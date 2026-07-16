@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: solar
+      POSTGRES_PASSWORD: solar
+      POSTGRES_DB: energivia
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U solar -d energivia"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api-runtime
+    env_file:
+      - apps/api/.env.example
+    environment:
+      DATABASE_URL: "postgresql://solar:solar@postgres:5432/energivia?schema=public"
+      PORT: 4000
+      API_PREFIX: api
+      AUTH0_AUDIENCE: ""
+      AUTH0_DOMAIN: dev-pzd1auy14mxssst2.us.auth0.com
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data: {}

@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Build packages
+        run: pnpm run build --filter=@energivia/types --filter=@energivia/tokens --filter=@energivia/utils --filter=@energivia/ui
+
+      - name: Generate Prisma client
+        run: pnpm run db:generate --filter=@energivia/api
+        env:
+          DATABASE_URL: "postgresql://u:p@localhost:5432/d?schema=public"
+
+      - name: Build API
+        run: pnpm run build --filter=@energivia/api
+
+      - name: Build Web
+        run: pnpm run build --filter=@energivia/web
+        env:
+          NEXT_PUBLIC_API_URL: "http://localhost:4000/api"

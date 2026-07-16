@@ -1,0 +1,1275 @@
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id               String    @id @default(cuid())
+  name             String
+  slug             String    @unique
+  domain           String?
+  logoUrl          String?
+  settings         Json?
+  subscriptionPlan String?
+  createdById      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  creator       User?                @relation("TenantCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  users         User[]
+  members       OrganizationMember[]
+  leads         Lead[]
+  deals         Deal[]
+  energyBills   EnergyBill[]
+  proposals     Proposal[]
+  simulations   Simulation[]
+  systemSizings SystemSizing[]
+  conversations Conversation[]
+  proposalTemplates ProposalTemplate[]
+  proposalTemplateRevisions ProposalTemplateRevision[]
+  whatsappInboundPhones TenantWhatsappInboundPhone[]
+  whatsappAudioTranscriptionJobs WhatsappAudioTranscriptionJob[]
+  costRules             CompanyCostRule[]
+  userNotifications     UserNotification[]
+  leadActivityLogs      LeadActivityLog[]
+  financingApplications FinancingApplication[]
+  stockItems            StockItem[]
+  stockMovements        StockMovement[]
+  freightRules          FreightRule[]
+
+  @@index([slug])
+  @@index([deletedAt])
+  @@index([createdById])
+}
+
+model TenantWhatsappInboundPhone {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  phoneDigits    String   @map("phone_digits")
+  label          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Tenant @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([phoneDigits])
+  @@index([organizationId])
+  @@map("tenant_whatsapp_inbound_phones")
+}
+
+enum CostCalculationType {
+  FIXED
+  PERCENTAGE
+  PER_KWP
+}
+
+enum PercentageBase {
+  SALE_PRICE
+  PROJECT_COST
+  PROFIT
+}
+
+model CompanyCostRule {
+  id               String              @id @default(cuid())
+  organizationId   String              @map("organization_id")
+  name             String
+  calculationType  CostCalculationType @map("calculation_type")
+  value            Decimal             @db.Decimal(14, 4)
+  minKwp           Decimal?            @map("min_kwp") @db.Decimal(12, 4)
+  maxKwp           Decimal?            @map("max_kwp") @db.Decimal(12, 4)
+  percentageBase   PercentageBase?     @map("percentage_base")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  organization Tenant @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([organizationId, name])
+  @@map("company_cost_rules")
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  ENGINEER
+  SALES
+  VIEWER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
+model OrganizationMember {
+  id             String           @id @default(cuid())
+  organizationId String           @map("organization_id")
+  userId         String?          @map("user_id")
+  email          String?
+  role           OrgRole          @default(VIEWER)
+  invitedById    String?          @map("invited_by_id")
+  invitedAt      DateTime         @default(now()) @map("invited_at")
+  status         InvitationStatus @default(ACCEPTED) @map("status")
+  joinedAt       DateTime?        @map("joined_at")
+
+  organization Tenant @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?  @relation("UserMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy    User?  @relation("MemberInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([email, organizationId])
+  @@index([status])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String
+  password  String?
+  name      String
+  role      UserRole @default(SALES)
+  tenantId  String?
+  auth0Sub  String?  @unique @map("auth0_sub")
+  picture   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  tenant            Tenant?              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  organizationMemberships OrganizationMember[] @relation("UserMemberships")
+  invitedMembers    OrganizationMember[]  @relation("MemberInvitedBy")
+  createdTenants    Tenant[]             @relation("TenantCreator")
+  conversations     Conversation[]
+  messages          Message[]
+  notifications     UserNotification[]
+  assignedDeals     Deal[]               @relation("DealAssignedUser")
+  stockMovements    StockMovement[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([deletedAt])
+  @@index([auth0Sub])
+}
+
+enum UserRole {
+  ADMIN
+  SALES
+  ENGINEER
+}
+
+model Lead {
+  id        String    @id @default(cuid())
+  tenantId  String
+  name      String
+  whatsapp  String
+  cpfCnpj   String?   @map("cpf_cnpj")
+  email     String?
+  company   String?
+  source    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deals         Deal[]
+  energyBills   EnergyBill[]
+  simulations   Simulation[]
+  systemSizings SystemSizing[]
+  notifications UserNotification[]
+  activityLogs  LeadActivityLog[]
+
+  @@unique([tenantId, cpfCnpj])
+  @@index([tenantId])
+  @@index([deletedAt])
+}
+
+enum LeadActivityKind {
+  LEAD_CREATED
+  SIMULATION_ADDED
+  DEAL_CREATED
+  PROPOSAL_CREATED
+  PROPOSAL_SENT
+  PROPOSAL_VIEWED
+  NOTE_ADDED
+  CALL_LOGGED
+}
+
+model LeadActivityLog {
+  id         String           @id @default(cuid())
+  tenantId   String           @map("tenant_id")
+  leadId     String           @map("lead_id")
+  kind       LeadActivityKind
+  label      String
+  meta       Json?
+  occurredAt DateTime         @default(now()) @map("occurred_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, leadId, occurredAt(sort: Desc)])
+  @@map("lead_activity_logs")
+}
+
+model Deal {
+  id              String           @id @default(cuid())
+  tenantId        String
+  leadId          String
+  assignedUserId  String?          @map("assigned_user_id")
+  title           String
+  value           Decimal?         @db.Decimal(14, 2)
+  stage           DealStage        @default(NEW)
+  temperature     DealTemperature?
+  lastContactAt   DateTime?
+  nextActionAt    DateTime?
+  nextActionType  String?
+  lostReason      DealLostReason?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead      Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  assignedUser User?   @relation("DealAssignedUser", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  proposals Proposal[]
+  notifications UserNotification[]
+
+  @@index([tenantId])
+  @@index([tenantId, leadId])
+  @@index([leadId])
+  @@index([assignedUserId])
+  @@index([deletedAt])
+}
+
+enum DealStage {
+  NEW
+  CONTACTED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum DealTemperature {
+  HOT
+  WARM
+  COLD
+}
+
+enum DealLostReason {
+  PRICE
+  NO_RESPONSE
+  COMPETITOR
+  NOT_INTERESTED
+  OTHER
+}
+
+model EnergyBill {
+  id               String           @id @default(cuid())
+  tenantId         String
+  leadId           String
+  provider         UtilityProvider  @default(COPEL)
+  fileUrl          String
+  fileName         String
+  extractedData    Json?
+  extractionStatus ExtractionStatus @default(PENDING)
+  extractionError  String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  deletedAt        DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  systemSizings SystemSizing[]
+
+  @@index([tenantId])
+  @@index([leadId])
+  @@index([extractionStatus])
+  @@index([deletedAt])
+}
+
+enum UtilityProvider {
+  COPEL
+  OTHER
+}
+
+enum ExtractionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model SystemSizing {
+  id           String   @id @default(cuid())
+  tenantId     String
+  leadId       String
+  energyBillId String?
+  input        Json
+  result       Json
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead       Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  energyBill EnergyBill? @relation(fields: [energyBillId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([leadId])
+  @@index([deletedAt])
+}
+
+model Simulation {
+  id        String   @id @default(cuid())
+  tenantId  String
+  leadId    String
+  input     Json
+  result    Json
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead      Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  proposals Proposal[]
+
+  @@index([tenantId])
+  @@index([leadId])
+  @@index([deletedAt])
+}
+
+model Proposal {
+  id              String         @id @default(cuid())
+  tenantId        String
+  dealId          String
+  simulationId    String
+  proposalTemplateId String?     @map("proposal_template_id")
+  proposalTemplateVersion Int?   @map("proposal_template_version")
+  renderedData    Json?          @map("rendered_data")
+  /**
+   * Desconto comercial (R$) desta proposta, exibido como linha separada ao cliente
+   * (investimento cheio − desconto = total). Null/0 = sem desconto. Valor por-proposta,
+   * editável no funil (ao criar) e na proposta interna.
+   */
+  discountBrl     Float?         @map("discount_brl")
+  /**
+   * Token rotativo do link público (/proposta/{token}). Null = legado (o próprio id
+   * funciona como token). Salvar equipamentos gera um novo token e INVALIDA o link
+   * anterior.
+   */
+  publicToken     String?        @unique @map("public_token")
+  title           String
+  status          ProposalStatus @default(DRAFT)
+  validUntil      DateTime
+  pdfUrl          String?
+  sentAt          DateTime?
+  clientFirstViewedAt   DateTime? @map("client_first_viewed_at")
+  clientLastViewedAt    DateTime? @map("client_last_viewed_at")
+  clientViewCount       Int       @default(0) @map("client_view_count")
+  lastRevisitNotifiedAt DateTime? @map("last_revisit_notified_at")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  simulation   Simulation   @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  proposalTemplate ProposalTemplate? @relation(fields: [proposalTemplateId], references: [id], onDelete: SetNull)
+  sections     Section[]
+  notifications UserNotification[]
+
+  @@index([tenantId])
+  @@index([dealId])
+  @@index([status])
+  @@index([proposalTemplateId])
+  @@index([deletedAt])
+}
+
+enum NotificationType {
+  PROPOSAL_VIEWED
+  PROPOSAL_REVISITED
+  LEAD_NEEDS_ATTENTION
+  LEAD_SCHEDULE_PENDING
+  FOLLOWUP_REMINDER
+  ONBOARDING_TEMPLATES_READY
+  FINANCING_APPROVED
+  FINANCING_REJECTED
+  FINANCING_CONTRACT_SIGNED
+  FINANCING_CREDIT_RELEASED
+  FINANCING_PENDENCY
+}
+
+model UserNotification {
+  id         String           @id @default(cuid())
+  tenantId   String           @map("tenant_id")
+  userId     String           @map("user_id")
+  type       NotificationType
+  title      String
+  message    String
+  linkPath   String           @map("link_path")
+  readAt     DateTime?        @map("read_at")
+  proposalId String?          @map("proposal_id")
+  leadId     String?          @map("lead_id")
+  dealId     String?          @map("deal_id")
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  proposal Proposal? @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  lead     Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal     Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([tenantId, type, proposalId])
+  @@index([tenantId, type, leadId])
+  @@index([tenantId])
+  @@map("user_notifications")
+}
+
+model Section {
+  id         String   @id @default(uuid())
+  proposalId String
+  type       String
+  variant    String
+  order      Int
+  content    Json
+  style      Json
+  visible    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId, order])
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  REJECTED
+}
+
+enum ProposalTemplateStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model ProposalTemplate {
+  id          String                 @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  status      ProposalTemplateStatus @default(DRAFT)
+  version     Int                    @default(1)
+  isDefault   Boolean                @default(false) @map("is_default")
+  config      Json
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  deletedAt   DateTime?
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  proposals Proposal[]
+  revisions ProposalTemplateRevision[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([deletedAt])
+  @@index([isDefault])
+}
+
+model ProposalTemplateBlueprint {
+  id            String   @id @default(cuid())
+  slug          String?  @unique
+  name          String
+  description   String?
+  thumbnailUrl  String?  @map("thumbnail_url")
+  document      Json
+  published     Boolean  @default(false)
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([published])
+  @@index([published, sortOrder])
+  @@map("proposal_template_blueprints")
+}
+
+model ProposalTemplateRevision {
+  id                 String                 @id @default(cuid())
+  proposalTemplateId String                 @map("proposal_template_id")
+  tenantId           String                 @map("tenant_id")
+  version            Int
+  status             ProposalTemplateStatus @default(PUBLISHED)
+  config             Json
+  createdAt          DateTime               @default(now()) @map("created_at")
+  publishedAt        DateTime               @default(now()) @map("published_at")
+
+  proposalTemplate ProposalTemplate @relation(fields: [proposalTemplateId], references: [id], onDelete: Cascade)
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([proposalTemplateId, version])
+  @@index([proposalTemplateId])
+  @@index([tenantId, proposalTemplateId])
+  @@index([tenantId])
+}
+
+model Brand {
+  id        String   @id @default(cuid())
+  name      String
+  country   String?
+  imageUrl  String?  @map("image_url")
+  createdAt DateTime @default(now())
+
+  products Product[]
+
+  @@index([name])
+}
+
+model Category {
+  id   String @id @default(cuid())
+  name String @unique
+
+  products Product[]
+
+  @@index([name])
+}
+
+model Product {
+  id         String   @id @default(cuid())
+  name       String
+  brandId    String
+  categoryId String
+  imageUrl   String?  @map("image_url")
+  specs      Json
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  brand                Brand                 @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  category             Category              @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  kitItems             KitItem[]
+  compatA              ProductCompatibility[] @relation("ProductA")
+  compatB              ProductCompatibility[] @relation("ProductB")
+  supplierProducts     SupplierProduct[]
+  distributorProducts  DistributorProduct[]
+  stockItems           StockItem[]
+
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([active])
+  @@index([specs], type: Gin)
+}
+
+model StockItem {
+  id               String   @id @default(cuid())
+  organizationId   String   @map("organization_id")
+  productId        String   @map("product_id")
+  quantity         Int      @default(0)
+  reservedQuantity Int      @default(0) @map("reserved_quantity")
+  unitCost         Decimal  @db.Decimal(12, 2) @map("unit_cost")
+  sku              String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization Tenant          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product      Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  movements    StockMovement[]
+
+  @@unique([organizationId, productId])
+  @@index([organizationId])
+  @@index([productId])
+}
+
+enum StockMovementType {
+  INBOUND
+  ADJUSTMENT
+  RESERVE
+  RELEASE
+  OUTBOUND
+}
+
+model StockMovement {
+  id             String            @id @default(cuid())
+  organizationId String            @map("organization_id")
+  stockItemId    String            @map("stock_item_id")
+  type           StockMovementType
+  quantity       Int
+  reason         String?
+  referenceType  String?           @map("reference_type")
+  referenceId    String?           @map("reference_id")
+  createdById    String?           @map("created_by_id")
+  createdAt      DateTime          @default(now())
+
+  organization Tenant    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stockItem    StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
+  createdBy    User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([stockItemId])
+  @@index([referenceType, referenceId])
+}
+
+model Supplier {
+  id        String   @id @default(uuid())
+  name      String
+  cnpj      String?
+  city      String?
+  state     String?
+  createdAt DateTime @default(now())
+
+  supplierProducts SupplierProduct[]
+
+  @@index([name])
+  @@index([cnpj])
+}
+
+model SupplierProduct {
+  id                   String   @id @default(uuid())
+  supplierId           String   @map("supplier_id")
+  productId            String   @map("product_id")
+  supplierSku          String?  @map("supplier_sku")
+  price                Decimal  @db.Decimal(12, 2)
+  stock                Int      @default(0)
+  leadTimeDays         Int?     @map("lead_time_days")
+  minimumOrderQuantity Int      @default(1) @map("minimum_order_quantity")
+  updatedAt            DateTime @updatedAt
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([supplierId, productId])
+  @@index([supplierId])
+  @@index([productId])
+  @@index([supplierId, productId])
+}
+
+model Distributor {
+  id        String   @id @default(uuid())
+  name      String
+  cnpj      String?
+  email     String?
+  phone     String?
+  website   String?
+  city      String?
+  state     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  distributorProducts DistributorProduct[]
+  freightRules        FreightRule[]
+
+  @@index([name])
+  @@index([cnpj])
+}
+
+model FreightRule {
+  id             String   @id @default(cuid())
+  distributorId  String?  @map("distributor_id")
+  organizationId String?  @map("organization_id")
+  state          String
+  value          Decimal  @db.Decimal(12, 2)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  distributor  Distributor? @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  organization Tenant?      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([distributorId, state])
+  @@unique([organizationId, state])
+  @@index([distributorId])
+  @@index([organizationId])
+  @@map("freight_rules")
+}
+
+model DistributorProduct {
+  id                  String   @id @default(uuid())
+  distributorId       String   @map("distributor_id")
+  productId           String   @map("product_id")
+  distributorSku      String?  @map("distributor_sku")
+  price               Decimal  @db.Decimal(12, 2)
+  stockQuantity       Int      @default(0) @map("stock_quantity")
+  leadTimeDays        Int?     @map("lead_time_days")
+  minimumOrderQuantity Int     @default(1) @map("minimum_order_quantity")
+  lastPriceUpdate     DateTime? @map("last_price_update")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  distributor Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([distributorId, productId])
+  @@index([distributorId])
+  @@index([productId])
+  @@index([distributorId, productId])
+}
+
+enum CompatibilityType {
+  REQUIRES
+  FORBIDDEN
+  RECOMMENDED
+}
+
+model ProductCompatibility {
+  id                String            @id @default(cuid())
+  productAId        String
+  productBId        String
+  compatibilityType CompatibilityType
+  rule              Json?
+
+  productA Product @relation("ProductA", fields: [productAId], references: [id], onDelete: Cascade)
+  productB Product @relation("ProductB", fields: [productBId], references: [id], onDelete: Cascade)
+
+  @@unique([productAId, productBId])
+  @@index([productAId])
+  @@index([productBId])
+}
+
+model Kit {
+  id              String   @id @default(cuid())
+  systemPowerKw   Decimal  @map("system_power_kw") @db.Decimal(8, 2)
+  conversationId  String?
+  label           String?
+  tier            KitTier?
+  createdAt       DateTime @default(now())
+
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  items        KitItem[]
+
+  @@index([createdAt])
+  @@index([conversationId])
+}
+
+model KitItem {
+  id        String  @id @default(cuid())
+  kitId     String
+  productId String
+  quantity  Int     @default(1)
+
+  kit     Kit     @relation(fields: [kitId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([kitId, productId])
+  @@index([kitId])
+  @@index([productId])
+}
+
+enum ChatChannel {
+  web
+  whatsapp
+}
+
+enum MessageRole {
+  user
+  assistant
+}
+
+enum AttachmentType {
+  BILL
+  PRODUCT_IMAGE
+}
+
+enum KitTier {
+  BEST_COST_BENEFIT
+  LOWEST_PRICE
+  PREMIUM
+}
+
+model Conversation {
+  id             String      @id @default(cuid())
+  organizationId String      @map("organization_id")
+  userId         String?     @map("user_id")
+  channel        ChatChannel @default(web)
+  title          String?
+  metadata       Json?
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  organization Tenant    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages     Message[]
+  kits         Kit[]
+  /** Dedup: Meta pode reenviar o mesmo `messages[].id` (wamid) no webhook. */
+  whatsappInboundMessages WhatsappInboundMessage[]
+  whatsappAudioTranscriptionJobs WhatsappAudioTranscriptionJob[]
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([channel])
+}
+
+model WhatsappInboundMessage {
+  waMessageId    String   @id @map("wa_message_id") @db.VarChar(512)
+  conversationId String   @map("conversation_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("whatsapp_inbound_messages")
+}
+
+enum WhatsappAudioTranscriptionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model WhatsappAudioTranscriptionJob {
+  id            String                           @id @default(cuid())
+  waMessageId   String                           @unique @map("wa_message_id") @db.VarChar(512)
+  organizationId String                          @map("organization_id")
+  conversationId String                          @map("conversation_id")
+  customerWaId  String                           @map("customer_wa_id")
+  phoneNumberId String                           @map("phone_number_id")
+  mediaId       String                           @map("media_id")
+  mediaMimeType String                           @map("media_mime_type")
+  audioFileUrl  String                           @map("audio_file_url")
+  audioFileKey  String                           @map("audio_file_key")
+  audioFileName String                           @map("audio_file_name")
+  audioFileSize Int                              @map("audio_file_size")
+  transcriptText String?                         @map("transcript_text")
+  errorMessage  String?                          @map("error_message")
+  status        WhatsappAudioTranscriptionStatus @default(PENDING)
+  attempts      Int                              @default(0)
+  startedAt     DateTime?                        @map("started_at")
+  completedAt   DateTime?                        @map("completed_at")
+  createdAt     DateTime                         @default(now()) @map("created_at")
+  updatedAt     DateTime                         @updatedAt @map("updated_at")
+
+  organization Tenant       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([conversationId])
+  @@index([organizationId])
+  @@map("whatsapp_audio_transcription_jobs")
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String      @map("conversation_id")
+  userId         String?     @map("user_id")
+  role           MessageRole
+  content        String
+  channel        ChatChannel
+  metadata       Json?
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  attachments  Attachment[]
+
+  @@index([conversationId, createdAt])
+  @@index([userId])
+  @@index([channel])
+}
+
+model Attachment {
+  id         String         @id @default(cuid())
+  messageId  String         @map("message_id")
+  fileName   String         @map("file_name")
+  fileUrl    String         @map("file_url")
+  fileKey    String         @map("file_key")
+  mimeType   String         @map("mime_type")
+  fileSize   Int?           @map("file_size")
+  type       AttachmentType @default(BILL)
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([type])
+}
+
+model State {
+  id          String   @id @default(cuid())
+  ibgeCode    String   @unique @map("ibge_code")
+  uf          String   @unique @db.VarChar(2)
+  name        String
+  region      String?  @map("region_name")
+  countryCode String   @default("BR") @map("country_code")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  cities City[]
+
+  @@map("geo_states")
+}
+
+model City {
+  id            String   @id @default(cuid())
+  ibgeCode      String   @unique @map("ibge_code")
+  name          String
+  stateId       String   @map("state_id")
+  latitude      Decimal? @db.Decimal(10, 7)
+  longitude     Decimal? @db.Decimal(10, 7)
+  solarResource Json?    @map("solar_resource")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  state State @relation(fields: [stateId], references: [id], onDelete: Cascade)
+
+  @@index([stateId])
+  @@map("geo_cities")
+}
+
+enum FinancingProviderMode {
+  API
+  ASSISTED
+  MANUAL
+}
+
+enum FinancingPersonType {
+  PF
+  PJ
+}
+
+enum FinancingSimulationStatus {
+  DRAFT
+  PROCESSING
+  COMPLETED
+  ERROR
+}
+
+enum FinancingOfferEligibility {
+  ESTIMATED
+  PRE_APPROVED
+  APPROVED
+  REJECTED
+}
+
+enum FinancingApplicationStatus {
+  CREATED
+  AWAITING_DOCUMENTS
+  DOCUMENTS_RECEIVED
+  SUBMITTED_TO_BANK
+  UNDER_REVIEW
+  PENDING
+  APPROVED
+  REJECTED
+  CONTRACT_SIGNED
+  CREDIT_RELEASED
+  COMPLETED
+}
+
+enum FinancingDocumentStatus {
+  REQUIRED
+  UPLOADED
+  APPROVED
+  REJECTED
+}
+
+enum FinancingTimelineEventType {
+  SIMULATION_CREATED
+  OFFER_SELECTED
+  APPLICATION_CREATED
+  DOCUMENT_UPLOADED
+  DOCUMENT_APPROVED
+  DOCUMENT_REJECTED
+  SUBMITTED_TO_BANK
+  STATUS_CHANGED
+  PENDENCY_OPENED
+  APPROVED
+  REJECTED
+  CONTRACT_SIGNED
+  CREDIT_RELEASED
+  NOTE_ADDED
+}
+
+model FinancingProvider {
+  id           String                @id @default(cuid())
+  name         String                @unique
+  slug         String                @unique
+  logoUrl      String?               @map("logo_url")
+  mode         FinancingProviderMode @default(MANUAL)
+  active       Boolean               @default(true)
+  supportsPF   Boolean               @default(true) @map("supports_pf")
+  supportsPJ   Boolean               @default(false) @map("supports_pj")
+  apiConfig    Json?                 @map("api_config")
+  docsRequired Json?                 @map("docs_required")
+  createdAt    DateTime              @default(now()) @map("created_at")
+  updatedAt    DateTime              @updatedAt @map("updated_at")
+
+  tenantAvailabilities TenantFinancingProvider[]
+  rateTables           FinancingRateTable[]
+  offers               FinancingOffer[]
+  applications         FinancingApplication[]
+  commissionRules      FinancingCommissionRule[]
+  commissions          FinancingCommission[]
+
+  @@index([active])
+  @@index([mode])
+  @@map("financing_providers")
+}
+
+model TenantFinancingProvider {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  providerId  String   @map("provider_id")
+  active      Boolean  @default(true)
+  apiConfig   Json?    @map("api_config")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  provider FinancingProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, providerId])
+  @@index([tenantId, active])
+  @@map("tenant_financing_providers")
+}
+
+model FinancingRateTable {
+  id          String   @id @default(cuid())
+  providerId  String   @map("provider_id")
+  tenantId    String?  @map("tenant_id")
+  personType  FinancingPersonType @default(PF) @map("person_type")
+  minAmount   Decimal  @db.Decimal(14, 2) @map("min_amount")
+  maxAmount   Decimal  @db.Decimal(14, 2) @map("max_amount")
+  minTerm     Int      @map("min_term")
+  maxTerm     Int      @map("max_term")
+  monthlyRate Decimal  @db.Decimal(8, 6) @map("monthly_rate")
+  feeRate     Decimal  @db.Decimal(8, 6) @default(0) @map("fee_rate")
+  validFrom   DateTime? @map("valid_from")
+  validUntil  DateTime? @map("valid_until")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  provider FinancingProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, tenantId, active])
+  @@index([providerId, personType, active])
+  @@map("financing_rate_tables")
+}
+
+model FinancingSimulation {
+  id              String                    @id @default(cuid())
+  tenantId        String                    @map("tenant_id")
+  leadId          String                    @map("lead_id")
+  dealId          String?                   @map("deal_id")
+  customerName    String                    @map("customer_name")
+  cpfCnpj         String?                   @map("cpf_cnpj")
+  email           String?
+  phone           String?
+  personType      FinancingPersonType       @default(PF) @map("person_type")
+  projectAmount   Decimal                   @db.Decimal(14, 2) @map("project_amount")
+  downPayment     Decimal                   @db.Decimal(14, 2) @default(0) @map("down_payment")
+  financedAmount  Decimal                   @db.Decimal(14, 2) @map("financed_amount")
+  requestedTerm   Int                       @map("requested_term")
+  status          FinancingSimulationStatus @default(DRAFT)
+  errorMessage    String?                   @map("error_message")
+  createdById     String?                   @map("created_by_id")
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  updatedAt       DateTime                  @updatedAt @map("updated_at")
+
+  offers       FinancingOffer[]
+  applications FinancingApplication[]
+
+  @@index([tenantId, leadId])
+  @@index([tenantId, dealId])
+  @@index([tenantId, status])
+  @@map("financing_simulations")
+}
+
+model FinancingOffer {
+  id                 String                    @id @default(cuid())
+  simulationId       String                    @map("simulation_id")
+  providerId         String                    @map("provider_id")
+  rateTableId        String?                   @map("rate_table_id")
+  financedAmount     Decimal                   @db.Decimal(14, 2) @map("financed_amount")
+  term               Int
+  monthlyRate        Decimal                   @db.Decimal(8, 6) @map("monthly_rate")
+  cet                Decimal                   @db.Decimal(8, 6)
+  installmentValue   Decimal                   @db.Decimal(14, 2) @map("installment_value")
+  totalAmount        Decimal                   @db.Decimal(14, 2) @map("total_amount")
+  eligibilityStatus  FinancingOfferEligibility @default(ESTIMATED) @map("eligibility_status")
+  score              Decimal                   @db.Decimal(6, 4) @default(0)
+  notes              String?
+  rawResponse        Json?                     @map("raw_response")
+  createdAt          DateTime                  @default(now()) @map("created_at")
+
+  simulation FinancingSimulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  provider   FinancingProvider   @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  applications FinancingApplication[]
+
+  @@index([simulationId])
+  @@index([providerId])
+  @@map("financing_offers")
+}
+
+model FinancingApplication {
+  id                 String                     @id @default(cuid())
+  tenantId           String                     @map("tenant_id")
+  simulationId       String                     @map("simulation_id")
+  selectedOfferId    String                     @map("selected_offer_id")
+  providerId         String                     @map("provider_id")
+  assignedUserId     String?                    @map("assigned_user_id")
+  status             FinancingApplicationStatus @default(CREATED)
+  version            Int                        @default(1)
+  externalReference  String?                    @map("external_reference")
+  approvedAmount     Decimal?                   @db.Decimal(14, 2) @map("approved_amount")
+  approvedTerm       Int?                       @map("approved_term")
+  approvedRate       Decimal?                   @db.Decimal(8, 6) @map("approved_rate")
+  approvedCet        Decimal?                   @db.Decimal(8, 6) @map("approved_cet")
+  notes              String?
+  submittedAt        DateTime?                  @map("submitted_at")
+  approvedAt         DateTime?                  @map("approved_at")
+  releasedAt         DateTime?                  @map("released_at")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+
+  tenant         Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  simulation     FinancingSimulation        @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  selectedOffer  FinancingOffer             @relation(fields: [selectedOfferId], references: [id], onDelete: Restrict)
+  provider       FinancingProvider          @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  documents      FinancingDocument[]
+  timelineEvents FinancingTimelineEvent[]
+  commission     FinancingCommission?
+
+  @@index([tenantId, status])
+  @@index([tenantId, assignedUserId])
+  @@index([simulationId])
+  @@map("financing_applications")
+}
+
+model FinancingDocument {
+  id            String                  @id @default(cuid())
+  applicationId String                  @map("application_id")
+  name          String
+  type          String
+  status        FinancingDocumentStatus @default(REQUIRED)
+  fileUrl       String?                 @map("file_url")
+  uploadedAt    DateTime?               @map("uploaded_at")
+  reviewedAt    DateTime?               @map("reviewed_at")
+  reviewerNotes String?                 @map("reviewer_notes")
+  createdAt     DateTime                @default(now()) @map("created_at")
+  updatedAt     DateTime                @updatedAt @map("updated_at")
+
+  application FinancingApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, status])
+  @@map("financing_documents")
+}
+
+model FinancingTimelineEvent {
+  id            String                     @id @default(cuid())
+  applicationId String                     @map("application_id")
+  type          FinancingTimelineEventType
+  description   String
+  userId        String?                    @map("user_id")
+  meta          Json?
+  createdAt     DateTime                   @default(now()) @map("created_at")
+
+  application FinancingApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt(sort: Desc)])
+  @@map("financing_timeline_events")
+}
+
+enum CommissionCalculationType {
+  PERCENTAGE
+  FIXED
+}
+
+enum CommissionBase {
+  FINANCED_AMOUNT
+  TOTAL_AMOUNT
+}
+
+enum CommissionStatus {
+  PENDING
+  CONFIRMED
+  RECEIVED
+  CANCELLED
+}
+
+model FinancingCommissionRule {
+  id              String                    @id @default(cuid())
+  providerId      String                    @map("provider_id")
+  personType      FinancingPersonType?      @map("person_type")
+  calculationType CommissionCalculationType @map("calculation_type")
+  value           Decimal                   @db.Decimal(10, 4)
+  baseAmount      CommissionBase            @default(FINANCED_AMOUNT) @map("base_amount")
+  minAmount       Decimal?                  @db.Decimal(14, 2) @map("min_amount")
+  maxAmount       Decimal?                  @db.Decimal(14, 2) @map("max_amount")
+  validFrom       DateTime?                 @map("valid_from")
+  validUntil      DateTime?                 @map("valid_until")
+  active          Boolean                   @default(true)
+  notes           String?
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  updatedAt       DateTime                  @updatedAt @map("updated_at")
+
+  provider FinancingProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, active])
+  @@map("financing_commission_rules")
+}
+
+enum FinancingAuditEventType {
+  APPLICATION_UPDATED
+  STATUS_TRANSITIONED
+  COMMISSION_UPDATED
+  DOCUMENT_REVIEWED
+}
+
+model FinancingAuditLog {
+  id             String                  @id @default(cuid())
+  tenantId       String                  @map("tenant_id")
+  applicationId  String?                 @map("application_id")
+  commissionId   String?                 @map("commission_id")
+  userId         String?                 @map("user_id")
+  userRole       String?                 @map("user_role")
+  eventType      FinancingAuditEventType @map("event_type")
+  description    String
+  before         Json?
+  after          Json?
+  ipAddress      String?                 @map("ip_address")
+  userAgent      String?                 @map("user_agent")
+  createdAt      DateTime                @default(now()) @map("created_at")
+
+  @@index([tenantId, applicationId, createdAt(sort: Desc)])
+  @@index([commissionId, createdAt(sort: Desc)])
+  @@index([tenantId, eventType, createdAt(sort: Desc)])
+  @@map("financing_audit_logs")
+}
+
+model FinancingCommission {
+  id                 String                    @id @default(cuid())
+  applicationId      String                    @unique @map("application_id")
+  providerId         String                    @map("provider_id")
+  tenantId           String                    @map("tenant_id")
+  ruleId             String?                   @map("rule_id")
+  calculationType    CommissionCalculationType @map("calculation_type")
+  appliedValue       Decimal                   @db.Decimal(10, 4) @map("applied_value")
+  baseAmount         CommissionBase            @map("base_amount")
+  baseAmountBrl      Decimal                   @db.Decimal(14, 2) @map("base_amount_brl")
+  grossCommissionBrl Decimal                   @db.Decimal(14, 2) @map("gross_commission_brl")
+  status             CommissionStatus          @default(PENDING)
+  paidAt             DateTime?                 @map("paid_at")
+  notes              String?
+  createdAt          DateTime                  @default(now()) @map("created_at")
+  updatedAt          DateTime                  @updatedAt @map("updated_at")
+
+  application FinancingApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  provider    FinancingProvider    @relation(fields: [providerId], references: [id], onDelete: Restrict)
+
+  @@index([providerId, status])
+  @@index([tenantId])
+  @@index([status, createdAt(sort: Desc)])
+  @@map("financing_commissions")
+}

@@ -1,0 +1,1 @@
+pnpm --filter @energivia/web lint && NEXT_DIST_DIR=.next-prepush pnpm --filter @energivia/web build

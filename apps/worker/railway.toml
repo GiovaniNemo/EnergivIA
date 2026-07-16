@@ -1,0 +1,13 @@
+# Railway config — Worker service.
+# Apontar este arquivo no Railway: service worker → Settings → "Config File Path"
+# = apps/worker/railway.toml
+
+[build]
+dockerfilePath = "apps/worker/Dockerfile"
+
+[deploy]
+# Sem preDeployCommand — worker não roda migrations (é a API que faz)
+# Sem healthcheckPath — worker não expõe HTTP
+# Sem startCommand — o CMD do Dockerfile cuida
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

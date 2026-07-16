@@ -1,0 +1,43 @@
+name: Scheduled blog publish
+
+# Roda 1x por dia às 09:00 UTC (06:00 BRT) e dispara um redeploy do web na
+# Vercel. Posts com `date` no frontmatter já passada do horário aparecem
+# automaticamente no índice e ficam acessíveis via URL.
+#
+# Pra agendar um post novo, basta:
+#   1. Criar o .md em apps/web/content/blog/ com `date: 2026-06-10T09:00:00-03:00`
+#   2. Commitar + pushar
+#   3. Esperar — no dia 10/06 às 09h o cron deploya o web e o post aparece
+#
+# Setup necessário (uma vez):
+#   - No Vercel: Settings → Git → Deploy Hooks → Create Hook
+#     - Name: "Scheduled blog publish"
+#     - Branch: main
+#     - Copia a URL gerada
+#   - No GitHub: repo → Settings → Secrets and variables → Actions
+#     - New secret: VERCEL_DEPLOY_HOOK_URL = <URL copiada>
+
+on:
+  schedule:
+    # Cron syntax: minute hour day month weekday
+    - cron: "0 9 * * *" # diariamente 09:00 UTC
+  workflow_dispatch: # permite disparar manual pelo botão no GitHub UI
+
+jobs:
+  trigger-rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel deploy hook
+        run: |
+          if [ -z "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}" ]; then
+            echo "::error::VERCEL_DEPLOY_HOOK_URL secret não está configurado"
+            exit 1
+          fi
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}")
+          echo "Deploy hook response: $response"
+          # Vercel retorna 201 quando o deploy é enfileirado com sucesso.
+          if [ "$response" != "201" ] && [ "$response" != "200" ]; then
+            echo "::error::Deploy hook falhou (status $response)"
+            exit 1
+          fi
+          echo "::notice::Vercel deploy disparado com sucesso — posts agendados pra hoje devem aparecer em ~3min"

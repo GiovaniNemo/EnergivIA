@@ -1,0 +1,46 @@
+{
+  "name": "energivia",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.14.2",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "dev:web": "turbo run dev --filter=@energivia/web",
+    "dev:api": "turbo run dev --filter=@energivia/api",
+    "dev:worker": "turbo run dev --filter=@energivia/worker",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "prepare": "husky",
+    "db:generate": "turbo run db:generate --filter=@energivia/api",
+    "db:push": "turbo run db:push --filter=@energivia/api",
+    "db:migrate": "turbo run db:migrate --filter=@energivia/api",
+    "db:studio": "turbo run db:studio --filter=@energivia/api",
+    "db:seed": "turbo run db:seed --filter=@energivia/api",
+    "db:seed:geo": "pnpm --filter @energivia/api run db:seed:geo",
+    "db:ingest:geo": "pnpm --filter @energivia/api run db:ingest:geo",
+    "deploy:railway:build": "pnpm --filter @energivia/shared-types build && pnpm --filter @energivia/solar-engine build && pnpm --filter @energivia/api build",
+    "deploy:railway:start": "pnpm --filter @energivia/api start:prod",
+    "deploy:web:build": "pnpm --filter @energivia/web build"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.46.0",
+    "@typescript-eslint/parser": "^8.46.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "^18.3.1",
+      "react-dom": "^18.3.1"
+    }
+  }
+}

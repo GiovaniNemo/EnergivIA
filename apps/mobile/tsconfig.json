@@ -1,0 +1,8 @@
+{
+  "extends": "@energivia/config/typescript/react-native.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["src/**/*", "index.js", "*.ts", "*.tsx"]
+}

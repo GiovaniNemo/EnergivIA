@@ -1,0 +1,13 @@
+# Railway config — API service.
+# Apontar este arquivo no Railway: service api → Settings → "Config File Path"
+# = apps/api/railway.toml
+
+[build]
+dockerfilePath = "Dockerfile"
+
+[deploy]
+preDeployCommand = "/bin/sh -c \"set -euxo pipefail; cd /app; corepack enable; corepack prepare pnpm@9.14.2 --activate; pnpm --filter @energivia/api exec prisma migrate deploy --schema=prisma/schema.prisma\""
+startCommand = "node /app/apps/api/dist/main.js"
+healthcheckPath = "/health"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
