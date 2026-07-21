@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import * as Sentry from "@sentry/nextjs";
 import { Inter, Montserrat, Open_Sans, Roboto } from "next/font/google";
+import Script from "next/script";
 import { Auth0Provider } from "@auth0/nextjs-auth0/client";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
@@ -77,6 +78,17 @@ export default function RootLayout({
             </Auth0Provider>
           </ThemeProvider>
         </div>
+
+        {/* Script de Integração com o Chatbase - EnergivIA */}
+        <Script
+          id="chatbase-widget"
+          strategy="lazyOnload"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(){if(!window.chatbase||window.chatbase("getState")!=="initialized"){window.chatbase=function(){(window.chatbase.q=window.chatbase.q||[]).push(arguments)};window.chatbase=new Proxy(window.chatbase,{get(target,prop){if(prop==="q"){return target.q}return function(){return target(prop,...arguments)}}})}const parent=document.getElementsByTagName("head")[0];const script=document.createElement("script");script.src="https://www.chatbase.co/embed.min.js";script.id="CXsTCPop6oDd4DIn7EWX9";script.domain="www.chatbase.co";parent.appendChild(script)})()
+            `,
+          }}
+        />
       </body>
     </html>
   );

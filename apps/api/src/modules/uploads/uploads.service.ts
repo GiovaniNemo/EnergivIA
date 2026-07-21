@@ -7,6 +7,7 @@ import {
   ALLOWED_IMAGE_CONTENT_TYPES,
   buildS3ObjectKey,
   createS3ClientForPresign,
+  createS3GetUrl,
   presignedPutObjectUrlOptions,
 } from "../../common/s3/s3.util";
 import type { CreatePresignedUrlDto } from "./dto/create-presigned-url.dto";
@@ -20,7 +21,7 @@ export class UploadsService {
 
   constructor(private readonly config: ConfigService) {
     this.region = this.config.get<string>("AWS_REGION") ?? "";
-    this.bucketName = this.config.get<string>("S3_BUCKET_NAME") ?? "";
+    this.bucketName = this.config.get<string>("S3_BUCKET_NAME") ?? this.config.get<string>("AWS_S3_BUCKET") ?? "";
     this.cdnBaseUrl = this.config.get<string>("S3_CDN_BASE_URL")?.replace(/\/$/, "");
     this.s3 = createS3ClientForPresign(this.region || undefined);
   }
@@ -62,14 +63,14 @@ export class UploadsService {
     });
 
     const uploadUrl = await getSignedUrl(this.s3, command, presignedPutObjectUrlOptions(60 * 5));
-    const fileUrl = this.buildFileUrl(key);
+    const fileUrl = await this.buildFileUrl(key);
     return { uploadUrl, fileUrl };
   }
 
-  private buildFileUrl(key: string): string {
+  private async buildFileUrl(key: string): Promise<string> {
     if (this.cdnBaseUrl) {
       return `${this.cdnBaseUrl}/${key}`;
     }
-    return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
+    return createS3GetUrl(this.s3, this.bucketName, key);
   }
 }

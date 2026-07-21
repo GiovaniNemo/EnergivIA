@@ -1,4 +1,5 @@
-import { S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { extname } from "node:path";
 import { randomUUID } from "node:crypto";
 
@@ -23,6 +24,16 @@ export function presignedPutObjectUrlOptions(expiresInSeconds: number) {
     expiresIn: expiresInSeconds,
     signableHeaders: new Set(["content-type"]),
   };
+}
+
+export async function createS3GetUrl(
+  s3: S3Client,
+  bucketName: string,
+  key: string,
+  expiresInSeconds = 60 * 60
+): Promise<string> {
+  const command = new GetObjectCommand({ Bucket: bucketName, Key: key });
+  return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
 }
 
 const PRODUCT_CATEGORY_TO_FOLDER: Record<string, string> = {

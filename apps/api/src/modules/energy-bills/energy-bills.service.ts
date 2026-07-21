@@ -1,8 +1,12 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { PutObjectCommand, S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { createS3ClientForPresign, presignedPutObjectUrlOptions } from "../../common/s3/s3.util";
+import {
+  createS3ClientForPresign,
+  createS3GetUrl,
+  presignedPutObjectUrlOptions,
+} from "../../common/s3/s3.util";
 import { PrismaService } from "../../prisma/prisma.service";
 import { Prisma, UtilityProvider } from "@prisma/client";
 import { extname } from "node:path";
@@ -30,8 +34,37 @@ export class EnergyBillsService {
     private readonly config: ConfigService
   ) {
     this.region = this.config.get<string>("AWS_REGION") ?? "";
-    this.bucketName = this.config.get<string>("S3_BUCKET_NAME") ?? "";
+    this.bucketName = this.config.get<string>("S3_BUCKET_NAME") ?? this.config.get<string>("AWS_S3_BUCKET") ?? "";
     this.s3 = createS3ClientForPresign(this.region || undefined);
+  }
+
+  private parseBillText(text: string): { consumptionKwh?: number; totalAmount?: number; referenceMonth?: string; rawData?: Record<string, unknown> } {
+    const out: { consumptionKwh?: number; totalAmount?: number; referenceMonth?: string; rawData?: Record<string, unknown> } = {};
+    const t = (text || "").replace(/[\u00A0]/g, " ");
+    // buscar consumo em kWh (ex: "350 kWh" ou "350kwh")
+    const kwhMatch = t.match(/(\d{1,6}(?:[.,]\d{1,3})?)\s*(kwh|kw-h|kwh\/m[a-z]*)/i);
+    if (kwhMatch && kwhMatch[1]) {
+      const raw = String(kwhMatch[1]).replace(/\./g, "").replace(/,/, ".");
+      const n = Number(raw);
+      if (Number.isFinite(n)) out.consumptionKwh = Math.round(n);
+    }
+    // buscar valor em R$ (ex: R$ 123,45)
+    const brlMatch = t.match(/r\$\s*(\d{1,3}(?:[\.\s]\d{3})*(?:,\d{2})?)/i);
+    if (brlMatch && brlMatch[1]) {
+      const raw = String(brlMatch[1]).replace(/\s/g, "").replace(/\./g, "").replace(/,/, ".");
+      const n = Number(raw);
+      if (Number.isFinite(n)) out.totalAmount = Number((n).toFixed(2));
+    }
+    // buscar referência/competência (MM/YYYY ou M/YYYY)
+    const refMatch = t.match(/(compet[eê]ncia|refer[eê]ncia|referencia)[:\s]*([0-1]?\d\s*\/?\s*(?:20)?\d{2})/i);
+    if (refMatch && refMatch[2]) {
+      out.referenceMonth = String(refMatch[2]).replace(/\s/g, "").replace(/\//, "/");
+    } else {
+      const mmMatch = t.match(/(0[1-9]|1[0-2])\s*[\/-]\s*(20\d{2}|\d{2})/);
+      if (mmMatch) out.referenceMonth = `${mmMatch[1]}/${mmMatch[2]}`;
+    }
+    out.rawData = { text: t };
+    return out;
   }
 
   private async ensureLeadInTenant(tenantId: string, leadId: string): Promise<void> {
@@ -83,7 +116,7 @@ export class EnergyBillsService {
       ContentType: ct,
     });
     const uploadUrl = await getSignedUrl(this.s3, command, presignedPutObjectUrlOptions(60 * 5));
-    const fileUrl = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
+    const fileUrl = await createS3GetUrl(this.s3, this.bucketName, key);
 
     return { uploadUrl, fileUrl, key };
   }

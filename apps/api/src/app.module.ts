@@ -1,3 +1,4 @@
+import * as path from "node:path";
 import { Module } from "@nestjs/common";
 import { APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
@@ -37,7 +38,15 @@ import { ChatbaseModule } from "./modules/chatbase/chatbase.module";
   controllers: [HealthController],
   imports: [
     SentryModule.forRoot(),
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: [".env", ".env.local"] }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [
+        path.resolve(process.cwd(), ".env"),
+        path.resolve(process.cwd(), ".env.local"),
+        path.resolve(__dirname, "..", ".env"),
+        path.resolve(__dirname, "..", ".env.local"),
+      ],
+    }),
     ThrottlerModule.forRoot([
       { name: "short", ttl: 10_000, limit: 30 },
       { name: "medium", ttl: 60_000, limit: 120 },
