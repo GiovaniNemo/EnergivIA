@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { PutObjectCommand, S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
   createS3ClientForPresign,
@@ -34,12 +34,23 @@ export class EnergyBillsService {
     private readonly config: ConfigService
   ) {
     this.region = this.config.get<string>("AWS_REGION") ?? "";
-    this.bucketName = this.config.get<string>("S3_BUCKET_NAME") ?? this.config.get<string>("AWS_S3_BUCKET") ?? "";
+    this.bucketName =
+      this.config.get<string>("S3_BUCKET_NAME") ?? this.config.get<string>("AWS_S3_BUCKET") ?? "";
     this.s3 = createS3ClientForPresign(this.region || undefined);
   }
 
-  private parseBillText(text: string): { consumptionKwh?: number; totalAmount?: number; referenceMonth?: string; rawData?: Record<string, unknown> } {
-    const out: { consumptionKwh?: number; totalAmount?: number; referenceMonth?: string; rawData?: Record<string, unknown> } = {};
+  private parseBillText(text: string): {
+    consumptionKwh?: number;
+    totalAmount?: number;
+    referenceMonth?: string;
+    rawData?: Record<string, unknown>;
+  } {
+    const out: {
+      consumptionKwh?: number;
+      totalAmount?: number;
+      referenceMonth?: string;
+      rawData?: Record<string, unknown>;
+    } = {};
     const t = (text || "").replace(/[\u00A0]/g, " ");
     // buscar consumo em kWh (ex: "350 kWh" ou "350kwh")
     const kwhMatch = t.match(/(\d{1,6}(?:[.,]\d{1,3})?)\s*(kwh|kw-h|kwh\/m[a-z]*)/i);
@@ -53,10 +64,12 @@ export class EnergyBillsService {
     if (brlMatch && brlMatch[1]) {
       const raw = String(brlMatch[1]).replace(/\s/g, "").replace(/\./g, "").replace(/,/, ".");
       const n = Number(raw);
-      if (Number.isFinite(n)) out.totalAmount = Number((n).toFixed(2));
+      if (Number.isFinite(n)) out.totalAmount = Number(n.toFixed(2));
     }
     // buscar referência/competência (MM/YYYY ou M/YYYY)
-    const refMatch = t.match(/(compet[eê]ncia|refer[eê]ncia|referencia)[:\s]*([0-1]?\d\s*\/?\s*(?:20)?\d{2})/i);
+    const refMatch = t.match(
+      /(compet[eê]ncia|refer[eê]ncia|referencia)[:\s]*([0-1]?\d\s*\/?\s*(?:20)?\d{2})/i
+    );
     if (refMatch && refMatch[2]) {
       out.referenceMonth = String(refMatch[2]).replace(/\s/g, "").replace(/\//, "/");
     } else {

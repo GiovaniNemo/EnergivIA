@@ -6,7 +6,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* turbo.json ./
 COPY apps ./apps
 COPY packages ./packages
 RUN pnpm install --frozen-lockfile
-RUN pnpm run build --filter=@energivia/types --filter=@energivia/utils --filter=@energivia/shared-types --filter=@energivia/solar-engine --filter=@energivia/ai-agent
+RUN pnpm run build --filter=@energivia/types --filter=@energivia/utils --filter=@energivia/shared-types --filter=@energivia/solar-engine
 RUN pnpm run db:generate --filter=@energivia/api
 RUN pnpm run build --filter=@energivia/api
 
