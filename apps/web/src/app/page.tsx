@@ -18,7 +18,7 @@ const btnBase =
   "inline-flex h-11 items-center justify-center rounded-full px-6 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 focus-visible:ring-offset-2";
 const btnPrimary =
   "bg-emerald-400 text-slate-950 shadow-[0_0_30px_-10px_rgba(52,211,153,0.8)] hover:-translate-y-0.5 hover:bg-emerald-300";
-const appLoginUrl = "/auth/login";
+const appLoginUrl = "/login";
 
 const faqItems = [
   {

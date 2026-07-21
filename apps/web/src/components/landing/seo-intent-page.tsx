@@ -24,7 +24,7 @@ type SeoIntentPageProps = {
   ctaDescription: string;
 };
 
-const appLoginUrl = "/auth/login";
+const appLoginUrl = "/login";
 
 export function SeoIntentPage({
   eyebrow,
