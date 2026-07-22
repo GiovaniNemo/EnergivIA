@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth0 } from "@/lib/auth0";
 
 const BACKEND_URL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
+const AUTH0_AUDIENCE = process.env["AUTH0_AUDIENCE"];
 
 export async function GET(
   request: NextRequest,
@@ -38,8 +39,6 @@ export async function DELETE(
   return proxy(request, await params, "DELETE");
 }
 
-const AUTH0_AUDIENCE = process.env["AUTH0_AUDIENCE"];
-
 async function proxy(request: NextRequest, params: { path: string[] }, method: string) {
   const session = await auth0.getSession();
   if (!session?.user) {
@@ -47,29 +46,28 @@ async function proxy(request: NextRequest, params: { path: string[] }, method: s
   }
 
   let accessToken: string;
-  if (AUTH0_AUDIENCE) {
-    try {
-      const result = await auth0.getAccessToken({ audience: AUTH0_AUDIENCE });
-      accessToken = result.token;
-    } catch {
-      return NextResponse.json(
-        {
-          error: "No access token for API",
-          code: "ACCESS_TOKEN_UNAVAILABLE",
-          hint: "Authorize your app for the API in Auth0 (User Access), then log out and log in again.",
-        },
-        { status: 401 }
-      );
+
+  // Busca obrigatoriamente o Access Token (JWT de API)
+  try {
+    const result = await auth0.getAccessToken(
+      AUTH0_AUDIENCE ? { audience: AUTH0_AUDIENCE } : undefined
+    );
+
+    if (!result?.token) {
+      throw new Error("Token retornado está vazio");
     }
-  } else {
-    const idToken = (session as { tokenSet?: { idToken?: string } }).tokenSet?.idToken;
-    if (!idToken) {
-      return NextResponse.json(
-        { error: "No ID token available", code: "ID_TOKEN_UNAVAILABLE" },
-        { status: 503 }
-      );
-    }
-    accessToken = idToken;
+
+    accessToken = result.token;
+  } catch (error) {
+    console.error("Erro ao obter Access Token no Proxy:", error);
+    return NextResponse.json(
+      {
+        error: "No access token for API",
+        code: "ACCESS_TOKEN_UNAVAILABLE",
+        hint: "Verifique se o AUTH0_AUDIENCE está configurado e faça Logout / Login para renovar a sessão.",
+      },
+      { status: 401 }
+    );
   }
 
   const path = params.path?.join("/") ?? "";
@@ -88,6 +86,7 @@ async function proxy(request: NextRequest, params: { path: string[] }, method: s
   const headers: Record<string, string> = {
     Authorization: `Bearer ${accessToken}`,
   };
+
   if (method !== "GET") {
     headers["Content-Type"] = "application/json";
   }
