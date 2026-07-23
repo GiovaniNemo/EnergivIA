@@ -196,13 +196,16 @@ export async function middleware(request: NextRequest) {
           email,
         });
 
-        if (!isPlatform) {
-          const kickUrl = new URL(`https://${APP_HOST}/painel`);
-          const kick = NextResponse.redirect(kickUrl, 307);
-          kick.cookies.delete("__session");
-          log("role-gate:kick", { to: kickUrl.toString() });
-          return kick;
-        }
+       if (!isPlatform) {
+  // Limpa 'https://' ou 'http://' caso já existam na variável APP_HOST
+  const cleanHost = APP_HOST.replace(/^https?:\/\//, "");
+
+  const kickUrl = new URL(`https://${cleanHost}/painel`);
+  const kick = NextResponse.redirect(kickUrl, 307);
+  kick.cookies.delete("__session");
+  log("role-gate:kick", { to: kickUrl.toString() });
+  return kick;
+}
       }
     } catch (err) {
       log("role-gate:error", { message: err instanceof Error ? err.message : String(err) });

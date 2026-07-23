@@ -43,10 +43,14 @@ async function fetchAuth0UserInfo(
   bearerToken: string
 ): Promise<Auth0UserInfoProfile | null> {
   try {
-    const res = await fetch(`https://${auth0Domain}/userinfo`, {
-      headers: { Authorization: `Bearer ${bearerToken}` },
-      signal: AbortSignal.timeout(10_000),
-    });
+  // 🧼 Limpa qualquer "https://" ou "http://" da variável antes de usar
+  const cleanDomain = auth0Domain.replace(/^https?:\/\//, "");
+
+  const res = await fetch(`https://${cleanDomain}/userinfo`, {
+    headers: { Authorization: `Bearer ${bearerToken}` },
+    signal: AbortSignal.timeout(10_000),
+  });
+  // ... resto do seu código
     if (!res.ok) return null;
     const body = (await res.json()) as {
       email?: string;
@@ -84,7 +88,8 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
     private readonly prisma: PrismaService
   ) {
     const auth0Domain = config.get<string>("AUTH0_DOMAIN");
-    const jwksUri = auth0Domain ? `https://${auth0Domain}/.well-known/jwks.json` : "";
+    const cleanDomain = auth0Domain ? auth0Domain.replace(/^https?:\/\//, "") : "";
+    const jwksUri = cleanDomain ? `https://${cleanDomain}/.well-known/jwks.json` : "";
 
     const options: StrategyOptions = {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
