@@ -63,6 +63,7 @@ export default function HomePage(): JSX.Element {
                 height={136}
                 className="h-12 w-auto object-contain sm:h-14"
                 priority
+                unoptimized
               />
             </Link>
             <nav className="hidden sm:flex items-center gap-1 text-sm text-slate-700">
@@ -165,6 +166,7 @@ export default function HomePage(): JSX.Element {
                 className="h-auto w-full object-contain"
                 style={{ animation: "floatGentle 6s ease-in-out 900ms infinite" }}
                 priority
+                unoptimized
               />
             </div>
           </div>
@@ -353,7 +355,6 @@ export default function HomePage(): JSX.Element {
           </div>
         </section>
 
-        {}
         <section
           id="para-quem"
           className="relative overflow-hidden border-t border-slate-800 bg-slate-950 px-4 py-16 sm:px-6 sm:py-20"
@@ -470,7 +471,6 @@ export default function HomePage(): JSX.Element {
           </div>
         </section>
 
-        {}
         <footer className="border-t border-slate-800 bg-slate-950 px-4 py-12 sm:px-6 text-slate-300">
           <div className="mx-auto max-w-6xl">
             <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
@@ -481,6 +481,7 @@ export default function HomePage(): JSX.Element {
                   width={480}
                   height={136}
                   className="h-12 w-auto object-contain sm:h-14"
+                  unoptimized
                 />
               </Link>
               <nav className="flex flex-wrap items-center justify-center gap-5 text-sm">

@@ -112,7 +112,6 @@ function WhatsappDemoContent(): JSX.Element {
           poster="/landing/demo.png"
           className="h-[260px] w-full bg-black object-contain sm:h-[360px]"
         >
-          <source src="" type="video/mp4" />
           Seu navegador não suporta reprodução de vídeo.
         </video>
       </div>
@@ -141,6 +140,7 @@ function ProposalsDemoContent(): JSX.Element {
               width={1080}
               height={675}
               className="h-36 w-full border-b border-slate-700 object-cover"
+              unoptimized
             />
             <div className="p-3">
               <p className="text-sm font-semibold text-slate-100">{item.title}</p>
