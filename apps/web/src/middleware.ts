@@ -4,7 +4,10 @@ import { isAuth0Configured } from "@/lib/auth0-config";
 import { auth0 } from "@/lib/auth0";
 
 const normalizeHost = (value: string | undefined, fallback: string): string => {
-  const host = (value ?? fallback).trim().replace(/^https?:\/\//i, "").replace(/\/$/, "");
+  const host = (value ?? fallback)
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/$/, "");
   return host || fallback;
 };
 
@@ -30,7 +33,17 @@ const ADMIN_LANDING_PATH = "/plataforma/financiamentos";
 
 const ADMIN_LANDING_ALIASES = new Set(["/", "/painel"]);
 
-const SHARED_PREFIXES = ["/api", "/auth", "/login", "/logout", "/_next", "/favicon", "/logo", "/landing", "/og"];
+const SHARED_PREFIXES = [
+  "/api",
+  "/auth",
+  "/login",
+  "/logout",
+  "/_next",
+  "/favicon",
+  "/logo",
+  "/landing",
+  "/og",
+];
 
 const AUTH_DEPENDENT_PREFIXES = ["/auth", "/login", "/logout", "/api"];
 
@@ -38,7 +51,9 @@ const isPublicAssetPath = (pathname: string): boolean => {
   return (
     /\.(png|jpe?g|gif|svg|webp|avif|ico|bmp|mp4|webm|woff2?|ttf|eot|js|css|json|xml|txt)$/i.test(
       pathname
-    ) || pathname.startsWith("/landing/") || pathname.startsWith("/og/")
+    ) ||
+    pathname.startsWith("/landing/") ||
+    pathname.startsWith("/og/")
   );
 };
 
@@ -110,6 +125,10 @@ export async function middleware(request: NextRequest) {
     const shared = isSharedPath(pathname);
     const adminPath = isAdminSurfacePath(pathname);
     const marketingPath = isPublicMarketingRoute(pathname);
+
+    if (isLandingHost && (marketingPath || isPublicAssetPath(pathname))) {
+      return NextResponse.next();
+    }
 
     if (isAuthDependentPath(pathname) && !isAppHost && !isAdminHost) {
       const url = request.nextUrl.clone();
@@ -210,16 +229,16 @@ export async function middleware(request: NextRequest) {
           email,
         });
 
-       if (!isPlatform) {
-  // Limpa 'https://' ou 'http://' caso já existam na variável APP_HOST
-  const cleanHost = APP_HOST.replace(/^https?:\/\//, "");
+        if (!isPlatform) {
+          // Limpa 'https://' ou 'http://' caso já existam na variável APP_HOST
+          const cleanHost = APP_HOST.replace(/^https?:\/\//, "");
 
-  const kickUrl = new URL(`https://${cleanHost}/painel`);
-  const kick = NextResponse.redirect(kickUrl, 307);
-  kick.cookies.delete("__session");
-  log("role-gate:kick", { to: kickUrl.toString() });
-  return kick;
-}
+          const kickUrl = new URL(`https://${cleanHost}/painel`);
+          const kick = NextResponse.redirect(kickUrl, 307);
+          kick.cookies.delete("__session");
+          log("role-gate:kick", { to: kickUrl.toString() });
+          return kick;
+        }
       }
     } catch (err) {
       log("role-gate:error", { message: err instanceof Error ? err.message : String(err) });
