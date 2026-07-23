@@ -14,66 +14,8 @@ const normalizeHost = (value: string | undefined, fallback: string): string => {
 const ROOT_DOMAIN = normalizeHost(process.env["APP_ROOT_DOMAIN"], "energivia.com.br");
 const LANDING_HOST = normalizeHost(process.env["APP_LANDING_HOST"], "www.energivia.com.br");
 
-const SHARED_PREFIXES = [
-  "/api",
-  "/auth",
-  "/login",
-  "/logout",
-  "/_next",
-  "/favicon",
-  "/logo",
-  "/landing",
-  "/og",
-];
-
-const isPublicAssetPath = (pathname: string): boolean => {
-  return (
-    /\.(png|jpe?g|gif|svg|webp|avif|ico|bmp|mp4|webm|woff2?|ttf|eot|js|css|json|xml|txt)$/i.test(
-      pathname
-    ) ||
-    pathname.startsWith("/landing/") ||
-    pathname.startsWith("/og/")
-  );
-};
-
 const isLocalHost = (host: string): boolean =>
   host.includes("localhost") || host.startsWith("127.0.0.1");
-
-const isSharedPath = (pathname: string): boolean =>
-  SHARED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)) ||
-  isPublicAssetPath(pathname);
-
-const PLATFORM_ROLE_CLAIM = "https://energivia.com.br/role";
-
-const decodeJwtPayload = (jwt: string): Record<string, unknown> | null => {
-  try {
-    const parts = jwt.split(".");
-    if (parts.length !== 3) return null;
-    const payload = parts[1];
-    if (!payload) return null;
-    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
-    const json = atob(padded);
-    return JSON.parse(json) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-};
-
-const hasPlatformClaim = (claims: Record<string, unknown> | null): boolean => {
-  if (!claims) return false;
-  const value = claims[PLATFORM_ROLE_CLAIM];
-  return typeof value === "string" && value.trim().toLowerCase() === "platform";
-};
-
-const isPlatformByEmail = (email: string | undefined): boolean => {
-  if (!email) return false;
-  const allowlist = (process.env["PLATFORM_ADMIN_EMAILS"] ?? "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  return allowlist.includes(email.toLowerCase());
-};
 
 const DEBUG_AUTH = process.env["DEBUG_AUTH_MIDDLEWARE"] === "1";
 const log = (event: string, payload: Record<string, unknown> = {}): void => {
@@ -103,7 +45,7 @@ export async function middleware(request: NextRequest) {
 
   const authResponse = await auth0.middleware(request);
 
-  // Se o usuário estiver na raiz logado, direciona para o painel principal
+  // Se o usuário estiver na raiz e já autenticado, envia para o painel
   if (pathname === "/") {
     try {
       const session = await auth0.getSession(request);
@@ -121,41 +63,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Verificação de permissões de administrador/plataforma em rotas restritas
-  if (pathname.startsWith("/admin") && !isSharedPath(pathname)) {
-    try {
-      const session = await auth0.getSession(request);
-      log("role-gate:session", {
-        hasSession: !!session,
-        pathname,
-      });
-      if (session) {
-        const sessionUser = session.user as Record<string, unknown>;
-        const idToken = (session.tokenSet as { idToken?: string } | undefined)?.idToken;
-        const idTokenClaims = idToken ? decodeJwtPayload(idToken) : null;
-
-        const platformFromIdToken = hasPlatformClaim(idTokenClaims);
-        const platformFromUser = hasPlatformClaim(sessionUser);
-        const email =
-          typeof sessionUser["email"] === "string" ? (sessionUser["email"] as string) : undefined;
-        const platformFromEnv = isPlatformByEmail(email);
-        const isPlatform = platformFromIdToken || platformFromUser || platformFromEnv;
-
-        if (!isPlatform) {
-          const kickUrl = request.nextUrl.clone();
-          kickUrl.pathname = "/painel";
-          kickUrl.search = "";
-          const kick = NextResponse.redirect(kickUrl, 307);
-          kick.cookies.delete("__session");
-          log("role-gate:kick", { to: kickUrl.toString() });
-          return kick;
-        }
-      }
-    } catch (err) {
-      log("role-gate:error", { message: err instanceof Error ? err.message : String(err) });
-    }
-  }
-
+  // Permite acesso irrestrito às rotas de admin/plataforma para qualquer usuário logado
   return authResponse;
 }
 
