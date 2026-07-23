@@ -42,6 +42,22 @@ const nextConfig = {
         protocol: "https",
         hostname: "*.vercel.app",
       },
+      {
+        protocol: "https",
+        hostname: "*.up.railway.app",
+      },
+      {
+        protocol: "https",
+        hostname: "*.railway.app",
+      },
+      {
+        protocol: "https",
+        hostname: "*.amazonaws.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.s3.amazonaws.com",
+      },
     ],
   },
   async headers() {
@@ -82,4 +98,3 @@ module.exports = withSentryConfig(nextConfig, {
     },
   },
 });
-//oi
