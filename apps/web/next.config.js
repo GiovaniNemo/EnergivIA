@@ -28,6 +28,22 @@ const nextConfig = {
   transpilePackages: ["@energivia/ui", "@energivia/utils", "@energivia/tokens"],
   reactStrictMode: true,
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "www.energivia.com.br",
+      },
+      {
+        protocol: "https",
+        hostname: "energivia.com.br",
+      },
+      {
+        protocol: "https",
+        hostname: "*.vercel.app",
+      },
+    ],
+  },
   async headers() {
     return [
       {
