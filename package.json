@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "pnpm@9.14.2",
   "scripts": {
+    "postinstall": "npx puppeteer browsers install chrome",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "dev:web": "turbo run dev --filter=@energivia/web",
