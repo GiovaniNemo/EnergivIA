@@ -52,6 +52,7 @@ export class EnergyBillsService {
       rawData?: Record<string, unknown>;
     } = {};
     const t = (text || "").replace(/[\u00A0]/g, " ");
+
     // buscar consumo em kWh (ex: "350 kWh" ou "350kwh")
     const kwhMatch = t.match(/(\d{1,6}(?:[.,]\d{1,3})?)\s*(kwh|kw-h|kwh\/m[a-z]*)/i);
     if (kwhMatch && kwhMatch[1]) {
@@ -59,6 +60,7 @@ export class EnergyBillsService {
       const n = Number(raw);
       if (Number.isFinite(n)) out.consumptionKwh = Math.round(n);
     }
+
     // buscar valor em R$ (ex: R$ 123,45)
     const brlMatch = t.match(/r\$\s*(\d{1,3}(?:[\.\s]\d{3})*(?:,\d{2})?)/i);
     if (brlMatch && brlMatch[1]) {
@@ -66,6 +68,7 @@ export class EnergyBillsService {
       const n = Number(raw);
       if (Number.isFinite(n)) out.totalAmount = Number(n.toFixed(2));
     }
+
     // buscar referência/competência (MM/YYYY ou M/YYYY)
     const refMatch = t.match(
       /(compet[eê]ncia|refer[eê]ncia|referencia)[:\s]*([0-1]?\d\s*\/?\s*(?:20)?\d{2})/i
@@ -164,18 +167,152 @@ export class EnergyBillsService {
 
   private async runBillExtractionJob(
     billId: string,
-    _fileUrl: string,
+    fileUrl: string,
     fileName: string
   ): Promise<void> {
     this.logger.log(`Energy bill extraction start billId=${billId} fileName=${fileName}`);
+
     await this.prisma.energyBill.update({
       where: { id: billId },
       data: { extractionStatus: "PROCESSING", extractionError: null },
     });
-    await this.setExtractionResult(billId, {
-      extractedData: null,
-      extractionError: "Extração automática indisponível.",
-    });
+
+    try {
+      // 1. Baixa o conteúdo do arquivo
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error(`Falha ao baixar arquivo do S3 (Status: ${response.status})`);
+      }
+
+      const openAiApiKey = this.config.get<string>("OPENAI_API_KEY");
+      let extractedData: Record<string, unknown> | null = null;
+
+      // 2. Se houver OPENAI_API_KEY configurada, tenta extração via OpenAI
+      if (openAiApiKey) {
+        const ext = extname(fileName).toLowerCase();
+
+        if (ext === ".txt") {
+          const fileText = await response.text();
+          extractedData = await this.extractDataWithOpenAI(fileText, openAiApiKey);
+        } else if ([".jpg", ".jpeg", ".png", ".webp"].includes(ext)) {
+          const buffer = await response.arrayBuffer();
+          const base64Image = Buffer.from(buffer).toString("base64");
+          const mimeType = ext === ".png" ? "image/png" : "image/jpeg";
+          extractedData = await this.extractVisionWithOpenAI(base64Image, mimeType, openAiApiKey);
+        } else {
+          // PDF ou outros formatos: tenta extração via texto básico
+          const text = await response.text();
+          extractedData = await this.extractDataWithOpenAI(text, openAiApiKey);
+        }
+      }
+
+      // 3. Fallback: Se a OpenAI não retornar dados ou a chave não estiver configurada, roda regex local
+      if (!extractedData) {
+        const fileText = await response.text();
+        extractedData = this.parseBillText(fileText);
+      }
+
+      // 4. Salva o resultado
+      await this.setExtractionResult(billId, {
+        extractedData: extractedData ?? {},
+        extractionError: undefined,
+      });
+
+      this.logger.log(`Energy bill extraction completed billId=${billId}`);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Energy bill extraction error billId=${billId}: ${errorMsg}`);
+
+      await this.setExtractionResult(billId, {
+        extractedData: null,
+        extractionError: `Erro na extração: ${errorMsg}`,
+      });
+    }
+  }
+
+  private async extractDataWithOpenAI(
+    text: string,
+    apiKey: string
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content:
+                "Você é um assistente especialista em analisar contas de luz no Brasil. Extraia os dados em um JSON com os campos: consumptionKwh (número), totalAmount (número em R$), referenceMonth (string MM/YYYY), cidade (string), uf (string 2 letras), e provider (distribuidora).",
+            },
+            {
+              role: "user",
+              content: `Extraia os dados da seguinte fatura:\n\n${text}`,
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) return null;
+      const data = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const content = data.choices?.[0]?.message?.content;
+      return content ? (JSON.parse(content) as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async extractVisionWithOpenAI(
+    base64Image: string,
+    mimeType: string,
+    apiKey: string
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content:
+                "Você é um assistente especialista em analisar imagens de contas de luz no Brasil. Extraia os dados em um JSON com os campos: consumptionKwh (número), totalAmount (número em R$), referenceMonth (string MM/YYYY), cidade (string), uf (string 2 letras), e provider (distribuidora).",
+            },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Extraia os dados desta conta de energia:" },
+                {
+                  type: "image_url",
+                  image_url: { url: `data:${mimeType};base64,${base64Image}` },
+                },
+              ],
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) return null;
+      const data = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const content = data.choices?.[0]?.message?.content;
+      return content ? (JSON.parse(content) as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
   }
 
   async findByLead(tenantId: string, leadId: string) {
