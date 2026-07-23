@@ -11,27 +11,8 @@ const normalizeHost = (value: string | undefined, fallback: string): string => {
   return host || fallback;
 };
 
-const APP_HOST = normalizeHost(process.env["APP_AUTH_HOST"], "app.energivia.com.br");
-const ADMIN_HOST = normalizeHost(process.env["APP_ADMIN_HOST"], "admin.energivia.com.br");
 const ROOT_DOMAIN = normalizeHost(process.env["APP_ROOT_DOMAIN"], "energivia.com.br");
 const LANDING_HOST = normalizeHost(process.env["APP_LANDING_HOST"], "www.energivia.com.br");
-
-const PUBLIC_MARKETING_ROUTES = new Set([
-  "/",
-  "/proposta-energia-solar",
-  "/simulacao-energia-solar",
-  "/software-integrador-solar",
-  "/crm-energia-solar",
-  "/manifest.webmanifest",
-  "/robots.txt",
-  "/sitemap.xml",
-]);
-
-const ADMIN_SURFACE_PREFIXES = ["/admin", "/plataforma"];
-
-const ADMIN_LANDING_PATH = "/plataforma/financiamentos";
-
-const ADMIN_LANDING_ALIASES = new Set(["/", "/painel"]);
 
 const SHARED_PREFIXES = [
   "/api",
@@ -44,8 +25,6 @@ const SHARED_PREFIXES = [
   "/landing",
   "/og",
 ];
-
-const AUTH_DEPENDENT_PREFIXES = ["/auth", "/login", "/logout", "/api"];
 
 const isPublicAssetPath = (pathname: string): boolean => {
   return (
@@ -60,19 +39,9 @@ const isPublicAssetPath = (pathname: string): boolean => {
 const isLocalHost = (host: string): boolean =>
   host.includes("localhost") || host.startsWith("127.0.0.1");
 
-const isPublicMarketingRoute = (pathname: string): boolean => PUBLIC_MARKETING_ROUTES.has(pathname);
-
-const isAdminSurfacePath = (pathname: string): boolean =>
-  ADMIN_SURFACE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-
 const isSharedPath = (pathname: string): boolean =>
   SHARED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)) ||
   isPublicAssetPath(pathname);
-
-const isAuthDependentPath = (pathname: string): boolean =>
-  AUTH_DEPENDENT_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  );
 
 const PLATFORM_ROLE_CLAIM = "https://energivia.com.br/role";
 
@@ -118,61 +87,13 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   log("entry", { host: currentHost, pathname });
 
-  if (!isLocalHost(currentHost) && currentHost.endsWith(ROOT_DOMAIN)) {
-    const isAppHost = currentHost === APP_HOST;
-    const isAdminHost = currentHost === ADMIN_HOST;
-    const isLandingHost = currentHost === LANDING_HOST;
-    const shared = isSharedPath(pathname);
-    const adminPath = isAdminSurfacePath(pathname);
-    const marketingPath = isPublicMarketingRoute(pathname);
-
-    if (isLandingHost && (marketingPath || isPublicAssetPath(pathname))) {
-      return NextResponse.next();
-    }
-
-    if (isAuthDependentPath(pathname) && !isAppHost && !isAdminHost) {
-      const url = request.nextUrl.clone();
-      url.protocol = "https:";
-      url.host = adminPath ? ADMIN_HOST : APP_HOST;
-      log("redirect:auth-dep-to-app", {
-        from: pathname,
-        fromHost: currentHost,
-        to: url.host,
-      });
-      return NextResponse.redirect(url, 307);
-    }
-
-    if (!shared) {
-      if (isAdminHost && !adminPath) {
-        const url = request.nextUrl.clone();
-        if (ADMIN_LANDING_ALIASES.has(pathname)) {
-          url.pathname = ADMIN_LANDING_PATH;
-          log("redirect:admin-alias", { from: pathname, to: ADMIN_LANDING_PATH });
-          return NextResponse.redirect(url, 307);
-        }
-        url.protocol = "https:";
-        url.host = APP_HOST;
-        log("redirect:admin-to-app", { from: pathname, host: APP_HOST });
-        return NextResponse.redirect(url, 307);
-      }
-
-      if (isAppHost && adminPath) {
-        const url = request.nextUrl.clone();
-        url.protocol = "https:";
-        url.host = ADMIN_HOST;
-        log("redirect:app-to-admin", { from: pathname, host: ADMIN_HOST });
-        return NextResponse.redirect(url, 307);
-      }
-
-      const shouldBeOnAppHost = !marketingPath && !isAppHost && !isAdminHost;
-      if (shouldBeOnAppHost || (isLandingHost && !marketingPath)) {
-        const url = request.nextUrl.clone();
-        url.protocol = "https:";
-        url.host = adminPath ? ADMIN_HOST : APP_HOST;
-        log("redirect:landing-fallback", { from: pathname, to: url.host });
-        return NextResponse.redirect(url, 307);
-      }
-    }
+  // Normaliza o domínio sem www para redirecionar de forma limpa para o LANDING_HOST principal (www)
+  if (!isLocalHost(currentHost) && currentHost === ROOT_DOMAIN) {
+    const url = request.nextUrl.clone();
+    url.protocol = "https:";
+    url.host = LANDING_HOST;
+    log("redirect:root-to-landing", { fromHost: currentHost, to: LANDING_HOST });
+    return NextResponse.redirect(url, 307);
   }
 
   if (!isAuth0Configured()) {
@@ -182,6 +103,7 @@ export async function middleware(request: NextRequest) {
 
   const authResponse = await auth0.middleware(request);
 
+  // Se o usuário estiver na raiz logado, direciona para o painel principal
   if (pathname === "/") {
     try {
       const session = await auth0.getSession(request);
@@ -199,7 +121,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (!isLocalHost(currentHost) && currentHost === ADMIN_HOST && !isSharedPath(pathname)) {
+  // Verificação de permissões de administrador/plataforma em rotas restritas
+  if (pathname.startsWith("/admin") && !isSharedPath(pathname)) {
     try {
       const session = await auth0.getSession(request);
       log("role-gate:session", {
@@ -218,22 +141,10 @@ export async function middleware(request: NextRequest) {
         const platformFromEnv = isPlatformByEmail(email);
         const isPlatform = platformFromIdToken || platformFromUser || platformFromEnv;
 
-        log("role-gate:decision", {
-          isPlatform,
-          platformFromIdToken,
-          platformFromUser,
-          platformFromEnv,
-          hasIdToken: !!idToken,
-          idTokenClaimKeys: idTokenClaims ? Object.keys(idTokenClaims).sort() : null,
-          sessionUserKeys: Object.keys(sessionUser).sort(),
-          email,
-        });
-
         if (!isPlatform) {
-          // Limpa 'https://' ou 'http://' caso já existam na variável APP_HOST
-          const cleanHost = APP_HOST.replace(/^https?:\/\//, "");
-
-          const kickUrl = new URL(`https://${cleanHost}/painel`);
+          const kickUrl = request.nextUrl.clone();
+          kickUrl.pathname = "/painel";
+          kickUrl.search = "";
           const kick = NextResponse.redirect(kickUrl, 307);
           kick.cookies.delete("__session");
           log("role-gate:kick", { to: kickUrl.toString() });
