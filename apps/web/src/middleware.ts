@@ -3,10 +3,15 @@ import { NextResponse } from "next/server";
 import { isAuth0Configured } from "@/lib/auth0-config";
 import { auth0 } from "@/lib/auth0";
 
-const APP_HOST = process.env["APP_AUTH_HOST"] ?? "app.energivia.com.br";
-const ADMIN_HOST = process.env["APP_ADMIN_HOST"] ?? "admin.energivia.com.br";
-const ROOT_DOMAIN = process.env["APP_ROOT_DOMAIN"] ?? "energivia.com.br";
-const LANDING_HOST = process.env["APP_LANDING_HOST"] ?? "www.energivia.com.br";
+const normalizeHost = (value: string | undefined, fallback: string): string => {
+  const host = (value ?? fallback).trim().replace(/^https?:\/\//i, "").replace(/\/$/, "");
+  return host || fallback;
+};
+
+const APP_HOST = normalizeHost(process.env["APP_AUTH_HOST"], "app.energivia.com.br");
+const ADMIN_HOST = normalizeHost(process.env["APP_ADMIN_HOST"], "admin.energivia.com.br");
+const ROOT_DOMAIN = normalizeHost(process.env["APP_ROOT_DOMAIN"], "energivia.com.br");
+const LANDING_HOST = normalizeHost(process.env["APP_LANDING_HOST"], "www.energivia.com.br");
 
 const PUBLIC_MARKETING_ROUTES = new Set([
   "/",
@@ -25,9 +30,17 @@ const ADMIN_LANDING_PATH = "/plataforma/financiamentos";
 
 const ADMIN_LANDING_ALIASES = new Set(["/", "/painel"]);
 
-const SHARED_PREFIXES = ["/api", "/auth", "/login", "/logout", "/_next", "/favicon"];
+const SHARED_PREFIXES = ["/api", "/auth", "/login", "/logout", "/_next", "/favicon", "/logo", "/landing", "/og"];
 
 const AUTH_DEPENDENT_PREFIXES = ["/auth", "/login", "/logout", "/api"];
+
+const isPublicAssetPath = (pathname: string): boolean => {
+  return (
+    /\.(png|jpe?g|gif|svg|webp|avif|ico|bmp|mp4|webm|woff2?|ttf|eot|js|css|json|xml|txt)$/i.test(
+      pathname
+    ) || pathname.startsWith("/landing/") || pathname.startsWith("/og/")
+  );
+};
 
 const isLocalHost = (host: string): boolean =>
   host.includes("localhost") || host.startsWith("127.0.0.1");
@@ -38,7 +51,8 @@ const isAdminSurfacePath = (pathname: string): boolean =>
   ADMIN_SURFACE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
 const isSharedPath = (pathname: string): boolean =>
-  SHARED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  SHARED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)) ||
+  isPublicAssetPath(pathname);
 
 const isAuthDependentPath = (pathname: string): boolean =>
   AUTH_DEPENDENT_PREFIXES.some(
@@ -99,7 +113,7 @@ export async function middleware(request: NextRequest) {
 
     if (isAuthDependentPath(pathname) && !isAppHost && !isAdminHost) {
       const url = request.nextUrl.clone();
-      url.protocol = "https";
+      url.protocol = "https:";
       url.host = adminPath ? ADMIN_HOST : APP_HOST;
       log("redirect:auth-dep-to-app", {
         from: pathname,
@@ -117,7 +131,7 @@ export async function middleware(request: NextRequest) {
           log("redirect:admin-alias", { from: pathname, to: ADMIN_LANDING_PATH });
           return NextResponse.redirect(url, 307);
         }
-        url.protocol = "https";
+        url.protocol = "https:";
         url.host = APP_HOST;
         log("redirect:admin-to-app", { from: pathname, host: APP_HOST });
         return NextResponse.redirect(url, 307);
@@ -125,7 +139,7 @@ export async function middleware(request: NextRequest) {
 
       if (isAppHost && adminPath) {
         const url = request.nextUrl.clone();
-        url.protocol = "https";
+        url.protocol = "https:";
         url.host = ADMIN_HOST;
         log("redirect:app-to-admin", { from: pathname, host: ADMIN_HOST });
         return NextResponse.redirect(url, 307);
@@ -134,7 +148,7 @@ export async function middleware(request: NextRequest) {
       const shouldBeOnAppHost = !marketingPath && !isAppHost && !isAdminHost;
       if (shouldBeOnAppHost || (isLandingHost && !marketingPath)) {
         const url = request.nextUrl.clone();
-        url.protocol = "https";
+        url.protocol = "https:";
         url.host = adminPath ? ADMIN_HOST : APP_HOST;
         log("redirect:landing-fallback", { from: pathname, to: url.host });
         return NextResponse.redirect(url, 307);
