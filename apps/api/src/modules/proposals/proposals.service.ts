@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { BadRequestException, Injectable, NotFoundException, Logger } from "@nestjs/common";
 import type { Prisma, ProposalTemplate } from "@prisma/client";
 import { isProposalIntegratorSnapshot } from "@energivia/shared-types";
-import * as puppeteer from "puppeteer";
+import chromium from "@sparticuz/chromium";
+import puppeteer from "puppeteer-core";
 
 import { PrismaService } from "../../prisma/prisma.service";
 import { softDeleteWhere as soft } from "../../prisma/soft-delete";
@@ -413,24 +414,36 @@ export class ProposalsService {
   }
 
   async generatePdf(proposalId: string): Promise<Buffer> {
-    const webBaseUrl = process.env["PUBLIC_WEB_APP_BASE_URL"] || "http://localhost:3000";
+    const webBaseUrl = process.env["PUBLIC_WEB_APP_BASE_URL"] || "https://www.energivia.com.br";
     const targetUrl = `${webBaseUrl}/propostas/imprimir/${proposalId}`;
 
     this.logger.log(`Iniciando geração de PDF para a proposta ${proposalId} na URL: ${targetUrl}`);
 
-    const customExecutablePath = process.env["PUPPETEER_EXECUTABLE_PATH"];
+    const isProduction = process.env["NODE_ENV"] === "production";
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      ...(customExecutablePath ? { executablePath: customExecutablePath } : {}),
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--disable-gpu",
-      ],
-    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const launchOptions: any = isProduction
+      ? {
+          args: chromium.args,
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath(),
+          headless: chromium.headless,
+        }
+      : {
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-accelerated-2d-canvas",
+            "--disable-gpu",
+          ],
+          headless: true,
+          executablePath:
+            process.env["PUPPETEER_EXECUTABLE_PATH"] ||
+            (await import("puppeteer")).executablePath(),
+        };
+
+    const browser = await puppeteer.launch(launchOptions);
 
     try {
       const page = await browser.newPage();
