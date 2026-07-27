@@ -28,19 +28,6 @@ const nextConfig = {
   transpilePackages: ["@energivia/ui", "@energivia/utils", "@energivia/tokens"],
   experimental: {
     serverComponentsExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
-    outputFileTracingIncludes: {
-      "/api/**/*": [
-        "./node_modules/@sparticuz/chromium/bin/**",
-        "../../node_modules/@sparticuz/chromium/bin/**",
-        "../../node_modules/.pnpm/@sparticuz+chromium*/**",
-      ],
-    },
-  },
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.externals = [...(config.externals || []), "@sparticuz/chromium", "puppeteer-core"];
-    }
-    return config;
   },
   reactStrictMode: true,
   distDir: process.env.NEXT_DIST_DIR || ".next",
