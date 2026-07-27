@@ -413,7 +413,7 @@ export class ProposalsService {
   }
 
   async generatePdf(proposalId: string): Promise<Buffer> {
-    const webBaseUrl = process.env.PUBLIC_WEB_APP_BASE_URL || "http://localhost:3000";
+    const webBaseUrl = process.env["PUBLIC_WEB_APP_BASE_URL"] || "http://localhost:3000";
     const targetUrl = `${webBaseUrl}/propostas/imprimir/${proposalId}`;
 
     this.logger.log(`Iniciando geração de PDF para a proposta ${proposalId} na URL: ${targetUrl}`);
