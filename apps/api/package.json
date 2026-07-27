@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "puppeteer browsers install chrome",
     "build": "prisma generate && nest build",
     "dev": "nest start --watch",
     "start": "nest start",

@@ -418,8 +418,11 @@ export class ProposalsService {
 
     this.logger.log(`Iniciando geração de PDF para a proposta ${proposalId} na URL: ${targetUrl}`);
 
+    const customExecutablePath = process.env["PUPPETEER_EXECUTABLE_PATH"];
+
     const browser = await puppeteer.launch({
       headless: true,
+      ...(customExecutablePath ? { executablePath: customExecutablePath } : {}),
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
