@@ -415,7 +415,7 @@ export class ProposalsService {
 
   async generatePdf(proposalId: string): Promise<Buffer> {
     const webBaseUrl = process.env["PUBLIC_WEB_APP_BASE_URL"] || "https://www.energivia.com.br";
-    const targetUrl = `${webBaseUrl}/propostas/imprimir/${proposalId}`;
+    const targetUrl = `${webBaseUrl}/proposta/${proposalId}`;
 
     this.logger.log(`Iniciando geração de PDF para a proposta ${proposalId} na URL: ${targetUrl}`);
 
