@@ -3,7 +3,7 @@ import { BadRequestException, Injectable, NotFoundException, Logger } from "@nes
 import type { Prisma, ProposalTemplate } from "@prisma/client";
 import { isProposalIntegratorSnapshot } from "@energivia/shared-types";
 import chromium from "@sparticuz/chromium";
-import puppeteer from "puppeteer-core";
+import puppeteerCore from "puppeteer-core";
 
 import { PrismaService } from "../../prisma/prisma.service";
 import { softDeleteWhere as soft } from "../../prisma/soft-delete";
@@ -419,32 +419,29 @@ export class ProposalsService {
 
     this.logger.log(`Iniciando geração de PDF para a proposta ${proposalId} na URL: ${targetUrl}`);
 
-    const isProduction = process.env["NODE_ENV"] === "production";
+    // Identifica se está rodando localmente (Windows/Mac) ou na Vercel/Railway (Linux)
+    const isLocal = process.platform === "win32" || process.platform === "darwin";
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const launchOptions: any = isProduction
-      ? {
+    let browser: any = null;
+
+    try {
+      if (isLocal) {
+        // AMBIENTE LOCAL: Importa dinamicamente o puppeteer normal
+        const puppeteerLocal = await import("puppeteer");
+        browser = await puppeteerLocal.default.launch({
+          headless: true,
+          args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        });
+      } else {
+        // AMBIENTE NUVEM (VERCEL): Usa o puppeteer-core + sparticuz/chromium
+        browser = await puppeteerCore.launch({
           args: chromium.args,
           executablePath: await chromium.executablePath(),
           headless: true,
-        }
-      : {
-          args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-accelerated-2d-canvas",
-            "--disable-gpu",
-          ],
-          headless: true,
-          executablePath:
-            process.env["PUPPETEER_EXECUTABLE_PATH"] ||
-            (await import("puppeteer")).executablePath(),
-        };
+        });
+      }
 
-    const browser = await puppeteer.launch(launchOptions);
-
-    try {
       const page = await browser.newPage();
 
       await page.goto(targetUrl, {
@@ -468,7 +465,9 @@ export class ProposalsService {
       this.logger.error(`Erro ao gerar PDF da proposta ${proposalId}: ${String(error)}`);
       throw new BadRequestException("Não foi possível gerar o PDF da proposta.");
     } finally {
-      await browser.close();
+      if (browser) {
+        await browser.close();
+      }
     }
   }
 }
