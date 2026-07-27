@@ -32,9 +32,18 @@ async function getBrowser() {
     });
   }
 
+  let executablePath: string;
+  try {
+    executablePath = await chromium.executablePath();
+  } catch {
+    executablePath = await chromium.executablePath(
+      "https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar"
+    );
+  }
+
   return puppeteerCore.launch({
     args: chromium.args,
-    executablePath: await chromium.executablePath(),
+    executablePath,
     headless: true,
   });
 }
