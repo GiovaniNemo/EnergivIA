@@ -26,6 +26,9 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@energivia/ui", "@energivia/utils", "@energivia/tokens"],
+  experimental: {
+    serverComponentsExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
+  },
   reactStrictMode: true,
   distDir: process.env.NEXT_DIST_DIR || ".next",
   images: {

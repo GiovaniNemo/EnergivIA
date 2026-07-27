@@ -1,5 +1,6 @@
-import puppeteer from "puppeteer";
 import { NextResponse } from "next/server";
+import puppeteerCore from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 import {
   proposalPuppeteerPdfOptions,
   wrapProposalHtmlForPuppeteer,
@@ -15,6 +16,28 @@ function toSafeAsciiFilename(raw: string): string {
     .replace(/-+/g, "-")
     .replace(/^[-_.]+|[-_.]+$/g, "");
   return normalized.toLowerCase() || "proposta-solar";
+}
+
+async function getBrowser() {
+  const isLocal =
+    process.env.NODE_ENV === "development" ||
+    process.platform === "win32" ||
+    process.platform === "darwin";
+
+  if (isLocal) {
+    const puppeteer = await import("puppeteer");
+    return puppeteer.default.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+  }
+
+  return puppeteerCore.launch({
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath: await chromium.executablePath(),
+    headless: true,
+  });
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -43,10 +66,7 @@ export async function POST(request: Request): Promise<Response> {
       extraHeadHtml,
     });
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    const browser = await getBrowser();
     try {
       const page = await browser.newPage();
       await page.setContent(html, { waitUntil: "networkidle0", timeout: 45_000 });
