@@ -34,7 +34,6 @@ async function getBrowser() {
 
   return puppeteerCore.launch({
     args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
     executablePath: await chromium.executablePath(),
     headless: true,
   });
@@ -69,7 +68,7 @@ export async function POST(request: Request): Promise<Response> {
     const browser = await getBrowser();
     try {
       const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: "networkidle0", timeout: 45_000 });
+      await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 45_000 });
       const pdf = await page.pdf(proposalPuppeteerPdfOptions);
       return new Response(Buffer.from(pdf), {
         status: 200,
