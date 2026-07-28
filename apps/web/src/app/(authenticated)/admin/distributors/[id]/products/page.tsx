@@ -141,6 +141,7 @@ export default function DistributorInventoryPage(): JSX.Element {
     updated: number;
     skipped: { index: number; reason: string }[];
   } | null>(null);
+  const dismissBulkResult = () => setBulkResult(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -160,7 +161,7 @@ export default function DistributorInventoryPage(): JSX.Element {
     setOptionalColumns(next);
     try {
       window.localStorage.setItem(COLUMN_PREFS_KEY, JSON.stringify(next));
-    } catch {}
+    } catch { }
   };
 
   const toggleOptionalColumn = (id: OptionalColumnId, checked: boolean) => {
@@ -710,7 +711,42 @@ export default function DistributorInventoryPage(): JSX.Element {
         ) : null}
       </Paper>
 
-      {}
+      {bulkResult && (
+        <Alert
+          severity={bulkResult.skipped.length > 0 ? "warning" : "success"}
+          onClose={dismissBulkResult}
+          sx={{ mt: 2 }}
+        >
+          <Typography variant="subtitle2">
+            Importação concluída: {bulkResult.created} criados, {bulkResult.updated} atualizados.
+          </Typography>
+          {bulkResult.skipped.length > 0 && (
+            <Box mt={1}>
+              <Typography variant="body2" fontWeight="bold">
+                {bulkResult.skipped.length} linha(s) ignorada(s):
+              </Typography>
+              <ul style={{ margin: 0, paddingLeft: 16 }}>
+                {bulkResult.skipped.slice(0, 10).map((s, i) => (
+                  <li key={i}>
+                    <Typography variant="body2">
+                      Linha {s.index + 2}: {s.reason}
+                    </Typography>
+                  </li>
+                ))}
+                {bulkResult.skipped.length > 10 && (
+                  <li>
+                    <Typography variant="body2">
+                      ... e mais {bulkResult.skipped.length - 10} outras
+                    </Typography>
+                  </li>
+                )}
+              </ul>
+            </Box>
+          )}
+        </Alert>
+      )}
+
+      { }
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Adicionar produto</DialogTitle>
         <form onSubmit={form.handleSubmit((values) => addMutation.mutate(values))}>
@@ -836,7 +872,7 @@ export default function DistributorInventoryPage(): JSX.Element {
         </form>
       </Dialog>
 
-      {}
+      { }
       {editingRow && (
         <Dialog
           open={Boolean(editingRow)}
@@ -963,7 +999,7 @@ export default function DistributorInventoryPage(): JSX.Element {
         </Dialog>
       )}
 
-      {}
+      { }
       <Dialog
         open={bulkResult !== null}
         onClose={() => setBulkResult(null)}
