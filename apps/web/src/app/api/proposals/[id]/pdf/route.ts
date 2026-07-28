@@ -127,7 +127,9 @@ export async function GET(
     try {
       const page = await browser.newPage();
 
-      await page.setContent(html, { waitUntil: "networkidle0", timeout: 45_000 });
+      await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 45_000 });
+      // Wait for Tailwind CDN to finish loading
+      await page.waitForNetworkIdle({ timeout: 15_000 }).catch(() => { });
       const pdf = await page.pdf(proposalPuppeteerPdfOptions);
 
       const safeFilename = toSafeAsciiFilename(payload.title ?? "proposta-solar");
