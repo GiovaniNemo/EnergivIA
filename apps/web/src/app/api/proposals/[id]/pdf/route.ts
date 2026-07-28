@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import puppeteerCore from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
-import {
-  wrapProposalHtmlForPuppeteer,
-  proposalPuppeteerPdfOptions,
-} from "@/lib/proposal-puppeteer-html";
-import { templateConfigToPreviewDocument } from "@/lib/proposal-template-document";
-import { mergePublicProposalVariables } from "@/lib/public-proposal-variables";
+import { proposalPuppeteerPdfOptions } from "@/lib/proposal-puppeteer-html";
 import type { PublicProposalPayload } from "@/lib/public-proposals-api";
 import { auth0 } from "@/lib/auth0";
-import { PreviewDocument } from "@/components/proposals/editor/preview-document";
-import React from "react";
 
 const BACKEND_URL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
 
@@ -86,63 +79,15 @@ export async function GET(
         { status: 400 }
       );
     }
-
-    const documentState = templateConfigToPreviewDocument(payload.proposalTemplate.config);
-    const mergedVariables = mergePublicProposalVariables(documentState.variables, payload);
-    documentState.variables = mergedVariables;
-
-    const editorStyles = payload.proposalTemplate?.config?.editor?.styles as Record<string, unknown> | undefined;
-    const branding = editorStyles?.["branding"] as {
-      primaryColor?: string;
-      secondaryColor?: string;
-      backgroundColor?: string;
-      textColor?: string;
-      fontFamily?: string;
-    } | undefined;
-
-    let ReactDomServer: any;
-    try {
-      ReactDomServer = await eval('import("react-dom/server")');
-    } catch {
-      ReactDomServer = require("react-dom/server");
-    }
-
-    const renderToStaticMarkup =
-      ReactDomServer.renderToStaticMarkup || ReactDomServer.default?.renderToStaticMarkup;
-
-    if (!renderToStaticMarkup) {
-      throw new Error("Unable to load renderToStaticMarkup from react-dom/server");
-    }
-
-    const bodyHtml = renderToStaticMarkup(
-      React.createElement(PreviewDocument, {
-        title: payload.title ?? "Proposta Solar",
-        documentState,
-        mode: "pdf",
-        publicLayout: false,
-      })
-    );
-
-    const html = wrapProposalHtmlForPuppeteer({
-      documentTitle: payload.title ?? "Proposta Solar",
-      bodyHtml,
-      branding: {
-        primaryColor: branding?.primaryColor ?? "#059669",
-        secondaryColor: branding?.secondaryColor ?? "#047857",
-        backgroundColor: branding?.backgroundColor ?? "#ffffff",
-        textColor: branding?.textColor ?? "#0f172a",
-        fontFamily: branding?.fontFamily,
-      },
-      extraHeadHtml: `<script src="https://cdn.tailwindcss.com"></script>`
-    });
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || _request.nextUrl.origin).replace(/\/$/, "");
+    const proposalUrl = `${appUrl}/proposta/${id}?pdf=true`;
 
     const browser = await getBrowser();
     try {
       const page = await browser.newPage();
+      await page.setViewport({ width: 1200, height: 800 });
+      await page.goto(proposalUrl, { waitUntil: "networkidle0", timeout: 45_000 });
 
-      await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 45_000 });
-      // Wait for Tailwind CDN to finish loading
-      await page.waitForNetworkIdle({ timeout: 15_000 }).catch(() => { });
       const pdf = await page.pdf(proposalPuppeteerPdfOptions);
 
       const safeFilename = toSafeAsciiFilename(payload.title ?? "proposta-solar");

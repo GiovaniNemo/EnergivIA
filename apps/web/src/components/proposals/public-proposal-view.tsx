@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { PreviewDocument } from "@/components/proposals/editor/preview-document";
 import { LoadingState } from "@/components/ui/loading-state";
 import { getPublicProposal, type PublicProposalPayload } from "@/lib/public-proposals-api";
@@ -11,6 +12,8 @@ import { templateConfigToPreviewDocument } from "@/lib/proposal-template-documen
 export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.Element {
   const [data, setData] = useState<PublicProposalPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const isPdf = searchParams?.get("pdf") === "true";
 
   useEffect(() => {
     if (!proposalId) return;
@@ -60,18 +63,20 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
 
   return (
     <main className="min-h-screen bg-[var(--color-background)]">
-      <div className={`bg-[var(--color-background)] py-4 ${publicColumnClass}`}>
-        <h1 className="text-xl font-semibold text-[var(--color-foreground)]">{data.title}</h1>
-        <p className="text-sm text-[var(--color-muted-foreground)]">
-          Cliente: {data.deal.lead.name} · Válida até{" "}
-          {new Date(data.validUntil).toLocaleDateString("pt-BR")}
-        </p>
-      </div>
-      <div className={`${publicColumnClass} pt-5 pb-8`}>
+      {!isPdf && (
+        <div className={`bg-[var(--color-background)] py-4 ${publicColumnClass}`}>
+          <h1 className="text-xl font-semibold text-[var(--color-foreground)]">{data.title}</h1>
+          <p className="text-sm text-[var(--color-muted-foreground)]">
+            Cliente: {data.deal.lead.name} · Válida até{" "}
+            {new Date(data.validUntil).toLocaleDateString("pt-BR")}
+          </p>
+        </div>
+      )}
+      <div className={isPdf ? "w-full" : `${publicColumnClass} pt-5 pb-8`}>
         <PreviewDocument
           title={data.title}
           documentState={documentState}
-          mode="web"
+          mode={isPdf ? "pdf" : "web"}
           viewport="desktop"
           publicLayout
           sectionRenderOptions={
