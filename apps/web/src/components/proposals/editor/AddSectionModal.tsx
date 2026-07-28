@@ -982,7 +982,7 @@ export function AddSectionModal({
         style={{ height: "min(760px, calc(100vh - 80px))" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {}
+        { }
         <div className="flex shrink-0 items-center gap-4 border-b border-[var(--color-border)] px-6 py-4">
           <div>
             <h2 className="text-[17px] font-bold text-[var(--color-foreground)]">
@@ -995,7 +995,7 @@ export function AddSectionModal({
             )}
           </div>
 
-          {}
+          { }
           <div className="relative ml-auto max-w-[420px] flex-1">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted-foreground)]">
               <IconSearch />
@@ -1022,11 +1022,11 @@ export function AddSectionModal({
           </button>
         </div>
 
-        {}
+        { }
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          {}
+          { }
           <aside className="w-[248px] shrink-0 overflow-y-auto border-r border-[var(--color-border)] bg-[var(--color-background)] p-3">
-            {}
+            { }
             <div className="mb-4">
               <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-[var(--color-muted-foreground)]">
                 Biblioteca
@@ -1060,11 +1060,10 @@ export function AddSectionModal({
                     setLibraryView(view);
                     setActiveCategory(null);
                   }}
-                  className={`mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition ${
-                    libraryView === view && !activeCategory
+                  className={`mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition ${libraryView === view && !activeCategory
                       ? "bg-emerald-50 font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
                       : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
-                  }`}
+                    }`}
                 >
                   <span className="shrink-0">{icon}</span>
                   <span className="flex-1 text-left">{label}</span>
@@ -1073,7 +1072,7 @@ export function AddSectionModal({
               ))}
             </div>
 
-            {}
+            { }
             <div className="mb-4">
               <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-[var(--color-muted-foreground)]">
                 Categorias
@@ -1086,11 +1085,10 @@ export function AddSectionModal({
                     setActiveCategory(cat);
                     setLibraryView("all");
                   }}
-                  className={`mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition ${
-                    activeCategory === cat
+                  className={`mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition ${activeCategory === cat
                       ? "bg-emerald-50 font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
                       : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
-                  }`}
+                    }`}
                 >
                   <span className="shrink-0">{CATEGORY_ICON[cat]}</span>
                   <span className="flex-1 text-left">{cat}</span>
@@ -1101,10 +1099,10 @@ export function AddSectionModal({
               ))}
             </div>
 
-            {}
+            { }
             <div className="mx-2 mb-4 border-t border-[var(--color-border)]" />
 
-            {}
+            { }
             <div className="mb-4">
               <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-[var(--color-muted-foreground)]">
                 Pessoal
@@ -1125,7 +1123,7 @@ export function AddSectionModal({
               </button>
             </div>
 
-            {}
+            { }
             <div className="mx-1 rounded-xl border border-violet-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-3 dark:border-violet-800 dark:from-indigo-950/30 dark:to-purple-950/30">
               <p className="mb-1 flex items-center gap-1.5 text-[12px] font-bold text-violet-700 dark:text-violet-400">
                 <IconSparkle /> Gerar com IA
@@ -1135,6 +1133,7 @@ export function AddSectionModal({
               </p>
               <button
                 type="button"
+                onClick={() => alert("A geração de seções com IA entrará em funcionamento na próxima atualização! Em breve você poderá criar análises e textos comerciais de forma automática.")}
                 className="w-full rounded-lg bg-gradient-to-r from-violet-600 to-indigo-500 py-2 text-[11px] font-semibold text-white hover:from-violet-700 hover:to-indigo-600"
               >
                 + Nova seção com IA
@@ -1142,9 +1141,9 @@ export function AddSectionModal({
             </div>
           </aside>
 
-          {}
+          { }
           <main className="flex-1 overflow-y-auto p-5">
-            {}
+            { }
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <p className="mr-auto text-[14px] font-semibold text-[var(--color-foreground)]">
                 {activeCategory ??
@@ -1162,11 +1161,10 @@ export function AddSectionModal({
                   key={f}
                   type="button"
                   onClick={() => setActiveFilter(f)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] transition ${
-                    activeFilter === f
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] transition ${activeFilter === f
                       ? "border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-card)]"
                       : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:border-[var(--color-foreground)]/30 hover:text-[var(--color-foreground)]"
-                  }`}
+                    }`}
                 >
                   {f === "all" ? "Todos" : f === "popular" ? "Mais usadas" : "Novas"}
                 </button>
@@ -1196,13 +1194,12 @@ export function AddSectionModal({
                         setSelectedType(type);
                         setSelectedVariant(null);
                       }}
-                      className={`group cursor-pointer overflow-hidden rounded-xl border transition-all ${
-                        isSelected
+                      className={`group cursor-pointer overflow-hidden rounded-xl border transition-all ${isSelected
                           ? "border-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]"
                           : "border-[var(--color-border)] hover:border-emerald-400 hover:shadow-md hover:-translate-y-0.5"
-                      } bg-[var(--color-card)]`}
+                        } bg-[var(--color-card)]`}
                     >
-                      {}
+                      { }
                       <div className="relative aspect-[4/3] border-b border-[var(--color-border)] bg-[var(--color-background)] p-2">
                         <SectionMockup kind={TYPE_MOCKUP[type]} />
                         {inTemplate && (
@@ -1218,11 +1215,10 @@ export function AddSectionModal({
                         <button
                           type="button"
                           onClick={(e) => toggleFavorite(type, e)}
-                          className={`absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border-none bg-white/90 text-[var(--color-muted-foreground)] shadow backdrop-blur-sm transition ${
-                            isFav
+                          className={`absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border-none bg-white/90 text-[var(--color-muted-foreground)] shadow backdrop-blur-sm transition ${isFav
                               ? "opacity-100 text-amber-500"
                               : "opacity-0 group-hover:opacity-100"
-                          }`}
+                            }`}
                         >
                           <svg
                             width="11"
@@ -1236,7 +1232,7 @@ export function AddSectionModal({
                           </svg>
                         </button>
                       </div>
-                      {}
+                      { }
                       <div className="px-3 py-2.5">
                         <p className="text-[13px] font-semibold leading-tight text-[var(--color-foreground)]">
                           {SECTION_TYPE_LABELS[type]}
@@ -1256,11 +1252,11 @@ export function AddSectionModal({
             )}
           </main>
 
-          {}
+          { }
           <aside className="flex w-[340px] shrink-0 flex-col overflow-y-auto border-l border-[var(--color-border)]">
             {selected && selectedMeta ? (
               <>
-                {}
+                { }
                 <div className="shrink-0 bg-[var(--color-background)] p-4">
                   <ScaledSectionPreview
                     type={selected}
@@ -1269,7 +1265,7 @@ export function AddSectionModal({
                   />
                 </div>
 
-                {}
+                { }
                 <div className="flex-1 px-5 pb-5 pt-4">
                   <span className="mb-2 inline-block rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
                     {SECTION_CATEGORY_BY_TYPE[selected]}
@@ -1281,7 +1277,7 @@ export function AddSectionModal({
                     {selectedMeta.desc}
                   </p>
 
-                  {}
+                  { }
                   <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-[var(--color-background)] p-3">
                     {[
                       { label: "Páginas", value: "1" },
@@ -1306,7 +1302,7 @@ export function AddSectionModal({
                     ))}
                   </div>
 
-                  {}
+                  { }
                   {(() => {
                     const variants = SECTION_VARIANTS[selected] ?? [];
                     if (variants.length <= 1) return null;
@@ -1324,11 +1320,10 @@ export function AddSectionModal({
                               key={v}
                               type="button"
                               onClick={() => setSelectedVariant(v)}
-                              className={`flex cursor-pointer flex-col gap-1 rounded-lg border-2 p-1 transition ${
-                                v === activeVariant
+                              className={`flex cursor-pointer flex-col gap-1 rounded-lg border-2 p-1 transition ${v === activeVariant
                                   ? "border-emerald-500"
                                   : "border-[var(--color-border)] hover:border-[var(--color-foreground)]/30"
-                              }`}
+                                }`}
                             >
                               <div className="aspect-video w-full overflow-hidden rounded">
                                 <ScaledSectionPreview
@@ -1366,7 +1361,7 @@ export function AddSectionModal({
           </aside>
         </div>
 
-        {}
+        { }
         <div className="flex shrink-0 items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-background)] px-5 py-3.5">
           <div className="flex items-center gap-2 text-[12px] text-[var(--color-muted-foreground)]">
             <span>Posição:</span>
