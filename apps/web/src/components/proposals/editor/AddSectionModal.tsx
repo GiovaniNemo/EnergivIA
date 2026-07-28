@@ -873,11 +873,6 @@ export function AddSectionModal({
   const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState<Set<SectionType>>(new Set());
   const [activeFilter, setActiveFilter] = useState<"all" | "popular" | "new">("all");
-
-  const [showAIPrompt, setShowAIPrompt] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-
   const searchInputRef = useRef<HTMLInputElement>(null);
   const openRef = useRef(open);
   openRef.current = open;
@@ -969,29 +964,6 @@ export function AddSectionModal({
       const fieldsPatch = demoOverrides ? { ...demoOverrides } : undefined;
       onAdd(selectedType, variant, fieldsPatch);
       onClose();
-    }
-  }
-
-  async function handleAIGenerate() {
-    if (!aiPrompt.trim()) return;
-    setIsGenerating(true);
-    try {
-      const res = await fetch("/api/proxy/proposals/ai-generate-section", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: aiPrompt, contextText: "Template: " + (templateName || "Padrão") })
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-
-      onAdd("custom", "default", { title: data.title ?? "Nova Seção", text: data.text ?? "" });
-      setShowAIPrompt(false);
-      setAiPrompt("");
-      onClose();
-    } catch (error) {
-      alert("Ocorreu um erro ao gerar a seção (falha na API).");
-    } finally {
-      setIsGenerating(false);
     }
   }
 
@@ -1152,45 +1124,21 @@ export function AddSectionModal({
             </div>
 
             { }
-            {showAIPrompt ? (
-              <div className="mx-1 rounded-xl border border-violet-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-3 dark:border-violet-800 dark:from-indigo-950/30 dark:to-purple-950/30 flex flex-col gap-2">
-                <p className="flex items-center gap-1.5 text-[12px] font-bold text-violet-700 dark:text-violet-400">
-                  <IconSparkle /> O que você precisa?
-                </p>
-                <textarea
-                  value={aiPrompt}
-                  onChange={e => setAiPrompt(e.target.value)}
-                  disabled={isGenerating}
-                  className="w-full text-[11px] rounded border border-violet-200 p-2 focus:outline-violet-500 text-slate-800"
-                  rows={3}
-                  placeholder="Ex: Crie uma seção sobre a garantia dos nossos painéis..."
-                />
-                <div className="flex gap-2">
-                  <button disabled={isGenerating} onClick={() => setShowAIPrompt(false)} type="button" className="flex-1 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-700" >
-                    Cancelar
-                  </button>
-                  <button disabled={isGenerating || !aiPrompt.trim()} onClick={handleAIGenerate} type="button" className="flex-1 py-1 text-[11px] font-bold text-white bg-violet-600 rounded disabled:opacity-50 hover:bg-violet-700 transition-colors" >
-                    {isGenerating ? "Gerando..." : "Gerar"}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="mx-1 rounded-xl border border-violet-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-3 dark:border-violet-800 dark:from-indigo-950/30 dark:to-purple-950/30">
-                <p className="mb-1 flex items-center gap-1.5 text-[12px] font-bold text-violet-700 dark:text-violet-400">
-                  <IconSparkle /> Gerar com IA
-                </p>
-                <p className="mb-2.5 text-[11px] leading-snug text-[var(--color-muted-foreground)]">
-                  Descreva a seção que precisa e a IA cria a partir do contexto da proposta.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowAIPrompt(true)}
-                  className="w-full rounded-lg bg-gradient-to-r from-violet-600 to-indigo-500 py-2 text-[11px] font-semibold text-white hover:from-violet-700 hover:to-indigo-600"
-                >
-                  + Nova seção com IA
-                </button>
-              </div>
-            )}
+            <div className="mx-1 rounded-xl border border-violet-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-3 dark:border-violet-800 dark:from-indigo-950/30 dark:to-purple-950/30">
+              <p className="mb-1 flex items-center gap-1.5 text-[12px] font-bold text-violet-700 dark:text-violet-400">
+                <IconSparkle /> Gerar com IA
+              </p>
+              <p className="mb-2.5 text-[11px] leading-snug text-[var(--color-muted-foreground)]">
+                Descreva a seção que precisa e a IA cria a partir do contexto da proposta.
+              </p>
+              <button
+                type="button"
+                onClick={() => alert("A geração de seções com IA entrará em funcionamento na próxima atualização! Em breve você poderá criar análises e textos comerciais de forma automática.")}
+                className="w-full rounded-lg bg-gradient-to-r from-violet-600 to-indigo-500 py-2 text-[11px] font-semibold text-white hover:from-violet-700 hover:to-indigo-600"
+              >
+                + Nova seção com IA
+              </button>
+            </div>
           </aside>
 
           { }
