@@ -7,7 +7,7 @@ import { CreateProposalDto } from "./dto/create-proposal.dto";
 @Controller()
 @UseGuards(UnifiedAuthGuard)
 export class DealProposalsController {
-  constructor(private readonly proposalsService: ProposalsService) {}
+  constructor(private readonly proposalsService: ProposalsService) { }
 
   @Post("deals/:dealId/proposals")
   create(
@@ -29,5 +29,10 @@ export class DealProposalsController {
   @Get("deals/:dealId/proposals")
   findByDeal(@TenantId() tenantId: string, @Param("dealId") dealId: string) {
     return this.proposalsService.findByDeal(tenantId, dealId);
+  }
+
+  @Post("proposals/ai-generate-section")
+  generateAiSection(@Body() body: { prompt: string; contextText?: string }) {
+    return this.proposalsService.generateAiSection(body.prompt, body.contextText);
   }
 }

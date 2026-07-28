@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { BadRequestException, Injectable, NotFoundException, Logger } from "@nestjs/common";
 import type { Prisma, ProposalTemplate } from "@prisma/client";
 import { isProposalIntegratorSnapshot } from "@energivia/shared-types";
@@ -61,7 +62,7 @@ export class ProposalsService {
     private readonly notificationsService: NotificationsService,
     private readonly leadActivityLog: LeadActivityLogService,
     private readonly stockReservation: StockReservationService
-  ) {}
+  ) { }
 
   async list(tenantId: string) {
     const rows = await this.prisma.proposal.findMany({
@@ -152,12 +153,12 @@ export class ProposalsService {
     let templateVersion: number | undefined;
     const explicitTemplate = proposalTemplateId
       ? await this.prisma.proposalTemplate.findFirst({
-          where: {
-            id: proposalTemplateId,
-            tenantId,
-            deletedAt: null,
-          },
-        })
+        where: {
+          id: proposalTemplateId,
+          tenantId,
+          deletedAt: null,
+        },
+      })
       : null;
     if (explicitTemplate) {
       templateVersion = explicitTemplate.version;
@@ -219,7 +220,7 @@ export class ProposalsService {
         meta: { proposalId: created.id, dealId: data.dealId },
         occurredAt: created.createdAt,
       })
-      .catch(() => {});
+      .catch(() => { });
     return created;
   }
 
@@ -404,11 +405,11 @@ export class ProposalsService {
       internalUrl: `/propostas/${p.id}`,
       deal: p.deal
         ? {
-            id: p.deal.id,
-            title: p.deal.title,
-            stage: p.deal.stage,
-            lead: p.deal.lead,
-          }
+          id: p.deal.id,
+          title: p.deal.title,
+          stage: p.deal.stage,
+          lead: p.deal.lead,
+        }
         : null,
     };
   }
@@ -425,7 +426,7 @@ export class ProposalsService {
     }
 
     const webBaseUrl = process.env["PUBLIC_WEB_APP_BASE_URL"] || "https://www.energivia.com.br";
-    
+
     // 2. Usa o token público (se existir) ou o ID como fallback
     const token = proposal.publicToken || proposal.id;
 
@@ -484,6 +485,42 @@ export class ProposalsService {
       if (browser) {
         await browser.close();
       }
+    }
+  }
+
+  async generateAiSection(prompt: string, contextText?: string) {
+    const apiKey = process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
+    if (!apiKey) {
+      throw new BadRequestException("Serviço de IA não configurado (chave ausente).");
+    }
+
+    try {
+      const model = process.env["GEMINI_TEXT_MODEL"] ?? "gemini-2.5-flash";
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const genModel = genAI.getGenerativeModel({
+        model,
+        generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
+        systemInstruction:
+          `Você é um especialista em vendas e marketing de energia solar fotovoltaica. 
+Seu trabalho é gerar conteúdos persuasivos, claros e profissionais para seções de propostas comerciais.
+Você DEVE retornar um JSON válido com exatamente estas DUAS chaves:
+{
+  "title": "Título sugerido para a seção",
+  "text": "O conteúdo da seção renderizado em HTML puro. Use estruturação limpa (p, strong, ul/li, u, br). Não use tags h1/h2 no texto, apenas parágrafos bem escritos e listas."
+}
+O usuário descreverá a seção que deseja. Adapte o tom.`,
+      });
+
+      const userInput = `Contexto da proposta: ${contextText ?? "Nenhum especifico."}
+O usuário solicitou uma seção com a seguinte instrução: ${prompt}`;
+
+      const result = await genModel.generateContent(userInput);
+      const text = result.response.text();
+      // O modelo já está forçado a JSON, apenas devolvemos parseado
+      return JSON.parse(text);
+    } catch (error: any) {
+      this.logger.error(`Erro ao chamar Gemini: ${String(error)}`);
+      throw new BadRequestException("Falha ao gerar seção com IA. Tente novamente mais tarde.");
     }
   }
 }

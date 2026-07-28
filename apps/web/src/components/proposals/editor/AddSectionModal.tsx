@@ -873,6 +873,11 @@ export function AddSectionModal({
   const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState<Set<SectionType>>(new Set());
   const [activeFilter, setActiveFilter] = useState<"all" | "popular" | "new">("all");
+
+  const [showAIPrompt, setShowAIPrompt] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const openRef = useRef(open);
   openRef.current = open;
@@ -964,6 +969,29 @@ export function AddSectionModal({
       const fieldsPatch = demoOverrides ? { ...demoOverrides } : undefined;
       onAdd(selectedType, variant, fieldsPatch);
       onClose();
+    }
+  }
+
+  async function handleAIGenerate() {
+    if (!aiPrompt.trim()) return;
+    setIsGenerating(true);
+    try {
+      const res = await fetch("/api/proxy/proposals/ai-generate-section", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt, contextText: "Template: " + (templateName || "Padrão") })
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+
+      onAdd("custom", "default", { title: data.title ?? "Nova Seção", text: data.text ?? "" });
+      setShowAIPrompt(false);
+      setAiPrompt("");
+      onClose();
+    } catch (error) {
+      alert("Ocorreu um erro ao gerar a seção (falha na API).");
+    } finally {
+      setIsGenerating(false);
     }
   }
 
@@ -1061,8 +1089,8 @@ export function AddSectionModal({
                     setActiveCategory(null);
                   }}
                   className={`mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition ${libraryView === view && !activeCategory
-                      ? "bg-emerald-50 font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
-                      : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
+                    ? "bg-emerald-50 font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                    : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
                     }`}
                 >
                   <span className="shrink-0">{icon}</span>
@@ -1086,8 +1114,8 @@ export function AddSectionModal({
                     setLibraryView("all");
                   }}
                   className={`mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition ${activeCategory === cat
-                      ? "bg-emerald-50 font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
-                      : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
+                    ? "bg-emerald-50 font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                    : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
                     }`}
                 >
                   <span className="shrink-0">{CATEGORY_ICON[cat]}</span>
@@ -1124,21 +1152,45 @@ export function AddSectionModal({
             </div>
 
             { }
-            <div className="mx-1 rounded-xl border border-violet-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-3 dark:border-violet-800 dark:from-indigo-950/30 dark:to-purple-950/30">
-              <p className="mb-1 flex items-center gap-1.5 text-[12px] font-bold text-violet-700 dark:text-violet-400">
-                <IconSparkle /> Gerar com IA
-              </p>
-              <p className="mb-2.5 text-[11px] leading-snug text-[var(--color-muted-foreground)]">
-                Descreva a seção que precisa e a IA cria a partir do contexto da proposta.
-              </p>
-              <button
-                type="button"
-                onClick={() => alert("A geração de seções com IA entrará em funcionamento na próxima atualização! Em breve você poderá criar análises e textos comerciais de forma automática.")}
-                className="w-full rounded-lg bg-gradient-to-r from-violet-600 to-indigo-500 py-2 text-[11px] font-semibold text-white hover:from-violet-700 hover:to-indigo-600"
-              >
-                + Nova seção com IA
-              </button>
-            </div>
+            {showAIPrompt ? (
+              <div className="mx-1 rounded-xl border border-violet-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-3 dark:border-violet-800 dark:from-indigo-950/30 dark:to-purple-950/30 flex flex-col gap-2">
+                <p className="flex items-center gap-1.5 text-[12px] font-bold text-violet-700 dark:text-violet-400">
+                  <IconSparkle /> O que você precisa?
+                </p>
+                <textarea
+                  value={aiPrompt}
+                  onChange={e => setAiPrompt(e.target.value)}
+                  disabled={isGenerating}
+                  className="w-full text-[11px] rounded border border-violet-200 p-2 focus:outline-violet-500 text-slate-800"
+                  rows={3}
+                  placeholder="Ex: Crie uma seção sobre a garantia dos nossos painéis..."
+                />
+                <div className="flex gap-2">
+                  <button disabled={isGenerating} onClick={() => setShowAIPrompt(false)} type="button" className="flex-1 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-700" >
+                    Cancelar
+                  </button>
+                  <button disabled={isGenerating || !aiPrompt.trim()} onClick={handleAIGenerate} type="button" className="flex-1 py-1 text-[11px] font-bold text-white bg-violet-600 rounded disabled:opacity-50 hover:bg-violet-700 transition-colors" >
+                    {isGenerating ? "Gerando..." : "Gerar"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mx-1 rounded-xl border border-violet-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-3 dark:border-violet-800 dark:from-indigo-950/30 dark:to-purple-950/30">
+                <p className="mb-1 flex items-center gap-1.5 text-[12px] font-bold text-violet-700 dark:text-violet-400">
+                  <IconSparkle /> Gerar com IA
+                </p>
+                <p className="mb-2.5 text-[11px] leading-snug text-[var(--color-muted-foreground)]">
+                  Descreva a seção que precisa e a IA cria a partir do contexto da proposta.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowAIPrompt(true)}
+                  className="w-full rounded-lg bg-gradient-to-r from-violet-600 to-indigo-500 py-2 text-[11px] font-semibold text-white hover:from-violet-700 hover:to-indigo-600"
+                >
+                  + Nova seção com IA
+                </button>
+              </div>
+            )}
           </aside>
 
           { }
@@ -1162,8 +1214,8 @@ export function AddSectionModal({
                   type="button"
                   onClick={() => setActiveFilter(f)}
                   className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] transition ${activeFilter === f
-                      ? "border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-card)]"
-                      : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:border-[var(--color-foreground)]/30 hover:text-[var(--color-foreground)]"
+                    ? "border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-card)]"
+                    : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:border-[var(--color-foreground)]/30 hover:text-[var(--color-foreground)]"
                     }`}
                 >
                   {f === "all" ? "Todos" : f === "popular" ? "Mais usadas" : "Novas"}
@@ -1195,8 +1247,8 @@ export function AddSectionModal({
                         setSelectedVariant(null);
                       }}
                       className={`group cursor-pointer overflow-hidden rounded-xl border transition-all ${isSelected
-                          ? "border-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]"
-                          : "border-[var(--color-border)] hover:border-emerald-400 hover:shadow-md hover:-translate-y-0.5"
+                        ? "border-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]"
+                        : "border-[var(--color-border)] hover:border-emerald-400 hover:shadow-md hover:-translate-y-0.5"
                         } bg-[var(--color-card)]`}
                     >
                       { }
@@ -1216,8 +1268,8 @@ export function AddSectionModal({
                           type="button"
                           onClick={(e) => toggleFavorite(type, e)}
                           className={`absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border-none bg-white/90 text-[var(--color-muted-foreground)] shadow backdrop-blur-sm transition ${isFav
-                              ? "opacity-100 text-amber-500"
-                              : "opacity-0 group-hover:opacity-100"
+                            ? "opacity-100 text-amber-500"
+                            : "opacity-0 group-hover:opacity-100"
                             }`}
                         >
                           <svg
@@ -1321,8 +1373,8 @@ export function AddSectionModal({
                               type="button"
                               onClick={() => setSelectedVariant(v)}
                               className={`flex cursor-pointer flex-col gap-1 rounded-lg border-2 p-1 transition ${v === activeVariant
-                                  ? "border-emerald-500"
-                                  : "border-[var(--color-border)] hover:border-[var(--color-foreground)]/30"
+                                ? "border-emerald-500"
+                                : "border-[var(--color-border)] hover:border-[var(--color-foreground)]/30"
                                 }`}
                             >
                               <div className="aspect-video w-full overflow-hidden rounded">
