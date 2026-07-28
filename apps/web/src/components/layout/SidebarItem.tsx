@@ -64,7 +64,7 @@ export function SidebarItem({
               className={cn(
                 "ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold",
                 disabled
-                  ? "bg-[var(--color-muted)] text-[var(--color-muted-foreground)] opacity-80"
+                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-400 opacity-90"
                   : active
                     ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
                     : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)]"
