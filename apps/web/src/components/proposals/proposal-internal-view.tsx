@@ -20,6 +20,7 @@ import {
   getProposal,
   setProposalTemplate,
   updateProposalDiscount,
+  downloadProposalPdf,
   type ProposalDetail,
   type SystemSizingInputJson,
   type SystemSizingResultJson,
@@ -111,88 +112,7 @@ function computeBillSavingsPct(proposal: ProposalDetail): number | null {
   return (savings / bill) * 100;
 }
 
-function buildInternalPdfBodyHtml(
-  proposal: ProposalDetail,
-  integrator: ProposalIntegratorSnapshot | null
-): string {
-  const sizingBlocks = getSizingFromSimulation(proposal);
-  const si = sizingBlocks?.result ?? null;
-  const simIn = proposal.simulation.input;
-  const simRes = proposal.simulation.result;
-  const rows: string[] = [];
 
-  if (integrator?.kitItems.length) {
-    rows.push(
-      "<tr><th>Produto</th><th>Marca</th><th class='num'>Qtd</th><th class='num'>Unit.</th><th class='num'>Total</th></tr>"
-    );
-    for (const it of integrator.kitItems) {
-      rows.push(
-        `<tr><td>${escapeHtml(it.productName)}</td><td>${escapeHtml(it.brandName)}</td><td class='num'>${it.quantity}</td><td class='num'>${formatBRL(it.unitPrice)}</td><td class='num'>${formatBRL(it.lineTotal)}</td></tr>`
-      );
-    }
-  }
-
-  const hasKit = Boolean(
-    integrator && (integrator.kitItems.length > 0 || integrator.equipmentSubtotalBrl > 0)
-  );
-  const equipment = hasKit ? integrator!.equipmentSubtotalBrl : 0;
-  const quoted = integrator?.quotedSaleBrl ?? simIn.investmentAmount;
-  const remainder = hasKit ? Math.round((quoted - equipment) * 100) / 100 : null;
-
-  return `
-<div class="proposal-puppeteer-section">
-  <p style="font-size:10pt;color:#64748b;margin:0 0 0.5rem">Uso interno — não compartilhar com o cliente sem revisão.</p>
-  <h1 style="font-size:18pt;margin:0 0 0.25rem">${escapeHtml(proposal.title)}</h1>
-  <p style="margin:0;font-size:11pt">${escapeHtml(proposal.deal.lead.name)} · ${escapeHtml(proposal.deal.lead.whatsapp)}</p>
-</div>
-<div class="proposal-puppeteer-section">
-  <h2 style="font-size:13pt;margin:0 0 0.5rem">Comercial</h2>
-  <table>
-    <tbody>
-      <tr><td>Valor simulado (investimento)</td><td class="num">${formatBRL(quoted)}</td></tr>
-      ${
-        hasKit
-          ? `<tr><td>Subtotal equipamentos</td><td class="num">${formatBRL(equipment)}</td></tr>
-      <tr><td>Custos de projeto e margem (após equipamentos, agregado)</td><td class="num">${formatBRL(remainder!)}</td></tr>
-      ${
-        quoted > 0
-          ? `<tr><td>Margem bruta sobre o valor simulado</td><td class="num">${((remainder! / quoted) * 100).toFixed(1)}%</td></tr>`
-          : ""
-      }`
-          : `<tr><td colspan="2">Sem snapshot de kit — detalhamento de equipamentos e margem não disponível.</td></tr>`
-      }
-    </tbody>
-  </table>
-</div>
-${
-  rows.length
-    ? `<div class="proposal-puppeteer-section proposal-puppeteer-section--allow-break">
-  <h2 style="font-size:13pt;margin:0 0 0.5rem">Lista de produtos</h2>
-  <table>${rows.join("")}</table>
-</div>`
-    : `<div class="proposal-puppeteer-section"><h2 style="font-size:13pt">Lista de produtos</h2><p>${
-        si
-          ? `Dimensionamento resumido: ${si.panelCount} módulos, ${si.inverterCount} inversor(es), ${si.recommendedPowerKw.toFixed(2)} kWp estimados.`
-          : `Sistema comercial: ${simIn.systemSizeKw} kWp — sem dimensionamento técnico embutido nesta simulação.`
-      }</p></div>`
-}
-<div class="proposal-puppeteer-section">
-  <h2 style="font-size:13pt;margin:0 0 0.5rem">Simulação</h2>
-  <table><tbody>
-    <tr><td>Sistema (kW)</td><td class="num">${simIn.systemSizeKw}</td></tr>
-    <tr><td>Payback (anos)</td><td class="num">${simRes.paybackYears}</td></tr>
-    <tr><td>Economia mensal (est.)</td><td class="num">${formatBRL(simRes.monthlySavings)}</td></tr>
-    <tr><td>Economia 25 anos (est.)</td><td class="num">${formatBRL(simRes.totalSavings25y)}</td></tr>
-  </tbody></table>
-</div>
-<style>
-  table { width:100%; font-size:10pt; }
-  th, td { text-align:left; padding:0.35rem 0.5rem; border-bottom:1px solid #e2e8f0; }
-  th { font-weight:600; background:#f8fafc; }
-  td.num, th.num { text-align:right; }
-</style>
-`.trim();
-}
 
 export function ProposalInternalView({ proposalId }: { proposalId: string }): JSX.Element {
   const router = useRouter();
@@ -300,20 +220,13 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
       : componentFallback.reduce((s, c) => s + c.quantity, 0);
 
   async function downloadInternalPdf(): Promise<void> {
-    if (!proposal) return;
+    if (!proposal || !currentOrganizationId) return;
     setPdfError(null);
     setPdfLoading(true);
     try {
-      // Chama a rota nova que criamos no backend
-      const res = await fetch(`/api/proposals/${proposal.id}/generate-pdf`, {
-        method: "GET",
-      });
+      // Chama a rota do backend que gera o PDF consumindo o layout público final
+      const blob = await downloadProposalPdf(currentOrganizationId, proposal.id);
       
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: Falha ao gerar o PDF.`);
-      }
-      
-      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
