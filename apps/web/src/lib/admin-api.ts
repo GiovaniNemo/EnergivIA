@@ -87,6 +87,14 @@ export async function updateBrand(
   return res.json();
 }
 
+export async function deleteBrand(id: string): Promise<void> {
+  const res = await fetch(`${getApiUrl()}/brands/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message ?? "Falha ao excluir marca.");
+  }
+}
+
 export async function fetchCategories(): Promise<Category[]> {
   const res = await fetch(`${getApiUrl()}/categories`);
   if (!res.ok) throw new Error("Falha ao carregar categorias.");
@@ -346,7 +354,7 @@ export async function fetchDistributorProducts(
   if (!res.ok) throw new Error("Falha ao carregar produtos do distribuidor.");
   const json = await res.json();
   return {
-    data: json.data.map((row: { price: unknown; [k: string]: unknown }) => ({
+    data: json.data.map((row: { price: unknown;[k: string]: unknown }) => ({
       ...row,
       price: typeof row.price === "number" ? row.price : Number(row.price),
     })),

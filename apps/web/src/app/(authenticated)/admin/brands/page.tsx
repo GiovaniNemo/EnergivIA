@@ -21,11 +21,12 @@ import {
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/Delete";
 import ChecklistIcon from "@mui/icons-material/Checklist";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { brandSchema, type BrandFormValues } from "@/lib/admin/schemas";
-import { fetchBrands, createBrand, updateBrand, type Brand } from "@/lib/admin-api";
+import { fetchBrands, createBrand, updateBrand, deleteBrand, type Brand } from "@/lib/admin-api";
 import { ImageUpload } from "@/components/admin/products/ImageUpload";
 
 export default function AdminBrandsPage(): JSX.Element {
@@ -67,6 +68,16 @@ export default function AdminBrandsPage(): JSX.Element {
       setEditingBrand(null);
       form.reset({ name: "", country: "", image_url: "" });
     },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteBrand,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "brands"] });
+    },
+    onError: (err: any) => {
+      alert(err.message || "Erro ao excluir a marca. Talvez haja produtos vinculados a ela.");
+    }
   });
 
   const [bulkLoading, setBulkLoading] = useState(false);
@@ -179,6 +190,17 @@ export default function AdminBrandsPage(): JSX.Element {
                         aria-label="Editar"
                       >
                         <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          if (window.confirm(`Deseja realmente excluir a marca ${brand.name}?`)) {
+                            deleteMutation.mutate(brand.id);
+                          }
+                        }}
+                        aria-label="Excluir"
+                      >
+                        <DeleteIcon fontSize="small" />
                       </IconButton>
                     </TableCell>
                   </TableRow>

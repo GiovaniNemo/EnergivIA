@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import type { CreateBrandDto } from "./dto/create-brand.dto";
 import type { UpdateBrandDto } from "./dto/update-brand.dto";
@@ -6,7 +6,7 @@ import type { Brand } from "@prisma/client";
 
 @Injectable()
 export class BrandsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async findAll(): Promise<(Brand & { _count?: { products: number } })[]> {
     return this.prisma.brand.findMany({
@@ -43,5 +43,14 @@ export class BrandsService {
         ...(dto.image_url !== undefined && { imageUrl: dto.image_url.trim() || null }),
       },
     });
+  }
+
+  async remove(id: string): Promise<void> {
+    await this.findOne(id);
+    const productCount = await this.prisma.product.count({ where: { brandId: id } });
+    if (productCount > 0) {
+      throw new BadRequestException(`Não é possível excluir a marca, pois ela possui ${productCount} produto(s) vinculado(s).`);
+    }
+    await this.prisma.brand.delete({ where: { id } });
   }
 }
