@@ -163,9 +163,7 @@ function DealSummaryCard({ deal }: { deal: DealWithProposals }): JSX.Element {
         display: "flex",
         alignItems: "stretch",
         border: "1px solid var(--color-border)",
-        background:
-          "linear-gradient(165deg, var(--color-card) 0%, var(--color-secondary-50) 42%, var(--color-muted) 100%)",
-        boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.65)",
+        bgcolor: "var(--color-card)",
       }}
     >
       <Box
