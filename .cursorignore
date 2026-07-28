@@ -1,0 +1,22 @@
+# Ignorar arquivos de dados pesados e seeds
+apps/api/prisma/data/
+*.csv
+*.sql
+!apps/api/prisma/schema.prisma
+
+# Ignorar histórico de migrations (A IA deve ler apenas o schema.prisma)
+apps/api/prisma/migrations/
+
+# Ignorar imagens e mídias do frontend
+apps/web/public/
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.ico
+
+# Build e Dependências
+node_modules/
+.next/
+dist/
+build/

@@ -1,0 +1,11 @@
+﻿node.exe : npm error npx canceled due to missing packages and no YES option: 
+["next@16.2.12"]
+No linha:1 caractere:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm error npx c..."next@16.2.12"]:Str 
+   ing) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm error A complete log of this run can be found in: 
+C:\Users\sgiov\AppData\Local\npm-cache\_logs\2026-07-28T14_45_28_046Z-debug-0.log

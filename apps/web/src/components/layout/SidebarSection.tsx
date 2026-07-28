@@ -37,6 +37,8 @@ export function SidebarSection({
           collapsed={collapsed}
           active={isActive(item.path)}
           highlight={item.highlight}
+          badge={item.badge}
+          disabled={item.disabled}
           onClick={onItemClick}
         />
       ))}

@@ -1,0 +1,18 @@
+﻿cmd : [WARN] The "pnpm" field in package.json is no longer read by pnpm. The 
+following keys were ignored: "pnpm.overrides". See https://pnpm.io/settings for 
+the new home of each setting.
+No linha:1 caractere:1
++ cmd /c "cd apps\web && pnpm build" 2>&1 | Out-File -FilePath build-we ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([WARN] The "pnp...f each setting.:Str 
+   ing) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+> @energivia/web@0.1.0 build C:\Users\sgiov\EnergivIA\apps\web
+> next build
+
+'next' não é reconhecido como um comando interno
+ou externo, um programa operável ou um arquivo em lotes.
+ÔÇëELIFECYCLEÔÇë Command failed with exit code 1.
+ÔÇëWARNÔÇë  Local package.json exists, but node_modules missing, did you mean to install?

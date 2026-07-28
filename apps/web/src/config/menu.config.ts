@@ -34,6 +34,8 @@ export type MenuItem = {
   tooltip?: string;
   requiresRole?: SidebarRole;
   highlight?: boolean;
+  disabled?: boolean;
+  badge?: string;
 };
 
 export const SECTION_LABELS: Record<SidebarSectionKey, string> = {
@@ -76,6 +78,8 @@ export const MENU_ITEMS: MenuItem[] = [
     section: "operation",
     tooltip: "Dashboard, Kanban e simulações de financiamento",
     highlight: true,
+    disabled: true,
+    badge: "EM BREVE",
   },
 
   {

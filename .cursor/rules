@@ -1,0 +1,13 @@
+# Regras de Economia e Contexto do Projeto EnergivIA
+
+1. **Economia de Contexto:**
+   - NUNCA peça para ler o repositório inteiro.
+   - Responda apenas com base nos arquivos explicitamente citados ou focados no chat.
+   - Para dúvidas sobre o Banco de Dados, consulte APENAS o arquivo `apps/api/prisma/schema.prisma`. Ignore a pasta `migrations/` e `data/`.
+
+2. **Estilo de Código e Módulos:**
+   - A API é NestJS e o Frontend é Next.js.
+   - Ao criar Controllers/Services, altere apenas o módulo solicitado sem reescrever arquivos de outros módulos desnecessariamente.
+
+3. **Respostas Concisas:**
+   - Seja direto. Forneça apenas o código modificado ou crie trechos cirúrgicos ao invés de reescrever arquivos de 300 linhas inteiros.
