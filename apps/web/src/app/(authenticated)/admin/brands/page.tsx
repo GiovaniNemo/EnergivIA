@@ -21,6 +21,7 @@ import {
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
+import ChecklistIcon from "@mui/icons-material/Checklist";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { brandSchema, type BrandFormValues } from "@/lib/admin/schemas";
@@ -30,6 +31,8 @@ import { ImageUpload } from "@/components/admin/products/ImageUpload";
 export default function AdminBrandsPage(): JSX.Element {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkInput, setBulkInput] = useState("");
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
 
   const { data: brands = [], isLoading } = useQuery({
@@ -66,6 +69,23 @@ export default function AdminBrandsPage(): JSX.Element {
     },
   });
 
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const handleBulkSubmit = async () => {
+    const lines = bulkInput.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (lines.length === 0) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(lines.map((name) => createBrand({ name, country: "", image_url: "" })));
+      queryClient.invalidateQueries({ queryKey: ["admin", "brands"] });
+      setBulkDialogOpen(false);
+      setBulkInput("");
+    } catch (err) {
+      alert("Houve um erro ao importar algumas marcas.");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const handleOpenCreate = () => {
     setEditingBrand(null);
     form.reset({ name: "", country: "", image_url: "" });
@@ -100,7 +120,15 @@ export default function AdminBrandsPage(): JSX.Element {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="flex-end" mb={2}>
+      <Box display="flex" justifyContent="flex-end" gap={2} mb={2}>
+        <Button
+          variant="outlined"
+          startIcon={<ChecklistIcon />}
+          onClick={() => setBulkDialogOpen(true)}
+          size="medium"
+        >
+          Adicionar várias
+        </Button>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -139,8 +167,8 @@ export default function AdminBrandsPage(): JSX.Element {
                     <TableCell>{brand.country ?? "—"}</TableCell>
                     <TableCell align="right">
                       {"_count" in brand &&
-                      typeof (brand as Brand & { _count?: { products: number } })._count
-                        ?.products === "number"
+                        typeof (brand as Brand & { _count?: { products: number } })._count
+                          ?.products === "number"
                         ? (brand as Brand & { _count: { products: number } })._count.products
                         : "—"}
                     </TableCell>
@@ -221,6 +249,37 @@ export default function AdminBrandsPage(): JSX.Element {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      <Dialog open={bulkDialogOpen} onClose={() => setBulkDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 600, fontSize: "1.25rem" }}>
+          Adicionar várias marcas
+        </DialogTitle>
+        <DialogContent>
+          <Box pt={1}>
+            <TextField
+              multiline
+              rows={10}
+              fullWidth
+              placeholder="Digite ou cole os nomes das marcas, um por linha..."
+              value={bulkInput}
+              onChange={(e) => setBulkInput(e.target.value)}
+              disabled={bulkLoading}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, pt: 0 }}>
+          <Button onClick={() => setBulkDialogOpen(false)} disabled={bulkLoading}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleBulkSubmit}
+            variant="contained"
+            disabled={bulkLoading || !bulkInput.trim()}
+          >
+            {bulkLoading ? "Salvando..." : "Adicionar em lote"}
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );
