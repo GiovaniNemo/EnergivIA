@@ -40,6 +40,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
+import SyncIcon from "@mui/icons-material/Sync";
 import SearchIcon from "@mui/icons-material/Search";
 import ViewColumnIcon from "@mui/icons-material/ViewColumn";
 import {
@@ -133,6 +134,7 @@ export default function DistributorInventoryPage(): JSX.Element {
   const [columnMenuAnchor, setColumnMenuAnchor] = useState<null | HTMLElement>(null);
   const [categoryId, setCategoryId] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<DistributorProduct | null>(null);
   const [inlinePrice, setInlinePrice] = useState<{ id: string; value: string } | null>(null);
   const [inlineStock, setInlineStock] = useState<{ id: string; value: string } | null>(null);
@@ -404,6 +406,14 @@ export default function DistributorInventoryPage(): JSX.Element {
                   <ViewColumnIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<SyncIcon />}
+                onClick={() => setSyncModalOpen(true)}
+              >
+                Sincronizar API
+              </Button>
               <Button
                 variant="outlined"
                 startIcon={<UploadFileIcon />}
@@ -745,6 +755,29 @@ export default function DistributorInventoryPage(): JSX.Element {
           )}
         </Alert>
       )}
+
+      <Dialog open={syncModalOpen} onClose={() => setSyncModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Sincronizar via API do Distribuidor</DialogTitle>
+        <DialogContent dividers>
+          <Box py={1}>
+            <Typography variant="body1" paragraph>
+              A integração via API permite atualizar automaticamente <strong>preços, estoque em tempo real e fichas técnicas</strong> de materiais, conectando-se diretamente ao sistema do distribuidor.
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Para implementar o funcionamento real deste botão, você precisará nos fornecer as <strong>Credenciais (API Keys, Tokens)</strong> e a <strong>Documentação (Manual de Integração)</strong> fornecidas pelo distribuidor (ex: Aldo Solar, Amara, etc.).
+            </Typography>
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Integração pendente: Aguardando as chaves de acesso dos fornecedores.
+            </Alert>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSyncModalOpen(false)}>Cancelar</Button>
+          <Button variant="contained" disabled startIcon={<SyncIcon />}>
+            Sincronizar Agora
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       { }
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="sm" fullWidth>
