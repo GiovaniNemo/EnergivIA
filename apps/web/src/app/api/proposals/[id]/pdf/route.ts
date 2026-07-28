@@ -79,7 +79,7 @@ export async function GET(
         { status: 400 }
       );
     }
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || _request.nextUrl.origin).replace(/\/$/, "");
+    const appUrl = (process.env["NEXT_PUBLIC_APP_URL"] || _request.nextUrl.origin).replace(/\/$/, "");
     const proposalUrl = `${appUrl}/proposta/${id}?pdf=true`;
 
     const browser = await getBrowser();
