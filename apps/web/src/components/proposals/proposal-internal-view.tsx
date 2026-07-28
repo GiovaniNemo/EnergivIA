@@ -304,25 +304,20 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
     setPdfError(null);
     setPdfLoading(true);
     try {
-      const bodyHtml = buildInternalPdfBodyHtml(proposal, integrator);
-      const res = await fetch("/api/proposals/pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: `interno-${proposal.title}`.slice(0, 80),
-          bodyHtml,
-          branding: PDF_BRANDING,
-        }),
+      // Chama a rota nova que criamos no backend
+      const res = await fetch(`/api/proposals/${proposal.id}/generate-pdf`, {
+        method: "GET",
       });
+      
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error((j as { error?: string }).error ?? `HTTP ${res.status}`);
+        throw new Error(`HTTP ${res.status}: Falha ao gerar o PDF.`);
       }
+      
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `proposta-interno-${proposal.id.slice(0, 8)}.pdf`;
+      a.download = `Proposta - ${proposal.deal.lead.name}.pdf`; 
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {

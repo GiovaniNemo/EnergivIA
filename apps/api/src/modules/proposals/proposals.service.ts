@@ -413,31 +413,77 @@ export class ProposalsService {
     };
   }
 
-  async function downloadInternalPdf(): Promise<void> {
-    if (!proposal) return;
-    setPdfError(null);
-    setPdfLoading(true);
+  async generatePdf(proposalId: string): Promise<Buffer> {
+    // 1. Busca a proposta para pegar o Token Público
+    const proposal = await this.prisma.proposal.findUnique({
+      where: { id: proposalId },
+      select: { id: true, publicToken: true } // Pegamos apenas o que precisamos
+    });
+
+    if (!proposal) {
+      throw new BadRequestException("Proposta não encontrada para gerar PDF.");
+    }
+
+    const webBaseUrl = process.env["PUBLIC_WEB_APP_BASE_URL"] || "https://www.energivia.com.br";
+    
+    // 2. Usa o token público (se existir) ou o ID como fallback
+    const token = proposal.publicToken || proposal.id;
+
+    // ATENÇÃO: Verifique se a rota do seu frontend para o cliente final é "/proposta/" mesmo 
+    // ou se é algo como "/p/", "/proposta/publica/", etc.
+    const targetUrl = `${webBaseUrl}/proposta/${token}`;
+
+    this.logger.log(`Iniciando geração de PDF para a proposta ${proposalId} na URL: ${targetUrl}`);
+
+    // Identifica se está rodando localmente (Windows/Mac) ou na Vercel/Railway (Linux)
+    const isLocal = process.platform === "win32" || process.platform === "darwin";
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let browser: any = null;
+
     try {
-      // Aqui chamamos a nova rota do seu backend!
-      const res = await fetch(`/api/proposals/${proposal.id}/generate-pdf`, {
-        method: "GET",
-      });
-      
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: Falha ao gerar o PDF.`);
+      if (isLocal) {
+        // AMBIENTE LOCAL: Importa dinamicamente o puppeteer normal
+        const puppeteerLocal = await import("puppeteer");
+        browser = await puppeteerLocal.default.launch({
+          headless: true,
+          args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        });
+      } else {
+        // AMBIENTE NUVEM (VERCEL): Usa o puppeteer-core + sparticuz/chromium
+        browser = await puppeteerCore.launch({
+          args: chromium.args,
+          executablePath: await chromium.executablePath(),
+          headless: true,
+        });
       }
-      
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      // O arquivo agora baixa com o nome do cliente!
-      a.download = `Proposta - ${proposal.deal.lead.name}.pdf`; 
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      setPdfError(e instanceof Error ? e.message : "Falha ao gerar PDF.");
+
+      const page = await browser.newPage();
+
+      await page.goto(targetUrl, {
+        waitUntil: "networkidle0",
+        timeout: 30000,
+      });
+
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: {
+          top: "10mm",
+          right: "10mm",
+          bottom: "10mm",
+          left: "10mm",
+        },
+      });
+
+      return Buffer.from(pdfBuffer);
+    } catch (error) {
+      this.logger.error(`Erro ao gerar PDF da proposta ${proposalId}: ${String(error)}`);
+      throw new BadRequestException("Não foi possível gerar o PDF da proposta.");
     } finally {
-      setPdfLoading(false);
+      if (browser) {
+        await browser.close();
+      }
     }
   }
+}
