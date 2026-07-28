@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as ReactDOMServer from "react-dom/server";
 import puppeteerCore from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import {
@@ -101,7 +100,8 @@ export async function GET(
       fontFamily?: string;
     } | undefined;
 
-    const bodyHtml = ReactDOMServer.renderToStaticMarkup(
+    const ReactDomServer = await import("react-dom/server");
+    const bodyHtml = ReactDomServer.renderToStaticMarkup(
       React.createElement(PreviewDocument, {
         title: payload.title ?? "Proposta Solar",
         documentState,
