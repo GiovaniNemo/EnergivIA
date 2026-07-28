@@ -10,6 +10,7 @@ export interface PublicProposalPayload {
   title: string;
   validUntil: string;
   createdAt: string;
+  publicToken?: string | null;
   discountBrl?: number | null;
   companyName?: string | null;
   deal: {
