@@ -18,11 +18,13 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  InputAdornment,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ChecklistIcon from "@mui/icons-material/Checklist";
+import SearchIcon from "@mui/icons-material/Search";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { brandSchema, type BrandFormValues } from "@/lib/admin/schemas";
@@ -35,6 +37,7 @@ export default function AdminBrandsPage(): JSX.Element {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [bulkInput, setBulkInput] = useState("");
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: brands = [], isLoading } = useQuery({
     queryKey: ["admin", "brands"],
@@ -129,25 +132,45 @@ export default function AdminBrandsPage(): JSX.Element {
     }
   };
 
+  const filteredBrands = brands.filter((brand) =>
+    brand.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <Box>
-      <Box display="flex" justifyContent="flex-end" gap={2} mb={2}>
-        <Button
-          variant="outlined"
-          startIcon={<ChecklistIcon />}
-          onClick={() => setBulkDialogOpen(true)}
-          size="medium"
-        >
-          Adicionar várias
-        </Button>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleOpenCreate}
-          size="medium"
-        >
-          Nova marca
-        </Button>
+      <Box display="flex" justifyContent="space-between" flexWrap="wrap" gap={2} mb={2}>
+        <TextField
+          placeholder="Pesquisar marcas..."
+          size="small"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ minWidth: 250, bgcolor: "background.paper" }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <Box display="flex" gap={2}>
+          <Button
+            variant="outlined"
+            startIcon={<ChecklistIcon />}
+            onClick={() => setBulkDialogOpen(true)}
+            size="medium"
+          >
+            Adicionar várias
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleOpenCreate}
+            size="medium"
+          >
+            Nova marca
+          </Button>
+        </Box>
       </Box>
 
       <Paper variant="outlined" sx={{ overflow: "hidden" }}>
@@ -171,8 +194,17 @@ export default function AdminBrandsPage(): JSX.Element {
                     Carregando…
                   </TableCell>
                 </TableRow>
+              ) : filteredBrands.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    sx={{ py: 4, textAlign: "center", color: "text.secondary" }}
+                  >
+                    Nenhuma marca encontrada.
+                  </TableCell>
+                </TableRow>
               ) : (
-                brands.map((brand) => (
+                filteredBrands.map((brand) => (
                   <TableRow key={brand.id}>
                     <TableCell>{brand.name}</TableCell>
                     <TableCell>{brand.country ?? "—"}</TableCell>
