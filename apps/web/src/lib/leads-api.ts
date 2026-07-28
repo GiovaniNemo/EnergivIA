@@ -1,904 +1,821 @@
-async function apiProxy(
-  method: string,
-  path: string,
-  body?: unknown,
-  organizationId?: string | null
-): Promise<Response> {
-  const url = `/api/proxy${path.startsWith("/") ? path : `/${path}`}`;
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (organizationId) headers["x-organization-id"] = organizationId;
-  return fetch(url, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-    credentials: "include",
-  });
-}
+"use client";
 
-export type DealStage = "NEW" | "CONTACTED" | "PROPOSAL" | "NEGOTIATION" | "WON" | "LOST";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Copy, LinkIcon } from "lucide-react";
+import {
+  getDefaultEssentialRulesForSeeding,
+  PROJECT_COST_ESSENTIAL_LABOR_NAME,
+  PROJECT_COST_ESSENTIAL_MARGIN_NAME,
+} from "@energivia/proposal-economia";
+import { percentageBaseShortLabel } from "@/components/project-cost-rules/cost-rule-presets";
+import {
+  isProposalIntegratorSnapshot,
+  type ProposalIntegratorSnapshot,
+  type ProposalProjectCostLine,
+} from "@energivia/shared-types";
+import { createCostRule, listCostRules } from "@/lib/cost-rules-api";
+import {
+  getProposal,
+  setProposalTemplate,
+  updateProposalDiscount,
+  downloadProposalPdf,
+  type ProposalDetail,
+  type SystemSizingInputJson,
+  type SystemSizingResultJson,
+} from "@/lib/leads-api";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { listProposalTemplates, type ProposalTemplateEntity } from "@/lib/proposal-templates-api";
+import { useOrganization } from "@/components/providers/organization-provider";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { LoadingState } from "@/components/ui/loading-state";
+import { TEMPLATE_THUMBNAIL_DATA_URL_KEY } from "@/lib/proposal-document-to-template-config";
+import {
+  formatBRL,
+  getMarginHealth,
+  ProposalBusinessHeroCard,
+  ProposalCollapsibleProducts,
+  ProposalCollapsibleTechnical,
+  ProposalConversionHint,
+  ProposalEquipmentSummaryCard,
+  ProposalInternalHeader,
+  ProposalLayoutSection,
+  ProposalSalesHeroCard,
+  ProposalScenarioActions,
+} from "@/components/proposals/proposal-internal-ui";
+import { ProposalEquipmentEditorCard } from "@/components/proposals/proposal-equipment-editor-card";
 
-export type DealLostReason = "PRICE" | "NO_RESPONSE" | "COMPETITOR" | "NOT_INTERESTED" | "OTHER";
+const PDF_BRANDING = {
+  primaryColor: "#059669",
+  secondaryColor: "#047857",
+  backgroundColor: "#ffffff",
+  textColor: "#0f172a",
+} as const;
 
-export interface LeadListItem {
-  id: string;
-  name: string;
-  whatsapp: string;
-  cpfCnpj?: string | null;
-  email?: string | null;
-  company?: string | null;
-  source?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  latestDealStage: DealStage | null;
-  latestDealValue?: string | null;
-  latestDealProposalCount?: number;
-  latestDealProposalId?: string | null;
-  latestDealProposalStatus?: string | null;
-  latestDealProposalSentAt?: string | null;
-  latestDealProposalClientViewedAt?: string | null;
-  latestDealProposalClientViewCount?: number;
-  latestDealAssignedUserId?: string | null;
-  latestDealAssignedUserName?: string | null;
-  latestDealUpdatedAt?: string | null;
-  latestDealTemperature?: "HOT" | "WARM" | "COLD" | null;
-  latestDealId?: string | null;
-  nextActionAt: string | null;
-  nextActionType: string | null;
-}
-
-export interface LeadsDashboardStats {
-  totalLeads: number;
-  dealsInProposal: number;
-  dealsInNegotiation: number;
-  dealsWon: number;
-}
-
-export interface ProposalSummary {
-  id: string;
-  title: string;
-  status: string;
-  createdAt: string;
-  validUntil: string;
-  sentAt?: string | null;
-  pdfUrl?: string | null;
-  clientViewCount?: number;
-  clientFirstViewedAt?: string | null;
-  clientLastViewedAt?: string | null;
-  renderedData?: unknown | null;
-  simulation?: { input?: unknown; result?: unknown } | null;
-}
-
-export interface DealWithProposals {
-  id: string;
-  leadId: string;
-  title: string;
-  value: string | null;
-  stage: DealStage;
-  temperature: string | null;
-  lastContactAt: string | null;
-  nextActionAt: string | null;
-  nextActionType: string | null;
-  lostReason: DealLostReason | null;
-  createdAt: string;
-  updatedAt: string;
-  proposals: ProposalSummary[];
-}
-
-export interface LeadDetail {
-  id: string;
-  name: string;
-  whatsapp: string;
-  cpfCnpj?: string | null;
-  email?: string | null;
-  company?: string | null;
-  source?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  deals: DealWithProposals[];
-  energyBills?: EnergyBillRecord[];
-}
-
-export interface PaginatedLeads {
-  data: LeadListItem[];
-  meta: {
-    total: number;
-    page: number;
-    pageSize: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-}
-
-export interface GeoState {
-  id: string;
-  uf: string;
-  name: string;
-  ibgeCode: string;
-}
-
-export interface GeoCity {
-  id: string;
-  stateId: string;
-  name: string;
-  ibgeCode: string;
-  solarResource?: unknown;
-}
-
-export async function getLeadsDashboardStats(organizationId: string): Promise<LeadsDashboardStats> {
-  const res = await apiProxy("GET", "/leads/stats", undefined, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<LeadsDashboardStats>;
-}
-
-export async function listLeads(
-  organizationId: string,
-  params?: { page?: number; pageSize?: number; search?: string }
-): Promise<PaginatedLeads> {
-  const q = new URLSearchParams();
-  if (params?.page) q.set("page", String(params.page));
-  if (params?.pageSize) q.set("pageSize", String(params.pageSize));
-  if (params?.search) q.set("search", params.search);
-  const suffix = q.toString() ? `?${q.toString()}` : "";
-  const res = await apiProxy("GET", `/leads${suffix}`, undefined, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<PaginatedLeads>;
-}
-
-export async function listGeoStates(organizationId: string): Promise<GeoState[]> {
-  const res = await apiProxy("GET", "/geo/states", undefined, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<GeoState[]>;
-}
-
-export async function listGeoCities(organizationId: string, stateId: string): Promise<GeoCity[]> {
-  const q = new URLSearchParams();
-  q.set("stateId", stateId);
-  const res = await apiProxy("GET", `/geo/cities?${q.toString()}`, undefined, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<GeoCity[]>;
-}
-
-export async function getLead(organizationId: string, id: string): Promise<LeadDetail> {
-  const res = await apiProxy("GET", `/leads/${id}`, undefined, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<LeadDetail>;
-}
-
-export type LeadActivityRow = {
-  id: string;
-  kind: string;
-  label: string;
-  occurredAt: string;
+const STATUS_LABEL: Record<string, string> = {
+  DRAFT: "Rascunho",
+  SENT: "Enviada",
+  VIEWED: "Visualizada",
+  ACCEPTED: "Aceita",
+  REJECTED: "Recusada",
 };
 
-export async function listLeadActivity(
-  organizationId: string,
-  leadId: string
-): Promise<LeadActivityRow[]> {
-  const res = await apiProxy("GET", `/leads/${leadId}/activity`, undefined, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<LeadActivityRow[]>;
+function paybackToneClass(years: number): string {
+  if (years > 20) return "text-amber-600 dark:text-amber-400";
+  if (years > 12) return "text-[var(--color-muted-foreground)]";
+  return "text-emerald-600 dark:text-emerald-400";
 }
 
-export async function appendLeadActivity(
-  organizationId: string,
-  leadId: string,
-  body: { kind: "NOTE" | "CALL"; text: string }
-): Promise<{ id: string }> {
-  const res = await apiProxy("POST", `/leads/${leadId}/activity`, body, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<{ id: string }>;
+function extractIntegrator(data: unknown): ProposalIntegratorSnapshot | null {
+  if (!data || typeof data !== "object") return null;
+  const int = (data as { integrator?: unknown }).integrator;
+  return isProposalIntegratorSnapshot(int) ? int : null;
 }
 
-export async function createLead(
-  organizationId: string,
-  body: {
-    name: string;
-    whatsapp: string;
-    cpfCnpj?: string;
-    email?: string;
-    company?: string;
-    source?: string;
-  }
-): Promise<{ id: string }> {
-  const res = await apiProxy("POST", "/leads", body, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<{ id: string }>;
+function getSizingFromSimulation(
+  proposal: ProposalDetail
+): { input: SystemSizingInputJson; result: SystemSizingResultJson } | null {
+  const si = proposal.simulation.input.sizing;
+  const sr = proposal.simulation.result.sizing;
+  if (!si || !sr) return null;
+  return { input: si, result: sr };
 }
 
-export async function updateLead(
-  organizationId: string,
-  id: string,
-  body: {
-    name?: string;
-    whatsapp?: string;
-    cpfCnpj?: string | null;
-    email?: string | null;
-    company?: string | null;
-    source?: string | null;
-  }
-): Promise<void> {
-  const res = await apiProxy("PUT", `/leads/${id}`, body, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
+function sumProjectCostLinesByName(
+  lines: ProposalProjectCostLine[] | undefined,
+  name: string
+): number | undefined {
+  if (!lines?.length) return undefined;
+  const hits = lines.filter((l) => l.name === name);
+  if (hits.length === 0) return undefined;
+  return Math.round(hits.reduce((s, l) => s + l.appliedAmountBrl, 0) * 100) / 100;
 }
 
-export async function createDeal(
-  organizationId: string,
-  leadId: string,
-  body: {
-    title: string;
-    value?: number;
-    stage?: DealStage;
-    temperature?: string | null;
-    assignedUserId?: string;
-  }
-): Promise<{ id: string }> {
-  const res = await apiProxy("POST", `/leads/${leadId}/deals`, body, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<{ id: string }>;
+function computeBillSavingsPct(proposal: ProposalDetail): number | null {
+  const sizing = getSizingFromSimulation(proposal);
+  const kwh = sizing?.input.monthlyConsumptionKwh;
+  const price = proposal.simulation.input.energyPriceKwh;
+  const savings = proposal.simulation.result.monthlySavings;
+  if (kwh == null || price == null || price <= 0 || savings == null) return null;
+  const bill = kwh * price;
+  if (bill <= 0) return null;
+  return (savings / bill) * 100;
 }
 
-export async function patchDeal(
-  organizationId: string,
-  dealId: string,
-  body: {
-    title?: string;
-    value?: number | null;
-    stage?: DealStage;
-    temperature?: string | null;
-    assignedUserId?: string | null;
-    nextActionAt?: string | null;
-    nextActionType?: string | null;
-    lostReason?: DealLostReason | null;
-  }
-): Promise<void> {
-  const res = await apiProxy("PATCH", `/deals/${dealId}`, body, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-}
+export function ProposalInternalView({ proposalId }: { proposalId: string }): JSX.Element {
+  const router = useRouter();
+  const { currentOrganizationId, currentOrganization, loading: orgLoading } = useOrganization();
+  const [proposal, setProposal] = useState<ProposalDetail | null>(null);
+  const [templates, setTemplates] = useState<ProposalTemplateEntity[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [copyState, setCopyState] = useState<"idle" | "done" | "err">("idle");
+  const [savingCostDefaults, setSavingCostDefaults] = useState(false);
+  const [costDefaultsError, setCostDefaultsError] = useState<string | null>(null);
+  const [costDefaultsSaved, setCostDefaultsSaved] = useState(false);
+  const [orgCostRulesExist, setOrgCostRulesExist] = useState(false);
+  const [regeneratedPublicUrl, setRegeneratedPublicUrl] = useState<string | null>(null);
+  const [discountDraft, setDiscountDraft] = useState<number | null>(null);
+  const [discountSaving, setDiscountSaving] = useState(false);
+  const [discountError, setDiscountError] = useState<string | null>(null);
 
-export type SystemSizingInputJson = {
-  monthlyConsumptionKwh: number;
-  roofAreaSqm?: number;
-  panelEfficiency?: number;
-  includeBattery?: boolean;
-  autonomyHours?: number;
-  billConsumptionHistoryKwh?: number[];
-  billConsumptionHistoryLabeled?: Array<{ month: string; consumptionKwh: number }>;
-  billReferenceMonth?: string;
-};
-
-export type SystemSizingResultJson = {
-  recommendedPowerKw: number;
-  panelCount: number;
-  inverterCount: number;
-  estimatedProductionKwhMonth: number;
-  batteryCapacityKwh?: number;
-  batteryCount?: number;
-  components?: Array<{ type: string; quantity: number; spec?: string }>;
-};
-
-export type FinancialSimulationInputJson = {
-  systemSizeKw: number;
-  investmentAmount: number;
-  financingType: "CASH" | "FINANCED";
-  interestRate?: number;
-  installments?: number;
-  energyPriceKwh?: number;
-  annualIncreasePercent?: number;
-  sizing?: SystemSizingInputJson;
-  solarResource?: unknown;
-};
-
-export type FinancialSimulationResultJson = {
-  paybackYears: number;
-  totalSavings25y: number;
-  monthlySavings: number;
-  irr?: number;
-  npv?: number;
-  annualSavings: number[];
-  sizing?: SystemSizingResultJson;
-};
-
-export interface ProposalDetail {
-  id: string;
-  title: string;
-  status: string;
-  validUntil: string;
-  pdfUrl: string | null;
-  sentAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  renderedData: unknown;
-  discountBrl?: number | null;
-  publicToken?: string | null;
-  deal: {
-    id: string;
-    title: string;
-    value: unknown;
-    leadId: string;
-    stage: string;
-    lead: {
-      id: string;
-      name: string;
-      whatsapp: string;
-      email?: string | null;
-    };
-  };
-  simulation: {
-    id: string;
-    name: string | null;
-    input: FinancialSimulationInputJson;
-    result: FinancialSimulationResultJson;
-  };
-  proposalTemplate: { id: string; name: string } | null;
-}
-
-export interface ProposalListItem {
-  id: string;
-  title: string;
-  status: string;
-  validUntil: string;
-  pdfUrl: string | null;
-  createdAt: string;
-  deal: {
-    id: string;
-    title: string;
-    stage: string;
-    lead: {
-      id: string;
-      name: string;
-      whatsapp: string;
-    };
-  };
-  quotedValueBrl: number | null;
-  equipmentSubtotalBrl: number | null;
-  marginBrl: number | null;
-  kitLineCount: number;
-}
-
-export async function listProposals(organizationId: string): Promise<ProposalListItem[]> {
-  const res = await apiProxy("GET", "/proposals", undefined, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<ProposalListItem[]>;
-}
-
-export async function getProposal(
-  organizationId: string,
-  proposalId: string
-): Promise<ProposalDetail> {
-  const res = await apiProxy("GET", `/proposals/${proposalId}`, undefined, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<ProposalDetail>;
-}
-
-export async function sendProposalWithPdf(
-  organizationId: string,
-  proposalId: string,
-  pdfUrl: string
-): Promise<void> {
-  const res = await apiProxy("POST", `/proposals/${proposalId}/send`, { pdfUrl }, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-}
-
-export async function updateProposalDiscount(
-  organizationId: string,
-  proposalId: string,
-  discountBrl: number | null
-): Promise<{ discountBrl: number | null; publicToken: string }> {
-  const res = await apiProxy(
-    "PATCH",
-    `/proposals/${proposalId}/discount`,
-    { discountBrl },
-    organizationId
+  const integrator = useMemo(
+    () => (proposal ? extractIntegrator(proposal.renderedData) : null),
+    [proposal]
   );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<{ discountBrl: number | null; publicToken: string }>;
-}
 
-export async function setProposalTemplate(
-  organizationId: string,
-  proposalId: string,
-  proposalTemplateId: string | null
-): Promise<void> {
-  const res = await apiProxy(
-    "POST",
-    `/proposals/${proposalId}/template`,
-    { proposalTemplateId },
-    organizationId
+  const reload = useCallback(async () => {
+    if (!currentOrganizationId || !proposalId) return;
+    setLoadError(null);
+    try {
+      const p = await getProposal(currentOrganizationId, proposalId);
+      setProposal(p);
+      setSelectedTemplateId(p.proposalTemplate?.id ?? "");
+    } catch (e) {
+      setProposal(null);
+      setLoadError(e instanceof Error ? e.message : "Não foi possível carregar a proposta.");
+    }
+  }, [currentOrganizationId, proposalId]);
+
+  useEffect(() => {
+    if (!orgLoading && currentOrganizationId) void reload();
+  }, [orgLoading, currentOrganizationId, reload]);
+
+  useEffect(() => {
+    setDiscountDraft(proposal?.discountBrl ?? null);
+  }, [proposal?.id, proposal?.discountBrl]);
+
+  useEffect(() => {
+    if (!currentOrganizationId) return;
+    listProposalTemplates(currentOrganizationId)
+      .then((all) => setTemplates(all.filter((t) => t.status === "PUBLISHED")))
+      .catch(() => setTemplates([]));
+  }, [currentOrganizationId]);
+
+  useEffect(() => {
+    if (!currentOrganizationId || !integrator?.defaultEssentialCostNames?.length) return;
+    listCostRules(currentOrganizationId)
+      .then((rules) => {
+        const hasLabor = rules.some((r) => r.name === PROJECT_COST_ESSENTIAL_LABOR_NAME);
+        const hasMargin = rules.some((r) => r.name === PROJECT_COST_ESSENTIAL_MARGIN_NAME);
+        if (hasLabor || hasMargin) setOrgCostRulesExist(true);
+      })
+      .catch(() => undefined);
+  }, [currentOrganizationId, integrator?.defaultEssentialCostNames?.length]);
+
+  const hasEquipmentBreakdown = Boolean(
+    integrator && (integrator.kitItems.length > 0 || integrator.equipmentSubtotalBrl > 0)
   );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-}
+  const equipmentSubtotal = hasEquipmentBreakdown ? integrator!.equipmentSubtotalBrl : 0;
+  const quotedSale = integrator?.quotedSaleBrl ?? proposal?.simulation.input.investmentAmount ?? 0;
+  const remainderAgg = hasEquipmentBreakdown
+    ? Math.round((quotedSale - equipmentSubtotal) * 100) / 100
+    : null;
 
-export interface ProposalEquipmentContextItem {
-  productId: string;
-  productName: string;
-  brandName: string;
-  categoryName: string | null;
-  quantity: number;
-  unitPrice: number;
-  lineTotal: number;
-}
-
-export interface ProposalEquipmentContext {
-  proposalId: string;
-  sourceType: "distributor" | "own_stock";
-  distributorId: string | null;
-  distributorName: string | null;
-  alternateDistributors: Array<{ id: string; name: string }>;
-  items: ProposalEquipmentContextItem[];
-  equipmentSubtotalBrl: number;
-  quotedSaleBrl: number;
-  systemPowerKw?: number | null;
-  freightState?: string | null;
-  freightBrl?: number | null;
-}
-
-export interface ProposalEquipmentOption {
-  productId: string;
-  productName: string;
-  brandName: string;
-  categoryName: string;
-  unitPrice: number;
-  stockQuantity: number;
-  imageUrl: string | null;
-}
-
-export async function getProposalEquipment(
-  organizationId: string,
-  proposalId: string
-): Promise<ProposalEquipmentContext> {
-  const res = await apiProxy(
-    "GET",
-    `/proposals/${proposalId}/equipment`,
-    undefined,
-    organizationId
+  const marginAppliedFromRules = sumProjectCostLinesByName(
+    integrator?.projectCostLines,
+    PROJECT_COST_ESSENTIAL_MARGIN_NAME
   );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<ProposalEquipmentContext>;
-}
-
-export async function listProposalFreightRules(
-  organizationId: string,
-  proposalId: string,
-  distributorId: string
-): Promise<Array<{ state: string; value: number }>> {
-  const q = new URLSearchParams({ distributorId });
-  const res = await apiProxy(
-    "GET",
-    `/proposals/${proposalId}/equipment/freight?${q.toString()}`,
-    undefined,
-    organizationId
+  const laborAppliedFromRules = sumProjectCostLinesByName(
+    integrator?.projectCostLines,
+    PROJECT_COST_ESSENTIAL_LABOR_NAME
   );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+  const hasRuleCostBreakdown =
+    marginAppliedFromRules !== undefined || laborAppliedFromRules !== undefined;
+
+  const marginPct =
+    hasEquipmentBreakdown && quotedSale > 0
+      ? marginAppliedFromRules !== undefined
+        ? (marginAppliedFromRules / quotedSale) * 100
+        : remainderAgg !== null
+          ? (remainderAgg / quotedSale) * 100
+          : null
+      : null;
+
+  const productLineCount = integrator?.kitItems.length ?? 0;
+  const componentFallback = proposal
+    ? (getSizingFromSimulation(proposal)?.result.components ?? [])
+    : [];
+  const totalSkuCount = productLineCount > 0 ? productLineCount : componentFallback.length;
+  const totalUnits =
+    productLineCount > 0
+      ? integrator!.kitItems.reduce((s, i) => s + i.quantity, 0)
+      : componentFallback.reduce((s, c) => s + c.quantity, 0);
+
+  async function downloadInternalPdf(): Promise<void> {
+    if (!currentOrganizationId || !proposal) return;
+    setPdfError(null);
+    setPdfLoading(true);
+    try {
+      const blob = await downloadProposalPdf(currentOrganizationId, proposal.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Proposta - ${proposal.deal.lead.name}.pdf`; 
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setPdfError(e instanceof Error ? e.message : "Falha ao gerar PDF.");
+    } finally {
+      setPdfLoading(false);
+    }
   }
-  return res.json();
-}
 
-export async function listProposalEquipmentOptions(
-  organizationId: string,
-  proposalId: string,
-  params: { distributorId: string; categoryName: string; search?: string }
-): Promise<ProposalEquipmentOption[]> {
-  const q = new URLSearchParams({
-    distributorId: params.distributorId,
-    category: params.categoryName,
-  });
-  if (params.search?.trim()) q.set("search", params.search.trim());
-  const res = await apiProxy(
-    "GET",
-    `/proposals/${proposalId}/equipment/options?${q.toString()}`,
-    undefined,
-    organizationId
-  );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+  async function copyPublicLink(): Promise<void> {
+    if (!proposal) return;
+    setCopyState("idle");
+    try {
+      const url = `${window.location.origin}/proposta/${proposal.publicToken ?? proposal.id}`;
+      await navigator.clipboard.writeText(url);
+      setCopyState("done");
+      window.setTimeout(() => setCopyState("idle"), 2500);
+    } catch {
+      setCopyState("err");
+    }
   }
-  return res.json() as Promise<ProposalEquipmentOption[]>;
-}
 
-export interface ProposalDistributorAvailability {
-  id: string;
-  name: string;
-  matchedCount: number;
-  totalCount: number;
-  hasAllItems: boolean;
-  total?: number | null;
-}
-
-export interface ProposalItemAvailability {
-  productId: string;
-  productName: string;
-  brandName: string;
-  categoryName: string | null;
-  quantity: number;
-  available: boolean;
-  unitPrice: number | null;
-  lineTotal: number | null;
-}
-
-export interface ProposalItemsAvailabilitySummary {
-  distributorId: string;
-  distributorName: string;
-  rows: ProposalItemAvailability[];
-}
-
-export async function listProposalDistributors(
-  organizationId: string,
-  proposalId: string
-): Promise<ProposalDistributorAvailability[]> {
-  const res = await apiProxy(
-    "GET",
-    `/proposals/${proposalId}/equipment/distributors`,
-    undefined,
-    organizationId
-  );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+  function handleEquipmentSaved(publicToken: string): void {
+    setRegeneratedPublicUrl(`${window.location.origin}/proposta/${publicToken}`);
+    void reload();
   }
-  return res.json() as Promise<ProposalDistributorAvailability[]>;
-}
 
-export async function getProposalItemsAvailability(
-  organizationId: string,
-  proposalId: string,
-  distributorId: string
-): Promise<ProposalItemsAvailabilitySummary> {
-  const q = new URLSearchParams({ distributorId });
-  const res = await apiProxy(
-    "GET",
-    `/proposals/${proposalId}/equipment/availability?${q.toString()}`,
-    undefined,
-    organizationId
-  );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+  async function sharePublicLinkWithTemplate(): Promise<void> {
+    if (!currentOrganizationId || !proposal) return;
+    setTemplateError(null);
+    setTemplateSaving(true);
+    try {
+      await setProposalTemplate(currentOrganizationId, proposal.id, selectedTemplateId || null);
+      const publicUrl = `${window.location.origin}/proposta/${proposal.publicToken ?? proposal.id}`;
+      await navigator.clipboard.writeText(publicUrl);
+      setShareDialogOpen(false);
+      setCopyState("done");
+      window.setTimeout(() => setCopyState("idle"), 2500);
+      await reload();
+    } catch (e) {
+      setTemplateError(e instanceof Error ? e.message : "Não foi possível compartilhar o link.");
+    } finally {
+      setTemplateSaving(false);
+    }
   }
-  return res.json() as Promise<ProposalItemsAvailabilitySummary>;
-}
 
-export async function updateProposalKitItems(
-  organizationId: string,
-  proposalId: string,
-  body: {
-    distributorId: string;
-    items: Array<{ productId: string; quantity: number }>;
-    freightState?: string | null;
+  async function persistDefaultEssentialCostRules(): Promise<void> {
+    if (!currentOrganizationId || !integrator?.defaultEssentialCostNames?.length) return;
+    const role = currentOrganization?.role;
+    if (role !== "OWNER" && role !== "ADMIN") return;
+    setCostDefaultsError(null);
+    setSavingCostDefaults(true);
+    try {
+      const existing = await listCostRules(currentOrganizationId);
+      const hasMao = existing.some((r) => r.name === PROJECT_COST_ESSENTIAL_LABOR_NAME);
+      const hasMargem = existing.some((r) => r.name === PROJECT_COST_ESSENTIAL_MARGIN_NAME);
+      const seeds = getDefaultEssentialRulesForSeeding();
+      if (!hasMao) {
+        for (const r of seeds.filter((s) => s.name === PROJECT_COST_ESSENTIAL_LABOR_NAME)) {
+          await createCostRule(currentOrganizationId, {
+            name: r.name,
+            calculationType: r.calculationType,
+            value: r.value,
+            minKwp: r.minKwp,
+            maxKwp: r.maxKwp,
+            ...(r.calculationType === "PERCENTAGE" && r.percentageBase
+              ? { percentageBase: r.percentageBase }
+              : {}),
+          });
+        }
+      }
+      if (!hasMargem) {
+        const m = seeds.find((s) => s.name === PROJECT_COST_ESSENTIAL_MARGIN_NAME);
+        if (m) {
+          await createCostRule(currentOrganizationId, {
+            name: m.name,
+            calculationType: m.calculationType,
+            value: m.value,
+            minKwp: m.minKwp,
+            maxKwp: m.maxKwp,
+            ...(m.calculationType === "PERCENTAGE" && m.percentageBase
+              ? { percentageBase: m.percentageBase }
+              : {}),
+          });
+        }
+      }
+      setCostDefaultsSaved(true);
+    } catch (e) {
+      setCostDefaultsError(
+        e instanceof Error ? e.message : "Não foi possível guardar as regras na empresa."
+      );
+    } finally {
+      setSavingCostDefaults(false);
+    }
   }
-): Promise<ProposalEquipmentContext & { publicToken: string }> {
-  const res = await apiProxy("PATCH", `/proposals/${proposalId}/kit-items`, body, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+
+  async function saveDiscount(): Promise<void> {
+    if (!currentOrganizationId || !proposal) return;
+    setDiscountError(null);
+    setDiscountSaving(true);
+    try {
+      const { publicToken } = await updateProposalDiscount(
+        currentOrganizationId,
+        proposal.id,
+        discountDraft
+      );
+      setRegeneratedPublicUrl(`${window.location.origin}/proposta/${publicToken}`);
+      await reload();
+    } catch (e) {
+      setDiscountError(e instanceof Error ? e.message : "Não foi possível salvar o desconto.");
+    } finally {
+      setDiscountSaving(false);
+    }
   }
-  return res.json() as Promise<ProposalEquipmentContext & { publicToken: string }>;
-}
 
-export async function createProposalForDeal(
-  organizationId: string,
-  dealId: string,
-  body: {
-    simulationId: string;
-    title: string;
-    validUntil: string;
-    proposalTemplateId?: string;
-    renderedData?: Record<string, unknown>;
-    discountBrl?: number;
+  async function saveTemplateBinding(): Promise<void> {
+    if (!currentOrganizationId || !proposal) return;
+    setTemplateError(null);
+    setTemplateSaving(true);
+    try {
+      await setProposalTemplate(currentOrganizationId, proposal.id, selectedTemplateId || null);
+      await reload();
+    } catch (e) {
+      setTemplateError(e instanceof Error ? e.message : "Não foi possível aplicar o layout.");
+    } finally {
+      setTemplateSaving(false);
+    }
   }
-): Promise<{ id: string }> {
-  const res = await apiProxy("POST", `/deals/${dealId}/proposals`, body, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+
+  if (orgLoading) {
+    return <LoadingState label="Carregando organização" compact />;
   }
-  return res.json() as Promise<{ id: string }>;
-}
 
-export type SimulationListItem = {
-  id: string;
-  name?: string | null;
-  input?: unknown;
-  result?: unknown;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export function simulationHasEmbeddedSizing(s: { result?: unknown }): boolean {
-  const res = s.result;
-  if (!res || typeof res !== "object") return false;
-  const sz = (res as Record<string, unknown>)["sizing"];
-  return (
-    sz != null &&
-    typeof sz === "object" &&
-    typeof (sz as Record<string, unknown>)["recommendedPowerKw"] === "number"
-  );
-}
-
-export async function listSimulationsForLead(
-  organizationId: string,
-  leadId: string
-): Promise<SimulationListItem[]> {
-  const res = await apiProxy("GET", `/leads/${leadId}/simulations`, undefined, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<SimulationListItem[]>;
-}
-
-export async function listSizingsForLead(
-  organizationId: string,
-  leadId: string
-): Promise<{ id: string; name?: string | null }[]> {
-  const res = await apiProxy("GET", `/leads/${leadId}/sizing`, undefined, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<{ id: string; name?: string | null }[]>;
-}
-
-export type LeadFinancialSimulationInput = {
-  systemSizeKw: number;
-  investmentAmount: number;
-  financingType: "CASH" | "FINANCED";
-  interestRate?: number;
-  installments?: number;
-  energyPriceKwh?: number;
-  annualIncreasePercent?: number;
-  sizing?: SystemSizingInputJson;
-  solarResource?: unknown;
-};
-
-export type LeadSystemSizingInput = {
-  monthlyConsumptionKwh: number;
-  roofAreaSqm?: number;
-  panelEfficiency?: number;
-  includeBattery?: boolean;
-  autonomyHours?: number;
-};
-
-export async function createLeadFinancialSimulation(
-  organizationId: string,
-  leadId: string,
-  body: { input: LeadFinancialSimulationInput; name?: string }
-): Promise<{ id: string }> {
-  const res = await apiProxy("POST", `/leads/${leadId}/simulations`, body, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  const data = (await res.json()) as { id: string };
-  return { id: data.id };
-}
-
-export async function createLeadSystemSizing(
-  organizationId: string,
-  leadId: string,
-  body: { input: LeadSystemSizingInput; energyBillId?: string; name?: string }
-): Promise<{ id: string }> {
-  const res = await apiProxy("POST", `/leads/${leadId}/sizing`, body, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  const data = (await res.json()) as { id: string };
-  return { id: data.id };
-}
-
-export function waMeUrl(whatsappDigits: string, message: string): string {
-  const d = whatsappDigits.replace(/\D/g, "");
-  return `https://wa.me/${d}?text=${encodeURIComponent(message)}`;
-}
-
-export type EnergyBillContentType =
-  | "image/jpeg"
-  | "image/png"
-  | "image/webp"
-  | "application/pdf"
-  | "text/plain";
-
-export function guessEnergyBillContentType(file: File): EnergyBillContentType {
-  const t = file.type?.toLowerCase();
-  if (
-    t === "image/jpeg" ||
-    t === "image/png" ||
-    t === "image/webp" ||
-    t === "application/pdf" ||
-    t === "text/plain"
-  ) {
-    return t;
-  }
-  const n = file.name.toLowerCase();
-  if (n.endsWith(".txt")) return "text/plain";
-  if (n.endsWith(".pdf")) return "application/pdf";
-  if (n.endsWith(".png")) return "image/png";
-  if (n.endsWith(".webp")) return "image/webp";
-  if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg";
-  return "application/pdf";
-}
-
-export async function presignEnergyBillUpload(
-  organizationId: string,
-  leadId: string,
-  input: { fileName: string; contentType: EnergyBillContentType }
-): Promise<{ uploadUrl: string; fileUrl: string; key: string }> {
-  const res = await apiProxy(
-    "POST",
-    `/leads/${leadId}/energy-bills/presign`,
-    input,
-    organizationId
-  );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<{ uploadUrl: string; fileUrl: string; key: string }>;
-}
-
-export async function uploadEnergyBillFileToS3(
-  organizationId: string,
-  leadId: string,
-  file: File,
-  contentType: EnergyBillContentType
-): Promise<{ fileUrl: string; fileName: string; mimeType: string; fileSize: number }> {
-  const presign = await presignEnergyBillUpload(organizationId, leadId, {
-    fileName: file.name,
-    contentType,
-  });
-  const uploadRes = await fetch(presign.uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": contentType },
-    body: file,
-  });
-  if (!uploadRes.ok) {
-    const body = await uploadRes.text();
-    const s3Message = body.match(/<Message>([^<]*)<\/Message>/)?.[1];
-    const hint =
-      uploadRes.status === 403
-        ? " Verifique CORS do bucket (PUT desde o origin do app) e se a política/IAM permitem PutObject neste prefixo."
-        : "";
-    throw new Error(
-      s3Message ? `S3: ${s3Message}${hint}` : `Falha no upload (${uploadRes.status}).${hint}`
+  if (!currentOrganizationId) {
+    return (
+      <p className="text-sm text-[var(--color-muted-foreground)]">
+        Selecione uma organização para ver esta proposta.
+      </p>
     );
   }
-  return {
-    fileUrl: presign.fileUrl,
-    fileName: file.name,
-    mimeType: contentType,
-    fileSize: file.size,
-  };
-}
 
-export type EnergyBillExtractionStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
-
-export interface EnergyBillExtractedPayload {
-  referenceMonth?: string;
-  consumptionKwh?: number;
-  totalAmount?: number;
-  rawData?: Record<string, unknown>;
-}
-
-export interface EnergyBillRecord {
-  id: string;
-  tenantId: string;
-  leadId: string;
-  fileUrl: string;
-  fileName: string;
-  provider: string;
-  extractionStatus: EnergyBillExtractionStatus;
-  extractionError?: string | null;
-  extractedData: EnergyBillExtractedPayload | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export async function createEnergyBill(
-  organizationId: string,
-  leadId: string,
-  body: { fileUrl: string; fileName: string; provider?: "COPEL" | "OTHER" }
-): Promise<EnergyBillRecord> {
-  const res = await apiProxy("POST", `/leads/${leadId}/energy-bills`, body, organizationId);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+  if (loadError) {
+    return (
+      <div className="w-full min-w-0 space-y-4">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="gap-2"
+          onClick={() => router.back()}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </Button>
+        <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
+      </div>
+    );
   }
-  return res.json() as Promise<EnergyBillRecord>;
-}
 
-export async function getEnergyBill(
-  organizationId: string,
-  leadId: string,
-  billId: string
-): Promise<EnergyBillRecord> {
-  const res = await apiProxy(
-    "GET",
-    `/leads/${leadId}/energy-bills/${billId}`,
-    undefined,
-    organizationId
+  if (!proposal) {
+    return <LoadingState label="Carregando proposta" compact />;
+  }
+
+  const paybackY = proposal.simulation.result.paybackYears;
+  const simIn = proposal.simulation.input;
+  const simRes = proposal.simulation.result;
+  const sizing = getSizingFromSimulation(proposal);
+  const billSavingsPct = computeBillSavingsPct(proposal);
+  const annualFirst =
+    Array.isArray(simRes.annualSavings) && simRes.annualSavings.length > 0
+      ? (simRes.annualSavings[0] ?? null)
+      : null;
+
+  const publicProposalPath = `/proposta/${proposal.publicToken ?? proposal.id}`;
+  const templateIdForEditor = selectedTemplateId || proposal.proposalTemplate?.id || "";
+  const templateEditorPath = templateIdForEditor
+    ? `/propostas/templates/${templateIdForEditor}`
+    : null;
+  const previewLayoutHref = selectedTemplateId
+    ? `/propostas/templates/${selectedTemplateId}`
+    : null;
+
+  const financingLabel =
+    simIn.financingType === "FINANCED" ? "Simulação financiada" : "Simulação à vista";
+  const financingModeLabel = simIn.financingType === "FINANCED" ? "Financiada" : "À vista";
+
+  const marginHealth = getMarginHealth(marginPct);
+
+  return (
+    <div className="w-full min-w-0 space-y-10">
+      {copyState === "done" && (
+        <div className="pointer-events-none fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-lg">
+          <svg
+            className="h-4 w-4 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          Link copiado para a área de transferência
+        </div>
+      )}
+      <ProposalInternalHeader
+        leadId={proposal.deal.lead.id}
+        leadName={proposal.deal.lead.name}
+        title={proposal.title}
+        statusLabel={STATUS_LABEL[proposal.status] ?? proposal.status}
+        validUntilLabel={new Date(proposal.validUntil).toLocaleDateString("pt-BR")}
+        onSendToClient={() => setShareDialogOpen(true)}
+        publicProposalPath={publicProposalPath}
+        templateEditorUrl={templateEditorPath}
+        canEditTemplate={Boolean(templateIdForEditor)}
+        onCopyPublicLink={() => void copyPublicLink()}
+        copyState={copyState}
+        onExportPdf={() => void downloadInternalPdf()}
+        pdfLoading={pdfLoading}
+        pdfError={pdfError}
+        showSentPdfLink={Boolean(proposal.pdfUrl)}
+        sentPdfUrl={proposal.pdfUrl}
+        financingLabel={financingLabel}
+      />
+
+      <section
+        className="grid gap-6 lg:grid-cols-2 lg:items-stretch"
+        aria-label="Resumo comercial e financeiro"
+      >
+        <ProposalSalesHeroCard
+          monthlySavings={simRes.monthlySavings}
+          investment={quotedSale}
+          paybackYears={paybackY}
+          totalSavings25y={simRes.totalSavings25y}
+          annualSavingsFirstYear={annualFirst}
+          billSavingsPct={billSavingsPct}
+          paybackClassName={paybackToneClass(paybackY)}
+          paybackWarning={paybackY > 20}
+        />
+        <ProposalBusinessHeroCard
+          hasKit={hasEquipmentBreakdown}
+          marginPct={marginPct}
+          marginAppliedBrl={marginAppliedFromRules ?? null}
+          laborAppliedBrl={laborAppliedFromRules ?? null}
+          hasRuleCostBreakdown={hasRuleCostBreakdown}
+          equipmentCost={hasEquipmentBreakdown ? equipmentSubtotal : null}
+          remainderAfterEquipmentBrl={remainderAgg}
+          saleToClient={quotedSale}
+          health={marginHealth}
+        />
+      </section>
+
+      {regeneratedPublicUrl ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">
+          <LinkIcon className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 flex-1">
+            Equipamentos salvos.{" "}
+            <span className="font-semibold">O link anterior foi invalidado</span> — compartilhe o
+            novo link com o cliente.
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            className="bg-emerald-600 text-white hover:bg-emerald-700"
+            onClick={() => {
+              void navigator.clipboard.writeText(regeneratedPublicUrl);
+              setCopyState("done");
+              window.setTimeout(() => setCopyState("idle"), 2500);
+            }}
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            Copiar novo link
+          </Button>
+        </div>
+      ) : null}
+
+      {hasEquipmentBreakdown ? (
+        <ProposalEquipmentEditorCard
+          organizationId={currentOrganizationId}
+          proposalId={proposal.id}
+          onSaved={handleEquipmentSaved}
+        />
+      ) : null}
+
+      <section
+        className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4"
+        aria-label="Desconto comercial"
+      >
+        <h2 className="text-sm font-semibold text-[var(--color-foreground)]">Desconto comercial</h2>
+        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+          Aparece como linha separada na proposta do cliente (valor cheio − desconto = total). Deixe
+          vazio para não aplicar. Salvar gera um novo link público e invalida o anterior.
+        </p>
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <div className="w-full max-w-[220px]">
+            <CurrencyInput
+              id="proposal-discount-edit"
+              label="Desconto (R$)"
+              value={discountDraft}
+              onValueChange={setDiscountDraft}
+            />
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            disabled={discountSaving || (discountDraft ?? 0) === (proposal.discountBrl ?? 0)}
+            onClick={() => void saveDiscount()}
+          >
+            {discountSaving ? "Salvando…" : "Salvar desconto"}
+          </Button>
+          {discountDraft != null && discountDraft > 0 && quotedSale > 0 ? (
+            <span className="text-xs text-[var(--color-muted-foreground)]">
+              Total ao cliente:{" "}
+              <span className="font-semibold text-[var(--color-foreground)]">
+                {formatBRL(Math.max(0, quotedSale - discountDraft))}
+              </span>
+            </span>
+          ) : null}
+        </div>
+        {discountError ? (
+          <p className="mt-2 text-xs text-red-600 dark:text-red-400">{discountError}</p>
+        ) : null}
+      </section>
+
+      {integrator?.notes ? (
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100/90">
+          <span className="font-medium">Notas do kit: </span>
+          {integrator.notes}
+        </p>
+      ) : null}
+
+      {integrator?.defaultEssentialCostNames &&
+      integrator.defaultEssentialCostNames.length > 0 &&
+      !orgCostRulesExist &&
+      !costDefaultsSaved ? (
+        <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-950 dark:text-sky-50/95">
+          <p className="font-medium text-sky-900 dark:text-sky-100">
+            Custos essenciais por padrão do sistema
+          </p>
+          <p className="mt-1 text-sky-900/90 dark:text-sky-100/85">
+            Esta proposta usou valores padrão para:{" "}
+            <span className="font-semibold">
+              {integrator.defaultEssentialCostNames.join(" · ")}
+            </span>
+            . Você pode ajustar o valor comercial na simulação e, para as próximas propostas,
+            cadastrar as mesmas regras na empresa.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Link
+              href="/configuracoes/custos-projeto"
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-accent)]"
+            >
+              Abrir custos do projeto
+            </Link>
+            {(currentOrganization?.role === "OWNER" || currentOrganization?.role === "ADMIN") &&
+            !costDefaultsSaved ? (
+              <Button
+                type="button"
+                size="sm"
+                disabled={savingCostDefaults}
+                onClick={() => void persistDefaultEssentialCostRules()}
+              >
+                {savingCostDefaults ? "A guardar…" : "Guardar estes padrões na empresa"}
+              </Button>
+            ) : null}
+            {costDefaultsSaved ? (
+              <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                Regras cadastradas. As próximas propostas usarão os valores da empresa.
+              </span>
+            ) : null}
+          </div>
+          {costDefaultsError ? (
+            <p className="mt-2 text-xs text-red-600 dark:text-red-400">{costDefaultsError}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {integrator?.projectCostLines && integrator.projectCostLines.length > 0 ? (
+        <section
+          className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4"
+          aria-label="Custos do projeto aplicados"
+        >
+          <h2 className="text-sm font-semibold text-[var(--color-foreground)]">
+            Custos do projeto (regras)
+          </h2>
+          <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+            Linhas usadas para compor o valor comercial desta proposta (equipamento + custos +
+            margem).
+          </p>
+          <div className="mt-3 overflow-x-auto rounded-lg border border-[var(--color-border)]">
+            <table className="w-full min-w-[480px] text-left text-sm">
+              <thead className="bg-[var(--color-muted)]/40 text-xs uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Nome</th>
+                  <th className="px-3 py-2 font-medium">Tipo</th>
+                  <th className="px-3 py-2 font-medium">Referência</th>
+                  <th className="px-3 py-2 text-right font-medium">Valor regra</th>
+                  <th className="px-3 py-2 text-right font-medium">Aplicado</th>
+                  <th className="px-3 py-2 font-medium">Origem</th>
+                </tr>
+              </thead>
+              <tbody>
+                {integrator.projectCostLines.map((line, idx) => (
+                  <tr
+                    key={`${line.name}-${idx}`}
+                    className="border-t border-[var(--color-border)]/70"
+                  >
+                    <td className="px-3 py-2 font-medium">{line.name}</td>
+                    <td className="px-3 py-2 text-[var(--color-muted-foreground)]">
+                      {line.calculationType === "FIXED"
+                        ? "Fixo (R$)"
+                        : line.calculationType === "PER_KWP"
+                          ? "Por kWp"
+                          : "Percentual (%)"}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-[var(--color-muted-foreground)]">
+                      {line.calculationType === "PERCENTAGE"
+                        ? percentageBaseShortLabel(line.percentageBase)
+                        : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {line.calculationType === "PERCENTAGE"
+                        ? `${line.value}%`
+                        : formatBRL(line.value)}
+                    </td>
+                    <td className="px-3 py-2 text-right font-medium tabular-nums">
+                      {formatBRL(line.appliedAmountBrl)}
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      {line.source === "system_default" ? (
+                        <span className="rounded-full bg-sky-500/15 px-2 py-0.5 font-medium text-sky-800 dark:text-sky-200">
+                          Padrão sistema
+                        </span>
+                      ) : (
+                        <span className="text-[var(--color-muted-foreground)]">Empresa</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {typeof integrator.computedSaleFromCostRulesBrl === "number" ? (
+            <p className="mt-3 text-right text-sm font-semibold tabular-nums text-[var(--color-foreground)]">
+              Total calculado (regras): {formatBRL(integrator.computedSaleFromCostRulesBrl)}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      <ProposalScenarioActions pipelineHref="/pipeline" financingModeLabel={financingModeLabel} />
+
+      <ProposalConversionHint />
+
+      {!hasEquipmentBreakdown ? (
+        <>
+          <ProposalEquipmentSummaryCard
+            lineCount={totalSkuCount}
+            unitCount={totalUnits}
+            equipmentSubtotal={null}
+            hasKit={false}
+          />
+          <ProposalCollapsibleProducts productLineCount={productLineCount}>
+            <ul className="divide-y divide-[var(--color-border)]/60 rounded-lg border border-[var(--color-border)]">
+              {componentFallback.length ? (
+                componentFallback.map((c, idx) => (
+                  <li
+                    key={`${c.type}-${idx}`}
+                    className="flex justify-between gap-4 px-3 py-2.5 text-sm"
+                  >
+                    <span className="capitalize">{c.type}</span>
+                    <span className="text-[var(--color-muted-foreground)]">
+                      {c.quantity}× {c.spec ?? "—"}
+                    </span>
+                  </li>
+                ))
+              ) : (
+                <li className="px-3 py-6 text-center text-sm text-[var(--color-muted-foreground)]">
+                  Nenhum componente listado no dimensionamento.
+                </li>
+              )}
+            </ul>
+          </ProposalCollapsibleProducts>
+        </>
+      ) : null}
+
+      <ProposalLayoutSection
+        selectedTemplateId={selectedTemplateId}
+        onTemplateChange={setSelectedTemplateId}
+        templates={templates.map((t) => ({ id: t.id, name: t.name, version: t.version }))}
+        previewHref={previewLayoutHref}
+        templateSaving={templateSaving}
+        onApply={() => void saveTemplateBinding()}
+        error={templateError}
+      />
+
+      <ProposalCollapsibleTechnical>
+        {sizing ? (
+          <div className="grid gap-2 text-sm sm:grid-cols-2">
+            <p>
+              <span className="text-[var(--color-muted-foreground)]">Consumo mensal: </span>
+              <span className="font-medium">{sizing.input.monthlyConsumptionKwh} kWh</span>
+            </p>
+            <p>
+              <span className="text-[var(--color-muted-foreground)]">Potência recomendada: </span>
+              <span className="font-medium">{sizing.result.recommendedPowerKw} kWp</span>
+            </p>
+            <p className="sm:col-span-2">
+              <span className="text-[var(--color-muted-foreground)]">Produção estimada/mês: </span>
+              <span className="font-medium">
+                {Math.round(sizing.result.estimatedProductionKwhMonth)} kWh
+              </span>
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--color-muted-foreground)]">
+            Não há consumo/dimensionamento embutido nesta simulação.
+          </p>
+        )}
+      </ProposalCollapsibleTechnical>
+
+      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <DialogContent muiMaxWidth={false} className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Enviar proposta ao cliente</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-[var(--color-muted-foreground)]">
+            Escolha o layout público. Ao confirmar, o vínculo é salvo e o link da proposta é copiado
+            para você colar no WhatsApp ou e-mail.
+          </p>
+          {templates.length === 0 ? (
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              Nenhum template publicado. Publique um template em Propostas → Templates antes de
+              enviar.
+            </p>
+          ) : (
+            <div className="grid max-h-[55vh] gap-3 overflow-auto p-1 md:grid-cols-2">
+              {templates.map((t) => {
+                const thumb = (t.config?.editor?.styles as Record<string, unknown> | undefined)?.[
+                  TEMPLATE_THUMBNAIL_DATA_URL_KEY
+                ];
+                const checked = selectedTemplateId === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setSelectedTemplateId(t.id)}
+                    className={`rounded-xl border p-3 text-left transition ${
+                      checked
+                        ? "border-emerald-500 bg-emerald-500/10"
+                        : "border-[var(--color-border)] hover:border-emerald-500/40"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="h-28 shrink-0 overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-background)]">
+                        {typeof thumb === "string" && thumb ? (
+                          <img
+                            src={thumb}
+                            alt={`Preview do template ${t.name}`}
+                            className="block h-full w-auto object-contain"
+                          />
+                        ) : (
+                          <div className="flex h-full min-w-20 items-center justify-center px-2 text-[10px] text-[var(--color-muted-foreground)]">
+                            Sem preview
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="line-clamp-1 text-sm font-semibold">{t.name}</p>
+                        <p className="text-xs text-[var(--color-muted-foreground)]">v{t.version}</p>
+                        <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted-foreground)]">
+                          {t.description || "Template sem descrição"}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setShareDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              disabled={templateSaving || !selectedTemplateId}
+              onClick={() => void sharePublicLinkWithTemplate()}
+            >
+              {templateSaving ? "Enviando..." : "Salvar layout e copiar link"}
+            </Button>
+          </div>
+          {templateError ? (
+            <p className="text-sm text-red-600 dark:text-red-400">{templateError}</p>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<EnergyBillRecord>;
-}
-
-const ENERGY_BILL_POLL_MS = 750;
-const ENERGY_BILL_WAIT_MS = 120_000;
-
-export async function waitForEnergyBillExtraction(
-  organizationId: string,
-  leadId: string,
-  billId: string
-): Promise<EnergyBillRecord> {
-  const deadline = Date.now() + ENERGY_BILL_WAIT_MS;
-  for (;;) {
-    const bill = await getEnergyBill(organizationId, leadId, billId);
-    if (bill.extractionStatus === "COMPLETED" || bill.extractionStatus === "FAILED") {
-      return bill;
-    }
-    if (Date.now() >= deadline) {
-      throw new Error(
-        "Tempo esgotado ao ler a conta de luz. Verifique a API (OpenAI) e tente de novo."
-      );
-    }
-    await new Promise((r) => setTimeout(r, ENERGY_BILL_POLL_MS));
-  }
 }
