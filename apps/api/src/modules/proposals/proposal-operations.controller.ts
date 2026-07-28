@@ -1,5 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
-import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, Header, StreamableFile } from "@nestjs/common";import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
 import { TenantId } from "../../common/decorators/tenant-id.decorator";
 import { ProposalsService } from "./proposals.service";
 
@@ -16,6 +15,13 @@ export class ProposalOperationsController {
   @Get(":id")
   findOne(@TenantId() tenantId: string, @Param("id") id: string) {
     return this.proposalsService.findOne(tenantId, id);
+  }
+  
+  @Get(":id/generate-pdf")
+  @Header("Content-Type", "application/pdf")
+  async generatePdf(@Param("id") id: string) {
+    const buffer = await this.proposalsService.generatePdf(id);
+    return new StreamableFile(buffer);
   }
 
   @Post(":id/send")
