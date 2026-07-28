@@ -414,8 +414,24 @@ export class ProposalsService {
   }
 
   async generatePdf(proposalId: string): Promise<Buffer> {
+    // 1. Busca a proposta para pegar o Token Público
+    const proposal = await this.prisma.proposal.findUnique({
+      where: { id: proposalId },
+      select: { id: true, publicToken: true } // Pegamos apenas o que precisamos
+    });
+
+    if (!proposal) {
+      throw new BadRequestException("Proposta não encontrada para gerar PDF.");
+    }
+
     const webBaseUrl = process.env["PUBLIC_WEB_APP_BASE_URL"] || "https://www.energivia.com.br";
-    const targetUrl = `${webBaseUrl}/proposta/${proposalId}`;
+    
+    // 2. Usa o token público (se existir) ou o ID como fallback
+    const token = proposal.publicToken || proposal.id;
+
+    // ATENÇÃO: Verifique se a rota do seu frontend para o cliente final é "/proposta/" mesmo 
+    // ou se é algo como "/p/", "/proposta/publica/", etc.
+    const targetUrl = `${webBaseUrl}/proposta/${token}`;
 
     this.logger.log(`Iniciando geração de PDF para a proposta ${proposalId} na URL: ${targetUrl}`);
 
@@ -470,4 +486,3 @@ export class ProposalsService {
       }
     }
   }
-}
