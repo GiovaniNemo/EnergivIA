@@ -79,16 +79,6 @@ export default function RootLayout({
           </ThemeProvider>
         </div>
 
-        {/* Script de Integração com o Chatbase - EnergivIA */}
-        <Script
-          id="chatbase-widget"
-          strategy="lazyOnload"
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(){if(!window.chatbase||window.chatbase("getState")!=="initialized"){window.chatbase=function(){(window.chatbase.q=window.chatbase.q||[]).push(arguments)};window.chatbase=new Proxy(window.chatbase,{get(target,prop){if(prop==="q"){return target.q}return function(){return target(prop,...arguments)}}})}const parent=document.getElementsByTagName("head")[0];const script=document.createElement("script");script.src="https://www.chatbase.co/embed.min.js";script.id="CXsTCPop6oDd4DIn7EWX9";script.domain="www.chatbase.co";parent.appendChild(script)})()
-            `,
-          }}
-        />
       </body>
     </html>
   );
