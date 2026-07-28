@@ -100,9 +100,15 @@ export async function GET(
       fontFamily?: string;
     } | undefined;
 
-    const ReactDomServer = await import("react-dom/server");
+    let ReactDomServer: any;
+    try {
+      ReactDomServer = await eval('import("react-dom/server")');
+    } catch {
+      ReactDomServer = require("react-dom/server");
+    }
+
     const renderToStaticMarkup =
-      ReactDomServer.renderToStaticMarkup || (ReactDomServer as any).default?.renderToStaticMarkup;
+      ReactDomServer.renderToStaticMarkup || ReactDomServer.default?.renderToStaticMarkup;
 
     if (!renderToStaticMarkup) {
       throw new Error("Unable to load renderToStaticMarkup from react-dom/server");
