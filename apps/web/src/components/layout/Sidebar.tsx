@@ -13,6 +13,11 @@ import { cn } from "@energivia/utils";
 const ADMIN_SURFACE_SECTIONS: ReadonlySet<SidebarSectionKey> = new Set(["admin", "platform"]);
 const APP_SURFACE_SECTIONS: ReadonlySet<SidebarSectionKey> = new Set(["operation", "management"]);
 
+// Defina aqui os e-mails das pessoas que terão acesso à aba ADMIN e PLATAFORMA.
+const ALLOWED_ADMIN_EMAILS = [
+  "admin@energivia.com.br", // Troque este pelo seu e-mail
+];
+
 type Surface = "admin" | "app" | "all";
 
 const isLocalDevHost = (host: string): boolean =>
@@ -49,6 +54,14 @@ export function Sidebar(): JSX.Element {
         items: MENU_ITEMS.filter((item) => {
           if (item.section !== sectionKey) return false;
 
+          // Restringe as abas "admin" (e opcionalmente "platform") apenas para os e-mails definidos
+          if (sectionKey === "admin" || sectionKey === "platform") {
+            const userEmail = user?.email?.toLowerCase();
+            if (!userEmail || !ALLOWED_ADMIN_EMAILS.includes(userEmail)) {
+              return false;
+            }
+          }
+
           if (surface === "admin" && !ADMIN_SURFACE_SECTIONS.has(sectionKey)) return false;
           if (surface === "app" && !APP_SURFACE_SECTIONS.has(sectionKey)) return false;
 
@@ -64,7 +77,7 @@ export function Sidebar(): JSX.Element {
         }),
       }))
       .filter((section) => section.items.length > 0);
-  }, [userRole, surface]);
+  }, [user, userRole, surface]);
 
   const activeMenuPath = useMemo(() => {
     const currentPath = (pathname ?? "").replace(/\/$/, "");
