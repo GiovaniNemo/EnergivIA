@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import puppeteerCore from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import {
-    wrapProposalHtmlForPuppeteer,
-    proposalPuppeteerPdfOptions,
+  wrapProposalHtmlForPuppeteer,
+  proposalPuppeteerPdfOptions,
 } from "@/lib/proposal-puppeteer-html";
 import { templateConfigToPreviewDocument } from "@/lib/proposal-template-document";
 import { mergePublicProposalVariables } from "@/lib/public-proposal-variables";
@@ -13,38 +13,38 @@ import { auth0 } from "@/lib/auth0";
 const BACKEND_URL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
 
 async function getBrowser() {
-    const isLocal =
-        process.env.NODE_ENV === "development" ||
-        process.platform === "win32" ||
-        process.platform === "darwin";
+  const isLocal =
+    process.env.NODE_ENV === "development" ||
+    process.platform === "win32" ||
+    process.platform === "darwin";
 
-    if (isLocal) {
-        const puppeteer = await import("puppeteer");
-        return puppeteer.default.launch({
-            headless: true,
-            args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        });
-    }
-
-    const CHROMIUM_URL =
-        "https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar";
-    const executablePath = await chromium.executablePath(CHROMIUM_URL);
-    return puppeteerCore.launch({
-        args: chromium.args,
-        executablePath,
-        headless: true,
+  if (isLocal) {
+    const puppeteer = await import("puppeteer");
+    return puppeteer.default.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
+  }
+
+  const CHROMIUM_URL =
+    "https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar";
+  const executablePath = await chromium.executablePath(CHROMIUM_URL);
+  return puppeteerCore.launch({
+    args: chromium.args,
+    executablePath,
+    headless: true,
+  });
 }
 
 function toSafeAsciiFilename(raw: string): string {
-    const normalized = raw
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^\x20-\x7E]/g, "")
-        .replace(/[^a-zA-Z0-9._-]+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^[-_.]+|[-_.]+$/g, "");
-    return normalized.toLowerCase() || "proposta-solar";
+  const normalized = raw
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-_.]+|[-_.]+$/g, "");
+  return normalized.toLowerCase() || "proposta-solar";
 }
 
 /**
@@ -52,11 +52,11 @@ function toSafeAsciiFilename(raw: string): string {
  * Usa as mesmas funções de variáveis e template já existentes no projeto.
  */
 function buildStaticProposalHtml(payload: PublicProposalPayload): string {
-    // Sem template vinculado — fallback simples
-    if (!payload.proposalTemplate?.config) {
-        const clientName = payload.deal?.lead?.name ?? "Cliente";
-        const title = payload.title ?? "Proposta Solar";
-        return `
+  // Sem template vinculado — fallback simples
+  if (!payload.proposalTemplate?.config) {
+    const clientName = payload.deal?.lead?.name ?? "Cliente";
+    const title = payload.title ?? "Proposta Solar";
+    return `
       <div style="font-family:system-ui,sans-serif;padding:40px;max-width:800px;margin:0 auto">
         <h1 style="font-size:24px;margin-bottom:8px">${title}</h1>
         <p style="color:#64748b">Cliente: ${clientName}</p>
@@ -66,42 +66,47 @@ function buildStaticProposalHtml(payload: PublicProposalPayload): string {
         </p>
       </div>
     `;
-    }
+  }
 
-    // Constrói as variáveis a partir dos dados reais da proposta
-    const base = templateConfigToPreviewDocument(payload.proposalTemplate.config);
-    const mergedVariables = mergePublicProposalVariables(base.variables, payload);
-    const branding = base.styles?.branding;
+  // Constrói as variáveis a partir dos dados reais da proposta
+  const base = templateConfigToPreviewDocument(payload.proposalTemplate.config);
+  const mergedVariables = mergePublicProposalVariables(base.variables, payload);
+  const branding = base.styles?.["branding"] as {
+    primaryColor?: string;
+    backgroundColor?: string;
+    textColor?: string;
+    logoUrl?: string;
+  } | undefined;
 
-    // Pega as seções e monta HTML simples (sem React, sem Tailwind)
-    // Usando abordagem de substituição de variáveis no HTML existente (se houver)
-    // O template já tem o HTML configurado no editor; precisamos renderizá-lo estaticamente.
-    // Por limitação server-side (sem React/ReactDOM disponível nesta rota),
-    // geramos uma página com os dados principais formatados profissionalmente.
+  // Pega as seções e monta HTML simples (sem React, sem Tailwind)
+  // Usando abordagem de substituição de variáveis no HTML existente (se houver)
+  // O template já tem o HTML configurado no editor; precisamos renderizá-lo estaticamente.
+  // Por limitação server-side (sem React/ReactDOM disponível nesta rota),
+  // geramos uma página com os dados principais formatados profissionalmente.
 
-    const vars = mergedVariables as Record<string, string | number | undefined>;
+  const vars = mergedVariables as Record<string, string | number | undefined>;
 
-    const fmt = (v: unknown) =>
-        v !== undefined && v !== null && v !== "" ? String(v) : "—";
+  const fmt = (v: unknown) =>
+    v !== undefined && v !== null && v !== "" ? String(v) : "—";
 
-    const primaryColor = branding?.primaryColor ?? "#059669";
-    const bgColor = branding?.backgroundColor ?? "#ffffff";
-    const textColor = branding?.textColor ?? "#0f172a";
-    const logoUrl =
-        typeof branding?.logoUrl === "string" && branding.logoUrl.trim()
-            ? branding.logoUrl.trim()
-            : "";
+  const primaryColor = branding?.primaryColor ?? "#059669";
+  const bgColor = branding?.backgroundColor ?? "#ffffff";
+  const textColor = branding?.textColor ?? "#0f172a";
+  const logoUrl =
+    typeof branding?.logoUrl === "string" && branding.logoUrl.trim()
+      ? branding.logoUrl.trim()
+      : "";
 
-    const logoHtml = logoUrl
-        ? `<img src="${logoUrl}" alt="Logo" style="height:48px;object-fit:contain;margin-bottom:8px" />`
-        : "";
+  const logoHtml = logoUrl
+    ? `<img src="${logoUrl}" alt="Logo" style="height:48px;object-fit:contain;margin-bottom:8px" />`
+    : "";
 
-    const discountLine =
-        vars["investimento_desconto"] && vars["investimento_desconto"] !== "—"
-            ? `<tr><td style="padding:6px 0;color:#64748b">Desconto</td><td style="padding:6px 0;text-align:right;color:#dc2626">- ${fmt(vars["investimento_desconto"])}</td></tr>`
-            : "";
+  const discountLine =
+    vars["investimento_desconto"] && vars["investimento_desconto"] !== "—"
+      ? `<tr><td style="padding:6px 0;color:#64748b">Desconto</td><td style="padding:6px 0;text-align:right;color:#dc2626">- ${fmt(vars["investimento_desconto"])}</td></tr>`
+      : "";
 
-    return `
+  return `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:${bgColor};color:${textColor};min-height:100vh">
 
       <!-- Capa -->
@@ -198,85 +203,86 @@ function buildStaticProposalHtml(payload: PublicProposalPayload): string {
 }
 
 export async function GET(
-    _request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
-    // Verifica autenticação
-    const session = await auth0.getSession();
-    if (!session?.user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Verifica autenticação
+  const session = await auth0.getSession();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json({ error: "Missing proposal id" }, { status: 400 });
+  }
+
+  try {
+    // 1. Busca os dados da proposta via API pública (server-to-server, sem auth de browser)
+    const apiUrl = `${BACKEND_URL}/public/proposals/${id}`;
+    const apiResponse = await fetch(apiUrl, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      // sem credentials — rota é pública no backend
+    });
+
+    if (!apiResponse.ok) {
+      const err = await apiResponse.json().catch(() => ({})) as { message?: string };
+      return NextResponse.json(
+        { error: err.message ?? `Proposta não encontrada (HTTP ${apiResponse.status})` },
+        { status: apiResponse.status }
+      );
     }
 
-    const { id } = await params;
-    if (!id) {
-        return NextResponse.json({ error: "Missing proposal id" }, { status: 400 });
-    }
+    const payload = (await apiResponse.json()) as PublicProposalPayload;
 
+    // 2. Monta o HTML estático com as variáveis reais da proposta
+    const bodyHtml = buildStaticProposalHtml(payload);
+
+    const editorStyles = payload.proposalTemplate?.config?.editor?.styles as Record<string, unknown> | undefined;
+    const branding = editorStyles?.["branding"] as {
+      primaryColor?: string;
+      secondaryColor?: string;
+      backgroundColor?: string;
+      textColor?: string;
+      fontFamily?: string;
+    } | undefined;
+
+    const html = wrapProposalHtmlForPuppeteer({
+      documentTitle: payload.title ?? "Proposta Solar",
+      bodyHtml,
+      branding: {
+        primaryColor: branding?.primaryColor ?? "#059669",
+        secondaryColor: branding?.secondaryColor ?? "#047857",
+        backgroundColor: branding?.backgroundColor ?? "#ffffff",
+        textColor: branding?.textColor ?? "#0f172a",
+        fontFamily: branding?.fontFamily,
+      },
+    });
+
+    // 3. Gera o PDF com Puppeteer a partir do HTML estático (sem navegar para URL)
+    const browser = await getBrowser();
     try {
-        // 1. Busca os dados da proposta via API pública (server-to-server, sem auth de browser)
-        const apiUrl = `${BACKEND_URL}/public/proposals/${id}`;
-        const apiResponse = await fetch(apiUrl, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            // sem credentials — rota é pública no backend
-        });
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 45_000 });
+      const pdf = await page.pdf(proposalPuppeteerPdfOptions);
 
-        if (!apiResponse.ok) {
-            const err = await apiResponse.json().catch(() => ({})) as { message?: string };
-            return NextResponse.json(
-                { error: err.message ?? `Proposta não encontrada (HTTP ${apiResponse.status})` },
-                { status: apiResponse.status }
-            );
-        }
+      const safeFilename = toSafeAsciiFilename(payload.title ?? "proposta-solar");
 
-        const payload = (await apiResponse.json()) as PublicProposalPayload;
-
-        // 2. Monta o HTML estático com as variáveis reais da proposta
-        const bodyHtml = buildStaticProposalHtml(payload);
-
-        const branding = payload.proposalTemplate?.config?.editor?.styles?.branding as {
-            primaryColor?: string;
-            secondaryColor?: string;
-            backgroundColor?: string;
-            textColor?: string;
-            fontFamily?: string;
-        } | undefined;
-
-        const html = wrapProposalHtmlForPuppeteer({
-            documentTitle: payload.title ?? "Proposta Solar",
-            bodyHtml,
-            branding: {
-                primaryColor: branding?.primaryColor ?? "#059669",
-                secondaryColor: branding?.secondaryColor ?? "#047857",
-                backgroundColor: branding?.backgroundColor ?? "#ffffff",
-                textColor: branding?.textColor ?? "#0f172a",
-                fontFamily: branding?.fontFamily,
-            },
-        });
-
-        // 3. Gera o PDF com Puppeteer a partir do HTML estático (sem navegar para URL)
-        const browser = await getBrowser();
-        try {
-            const page = await browser.newPage();
-            await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 45_000 });
-            const pdf = await page.pdf(proposalPuppeteerPdfOptions);
-
-            const safeFilename = toSafeAsciiFilename(payload.title ?? "proposta-solar");
-
-            return new Response(Buffer.from(pdf), {
-                status: 200,
-                headers: {
-                    "Content-Type": "application/pdf",
-                    "Content-Disposition": `attachment; filename="${safeFilename}.pdf"`,
-                    "Cache-Control": "no-store",
-                },
-            });
-        } finally {
-            await browser.close();
-        }
-    } catch (error) {
-        console.error("[api/proposals/[id]/pdf] Erro:", error);
-        const message = error instanceof Error ? error.message : "Falha ao gerar PDF";
-        return NextResponse.json({ error: message }, { status: 500 });
+      return new Response(Buffer.from(pdf), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${safeFilename}.pdf"`,
+          "Cache-Control": "no-store",
+        },
+      });
+    } finally {
+      await browser.close();
     }
+  } catch (error) {
+    console.error("[api/proposals/[id]/pdf] Erro:", error);
+    const message = error instanceof Error ? error.message : "Falha ao gerar PDF";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
