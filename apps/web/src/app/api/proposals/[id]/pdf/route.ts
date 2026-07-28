@@ -101,7 +101,14 @@ export async function GET(
     } | undefined;
 
     const ReactDomServer = await import("react-dom/server");
-    const bodyHtml = ReactDomServer.renderToStaticMarkup(
+    const renderToStaticMarkup =
+      ReactDomServer.renderToStaticMarkup || (ReactDomServer as any).default?.renderToStaticMarkup;
+
+    if (!renderToStaticMarkup) {
+      throw new Error("Unable to load renderToStaticMarkup from react-dom/server");
+    }
+
+    const bodyHtml = renderToStaticMarkup(
       React.createElement(PreviewDocument, {
         title: payload.title ?? "Proposta Solar",
         documentState,
