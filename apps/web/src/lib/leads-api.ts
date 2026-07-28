@@ -889,7 +889,7 @@ export async function waitForEnergyBillExtraction(
   billId: string
 ): Promise<EnergyBillRecord> {
   const deadline = Date.now() + ENERGY_BILL_WAIT_MS;
-  for (;;) {
+  for (; ;) {
     const bill = await getEnergyBill(organizationId, leadId, billId);
     if (bill.extractionStatus === "COMPLETED" || bill.extractionStatus === "FAILED") {
       return bill;
@@ -903,12 +903,19 @@ export async function waitForEnergyBillExtraction(
   }
 }
 
-// ---- FUNÇÃO DO PDF ADICIONADA AQUI NO FINAL ----
+// ---- FUNÇÃO DO PDF: usa rota Next.js server-side que gera PDF sem SPA ----
 export async function downloadProposalPdf(
-  organizationId: string,
+  _organizationId: string,
   proposalId: string
 ): Promise<Blob> {
-  const res = await apiProxy("GET", `/proposals/${proposalId}/generate-pdf`, undefined, organizationId);
+  // Chama a rota Next.js /api/proposals/[id]/pdf que:
+  // 1. Busca os dados da proposta na API pública (server-to-server)
+  // 2. Monta o HTML com as variáveis reais do template
+  // 3. Gera o PDF com Puppeteer a partir do HTML estático (sem navegar para SPA)
+  const res = await fetch(`/api/proposals/${proposalId}/pdf`, {
+    method: "GET",
+    credentials: "include",
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
