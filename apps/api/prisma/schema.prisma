@@ -43,6 +43,7 @@ model Tenant {
   stockItems            StockItem[]
   stockMovements        StockMovement[]
   freightRules          FreightRule[]
+  subscription          Subscription?
 
   @@index([slug])
   @@index([deletedAt])
@@ -1272,4 +1273,41 @@ model FinancingCommission {
   @@index([tenantId])
   @@index([status, createdAt(sort: Desc)])
   @@map("financing_commissions")
+}
+
+model Plan {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  features    Json?
+  active      Boolean  @default(true)
+  interval    String   @default("month")
+  stripeId    String?  @unique
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  tenantId             String   @unique @map("tenant_id")
+  planId               String   @map("plan_id")
+  status               String   @default("active")
+  stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
+  stripeCustomerId     String?  @map("stripe_customer_id")
+  currentPeriodEnd     DateTime @map("current_period_end")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([planId])
+  @@index([status])
+  @@map("subscriptions")
 }
