@@ -94,6 +94,7 @@ function createAppShellMuiTheme() {
       MuiMenuItem: {
         styleOverrides: {
           root: {
+            color: "var(--color-foreground)",
             borderRadius: 6,
             margin: "0 4px",
             "&.Mui-selected": {
@@ -156,6 +157,7 @@ function createAppShellMuiTheme() {
             fontSize: "0.875rem",
           },
           option: {
+            color: "var(--color-foreground)",
             borderRadius: 6,
             minHeight: 36,
             "&[aria-selected='true']": {
