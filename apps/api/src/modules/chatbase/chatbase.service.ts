@@ -120,7 +120,7 @@ export class ChatbaseService {
 
     // Monta o link da proposta pública
     // Tenta pegar WEB_URL das vars de ambiente, ou usa o default de prod
-    const webUrl = process.env.WEB_URL || "https://www.energivia.com.br";
+    const webUrl = process.env["WEB_URL"] || "https://www.energivia.com.br";
     const token = proposal.publicToken || proposal.id;
     const proposalLink = `${webUrl}/proposta/${token}`;
 
