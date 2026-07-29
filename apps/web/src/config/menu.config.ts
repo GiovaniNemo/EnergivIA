@@ -21,6 +21,8 @@ import {
   Banknote,
   Building2 as BuildingIcon,
   ListChecks,
+  CreditCard,
+  Crown,
 } from "lucide-react";
 
 export type SidebarSectionKey = "operation" | "management" | "admin" | "platform";
@@ -109,6 +111,13 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/propostas/templates",
     section: "management",
   },
+  {
+    label: "Meus Planos",
+    icon: Crown,
+    path: "/gestao/meus-planos",
+    section: "management",
+    tooltip: "Assine um plano para acessar recursos premium",
+  },
   { label: "Configurações", icon: Settings, path: "/configuracoes", section: "management" },
 
   {
@@ -150,6 +159,13 @@ export const MENU_ITEMS: MenuItem[] = [
     label: "Sistema",
     icon: Shield,
     path: "/admin/sistema",
+    section: "admin",
+    requiresRole: "platform",
+  },
+  {
+    label: "Gestão de Planos",
+    icon: CreditCard,
+    path: "/admin/planos",
     section: "admin",
     requiresRole: "platform",
   },
