@@ -39,9 +39,10 @@ export class ChatbaseService {
     // Registra a atividade do lead
     await this.prisma.leadActivityLog.create({
       data: {
+        tenantId: lead.tenantId,
         leadId: lead.id,
         kind: "LEAD_CREATED",
-        description: "Lead criado através do chatbot.",
+        label: "Lead criado através do chatbot.",
       },
     });
 
@@ -82,7 +83,6 @@ export class ChatbaseService {
         leadId: lead.id,
         title: `Simulação Chatbot - ${data.name}`,
         value: estimatedValue,
-        probability: 50,
       }
     });
 
