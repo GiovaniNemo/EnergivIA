@@ -72,6 +72,46 @@ function createAppShellMuiTheme() {
           },
         },
       },
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            backgroundColor: "var(--color-popover)",
+            color: "var(--color-popover-foreground)",
+            backgroundImage: "none",
+          },
+        },
+      },
+      MuiMenu: {
+        styleOverrides: {
+          paper: {
+            backgroundColor: "var(--color-popover)",
+            color: "var(--color-popover-foreground)",
+            border: "1px solid var(--color-border)",
+            borderRadius: 8,
+          },
+        },
+      },
+      MuiMenuItem: {
+        styleOverrides: {
+          root: {
+            borderRadius: 6,
+            margin: "0 4px",
+            "&.Mui-selected": {
+              backgroundColor: "var(--color-accent)",
+              color: "var(--color-accent-foreground)",
+              "&:hover": {
+                backgroundColor: "var(--color-accent)",
+              }
+            },
+            "&:hover": {
+              backgroundColor: "var(--color-muted)",
+            },
+            "&.Mui-focused": {
+              backgroundColor: "var(--color-muted)",
+            },
+          },
+        },
+      },
       MuiInputLabel: {
         styleOverrides: {
           root: {
