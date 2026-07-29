@@ -21,4 +21,11 @@ export class ChatbaseController {
     // Rota pública acessível pelo Chatbase para criar leads durante a conversa
     return this.chatbase.createLead(data);
   }
+
+  @Public()
+  @Post("proposta")
+  async createProposalFromChat(@Body() data: { tenantId: string; name: string; whatsapp: string; monthlyConsumptionKwh: number; email?: string; source?: string }) {
+    // Rota pública para Chatbase gerar simulação/proposta rápida
+    return this.chatbase.createFastSimulation(data);
+  }
 }
