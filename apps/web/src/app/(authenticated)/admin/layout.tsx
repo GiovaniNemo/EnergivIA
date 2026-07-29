@@ -25,17 +25,17 @@ const tabs = [
   },
 ];
 
-function isTemplateBlueprintEditorPath(pathname: string | null): boolean {
+function isStandaloneAdminPath(pathname: string | null): boolean {
   if (!pathname) return false;
   const normalized = pathname.replace(/\/$/, "") || "/";
-  return normalized.startsWith("/admin/modelos-template/");
+  return normalized.startsWith("/admin/modelos-template/") || normalized.startsWith("/admin/planos");
 }
 
 export default function AdminLayout({ children }: { children: ReactNode }): JSX.Element {
   const pathname = usePathname();
-  const blueprintEditorFullscreen = isTemplateBlueprintEditorPath(pathname);
+  const standalone = isStandaloneAdminPath(pathname);
 
-  if (blueprintEditorFullscreen) {
+  if (standalone) {
     return <AdminThemeProvider>{children}</AdminThemeProvider>;
   }
 
