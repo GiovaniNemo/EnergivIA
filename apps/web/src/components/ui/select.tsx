@@ -132,6 +132,15 @@ const Select = React.forwardRef<unknown, SelectProps>(
             ...(inputProps as any),
           }}
           displayEmpty
+          renderValue={(selected) => {
+            let selectedNode: React.ReactNode = selected as string;
+            React.Children.forEach(childrenMapped, (child) => {
+              if (React.isValidElement(child) && child.props.value === selected) {
+                selectedNode = child.props.children;
+              }
+            });
+            return selectedNode || "";
+          }}
         >
           {childrenMapped}
         </MuiSelect>
