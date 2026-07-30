@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from "class-validator";
+import { IsString, IsOptional, IsArray } from "class-validator";
 
 export class UpdateBrandDto {
   @IsOptional()
