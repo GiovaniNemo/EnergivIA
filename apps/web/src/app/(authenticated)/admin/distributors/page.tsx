@@ -92,8 +92,9 @@ export default function AdminDistributorsPage(): JSX.Element {
   });
 
   const handleOpenIntegration = (d: Distributor) => {
-    setApiKey((d.apiCredentials?.apiKey as string) || "");
-    setApiSecret((d.apiCredentials?.secret as string) || "");
+    const creds = d.apiCredentials as Record<string, unknown> | null | undefined;
+    setApiKey((creds?.["apiKey"] as string) || "");
+    setApiSecret((creds?.["secret"] as string) || "");
     setIntegrationDialog({ open: true, distributor: d });
   };
 
