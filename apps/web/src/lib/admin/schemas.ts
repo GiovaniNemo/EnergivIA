@@ -11,7 +11,7 @@ export const brandSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   country: z.string().optional(),
   image_url: z.string().url("URL da imagem inválida").optional().or(z.literal("")),
-  categories: z.array(z.string()).optional().default([]),
+  categories: z.array(z.string()).optional(),
 });
 
 export const distributorSchema = z.object({
