@@ -103,6 +103,7 @@ const Select = React.forwardRef<unknown, SelectProps>(
             },
           }}
           MenuProps={{
+            disablePortal: true,
             PaperProps: {
               sx: {
                 bgcolor: "var(--color-background)",
@@ -130,6 +131,7 @@ const Select = React.forwardRef<unknown, SelectProps>(
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             ...(inputProps as any),
           }}
+          displayEmpty
         >
           {childrenMapped}
         </MuiSelect>
