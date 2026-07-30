@@ -110,9 +110,6 @@ const ROOF_TYPE_SELECT_OPTIONS: { value: RoofType; label: string }[] = [
 
 const MODULE_BRAND_SELECT_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "Melhor custo (qualquer marca)" },
-  { value: "Canadian Solar", label: "Canadian Solar" },
-  { value: "JA Solar", label: "JA Solar" },
-  { value: "Trina", label: "Trina" },
   { value: "__custom__", label: "Outra (digitar)" },
 ];
 

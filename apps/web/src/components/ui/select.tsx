@@ -3,7 +3,7 @@
 import * as React from "react";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
-import NativeSelect from "@mui/material/NativeSelect";
+
 import OutlinedInput from "@mui/material/OutlinedInput";
 import { cn } from "@energivia/utils";
 
@@ -33,10 +33,10 @@ const selectOutlinedSx = {
   },
 } as const;
 
-export type SelectProps = Omit<
-  React.ComponentProps<typeof NativeSelect>,
-  "input" | "variant" | "inputProps"
-> & {
+import MuiSelect, { SelectProps as MuiSelectProps } from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+
+export type SelectProps = Omit<MuiSelectProps<unknown>, "input" | "variant" | "inputProps"> & {
   label?: string;
   id?: string;
   className?: string;
@@ -44,7 +44,7 @@ export type SelectProps = Omit<
   inputProps?: React.ComponentProps<"select">;
 };
 
-const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
+const Select = React.forwardRef<unknown, SelectProps>(
   (
     { className, label, id: idProp, fullWidth = true, children, inputProps, disabled, ...rest },
     ref
@@ -57,6 +57,17 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     const outlinedInput = (
       <OutlinedInput notched={hasLabel} label={hasLabel ? label : undefined} id={fieldId} />
     );
+
+    const childrenMapped = React.Children.map(children, (child) => {
+      if (React.isValidElement(child) && child.type === "option") {
+        return (
+          <MenuItem key={child.key} value={child.props.value} disabled={child.props.disabled}>
+            {child.props.children}
+          </MenuItem>
+        );
+      }
+      return child;
+    });
 
     return (
       <FormControl
@@ -71,22 +82,52 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             {label}
           </InputLabel>
         ) : null}
-        <NativeSelect
+        <MuiSelect
           {...rest}
           disabled={disabled}
           id={fieldId}
           variant="outlined"
           input={outlinedInput}
           inputRef={ref}
-          sx={selectOutlinedSx}
+          sx={{
+            ...selectOutlinedSx,
+            "& .MuiSelect-select": {
+              py: 1,
+              pl: 1.5,
+              pr: 3.25,
+              fontSize: "0.875rem",
+              fontFamily: "inherit",
+              display: "flex",
+              alignItems: "center",
+            },
+          }}
+          MenuProps={{
+            PaperProps: {
+              sx: {
+                bgcolor: "var(--color-background)",
+                color: "var(--color-foreground)",
+                border: "1px solid var(--color-border)",
+                backgroundImage: "none",
+                "& .MuiMenuItem-root": {
+                  fontSize: "0.875rem",
+                },
+                "& .MuiMenuItem-root.Mui-selected": {
+                  bgcolor: "var(--color-primary-foreground)",
+                },
+                "& .MuiMenuItem-root:hover": {
+                  bgcolor: "var(--color-muted)",
+                },
+              },
+            },
+          }}
           inputProps={{
             id: fieldId,
             ...(hasLabel && labelId ? { "aria-labelledby": labelId } : {}),
             ...inputProps,
           }}
         >
-          {children}
-        </NativeSelect>
+          {childrenMapped}
+        </MuiSelect>
       </FormControl>
     );
   }
