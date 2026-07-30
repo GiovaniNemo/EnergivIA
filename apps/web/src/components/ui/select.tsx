@@ -124,7 +124,8 @@ const Select = React.forwardRef<unknown, SelectProps>(
           inputProps={{
             id: fieldId,
             ...(hasLabel && labelId ? { "aria-labelledby": labelId } : {}),
-            ...inputProps,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...(inputProps as any),
           }}
         >
           {childrenMapped}
