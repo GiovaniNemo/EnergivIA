@@ -17,6 +17,13 @@ interface EdeltecProduct {
   grupoDeProduto?: {
     descricao: string;
   };
+  ehGerador?: boolean;
+  potenciaGerador?: number;
+  potenciaInversor?: number;
+  potenciaModulo?: number;
+  tensaoSaida?: number;
+  fase?: string;
+  potencia?: number;
 }
 
 @Injectable()
@@ -106,33 +113,82 @@ export class EdeltecService {
     if (!item.titulo || item.precoDoIntegrador == null) return;
 
     // Resolve Brand
-    let brandId: string | undefined;
-    if (item.marca) {
-      const brandName = item.marca.trim();
-      let brand = await this.prisma.brand.findFirst({
-        where: { name: { equals: brandName, mode: "insensitive" } },
+    const brandName = item.marca?.trim() || "Genérica";
+    let brand = await this.prisma.brand.findFirst({
+      where: { name: { equals: brandName, mode: "insensitive" } },
+    });
+    if (!brand) {
+      brand = await this.prisma.brand.create({
+        data: { name: brandName },
       });
-      if (!brand) {
-        brand = await this.prisma.brand.create({
-          data: { name: brandName },
-        });
-      }
-      brandId = brand.id;
     }
+    const brandId = brand.id;
 
     // Resolve Category
-    let categoryId: string | undefined;
-    if (item.grupoDeProduto?.descricao) {
-      const catName = item.grupoDeProduto.descricao.trim();
-      let category = await this.prisma.category.findFirst({
-        where: { name: { equals: catName, mode: "insensitive" } },
-      });
-      if (!category) {
-        category = await this.prisma.category.create({
-          data: { name: catName },
-        });
+    let catName = item.grupoDeProduto?.descricao?.trim() || item.tipoDeProduto?.trim() || "Outros";
+    if (!item.ehGerador) {
+      if (/modulo|placa|painel/i.test(catName) || /modulo|placa|painel/i.test(item.titulo)) {
+        catName = "Módulo";
+      } else if (/inversor/i.test(catName) || /inversor/i.test(item.titulo)) {
+        if (/micro/i.test(item.titulo)) {
+          catName = "Microinversor";
+        } else {
+          catName = "Inversor";
+        }
+      } else if (/cabo/i.test(catName) || /cabo/i.test(item.titulo)) {
+        catName = "Cabo CC";
+      } else if (/conector/i.test(catName) || /conector/i.test(item.titulo) || /mc4/i.test(item.titulo)) {
+        catName = "Conector";
       }
-      categoryId = category.id;
+    }
+
+    let category = await this.prisma.category.findFirst({
+      where: { name: { equals: catName, mode: "insensitive" } },
+    });
+    if (!category) {
+      category = await this.prisma.category.create({
+        data: { name: catName },
+      });
+    }
+    const categoryId = category.id;
+
+    // Extract Specs
+    let specs: any = {};
+    if (!item.ehGerador) {
+      if (catName === "Módulo") {
+        const powerMatches = item.titulo.match(/(\d{3,4})w/i);
+        const power = item.potenciaModulo || item.potencia || (powerMatches ? parseInt(powerMatches[1]!, 10) : 0);
+        if (power > 0) specs = { power_w: power };
+      } else if (catName === "Inversor") {
+        const powerMatches = item.titulo.match(/(\d+([.,]\d+)?)k/i);
+        let powerKW = item.potenciaInversor || item.potencia || 0;
+        if (!powerKW && powerMatches) {
+           powerKW = parseFloat(powerMatches[1]!.replace(',', '.'));
+        }
+        const powerW = powerKW < 100 ? powerKW * 1000 : powerKW;
+        const voltage = item.tensaoSaida || (item.titulo.includes("220") ? 220 : 380);
+        if (powerW > 0) {
+          specs = {
+            nominal_power_w: powerW,
+            max_power_w: powerW * 1.2,
+            voltage_v: voltage,
+            type: "STRING_INVERTER",
+            phase: item.fase || (item.titulo.match(/monof/i) ? "monophasic" : "triphasic")
+          };
+        }
+      } else if (catName === "Microinversor") {
+        const powerMatches = item.titulo.match(/(\d{3,4})w/i);
+        const power = item.potenciaInversor || item.potencia || (powerMatches ? parseInt(powerMatches[1]!, 10) : 0);
+        const voltage = item.tensaoSaida || (item.titulo.includes("220") ? 220 : 380);
+        if (power > 0) {
+          specs = {
+            nominal_power_w: power,
+            voltage_v: voltage,
+            max_modules: 4,
+            type: "MICROINVERTER"
+          };
+        }
+      }
     }
 
     // Upsert Product
@@ -144,17 +200,24 @@ export class EdeltecService {
     });
 
     if (!product) {
-      if (!brandId || !categoryId) {
-        return; // Pula se faltar dados obrigatórios de marca/categoria para criar um produto novo
-      }
       product = await this.prisma.product.create({
         data: {
           name: item.titulo,
           brandId,
           categoryId,
-          specs: {},
+          specs,
         },
       });
+    } else {
+      // Optional: Update specs of existing products if they are empty
+      if (!product.specs || Object.keys(product.specs).length === 0) {
+        if (Object.keys(specs).length > 0) {
+          await this.prisma.product.update({
+             where: { id: product.id },
+             data: { specs }
+          });
+        }
+      }
     }
 
     // Upsert DistributorProduct
