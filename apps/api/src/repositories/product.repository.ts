@@ -65,8 +65,15 @@ export class ProductRepository {
 
   private async restrictProductIds(source: KitProductSource): Promise<string[] | null> {
     if (source.stockOwnerOrgId) return this.getStockProductIds(source.stockOwnerOrgId);
-    if (source.supplierId)
-      return this.supplierProductRepo.getProductIdsBySupplier(source.supplierId);
+    if (source.supplierId) {
+      const supIds = await this.supplierProductRepo.getProductIdsBySupplier(source.supplierId);
+      const distOffers = await this.prisma.distributorProduct.findMany({
+        where: { distributorId: source.supplierId },
+        select: { productId: true }
+      });
+      const distIds = distOffers.map(o => o.productId);
+      return Array.from(new Set([...supIds, ...distIds]));
+    }
     return null;
   }
 
@@ -85,19 +92,46 @@ export class ProductRepository {
     }
 
     if (source.supplierId) {
-      const offers = await this.supplierProductRepo.getOffersBySupplier(
+      const supOffers = await this.supplierProductRepo.getOffersBySupplier(
         source.supplierId,
         productIds
       );
+      const distOffersRows = await this.prisma.distributorProduct.findMany({
+        where: { distributorId: source.supplierId, productId: { in: productIds } }
+      });
+      const distOffers = new Map(distOffersRows.map(o => [o.productId, { price: Number(o.price) }]));
+
       return items
-        .filter((p) => offers.has(p.id))
-        .map((p) => ({ ...p, price: offers.get(p.id)!.price }) as T & { price: number });
+        .filter((p) => supOffers.has(p.id) || distOffers.has(p.id))
+        .map((p) => {
+          let price = 0;
+          if (supOffers.has(p.id) && distOffers.has(p.id)) {
+            price = Math.min(supOffers.get(p.id)!.price, distOffers.get(p.id)!.price);
+          } else if (supOffers.has(p.id)) {
+            price = supOffers.get(p.id)!.price;
+          } else if (distOffers.has(p.id)) {
+            price = distOffers.get(p.id)!.price;
+          }
+          return { ...p, price } as T & { price: number };
+        });
     }
 
     const withPrice: (T & { price: number })[] = [];
     for (const item of items) {
-      const offer = await this.supplierProductRepo.getCheapestOffer(item.id);
-      if (offer) withPrice.push({ ...item, price: offer.price } as T & { price: number });
+      const offerSup = await this.supplierProductRepo.getCheapestOffer(item.id);
+      const offerDistRow = await this.prisma.distributorProduct.findFirst({
+        where: { productId: item.id },
+        orderBy: { price: "asc" }
+      });
+      
+      let bestPrice: number | null = null;
+      const distPrice = offerDistRow ? Number(offerDistRow.price) : null;
+      
+      if (offerSup && distPrice !== null) bestPrice = Math.min(offerSup.price, distPrice);
+      else if (offerSup) bestPrice = offerSup.price;
+      else if (distPrice !== null) bestPrice = distPrice;
+
+      if (bestPrice !== null) withPrice.push({ ...item, price: bestPrice } as T & { price: number });
     }
     return withPrice;
   }

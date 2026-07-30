@@ -106,11 +106,14 @@ export class KitGenerationService {
 
     const suppliers = await this.prisma.supplier.findMany({
       select: { id: true, name: true },
-      orderBy: { name: "asc" },
     });
+    const distributors = await this.prisma.distributor.findMany({
+      select: { id: true, name: true },
+    });
+    const allOrigins = [...suppliers, ...distributors].sort((a, b) => a.name.localeCompare(b.name));
 
     const supplierSources: KitSourceOption[] = [];
-    for (const s of suppliers) {
+    for (const s of allOrigins) {
       const built = await this.buildKit(input, roofType, { supplierId: s.id });
       supplierSources.push({
         type: "supplier",
@@ -198,14 +201,18 @@ export class KitGenerationService {
     const currentSupplierId = input.stock_owner_org_id ? undefined : input.supplier_id;
     const suppliers = await this.prisma.supplier.findMany({
       select: { id: true, name: true },
-      orderBy: { name: "asc" },
     });
+    const distributors = await this.prisma.distributor.findMany({
+      select: { id: true, name: true },
+    });
+    const allOrigins = [...suppliers, ...distributors].sort((a, b) => a.name.localeCompare(b.name));
+
     const otherSourceEntries: Array<{
       source: KitProductSource;
       source_type: "own_stock" | "supplier";
       supplier_id?: string;
       supplier_name?: string;
-    }> = suppliers
+    }> = allOrigins
       .filter((s) => s.id !== currentSupplierId)
       .map((s) => ({
         source: { supplierId: s.id },
