@@ -19,6 +19,12 @@ import {
   DialogContent,
   DialogActions,
   InputAdornment,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  OutlinedInput,
+  Chip,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
@@ -27,9 +33,18 @@ import ChecklistIcon from "@mui/icons-material/Checklist";
 import SearchIcon from "@mui/icons-material/Search";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { brandSchema, type BrandFormValues } from "@/lib/admin/schemas";
+import { brandSchema, type BrandFormValues, categoryNames } from "@/lib/admin/schemas";
 import { fetchBrands, createBrand, updateBrand, deleteBrand, type Brand } from "@/lib/admin-api";
 import { ImageUpload } from "@/components/admin/products/ImageUpload";
+
+const categoryLabels: Record<string, string> = {
+  module: "Painéis/Módulos",
+  inverter: "Inversores",
+  microinverter: "Microinversores",
+  structure_kit: "Estruturas",
+  dc_cable: "Cabos DC",
+  connector: "Conectores",
+};
 
 export default function AdminBrandsPage(): JSX.Element {
   const queryClient = useQueryClient();
@@ -46,7 +61,7 @@ export default function AdminBrandsPage(): JSX.Element {
 
   const form = useForm<BrandFormValues>({
     resolver: zodResolver(brandSchema),
-    defaultValues: { name: "", country: "", image_url: "" },
+    defaultValues: { name: "", country: "", image_url: "", categories: [] },
   });
 
   const createMutation = useMutation({
@@ -64,12 +79,12 @@ export default function AdminBrandsPage(): JSX.Element {
       data,
     }: {
       id: string;
-      data: { name?: string; country?: string; image_url?: string };
+      data: { name?: string; country?: string; image_url?: string; categories?: string[] };
     }) => updateBrand(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "brands"] });
       setEditingBrand(null);
-      form.reset({ name: "", country: "", image_url: "" });
+      form.reset({ name: "", country: "", image_url: "", categories: [] });
     },
   });
 
@@ -78,22 +93,27 @@ export default function AdminBrandsPage(): JSX.Element {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "brands"] });
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       alert(err.message || "Erro ao excluir a marca. Talvez haja produtos vinculados a ela.");
-    }
+    },
   });
 
   const [bulkLoading, setBulkLoading] = useState(false);
   const handleBulkSubmit = async () => {
-    const lines = bulkInput.split("\n").map((l) => l.trim()).filter(Boolean);
+    const lines = bulkInput
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
     if (lines.length === 0) return;
     setBulkLoading(true);
     try {
-      await Promise.all(lines.map((name) => createBrand({ name, country: "", image_url: "" })));
+      await Promise.all(
+        lines.map((name) => createBrand({ name, country: "", image_url: "", categories: [] }))
+      );
       queryClient.invalidateQueries({ queryKey: ["admin", "brands"] });
       setBulkDialogOpen(false);
       setBulkInput("");
-    } catch (err) {
+    } catch {
       alert("Houve um erro ao importar algumas marcas.");
     } finally {
       setBulkLoading(false);
@@ -102,20 +122,25 @@ export default function AdminBrandsPage(): JSX.Element {
 
   const handleOpenCreate = () => {
     setEditingBrand(null);
-    form.reset({ name: "", country: "", image_url: "" });
+    form.reset({ name: "", country: "", image_url: "", categories: [] });
     setDialogOpen(true);
   };
 
   const handleOpenEdit = (brand: Brand) => {
     setEditingBrand(brand);
-    form.reset({ name: brand.name, country: brand.country ?? "", image_url: brand.imageUrl ?? "" });
+    form.reset({
+      name: brand.name,
+      country: brand.country ?? "",
+      image_url: brand.imageUrl ?? "",
+      categories: brand.categories ?? [],
+    });
     setDialogOpen(true);
   };
 
   const handleClose = () => {
     setDialogOpen(false);
     setEditingBrand(null);
-    form.reset({ name: "", country: "", image_url: "" });
+    form.reset({ name: "", country: "", image_url: "", categories: [] });
   };
 
   const onSubmit = (values: BrandFormValues) => {
@@ -124,6 +149,7 @@ export default function AdminBrandsPage(): JSX.Element {
       ...values,
       country: values.country?.trim() || undefined,
       image_url: normalizedImageUrl,
+      categories: values.categories || [],
     };
     if (editingBrand) {
       updateMutation.mutate({ id: editingBrand.id, data: payload });
@@ -179,6 +205,7 @@ export default function AdminBrandsPage(): JSX.Element {
             <TableHead>
               <TableRow>
                 <TableCell>Nome</TableCell>
+                <TableCell>Categorias</TableCell>
                 <TableCell>País</TableCell>
                 <TableCell align="right">Produtos</TableCell>
                 <TableCell align="right">Ações</TableCell>
@@ -188,7 +215,7 @@ export default function AdminBrandsPage(): JSX.Element {
               {isLoading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={4}
+                    colSpan={5}
                     sx={{ py: 4, textAlign: "center", color: "text.secondary" }}
                   >
                     Carregando…
@@ -197,7 +224,7 @@ export default function AdminBrandsPage(): JSX.Element {
               ) : filteredBrands.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={4}
+                    colSpan={5}
                     sx={{ py: 4, textAlign: "center", color: "text.secondary" }}
                   >
                     Nenhuma marca encontrada.
@@ -207,11 +234,28 @@ export default function AdminBrandsPage(): JSX.Element {
                 filteredBrands.map((brand) => (
                   <TableRow key={brand.id}>
                     <TableCell>{brand.name}</TableCell>
+                    <TableCell>
+                      <Box display="flex" gap={0.5} flexWrap="wrap">
+                        {brand.categories && brand.categories.length > 0 ? (
+                          brand.categories.map((cat) => (
+                            <Chip
+                              key={cat}
+                              label={categoryLabels[cat] || cat}
+                              size="small"
+                              variant="outlined"
+                              sx={{ fontSize: "0.75rem" }}
+                            />
+                          ))
+                        ) : (
+                          <span style={{ color: "#aaa" }}>—</span>
+                        )}
+                      </Box>
+                    </TableCell>
                     <TableCell>{brand.country ?? "—"}</TableCell>
                     <TableCell align="right">
                       {"_count" in brand &&
-                        typeof (brand as Brand & { _count?: { products: number } })._count
-                          ?.products === "number"
+                      typeof (brand as Brand & { _count?: { products: number } })._count
+                        ?.products === "number"
                         ? (brand as Brand & { _count: { products: number } })._count.products
                         : "—"}
                     </TableCell>
@@ -265,6 +309,35 @@ export default function AdminBrandsPage(): JSX.Element {
                 )}
               />
               <Controller
+                name="categories"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <FormControl fullWidth size="small" error={Boolean(fieldState.error)}>
+                    <InputLabel id="categories-label">Categorias Fabricadas</InputLabel>
+                    <Select
+                      labelId="categories-label"
+                      multiple
+                      value={field.value || []}
+                      onChange={field.onChange}
+                      input={<OutlinedInput label="Categorias Fabricadas" />}
+                      renderValue={(selected) => (
+                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                          {selected.map((value) => (
+                            <Chip key={value} label={categoryLabels[value] || value} size="small" />
+                          ))}
+                        </Box>
+                      )}
+                    >
+                      {categoryNames.map((name) => (
+                        <MenuItem key={name} value={name}>
+                          {categoryLabels[name]}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+              <Controller
                 name="country"
                 control={form.control}
                 render={({ field, fieldState }) => (
@@ -305,7 +378,12 @@ export default function AdminBrandsPage(): JSX.Element {
         </form>
       </Dialog>
 
-      <Dialog open={bulkDialogOpen} onClose={() => setBulkDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={bulkDialogOpen}
+        onClose={() => setBulkDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle sx={{ fontWeight: 600, fontSize: "1.25rem" }}>
           Adicionar várias marcas
         </DialogTitle>

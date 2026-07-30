@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from "class-validator";
+import { IsString, IsOptional, IsArray } from "class-validator";
 
 export class CreateBrandDto {
   @IsString()
@@ -11,4 +11,9 @@ export class CreateBrandDto {
   @IsOptional()
   @IsString()
   image_url?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  categories?: string[];
 }

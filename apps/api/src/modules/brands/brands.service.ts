@@ -6,7 +6,7 @@ import type { Brand } from "@prisma/client";
 
 @Injectable()
 export class BrandsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAll(): Promise<(Brand & { _count?: { products: number } })[]> {
     return this.prisma.brand.findMany({
@@ -29,6 +29,7 @@ export class BrandsService {
         name: dto.name,
         country: dto.country ?? undefined,
         imageUrl: dto.image_url?.trim() || undefined,
+        categories: dto.categories || [],
       },
     });
   }
@@ -41,6 +42,7 @@ export class BrandsService {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.country !== undefined && { country: dto.country }),
         ...(dto.image_url !== undefined && { imageUrl: dto.image_url.trim() || null }),
+        ...(dto.categories !== undefined && { categories: dto.categories }),
       },
     });
   }
@@ -49,7 +51,9 @@ export class BrandsService {
     await this.findOne(id);
     const productCount = await this.prisma.product.count({ where: { brandId: id } });
     if (productCount > 0) {
-      throw new BadRequestException(`Não é possível excluir a marca, pois ela possui ${productCount} produto(s) vinculado(s).`);
+      throw new BadRequestException(
+        `Não é possível excluir a marca, pois ela possui ${productCount} produto(s) vinculado(s).`
+      );
     }
     await this.prisma.brand.delete({ where: { id } });
   }

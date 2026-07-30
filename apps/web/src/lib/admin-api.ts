@@ -7,6 +7,7 @@ export interface Brand {
   name: string;
   country: string | null;
   imageUrl?: string | null;
+  categories?: string[];
   createdAt?: string;
   _count?: { products: number };
 }
@@ -58,6 +59,7 @@ export async function createBrand(data: {
   name: string;
   country?: string;
   image_url?: string;
+  categories?: string[];
 }): Promise<Brand> {
   const res = await fetch(`${getApiUrl()}/brands`, {
     method: "POST",
@@ -73,7 +75,12 @@ export async function createBrand(data: {
 
 export async function updateBrand(
   id: string,
-  data: { name?: string; country?: string; image_url?: string }
+  data: {
+    name?: string;
+    country?: string;
+    image_url?: string;
+    categories?: string[];
+  }
 ): Promise<Brand> {
   const res = await fetch(`${getApiUrl()}/brands/${id}`, {
     method: "PUT",
@@ -354,7 +361,7 @@ export async function fetchDistributorProducts(
   if (!res.ok) throw new Error("Falha ao carregar produtos do distribuidor.");
   const json = await res.json();
   return {
-    data: json.data.map((row: { price: unknown;[k: string]: unknown }) => ({
+    data: json.data.map((row: { price: unknown; [k: string]: unknown }) => ({
       ...row,
       price: typeof row.price === "number" ? row.price : Number(row.price),
     })),
