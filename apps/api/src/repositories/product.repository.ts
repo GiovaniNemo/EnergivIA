@@ -16,6 +16,7 @@ const CATEGORY_NAMES = {
 
 export type KitProductSource = {
   supplierId?: string;
+  distributorId?: string;
   stockOwnerOrgId?: string;
 };
 
@@ -65,12 +66,12 @@ export class ProductRepository {
 
   private async restrictProductIds(source: KitProductSource): Promise<string[] | null> {
     if (source.stockOwnerOrgId) return this.getStockProductIds(source.stockOwnerOrgId);
-    if (source.supplierId) {
-      const supIds = await this.supplierProductRepo.getProductIdsBySupplier(source.supplierId);
-      const distOffers = await this.prisma.distributorProduct.findMany({
-        where: { distributorId: source.supplierId },
+    if (source.supplierId || source.distributorId) {
+      const supIds = source.supplierId ? await this.supplierProductRepo.getProductIdsBySupplier(source.supplierId) : [];
+      const distOffers = source.distributorId ? await this.prisma.distributorProduct.findMany({
+        where: { distributorId: source.distributorId },
         select: { productId: true }
-      });
+      }) : [];
       const distIds = distOffers.map(o => o.productId);
       return Array.from(new Set([...supIds, ...distIds]));
     }
@@ -91,14 +92,15 @@ export class ProductRepository {
         .map((p) => ({ ...p, price: offers.get(p.id)!.price }) as T & { price: number });
     }
 
-    if (source.supplierId) {
-      const supOffers = await this.supplierProductRepo.getOffersBySupplier(
+    if (source.supplierId || source.distributorId) {
+      const supOffers = source.supplierId ? await this.supplierProductRepo.getOffersBySupplier(
         source.supplierId,
         productIds
-      );
-      const distOffersRows = await this.prisma.distributorProduct.findMany({
-        where: { distributorId: source.supplierId, productId: { in: productIds } }
-      });
+      ) : new Map();
+      
+      const distOffersRows = source.distributorId ? await this.prisma.distributorProduct.findMany({
+        where: { distributorId: source.distributorId, productId: { in: productIds } }
+      }) : [];
       const distOffers = new Map(distOffersRows.map(o => [o.productId, { price: Number(o.price) }]));
 
       return items
