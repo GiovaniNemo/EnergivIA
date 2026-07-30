@@ -36,7 +36,8 @@ const selectOutlinedSx = {
 import MuiSelect, { SelectProps as MuiSelectProps } from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 
-export type SelectProps = Omit<MuiSelectProps<unknown>, "input" | "variant" | "inputProps"> & {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type SelectProps = Omit<MuiSelectProps<any>, "input" | "variant" | "inputProps"> & {
   label?: string;
   id?: string;
   className?: string;
