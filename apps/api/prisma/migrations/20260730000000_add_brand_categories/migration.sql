@@ -1,0 +1,1 @@
+ALTER TABLE "Brand" ADD COLUMN "categories" TEXT[] DEFAULT ARRAY[]::TEXT[];
