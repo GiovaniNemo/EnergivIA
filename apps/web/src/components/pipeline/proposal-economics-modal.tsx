@@ -3083,7 +3083,10 @@ export const ProposalEconomicsModal = forwardRef<
                   type="button"
                   className="h-11 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-base font-semibold text-white shadow-sm hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-60 sm:w-auto"
                   disabled={
-                    proposalCreateLoading || proposalKitLoading || !generatedProposal?.dealId
+                    proposalCreateLoading ||
+                    proposalKitLoading ||
+                    !generatedProposal?.dealId ||
+                    !!proposalKitError
                   }
                   title="Ao concluir, você vai para a ficha do cliente com a proposta em destaque."
                   onClick={() => void createProposalFromPipelineModal()}
