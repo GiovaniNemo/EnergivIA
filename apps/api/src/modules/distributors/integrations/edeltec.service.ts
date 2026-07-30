@@ -76,7 +76,10 @@ export class EdeltecService {
           throw new Error(`Falha ao buscar produtos na Edeltec na página ${currentPage}`);
         }
 
-        const data = await response.json();
+        const data = (await response.json()) as {
+          items?: EdeltecProduct[];
+          meta?: { totalPages?: number };
+        };
         const items: EdeltecProduct[] = data.items || [];
         totalPages = data.meta?.totalPages || 1;
 
@@ -149,6 +152,7 @@ export class EdeltecService {
           name: item.titulo,
           brandId,
           categoryId,
+          specs: {},
         },
       });
     }

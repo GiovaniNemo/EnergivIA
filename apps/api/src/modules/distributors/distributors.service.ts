@@ -6,7 +6,7 @@ import type { CreateDistributorProductDto } from "./dto/create-distributor-produ
 import type { UpdateDistributorProductDto } from "./dto/update-distributor-product.dto";
 import type { QueryDistributorProductsDto } from "./dto/query-distributor-products.dto";
 import type { BulkDistributorProductRowDto } from "./dto/bulk-distributor-products.dto";
-import type { Distributor } from "@prisma/client";
+import type { Distributor, Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 
 export interface FreightRuleRow {
@@ -120,7 +120,9 @@ export class DistributorsService {
         ...(dto.website !== undefined && { website: dto.website }),
         ...(dto.city !== undefined && { city: dto.city }),
         ...(dto.state !== undefined && { state: dto.state }),
-        ...(dto.apiCredentials !== undefined && { apiCredentials: dto.apiCredentials }),
+        ...(dto.apiCredentials !== undefined && {
+          apiCredentials: dto.apiCredentials as Prisma.InputJsonValue,
+        }),
         ...(dto.integrationProvider !== undefined && {
           integrationProvider: dto.integrationProvider,
         }),
