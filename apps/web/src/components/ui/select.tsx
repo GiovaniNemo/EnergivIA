@@ -135,7 +135,10 @@ const Select = React.forwardRef<unknown, SelectProps>(
           renderValue={(selected) => {
             let selectedNode: React.ReactNode = selected as string;
             React.Children.forEach(childrenMapped, (child) => {
-              if (React.isValidElement(child) && child.props.value === selected) {
+              if (
+                React.isValidElement<{ value?: unknown; children?: React.ReactNode }>(child) &&
+                child.props.value === selected
+              ) {
                 selectedNode = child.props.children;
               }
             });
