@@ -15,10 +15,19 @@ import { UpdateDistributorDto } from "./dto/update-distributor.dto";
 import { CreateDistributorProductDto } from "./dto/create-distributor-product.dto";
 import { QueryDistributorProductsDto } from "./dto/query-distributor-products.dto";
 import { BulkDistributorProductsDto } from "./dto/bulk-distributor-products.dto";
+import { EdeltecService } from "./integrations/edeltec.service";
 
 @Controller("distributors")
 export class DistributorsController {
-  constructor(private readonly distributorsService: DistributorsService) {}
+  constructor(
+    private readonly distributorsService: DistributorsService,
+    private readonly edeltecService: EdeltecService
+  ) {}
+
+  @Post(":id/sync")
+  syncCatalog(@Param("id", ParseUUIDPipe) id: string) {
+    return this.edeltecService.syncCatalog(id);
+  }
 
   @Get()
   findAll() {

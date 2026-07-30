@@ -120,6 +120,10 @@ export class DistributorsService {
         ...(dto.website !== undefined && { website: dto.website }),
         ...(dto.city !== undefined && { city: dto.city }),
         ...(dto.state !== undefined && { state: dto.state }),
+        ...(dto.apiCredentials !== undefined && { apiCredentials: dto.apiCredentials }),
+        ...(dto.integrationProvider !== undefined && {
+          integrationProvider: dto.integrationProvider,
+        }),
       },
     });
   }

@@ -28,4 +28,11 @@ export class UpdateDistributorDto {
   @IsOptional()
   @IsString()
   state?: string;
+
+  @IsOptional()
+  apiCredentials?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  integrationProvider?: string;
 }

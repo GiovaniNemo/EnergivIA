@@ -200,9 +200,22 @@ export interface Distributor {
   website: string | null;
   city: string | null;
   state: string | null;
+  apiCredentials?: Record<string, unknown>;
+  integrationProvider?: string | null;
   createdAt?: string;
   updatedAt?: string;
   _count?: { distributorProducts: number };
+}
+
+export async function syncDistributorCatalog(
+  id: string
+): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${getApiUrl()}/distributors/${id}/sync`, { method: "POST" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message ?? "Falha ao sincronizar catálogo.");
+  }
+  return res.json();
 }
 
 export interface DistributorProduct {

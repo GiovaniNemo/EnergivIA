@@ -1,4 +1,5 @@
-import { useState } from "react";
+"use client";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
@@ -14,27 +15,13 @@ import {
   TableRow,
   Alert,
   Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  CircularProgress,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import InventoryIcon from "@mui/icons-material/Inventory";
-import SettingsIcon from "@mui/icons-material/Settings";
-import SyncIcon from "@mui/icons-material/Sync";
 import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
-import {
-  fetchDistributors,
-  deleteDistributor,
-  updateDistributor,
-  syncDistributorCatalog,
-  type Distributor,
-} from "@/lib/admin-api";
+import { fetchDistributors, deleteDistributor, type Distributor } from "@/lib/admin-api";
 
 export default function AdminDistributorsPage(): JSX.Element {
   const router = useRouter();
@@ -60,53 +47,6 @@ export default function AdminDistributorsPage(): JSX.Element {
   const handleDelete = (d: Distributor) => {
     if (window.confirm(`Excluir distribuidor "${d.name}"? Esta ação não pode ser desfeita.`)) {
       deleteMutation.mutate(d.id);
-    }
-  };
-
-  const [integrationDialog, setIntegrationDialog] = useState<{
-    open: boolean;
-    distributor: Distributor | null;
-  }>({
-    open: false,
-    distributor: null,
-  });
-  const [apiKey, setApiKey] = useState("");
-  const [apiSecret, setApiSecret] = useState("");
-  const [syncing, setSyncing] = useState<string | null>(null);
-
-  const saveIntegrationMutation = useMutation({
-    mutationFn: (data: { id: string; apiKey: string; secret: string }) =>
-      updateDistributor(data.id, {
-        integrationProvider: "EDELTEC",
-        apiCredentials: { apiKey: data.apiKey, secret: data.secret },
-      } as Record<string, unknown>),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
-      setIntegrationDialog({ open: false, distributor: null });
-      alert("Integração salva com sucesso!");
-    },
-    onError: (err: Error) => {
-      alert("Erro ao salvar integração: " + err.message);
-    },
-  });
-
-  const handleOpenIntegration = (d: Distributor) => {
-    setApiKey(d.apiCredentials?.apiKey || "");
-    setApiSecret(d.apiCredentials?.secret || "");
-    setIntegrationDialog({ open: true, distributor: d });
-  };
-
-  const handleSync = async (id: string) => {
-    try {
-      setSyncing(id);
-      const res = await syncDistributorCatalog(id);
-      alert(res.message);
-      queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Desconhecido";
-      alert("Erro ao sincronizar: " + msg);
-    } finally {
-      setSyncing(null);
     }
   };
 
@@ -194,31 +134,6 @@ export default function AdminDistributorsPage(): JSX.Element {
                     <TableCell align="right">
                       <IconButton
                         size="small"
-                        onClick={() => handleSync(d.id)}
-                        disabled={syncing === d.id || !d.integrationProvider}
-                        aria-label="Sincronizar"
-                        title={
-                          d.integrationProvider
-                            ? "Sincronizar Catálogo"
-                            : "Integração não configurada"
-                        }
-                      >
-                        {syncing === d.id ? (
-                          <CircularProgress size={20} />
-                        ) : (
-                          <SyncIcon fontSize="small" />
-                        )}
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOpenIntegration(d)}
-                        aria-label="Configurar Integração"
-                        title="Configurar API Edeltec"
-                      >
-                        <SettingsIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
                         onClick={() => router.push(`/admin/distribuidores/${d.id}/products`)}
                         aria-label="Estoque"
                         title="Ver estoque"
@@ -248,58 +163,6 @@ export default function AdminDistributorsPage(): JSX.Element {
           </Table>
         </TableContainer>
       </Paper>
-
-      {/* Integration Modal */}
-      <Dialog
-        open={integrationDialog.open}
-        onClose={() => setIntegrationDialog({ open: false, distributor: null })}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Integração Edeltec</DialogTitle>
-        <DialogContent dividers>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            Insira as credenciais da API da Edeltec para sincronização automática de produtos e
-            preços de integrador.
-          </Typography>
-          <TextField
-            label="API Key"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            fullWidth
-            margin="normal"
-            size="small"
-          />
-          <TextField
-            label="API Secret"
-            value={apiSecret}
-            onChange={(e) => setApiSecret(e.target.value)}
-            fullWidth
-            margin="normal"
-            size="small"
-            type="password"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIntegrationDialog({ open: false, distributor: null })}>
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            disabled={saveIntegrationMutation.isPending}
-            onClick={() =>
-              integrationDialog.distributor &&
-              saveIntegrationMutation.mutate({
-                id: integrationDialog.distributor.id,
-                apiKey,
-                secret: apiSecret,
-              })
-            }
-          >
-            {saveIntegrationMutation.isPending ? "Salvando..." : "Salvar Configurações"}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }

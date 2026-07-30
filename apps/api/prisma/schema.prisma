@@ -668,6 +668,8 @@ model Distributor {
   website   String?
   city      String?
   state     String?
+  apiCredentials Json?
+  integrationProvider String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
