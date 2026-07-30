@@ -47,7 +47,7 @@ import {
 } from "@/components/proposals/proposal-internal-ui";
 import { ProposalEquipmentEditorCard } from "@/components/proposals/proposal-equipment-editor-card";
 
-const PDF_BRANDING = {
+const _PDF_BRANDING = {
   primaryColor: "#059669",
   secondaryColor: "#047857",
   backgroundColor: "#ffffff",
@@ -62,7 +62,7 @@ const STATUS_LABEL: Record<string, string> = {
   REJECTED: "Recusada",
 };
 
-function escapeHtml(text: string): string {
+function _escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -111,8 +111,6 @@ function computeBillSavingsPct(proposal: ProposalDetail): number | null {
   if (bill <= 0) return null;
   return (savings / bill) * 100;
 }
-
-
 
 export function ProposalInternalView({ proposalId }: { proposalId: string }): JSX.Element {
   const router = useRouter();
@@ -226,11 +224,11 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
     try {
       // Chama a rota do backend que gera o PDF consumindo o layout público final
       const blob = await downloadProposalPdf(currentOrganizationId, proposal.id);
-      
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Proposta - ${proposal.deal.lead.name}.pdf`; 
+      a.download = `Proposta - ${proposal.deal.lead.name}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {

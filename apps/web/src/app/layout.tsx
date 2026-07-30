@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import * as Sentry from "@sentry/nextjs";
 import { Inter, Montserrat, Open_Sans, Roboto } from "next/font/google";
-import Script from "next/script";
 import { Auth0Provider } from "@auth0/nextjs-auth0/client";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
@@ -78,7 +77,6 @@ export default function RootLayout({
             </Auth0Provider>
           </ThemeProvider>
         </div>
-
       </body>
     </html>
   );
