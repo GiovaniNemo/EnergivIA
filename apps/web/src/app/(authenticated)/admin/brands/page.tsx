@@ -107,14 +107,23 @@ export default function AdminBrandsPage(): JSX.Element {
     if (lines.length === 0) return;
     setBulkLoading(true);
     try {
-      await Promise.all(
-        lines.map((name) => createBrand({ name, country: "", image_url: "", categories: [] }))
+      const results = await Promise.allSettled(
+        lines.map((name) => createBrand({ name, categories: [] }))
       );
+
+      const failedCount = results.filter((r) => r.status === "rejected").length;
+
       queryClient.invalidateQueries({ queryKey: ["admin", "brands"] });
       setBulkDialogOpen(false);
       setBulkInput("");
+
+      if (failedCount > 0) {
+        alert(
+          `Processo concluído, mas ${failedCount} marca(s) falharam (talvez já existissem no sistema).`
+        );
+      }
     } catch {
-      alert("Houve um erro ao importar algumas marcas.");
+      alert("Houve um erro inesperado ao importar as marcas.");
     } finally {
       setBulkLoading(false);
     }
