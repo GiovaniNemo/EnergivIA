@@ -113,7 +113,10 @@ const Select = React.forwardRef<unknown, SelectProps>(
                   fontSize: "0.875rem",
                 },
                 "& .MuiMenuItem-root.Mui-selected": {
-                  bgcolor: "var(--color-primary-foreground)",
+                  bgcolor: "var(--color-muted)",
+                },
+                "& .MuiMenuItem-root.Mui-selected:hover": {
+                  bgcolor: "var(--color-muted)",
                 },
                 "& .MuiMenuItem-root:hover": {
                   bgcolor: "var(--color-muted)",
