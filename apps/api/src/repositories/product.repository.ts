@@ -69,7 +69,7 @@ export class ProductRepository {
     if (source.supplierId || source.distributorId) {
       const supIds = source.supplierId ? await this.supplierProductRepo.getProductIdsBySupplier(source.supplierId) : [];
       const distOffers = source.distributorId ? await this.prisma.distributorProduct.findMany({
-        where: { distributorId: source.distributorId },
+        where: { distributorId: source.distributorId, stockQuantity: { gt: 0 } },
         select: { productId: true }
       }) : [];
       const distIds = distOffers.map(o => o.productId);
@@ -99,7 +99,7 @@ export class ProductRepository {
       ) : new Map();
       
       const distOffersRows = source.distributorId ? await this.prisma.distributorProduct.findMany({
-        where: { distributorId: source.distributorId, productId: { in: productIds } }
+        where: { distributorId: source.distributorId, productId: { in: productIds }, stockQuantity: { gt: 0 } }
       }) : [];
       const distOffers = new Map(distOffersRows.map(o => [o.productId, { price: Number(o.price) }]));
 

@@ -35,7 +35,7 @@ export class SupplierProductRepository {
   > {
     if (productIds.length === 0) return new Map();
     const rows = await this.prisma.supplierProduct.findMany({
-      where: { supplierId, productId: { in: productIds } },
+      where: { supplierId, productId: { in: productIds }, stock: { gt: 0 } },
       select: {
         productId: true,
         price: true,
@@ -61,7 +61,7 @@ export class SupplierProductRepository {
 
   async getProductIdsBySupplier(supplierId: string): Promise<string[]> {
     const rows = await this.prisma.supplierProduct.findMany({
-      where: { supplierId },
+      where: { supplierId, stock: { gt: 0 } },
       select: { productId: true },
     });
     return rows.map((r) => r.productId);
