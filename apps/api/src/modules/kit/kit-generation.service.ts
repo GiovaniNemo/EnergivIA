@@ -104,21 +104,34 @@ export class KitGenerationService {
   ): Promise<KitSourceOptionsResult> {
     const roofType = input.roof_type || DEFAULT_ROOF_TYPE;
 
-    const suppliers = await this.prisma.supplier.findMany({
-      select: { id: true, name: true },
-    });
-    const distributors = await this.prisma.distributor.findMany({
-      select: { id: true, name: true },
-    });
-    const allOrigins = [...suppliers, ...distributors].sort((a, b) => a.name.localeCompare(b.name));
+    const suppliers = await this.prisma.supplier.findMany({ select: { id: true, name: true } });
+    const distributors = await this.prisma.distributor.findMany({ select: { id: true, name: true } });
+    
+    const originMap = new Map<string, { name: string; supplierId?: string; distributorId?: string }>();
+    for (const s of suppliers) {
+      originMap.set(s.name.trim().toLowerCase(), { name: s.name.trim(), supplierId: s.id });
+    }
+    for (const d of distributors) {
+      const key = d.name.trim().toLowerCase();
+      const existing = originMap.get(key);
+      if (existing) {
+        existing.distributorId = d.id;
+      } else {
+        originMap.set(key, { name: d.name.trim(), distributorId: d.id });
+      }
+    }
+    const allOrigins = Array.from(originMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 
     const supplierSources: KitSourceOption[] = [];
-    for (const s of allOrigins) {
-      const built = await this.buildKit(input, roofType, { supplierId: s.id });
+    for (const origin of allOrigins) {
+      const built = await this.buildKit(input, roofType, { 
+        supplierId: origin.supplierId, 
+        distributorId: origin.distributorId 
+      });
       supplierSources.push({
         type: "supplier",
-        supplier_id: s.id,
-        supplier_name: s.name,
+        supplier_id: origin.distributorId || origin.supplierId,
+        supplier_name: origin.name,
         available: built !== null,
         complete: built !== null && built.kitItems.length >= REQUIRED_KIT_CATEGORIES,
         total: built ? kitItemsTotal(built.kitItems) : null,
@@ -199,13 +212,20 @@ export class KitGenerationService {
     }
 
     const currentSupplierId = input.stock_owner_org_id ? undefined : input.supplier_id;
-    const suppliers = await this.prisma.supplier.findMany({
-      select: { id: true, name: true },
-    });
-    const distributors = await this.prisma.distributor.findMany({
-      select: { id: true, name: true },
-    });
-    const allOrigins = [...suppliers, ...distributors].sort((a, b) => a.name.localeCompare(b.name));
+    const suppliers = await this.prisma.supplier.findMany({ select: { id: true, name: true } });
+    const distributors = await this.prisma.distributor.findMany({ select: { id: true, name: true } });
+    
+    const originMap = new Map<string, { name: string; supplierId?: string; distributorId?: string }>();
+    for (const s of suppliers) {
+      originMap.set(s.name.trim().toLowerCase(), { name: s.name.trim(), supplierId: s.id });
+    }
+    for (const d of distributors) {
+      const key = d.name.trim().toLowerCase();
+      const existing = originMap.get(key);
+      if (existing) existing.distributorId = d.id;
+      else originMap.set(key, { name: d.name.trim(), distributorId: d.id });
+    }
+    const allOrigins = Array.from(originMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 
     const otherSourceEntries: Array<{
       source: KitProductSource;
@@ -213,12 +233,12 @@ export class KitGenerationService {
       supplier_id?: string;
       supplier_name?: string;
     }> = allOrigins
-      .filter((s) => s.id !== currentSupplierId)
-      .map((s) => ({
-        source: { supplierId: s.id },
+      .filter((o) => o.supplierId !== currentSupplierId && o.distributorId !== currentSupplierId)
+      .map((o) => ({
+        source: { supplierId: o.supplierId, distributorId: o.distributorId },
         source_type: "supplier" as const,
-        supplier_id: s.id,
-        supplier_name: s.name,
+        supplier_id: o.distributorId || o.supplierId,
+        supplier_name: o.name,
       }));
     if (opts.organizationId && !input.stock_owner_org_id) {
       otherSourceEntries.push({

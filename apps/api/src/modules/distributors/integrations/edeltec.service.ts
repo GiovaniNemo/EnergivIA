@@ -128,17 +128,19 @@ export class EdeltecService {
     let catName = item.grupoDeProduto?.descricao?.trim() || item.tipoDeProduto?.trim() || "Outros";
     if (!item.ehGerador) {
       if (/modulo|placa|painel/i.test(catName) || /modulo|placa|painel/i.test(item.titulo)) {
-        catName = "Módulo";
+        catName = "module";
       } else if (/inversor/i.test(catName) || /inversor/i.test(item.titulo)) {
         if (/micro/i.test(item.titulo)) {
-          catName = "Microinversor";
+          catName = "microinverter";
         } else {
-          catName = "Inversor";
+          catName = "inverter";
         }
       } else if (/cabo/i.test(catName) || /cabo/i.test(item.titulo)) {
-        catName = "Cabo CC";
+        catName = "dc_cable";
       } else if (/conector/i.test(catName) || /conector/i.test(item.titulo) || /mc4/i.test(item.titulo)) {
-        catName = "Conector";
+        catName = "connector";
+      } else if (/estrutura/i.test(catName) || /estrutura/i.test(item.titulo)) {
+        catName = "structure_kit";
       }
     }
 
@@ -155,11 +157,11 @@ export class EdeltecService {
     // Extract Specs
     let specs: any = {};
     if (!item.ehGerador) {
-      if (catName === "Módulo") {
+      if (catName === "module") {
         const powerMatches = item.titulo.match(/(\d{3,4})w/i);
         const power = item.potenciaModulo || item.potencia || (powerMatches ? parseInt(powerMatches[1]!, 10) : 0);
         if (power > 0) specs = { power_w: power };
-      } else if (catName === "Inversor") {
+      } else if (catName === "inverter") {
         const powerMatches = item.titulo.match(/(\d+([.,]\d+)?)k/i);
         let powerKW = item.potenciaInversor || item.potencia || 0;
         if (!powerKW && powerMatches) {
@@ -176,7 +178,7 @@ export class EdeltecService {
             phase: item.fase || (item.titulo.match(/monof/i) ? "monophasic" : "triphasic")
           };
         }
-      } else if (catName === "Microinversor") {
+      } else if (catName === "microinverter") {
         const powerMatches = item.titulo.match(/(\d{3,4})w/i);
         const power = item.potenciaInversor || item.potencia || (powerMatches ? parseInt(powerMatches[1]!, 10) : 0);
         const voltage = item.tensaoSaida || (item.titulo.includes("220") ? 220 : 380);
