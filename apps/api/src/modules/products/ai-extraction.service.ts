@@ -59,6 +59,7 @@ export class AiExtractionService {
               type: SchemaType.STRING,
               description: "Deve ser 'module' (para Painel Solar) ou 'inverter' (para Inversor)",
               enum: ["module", "inverter", "unknown"],
+              format: "enum",
             },
             specs: {
               type: SchemaType.OBJECT,
@@ -144,6 +145,7 @@ export class AiExtractionService {
                   type: SchemaType.STRING,
                   description: "'monophasic', 'biphasic' ou 'triphasic'",
                   enum: ["monophasic", "biphasic", "triphasic"],
+                  format: "enum",
                 },
                 voltage_v: {
                   type: SchemaType.NUMBER,
