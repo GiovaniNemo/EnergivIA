@@ -309,6 +309,7 @@ export class ProductRepository {
       price: number;
       section_mm2: number;
       color: "red" | "black" | "unknown";
+      roll_length_m: number;
     }[]
   > {
     const products = await this.prisma.product.findMany({
@@ -326,13 +327,14 @@ export class ProductRepository {
     if (matchingProducts.length === 0) return [];
 
     const dtos = matchingProducts.map((p) => {
-      const specs = p.specs as { section_mm2: number; color?: string };
+      const specs = p.specs as { section_mm2: number; color?: string; roll_length_m?: number };
       return {
         id: p.id,
         name: p.name,
         brandName: p.brand.name,
         section_mm2: specs.section_mm2,
         specColor: specs.color,
+        roll_length_m: specs.roll_length_m,
       };
     });
 
@@ -354,6 +356,7 @@ export class ProductRepository {
         price: p.price,
         section_mm2: p.section_mm2,
         color,
+        roll_length_m: p.roll_length_m || 1,
       };
     });
   }

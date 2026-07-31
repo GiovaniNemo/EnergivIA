@@ -42,6 +42,7 @@ export interface StructureKitSpec {
 export interface DcCableSpec {
   section_mm2: number;
   max_voltage: number;
+  roll_length_m?: number;
 }
 
 export interface ConnectorSpec {

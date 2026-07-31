@@ -25,6 +25,11 @@ export function SpecsCableForm(): JSX.Element {
         <MenuItem value="preto">Preto</MenuItem>
         <MenuItem value="vermelho">Vermelho</MenuItem>
       </TextField>
+      <NumberSpecField
+        name="specs.roll_length_m"
+        label="Tamanho da bobina (metros)"
+        helperText="Deixe vazio ou 1 se for vendido por metro."
+      />
     </Box>
   );
 }

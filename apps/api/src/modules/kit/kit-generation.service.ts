@@ -394,7 +394,12 @@ export class KitGenerationService {
       microInverters = [];
     }
 
-    if (modules.length === 0) return null;
+    if (modules.length === 0) {
+      console.log(
+        `[buildKit] ${source.supplierId || source.distributorId || source.stockOwnerOrgId}: No modules found`
+      );
+      return null;
+    }
 
     const sizingResult = sizeSolarSystem({
       system_kw: input.system_kw,
@@ -403,7 +408,12 @@ export class KitGenerationService {
       stringInverters,
       microInverters,
     });
-    if (!sizingResult) return null;
+    if (!sizingResult) {
+      console.log(
+        `[buildKit] ${source.supplierId || source.distributorId || source.stockOwnerOrgId}: sizing failed`
+      );
+      return null;
+    }
 
     const kitItems: KitItemLine[] = [];
     kitItems.push({
@@ -478,21 +488,21 @@ export class KitGenerationService {
     if (dcCables && dcCables.length > 0) {
       const redCable = dcCables.find((c) => c.color === "red");
       const blackCable = dcCables.find((c) => c.color === "black");
-      const metersPerColor = Math.ceil(dcCableMeters / 2);
+      const metersPerColor = dcCableMeters / 2;
 
       if (redCable && blackCable) {
         kitItems.push({
           product_id: redCable.id,
           product_name: redCable.name,
           brand_name: redCable.brandName,
-          quantity: metersPerColor,
+          quantity: Math.ceil(metersPerColor / redCable.roll_length_m),
           unit_price: redCable.price,
         });
         kitItems.push({
           product_id: blackCable.id,
           product_name: blackCable.name,
           brand_name: blackCable.brandName,
-          quantity: metersPerColor,
+          quantity: Math.ceil(metersPerColor / blackCable.roll_length_m),
           unit_price: blackCable.price,
         });
       } else {
@@ -501,7 +511,7 @@ export class KitGenerationService {
           product_id: dcCables[0]!.id,
           product_name: dcCables[0]!.name,
           brand_name: dcCables[0]!.brandName,
-          quantity: Math.ceil(dcCableMeters),
+          quantity: Math.ceil(dcCableMeters / dcCables[0]!.roll_length_m),
           unit_price: dcCables[0]!.price,
         });
       }
