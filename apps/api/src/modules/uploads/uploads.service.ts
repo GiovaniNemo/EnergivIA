@@ -21,7 +21,8 @@ export class UploadsService {
 
   constructor(private readonly config: ConfigService) {
     this.region = this.config.get<string>("AWS_REGION") ?? "";
-    this.bucketName = this.config.get<string>("S3_BUCKET_NAME") ?? this.config.get<string>("AWS_S3_BUCKET") ?? "";
+    this.bucketName =
+      this.config.get<string>("S3_BUCKET_NAME") ?? this.config.get<string>("AWS_S3_BUCKET") ?? "";
     this.cdnBaseUrl = this.config.get<string>("S3_CDN_BASE_URL")?.replace(/\/$/, "");
     this.s3 = createS3ClientForPresign(this.region || undefined);
   }
@@ -36,7 +37,7 @@ export class UploadsService {
     }
 
     const allowedByFolder =
-      dto.folder === "financing_documents"
+      dto.folder === "financing_documents" || dto.folder === "datasheets"
         ? {
             set: ALLOWED_DOCUMENT_CONTENT_TYPES,
             message: "Tipo de arquivo não suportado. Permitidos: pdf, jpg, jpeg, png, webp.",
