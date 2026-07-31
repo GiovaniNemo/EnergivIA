@@ -63,7 +63,8 @@ export function resolveUploadPrefix(
     | "distributors"
     | "organizations"
     | "proposal_templates"
-    | "financing_documents",
+    | "financing_documents"
+    | "datasheets",
   productCategory?: string
 ): string {
   if (folder === "brands") return "brands";
@@ -71,6 +72,7 @@ export function resolveUploadPrefix(
   if (folder === "organizations") return "organizations";
   if (folder === "proposal_templates") return "proposal-templates";
   if (folder === "financing_documents") return "financing/documents";
+  if (folder === "datasheets") return "datasheets";
   const categoryFolder =
     PRODUCT_CATEGORY_TO_FOLDER[(productCategory ?? "").toLowerCase()] ?? "accessories";
   return `products/${categoryFolder}`;
@@ -83,17 +85,19 @@ export function buildS3ObjectKey(input: {
     | "distributors"
     | "organizations"
     | "proposal_templates"
-    | "financing_documents";
+    | "financing_documents"
+    | "datasheets";
   fileName: string;
   productCategory?: string;
 }): string {
   const prefix = resolveUploadPrefix(input.folder, input.productCategory);
   const extension = extname(input.fileName).toLowerCase() || ".jpg";
   const allowedExts =
-    input.folder === "financing_documents"
+    input.folder === "financing_documents" || input.folder === "datasheets"
       ? [".pdf", ".jpg", ".jpeg", ".png", ".webp"]
       : [".jpg", ".jpeg", ".png", ".webp"];
-  const fallback = input.folder === "financing_documents" ? ".pdf" : ".jpg";
+  const fallback =
+    input.folder === "financing_documents" || input.folder === "datasheets" ? ".pdf" : ".jpg";
   const safeExt = allowedExts.includes(extension) ? extension : fallback;
   const slug = slugifyBaseName(input.fileName);
   const uid = randomUUID();

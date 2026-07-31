@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { GoogleGenerativeAI, Type } from "@google/generative-ai";
-import * as pdfParse from "pdf-parse";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import pdfParse from "pdf-parse";
 
 @Injectable()
 export class AiExtractionService {
@@ -53,85 +53,100 @@ export class AiExtractionService {
         temperature: 0,
         responseMimeType: "application/json",
         responseSchema: {
-          type: Type.OBJECT,
+          type: SchemaType.OBJECT,
           properties: {
             detectedCategory: {
-              type: Type.STRING,
+              type: SchemaType.STRING,
               description: "Deve ser 'module' (para Painel Solar) ou 'inverter' (para Inversor)",
               enum: ["module", "inverter", "unknown"],
             },
             specs: {
-              type: Type.OBJECT,
+              type: SchemaType.OBJECT,
               description:
                 "Preencha APENAS as propriedades correspondentes à categoria detectada. Deixe as outras nulas ou omitidas.",
               properties: {
                 // Especificações do Módulo
-                power_w: { type: Type.NUMBER, description: "Potência Nominal Pmax em Watts (W)" },
+                power_w: {
+                  type: SchemaType.NUMBER,
+                  description: "Potência Nominal Pmax em Watts (W)",
+                },
                 voc: {
-                  type: Type.NUMBER,
+                  type: SchemaType.NUMBER,
                   description: "Tensão de Circuito Aberto Voc em Volts (V)",
                 },
                 vmp: {
-                  type: Type.NUMBER,
+                  type: SchemaType.NUMBER,
                   description: "Tensão de Máxima Potência Vmp em Volts (V)",
                 },
                 isc: {
-                  type: Type.NUMBER,
+                  type: SchemaType.NUMBER,
                   description: "Corrente de Curto-Circuito Isc em Amperes (A)",
                 },
                 imp: {
-                  type: Type.NUMBER,
+                  type: SchemaType.NUMBER,
                   description: "Corrente de Máxima Potência Imp em Amperes (A)",
                 },
                 max_system_voltage: {
-                  type: Type.NUMBER,
+                  type: SchemaType.NUMBER,
                   description: "Tensão Máxima do Sistema em Volts (ex: 1000 ou 1500)",
                 },
                 efficiency: {
-                  type: Type.NUMBER,
+                  type: SchemaType.NUMBER,
                   description: "Eficiência do módulo em porcentagem (%)",
                 },
-                weight: { type: Type.NUMBER, description: "Peso do módulo em kg" },
-                area: { type: Type.NUMBER, description: "Área do módulo em metros quadrados (m2)" },
+                weight: { type: SchemaType.NUMBER, description: "Peso do módulo em kg" },
+                area: {
+                  type: SchemaType.NUMBER,
+                  description: "Área do módulo em metros quadrados (m2)",
+                },
                 temperature_coefficient_pmax: {
-                  type: Type.NUMBER,
+                  type: SchemaType.NUMBER,
                   description: "Coeficiente de Temperatura de Pmax (%/°C)",
                 },
                 temperature_coefficient_voc: {
-                  type: Type.NUMBER,
+                  type: SchemaType.NUMBER,
                   description: "Coeficiente de Temperatura de Voc (%/°C)",
                 },
                 // Especificações do Inversor
                 nominal_power_w: {
-                  type: Type.NUMBER,
+                  type: SchemaType.NUMBER,
                   description: "Potência Nominal CA em Watts (W)",
                 },
                 max_dc_power_w: {
-                  type: Type.NUMBER,
+                  type: SchemaType.NUMBER,
                   description: "Potência Máxima CC Recomendada em Watts (W)",
                 },
                 max_input_voltage_v: {
-                  type: Type.NUMBER,
+                  type: SchemaType.NUMBER,
                   description: "Tensão Máxima de Entrada CC (V)",
                 },
-                mppt_voltage_min_v: { type: Type.NUMBER, description: "Tensão Mínima de MPPT (V)" },
-                mppt_voltage_max_v: { type: Type.NUMBER, description: "Tensão Máxima de MPPT (V)" },
+                mppt_voltage_min_v: {
+                  type: SchemaType.NUMBER,
+                  description: "Tensão Mínima de MPPT (V)",
+                },
+                mppt_voltage_max_v: {
+                  type: SchemaType.NUMBER,
+                  description: "Tensão Máxima de MPPT (V)",
+                },
                 max_input_current_a: {
-                  type: Type.NUMBER,
+                  type: SchemaType.NUMBER,
                   description: "Corrente Máxima de Entrada CC por MPPT (A)",
                 },
                 max_short_circuit_current_a: {
-                  type: Type.NUMBER,
+                  type: SchemaType.NUMBER,
                   description: "Corrente Máxima de Curto-Circuito (A)",
                 },
-                num_mppt: { type: Type.NUMBER, description: "Número de MPPTs (rastreadores)" },
+                num_mppt: {
+                  type: SchemaType.NUMBER,
+                  description: "Número de MPPTs (rastreadores)",
+                },
                 phase: {
-                  type: Type.STRING,
+                  type: SchemaType.STRING,
                   description: "'monophasic', 'biphasic' ou 'triphasic'",
                   enum: ["monophasic", "biphasic", "triphasic"],
                 },
                 voltage_v: {
-                  type: Type.NUMBER,
+                  type: SchemaType.NUMBER,
                   description: "Tensão de Saída CA Nominal (ex: 220, 380)",
                 },
               },
