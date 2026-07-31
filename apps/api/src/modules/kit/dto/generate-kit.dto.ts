@@ -28,6 +28,14 @@ export class GenerateKitDto {
   @IsOptional()
   @IsString()
   pinned_inverter_id?: string;
+
+  @IsOptional()
+  @IsString()
+  inverter_type?: string;
+
+  @IsOptional()
+  @IsString()
+  string_box_id?: string;
 }
 
 export class KitAlternativesDto extends GenerateKitDto {

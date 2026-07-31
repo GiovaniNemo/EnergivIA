@@ -20,6 +20,8 @@ export class KitController {
         system_kw: dto.system_kw,
         roof_type: dto.roof_type,
         preferred_brand: dto.preferred_brand,
+        inverter_type: dto.inverter_type,
+        string_box_id: dto.string_box_id,
       },
       organizationId
     );
@@ -39,6 +41,8 @@ export class KitController {
         stock_owner_org_id: dto.own_stock ? organizationId : undefined,
         pinned_module_id: dto.pinned_module_id,
         pinned_inverter_id: dto.pinned_inverter_id,
+        inverter_type: dto.inverter_type,
+        string_box_id: dto.string_box_id,
       },
       dto.category,
       {
@@ -61,6 +65,8 @@ export class KitController {
       stock_owner_org_id: dto.own_stock ? organizationId : undefined,
       pinned_module_id: dto.pinned_module_id,
       pinned_inverter_id: dto.pinned_inverter_id,
+      inverter_type: dto.inverter_type,
+      string_box_id: dto.string_box_id,
     });
     return {
       json: result,
