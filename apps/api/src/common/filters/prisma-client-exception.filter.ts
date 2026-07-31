@@ -26,9 +26,10 @@ function mapPrismaKnownRequest(exception: Prisma.PrismaClientKnownRequestError):
     case "P2014":
       return { statusCode: HttpStatus.BAD_REQUEST, message: "Relação inválida entre registros." };
     default:
+      console.error("[Prisma Filter] Prisma Error:", exception);
       return {
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: "Erro ao processar o pedido.",
+        message: `Erro ao processar o pedido. (Prisma ${exception.code}: ${exception.message})`,
       };
   }
 }
