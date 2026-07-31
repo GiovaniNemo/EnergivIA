@@ -346,20 +346,20 @@ export class KitGenerationService {
     roofType: string
   ): Promise<number> {
     const source: KitProductSource = { stockOwnerOrgId: orgId };
-    const [modules, stringInverters, microInverters, structureKit, dcCable, connector] =
+    const [modules, stringInverters, microInverters, structureKits, dcCables, connector] =
       await Promise.all([
         this.productRepo.findActiveModules(input.preferred_brand, source),
         this.productRepo.findActiveStringInverters(source),
         this.productRepo.findActiveMicroInverters(source),
-        this.productRepo.findStructureKitByRoofType(roofType, source),
-        this.productRepo.findDcCableBySection(DC_CABLE_SECTION_MM2, source),
+        this.productRepo.findStructureKitsByRoofType(roofType, source),
+        this.productRepo.findDcCablesBySection(DC_CABLE_SECTION_MM2, source),
         this.productRepo.findConnectorByType("mc4", source),
       ]);
     let covered = 0;
     if (modules.length > 0) covered++;
     if (stringInverters.length > 0 || microInverters.length > 0) covered++;
-    if (structureKit) covered++;
-    if (dcCable) covered++;
+    if (structureKits.length > 0) covered++;
+    if (dcCables.length > 0) covered++;
     if (connector) covered++;
     return covered;
   }
