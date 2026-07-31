@@ -24,4 +24,8 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   image_url?: string;
+
+  @IsOptional()
+  @IsString()
+  datasheet_url?: string;
 }

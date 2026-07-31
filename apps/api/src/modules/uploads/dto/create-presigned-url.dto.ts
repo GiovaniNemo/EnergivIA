@@ -7,6 +7,7 @@ export const uploadFolders = [
   "organizations",
   "proposal_templates",
   "financing_documents",
+  "datasheets",
 ] as const;
 export type UploadFolder = (typeof uploadFolders)[number];
 

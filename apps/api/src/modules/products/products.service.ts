@@ -79,6 +79,7 @@ export class ProductsService {
         active: dto.active ?? true,
         specs: dto.specs as object,
         imageUrl: dto.image_url?.trim() || undefined,
+        datasheetUrl: dto.datasheet_url?.trim() || undefined,
       },
     });
   }
@@ -92,6 +93,7 @@ export class ProductsService {
     if (dto.active !== undefined) data.active = dto.active;
     if (dto.specs !== undefined) data.specs = dto.specs as object;
     if (dto.image_url !== undefined) data.imageUrl = dto.image_url.trim() || null;
+    if (dto.datasheet_url !== undefined) data.datasheetUrl = dto.datasheet_url.trim() || null;
     return this.prisma.product.update({
       where: { id },
       data,

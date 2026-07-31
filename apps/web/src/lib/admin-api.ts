@@ -23,6 +23,7 @@ export interface Product {
   brandId: string;
   categoryId: string;
   imageUrl?: string | null;
+  datasheetUrl?: string | null;
   active: boolean;
   specs: Record<string, unknown>;
   brand: { id: string; name: string; imageUrl?: string | null };
@@ -108,17 +109,33 @@ export async function fetchCategories(): Promise<Category[]> {
   return res.json();
 }
 
-export async function fetchProducts(params: QueryProductsParams = {}): Promise<ProductsResponse> {
-  const searchParams = new URLSearchParams();
-  if (params.category) searchParams.set("category", params.category);
-  if (params.brand) searchParams.set("brand", params.brand);
-  if (params.search) searchParams.set("search", params.search);
-  if (params.active !== undefined) searchParams.set("active", String(params.active));
-  if (params.page) searchParams.set("page", String(params.page));
-  if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
-  const url = `${getApiUrl()}/products?${searchParams.toString()}`;
-  const res = await fetch(url);
+export async function fetchProducts(params?: QueryProductsParams): Promise<ProductsResponse> {
+  const url = new URL(`${getApiUrl()}/products`);
+  if (params?.category) url.searchParams.set("category", params.category);
+  if (params?.brand) url.searchParams.set("brand", params.brand);
+  if (params?.search) url.searchParams.set("search", params.search);
+  if (params?.active !== undefined) url.searchParams.set("active", String(params.active));
+  if (params?.page) url.searchParams.set("page", String(params.page));
+  if (params?.pageSize) url.searchParams.set("pageSize", String(params.pageSize));
+
+  const res = await fetch(url.toString());
   if (!res.ok) throw new Error("Falha ao carregar produtos.");
+  return res.json();
+}
+
+export async function extractDatasheet(datasheetUrl: string): Promise<{
+  detectedCategory: string;
+  specs: Record<string, unknown>;
+}> {
+  const res = await fetch(`${getApiUrl()}/products/ai/extract-datasheet`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ datasheetUrl }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message ?? "Falha ao extrair datasheet com IA.");
+  }
   return res.json();
 }
 
@@ -132,9 +149,10 @@ export async function createProduct(data: {
   name: string;
   brand_id: string;
   category_id: string;
-  active?: boolean;
-  specs: Record<string, unknown>;
   image_url?: string;
+  datasheet_url?: string;
+  specs: Record<string, unknown>;
+  active?: boolean;
 }): Promise<Product> {
   const res = await fetch(`${getApiUrl()}/products`, {
     method: "POST",
@@ -154,9 +172,10 @@ export async function updateProduct(
     name?: string;
     brand_id?: string;
     category_id?: string;
-    active?: boolean;
-    specs?: Record<string, unknown>;
     image_url?: string;
+    datasheet_url?: string;
+    specs?: Record<string, unknown>;
+    active?: boolean;
   }
 ): Promise<Product> {
   const res = await fetch(`${getApiUrl()}/products/${id}`, {

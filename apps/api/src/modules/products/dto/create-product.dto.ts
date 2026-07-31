@@ -14,10 +14,15 @@ export class CreateProductDto {
   @IsBoolean()
   active?: boolean = true;
 
+  @IsOptional()
   @IsObject()
-  specs!: Record<string, unknown>;
+  specs?: Record<string, unknown>;
 
   @IsOptional()
   @IsString()
   image_url?: string;
+
+  @IsOptional()
+  @IsString()
+  datasheet_url?: string;
 }

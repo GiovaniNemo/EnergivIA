@@ -404,6 +404,16 @@ function renderProposalEquipmentCards(items: ProposalEquipmentItem[]): JSX.Eleme
                 <p className="text-sm font-semibold leading-snug">{item.title}</p>
               ) : null}
               {item.subtitle ? <p className="mt-0.5 text-xs opacity-75">{item.subtitle}</p> : null}
+              {item.datasheetUrl ? (
+                <a
+                  href={item.datasheetUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                >
+                  📄 Baixar Datasheet
+                </a>
+              ) : null}
             </div>
             <div className="min-w-0 basis-full">
               <div className="my-2 border-t" style={equipmentChromeBorder} />
@@ -488,6 +498,16 @@ function renderProposalEquipmentTable(items: ProposalEquipmentItem[]): JSX.Eleme
                       </li>
                     ))}
                   </ul>
+                  {item.datasheetUrl ? (
+                    <a
+                      href={item.datasheetUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                    >
+                      📄 Baixar Datasheet
+                    </a>
+                  ) : null}
                 </td>
               </tr>
             );
@@ -538,6 +558,16 @@ function renderProposalEquipmentList(items: ProposalEquipmentItem[]): JSX.Elemen
                     </li>
                   ))}
                 </ul>
+                {item.datasheetUrl ? (
+                  <a
+                    href={item.datasheetUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                  >
+                    📄 Baixar Datasheet
+                  </a>
+                ) : null}
               </div>
             </div>
           </li>

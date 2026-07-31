@@ -10,6 +10,7 @@ import { SpecsCableForm } from "./SpecsCableForm";
 import { SpecsConnectorForm } from "./SpecsConnectorForm";
 import { SpecsPreviewCard } from "./SpecsPreviewCard";
 import { ImageUpload } from "./ImageUpload";
+import { DatasheetUpload } from "./DatasheetUpload";
 import type { CategoryName } from "@/lib/admin/schemas";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -165,6 +166,29 @@ export function ProductForm({ categories, brands, categoryName }: ProductFormPro
         <Box component="section">
           <Box sx={{ typography: "subtitle1", fontWeight: 600, mb: 2 }}>
             Especificações técnicas
+          </Box>
+          <Box mb={4}>
+            <Controller
+              name="datasheet_url"
+              control={control}
+              render={({ field }) => (
+                <DatasheetUpload
+                  value={(field.value as string | undefined) ?? ""}
+                  onChange={(url) => field.onChange(url)}
+                  productCategory={categoryName ?? undefined}
+                  onExtractedSpecs={(specs) => {
+                    Object.entries(specs).forEach(([key, value]) => {
+                      if (value !== null && value !== undefined) {
+                        useFormContext().setValue(`specs.${key}`, value, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                      }
+                    });
+                  }}
+                />
+              )}
+            />
           </Box>
           <Box display="flex" gap={3} flexWrap="wrap">
             <Box flex="1" minWidth={280}>

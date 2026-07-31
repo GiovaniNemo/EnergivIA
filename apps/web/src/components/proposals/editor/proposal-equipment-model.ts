@@ -6,6 +6,7 @@ export interface ProposalEquipmentProductSnapshot {
   id: string;
   name: string;
   imageUrl?: string | null;
+  datasheetUrl?: string | null;
   specs: Record<string, unknown>;
   brand: { id: string; name: string; imageUrl?: string | null };
   category: { id: string; name: string };
@@ -25,6 +26,7 @@ export interface ProposalEquipmentItem {
   subtitle: string;
   specs: ProposalEquipmentSpec[];
   categoryName?: string;
+  datasheetUrl?: string | null;
 }
 
 export const PROPOSAL_EQUIPMENT_SPEC_SLOTS = 3;
@@ -98,6 +100,7 @@ export function createEmptyProposalEquipmentItem(): ProposalEquipmentItem {
     title: "",
     subtitle: "",
     categoryName: undefined,
+    datasheetUrl: undefined,
     specs: [
       emptyProposalEquipmentSpec(),
       emptyProposalEquipmentSpec(),
@@ -206,6 +209,7 @@ export function proposalEquipmentItemFromProduct(
     id: rowId,
     productId: product.id,
     imageUrl: String(product.imageUrl ?? "").trim(),
+    datasheetUrl: product.datasheetUrl ?? undefined,
     title: `${catLabel} — ${product.brand.name}`,
     subtitle: product.name,
     categoryName: cat,
