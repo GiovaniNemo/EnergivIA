@@ -105,9 +105,14 @@ export class KitGenerationService {
     const roofType = input.roof_type || DEFAULT_ROOF_TYPE;
 
     const suppliers = await this.prisma.supplier.findMany({ select: { id: true, name: true } });
-    const distributors = await this.prisma.distributor.findMany({ select: { id: true, name: true } });
-    
-    const originMap = new Map<string, { name: string; supplierId?: string; distributorId?: string }>();
+    const distributors = await this.prisma.distributor.findMany({
+      select: { id: true, name: true },
+    });
+
+    const originMap = new Map<
+      string,
+      { name: string; supplierId?: string; distributorId?: string }
+    >();
     for (const s of suppliers) {
       originMap.set(s.name.trim().toLowerCase(), { name: s.name.trim(), supplierId: s.id });
     }
@@ -124,9 +129,9 @@ export class KitGenerationService {
 
     const supplierSources: KitSourceOption[] = [];
     for (const origin of allOrigins) {
-      const built = await this.buildKit(input, roofType, { 
-        supplierId: origin.supplierId, 
-        distributorId: origin.distributorId 
+      const built = await this.buildKit(input, roofType, {
+        supplierId: origin.supplierId,
+        distributorId: origin.distributorId,
       });
       supplierSources.push({
         type: "supplier",
@@ -213,9 +218,14 @@ export class KitGenerationService {
 
     const currentSupplierId = input.stock_owner_org_id ? undefined : input.supplier_id;
     const suppliers = await this.prisma.supplier.findMany({ select: { id: true, name: true } });
-    const distributors = await this.prisma.distributor.findMany({ select: { id: true, name: true } });
-    
-    const originMap = new Map<string, { name: string; supplierId?: string; distributorId?: string }>();
+    const distributors = await this.prisma.distributor.findMany({
+      select: { id: true, name: true },
+    });
+
+    const originMap = new Map<
+      string,
+      { name: string; supplierId?: string; distributorId?: string }
+    >();
     for (const s of suppliers) {
       originMap.set(s.name.trim().toLowerCase(), { name: s.name.trim(), supplierId: s.id });
     }
@@ -417,11 +427,13 @@ export class KitGenerationService {
     if (requireComplete && (!structureKit || !dcCable || !connector)) return null;
 
     if (structureKit) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const maxMods = (structureKit as any).maxModules || 1;
       kitItems.push({
         product_id: structureKit.id,
         product_name: structureKit.name,
         brand_name: structureKit.brandName,
-        quantity: 1,
+        quantity: Math.ceil(sizingResult.module_quantity / maxMods),
         unit_price: structureKit.price,
       });
     }

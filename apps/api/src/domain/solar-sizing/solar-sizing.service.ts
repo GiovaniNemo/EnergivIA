@@ -134,7 +134,7 @@ export function sizeSolarSystem(input: SolarSizingInput): SizingResult | null {
       stringInverter,
       moduleQuantity
     );
-    if (validated.voltage && validated.current && validated.dc_ac_ratio) {
+    if (validated.voltage && validated.current) {
       return {
         module,
         inverter: stringInverter,
