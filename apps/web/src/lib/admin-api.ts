@@ -110,15 +110,16 @@ export async function fetchCategories(): Promise<Category[]> {
 }
 
 export async function fetchProducts(params?: QueryProductsParams): Promise<ProductsResponse> {
-  const url = new URL(`${getApiUrl()}/products`);
-  if (params?.category) url.searchParams.set("category", params.category);
-  if (params?.brand) url.searchParams.set("brand", params.brand);
-  if (params?.search) url.searchParams.set("search", params.search);
-  if (params?.active !== undefined) url.searchParams.set("active", String(params.active));
-  if (params?.page) url.searchParams.set("page", String(params.page));
-  if (params?.pageSize) url.searchParams.set("pageSize", String(params.pageSize));
+  const searchParams = new URLSearchParams();
+  if (params?.category) searchParams.set("category", params.category);
+  if (params?.brand) searchParams.set("brand", params.brand);
+  if (params?.search) searchParams.set("search", params.search);
+  if (params?.active !== undefined) searchParams.set("active", String(params.active));
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
 
-  const res = await fetch(url.toString());
+  const url = `${getApiUrl()}/products?${searchParams.toString()}`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error("Falha ao carregar produtos.");
   return res.json();
 }
