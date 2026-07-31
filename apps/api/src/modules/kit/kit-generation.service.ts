@@ -55,7 +55,10 @@ export class KitGenerationService {
     }
 
     if (!built) {
-      built = await this.buildKit(input, roofType, { supplierId: input.supplier_id });
+      built = await this.buildKit(input, roofType, {
+        supplierId: input.supplier_id,
+        distributorId: input.supplier_id,
+      });
     }
 
     if (!built) {
@@ -177,7 +180,7 @@ export class KitGenerationService {
     const roofType = input.roof_type || DEFAULT_ROOF_TYPE;
     const source: KitProductSource = input.stock_owner_org_id
       ? { stockOwnerOrgId: input.stock_owner_org_id }
-      : { supplierId: input.supplier_id };
+      : { supplierId: input.supplier_id, distributorId: input.supplier_id };
 
     const candidates = await this.findSwapCandidates(input.preferred_brand, source, category);
 
