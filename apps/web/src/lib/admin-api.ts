@@ -190,7 +190,7 @@ export async function updateProduct(
   return res.json();
 }
 
-export type UploadFolder = "products" | "brands" | "distributors";
+export type UploadFolder = "products" | "brands" | "distributors" | "datasheets";
 
 export async function createPresignedUploadUrl(data: {
   fileName: string;
