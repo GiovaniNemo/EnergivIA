@@ -48,8 +48,10 @@ export function SpecsPreviewCard({ categoryName }: SpecsPreviewCardProps): JSX.E
   } else if (categoryName === "dc_cable") {
     const sec = specs["section_mm2"];
     const v = specs["max_voltage"];
+    const roll = specs["roll_length_m"];
     if (sec != null) lines.push(`${sec} mm²`);
     if (v != null) lines.push(`${v}V`);
+    if (roll != null) lines.push(`Bobina: ${roll}m`);
   } else if (categoryName === "connector") {
     const t = specs["type"];
     if (t != null) lines.push(String(t).toUpperCase());

@@ -97,6 +97,8 @@ export const specsStructureSchema = z.object({
 export const specsDcCableSchema = z.object({
   section_mm2: positiveNumber,
   max_voltage: positiveNumber,
+  color: z.string().optional(),
+  roll_length_m: positiveNumber.optional(),
 });
 
 export const connectorTypeOptions = ["mc4"] as const;
