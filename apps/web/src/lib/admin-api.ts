@@ -120,7 +120,12 @@ export async function fetchProducts(params?: QueryProductsParams): Promise<Produ
 
   const url = `${getApiUrl()}/products?${searchParams.toString()}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error("Falha ao carregar produtos.");
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      err.message ?? err.error ?? `Falha ao carregar produtos. Status: ${res.status}`
+    );
+  }
   return res.json();
 }
 
