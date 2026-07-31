@@ -69,12 +69,16 @@ export class ProductRepository {
   private async restrictProductIds(source: KitProductSource): Promise<string[] | null> {
     if (source.stockOwnerOrgId) return this.getStockProductIds(source.stockOwnerOrgId);
     if (source.supplierId || source.distributorId) {
-      const supIds = source.supplierId ? await this.supplierProductRepo.getProductIdsBySupplier(source.supplierId) : [];
-      const distOffers = source.distributorId ? await this.prisma.distributorProduct.findMany({
-        where: { distributorId: source.distributorId, stockQuantity: { gt: 0 } },
-        select: { productId: true }
-      }) : [];
-      const distIds = distOffers.map(o => o.productId);
+      const supIds = source.supplierId
+        ? await this.supplierProductRepo.getProductIdsBySupplier(source.supplierId)
+        : [];
+      const distOffers = source.distributorId
+        ? await this.prisma.distributorProduct.findMany({
+            where: { distributorId: source.distributorId, stockQuantity: { gt: 0 } },
+            select: { productId: true },
+          })
+        : [];
+      const distIds = distOffers.map((o) => o.productId);
       return Array.from(new Set([...supIds, ...distIds]));
     }
     return null;
@@ -95,15 +99,22 @@ export class ProductRepository {
     }
 
     if (source.supplierId || source.distributorId) {
-      const supOffers = source.supplierId ? await this.supplierProductRepo.getOffersBySupplier(
-        source.supplierId,
-        productIds
-      ) : new Map();
-      
-      const distOffersRows = source.distributorId ? await this.prisma.distributorProduct.findMany({
-        where: { distributorId: source.distributorId, productId: { in: productIds }, stockQuantity: { gt: 0 } }
-      }) : [];
-      const distOffers = new Map(distOffersRows.map(o => [o.productId, { price: Number(o.price) }]));
+      const supOffers = source.supplierId
+        ? await this.supplierProductRepo.getOffersBySupplier(source.supplierId, productIds)
+        : new Map();
+
+      const distOffersRows = source.distributorId
+        ? await this.prisma.distributorProduct.findMany({
+            where: {
+              distributorId: source.distributorId,
+              productId: { in: productIds },
+              stockQuantity: { gt: 0 },
+            },
+          })
+        : [];
+      const distOffers = new Map(
+        distOffersRows.map((o) => [o.productId, { price: Number(o.price) }])
+      );
 
       return items
         .filter((p) => supOffers.has(p.id) || distOffers.has(p.id))
@@ -125,17 +136,18 @@ export class ProductRepository {
       const offerSup = await this.supplierProductRepo.getCheapestOffer(item.id);
       const offerDistRow = await this.prisma.distributorProduct.findFirst({
         where: { productId: item.id },
-        orderBy: { price: "asc" }
+        orderBy: { price: "asc" },
       });
-      
+
       let bestPrice: number | null = null;
       const distPrice = offerDistRow ? Number(offerDistRow.price) : null;
-      
+
       if (offerSup && distPrice !== null) bestPrice = Math.min(offerSup.price, distPrice);
       else if (offerSup) bestPrice = offerSup.price;
       else if (distPrice !== null) bestPrice = distPrice;
 
-      if (bestPrice !== null) withPrice.push({ ...item, price: bestPrice } as T & { price: number });
+      if (bestPrice !== null)
+        withPrice.push({ ...item, price: bestPrice } as T & { price: number });
     }
     return withPrice;
   }
@@ -255,7 +267,7 @@ export class ProductRepository {
       },
       include: { brand: true },
     });
-    
+
     const matchingProducts = products.filter(
       (p) => (p.specs as { roof_type?: string }).roof_type === roofType
     );
@@ -263,12 +275,12 @@ export class ProductRepository {
     if (matchingProducts.length === 0) return [];
 
     const dtos = matchingProducts
-      .filter((p) => typeof (p.specs as any).max_modules === "number")
+      .filter((p) => typeof (p.specs as { max_modules?: number }).max_modules === "number")
       .map((p) => ({
         id: p.id,
         name: p.name,
         brandName: p.brand.name,
-        maxModules: (p.specs as any).max_modules as number,
+        maxModules: (p.specs as { max_modules?: number }).max_modules as number,
       }));
 
     if (dtos.length === 0) return [];
@@ -306,7 +318,7 @@ export class ProductRepository {
       },
       include: { brand: true },
     });
-    
+
     const matchingProducts = products.filter(
       (p) => (p.specs as { section_mm2?: number }).section_mm2 === sectionMm2
     );
@@ -330,7 +342,7 @@ export class ProductRepository {
       let color: "red" | "black" | "unknown" = "unknown";
       if (lowerName.includes("preto") || lowerName.includes("black")) color = "black";
       else if (lowerName.includes("vermelho") || lowerName.includes("red")) color = "red";
-      
+
       return {
         id: p.id,
         name: p.name,

@@ -62,7 +62,7 @@ export class ProposalsService {
     private readonly notificationsService: NotificationsService,
     private readonly leadActivityLog: LeadActivityLogService,
     private readonly stockReservation: StockReservationService
-  ) { }
+  ) {}
 
   async list(tenantId: string) {
     const rows = await this.prisma.proposal.findMany({
@@ -153,12 +153,12 @@ export class ProposalsService {
     let templateVersion: number | undefined;
     const explicitTemplate = proposalTemplateId
       ? await this.prisma.proposalTemplate.findFirst({
-        where: {
-          id: proposalTemplateId,
-          tenantId,
-          deletedAt: null,
-        },
-      })
+          where: {
+            id: proposalTemplateId,
+            tenantId,
+            deletedAt: null,
+          },
+        })
       : null;
     if (explicitTemplate) {
       templateVersion = explicitTemplate.version;
@@ -220,7 +220,7 @@ export class ProposalsService {
         meta: { proposalId: created.id, dealId: data.dealId },
         occurredAt: created.createdAt,
       })
-      .catch(() => { });
+      .catch(() => {});
     return created;
   }
 
@@ -405,11 +405,11 @@ export class ProposalsService {
       internalUrl: `/propostas/${p.id}`,
       deal: p.deal
         ? {
-          id: p.deal.id,
-          title: p.deal.title,
-          stage: p.deal.stage,
-          lead: p.deal.lead,
-        }
+            id: p.deal.id,
+            title: p.deal.title,
+            stage: p.deal.stage,
+            lead: p.deal.lead,
+          }
         : null,
     };
   }
@@ -418,7 +418,7 @@ export class ProposalsService {
     // 1. Busca a proposta para pegar o Token Público
     const proposal = await this.prisma.proposal.findUnique({
       where: { id: proposalId },
-      select: { id: true, publicToken: true } // Pegamos apenas o que precisamos
+      select: { id: true, publicToken: true }, // Pegamos apenas o que precisamos
     });
 
     if (!proposal) {
@@ -430,7 +430,7 @@ export class ProposalsService {
     // 2. Usa o token público (se existir) ou o ID como fallback
     const token = proposal.publicToken || proposal.id;
 
-    // ATENÇÃO: Verifique se a rota do seu frontend para o cliente final é "/proposta/" mesmo 
+    // ATENÇÃO: Verifique se a rota do seu frontend para o cliente final é "/proposta/" mesmo
     // ou se é algo como "/p/", "/proposta/publica/", etc.
     const targetUrl = `${webBaseUrl}/proposta/${token}`;
 
@@ -500,8 +500,7 @@ export class ProposalsService {
       const genModel = genAI.getGenerativeModel({
         model,
         generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
-        systemInstruction:
-          `Você é um especialista em vendas e marketing de energia solar fotovoltaica. 
+        systemInstruction: `Você é um especialista em vendas e marketing de energia solar fotovoltaica. 
 Seu trabalho é gerar conteúdos persuasivos, claros e profissionais para seções de propostas comerciais.
 Você DEVE retornar um JSON válido com exatamente estas DUAS chaves:
 {
@@ -518,7 +517,7 @@ O usuário solicitou uma seção com a seguinte instrução: ${prompt}`;
       const text = result.response.text();
       // O modelo já está forçado a JSON, apenas devolvemos parseado
       return JSON.parse(text);
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error(`Erro ao chamar Gemini: ${String(error)}`);
       throw new BadRequestException("Falha ao gerar seção com IA. Tente novamente mais tarde.");
     }

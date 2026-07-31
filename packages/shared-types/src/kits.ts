@@ -28,6 +28,12 @@ export interface GenerateSolarKitsInput {
   location: string;
   roofType: RoofType;
   preferences?: KitPreferences;
+  pinned_module_id?: string;
+  pinned_inverter_id?: string;
+  inverter_type?: string;
+  string_box_id?: string;
+  supplier_id?: string;
+  stock_owner_org_id?: string;
 }
 
 export interface GenerateSolarKitsOutput {

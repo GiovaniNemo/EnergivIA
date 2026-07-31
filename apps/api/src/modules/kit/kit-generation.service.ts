@@ -443,24 +443,26 @@ export class KitGenerationService {
       stringBox = await this.productRepo.findStringBoxById(input.string_box_id, source);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const modulePower = (sizingResult.module.specs as any).power_w || 0;
     const profileLength = modulePower >= 700 ? 2.75 : 2.4;
     const profile = await this.productRepo.findProfileByLength(profileLength, source);
 
-    if (requireComplete && (structureKits.length === 0 || dcCables.length === 0 || !connector)) return null;
+    if (requireComplete && (structureKits.length === 0 || dcCables.length === 0 || !connector))
+      return null;
 
     if (structureKits.length > 0) {
       let remainingModules = sizingResult.module_quantity;
       for (const kit of structureKits) {
         if (remainingModules <= 0) break;
         const maxMods = kit.maxModules || 1;
-        
+
         // Se for o último kit (o menor disponível), pegamos o que sobrou arredondando pra cima.
         // Se não, pegamos o máximo que cabe neste kit.
         const isSmallestKit = kit === structureKits[structureKits.length - 1];
-        
-        const quantity = isSmallestKit 
-          ? Math.ceil(remainingModules / maxMods) 
+
+        const quantity = isSmallestKit
+          ? Math.ceil(remainingModules / maxMods)
           : Math.floor(remainingModules / maxMods);
 
         if (quantity > 0) {
@@ -479,7 +481,7 @@ export class KitGenerationService {
       const redCable = dcCables.find((c) => c.color === "red");
       const blackCable = dcCables.find((c) => c.color === "black");
       const metersPerColor = Math.ceil(dcCableMeters / 2);
-      
+
       if (redCable && blackCable) {
         kitItems.push({
           product_id: redCable.id,

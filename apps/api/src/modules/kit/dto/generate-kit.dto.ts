@@ -30,8 +30,8 @@ export class GenerateKitDto {
   pinned_inverter_id?: string;
 
   @IsOptional()
-  @IsString()
-  inverter_type?: string;
+  @IsIn(["string", "microinverter", "hybrid", "off_grid"])
+  inverter_type?: "string" | "microinverter" | "hybrid" | "off_grid";
 
   @IsOptional()
   @IsString()
