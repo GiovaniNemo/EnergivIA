@@ -127,7 +127,9 @@ function kitRequestEquals(a: ProposalKitRequest | null, b: ProposalKitRequest): 
     Boolean(a.ownStock) === Boolean(b.ownStock) &&
     a.supplierId === b.supplierId &&
     a.pinnedModuleId === b.pinnedModuleId &&
-    a.pinnedInverterId === b.pinnedInverterId
+    a.pinnedInverterId === b.pinnedInverterId &&
+    a.inverterType === b.inverterType &&
+    a.stringBoxId === b.stringBoxId
   );
 }
 
@@ -170,6 +172,8 @@ type ProposalKitDraft = {
   brandCustom: string;
   source: ProposalKitSource;
   pins: { moduleId?: string; inverterId?: string };
+  inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
+  stringBoxId?: string;
 };
 
 type ProposalKitRequest = {
@@ -456,7 +460,9 @@ export const ProposalEconomicsModal = forwardRef<
     pins: {},
     inverterType: "string",
   });
-  const [stringBoxOptions, setStringBoxOptions] = useState<any[]>([]);
+  const [stringBoxOptions, setStringBoxOptions] = useState<
+    { id: string; name: string; brandName: string; price: number }[]
+  >([]);
 
   useEffect(() => {
     // Fetch string boxes once
@@ -578,23 +584,19 @@ export const ProposalEconomicsModal = forwardRef<
     setProposalKitError(null);
     void (async () => {
       try {
-        const preview = await generateKitWhatsAppPreview({
-          system_kw: proposalKitRequest.systemKw,
-          roof_type: proposalKitRequest.roof,
-          ...(proposalKitRequest.preferredBrand
-            ? { preferred_brand: proposalKitRequest.preferredBrand }
-            : {}),
-          ...(proposalKitRequest.ownStock ? { own_stock: true } : {}),
-          ...(proposalKitRequest.supplierId ? { supplier_id: proposalKitRequest.supplierId } : {}),
-          ...(proposalKitRequest.pinnedModuleId
-            ? { pinned_module_id: proposalKitRequest.pinnedModuleId }
-            : {}),
-          ...(proposalKitRequest.pinnedInverterId
-            ? { pinned_inverter_id: proposalKitRequest.pinnedInverterId }
-            : {}),
-          ...(proposalKitRequest.inverterType ? { inverter_type: proposalKitRequest.inverterType } : {}),
-          ...(proposalKitRequest.stringBoxId ? { string_box_id: proposalKitRequest.stringBoxId } : {}),
-        });
+        const req = proposalKitRequest;
+        const reqPayload = {
+          system_kw: req.systemKw,
+          roof_type: req.roof,
+          ...(req.preferredBrand ? { preferred_brand: req.preferredBrand } : {}),
+          ...(req.ownStock ? { own_stock: true } : {}),
+          ...(req.supplierId ? { supplier_id: req.supplierId } : {}),
+          ...(req.pinnedModuleId ? { pinned_module_id: req.pinnedModuleId } : {}),
+          ...(req.pinnedInverterId ? { pinned_inverter_id: req.pinnedInverterId } : {}),
+          ...(req.inverterType ? { inverter_type: req.inverterType } : {}),
+          ...(req.stringBoxId ? { string_box_id: req.stringBoxId } : {}),
+        };
+        const preview = await generateKitWhatsAppPreview(reqPayload);
         if (cancelled) return;
         setProposalKitResult(preview.json);
         setProposalKitWhatsapp(preview.whatsapp_message);
@@ -712,9 +714,7 @@ export const ProposalEconomicsModal = forwardRef<
       ...(proposalKitRequest.inverterType
         ? { inverter_type: proposalKitRequest.inverterType }
         : {}),
-      ...(proposalKitRequest.stringBoxId
-        ? { string_box_id: proposalKitRequest.stringBoxId }
-        : {}),
+      ...(proposalKitRequest.stringBoxId ? { string_box_id: proposalKitRequest.stringBoxId } : {}),
     })
       .then((res) => {
         if (cancelled) return;
@@ -2356,7 +2356,7 @@ export const ProposalEconomicsModal = forwardRef<
                       </div>
                     ) : null}
                   </div>
-                  
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label htmlFor="proposal-kit-inverter-type">Tipo de Inversor</Label>
@@ -2367,7 +2367,7 @@ export const ProposalEconomicsModal = forwardRef<
                         onChange={(e) =>
                           setProposalKitDraft((d) => ({
                             ...d,
-                            inverterType: e.target.value as any,
+                            inverterType: e.target.value as ProposalKitDraft["inverterType"],
                             pins: { ...d.pins, inverterId: undefined },
                           }))
                         }
