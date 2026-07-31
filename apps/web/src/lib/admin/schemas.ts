@@ -42,6 +42,8 @@ export const categoryNames = [
   "structure_kit",
   "dc_cable",
   "connector",
+  "profile",
+  "string_box",
 ] as const;
 export type CategoryName = (typeof categoryNames)[number];
 
@@ -102,6 +104,15 @@ export const specsConnectorSchema = z.object({
   type: z.enum(connectorTypeOptions),
 });
 
+export const specsProfileSchema = z.object({
+  length_m: positiveNumber,
+});
+
+export const specsStringBoxSchema = z.object({
+  // Sem specs específicas para a string box por enquanto, ou se tiver, adicionar.
+  type: z.string().optional(),
+});
+
 const specsSchemaByCategory: Record<CategoryName, z.ZodType<Record<string, unknown>>> = {
   module: specsModuleSchema,
   inverter: specsInverterSchema,
@@ -109,6 +120,8 @@ const specsSchemaByCategory: Record<CategoryName, z.ZodType<Record<string, unkno
   structure_kit: specsStructureSchema,
   dc_cable: specsDcCableSchema,
   connector: specsConnectorSchema,
+  profile: specsProfileSchema,
+  string_box: specsStringBoxSchema,
 };
 
 export const productBaseSchema = z.object({
@@ -135,3 +148,5 @@ export type SpecsMicroInverter = z.infer<typeof specsMicroInverterSchema>;
 export type SpecsStructure = z.infer<typeof specsStructureSchema>;
 export type SpecsDcCable = z.infer<typeof specsDcCableSchema>;
 export type SpecsConnector = z.infer<typeof specsConnectorSchema>;
+export type SpecsProfile = z.infer<typeof specsProfileSchema>;
+export type SpecsStringBox = z.infer<typeof specsStringBoxSchema>;

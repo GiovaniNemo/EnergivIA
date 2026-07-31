@@ -38,6 +38,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   structure_kit: "Estrutura",
   dc_cable: "Cabo DC",
   connector: "Conector",
+  profile: "Perfil",
+  string_box: "String Box",
 };
 
 function categoryLabel(name: string): string {

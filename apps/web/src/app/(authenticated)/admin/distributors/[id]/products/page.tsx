@@ -65,6 +65,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   inverter: "Inversor",
   microinverter: "Microinversor",
   module: "Módulo",
+  structure_kit: "Estrutura",
+  profile: "Perfil",
+  string_box: "String Box",
 };
 
 function formatCategoryLabel(value?: string): string {
@@ -163,7 +166,7 @@ export default function DistributorInventoryPage(): JSX.Element {
     setOptionalColumns(next);
     try {
       window.localStorage.setItem(COLUMN_PREFS_KEY, JSON.stringify(next));
-    } catch { }
+    } catch {}
   };
 
   const toggleOptionalColumn = (id: OptionalColumnId, checked: boolean) => {
@@ -761,10 +764,15 @@ export default function DistributorInventoryPage(): JSX.Element {
         <DialogContent dividers>
           <Box py={1}>
             <Typography variant="body1" paragraph>
-              A integração via API permite atualizar automaticamente <strong>preços, estoque em tempo real e fichas técnicas</strong> de materiais, conectando-se diretamente ao sistema do distribuidor.
+              A integração via API permite atualizar automaticamente{" "}
+              <strong>preços, estoque em tempo real e fichas técnicas</strong> de materiais,
+              conectando-se diretamente ao sistema do distribuidor.
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              Para implementar o funcionamento real deste botão, você precisará nos fornecer as <strong>Credenciais (API Keys, Tokens)</strong> e a <strong>Documentação (Manual de Integração)</strong> fornecidas pelo distribuidor (ex: Aldo Solar, Amara, etc.).
+              Para implementar o funcionamento real deste botão, você precisará nos fornecer as{" "}
+              <strong>Credenciais (API Keys, Tokens)</strong> e a{" "}
+              <strong>Documentação (Manual de Integração)</strong> fornecidas pelo distribuidor (ex:
+              Aldo Solar, Amara, etc.).
             </Typography>
             <Alert severity="info" sx={{ mt: 2 }}>
               Integração pendente: Aguardando as chaves de acesso dos fornecedores.
@@ -779,7 +787,7 @@ export default function DistributorInventoryPage(): JSX.Element {
         </DialogActions>
       </Dialog>
 
-      { }
+      {}
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Adicionar produto</DialogTitle>
         <form onSubmit={form.handleSubmit((values) => addMutation.mutate(values))}>
@@ -905,7 +913,7 @@ export default function DistributorInventoryPage(): JSX.Element {
         </form>
       </Dialog>
 
-      { }
+      {}
       {editingRow && (
         <Dialog
           open={Boolean(editingRow)}
@@ -1032,7 +1040,7 @@ export default function DistributorInventoryPage(): JSX.Element {
         </Dialog>
       )}
 
-      { }
+      {}
       <Dialog
         open={bulkResult !== null}
         onClose={() => setBulkResult(null)}

@@ -19,6 +19,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   structure_kit: "Estrutura",
   dc_cable: "Cabo CC",
   connector: "Conector",
+  profile: "Perfil",
+  string_box: "String Box",
 };
 
 function formatCategoryLabel(value: string): string {
@@ -39,6 +41,19 @@ const categoryToSpecForm: Record<CategoryName, () => JSX.Element> = {
   structure_kit: SpecsStructureForm,
   dc_cable: SpecsCableForm,
   connector: SpecsConnectorForm,
+  profile: () => (
+    <Box>
+      <TextField
+        {...useFormContext().register("specs.length_m")}
+        label="Comprimento (metros)"
+        type="number"
+        inputProps={{ step: "any" }}
+        fullWidth
+        size="small"
+      />
+    </Box>
+  ),
+  string_box: () => null, // no special fields for now
 };
 
 interface ProductFormProps {

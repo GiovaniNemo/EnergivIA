@@ -36,6 +36,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   structure_kit: "Estrutura",
   dc_cable: "Cabo CC",
   connector: "Conector",
+  profile: "Perfil",
+  string_box: "String Box",
 };
 
 export function equipmentCategoryLucideIcon(categoryName: string | undefined): string {
@@ -65,6 +67,8 @@ const CATEGORY_TITLE_PREFIXES: Array<[string, string]> = [
   ["module", "Módulo"],
   ["inverter", "Inversor"],
   ["connector", "Conector"],
+  ["profile", "Perfil"],
+  ["string_box", "String Box"],
 ];
 
 function inferCategorySlugFromTitle(title: string): string | undefined {

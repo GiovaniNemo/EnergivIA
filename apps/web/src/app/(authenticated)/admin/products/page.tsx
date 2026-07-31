@@ -36,6 +36,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   inverter: "Inversor",
   microinverter: "Microinversor",
   module: "Módulo",
+  structure_kit: "Estrutura",
+  profile: "Perfil",
+  string_box: "String Box",
 };
 
 function formatCategoryLabel(value?: string): string {
