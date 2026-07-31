@@ -1,11 +1,11 @@
 "use client";
 
 import { Box, MenuItem, TextField } from "@mui/material";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, Controller } from "react-hook-form";
 import { NumberSpecField } from "./NumberSpecField";
 
 export function SpecsCableForm(): JSX.Element {
-  const { register } = useFormContext();
+  const { control } = useFormContext();
   return (
     <Box display="flex" flexDirection="column" gap={2}>
       <NumberSpecField
@@ -14,17 +14,17 @@ export function SpecsCableForm(): JSX.Element {
         helperText="Seção transversal do cabo"
       />
       <NumberSpecField name="specs.max_voltage" label="Tensão máxima (V)" />
-      <TextField
-        {...register("specs.color")}
-        select
-        label="Cor"
-        fullWidth
-        size="small"
+      <Controller
+        name="specs.color"
+        control={control}
         defaultValue="preto"
-      >
-        <MenuItem value="preto">Preto</MenuItem>
-        <MenuItem value="vermelho">Vermelho</MenuItem>
-      </TextField>
+        render={({ field }) => (
+          <TextField {...field} select label="Cor" fullWidth size="small">
+            <MenuItem value="preto">Preto</MenuItem>
+            <MenuItem value="vermelho">Vermelho</MenuItem>
+          </TextField>
+        )}
+      />
       <NumberSpecField
         name="specs.roll_length_m"
         label="Tamanho da bobina (metros)"
