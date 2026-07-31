@@ -10,6 +10,8 @@ export interface GenerateKitRequest {
   own_stock?: boolean;
   pinned_module_id?: string;
   pinned_inverter_id?: string;
+  inverter_type?: "string" | "microinverter" | "hybrid" | "off_grid";
+  string_box_id?: string;
 }
 
 export type KitSwapCategory = "module" | "inverter";

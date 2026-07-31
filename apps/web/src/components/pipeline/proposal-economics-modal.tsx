@@ -180,6 +180,8 @@ type ProposalKitRequest = {
   supplierId?: string;
   pinnedModuleId?: string;
   pinnedInverterId?: string;
+  inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
+  stringBoxId?: string;
 };
 
 type PipelineBillAttachment =
@@ -452,7 +454,20 @@ export const ProposalEconomicsModal = forwardRef<
     brandCustom: "",
     source: { kind: "auto" },
     pins: {},
+    inverterType: "string",
   });
+  const [stringBoxOptions, setStringBoxOptions] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Fetch string boxes once
+    fetch("/api/products?category=string_box")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data)) setStringBoxOptions(data);
+        else if (data && Array.isArray(data.items)) setStringBoxOptions(data.items);
+      })
+      .catch((e) => console.error("Failed to load string boxes", e));
+  }, []);
   const [kitSourceOptions, setKitSourceOptions] = useState<KitSourceOption[] | null>(null);
   const [kitSourceLoading, setKitSourceLoading] = useState(false);
   const autoSourceAppliedRef = useRef(false);
@@ -577,6 +592,8 @@ export const ProposalEconomicsModal = forwardRef<
           ...(proposalKitRequest.pinnedInverterId
             ? { pinned_inverter_id: proposalKitRequest.pinnedInverterId }
             : {}),
+          ...(proposalKitRequest.inverterType ? { inverter_type: proposalKitRequest.inverterType } : {}),
+          ...(proposalKitRequest.stringBoxId ? { string_box_id: proposalKitRequest.stringBoxId } : {}),
         });
         if (cancelled) return;
         setProposalKitResult(preview.json);
@@ -624,6 +641,8 @@ export const ProposalEconomicsModal = forwardRef<
         ...(proposalKitDraft.pins.inverterId
           ? { pinnedInverterId: proposalKitDraft.pins.inverterId }
           : {}),
+        inverterType: proposalKitDraft.inverterType,
+        stringBoxId: proposalKitDraft.stringBoxId,
       };
       setProposalKitRequest((prev) => (kitRequestEquals(prev, next) ? prev : next));
     }, 600);
@@ -689,6 +708,12 @@ export const ProposalEconomicsModal = forwardRef<
         : {}),
       ...(proposalKitRequest.pinnedInverterId
         ? { pinned_inverter_id: proposalKitRequest.pinnedInverterId }
+        : {}),
+      ...(proposalKitRequest.inverterType
+        ? { inverter_type: proposalKitRequest.inverterType }
+        : {}),
+      ...(proposalKitRequest.stringBoxId
+        ? { string_box_id: proposalKitRequest.stringBoxId }
         : {}),
     })
       .then((res) => {
@@ -2331,6 +2356,52 @@ export const ProposalEconomicsModal = forwardRef<
                       </div>
                     ) : null}
                   </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="proposal-kit-inverter-type">Tipo de Inversor</Label>
+                      <Select
+                        id="proposal-kit-inverter-type"
+                        className="h-11 w-full border-emerald-500/15"
+                        value={proposalKitDraft.inverterType || "string"}
+                        onChange={(e) =>
+                          setProposalKitDraft((d) => ({
+                            ...d,
+                            inverterType: e.target.value as any,
+                            pins: { ...d.pins, inverterId: undefined },
+                          }))
+                        }
+                      >
+                        <option value="string">String Inverter</option>
+                        <option value="microinverter">Microinversor</option>
+                        <option value="hybrid">Híbrido</option>
+                        <option value="off_grid">Off-Grid</option>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="proposal-kit-string-box">String Box (Opcional)</Label>
+                      <Select
+                        id="proposal-kit-string-box"
+                        className="h-11 w-full border-emerald-500/15"
+                        value={proposalKitDraft.stringBoxId || ""}
+                        onChange={(e) =>
+                          setProposalKitDraft((d) => ({
+                            ...d,
+                            stringBoxId: e.target.value || undefined,
+                          }))
+                        }
+                      >
+                        <option value="">(Sem String Box)</option>
+                        {stringBoxOptions.map((sb) => (
+                          <option key={sb.id} value={sb.id}>
+                            {sb.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  </div>
+
                   <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-3.5 py-3">
                     <div>
                       <p className="text-sm font-medium text-[var(--color-foreground)]">

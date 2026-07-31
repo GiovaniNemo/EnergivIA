@@ -379,12 +379,23 @@ export class KitGenerationService {
     const modules = input.pinned_module_id
       ? allModules.filter((m) => m.id === input.pinned_module_id)
       : allModules;
-    const stringInverters = input.pinned_inverter_id
+    let stringInverters = input.pinned_inverter_id
       ? allStringInverters.filter((i) => i.id === input.pinned_inverter_id)
       : allStringInverters;
-    const microInverters = input.pinned_inverter_id
+    let microInverters = input.pinned_inverter_id
       ? allMicroInverters.filter((i) => i.id === input.pinned_inverter_id)
       : allMicroInverters;
+
+    if (input.inverter_type === "string") {
+      microInverters = [];
+    } else if (input.inverter_type === "microinverter") {
+      stringInverters = [];
+    } else if (input.inverter_type === "hybrid" || input.inverter_type === "off_grid") {
+      // Temporarily clear both since they are not fully supported yet
+      stringInverters = [];
+      microInverters = [];
+    }
+
     if (modules.length === 0) return null;
 
     const sizingResult = sizeSolarSystem({
@@ -421,33 +432,79 @@ export class KitGenerationService {
       : sizingResult.module_quantity;
     const dcCableMeters = stringCount * 20 * 2;
 
-    const [structureKit, dcCable, connector] = await Promise.all([
-      this.productRepo.findStructureKitByRoofType(roofType, source),
-      this.productRepo.findDcCableBySection(DC_CABLE_SECTION_MM2, source),
+    const [structureKits, dcCables, connector] = await Promise.all([
+      this.productRepo.findStructureKitsByRoofType(roofType, source),
+      this.productRepo.findDcCablesBySection(DC_CABLE_SECTION_MM2, source),
       this.productRepo.findConnectorByType("mc4", source),
     ]);
 
-    if (requireComplete && (!structureKit || !dcCable || !connector)) return null;
-
-    if (structureKit) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const maxMods = (structureKit as any).maxModules || 1;
-      kitItems.push({
-        product_id: structureKit.id,
-        product_name: structureKit.name,
-        brand_name: structureKit.brandName,
-        quantity: Math.ceil(sizingResult.module_quantity / maxMods),
-        unit_price: structureKit.price,
-      });
+    let stringBox = null;
+    if (input.string_box_id) {
+      stringBox = await this.productRepo.findStringBoxById(input.string_box_id, source);
     }
-    if (dcCable) {
-      kitItems.push({
-        product_id: dcCable.id,
-        product_name: dcCable.name,
-        brand_name: dcCable.brandName,
-        quantity: Math.ceil(dcCableMeters),
-        unit_price: dcCable.price,
-      });
+
+    const modulePower = (sizingResult.module.specs as any).power_w || 0;
+    const profileLength = modulePower >= 700 ? 2.75 : 2.4;
+    const profile = await this.productRepo.findProfileByLength(profileLength, source);
+
+    if (requireComplete && (structureKits.length === 0 || dcCables.length === 0 || !connector)) return null;
+
+    if (structureKits.length > 0) {
+      let remainingModules = sizingResult.module_quantity;
+      for (const kit of structureKits) {
+        if (remainingModules <= 0) break;
+        const maxMods = kit.maxModules || 1;
+        
+        // Se for o último kit (o menor disponível), pegamos o que sobrou arredondando pra cima.
+        // Se não, pegamos o máximo que cabe neste kit.
+        const isSmallestKit = kit === structureKits[structureKits.length - 1];
+        
+        const quantity = isSmallestKit 
+          ? Math.ceil(remainingModules / maxMods) 
+          : Math.floor(remainingModules / maxMods);
+
+        if (quantity > 0) {
+          kitItems.push({
+            product_id: kit.id,
+            product_name: kit.name,
+            brand_name: kit.brandName,
+            quantity: quantity,
+            unit_price: kit.price,
+          });
+          remainingModules -= quantity * maxMods;
+        }
+      }
+    }
+    if (dcCables && dcCables.length > 0) {
+      const redCable = dcCables.find((c) => c.color === "red");
+      const blackCable = dcCables.find((c) => c.color === "black");
+      const metersPerColor = Math.ceil(dcCableMeters / 2);
+      
+      if (redCable && blackCable) {
+        kitItems.push({
+          product_id: redCable.id,
+          product_name: redCable.name,
+          brand_name: redCable.brandName,
+          quantity: metersPerColor,
+          unit_price: redCable.price,
+        });
+        kitItems.push({
+          product_id: blackCable.id,
+          product_name: blackCable.name,
+          brand_name: blackCable.brandName,
+          quantity: metersPerColor,
+          unit_price: blackCable.price,
+        });
+      } else {
+        // Fallback para usar o primeiro cabo encontrado
+        kitItems.push({
+          product_id: dcCables[0]!.id,
+          product_name: dcCables[0]!.name,
+          brand_name: dcCables[0]!.brandName,
+          quantity: Math.ceil(dcCableMeters),
+          unit_price: dcCables[0]!.price,
+        });
+      }
     }
     if (connector) {
       kitItems.push({
@@ -456,6 +513,24 @@ export class KitGenerationService {
         brand_name: connector.brandName,
         quantity: stringCount,
         unit_price: connector.price,
+      });
+    }
+    if (profile) {
+      kitItems.push({
+        product_id: profile.id,
+        product_name: profile.name,
+        brand_name: profile.brandName,
+        quantity: sizingResult.module_quantity * 2, // Uma aproximação, dependendo da engenharia
+        unit_price: profile.price,
+      });
+    }
+    if (stringBox) {
+      kitItems.push({
+        product_id: stringBox.id,
+        product_name: stringBox.name,
+        brand_name: stringBox.brandName,
+        quantity: isStringSizingResult(sizingResult) ? 1 : 0, // Apenas se usar inversor string
+        unit_price: stringBox.price,
       });
     }
 

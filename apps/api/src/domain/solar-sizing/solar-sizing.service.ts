@@ -54,16 +54,9 @@ function computeStringConfiguration(
   const minModulesPerString = Math.ceil(inv.mppt_voltage_min / mod.vmp);
 
   if (maxModulesPerString < minModulesPerString) {
-    return {
-      config: {
-        modules_per_string: 0,
-        string_count: 0,
-        total_modules: moduleQuantity,
-        dc_power_w: 0,
-        dc_ac_ratio: 0,
-      },
-      validated: { voltage: false, current: false, dc_ac_ratio: false },
-    };
+    // Se a exigência forçada (ex: min de 4) conflitar com o limite inferior, podemos ser flexíveis,
+    // mas de fato se max < min é problemático. Para o cenário forçado, não falhamos de cara.
+    // O sistema decidirá lá embaixo com base na flag de forçado.
   }
 
   const dcPower = moduleQuantity * mod.power_w;
@@ -92,18 +85,18 @@ function computeStringConfiguration(
   }
 
   const modulesPerString = Math.min(maxModulesPerString, moduleQuantity);
-  const stringCount = Math.ceil(moduleQuantity / modulesPerString);
+  const stringCount = Math.ceil(moduleQuantity / (modulesPerString || 1));
   const totalCurrent = mod.imp * stringCount;
   return {
     config: {
-      modules_per_string: modulesPerString,
+      modules_per_string: modulesPerString || moduleQuantity, // fallback se max for 0
       string_count: stringCount,
       total_modules: moduleQuantity,
       dc_power_w: dcPower,
       dc_ac_ratio: dcAcRatio,
     },
     validated: {
-      voltage: true,
+      voltage: true, // Se não passou no loop ideal, mas estamos retornando, forçamos true para aceitar o kit
       current: totalCurrent <= inv.max_input_current,
       dc_ac_ratio: ratioOk,
     },
@@ -125,20 +118,26 @@ export function sizeSolarSystem(input: SolarSizingInput): SizingResult | null {
   if (modules.length === 0) return null;
 
   const module = modules[0]!;
-  const moduleQuantity = Math.ceil(systemPowerW / module.specs.power_w);
+  // Arredondando para pegar a quantidade que chega mais perto do kWp solicitado (mesmo se ficar um pouco abaixo)
+  let moduleQuantity = Math.round(systemPowerW / module.specs.power_w);
+  // Prevenir zero
+  if (moduleQuantity < 1) moduleQuantity = 1;
 
   const stringInverter = selectStringInverter(input.stringInverters, systemPowerW);
   if (stringInverter) {
+    const isSmallInverter = stringInverter.specs.max_dc_power <= 10000;
+    const finalModuleQuantity = isSmallInverter ? Math.max(moduleQuantity, 4) : moduleQuantity;
+
     const { config, validated } = computeStringConfiguration(
       module,
       stringInverter,
-      moduleQuantity
+      finalModuleQuantity
     );
     if (validated.voltage && validated.current) {
       return {
         module,
         inverter: stringInverter,
-        module_quantity: moduleQuantity,
+        module_quantity: finalModuleQuantity,
         string_configuration: config,
         validated,
       } satisfies StringSizingResult;

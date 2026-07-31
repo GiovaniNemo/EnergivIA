@@ -10,6 +10,8 @@ const CATEGORY_NAMES = [
   "structure_kit",
   "dc_cable",
   "connector",
+  "profile",
+  "string_box",
 ] as const;
 
 async function main() {
@@ -274,7 +276,14 @@ async function main() {
       pricesBySupplier: [4500, 4680, 4350],
     },
     {
-      name: "Cabo solar 6mm²",
+      name: "Cabo solar 6mm² Preto",
+      brandName: "Genérico",
+      categoryName: "dc_cable" as const,
+      specs: { section_mm2: 6, max_voltage: 1500 },
+      pricesBySupplier: [12.5, 13, 12],
+    },
+    {
+      name: "Cabo solar 6mm² Vermelho",
       brandName: "Genérico",
       categoryName: "dc_cable" as const,
       specs: { section_mm2: 6, max_voltage: 1500 },
@@ -286,6 +295,27 @@ async function main() {
       categoryName: "connector" as const,
       specs: { type: "mc4" },
       pricesBySupplier: [18, 19, 17.5],
+    },
+    {
+      name: "Perfil alumínio 2.4M",
+      brandName: "Genérico",
+      categoryName: "profile" as const,
+      specs: { length_m: 2.4 },
+      pricesBySupplier: [45, 48, 43],
+    },
+    {
+      name: "Perfil alumínio 2.75M",
+      brandName: "Genérico",
+      categoryName: "profile" as const,
+      specs: { length_m: 2.75 },
+      pricesBySupplier: [55, 58, 52],
+    },
+    {
+      name: "String Box 2 Entradas / 2 Saídas",
+      brandName: "Genérico",
+      categoryName: "string_box" as const,
+      specs: { inputs: 2, outputs: 2, max_voltage: 1000 },
+      pricesBySupplier: [450, 480, 430],
     },
   ];
 

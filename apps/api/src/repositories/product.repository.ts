@@ -12,6 +12,8 @@ const CATEGORY_NAMES = {
   STRUCTURE_KIT: "structure_kit",
   DC_CABLE: "dc_cable",
   CONNECTOR: "connector",
+  PROFILE: "profile",
+  STRING_BOX: "string_box",
 } as const;
 
 export type KitProductSource = {
@@ -234,16 +236,18 @@ export class ProductRepository {
     );
   }
 
-  async findStructureKitByRoofType(
+  async findStructureKitsByRoofType(
     roofType: string,
     source: KitProductSource = {}
-  ): Promise<{
-    id: string;
-    name: string;
-    brandName: string;
-    price: number;
-    maxModules: number;
-  } | null> {
+  ): Promise<
+    {
+      id: string;
+      name: string;
+      brandName: string;
+      price: number;
+      maxModules: number;
+    }[]
+  > {
     const products = await this.prisma.product.findMany({
       where: {
         category: { name: CATEGORY_NAMES.STRUCTURE_KIT },
@@ -251,44 +255,50 @@ export class ProductRepository {
       },
       include: { brand: true },
     });
-    const product = products.find(
+    
+    const matchingProducts = products.filter(
       (p) => (p.specs as { roof_type?: string }).roof_type === roofType
     );
-    if (!product) return null;
-    const specs = product.specs as { roof_type?: string; max_modules?: number };
-    if (typeof specs.max_modules !== "number") return null;
-    const withPrice = await this.attachPrices(
-      [
-        {
-          id: product.id,
-          name: product.name,
-          brandName: product.brand.name,
-          maxModules: specs.max_modules,
-        },
-      ],
-      source
-    );
-    const one = withPrice[0];
-    if (!one) return null;
-    return {
-      id: product.id,
-      name: one.name,
-      brandName: one.brandName,
-      price: one.price,
-      maxModules: one.maxModules,
-    };
+
+    if (matchingProducts.length === 0) return [];
+
+    const dtos = matchingProducts
+      .filter((p) => typeof (p.specs as any).max_modules === "number")
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        brandName: p.brand.name,
+        maxModules: (p.specs as any).max_modules as number,
+      }));
+
+    if (dtos.length === 0) return [];
+
+    const withPrice = await this.attachPrices(dtos, source);
+
+    return withPrice
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        brandName: p.brandName,
+        price: p.price,
+        maxModules: p.maxModules,
+      }))
+      .sort((a, b) => b.maxModules - a.maxModules); // Sort descending by max modules
   }
 
-  async findDcCableBySection(
+  async findDcCablesBySection(
     sectionMm2: number,
     source: KitProductSource = {}
-  ): Promise<{
-    id: string;
-    name: string;
-    brandName: string;
-    price: number;
-    section_mm2: number;
-  } | null> {
+  ): Promise<
+    {
+      id: string;
+      name: string;
+      brandName: string;
+      price: number;
+      section_mm2: number;
+      color: "red" | "black" | "unknown";
+    }[]
+  > {
     const products = await this.prisma.product.findMany({
       where: {
         category: { name: CATEGORY_NAMES.DC_CABLE },
@@ -296,31 +306,40 @@ export class ProductRepository {
       },
       include: { brand: true },
     });
-    const product = products.find(
+    
+    const matchingProducts = products.filter(
       (p) => (p.specs as { section_mm2?: number }).section_mm2 === sectionMm2
     );
-    if (!product) return null;
-    const specs = product.specs as { section_mm2: number };
-    const withPrice = await this.attachPrices(
-      [
-        {
-          id: product.id,
-          name: product.name,
-          brandName: product.brand.name,
-          section_mm2: specs.section_mm2,
-        },
-      ],
-      source
-    );
-    const one = withPrice[0];
-    if (!one) return null;
-    return {
-      id: product.id,
-      name: one.name,
-      brandName: one.brandName,
-      price: one.price,
-      section_mm2: one.section_mm2,
-    };
+
+    if (matchingProducts.length === 0) return [];
+
+    const dtos = matchingProducts.map((p) => {
+      const specs = p.specs as { section_mm2: number };
+      return {
+        id: p.id,
+        name: p.name,
+        brandName: p.brand.name,
+        section_mm2: specs.section_mm2,
+      };
+    });
+
+    const withPrice = await this.attachPrices(dtos, source);
+
+    return withPrice.map((p) => {
+      const lowerName = p.name.toLowerCase();
+      let color: "red" | "black" | "unknown" = "unknown";
+      if (lowerName.includes("preto") || lowerName.includes("black")) color = "black";
+      else if (lowerName.includes("vermelho") || lowerName.includes("red")) color = "red";
+      
+      return {
+        id: p.id,
+        name: p.name,
+        brandName: p.brandName,
+        price: p.price,
+        section_mm2: p.section_mm2,
+        color,
+      };
+    });
   }
 
   async findConnectorByType(
@@ -340,6 +359,85 @@ export class ProductRepository {
       include: { brand: true },
     });
     const product = products.find((p) => (p.specs as { type?: string }).type === connectorType);
+    if (!product) return null;
+    const withPrice = await this.attachPrices(
+      [
+        {
+          id: product.id,
+          name: product.name,
+          brandName: product.brand.name,
+        },
+      ],
+      source
+    );
+    const one = withPrice[0];
+    if (!one) return null;
+    return {
+      id: product.id,
+      name: one.name,
+      brandName: one.brandName,
+      price: one.price,
+    };
+  }
+
+  async findProfileByLength(
+    minLengthM: number,
+    source: KitProductSource = {}
+  ): Promise<{
+    id: string;
+    name: string;
+    brandName: string;
+    price: number;
+  } | null> {
+    const products = await this.prisma.product.findMany({
+      where: {
+        category: { name: CATEGORY_NAMES.PROFILE },
+        active: true,
+      },
+      include: { brand: true },
+    });
+    const product = products.find((p) => {
+      const l = (p.specs as { length_m?: number }).length_m;
+      return typeof l === "number" && l >= minLengthM;
+    });
+    if (!product) return null;
+    const withPrice = await this.attachPrices(
+      [
+        {
+          id: product.id,
+          name: product.name,
+          brandName: product.brand.name,
+        },
+      ],
+      source
+    );
+    const one = withPrice[0];
+    if (!one) return null;
+    return {
+      id: product.id,
+      name: one.name,
+      brandName: one.brandName,
+      price: one.price,
+    };
+  }
+
+  async findStringBoxById(
+    stringBoxId: string,
+    source: KitProductSource = {}
+  ): Promise<{
+    id: string;
+    name: string;
+    brandName: string;
+    price: number;
+  } | null> {
+    const product = await this.prisma.product.findFirst({
+      where: {
+        id: stringBoxId,
+        category: { name: CATEGORY_NAMES.STRING_BOX },
+        active: true,
+      },
+      include: { brand: true },
+    });
     if (!product) return null;
     const withPrice = await this.attachPrices(
       [
