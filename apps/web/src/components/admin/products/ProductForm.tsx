@@ -53,7 +53,7 @@ const categoryToSpecForm: Record<CategoryName, () => JSX.Element> = {
       />
     </Box>
   ),
-  string_box: () => null, // no special fields for now
+  string_box: () => <></>, // no special fields for now
 };
 
 interface ProductFormProps {
