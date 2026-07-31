@@ -326,12 +326,13 @@ export class ProductRepository {
     if (matchingProducts.length === 0) return [];
 
     const dtos = matchingProducts.map((p) => {
-      const specs = p.specs as { section_mm2: number };
+      const specs = p.specs as { section_mm2: number; color?: string };
       return {
         id: p.id,
         name: p.name,
         brandName: p.brand.name,
         section_mm2: specs.section_mm2,
+        specColor: specs.color,
       };
     });
 
@@ -340,7 +341,10 @@ export class ProductRepository {
     return withPrice.map((p) => {
       const lowerName = p.name.toLowerCase();
       let color: "red" | "black" | "unknown" = "unknown";
-      if (lowerName.includes("preto") || lowerName.includes("black")) color = "black";
+
+      if (p.specColor === "vermelho" || p.specColor === "red") color = "red";
+      else if (p.specColor === "preto" || p.specColor === "black") color = "black";
+      else if (lowerName.includes("preto") || lowerName.includes("black")) color = "black";
       else if (lowerName.includes("vermelho") || lowerName.includes("red")) color = "red";
 
       return {
