@@ -320,7 +320,7 @@ export class ProductRepository {
     });
 
     const matchingProducts = products.filter(
-      (p) => (p.specs as { section_mm2?: number }).section_mm2 === sectionMm2
+      (p) => Number((p.specs as Record<string, unknown>).section_mm2) === sectionMm2
     );
 
     if (matchingProducts.length === 0) return [];

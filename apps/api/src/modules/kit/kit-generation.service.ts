@@ -369,8 +369,6 @@ export class KitGenerationService {
     roofType: string,
     source: KitProductSource
   ): Promise<BuiltKit | null> {
-    const requireComplete = Boolean(source.stockOwnerOrgId);
-
     const [allModules, allStringInverters, allMicroInverters] = await Promise.all([
       this.productRepo.findActiveModules(input.preferred_brand, source),
       this.productRepo.findActiveStringInverters(source),
@@ -448,8 +446,8 @@ export class KitGenerationService {
     const profileLength = modulePower >= 700 ? 2.75 : 2.4;
     const profile = await this.productRepo.findProfileByLength(profileLength, source);
 
-    if (requireComplete && (structureKits.length === 0 || dcCables.length === 0 || !connector))
-      return null;
+    // We no longer fail the kit if structures or cables are missing.
+    // They will just be omitted from the kit if they don't exist in stock.
 
     if (structureKits.length > 0) {
       let remainingModules = sizingResult.module_quantity;
