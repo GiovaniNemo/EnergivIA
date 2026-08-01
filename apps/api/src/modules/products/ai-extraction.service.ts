@@ -96,11 +96,8 @@ export class AiExtractionService {
                   type: SchemaType.NUMBER,
                   description: "Eficiência do módulo em porcentagem (%)",
                 },
-                weight: { type: SchemaType.NUMBER, description: "Peso do módulo em kg" },
-                area: {
-                  type: SchemaType.NUMBER,
-                  description: "Área do módulo em metros quadrados (m2)",
-                },
+                width_mm: { type: SchemaType.NUMBER, description: "Largura do módulo em mm" },
+                height_mm: { type: SchemaType.NUMBER, description: "Altura do módulo em mm" },
                 temperature_coefficient_pmax: {
                   type: SchemaType.NUMBER,
                   description: "Coeficiente de Temperatura de Pmax (%/°C)",
@@ -114,23 +111,23 @@ export class AiExtractionService {
                   type: SchemaType.NUMBER,
                   description: "Potência Nominal CA em Watts (W)",
                 },
-                max_dc_power_w: {
+                max_dc_power: {
                   type: SchemaType.NUMBER,
                   description: "Potência Máxima CC Recomendada em Watts (W)",
                 },
-                max_input_voltage_v: {
+                max_dc_voltage: {
                   type: SchemaType.NUMBER,
                   description: "Tensão Máxima de Entrada CC (V)",
                 },
-                mppt_voltage_min_v: {
+                mppt_voltage_min: {
                   type: SchemaType.NUMBER,
                   description: "Tensão Mínima de MPPT (V)",
                 },
-                mppt_voltage_max_v: {
+                mppt_voltage_max: {
                   type: SchemaType.NUMBER,
                   description: "Tensão Máxima de MPPT (V)",
                 },
-                max_input_current_a: {
+                max_input_current: {
                   type: SchemaType.NUMBER,
                   description: "Corrente Máxima de Entrada CC por MPPT (A)",
                 },
@@ -138,9 +135,21 @@ export class AiExtractionService {
                   type: SchemaType.NUMBER,
                   description: "Corrente Máxima de Curto-Circuito (A)",
                 },
-                num_mppt: {
+                mppt_count: {
                   type: SchemaType.NUMBER,
                   description: "Número de MPPTs (rastreadores)",
+                },
+                max_strings_per_mppt: {
+                  type: SchemaType.NUMBER,
+                  description: "Strings por MPPT",
+                },
+                recommended_dc_ac_ratio_min: {
+                  type: SchemaType.NUMBER,
+                  description: "Ratio DC/AC mín. recomendado",
+                },
+                recommended_dc_ac_ratio_max: {
+                  type: SchemaType.NUMBER,
+                  description: "Ratio DC/AC máx. recomendado",
                 },
                 phase: {
                   type: SchemaType.STRING,

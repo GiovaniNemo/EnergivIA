@@ -67,6 +67,7 @@ export function ProductForm({ categories, brands, categoryName }: ProductFormPro
   const {
     register,
     control,
+    setValue,
     formState: { errors, submitCount },
   } = useFormContext();
   const SpecForm = categoryName ? categoryToSpecForm[categoryName] : null;
@@ -179,7 +180,7 @@ export function ProductForm({ categories, brands, categoryName }: ProductFormPro
                   onExtractedSpecs={(specs) => {
                     Object.entries(specs).forEach(([key, value]) => {
                       if (value !== null && value !== undefined) {
-                        useFormContext().setValue(`specs.${key}`, value, {
+                        setValue(`specs.${key}`, value, {
                           shouldDirty: true,
                           shouldValidate: true,
                         });
