@@ -49,7 +49,7 @@ export class AiExtractionService {
     }
 
     const model = this.genAI.getGenerativeModel({
-      model: "gemini-1.5-pro",
+      model: "gemini-3-flash-preview",
       generationConfig: {
         temperature: 0,
         responseMimeType: "application/json",
@@ -184,8 +184,19 @@ ${textContent}`;
       return { specs };
     } catch (error) {
       console.error("Erro na extração com IA:", error);
+      let availableModels = "";
+      try {
+        const apiKey = this.configService.get<string>("GOOGLE_GEMINI_API_KEY");
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        if (res.ok) {
+          const data = await res.json();
+          availableModels = data.models ? data.models.map((m: any) => m.name).join(", ") : "Nenhum modelo listado";
+        }
+      } catch (e) {
+        availableModels = "Falha ao buscar modelos.";
+      }
       const msg = error instanceof Error ? error.message : "Erro desconhecido";
-      throw new BadRequestException(`Falha ao extrair especificações com a IA: ${msg}`);
+      throw new BadRequestException(`Falha ao extrair especificações com a IA: ${msg}. Modelos disponíveis: ${availableModels}`);
     }
   }
 }
