@@ -180,8 +180,11 @@ ${textContent}`;
         .replace(/```json/g, "")
         .replace(/```/g, "")
         .trim();
-      const specs = JSON.parse(cleaned);
-      return { specs };
+      const parsed = JSON.parse(cleaned);
+      return {
+        detectedCategory: parsed.detectedCategory,
+        specs: parsed.specs || {},
+      };
     } catch (error) {
       console.error("Erro na extração com IA:", error);
       const msg = error instanceof Error ? error.message : "Erro desconhecido";
