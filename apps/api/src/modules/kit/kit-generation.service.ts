@@ -526,11 +526,14 @@ export class KitGenerationService {
       });
     }
     if (profile) {
+      const moduleQty = sizingResult.module_quantity;
+      const profileQty = moduleQty % 2 === 0 ? moduleQty : moduleQty + 1;
+
       kitItems.push({
         product_id: profile.id,
         product_name: profile.name,
         brand_name: profile.brandName,
-        quantity: sizingResult.module_quantity * 2, // Uma aproximação, dependendo da engenharia
+        quantity: profileQty,
         unit_price: profile.price,
       });
     }
