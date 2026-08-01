@@ -13,7 +13,7 @@ export class AiExtractionService {
   }
 
   async extractSpecsFromDatasheetUrl(datasheetUrl: string) {
-    const urlWithoutQuery = datasheetUrl.split("?")[0].toLowerCase();
+    const urlWithoutQuery = (datasheetUrl.split("?")[0] ?? "").toLowerCase();
     if (!urlWithoutQuery.endsWith(".pdf")) {
       throw new BadRequestException("O arquivo fornecido não parece ser um PDF.");
     }
