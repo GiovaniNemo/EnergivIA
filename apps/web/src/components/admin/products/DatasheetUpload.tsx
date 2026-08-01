@@ -12,6 +12,7 @@ interface DatasheetUploadProps {
   value?: string;
   onChange: (url: string) => void;
   productCategory?: string;
+  productName?: string;
   onExtractedSpecs: (specs: Record<string, unknown>) => void;
 }
 
@@ -19,6 +20,7 @@ export function DatasheetUpload({
   value,
   onChange,
   productCategory,
+  productName,
   onExtractedSpecs,
 }: DatasheetUploadProps): JSX.Element {
   const [error, setError] = useState<string>("");
@@ -68,7 +70,7 @@ export function DatasheetUpload({
       setIsExtracting(true);
 
       // 2. Extrai as especificações usando IA
-      const { specs } = await extractDatasheet(fileUrl);
+      const { specs } = await extractDatasheet(fileUrl, productName);
       onExtractedSpecs(specs);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao enviar datasheet.");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormContext, Controller } from "react-hook-form";
+import { useFormContext, Controller, useWatch } from "react-hook-form";
 import { Alert, Box, TextField, MenuItem, FormControlLabel, Switch } from "@mui/material";
 import { SpecsModuleForm } from "./SpecsModuleForm";
 import { SpecsInverterForm } from "./SpecsInverterForm";
@@ -72,6 +72,8 @@ export function ProductForm({ categories, brands, categoryName }: ProductFormPro
   } = useFormContext();
   const SpecForm = categoryName ? categoryToSpecForm[categoryName] : null;
   const hasErrors = submitCount > 0 && Object.keys(errors).length > 0;
+
+  const productName = useWatch({ name: "name", control });
 
   return (
     <Box display="flex" flexDirection="column" gap={3}>
@@ -177,6 +179,7 @@ export function ProductForm({ categories, brands, categoryName }: ProductFormPro
                   value={(field.value as string | undefined) ?? ""}
                   onChange={(url) => field.onChange(url)}
                   productCategory={categoryName ?? undefined}
+                  productName={productName as string | undefined}
                   onExtractedSpecs={(specs) => {
                     Object.entries(specs).forEach(([key, value]) => {
                       if (value !== null && value !== undefined) {

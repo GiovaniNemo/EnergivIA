@@ -129,14 +129,17 @@ export async function fetchProducts(params?: QueryProductsParams): Promise<Produ
   return res.json();
 }
 
-export async function extractDatasheet(datasheetUrl: string): Promise<{
+export async function extractDatasheet(
+  datasheetUrl: string,
+  productName?: string
+): Promise<{
   detectedCategory: string;
   specs: Record<string, unknown>;
 }> {
   const res = await fetch(`${getApiUrl()}/products/ai/extract-datasheet`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ datasheetUrl }),
+    body: JSON.stringify({ datasheetUrl, productName }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

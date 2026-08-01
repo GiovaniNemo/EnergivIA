@@ -12,7 +12,7 @@ export class AiExtractionService {
     this.genAI = new GoogleGenerativeAI(apiKey);
   }
 
-  async extractSpecsFromDatasheetUrl(datasheetUrl: string) {
+  async extractSpecsFromDatasheetUrl(datasheetUrl: string, productName?: string) {
     const urlWithoutQuery = (datasheetUrl.split("?")[0] ?? "").toLowerCase();
     if (!urlWithoutQuery.endsWith(".pdf")) {
       throw new BadRequestException("O arquivo fornecido não parece ser um PDF.");
@@ -169,7 +169,13 @@ export class AiExtractionService {
       },
     });
 
-    const prompt = `Você é um engenheiro de sistemas fotovoltaicos. Leia o conteúdo do datasheet a seguir (texto extraído de um PDF) e extraia todas as especificações técnicas encontradas. Retorne APENAS o JSON de acordo com o Schema solicitado.
+    const modelInstruction = productName
+      ? `ATENÇÃO: Este PDF contém vários modelos. Extraia as especificações EXCLUSIVAMENTE para o modelo: "${productName}". Ignore os dados de outros modelos.`
+      : `Extraia as especificações técnicas gerais encontradas no datasheet.`;
+
+    const prompt = `Você é um engenheiro de sistemas fotovoltaicos. Leia o conteúdo do datasheet a seguir (texto extraído de um PDF).
+${modelInstruction}
+Retorne APENAS o JSON de acordo com o Schema solicitado.
 Texto do Datasheet:
 ${textContent}`;
 
