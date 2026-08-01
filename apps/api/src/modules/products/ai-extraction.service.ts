@@ -182,8 +182,10 @@ ${textContent}`;
         .trim();
       const specs = JSON.parse(cleaned);
       return { specs };
-    } catch {
-      throw new BadRequestException("Falha ao extrair especificações com a IA.");
+    } catch (error) {
+      console.error("Erro na extração com IA:", error);
+      const msg = error instanceof Error ? error.message : "Erro desconhecido";
+      throw new BadRequestException(`Falha ao extrair especificações com a IA: ${msg}`);
     }
   }
 }
