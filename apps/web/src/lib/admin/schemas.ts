@@ -127,7 +127,7 @@ const specsSchemaByCategory: Record<CategoryName, z.ZodType<Record<string, unkno
 };
 
 export const productBaseSchema = z.object({
-  name: z.string().min(1, "Nome é obrigatório"),
+  name: z.string().min(1, "Nome é obrigatório").toUpperCase(),
   brand_id: z.string().min(1, "Selecione a marca"),
   category_id: z.string().min(1, "Selecione a categoria"),
   image_url: z.string().url("URL da imagem inválida").optional().or(z.literal("")),
