@@ -3168,9 +3168,6 @@ export const ProposalEconomicsModal = forwardRef<
                     <>
                       <FileText className="mr-2 h-4 w-4 shrink-0" />
                       Criar proposta
-                      {generatedProposal
-                        ? ` · ${formatCurrency(generatedProposal.valorSistema)}`
-                        : ""}
                     </>
                   )}
                 </Button>
