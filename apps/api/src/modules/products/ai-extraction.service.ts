@@ -49,7 +49,7 @@ export class AiExtractionService {
     }
 
     const model = this.genAI.getGenerativeModel({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.6-flash",
       generationConfig: {
         temperature: 0,
         responseMimeType: "application/json",
@@ -174,21 +174,18 @@ Texto do Datasheet:
 ${textContent}`;
 
     try {
-      const apiKey = this.configService.get<string>("GOOGLE_GEMINI_API_KEY");
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-      let availableModels = "Falha";
-      if (res.ok) {
-        const data = (await res.json()) as any;
-        availableModels = data.models ? data.models.map((m: any) => m.name).join(", ") : "Nenhum modelo listado";
-      }
-      throw new BadRequestException(`DEBUG MODE. Modelos disponíveis na sua chave: ${availableModels}`);
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      const cleaned = text
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+      const specs = JSON.parse(cleaned);
+      return { specs };
     } catch (error) {
-      if (error instanceof BadRequestException) throw error;
-      throw new BadRequestException(`DEBUG ERRO: ${error instanceof Error ? error.message : "Desconhecido"}`);
+      console.error("Erro na extração com IA:", error);
+      const msg = error instanceof Error ? error.message : "Erro desconhecido";
+      throw new BadRequestException(`Falha ao extrair especificações com a IA: ${msg}`);
     }
-    
-    // O código abaixo não será executado por enquanto
-    // const result = await model.generateContent(prompt);
-    // return { specs: {} };
   }
 }
