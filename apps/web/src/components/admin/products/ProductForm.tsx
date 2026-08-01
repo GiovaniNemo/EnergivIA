@@ -88,7 +88,12 @@ export function ProductForm({ categories, brands, categoryName }: ProductFormPro
             render={({ field, fieldState }) => (
               <TextField
                 {...field}
-                onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                value={field.value || ""}
+                onChange={(e) => {
+                  const upper = e.target.value.toUpperCase();
+                  field.onChange(upper);
+                }}
+                sx={{ input: { textTransform: "uppercase" } }}
                 label="Nome do produto"
                 error={Boolean(fieldState.error)}
                 helperText={fieldState.error?.message}
