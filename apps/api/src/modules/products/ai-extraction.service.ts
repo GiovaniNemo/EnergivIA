@@ -49,7 +49,7 @@ export class AiExtractionService {
     }
 
     const model = this.genAI.getGenerativeModel({
-      model: "gemini-1.5-flash-latest",
+      model: "gemini-1.5-pro",
       generationConfig: {
         temperature: 0,
         responseMimeType: "application/json",
