@@ -189,7 +189,7 @@ ${textContent}`;
         const apiKey = this.configService.get<string>("GOOGLE_GEMINI_API_KEY");
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
         if (res.ok) {
-          const data = await res.json();
+          const data = (await res.json()) as any;
           availableModels = data.models ? data.models.map((m: any) => m.name).join(", ") : "Nenhum modelo listado";
         }
       } catch (e) {
