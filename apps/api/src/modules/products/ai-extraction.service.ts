@@ -174,8 +174,22 @@ Texto do Datasheet:
 ${textContent}`;
 
     try {
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const apiKey = this.configService.get<string>("GOOGLE_GEMINI_API_KEY");
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      let availableModels = "Falha";
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        availableModels = data.models ? data.models.map((m: any) => m.name).join(", ") : "Nenhum modelo listado";
+      }
+      throw new BadRequestException(`DEBUG MODE. Modelos disponíveis na sua chave: ${availableModels}`);
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException(`DEBUG ERRO: ${error instanceof Error ? error.message : "Desconhecido"}`);
+    }
+    
+    // O código abaixo não será executado por enquanto
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
       const cleaned = text
         .replace(/```json/g, "")
         .replace(/```/g, "")
