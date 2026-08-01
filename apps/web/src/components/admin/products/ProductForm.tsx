@@ -65,7 +65,6 @@ interface ProductFormProps {
 
 export function ProductForm({ categories, brands, categoryName }: ProductFormProps): JSX.Element {
   const {
-    register,
     control,
     setValue,
     formState: { errors, submitCount },
@@ -83,13 +82,20 @@ export function ProductForm({ categories, brands, categoryName }: ProductFormPro
       <Box component="section">
         <Box sx={{ typography: "subtitle1", fontWeight: 600, mb: 2 }}>Informações gerais</Box>
         <Box display="flex" flexDirection="column" gap={2}>
-          <TextField
-            {...register("name")}
-            label="Nome do produto"
-            error={Boolean(errors["name"])}
-            helperText={errors["name"]?.message as string | undefined}
-            fullWidth
-            size="small"
+          <Controller
+            name="name"
+            control={control}
+            render={({ field, fieldState }) => (
+              <TextField
+                {...field}
+                onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                label="Nome do produto"
+                error={Boolean(fieldState.error)}
+                helperText={fieldState.error?.message}
+                fullWidth
+                size="small"
+              />
+            )}
           />
           <Controller
             name="brand_id"
