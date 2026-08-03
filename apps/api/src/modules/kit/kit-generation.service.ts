@@ -524,7 +524,9 @@ export class KitGenerationService {
         product_id: connector.id,
         product_name: connector.name,
         brand_name: connector.brandName,
-        quantity: stringCount,
+        // 4 conectores (pares) por string é um padrão seguro que cobre
+        // a ida para a string box e da string box para o inversor, com sobra.
+        quantity: stringCount * 4,
         unit_price: connector.price,
       });
     }
