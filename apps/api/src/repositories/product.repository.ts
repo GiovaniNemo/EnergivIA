@@ -399,8 +399,9 @@ export class ProductRepository {
     };
   }
 
-  async findProfileByLength(
+  async findProfile(
     minLengthM: number,
+    roofType: string,
     source: KitProductSource = {}
   ): Promise<{
     id: string;
@@ -415,10 +416,29 @@ export class ProductRepository {
       },
       include: { brand: true },
     });
-    const product = products.find((p) => {
-      const l = (p.specs as { length_m?: number }).length_m;
-      return typeof l === "number" && l >= minLengthM;
-    });
+
+    let product = null;
+
+    if (roofType === "metal") {
+      product = products.find(
+        (p) => (p.specs as { profile_type?: string }).profile_type === "baixo"
+      );
+    } else if (roofType === "ground") {
+      product = products.find(
+        (p) => (p.specs as { profile_type?: string }).profile_type === "fechamento"
+      );
+    }
+
+    if (!product) {
+      product = products.find((p) => {
+        const specs = p.specs as { profile_type?: string; length_m?: number };
+        // Do not pick specific profiles when looking for standard ones
+        if (specs.profile_type === "baixo" || specs.profile_type === "fechamento") return false;
+        const l = specs.length_m;
+        return typeof l === "number" && l >= minLengthM;
+      });
+    }
+
     if (!product) return null;
     const withPrice = await this.attachPrices(
       [

@@ -49,13 +49,20 @@ export interface ConnectorSpec {
   type: string;
 }
 
+export interface ProfileSpec {
+  length_m: number;
+  structure_type?: string;
+  profile_type?: string;
+}
+
 export type ProductSpecs =
   | ModuleSpec
   | StringInverterSpec
   | MicroInverterSpec
   | StructureKitSpec
   | DcCableSpec
-  | ConnectorSpec;
+  | ConnectorSpec
+  | ProfileSpec;
 
 export function isModuleSpec(specs: unknown): specs is ModuleSpec {
   return (

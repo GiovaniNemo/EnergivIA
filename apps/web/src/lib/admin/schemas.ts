@@ -108,6 +108,8 @@ export const specsConnectorSchema = z.object({
 
 export const specsProfileSchema = z.object({
   length_m: positiveNumber,
+  structure_type: z.string().optional(),
+  profile_type: z.string().optional(),
 });
 
 export const specsStringBoxSchema = z.object({

@@ -454,10 +454,12 @@ export class KitGenerationService {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const modulePower = (sizingResult.module.specs as any).power_w || 0;
     const profileLength = modulePower >= 700 ? 2.75 : 2.4;
-    const profile = await this.productRepo.findProfileByLength(profileLength, source);
+    const profile = await this.productRepo.findProfile(profileLength, roofType, source);
 
     // We no longer fail the kit if structures or cables are missing.
     // They will just be omitted from the kit if they don't exist in stock.
+
+    let addedStructureKits: { maxMods: number; quantity: number }[] = [];
 
     if (structureKits.length > 0) {
       let remainingModules = sizingResult.module_quantity;
@@ -481,6 +483,7 @@ export class KitGenerationService {
             quantity: quantity,
             unit_price: kit.price,
           });
+          addedStructureKits.push({ maxMods, quantity });
           remainingModules -= quantity * maxMods;
         }
       }
@@ -527,15 +530,37 @@ export class KitGenerationService {
     }
     if (profile) {
       const moduleQty = sizingResult.module_quantity;
-      const profileQty = moduleQty % 2 === 0 ? moduleQty : moduleQty + 1;
+      let profileQty = 0;
 
-      kitItems.push({
-        product_id: profile.id,
-        product_name: profile.name,
-        brand_name: profile.brandName,
-        quantity: profileQty,
-        unit_price: profile.price,
-      });
+      if (roofType === "metal") {
+        for (const added of addedStructureKits) {
+          if (added.maxMods === 4) {
+            profileQty += added.quantity * 10;
+          } else if (added.maxMods === 2) {
+            profileQty += added.quantity * 5;
+          } else {
+            // Fallback if they have other sizes
+            profileQty += added.quantity * Math.ceil(added.maxMods * 2.5);
+          }
+        }
+        if (moduleQty % 2 !== 0) profileQty += 1;
+      } else if (roofType === "ground") {
+        // Para solo, deixamos a quantidade como o padrao (ou a criterio do integrador)
+        // O usuário informou que quer deixar à disposição, colocaremos 1 como aviso e ele ajusta
+        profileQty = 1;
+      } else {
+        profileQty = moduleQty % 2 === 0 ? moduleQty : moduleQty + 1;
+      }
+
+      if (profileQty > 0) {
+        kitItems.push({
+          product_id: profile.id,
+          product_name: profile.name,
+          brand_name: profile.brandName,
+          quantity: profileQty,
+          unit_price: profile.price,
+        });
+      }
     }
     if (stringBox) {
       kitItems.push({

@@ -43,7 +43,7 @@ const categoryToSpecForm: Record<CategoryName, () => JSX.Element> = {
   dc_cable: SpecsCableForm,
   connector: SpecsConnectorForm,
   profile: () => (
-    <Box>
+    <Box display="flex" flexDirection="column" gap={2}>
       <TextField
         {...useFormContext().register("specs.length_m")}
         label="Comprimento (metros)"
@@ -51,6 +51,45 @@ const categoryToSpecForm: Record<CategoryName, () => JSX.Element> = {
         inputProps={{ step: "any" }}
         fullWidth
         size="small"
+      />
+      <Controller
+        name="specs.structure_type"
+        control={useFormContext().control}
+        render={({ field }) => (
+          <TextField
+            {...field}
+            value={field.value || ""}
+            label="Tipo de Estrutura"
+            select
+            fullWidth
+            size="small"
+          >
+            <MenuItem value="">Nenhum/Padrão</MenuItem>
+            <MenuItem value="ceramic">Cerâmica / Fibrocimento</MenuItem>
+            <MenuItem value="metal">Metálico</MenuItem>
+            <MenuItem value="ground">Solo</MenuItem>
+            <MenuItem value="laje">Laje</MenuItem>
+          </TextField>
+        )}
+      />
+      <Controller
+        name="specs.profile_type"
+        control={useFormContext().control}
+        render={({ field }) => (
+          <TextField
+            {...field}
+            value={field.value || ""}
+            label="Tipo de Perfil"
+            select
+            fullWidth
+            size="small"
+          >
+            <MenuItem value="">Normal/Padrão</MenuItem>
+            <MenuItem value="alto">Alto</MenuItem>
+            <MenuItem value="baixo">Baixo (ex: 55CM)</MenuItem>
+            <MenuItem value="fechamento">Fechamento de Estrutura (Solo)</MenuItem>
+          </TextField>
+        )}
       />
     </Box>
   ),
