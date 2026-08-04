@@ -466,6 +466,7 @@ export interface ProposalEquipmentContextItem {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  specs?: any | null;
 }
 
 export interface ProposalEquipmentContext {
@@ -490,6 +491,7 @@ export interface ProposalEquipmentOption {
   unitPrice: number;
   stockQuantity: number;
   imageUrl: string | null;
+  specs?: any | null;
 }
 
 export async function getProposalEquipment(

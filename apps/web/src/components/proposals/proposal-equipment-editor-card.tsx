@@ -37,6 +37,7 @@ interface EditableLine {
   unitPrice: number;
   unavailable?: boolean;
   changed?: boolean;
+  specs?: any | null;
 }
 
 type LineRole = "module" | "inverter" | "locked_bos" | "bos";
@@ -132,6 +133,7 @@ export function ProposalEquipmentEditorCard({
           unitPrice: i.unitPrice,
           unavailable: false,
           changed: false,
+          specs: (i as any).specs ?? null,
         }))
       );
       setDistributorId(data.distributorId);
@@ -338,6 +340,41 @@ export function ProposalEquipmentEditorCard({
     return Math.round(perModuleKw * effectiveQty(moduleLine) * 100) / 100;
   })();
 
+  const { minAllowedModules, maxAllowedModules } = useMemo(() => {
+    let min = 1;
+    let max = Infinity;
+
+    if (moduleLine && moduleLine.quantity > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const invSpecs = inverterLine?.specs as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const modSpecs = moduleLine?.specs as any;
+
+      if (invSpecs?.type === "string") {
+        if (typeof invSpecs.max_dc_power === "number" && invSpecs.max_dc_power <= 10000) {
+          min = 4;
+        }
+        if (
+          typeof invSpecs.max_dc_power === "number" &&
+          typeof invSpecs.recommended_dc_ac_ratio_max === "number" &&
+          typeof modSpecs?.power_w === "number"
+        ) {
+          const inverterQty = inverterLine?.quantity || 1;
+          max = Math.floor(
+            (invSpecs.max_dc_power * inverterQty * invSpecs.recommended_dc_ac_ratio_max) /
+            modSpecs.power_w
+          );
+        }
+      } else if (invSpecs?.type === "micro") {
+        if (typeof invSpecs.channels === "number") {
+          const inverterQty = inverterLine?.quantity || 1;
+          max = invSpecs.channels * inverterQty;
+        }
+      }
+    }
+    return { minAllowedModules: min, maxAllowedModules: max };
+  }, [moduleLine, inverterLine]);
+
   async function changeDistributor(nextId: string): Promise<void> {
     if (!nextId || nextId === distributorId) return;
     setDistributorSwitchError(null);
@@ -380,7 +417,11 @@ export function ProposalEquipmentEditorCard({
     setQtyResetNotice(false);
     setModuleQtyOverrides((prev) => {
       const current = prev[line.productId] ?? line.quantity;
-      const next = Math.max(1, current + delta);
+      let next = current + delta;
+
+      if (next < minAllowedModules) next = minAllowedModules;
+      if (next > maxAllowedModules) next = maxAllowedModules;
+
       if (next === line.quantity) {
         const clone = { ...prev };
         delete clone[line.productId];
@@ -405,6 +446,7 @@ export function ProposalEquipmentEditorCard({
             unitPrice: option.unitPrice,
             unavailable: false,
             changed: true,
+            specs: (option as any).specs ?? null,
           }
           : l
       )
@@ -885,8 +927,10 @@ export function ProposalEquipmentEditorCard({
                               <span className="inline-flex items-center gap-1">
                                 <button
                                   type="button"
+                                  disabled={qty <= minAllowedModules}
+                                  title={qty <= minAllowedModules ? "Quantidade mínima (startup)" : "Um módulo a menos"}
                                   aria-label="Um módulo a menos"
-                                  className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--color-border)] text-sm leading-none hover:border-emerald-400"
+                                  className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--color-border)] text-sm leading-none hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
                                   onClick={() => adjustModuleQuantity(line, -1)}
                                 >
                                   −
@@ -894,8 +938,10 @@ export function ProposalEquipmentEditorCard({
                                 <span className="min-w-[2ch] text-center">{qty}</span>
                                 <button
                                   type="button"
+                                  disabled={qty >= maxAllowedModules}
+                                  title={qty >= maxAllowedModules ? "Limite máximo de módulos para este inversor" : "Um módulo a mais"}
                                   aria-label="Um módulo a mais"
-                                  className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--color-border)] text-sm leading-none hover:border-emerald-400"
+                                  className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--color-border)] text-sm leading-none hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-[var(--color-border)]"
                                   onClick={() => adjustModuleQuantity(line, 1)}
                                 >
                                   +

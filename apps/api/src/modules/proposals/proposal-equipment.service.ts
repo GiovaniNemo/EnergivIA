@@ -26,6 +26,7 @@ export interface EquipmentEditContext {
     quantity: number;
     unitPrice: number;
     lineTotal: number;
+    specs?: unknown | null;
   }>;
   equipmentSubtotalBrl: number;
   quotedSaleBrl: number;
@@ -42,6 +43,7 @@ export interface EquipmentOptionsRow {
   unitPrice: number;
   stockQuantity: number;
   imageUrl: string | null;
+  specs?: unknown | null;
 }
 
 export interface UpdateKitItemsInput {
@@ -81,7 +83,7 @@ export class ProposalEquipmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stockReservation: StockReservationService
-  ) {}
+  ) { }
 
   private estimateSystemPowerKw(
     kitItems: ProposalIntegratorKitLine[],
@@ -162,7 +164,7 @@ export class ProposalEquipmentService {
         category: { select: { id: true, name: true } },
       },
     });
-    const productById = new Map(products.map((p) => [p.id, p]));
+    const productById = new Map(products.map((p) => [p.id, p])) as Map<string, any>;
 
     const eligibleDistributors = await this.findDistributorsWithAllProducts(productIds);
 
@@ -203,6 +205,7 @@ export class ProposalEquipmentService {
         quantity: line.quantity,
         unitPrice,
         lineTotal,
+        specs: p?.specs ?? null,
       };
     });
 
@@ -260,9 +263,9 @@ export class ProposalEquipmentService {
       }),
       productIds.length > 0
         ? this.prisma.distributorProduct.findMany({
-            where: { productId: { in: productIds } },
-            select: { distributorId: true, productId: true, price: true },
-          })
+          where: { productId: { in: productIds } },
+          select: { distributorId: true, productId: true, price: true },
+        })
         : Promise.resolve([]),
     ]);
 
@@ -401,6 +404,7 @@ export class ProposalEquipmentService {
             id: true,
             name: true,
             imageUrl: true,
+            specs: true,
             brand: { select: { name: true } },
             category: { select: { name: true } },
           },
@@ -416,6 +420,7 @@ export class ProposalEquipmentService {
       unitPrice: Number(r.price),
       stockQuantity: r.stockQuantity,
       imageUrl: r.product.imageUrl,
+      specs: r.product.specs ?? null,
     }));
   }
 
@@ -463,7 +468,7 @@ export class ProposalEquipmentService {
         category: { select: { name: true } },
       },
     });
-    const productById = new Map(products.map((p) => [p.id, p]));
+    const productById = new Map(products.map((p) => [p.id, p])) as Map<string, any>;
     const missingProduct = productIds.find((id) => !productById.has(id));
     if (missingProduct) {
       throw new BadRequestException("Produto não encontrado no catálogo.");
@@ -524,15 +529,15 @@ export class ProposalEquipmentService {
     const freightCostLines =
       freightState && freightBrl > 0
         ? [
-            {
-              ruleId: null,
-              name: `Frete (${freightState})`,
-              calculationType: "FIXED" as const,
-              value: freightBrl,
-              appliedAmountBrl: freightBrl,
-              source: "organization" as const,
-            },
-          ]
+          {
+            ruleId: null,
+            name: `Frete (${freightState})`,
+            calculationType: "FIXED" as const,
+            value: freightBrl,
+            appliedAmountBrl: freightBrl,
+            source: "organization" as const,
+          },
+        ]
         : [];
 
     const renderedData = (proposal.renderedData ?? {}) as Record<string, unknown>;
