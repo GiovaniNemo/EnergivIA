@@ -166,7 +166,7 @@ export function ProposalEquipmentEditorCard({
       const proposedStrs = new Map<string, { qty: number, maxMods: number }>();
 
       for (let i = 0; i < sortedKits.length; i++) {
-        const sk = sortedKits[i];
+        const sk = sortedKits[i]!;
         if (rem <= 0) {
           proposedStrs.set(sk.productId, { qty: 0, maxMods: sk.maxMods });
           continue;
