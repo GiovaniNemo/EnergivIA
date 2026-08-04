@@ -158,7 +158,7 @@ export function ProposalEquipmentEditorCard({
       const structureKits = lines.filter((l) => l.categoryName === "structure_kit");
       const sortedKits = [...structureKits].map(sk => {
         const match = sk.productName.match(/([0-9]+)\s*MOD/i);
-        const maxMods = match ? parseInt(match[1], 10) : 1;
+        const maxMods = match && match[1] ? parseInt(match[1], 10) : 1;
         return { ...sk, maxMods };
       }).sort((a, b) => b.maxMods - a.maxMods);
 
