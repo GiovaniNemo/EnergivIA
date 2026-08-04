@@ -213,7 +213,8 @@ export class ProposalEquipmentService {
     const systemPowerKw = this.estimateSystemPowerKw(integrator.kitItems, productById, integrator);
 
     // Injeta outras estruturas compatíveis com qtd 0 para que a heurística do front-end funcione corretamente (possa adicionar kits de 2 moduli)
-    const roofType = integrator.projectSummary?.roof_type || "ceramic";
+    const currentStructure = items.find((i: any) => i.categoryName === "structure_kit");
+    const roofType = (currentStructure?.specs as any)?.roof_type || "ceramic";
     if (chosenId && !ownStock) {
       // @ts-ignore
       const extraProducts = await this.prisma.distributorProduct.findMany({
