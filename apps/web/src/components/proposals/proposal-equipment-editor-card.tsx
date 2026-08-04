@@ -150,6 +150,70 @@ export function ProposalEquipmentEditorCard({
     void load();
   }, [load]);
 
+  const calculateLockedBosQty = useCallback(
+    (targetLine: EditableLine, targetModuleQty: number, currentModuleQty: number): number => {
+      const isStructure = targetLine.categoryName === "structure_kit";
+      const isProfile = targetLine.categoryName === "profile";
+
+      const structureKits = lines.filter((l) => l.categoryName === "structure_kit");
+      const sortedKits = [...structureKits].map(sk => {
+        const match = sk.productName.match(/([0-9]+)\s*MOD/i);
+        const maxMods = match ? parseInt(match[1], 10) : 1;
+        return { ...sk, maxMods };
+      }).sort((a, b) => b.maxMods - a.maxMods);
+
+      let rem = targetModuleQty;
+      const proposedStrs = new Map<string, { qty: number, maxMods: number }>();
+
+      for (let i = 0; i < sortedKits.length; i++) {
+        const sk = sortedKits[i];
+        if (rem <= 0) {
+          proposedStrs.set(sk.productId, { qty: 0, maxMods: sk.maxMods });
+          continue;
+        }
+        const isSmallest = i === sortedKits.length - 1;
+        const q = isSmallest ? Math.ceil(rem / sk.maxMods) : Math.floor(rem / sk.maxMods);
+        proposedStrs.set(sk.productId, { qty: q, maxMods: sk.maxMods });
+        rem -= q * sk.maxMods;
+      }
+
+      if (isStructure) {
+        return proposedStrs.get(targetLine.productId)?.qty ?? targetLine.quantity;
+      }
+
+      if (isProfile) {
+        const getMetalProfileQty = (modQty: number, strMap: Map<string, { qty: number, maxMods: number }>) => {
+          let profs = 0;
+          for (const s of Array.from(strMap.values())) {
+            if (s.maxMods === 4) profs += s.qty * 10;
+            else if (s.maxMods === 2) profs += s.qty * 5;
+            else profs += s.qty * Math.ceil(s.maxMods * 2.5);
+          }
+          if (modQty % 2 !== 0) profs += 1;
+          return profs;
+        };
+
+        const originalStrs = new Map<string, { qty: number, maxMods: number }>();
+        sortedKits.forEach(sk => originalStrs.set(sk.productId, { qty: sk.quantity, maxMods: sk.maxMods }));
+
+        const ceramicOrig = currentModuleQty % 2 === 0 ? currentModuleQty : currentModuleQty + 1;
+        const metalOrig = getMetalProfileQty(currentModuleQty, originalStrs);
+
+        let roofType: "metal" | "ceramic" | "ground" = "ceramic";
+        if (targetLine.quantity === 1 && currentModuleQty > 2) roofType = "ground";
+        else if (targetLine.quantity === metalOrig) roofType = "metal";
+        else roofType = "ceramic";
+
+        if (roofType === "ground") return 1;
+        if (roofType === "metal") return getMetalProfileQty(targetModuleQty, proposedStrs);
+        return targetModuleQty % 2 === 0 ? targetModuleQty : targetModuleQty + 1;
+      }
+
+      return targetLine.quantity;
+    },
+    [lines]
+  );
+
   const effectiveQty = useCallback(
     (line: EditableLine): number => {
       const role = roleOf(line.categoryName);
@@ -161,9 +225,8 @@ export function ProposalEquipmentEditorCard({
       if (role === "locked_bos") {
         const moduleLine = lines.find((l) => roleOf(l.categoryName) === "module");
         if (moduleLine && moduleLine.quantity > 0) {
-          const currentModQty = moduleQtyOverrides[moduleLine.productId] ?? moduleLine.quantity;
-          const ratio = currentModQty / moduleLine.quantity;
-          return Math.max(1, Math.ceil(line.quantity * ratio));
+          const targetModQty = moduleQtyOverrides[moduleLine.productId] ?? moduleLine.quantity;
+          return calculateLockedBosQty(line, targetModQty, moduleLine.quantity);
         }
         return line.quantity;
       }
@@ -173,7 +236,7 @@ export function ProposalEquipmentEditorCard({
       const parsed = parseInt(raw, 10);
       return Number.isFinite(parsed) && parsed >= 1 ? parsed : line.quantity;
     },
-    [moduleQtyOverrides, qtyDrafts, lines]
+    [moduleQtyOverrides, qtyDrafts, lines, calculateLockedBosQty]
   );
 
   useEffect(() => {
@@ -451,8 +514,8 @@ export function ProposalEquipmentEditorCard({
                       type="button"
                       disabled={isCurrent}
                       className={`flex w-full items-center gap-2.5 border-b border-[var(--color-border)]/60 px-3.5 py-2.5 text-left last:border-0 ${isCurrent
-                          ? "bg-emerald-500/[0.06]"
-                          : "transition-colors hover:bg-emerald-500/[0.04]"
+                        ? "bg-emerald-500/[0.06]"
+                        : "transition-colors hover:bg-emerald-500/[0.04]"
                         }`}
                       onClick={() => applySwap(opt)}
                     >
@@ -480,8 +543,8 @@ export function ProposalEquipmentEditorCard({
                       {!isCurrent && delta != null && delta !== 0 ? (
                         <span
                           className={`shrink-0 text-xs font-semibold tabular-nums ${delta < 0
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-red-600 dark:text-red-400"
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-red-600 dark:text-red-400"
                             }`}
                         >
                           {delta > 0 ? "+" : "−"} {formatBRL(Math.abs(delta))}
@@ -587,8 +650,8 @@ export function ProposalEquipmentEditorCard({
                           : `${d.name}: ${d.matchedCount} de ${d.totalCount} itens — os demais precisam ser substituídos`
                       }
                       className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${selected
-                          ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
-                          : "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
+                        ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
+                        : "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
                         } ${distributorSwitchLoading ? "opacity-60" : ""}`}
                       onClick={() => void changeDistributor(d.id)}
                     >
@@ -745,10 +808,10 @@ export function ProposalEquipmentEditorCard({
                       <Fragment key={`${line.productId}-${idx}`}>
                         <tr
                           className={`border-b border-[var(--color-border)]/80 transition-colors last:border-0 hover:bg-emerald-500/[0.04] ${line.unavailable
-                              ? "bg-red-500/5"
-                              : idx % 2 === 1
-                                ? "bg-[var(--color-muted)]/15"
-                                : ""
+                            ? "bg-red-500/5"
+                            : idx % 2 === 1
+                              ? "bg-[var(--color-muted)]/15"
+                              : ""
                             }`}
                         >
                           <td className="p-3 font-medium text-[var(--color-foreground)]">
@@ -852,8 +915,8 @@ export function ProposalEquipmentEditorCard({
                                 inputMode="numeric"
                                 aria-label={`Quantidade de ${line.productName}`}
                                 className={`h-7 w-16 rounded-md border bg-[var(--color-background)] px-1.5 text-right tabular-nums outline-none focus:border-red-400 ${belowCalculated
-                                    ? "border-red-500/60 focus:border-red-400"
-                                    : "border-[var(--color-border)] focus:border-emerald-400"
+                                  ? "border-red-500/60 focus:border-red-400"
+                                  : "border-[var(--color-border)] focus:border-emerald-400"
                                   }`}
                                 value={raw ?? String(line.quantity)}
                                 onChange={(e) => {
