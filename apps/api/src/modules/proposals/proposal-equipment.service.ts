@@ -210,8 +210,40 @@ export class ProposalEquipmentService {
     });
 
     const ownStock = integrator.sourceType === "own_stock";
-
     const systemPowerKw = this.estimateSystemPowerKw(integrator.kitItems, productById, integrator);
+
+    // Injeta outras estruturas compatíveis com qtd 0 para que a heurística do front-end funcione corretamente (possa adicionar kits de 2 moduli)
+    const roofType = integrator.projectSummary?.roof_type || "ceramic";
+    if (chosenId && !ownStock) {
+      // @ts-ignore
+      const extraProducts = await this.prisma.distributorProduct.findMany({
+        where: {
+          distributorId: chosenId,
+          product: { active: true, category: { name: "structure_kit" } },
+        },
+        include: { product: { include: { brand: true, category: true } } },
+      });
+      const extraStructures = extraProducts.filter(
+        // @ts-ignore
+        (dp: any) => (dp.product.specs as any)?.roof_type === roofType
+      );
+      // @ts-ignore
+      for (const dp of extraStructures) {
+        // @ts-ignore
+        if (!items.find((i: any) => i.productId === dp.productId)) {
+          items.push({
+            productId: dp.productId,
+            productName: dp.product.name,
+            brandName: dp.product.brand.name,
+            categoryName: dp.product.category.name,
+            quantity: 0,
+            unitPrice: Number(dp.price),
+            lineTotal: 0,
+            specs: dp.product.specs ?? null,
+          });
+        }
+      }
+    }
 
     return {
       proposalId,

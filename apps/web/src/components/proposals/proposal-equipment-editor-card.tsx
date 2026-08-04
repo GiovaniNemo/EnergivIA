@@ -354,14 +354,14 @@ export function ProposalEquipmentEditorCard({
         if (typeof invSpecs.max_dc_power === "number" && invSpecs.max_dc_power <= 10000) {
           min = 4;
         }
+        const ratio = typeof invSpecs.recommended_dc_ac_ratio_max === "number" ? invSpecs.recommended_dc_ac_ratio_max : 1.5;
         if (
           typeof invSpecs.max_dc_power === "number" &&
-          typeof invSpecs.recommended_dc_ac_ratio_max === "number" &&
           typeof modSpecs?.power_w === "number"
         ) {
           const inverterQty = inverterLine?.quantity || 1;
           max = Math.floor(
-            (invSpecs.max_dc_power * inverterQty * invSpecs.recommended_dc_ac_ratio_max) /
+            (invSpecs.max_dc_power * inverterQty * ratio) /
             modSpecs.power_w
           );
         }
@@ -846,6 +846,7 @@ export function ProposalEquipmentEditorCard({
                         ? moduleQtyOverrides[line.productId] != null
                         : role === "bos" && raw != null && qty !== line.quantity;
                     const belowCalculated = isAdjusted && qty < line.quantity;
+                    if (qty <= 0) return null;
                     return (
                       <Fragment key={`${line.productId}-${idx}`}>
                         <tr
