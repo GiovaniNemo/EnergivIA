@@ -354,7 +354,7 @@ export function ProposalEquipmentEditorCard({
         if (typeof invSpecs.max_dc_power === "number" && invSpecs.max_dc_power <= 10000) {
           min = 4;
         }
-        const ratio = typeof invSpecs.recommended_dc_ac_ratio_max === "number" ? invSpecs.recommended_dc_ac_ratio_max : 1.5;
+        const ratio = typeof invSpecs.recommended_dc_ac_ratio_max === "number" ? invSpecs.recommended_dc_ac_ratio_max : 1.0;
         if (
           typeof invSpecs.max_dc_power === "number" &&
           typeof modSpecs?.power_w === "number"
