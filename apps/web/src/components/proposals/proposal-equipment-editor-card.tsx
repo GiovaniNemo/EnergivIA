@@ -39,11 +39,12 @@ interface EditableLine {
   changed?: boolean;
 }
 
-type LineRole = "module" | "inverter" | "bos";
+type LineRole = "module" | "inverter" | "locked_bos" | "bos";
 
 function roleOf(categoryName: string | null): LineRole {
   if (categoryName === "module") return "module";
   if (categoryName === "inverter" || categoryName === "microinverter") return "inverter";
+  if (categoryName === "structure_kit" || categoryName === "profile") return "locked_bos";
   return "bos";
 }
 
@@ -156,12 +157,23 @@ export function ProposalEquipmentEditorCard({
         return moduleQtyOverrides[line.productId] ?? line.quantity;
       }
       if (role === "inverter") return line.quantity;
+
+      if (role === "locked_bos") {
+        const moduleLine = lines.find((l) => roleOf(l.categoryName) === "module");
+        if (moduleLine && moduleLine.quantity > 0) {
+          const currentModQty = moduleQtyOverrides[moduleLine.productId] ?? moduleLine.quantity;
+          const ratio = currentModQty / moduleLine.quantity;
+          return Math.max(1, Math.ceil(line.quantity * ratio));
+        }
+        return line.quantity;
+      }
+
       const raw = qtyDrafts[line.productId];
       if (raw == null) return line.quantity;
       const parsed = parseInt(raw, 10);
       return Number.isFinite(parsed) && parsed >= 1 ? parsed : line.quantity;
     },
-    [moduleQtyOverrides, qtyDrafts]
+    [moduleQtyOverrides, qtyDrafts, lines]
   );
 
   useEffect(() => {
@@ -322,15 +334,15 @@ export function ProposalEquipmentEditorCard({
       prev.map((l, i) =>
         i === swapTargetIndex
           ? {
-              ...l,
-              productId: option.productId,
-              productName: option.productName,
-              brandName: option.brandName,
-              categoryName: option.categoryName,
-              unitPrice: option.unitPrice,
-              unavailable: false,
-              changed: true,
-            }
+            ...l,
+            productId: option.productId,
+            productName: option.productName,
+            brandName: option.brandName,
+            categoryName: option.categoryName,
+            unitPrice: option.unitPrice,
+            unavailable: false,
+            changed: true,
+          }
           : l
       )
     );
@@ -438,11 +450,10 @@ export function ProposalEquipmentEditorCard({
                       key={opt.productId}
                       type="button"
                       disabled={isCurrent}
-                      className={`flex w-full items-center gap-2.5 border-b border-[var(--color-border)]/60 px-3.5 py-2.5 text-left last:border-0 ${
-                        isCurrent
+                      className={`flex w-full items-center gap-2.5 border-b border-[var(--color-border)]/60 px-3.5 py-2.5 text-left last:border-0 ${isCurrent
                           ? "bg-emerald-500/[0.06]"
                           : "transition-colors hover:bg-emerald-500/[0.04]"
-                      }`}
+                        }`}
                       onClick={() => applySwap(opt)}
                     >
                       {isCurrent ? (
@@ -468,11 +479,10 @@ export function ProposalEquipmentEditorCard({
                       </span>
                       {!isCurrent && delta != null && delta !== 0 ? (
                         <span
-                          className={`shrink-0 text-xs font-semibold tabular-nums ${
-                            delta < 0
+                          className={`shrink-0 text-xs font-semibold tabular-nums ${delta < 0
                               ? "text-emerald-600 dark:text-emerald-400"
                               : "text-red-600 dark:text-red-400"
-                          }`}
+                            }`}
                         >
                           {delta > 0 ? "+" : "−"} {formatBRL(Math.abs(delta))}
                         </span>
@@ -576,11 +586,10 @@ export function ProposalEquipmentEditorCard({
                           ? `${d.name}: todos os ${d.totalCount} itens disponíveis`
                           : `${d.name}: ${d.matchedCount} de ${d.totalCount} itens — os demais precisam ser substituídos`
                       }
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${
-                        selected
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${selected
                           ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
                           : "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
-                      } ${distributorSwitchLoading ? "opacity-60" : ""}`}
+                        } ${distributorSwitchLoading ? "opacity-60" : ""}`}
                       onClick={() => void changeDistributor(d.id)}
                     >
                       {d.name}
@@ -735,13 +744,12 @@ export function ProposalEquipmentEditorCard({
                     return (
                       <Fragment key={`${line.productId}-${idx}`}>
                         <tr
-                          className={`border-b border-[var(--color-border)]/80 transition-colors last:border-0 hover:bg-emerald-500/[0.04] ${
-                            line.unavailable
+                          className={`border-b border-[var(--color-border)]/80 transition-colors last:border-0 hover:bg-emerald-500/[0.04] ${line.unavailable
                               ? "bg-red-500/5"
                               : idx % 2 === 1
                                 ? "bg-[var(--color-muted)]/15"
                                 : ""
-                          }`}
+                            }`}
                         >
                           <td className="p-3 font-medium text-[var(--color-foreground)]">
                             {line.productName}
@@ -796,7 +804,7 @@ export function ProposalEquipmentEditorCard({
                                   restaurar
                                 </button>
                                 {belowCalculated ? (
-                                  <span className="text-amber-700 dark:text-amber-300">
+                                  <span className="text-red-600 font-semibold dark:text-red-400">
                                     {" "}
                                     · abaixo do calculado
                                   </span>
@@ -830,7 +838,7 @@ export function ProposalEquipmentEditorCard({
                                   +
                                 </button>
                               </span>
-                            ) : role === "inverter" ? (
+                            ) : role === "inverter" || role === "locked_bos" ? (
                               <span
                                 title="Quantidade definida pelo dimensionamento do kit"
                                 className="cursor-help underline decoration-dotted underline-offset-2"
@@ -843,11 +851,10 @@ export function ProposalEquipmentEditorCard({
                                 min={1}
                                 inputMode="numeric"
                                 aria-label={`Quantidade de ${line.productName}`}
-                                className={`h-7 w-16 rounded-md border bg-[var(--color-background)] px-1.5 text-right tabular-nums outline-none focus:border-emerald-400 ${
-                                  belowCalculated
-                                    ? "border-amber-500/60"
-                                    : "border-[var(--color-border)]"
-                                }`}
+                                className={`h-7 w-16 rounded-md border bg-[var(--color-background)] px-1.5 text-right tabular-nums outline-none focus:border-red-400 ${belowCalculated
+                                    ? "border-red-500/60 focus:border-red-400"
+                                    : "border-[var(--color-border)] focus:border-emerald-400"
+                                  }`}
                                 value={raw ?? String(line.quantity)}
                                 onChange={(e) => {
                                   setQtyResetNotice(false);
@@ -855,10 +862,10 @@ export function ProposalEquipmentEditorCard({
                                   setQtyDrafts((prev) =>
                                     value === String(line.quantity)
                                       ? (() => {
-                                          const clone = { ...prev };
-                                          delete clone[line.productId];
-                                          return clone;
-                                        })()
+                                        const clone = { ...prev };
+                                        delete clone[line.productId];
+                                        return clone;
+                                      })()
                                       : { ...prev, [line.productId]: value }
                                   );
                                 }}

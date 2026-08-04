@@ -97,12 +97,12 @@
     --color-error: #ef4444;
     --color-error-dark: #b91c1c;
     --color-error-foreground: #ffffff;
-    --color-background: #f8f8f8;
+    --color-background: #f1f5f9;
     --color-foreground: #1a1a1a;
-    --color-muted: #f1f1f1;
+    --color-muted: #f1f5f9;
     --color-muted-foreground: #525252;
-    --color-border: #e5e5e5;
-    --color-input: #e5e5e5;
+    --color-border: #e2e8f0;
+    --color-input: #e2e8f0;
     --color-ring: #4caf50;
     --color-card: #ffffff;
     --color-card-foreground: #1a1a1a;
@@ -131,11 +131,11 @@
 
   /* Força tema claro na landing (home) independente do tema global */
   .landing-light {
-    --color-background: #f8f8f8;
+    --color-background: #f1f5f9;
     --color-foreground: #1a1a1a;
-    --color-muted: #f1f1f1;
+    --color-muted: #f1f5f9;
     --color-muted-foreground: #525252;
-    --color-border: #e5e5e5;
+    --color-border: #e2e8f0;
     --color-card: #ffffff;
     --color-card-foreground: #1a1a1a;
     --color-accent: #e8f5e9;

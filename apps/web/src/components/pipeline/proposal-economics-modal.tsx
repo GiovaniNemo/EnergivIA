@@ -193,15 +193,15 @@ type PipelineBillAttachment =
   | { status: "processing"; message: string }
   | { status: "needs_password"; file: File }
   | {
-      status: "ready";
-      billId: string;
-      displayName: string;
-      fileUrl: string;
-      fileName: string;
-      mimeType: string;
-      fileSize: number;
-      extractedData: EnergyBillExtractedPayload | null;
-    }
+    status: "ready";
+    billId: string;
+    displayName: string;
+    fileUrl: string;
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+    extractedData: EnergyBillExtractedPayload | null;
+  }
   | { status: "error"; message: string };
 
 const UUID_LIKE_FILE_BASE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1160,13 +1160,13 @@ export const ProposalEconomicsModal = forwardRef<
 
       const kitForProposal = proposalKitResult
         ? {
-            ...proposalKitResult,
-            kit_items: proposalKitResult.kit_items.map((item) => {
-              const raw = kitQtyDraftsRef.current[item.product_id];
-              const parsed = raw != null ? parseInt(raw, 10) : NaN;
-              return Number.isFinite(parsed) && parsed >= 1 ? { ...item, quantity: parsed } : item;
-            }),
-          }
+          ...proposalKitResult,
+          kit_items: proposalKitResult.kit_items.map((item) => {
+            const raw = kitQtyDraftsRef.current[item.product_id];
+            const parsed = raw != null ? parseInt(raw, 10) : NaN;
+            return Number.isFinite(parsed) && parsed >= 1 ? { ...item, quantity: parsed } : item;
+          }),
+        }
         : null;
 
       let freight: { state: string; valueBrl: number } | undefined;
@@ -1175,7 +1175,7 @@ export const ProposalEconomicsModal = forwardRef<
           const freightRules = await getStockFreightRules(currentOrganizationId);
           const rule = freightRules.find((r) => r.state === selectedState.uf.toUpperCase());
           if (rule && rule.value > 0) freight = { state: rule.state, valueBrl: rule.value };
-        } catch {}
+        } catch { }
       }
 
       const renderedData = buildProposalIntegratorRenderedData(
@@ -1381,7 +1381,7 @@ export const ProposalEconomicsModal = forwardRef<
         const detail = await getLead(currentOrganizationId, leadId);
         const deal = buildDealFromLeadDetail(detail);
         await handleCreateProposalClickRef.current(deal, opts);
-      } catch {}
+      } catch { }
     },
     openWithFile: async (deal, file) => {
       await handleCreateProposalClickRef.current(deal, { forceStudyModal: true });
@@ -1474,11 +1474,10 @@ export const ProposalEconomicsModal = forwardRef<
                   <div className="grid grid-cols-2 gap-1.5">
                     <button
                       type="button"
-                      className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${
-                        proposalInputMode === "upload"
+                      className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${proposalInputMode === "upload"
                           ? "bg-emerald-500 text-white shadow-sm"
                           : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-background)]"
-                      }`}
+                        }`}
                       onClick={() => {
                         setProposalInputMode("upload");
                         setProposalFieldErrors({});
@@ -1489,11 +1488,10 @@ export const ProposalEconomicsModal = forwardRef<
                     </button>
                     <button
                       type="button"
-                      className={`inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-medium transition ${
-                        proposalInputMode === "manual"
+                      className={`inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-medium transition ${proposalInputMode === "manual"
                           ? "bg-[var(--color-background)] text-[var(--color-foreground)] shadow-sm"
                           : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-background)]"
-                      }`}
+                        }`}
                       onClick={() => {
                         setProposalInputMode("manual");
                         setProposalFieldErrors({});
@@ -1512,11 +1510,10 @@ export const ProposalEconomicsModal = forwardRef<
                       <div
                         role="button"
                         tabIndex={0}
-                        className={`relative rounded-2xl border-2 border-dashed px-4 py-6 transition sm:px-6 sm:py-8 ${
-                          isUploadDragActive
+                        className={`relative rounded-2xl border-2 border-dashed px-4 py-6 transition sm:px-6 sm:py-8 ${isUploadDragActive
                             ? "border-emerald-500 bg-emerald-500/10 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]"
                             : "border-[var(--color-border)] bg-[var(--color-card)] hover:border-emerald-300"
-                        }`}
+                          }`}
                         onClick={() => {
                           if (billAttachment.status === "processing") return;
                           billFileInputRef.current?.click();
@@ -1782,17 +1779,16 @@ export const ProposalEconomicsModal = forwardRef<
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {}
+                      { }
                       <div className="grid gap-1.5">
                         <Label className="text-sm font-semibold">Dimensionar por</Label>
                         <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 p-1.5">
                           <button
                             type="button"
-                            className={`inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium transition ${
-                              manualSizingBasis === "consumption"
+                            className={`inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium transition ${manualSizingBasis === "consumption"
                                 ? "bg-[var(--color-background)] text-[var(--color-foreground)] shadow-sm"
                                 : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-background)]"
-                            }`}
+                              }`}
                             onClick={() => {
                               setManualSizingBasis("consumption");
                               setProposalFieldErrors((prev) => ({
@@ -1807,11 +1803,10 @@ export const ProposalEconomicsModal = forwardRef<
                           </button>
                           <button
                             type="button"
-                            className={`inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium transition ${
-                              manualSizingBasis === "power"
+                            className={`inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium transition ${manualSizingBasis === "power"
                                 ? "bg-[var(--color-background)] text-[var(--color-foreground)] shadow-sm"
                                 : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-background)]"
-                            }`}
+                              }`}
                             onClick={() => {
                               setManualSizingBasis("power");
                               setProposalFieldErrors((prev) => ({
@@ -2136,13 +2131,13 @@ export const ProposalEconomicsModal = forwardRef<
                       source: proposalInputMode === "upload" ? "upload" : "manual",
                       ...(proposalInputMode === "upload" && billAttachment.status === "ready"
                         ? {
-                            energyBill: {
-                              billId: billAttachment.billId,
-                              fileUrl: billAttachment.fileUrl,
-                              fileName: billAttachment.fileName,
-                              extractedData: billAttachment.extractedData,
-                            },
-                          }
+                          energyBill: {
+                            billId: billAttachment.billId,
+                            fileUrl: billAttachment.fileUrl,
+                            fileName: billAttachment.fileName,
+                            extractedData: billAttachment.extractedData,
+                          },
+                        }
                         : {}),
                     }
                   );
@@ -2428,13 +2423,12 @@ export const ProposalEconomicsModal = forwardRef<
                               ? "Montar o kit 100% do seu estoque"
                               : "Seu estoque não cobre o kit completo para esta configuração"
                           }
-                          className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${
-                            kitDraftSource.kind === "own"
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${kitDraftSource.kind === "own"
                               ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
                               : ownStockOption.available
                                 ? "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
                                 : "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-muted-foreground)] opacity-70"
-                          }`}
+                            }`}
                           onClick={() =>
                             setProposalKitDraft((d) => ({
                               ...d,
@@ -2469,14 +2463,13 @@ export const ProposalEconomicsModal = forwardRef<
                                 : `${s.supplier_name} cobre só ${s.item_count ?? 0} de 5 itens do kit`
                               : `${s.supplier_name} não tem módulo/inversor compatível`
                           }
-                          className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${
-                            kitDraftSource.kind === "supplier" &&
-                            kitDraftSource.id === s.supplier_id
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${kitDraftSource.kind === "supplier" &&
+                              kitDraftSource.id === s.supplier_id
                               ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
                               : s.available
                                 ? "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
                                 : "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-muted-foreground)] opacity-70"
-                          }`}
+                            }`}
                           onClick={() =>
                             setProposalKitDraft((d) => ({
                               ...d,
@@ -2516,8 +2509,8 @@ export const ProposalEconomicsModal = forwardRef<
                     </div>
                   </div>
                   {kitDraftSource.kind === "own" &&
-                  proposalKitResult &&
-                  !proposalKitResult.own_stock_used ? (
+                    proposalKitResult &&
+                    !proposalKitResult.own_stock_used ? (
                     <p className="rounded-lg border border-amber-500/30 bg-amber-50 px-3 py-2 text-xs leading-snug text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
                       Seu estoque não cobre um kit completo (falta algum item obrigatório ou
                       quantidade). Este kit foi montado com o <strong>catálogo global</strong>.
@@ -2585,9 +2578,8 @@ export const ProposalEconomicsModal = forwardRef<
                 ) : null}
                 {proposalKitResult ? (
                   <div
-                    className={`space-y-5 transition-opacity ${
-                      proposalKitLoading ? "pointer-events-none opacity-50" : ""
-                    }`}
+                    className={`space-y-5 transition-opacity ${proposalKitLoading ? "pointer-events-none opacity-50" : ""
+                      }`}
                   >
                     <div className="flex flex-wrap items-center gap-3">
                       <div className="inline-flex items-baseline gap-2 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-500/12 to-emerald-600/5 px-4 py-2.5">
@@ -2668,7 +2660,7 @@ export const ProposalEconomicsModal = forwardRef<
                               : "Trocar inversor — alternativas desta origem"}
                           </p>
                           {(kitSwapCategory === "module" && proposalKitDraft.pins.moduleId) ||
-                          (kitSwapCategory === "inverter" && proposalKitDraft.pins.inverterId) ? (
+                            (kitSwapCategory === "inverter" && proposalKitDraft.pins.inverterId) ? (
                             <button
                               type="button"
                               className="text-xs text-emerald-700 hover:underline dark:text-emerald-300"
@@ -2714,13 +2706,12 @@ export const ProposalEconomicsModal = forwardRef<
                               key={alt.product_id}
                               type="button"
                               disabled={!alt.compatible || isCurrent}
-                              className={`flex w-full items-center gap-2.5 border-b border-[var(--color-border)]/60 px-3.5 py-2.5 text-left last:border-0 ${
-                                isCurrent
+                              className={`flex w-full items-center gap-2.5 border-b border-[var(--color-border)]/60 px-3.5 py-2.5 text-left last:border-0 ${isCurrent
                                   ? "bg-emerald-500/[0.06]"
                                   : alt.compatible
                                     ? "transition-colors hover:bg-emerald-500/[0.04]"
                                     : "opacity-60"
-                              }`}
+                                }`}
                               onClick={() => {
                                 if (!alt.compatible || isCurrent) return;
                                 const cat = kitSwapCategory;
@@ -2740,11 +2731,10 @@ export const ProposalEconomicsModal = forwardRef<
                                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                               ) : (
                                 <span
-                                  className={`h-4 w-4 shrink-0 rounded-full border ${
-                                    alt.compatible
+                                  className={`h-4 w-4 shrink-0 rounded-full border ${alt.compatible
                                       ? "border-[var(--color-border)]"
                                       : "border-dashed border-[var(--color-border)]"
-                                  }`}
+                                    }`}
                                   aria-hidden
                                 />
                               )}
@@ -2759,21 +2749,19 @@ export const ProposalEconomicsModal = forwardRef<
                                 </span>
                                 <span className="block text-xs text-[var(--color-muted-foreground)]">
                                   {alt.compatible
-                                    ? `${alt.quantity}× ${formatCurrency(alt.unit_price)}${
-                                        alt.string_summary ? ` · ${alt.string_summary}` : ""
-                                      }`
+                                    ? `${alt.quantity}× ${formatCurrency(alt.unit_price)}${alt.string_summary ? ` · ${alt.string_summary}` : ""
+                                    }`
                                     : alt.reason}
                                 </span>
                               </span>
                               {alt.compatible && delta != null && !isCurrent ? (
                                 <span
-                                  className={`shrink-0 text-xs font-semibold tabular-nums ${
-                                    delta < 0
+                                  className={`shrink-0 text-xs font-semibold tabular-nums ${delta < 0
                                       ? "text-emerald-600 dark:text-emerald-400"
                                       : delta > 0
                                         ? "text-red-600 dark:text-red-400"
                                         : "text-[var(--color-muted-foreground)]"
-                                  }`}
+                                    }`}
                                 >
                                   {delta === 0
                                     ? "mesmo total"
@@ -2841,11 +2829,10 @@ export const ProposalEconomicsModal = forwardRef<
                                     <span className="block truncate text-sm text-[var(--color-foreground)]">
                                       {alt.brand_name} {alt.product_name}
                                       <span
-                                        className={`ml-2 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold ${
-                                          alt.source_type === "own_stock"
+                                        className={`ml-2 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold ${alt.source_type === "own_stock"
                                             ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
                                             : "bg-violet-500/15 text-violet-700 dark:text-violet-300"
-                                        }`}
+                                          }`}
                                       >
                                         {sourceLabel}
                                       </span>
@@ -2860,13 +2847,12 @@ export const ProposalEconomicsModal = forwardRef<
                                   </span>
                                   {delta != null ? (
                                     <span
-                                      className={`shrink-0 text-xs font-semibold tabular-nums ${
-                                        delta < 0
+                                      className={`shrink-0 text-xs font-semibold tabular-nums ${delta < 0
                                           ? "text-emerald-600 dark:text-emerald-400"
                                           : delta > 0
                                             ? "text-red-600 dark:text-red-400"
                                             : "text-[var(--color-muted-foreground)]"
-                                      }`}
+                                        }`}
                                     >
                                       {delta === 0
                                         ? "mesmo total"
@@ -2918,12 +2904,12 @@ export const ProposalEconomicsModal = forwardRef<
                             const hasDraft = kitQtyDrafts[item.product_id] != null;
                             const isAdjusted = hasDraft && qty !== item.quantity;
                             const belowCalculated = isAdjusted && qty < item.quantity;
+                            const isLockedBos = (item as any).category_name === "structure_kit" || (item as any).category_name === "profile" || (!("category_name" in item) && (item.product_name.toUpperCase().includes("ESTRUTURA") || item.product_name.toUpperCase().includes("PERFIL")));
                             return (
                               <tr
                                 key={item.product_id}
-                                className={`border-b border-[var(--color-border)]/80 transition-colors last:border-0 hover:bg-emerald-500/[0.04] ${
-                                  idx % 2 === 1 ? "bg-[var(--color-muted)]/15" : ""
-                                }`}
+                                className={`border-b border-[var(--color-border)]/80 transition-colors last:border-0 hover:bg-emerald-500/[0.04] ${idx % 2 === 1 ? "bg-[var(--color-muted)]/15" : ""
+                                  }`}
                               >
                                 <td className="p-3 font-medium text-[var(--color-foreground)]">
                                   {item.product_name}
@@ -2945,7 +2931,7 @@ export const ProposalEconomicsModal = forwardRef<
                                         restaurar
                                       </button>
                                       {belowCalculated ? (
-                                        <span className="text-amber-700 dark:text-amber-300">
+                                        <span className="text-red-600 font-semibold dark:text-red-400">
                                           {" "}
                                           · abaixo do calculado
                                         </span>
@@ -2979,9 +2965,9 @@ export const ProposalEconomicsModal = forwardRef<
                                         +
                                       </button>
                                     </span>
-                                  ) : isInverterRow ? (
+                                  ) : isInverterRow || isLockedBos ? (
                                     <span
-                                      title="Quantidade definida pelo dimensionamento (strings/microinversores)"
+                                      title="Quantidade definida pelo dimensionamento"
                                       className="cursor-help underline decoration-dotted underline-offset-2"
                                     >
                                       {item.quantity}
@@ -2992,11 +2978,10 @@ export const ProposalEconomicsModal = forwardRef<
                                       min={1}
                                       inputMode="numeric"
                                       aria-label={`Quantidade de ${item.product_name}`}
-                                      className={`h-7 w-16 rounded-md border bg-[var(--color-background)] px-1.5 text-right tabular-nums outline-none focus:border-emerald-400 ${
-                                        belowCalculated
-                                          ? "border-amber-500/60"
-                                          : "border-[var(--color-border)]"
-                                      }`}
+                                      className={`h-7 w-16 rounded-md border bg-[var(--color-background)] px-1.5 text-right tabular-nums outline-none focus:border-red-400 ${belowCalculated
+                                          ? "border-red-500/60 focus:border-red-400"
+                                          : "border-[var(--color-border)] focus:border-emerald-400"
+                                        }`}
                                       value={kitQtyDrafts[item.product_id] ?? String(item.quantity)}
                                       onChange={(e) => {
                                         setKitQtyResetNotice(false);
@@ -3004,10 +2989,10 @@ export const ProposalEconomicsModal = forwardRef<
                                         setKitQtyDrafts((prev) =>
                                           raw === String(item.quantity)
                                             ? (() => {
-                                                const next = { ...prev };
-                                                delete next[item.product_id];
-                                                return next;
-                                              })()
+                                              const next = { ...prev };
+                                              delete next[item.product_id];
+                                              return next;
+                                            })()
                                             : { ...prev, [item.product_id]: raw }
                                         );
                                       }}
