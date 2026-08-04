@@ -14,7 +14,6 @@ import {
   type UserNotificationDto,
 } from "@/lib/notifications-api";
 
-const NOTIFICATIONS_SSE_PATH = "/api/proxy/notifications/stream";
 
 function formatWhen(iso: string): string {
   try {
@@ -46,7 +45,7 @@ export function NotificationsBell(): JSX.Element {
     try {
       const c = await getUnreadNotificationCount(currentOrganizationId);
       setUnread(c);
-    } catch {}
+    } catch { }
   }, [currentOrganizationId]);
 
   const loadList = useCallback(async () => {
@@ -69,19 +68,14 @@ export function NotificationsBell(): JSX.Element {
 
   useEffect(() => {
     if (!currentOrganizationId) return;
-    const es = new EventSource(NOTIFICATIONS_SSE_PATH);
-    es.onmessage = (ev: MessageEvent) => {
-      try {
-        const p = JSON.parse(ev.data as string) as { type?: string; count?: number };
-        if (p.type === "unread_count" && typeof p.count === "number") {
-          setUnread(p.count);
-        }
-      } catch {}
-    };
-    return () => {
-      es.close();
-    };
-  }, [currentOrganizationId]);
+
+    // Utilize polling em vez de SSE para evitar timeout de 300s da Vercel
+    const interval = setInterval(() => {
+      void refreshCount();
+    }, 60000); // a cada 60 segundos
+
+    return () => clearInterval(interval);
+  }, [currentOrganizationId, refreshCount]);
 
   useEffect(() => {
     const onFocus = () => void refreshCount();
@@ -124,7 +118,7 @@ export function NotificationsBell(): JSX.Element {
           prev.map((x) => (x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x))
         );
         await refreshCount();
-      } catch {}
+      } catch { }
     }
     setOpen(false);
   }
@@ -135,7 +129,7 @@ export function NotificationsBell(): JSX.Element {
       await markAllNotificationsRead(currentOrganizationId);
       setItems((prev) => prev.map((x) => ({ ...x, readAt: x.readAt ?? new Date().toISOString() })));
       setUnread(0);
-    } catch {}
+    } catch { }
   }
 
   if (!currentOrganizationId) {
@@ -203,9 +197,8 @@ export function NotificationsBell(): JSX.Element {
                   <li key={n.id}>
                     <Link
                       href={n.linkPath}
-                      className={`block px-3 py-2.5 text-left transition-colors hover:bg-[var(--color-muted)]/40 ${
-                        !n.readAt ? "bg-[var(--color-muted)]/25" : ""
-                      }`}
+                      className={`block px-3 py-2.5 text-left transition-colors hover:bg-[var(--color-muted)]/40 ${!n.readAt ? "bg-[var(--color-muted)]/25" : ""
+                        }`}
                       onClick={() => void onItemNavigate(n)}
                     >
                       <p className="text-sm font-medium text-[var(--color-foreground)]">
