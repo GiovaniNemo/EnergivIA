@@ -468,7 +468,7 @@ export function ProposalBusinessHeroCard({
                     <button
                       type="button"
                       onClick={onEditMarginClick}
-                      className="absolute right-0 top-0 hidden rounded-md bg-[var(--color-accent)] p-1 text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-muted)] group-hover:block"
+                      className="absolute right-0 top-0 rounded-md bg-[var(--color-accent)] p-1 text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-muted)]"
                       title="Editar Margem"
                     >
                       <svg
@@ -530,7 +530,7 @@ export function ProposalBusinessHeroCard({
                     <button
                       type="button"
                       onClick={onEditLaborClick}
-                      className="absolute right-0 top-0 hidden rounded-md bg-[var(--color-accent)] p-1 text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-muted)] group-hover:block"
+                      className="absolute right-0 top-0 rounded-md bg-[var(--color-accent)] p-1 text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-muted)]"
                       title="Editar Mão de obra"
                     >
                       <svg
