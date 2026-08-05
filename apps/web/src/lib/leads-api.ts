@@ -459,6 +459,24 @@ export async function updateProposalMarginOverride(
   return res.json() as Promise<{ publicToken: string }>;
 }
 
+export async function updateProposalLaborOverride(
+  organizationId: string,
+  proposalId: string,
+  laborBrl: number
+): Promise<{ publicToken: string }> {
+  const res = await apiProxy(
+    "PATCH",
+    `/proposals/${proposalId}/labor-override`,
+    { laborBrl },
+    organizationId
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<{ publicToken: string }>;
+}
+
 export async function setProposalTemplate(
   organizationId: string,
   proposalId: string,

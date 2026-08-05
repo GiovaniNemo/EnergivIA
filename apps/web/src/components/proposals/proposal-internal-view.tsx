@@ -21,6 +21,7 @@ import {
   setProposalTemplate,
   updateProposalDiscount,
   updateProposalMarginOverride,
+  updateProposalLaborOverride,
   downloadProposalPdf,
   type ProposalDetail,
   type SystemSizingInputJson,
@@ -138,6 +139,10 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
   const [isEditingMargin, setIsEditingMargin] = useState(false);
   const [marginOverrideDraft, setMarginOverrideDraft] = useState<number | null>(null);
   const [marginOverrideSaving, setMarginOverrideSaving] = useState(false);
+
+  const [isEditingLabor, setIsEditingLabor] = useState(false);
+  const [laborOverrideDraft, setLaborOverrideDraft] = useState<number | null>(null);
+  const [laborOverrideSaving, setLaborOverrideSaving] = useState(false);
 
   const integrator = useMemo(
     () => (proposal ? extractIntegrator(proposal.renderedData) : null),
@@ -362,10 +367,28 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
       setIsEditingMargin(false);
       await reload();
     } catch (e) {
-      // Re-using discount error or showing an alert if preferred, but for now console error is okay, or we could add a toast.
       alert(e instanceof Error ? e.message : "Não foi possível salvar a margem.");
     } finally {
       setMarginOverrideSaving(false);
+    }
+  }
+
+  async function saveLaborOverride(): Promise<void> {
+    if (!currentOrganizationId || !proposal || laborOverrideDraft == null) return;
+    setLaborOverrideSaving(true);
+    try {
+      const { publicToken } = await updateProposalLaborOverride(
+        currentOrganizationId,
+        proposal.id,
+        laborOverrideDraft
+      );
+      setRegeneratedPublicUrl(`${window.location.origin}/proposta/${publicToken}`);
+      setIsEditingLabor(false);
+      await reload();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Não foi possível salvar a mão de obra.");
+    } finally {
+      setLaborOverrideSaving(false);
     }
   }
 
@@ -512,6 +535,16 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
           marginOverrideSaving={marginOverrideSaving}
           onSaveMarginOverride={() => void saveMarginOverride()}
           onCancelMarginEdit={() => setIsEditingMargin(false)}
+          isEditingLabor={isEditingLabor}
+          onEditLaborClick={() => {
+            setLaborOverrideDraft(laborAppliedFromRules ?? 0);
+            setIsEditingLabor(true);
+          }}
+          laborOverrideDraft={laborOverrideDraft}
+          onLaborOverrideChange={setLaborOverrideDraft}
+          laborOverrideSaving={laborOverrideSaving}
+          onSaveLaborOverride={() => void saveLaborOverride()}
+          onCancelLaborEdit={() => setIsEditingLabor(false)}
         />
       </section>
 

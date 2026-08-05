@@ -59,6 +59,15 @@ export class ProposalOperationsController {
     return this.proposalsService.updateMarginOverride(tenantId, id, body.marginBrl);
   }
 
+  @Patch(":id/labor-override")
+  updateLaborOverride(
+    @TenantId() tenantId: string,
+    @Param("id") id: string,
+    @Body() body: { laborBrl: number }
+  ) {
+    return this.proposalsService.updateLaborOverride(tenantId, id, body.laborBrl);
+  }
+
   @Post(":id/template")
   setTemplate(
     @TenantId() tenantId: string,

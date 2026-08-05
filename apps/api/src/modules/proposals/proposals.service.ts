@@ -3,7 +3,10 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { BadRequestException, Injectable, NotFoundException, Logger } from "@nestjs/common";
 import type { Prisma, ProposalTemplate } from "@prisma/client";
 import { isProposalIntegratorSnapshot } from "@energivia/shared-types";
-import { PROJECT_COST_ESSENTIAL_MARGIN_NAME } from "@energivia/proposal-economia";
+import {
+  PROJECT_COST_ESSENTIAL_MARGIN_NAME,
+  PROJECT_COST_ESSENTIAL_LABOR_NAME,
+} from "@energivia/proposal-economia";
 import chromium from "@sparticuz/chromium";
 import puppeteerCore from "puppeteer-core";
 
@@ -370,6 +373,74 @@ export class ProposalsService {
         calculationType: "FIXED",
         value: marginBrl,
         appliedAmountBrl: marginBrl,
+        source: "organization",
+      });
+    }
+
+    integrator.projectCostLines = projectCostLines;
+
+    const equipmentTotal = integrator.equipmentSubtotalBrl ?? 0;
+    const costsTotal = projectCostLines.reduce(
+      (acc, curr) => acc + (curr.appliedAmountBrl ?? 0),
+      0
+    );
+    const newQuotedSaleBrl = equipmentTotal + costsTotal;
+
+    integrator.computedSaleFromCostRulesBrl = newQuotedSaleBrl;
+    integrator.quotedSaleBrl = newQuotedSaleBrl;
+
+    const nextPublicToken = randomUUID();
+    const renderedData = {
+      ...(proposal.renderedData as Record<string, unknown>),
+      integrator,
+    };
+
+    const updated = await this.prisma.proposal.update({
+      where: { id },
+      data: {
+        renderedData: renderedData as unknown as Prisma.InputJsonValue,
+        publicToken: nextPublicToken,
+      },
+    });
+
+    return {
+      id: updated.id,
+      publicToken: nextPublicToken,
+    };
+  }
+
+  async updateLaborOverride(tenantId: string, id: string, laborBrl: number) {
+    const proposal = await this.findOne(tenantId, id);
+    if (!Number.isFinite(laborBrl) || laborBrl < 0) {
+      throw new BadRequestException("Mão de obra inválida.");
+    }
+
+    const integrator = parseIntegratorFromRendered(proposal.renderedData);
+    if (!integrator) {
+      throw new BadRequestException(
+        "Proposta não possui dados de integrador para alterar mão de obra."
+      );
+    }
+
+    const projectCostLines = integrator.projectCostLines ?? [];
+    const laborIndex = projectCostLines.findIndex(
+      (l) => l.name === PROJECT_COST_ESSENTIAL_LABOR_NAME
+    );
+
+    if (laborIndex >= 0) {
+      const laborLine = projectCostLines[laborIndex];
+      if (laborLine) {
+        laborLine.calculationType = "FIXED";
+        laborLine.value = laborBrl;
+        laborLine.appliedAmountBrl = laborBrl;
+        laborLine.source = "organization";
+      }
+    } else {
+      projectCostLines.push({
+        name: PROJECT_COST_ESSENTIAL_LABOR_NAME,
+        calculationType: "FIXED",
+        value: laborBrl,
+        appliedAmountBrl: laborBrl,
         source: "organization",
       });
     }

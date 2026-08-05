@@ -315,6 +315,13 @@ export type ProposalBusinessHeroProps = {
   marginOverrideSaving?: boolean;
   onSaveMarginOverride?: () => void;
   onCancelMarginEdit?: () => void;
+  isEditingLabor?: boolean;
+  onEditLaborClick?: () => void;
+  laborOverrideDraft?: number | null;
+  onLaborOverrideChange?: (val: number | null) => void;
+  laborOverrideSaving?: boolean;
+  onSaveLaborOverride?: () => void;
+  onCancelLaborEdit?: () => void;
 };
 
 export function ProposalBusinessHeroCard({
@@ -334,6 +341,13 @@ export function ProposalBusinessHeroCard({
   marginOverrideSaving,
   onSaveMarginOverride,
   onCancelMarginEdit,
+  isEditingLabor,
+  onEditLaborClick,
+  laborOverrideDraft,
+  onLaborOverrideChange,
+  laborOverrideSaving,
+  onSaveLaborOverride,
+  onCancelLaborEdit,
 }: ProposalBusinessHeroProps): JSX.Element {
   const activeHealth = health === "none" ? null : health;
 
@@ -481,10 +495,61 @@ export function ProposalBusinessHeroCard({
                 <p className="text-[11px] font-medium text-[var(--color-muted-foreground)]">
                   Mão de obra (regras)
                 </p>
-                <p className="mt-1 text-lg font-semibold tabular-nums">
-                  {laborAppliedBrl !== null ? formatBRL(laborAppliedBrl) : "—"}
-                </p>
-                <p className="mt-0.5 text-[10px] text-[var(--color-muted-foreground)]">
+                {isEditingLabor ? (
+                  <div className="mt-2 space-y-2">
+                    <CurrencyInput
+                      id="labor-override"
+                      value={laborOverrideDraft ?? null}
+                      onValueChange={(val) => onLaborOverrideChange?.(val)}
+                    />
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        className="h-7 w-full text-[10px]"
+                        disabled={laborOverrideSaving}
+                        onClick={onSaveLaborOverride}
+                      >
+                        {laborOverrideSaving ? "..." : "Salvar"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 w-full text-[10px]"
+                        disabled={laborOverrideSaving}
+                        onClick={onCancelLaborEdit}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="group relative mt-1">
+                    <p className="text-lg font-semibold tabular-nums">
+                      {laborAppliedBrl !== null ? formatBRL(laborAppliedBrl) : "—"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={onEditLaborClick}
+                      className="absolute right-0 top-0 hidden rounded-md bg-[var(--color-accent)] p-1 text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-muted)] group-hover:block"
+                      title="Editar Mão de obra"
+                    >
+                      <svg
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+                <p className="mt-1.5 text-[10px] text-[var(--color-muted-foreground)]">
                   Custo de serviço parametrizado
                 </p>
               </div>
