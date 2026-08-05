@@ -32,45 +32,50 @@ export class SpreadsheetImportService {
       throw new Error('Planilha vazia ou sem dados válidos.');
     }
 
-    // Assumir que a primeira linha é o cabeçalho. Vamos procurar os índices das colunas.
-    const headerRow = rows[0] as string[];
-    
-    // Normalizar cabeçalho para achar índices independentemente de espaços e maiúsculas
-    const normalizeStr = (str: unknown) => str ? String(str).trim().toLowerCase() : '';
-    
+    // Procurar a linha de cabeçalho nas primeiras 20 linhas
+    let headerRowIndex = -1;
     let codIndex = -1, produtoIndex = -1, marcaIndex = -1, precoIndex = -1;
-    
-    // Tentativa 1: Procurar nos cabeçalhos
-    for (let i = 0; i < headerRow.length; i++) {
-      const h = normalizeStr(headerRow[i]);
-      if (h.includes('cod')) codIndex = i;
-      if (h.includes('produto') || h.includes('descri')) produtoIndex = i;
-      if (h.includes('marca')) marcaIndex = i;
-      if (h.includes('preço') || h.includes('preco') || h.includes('valor')) precoIndex = i;
+    const normalizeStr = (str: unknown) => str ? String(str).trim().toLowerCase() : '';
+
+    for (let r = 0; r < Math.min(rows.length, 20); r++) {
+      const row = rows[r] as unknown[];
+      if (!row) continue;
+      
+      let tempCod = -1, tempProd = -1, tempMarca = -1, tempPreco = -1;
+      
+      for (let i = 0; i < row.length; i++) {
+        const h = normalizeStr(row[i]);
+        if (h === 'cod' || h === 'código' || h === 'codigo') tempCod = i;
+        if (h.includes('produto') || h.includes('descri')) tempProd = i;
+        if (h.includes('marca')) tempMarca = i;
+        if (h.includes('preço') || h.includes('preco') || h.includes('valor')) tempPreco = i;
+      }
+      
+      // Se achou pelo menos PRODUTO, consideramos como a linha de cabeçalho
+      if (tempProd !== -1) {
+        headerRowIndex = r;
+        codIndex = tempCod;
+        produtoIndex = tempProd;
+        marcaIndex = tempMarca;
+        precoIndex = tempPreco;
+        break;
+      }
     }
 
-    // Tentativa 2: Fallback (se falhar, assumir o que vimos no print: A=0(COD), B=1(PRODUTO), E=4(MARCA), H=7(PRECO))
-    if (produtoIndex === -1) produtoIndex = 1; // Pelo menos PRODUTO precisamos
-    if (codIndex === -1) codIndex = 0;
-    
-    // O preço no print parecia ser a última ou penúltima coluna da tabela, se não encontrou no header:
-    if (precoIndex === -1) {
-      for (let i = headerRow.length - 1; i >= 0; i--) {
-        if (!headerRow[i]) { // Preço estava sem cabeçalho no print (ou estava acima)
-           precoIndex = i;
-           break;
-        }
-      }
-      if (precoIndex === -1) precoIndex = 7; // Fallback extremo (H)
+    if (headerRowIndex === -1) {
+      throw new Error('Não foi possível encontrar a coluna de produtos (cabeçalho).');
     }
-    
-    if (marcaIndex === -1) marcaIndex = 4; // Fallback extremo (E)
+
+    // Fallbacks para colunas que não foram encontradas (baseado no formato Edeltec padrão)
+    if (codIndex === -1) codIndex = 0; // Coluna A
+    if (marcaIndex === -1) marcaIndex = 4; // Coluna E
+    if (precoIndex === -1) precoIndex = 7; // Coluna H (geralmente não tem cabeçalho escrito)
 
     let itemsProcessed = 0;
     let itemsUpdated = 0;
     let itemsCreated = 0;
 
-    for (let r = 1; r < rows.length; r++) {
+    for (let r = headerRowIndex + 1; r < rows.length; r++) {
       const row = rows[r];
       if (!row || !row[produtoIndex]) continue; // Pular linhas vazias
 
