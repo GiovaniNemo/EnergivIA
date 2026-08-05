@@ -357,10 +357,13 @@ export class ProposalsService {
     );
 
     if (marginIndex >= 0) {
-      projectCostLines[marginIndex].calculationType = "FIXED";
-      projectCostLines[marginIndex].value = marginBrl;
-      projectCostLines[marginIndex].appliedAmountBrl = marginBrl;
-      projectCostLines[marginIndex].source = "organization";
+      const marginLine = projectCostLines[marginIndex];
+      if (marginLine) {
+        marginLine.calculationType = "FIXED";
+        marginLine.value = marginBrl;
+        marginLine.appliedAmountBrl = marginBrl;
+        marginLine.source = "organization";
+      }
     } else {
       projectCostLines.push({
         name: PROJECT_COST_ESSENTIAL_MARGIN_NAME,
@@ -392,7 +395,7 @@ export class ProposalsService {
     const updated = await this.prisma.proposal.update({
       where: { id },
       data: {
-        renderedData: renderedData as Prisma.InputJsonValue,
+        renderedData: renderedData as unknown as Prisma.InputJsonValue,
         publicToken: nextPublicToken,
       },
     });
