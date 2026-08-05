@@ -74,17 +74,40 @@ export class SpreadsheetImportService {
     let itemsProcessed = 0;
     let itemsUpdated = 0;
     let itemsCreated = 0;
+    let skippedReason = '';
 
     for (let r = headerRowIndex + 1; r < rows.length; r++) {
-      const row = rows[r];
-      if (!row || !row[produtoIndex]) continue; // Pular linhas vazias
+      const row = rows[r] as unknown[];
+      if (!row || !row[produtoIndex]) {
+        if (!skippedReason) skippedReason = `Linha ${r+1}: Coluna PRODUTO vazia.`;
+        continue;
+      }
 
       const produtoStr = String(row[produtoIndex]).trim();
+      if (!produtoStr) {
+        if (!skippedReason) skippedReason = `Linha ${r+1}: PRODUTO vazio.`;
+        continue;
+      }
+
       const codStr = row[codIndex] ? String(row[codIndex]).trim() : '';
       let marcaStr = row[marcaIndex] ? String(row[marcaIndex]).trim() : '';
-      const precoRaw = row[precoIndex];
+      let precoRaw = row[precoIndex];
 
-      if (!produtoStr) continue;
+      // Busca dinâmica pelo preço caso a coluna definida esteja vazia ou não seja numérica
+      if (!precoRaw || (typeof precoRaw !== 'number' && !String(precoRaw).match(/[\d,.]+/))) {
+        for (let i = row.length - 1; i >= 0; i--) {
+          if (i === codIndex || i === produtoIndex || i === marcaIndex) continue;
+          const val = row[i];
+          if (typeof val === 'number') {
+            precoRaw = val;
+            break;
+          }
+          if (typeof val === 'string' && val.match(/^\s*[\d.]+,[\d]{2}\s*$/)) {
+            precoRaw = val;
+            break;
+          }
+        }
+      }
 
       // 1. Tratamento da Marca (fallback se vazia)
       if (!marcaStr || marcaStr.toLowerCase() === 'undefined') {
@@ -106,6 +129,7 @@ export class SpreadsheetImportService {
       }
       
       if (isNaN(price) || price <= 0) {
+         if (!skippedReason) skippedReason = `Linha ${r+1} (${produtoStr}): Preço inválido (${precoRaw}).`;
          continue; // Ignorar itens sem preço válido
       }
 
@@ -193,7 +217,7 @@ export class SpreadsheetImportService {
 
     return {
       success: true,
-      message: `Planilha importada com sucesso. Total: ${itemsProcessed}. Novos: ${itemsCreated}. Atualizados: ${itemsUpdated}.`,
+      message: `Planilha importada com sucesso. Total: ${itemsProcessed}. Novos: ${itemsCreated}. Atualizados: ${itemsUpdated}.${itemsProcessed === 0 && skippedReason ? ' Motivo do primeiro erro: ' + skippedReason : ''}`,
     };
   }
 }
