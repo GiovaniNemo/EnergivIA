@@ -14,10 +14,15 @@ export class SpreadsheetImportService {
     // Ler o buffer usando xlsx
     const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
+    
+    if (!sheetName) {
+      throw new Error('Nenhuma aba encontrada na planilha.');
+    }
+
     const sheet = workbook.Sheets[sheetName];
     
     if (!sheet) {
-      throw new Error('Nenhuma aba encontrada na planilha.');
+      throw new Error('Aba não encontrada ou inválida na planilha.');
     }
 
     // Converter aba para JSON (array de arrays)
@@ -31,7 +36,7 @@ export class SpreadsheetImportService {
     const headerRow = rows[0] as string[];
     
     // Normalizar cabeçalho para achar índices independentemente de espaços e maiúsculas
-    const normalizeStr = (str: string) => str ? String(str).trim().toLowerCase() : '';
+    const normalizeStr = (str: unknown) => str ? String(str).trim().toLowerCase() : '';
     
     let codIndex = -1, produtoIndex = -1, marcaIndex = -1, precoIndex = -1;
     
