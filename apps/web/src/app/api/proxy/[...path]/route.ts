@@ -87,15 +87,19 @@ async function proxy(request: NextRequest, params: { path: string[] }, method: s
     Authorization: `Bearer ${accessToken}`,
   };
 
-  if (method !== "GET") {
+  const requestContentType = request.headers.get("Content-Type");
+  if (requestContentType) {
+    headers["Content-Type"] = requestContentType;
+  } else if (method !== "GET") {
     headers["Content-Type"] = "application/json";
   }
+
   if (isSseStream) {
     headers["Accept"] = "text/event-stream";
   }
   if (orgId) headers["X-Organization-Id"] = orgId;
 
-  const body = method !== "GET" ? await request.text() : undefined;
+  const body = method !== "GET" ? await request.arrayBuffer() : undefined;
   const res = await fetch(url.toString(), { method, headers, body });
 
   if (isSseStream) {
