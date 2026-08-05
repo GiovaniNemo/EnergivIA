@@ -20,6 +20,7 @@ import {
   getProposal,
   setProposalTemplate,
   updateProposalDiscount,
+  updateProposalMarginOverride,
   downloadProposalPdf,
   type ProposalDetail,
   type SystemSizingInputJson,
@@ -133,6 +134,10 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
   const [discountDraft, setDiscountDraft] = useState<number | null>(null);
   const [discountSaving, setDiscountSaving] = useState(false);
   const [discountError, setDiscountError] = useState<string | null>(null);
+
+  const [isEditingMargin, setIsEditingMargin] = useState(false);
+  const [marginOverrideDraft, setMarginOverrideDraft] = useState<number | null>(null);
+  const [marginOverrideSaving, setMarginOverrideSaving] = useState(false);
 
   const integrator = useMemo(
     () => (proposal ? extractIntegrator(proposal.renderedData) : null),
@@ -344,6 +349,26 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
     }
   }
 
+  async function saveMarginOverride(): Promise<void> {
+    if (!currentOrganizationId || !proposal || marginOverrideDraft == null) return;
+    setMarginOverrideSaving(true);
+    try {
+      const { publicToken } = await updateProposalMarginOverride(
+        currentOrganizationId,
+        proposal.id,
+        marginOverrideDraft
+      );
+      setRegeneratedPublicUrl(`${window.location.origin}/proposta/${publicToken}`);
+      setIsEditingMargin(false);
+      await reload();
+    } catch (e) {
+      // Re-using discount error or showing an alert if preferred, but for now console error is okay, or we could add a toast.
+      alert(e instanceof Error ? e.message : "Não foi possível salvar a margem.");
+    } finally {
+      setMarginOverrideSaving(false);
+    }
+  }
+
   async function saveTemplateBinding(): Promise<void> {
     if (!currentOrganizationId || !proposal) return;
     setTemplateError(null);
@@ -477,6 +502,16 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
           remainderAfterEquipmentBrl={remainderAgg}
           saleToClient={quotedSale}
           health={marginHealth}
+          isEditingMargin={isEditingMargin}
+          onEditMarginClick={() => {
+            setMarginOverrideDraft(marginAppliedFromRules ?? 0);
+            setIsEditingMargin(true);
+          }}
+          marginOverrideDraft={marginOverrideDraft}
+          onMarginOverrideChange={setMarginOverrideDraft}
+          marginOverrideSaving={marginOverrideSaving}
+          onSaveMarginOverride={() => void saveMarginOverride()}
+          onCancelMarginEdit={() => setIsEditingMargin(false)}
         />
       </section>
 

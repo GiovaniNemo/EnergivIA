@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@energivia/utils";
 
@@ -307,6 +308,13 @@ export type ProposalBusinessHeroProps = {
   remainderAfterEquipmentBrl: number | null;
   saleToClient: number;
   health: MarginHealth;
+  isEditingMargin?: boolean;
+  onEditMarginClick?: () => void;
+  marginOverrideDraft?: number | null;
+  onMarginOverrideChange?: (val: number | null) => void;
+  marginOverrideSaving?: boolean;
+  onSaveMarginOverride?: () => void;
+  onCancelMarginEdit?: () => void;
 };
 
 export function ProposalBusinessHeroCard({
@@ -319,6 +327,13 @@ export function ProposalBusinessHeroCard({
   remainderAfterEquipmentBrl,
   saleToClient,
   health,
+  isEditingMargin,
+  onEditMarginClick,
+  marginOverrideDraft,
+  onMarginOverrideChange,
+  marginOverrideSaving,
+  onSaveMarginOverride,
+  onCancelMarginEdit,
 }: ProposalBusinessHeroProps): JSX.Element {
   const activeHealth = health === "none" ? null : health;
 
@@ -404,10 +419,61 @@ export function ProposalBusinessHeroCard({
                 <p className="text-[11px] font-medium text-[var(--color-muted-foreground)]">
                   Margem (regras)
                 </p>
-                <p className="mt-1 text-lg font-semibold tabular-nums">
-                  {marginAppliedBrl !== null ? formatBRL(marginAppliedBrl) : "—"}
-                </p>
-                <p className="mt-0.5 text-[10px] text-[var(--color-muted-foreground)]">
+                {isEditingMargin ? (
+                  <div className="mt-2 space-y-2">
+                    <CurrencyInput
+                      id="margin-override"
+                      value={marginOverrideDraft ?? null}
+                      onValueChange={(val) => onMarginOverrideChange?.(val)}
+                    />
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        className="h-7 w-full text-[10px]"
+                        disabled={marginOverrideSaving}
+                        onClick={onSaveMarginOverride}
+                      >
+                        {marginOverrideSaving ? "..." : "Salvar"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 w-full text-[10px]"
+                        disabled={marginOverrideSaving}
+                        onClick={onCancelMarginEdit}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="group relative mt-1">
+                    <p className="text-lg font-semibold tabular-nums">
+                      {marginAppliedBrl !== null ? formatBRL(marginAppliedBrl) : "—"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={onEditMarginClick}
+                      className="absolute right-0 top-0 hidden rounded-md bg-[var(--color-accent)] p-1 text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-muted)] group-hover:block"
+                      title="Editar Margem"
+                    >
+                      <svg
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+                <p className="mt-1.5 text-[10px] text-[var(--color-muted-foreground)]">
                   Sobre o valor fechado (não é lucro líquido)
                 </p>
               </div>

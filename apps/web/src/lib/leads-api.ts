@@ -441,6 +441,24 @@ export async function updateProposalDiscount(
   return res.json() as Promise<{ discountBrl: number | null; publicToken: string }>;
 }
 
+export async function updateProposalMarginOverride(
+  organizationId: string,
+  proposalId: string,
+  marginBrl: number
+): Promise<{ publicToken: string }> {
+  const res = await apiProxy(
+    "PATCH",
+    `/proposals/${proposalId}/margin-override`,
+    { marginBrl },
+    organizationId
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<{ publicToken: string }>;
+}
+
 export async function setProposalTemplate(
   organizationId: string,
   proposalId: string,
@@ -466,7 +484,7 @@ export interface ProposalEquipmentContextItem {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
-  specs?: any | null;
+  specs?: unknown | null;
 }
 
 export interface ProposalEquipmentContext {
@@ -491,7 +509,7 @@ export interface ProposalEquipmentOption {
   unitPrice: number;
   stockQuantity: number;
   imageUrl: string | null;
-  specs?: any | null;
+  specs?: unknown | null;
 }
 
 export async function getProposalEquipment(
@@ -891,7 +909,7 @@ export async function waitForEnergyBillExtraction(
   billId: string
 ): Promise<EnergyBillRecord> {
   const deadline = Date.now() + ENERGY_BILL_WAIT_MS;
-  for (; ;) {
+  for (;;) {
     const bill = await getEnergyBill(organizationId, leadId, billId);
     if (bill.extractionStatus === "COMPLETED" || bill.extractionStatus === "FAILED") {
       return bill;

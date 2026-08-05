@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, Header, StreamableFile } from "@nestjs/common";import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+  Header,
+  StreamableFile,
+} from "@nestjs/common";
+import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
 import { TenantId } from "../../common/decorators/tenant-id.decorator";
 import { ProposalsService } from "./proposals.service";
 
@@ -16,7 +28,7 @@ export class ProposalOperationsController {
   findOne(@TenantId() tenantId: string, @Param("id") id: string) {
     return this.proposalsService.findOne(tenantId, id);
   }
-  
+
   @Get(":id/generate-pdf")
   @Header("Content-Type", "application/pdf")
   async generatePdf(@Param("id") id: string) {
@@ -36,6 +48,15 @@ export class ProposalOperationsController {
     @Body() body: { discountBrl: number | null }
   ) {
     return this.proposalsService.updateDiscount(tenantId, id, body.discountBrl ?? null);
+  }
+
+  @Patch(":id/margin-override")
+  updateMarginOverride(
+    @TenantId() tenantId: string,
+    @Param("id") id: string,
+    @Body() body: { marginBrl: number }
+  ) {
+    return this.proposalsService.updateMarginOverride(tenantId, id, body.marginBrl);
   }
 
   @Post(":id/template")

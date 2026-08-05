@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { BadRequestException, Injectable, NotFoundException, Logger } from "@nestjs/common";
 import type { Prisma, ProposalTemplate } from "@prisma/client";
 import { isProposalIntegratorSnapshot } from "@energivia/shared-types";
+import { PROJECT_COST_ESSENTIAL_MARGIN_NAME } from "@energivia/proposal-economia";
 import chromium from "@sparticuz/chromium";
 import puppeteerCore from "puppeteer-core";
 
@@ -335,6 +336,69 @@ export class ProposalsService {
     return {
       id: updated.id,
       discountBrl: updated.discountBrl ?? null,
+      publicToken: nextPublicToken,
+    };
+  }
+
+  async updateMarginOverride(tenantId: string, id: string, marginBrl: number) {
+    const proposal = await this.findOne(tenantId, id);
+    if (!Number.isFinite(marginBrl) || marginBrl < 0) {
+      throw new BadRequestException("Margem inválida.");
+    }
+
+    const integrator = parseIntegratorFromRendered(proposal.renderedData);
+    if (!integrator) {
+      throw new BadRequestException("Proposta não possui dados de integrador para alterar margem.");
+    }
+
+    const projectCostLines = integrator.projectCostLines ?? [];
+    const marginIndex = projectCostLines.findIndex(
+      (l) => l.name === PROJECT_COST_ESSENTIAL_MARGIN_NAME
+    );
+
+    if (marginIndex >= 0) {
+      projectCostLines[marginIndex].calculationType = "FIXED";
+      projectCostLines[marginIndex].value = marginBrl;
+      projectCostLines[marginIndex].appliedAmountBrl = marginBrl;
+      projectCostLines[marginIndex].source = "organization";
+    } else {
+      projectCostLines.push({
+        name: PROJECT_COST_ESSENTIAL_MARGIN_NAME,
+        calculationType: "FIXED",
+        value: marginBrl,
+        appliedAmountBrl: marginBrl,
+        source: "organization",
+      });
+    }
+
+    integrator.projectCostLines = projectCostLines;
+
+    const equipmentTotal = integrator.equipmentSubtotalBrl ?? 0;
+    const costsTotal = projectCostLines.reduce(
+      (acc, curr) => acc + (curr.appliedAmountBrl ?? 0),
+      0
+    );
+    const newQuotedSaleBrl = equipmentTotal + costsTotal;
+
+    integrator.computedSaleFromCostRulesBrl = newQuotedSaleBrl;
+    integrator.quotedSaleBrl = newQuotedSaleBrl;
+
+    const nextPublicToken = randomUUID();
+    const renderedData = {
+      ...(proposal.renderedData as Record<string, unknown>),
+      integrator,
+    };
+
+    const updated = await this.prisma.proposal.update({
+      where: { id },
+      data: {
+        renderedData: renderedData as Prisma.InputJsonValue,
+        publicToken: nextPublicToken,
+      },
+    });
+
+    return {
+      id: updated.id,
       publicToken: nextPublicToken,
     };
   }
