@@ -1,10 +1,35 @@
-import puppeteer from "puppeteer";
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
+import puppeteerCore from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 import type { ProposalDocumentJson } from "@/components/proposals/editor/types";
 import { createThumbnailRenderSessionId, signThumbnailPayload } from "@/lib/thumbnail-render-token";
 import { setThumbnailRenderSession } from "@/lib/thumbnail-render-store";
 
-export async function POST(request: Request): Promise<Response> {
+async function getBrowser() {
+  const isLocal =
+    process.env.NODE_ENV === "development" ||
+    process.platform === "win32" ||
+    process.platform === "darwin";
+
+  if (isLocal) {
+    const puppeteer = await import("puppeteer");
+    return puppeteer.default.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+  }
+
+  const CHROMIUM_URL =
+    "https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar";
+  const executablePath = await chromium.executablePath(CHROMIUM_URL);
+  return puppeteerCore.launch({
+    args: chromium.args,
+    executablePath,
+    headless: true,
+  });
+}
+
+export async function POST(request: NextRequest): Promise<Response> {
   try {
     const body = (await request.json()) as {
       title?: string;
@@ -28,7 +53,8 @@ export async function POST(request: Request): Promise<Response> {
     });
     const sig = signThumbnailPayload(sessionId);
     const requestUrl = new URL(request.url);
-    const baseUrl = process.env["APP_BASE_URL"] || requestUrl.origin;
+    const baseUrl =
+      process.env["NEXT_PUBLIC_APP_URL"] || process.env["APP_BASE_URL"] || requestUrl.origin;
     const renderUrl = new URL("/internal/template-thumbnail", baseUrl);
     renderUrl.searchParams.set("id", sessionId);
     renderUrl.searchParams.set("sig", sig);
@@ -39,17 +65,16 @@ export async function POST(request: Request): Promise<Response> {
       hasSignature: Boolean(sig),
     });
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    const browser = await getBrowser();
     try {
       const page = await browser.newPage();
       await page.setViewport({ width: 1200, height: 1800, deviceScaleFactor: 1 });
       console.info("[thumbnail-api] puppeteer goto", { sessionId, url: renderUrl.toString() });
-      await page.goto(renderUrl.toString(), { waitUntil: "networkidle0", timeout: 45_000 });
+      await page.goto(renderUrl.toString(), { waitUntil: "networkidle2", timeout: 45_000 });
       console.info("[thumbnail-api] waiting capture selector", { sessionId });
-      await page.waitForSelector("[data-preview-capture-target='true']", { timeout: 15_000 });
+      await page
+        .waitForSelector("[data-preview-capture-target='true']", { timeout: 15_000 })
+        .catch(() => {});
       const captureElement = await page.$("[data-preview-capture-target='true']");
       if (!captureElement) {
         console.error("[thumbnail-api] capture selector missing after wait", { sessionId });
