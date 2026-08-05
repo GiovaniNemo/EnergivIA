@@ -8,7 +8,10 @@ import {
   Param,
   Query,
   ParseUUIDPipe,
+  UseInterceptors,
+  UploadedFile,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { DistributorsService } from "./distributors.service";
 import { CreateDistributorDto } from "./dto/create-distributor.dto";
 import { UpdateDistributorDto } from "./dto/update-distributor.dto";
@@ -16,17 +19,31 @@ import { CreateDistributorProductDto } from "./dto/create-distributor-product.dt
 import { QueryDistributorProductsDto } from "./dto/query-distributor-products.dto";
 import { BulkDistributorProductsDto } from "./dto/bulk-distributor-products.dto";
 import { EdeltecService } from "./integrations/edeltec.service";
+import { SpreadsheetImportService } from "./spreadsheet-import.service";
 
 @Controller("distributors")
 export class DistributorsController {
   constructor(
     private readonly distributorsService: DistributorsService,
-    private readonly edeltecService: EdeltecService
+    private readonly edeltecService: EdeltecService,
+    private readonly spreadsheetImportService: SpreadsheetImportService
   ) {}
 
   @Post(":id/sync")
   syncCatalog(@Param("id", ParseUUIDPipe) id: string) {
     return this.edeltecService.syncCatalog(id);
+  }
+
+  @Post(":id/upload-spreadsheet")
+  @UseInterceptors(FileInterceptor("file"))
+  uploadSpreadsheet(
+    @Param("id", ParseUUIDPipe) id: string,
+    @UploadedFile() file: Express.Multer.File
+  ) {
+    if (!file) {
+      throw new Error("Arquivo não fornecido.");
+    }
+    return this.spreadsheetImportService.importSpreadsheet(id, file.buffer);
   }
 
   @Get()

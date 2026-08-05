@@ -21,6 +21,10 @@ import {
   DialogActions,
   TextField,
   CircularProgress,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -28,12 +32,15 @@ import AddIcon from "@mui/icons-material/Add";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import SettingsIcon from "@mui/icons-material/Settings";
 import SyncIcon from "@mui/icons-material/Sync";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
 import {
   fetchDistributors,
   deleteDistributor,
   updateDistributor,
   syncDistributorCatalog,
+  uploadDistributorSpreadsheet,
   type Distributor,
 } from "@/lib/admin-api";
 
@@ -110,6 +117,119 @@ export default function AdminDistributorsPage(): JSX.Element {
     } finally {
       setSyncing(null);
     }
+  };
+
+  const [uploading, setUploading] = useState<string | null>(null);
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, id: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploading(id);
+      const res = await uploadDistributorSpreadsheet(id, file);
+      alert(res.message);
+      queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Desconhecido";
+      alert("Erro ao enviar planilha: " + msg);
+    } finally {
+      setUploading(null);
+      e.target.value = ""; // Reset input
+    }
+  };
+
+  const RowActions = ({ d }: { d: Distributor }) => {
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const open = Boolean(anchorEl);
+    const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+      setAnchorEl(event.currentTarget);
+    };
+    const handleClose = () => {
+      setAnchorEl(null);
+    };
+
+    return (
+      <>
+        <IconButton size="small" onClick={handleClick} aria-label="Mais ações">
+          <MoreVertIcon fontSize="small" />
+        </IconButton>
+        <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              router.push(`/admin/distribuidores/${d.id}/products`);
+            }}
+          >
+            <ListItemIcon>
+              <InventoryIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Estoque e Produtos</ListItemText>
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              handleOpenIntegration(d);
+            }}
+          >
+            <ListItemIcon>
+              <SettingsIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Configurar API Edeltec</ListItemText>
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              handleSync(d.id);
+            }}
+            disabled={syncing === d.id || !d.integrationProvider}
+          >
+            <ListItemIcon>
+              {syncing === d.id ? <CircularProgress size={20} /> : <SyncIcon fontSize="small" />}
+            </ListItemIcon>
+            <ListItemText>Sincronizar via API</ListItemText>
+          </MenuItem>
+          <MenuItem component="label" disabled={uploading === d.id}>
+            <ListItemIcon>
+              {uploading === d.id ? <CircularProgress size={20} /> : <CloudUploadIcon fontSize="small" />}
+            </ListItemIcon>
+            <ListItemText>Importar Planilha</ListItemText>
+            <input
+              type="file"
+              hidden
+              accept=".xlsx,.xls"
+              onChange={(e) => {
+                handleClose();
+                handleFileUpload(e, d.id);
+              }}
+            />
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              router.push(`/admin/distribuidores/${d.id}`);
+            }}
+          >
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Editar</ListItemText>
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              handleDelete(d);
+            }}
+            disabled={deleteMutation.isPending}
+            sx={{ color: "error.main" }}
+          >
+            <ListItemIcon sx={{ color: "inherit" }}>
+              <DeleteIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Excluir</ListItemText>
+          </MenuItem>
+        </Menu>
+      </>
+    );
   };
 
   return (
@@ -194,54 +314,7 @@ export default function AdminDistributorsPage(): JSX.Element {
                         : "—"}
                     </TableCell>
                     <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleSync(d.id)}
-                        disabled={syncing === d.id || !d.integrationProvider}
-                        aria-label="Sincronizar"
-                        title={
-                          d.integrationProvider
-                            ? "Sincronizar Catálogo"
-                            : "Integração não configurada"
-                        }
-                      >
-                        {syncing === d.id ? (
-                          <CircularProgress size={20} />
-                        ) : (
-                          <SyncIcon fontSize="small" />
-                        )}
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOpenIntegration(d)}
-                        aria-label="Configurar Integração"
-                        title="Configurar API Edeltec"
-                      >
-                        <SettingsIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => router.push(`/admin/distribuidores/${d.id}/products`)}
-                        aria-label="Estoque"
-                        title="Ver estoque"
-                      >
-                        <InventoryIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => router.push(`/admin/distribuidores/${d.id}`)}
-                        aria-label="Editar"
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDelete(d)}
-                        aria-label="Excluir"
-                        disabled={deleteMutation.isPending}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
+                      <RowActions d={d} />
                     </TableCell>
                   </TableRow>
                 ))

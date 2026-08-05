@@ -246,6 +246,24 @@ export async function syncDistributorCatalog(
   return res.json();
 }
 
+export async function uploadDistributorSpreadsheet(
+  id: string,
+  file: File
+): Promise<{ success: boolean; message: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${getApiUrl()}/distributors/${id}/upload-spreadsheet`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message ?? "Falha ao importar planilha.");
+  }
+  return res.json();
+}
+
 export interface DistributorProduct {
   id: string;
   distributorSku: string | null;
