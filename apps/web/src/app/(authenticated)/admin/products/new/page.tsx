@@ -77,21 +77,23 @@ export default function NewProductPage(): JSX.Element {
   });
 
   const onSubmit = (values: FormValues) => {
+    // Inject hidden defaults before validation to prevent impossible validation errors
+    if (effectiveCategoryName && defaultSpecsByCategory[effectiveCategoryName]) {
+      values.specs = { ...defaultSpecsByCategory[effectiveCategoryName], ...values.specs };
+    }
+
     const schema = buildProductSchema(effectiveCategoryName);
     const parsed = schema.safeParse(values);
     if (!parsed.success) {
-      const err = parsed.error.flatten();
-      Object.entries(err.fieldErrors).forEach(([key, messages]) => {
-        const msg = Array.isArray(messages) ? messages[0] : messages;
-        if (msg) methods.setError(key as keyof FormValues, { message: msg });
+      parsed.error.issues.forEach((issue) => {
+        const path = issue.path.length > 0 ? issue.path.join(".") : "root";
+        methods.setError(path as import("react-hook-form").FieldPath<FormValues>, {
+          message: issue.message,
+        });
       });
-      if (err.formErrors[0]) methods.setError("root", { message: err.formErrors[0] });
       return;
     }
-    let specs = parsed.data.specs ?? {};
-    if (effectiveCategoryName && defaultSpecsByCategory[effectiveCategoryName]) {
-      specs = { ...defaultSpecsByCategory[effectiveCategoryName], ...specs };
-    }
+    const specs = parsed.data.specs ?? {};
     createMutation.mutate({
       name: parsed.data.name,
       brand_id: parsed.data.brand_id,
