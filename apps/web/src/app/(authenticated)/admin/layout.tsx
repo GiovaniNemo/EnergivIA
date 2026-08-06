@@ -28,7 +28,12 @@ const tabs = [
 function isStandaloneAdminPath(pathname: string | null): boolean {
   if (!pathname) return false;
   const normalized = pathname.replace(/\/$/, "") || "/";
-  return normalized.startsWith("/admin/modelos-template/") || normalized.startsWith("/admin/planos");
+  return (
+    normalized.startsWith("/admin/modelos-template/") ||
+    normalized.startsWith("/admin/planos") ||
+    normalized.startsWith("/admin/metricas") ||
+    normalized.startsWith("/admin/sistema")
+  );
 }
 
 export default function AdminLayout({ children }: { children: ReactNode }): JSX.Element {

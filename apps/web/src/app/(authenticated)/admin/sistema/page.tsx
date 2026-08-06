@@ -11,8 +11,6 @@ import {
   Mail,
   Globe,
   Settings2,
-  Trash2,
-  ShieldAlert,
   ToggleLeft,
   ToggleRight,
   CheckCircle2,
@@ -22,8 +20,8 @@ import {
 
 export default function AdminSistemaPage() {
   const [loading, setLoading] = useState(true);
+  const [saveMessage, setSaveMessage] = useState("");
 
-  // Mock Feature Flags state
   const [flags, setFlags] = useState({
     aiFeatures: true,
     newProposalEditor: true,
@@ -31,16 +29,26 @@ export default function AdminSistemaPage() {
     publicAPI: false,
   });
 
-  const toggleFlag = (key: keyof typeof flags) => {
-    setFlags((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
   useEffect(() => {
+    const savedFlags = localStorage.getItem("adminFlags");
+    if (savedFlags) {
+      setFlags(JSON.parse(savedFlags));
+    }
     const timer = setTimeout(() => {
       setLoading(false);
     }, 600);
     return () => clearTimeout(timer);
   }, []);
+
+  const toggleFlag = (key: keyof typeof flags) => {
+    setFlags((prev) => {
+      const newState = { ...prev, [key]: !prev[key] };
+      localStorage.setItem("adminFlags", JSON.stringify(newState));
+      setSaveMessage("Configuração salva com sucesso!");
+      setTimeout(() => setSaveMessage(""), 2500);
+      return newState;
+    });
+  };
 
   if (loading) {
     return (
@@ -63,13 +71,12 @@ export default function AdminSistemaPage() {
     <div className="flex items-center justify-between p-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-card)]">
       <div className="flex items-center gap-3">
         <div
-          className={`p-2 rounded-full ${
-            status === "operational"
-              ? "bg-green-500/10 text-green-500"
-              : status === "degraded"
-                ? "bg-yellow-500/10 text-yellow-500"
-                : "bg-red-500/10 text-red-500"
-          }`}
+          className={`p-2 rounded-full ${status === "operational"
+            ? "bg-green-500/10 text-green-500"
+            : status === "degraded"
+              ? "bg-yellow-500/10 text-yellow-500"
+              : "bg-red-500/10 text-red-500"
+            }`}
         >
           <Icon className="h-5 w-5" />
         </div>
@@ -134,35 +141,6 @@ export default function AdminSistemaPage() {
             </CardContent>
           </Card>
 
-          {/* Gerenciamento de Cache */}
-          <Card className="border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.05)]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-500">
-                <ShieldAlert className="h-5 w-5" />
-                Ações Perigosas
-              </CardTitle>
-              <CardDescription>Ações que afetam todos os usuários da plataforma</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-[var(--color-muted)]/20 border border-[var(--color-border)] rounded-lg">
-                <div>
-                  <h4 className="font-medium text-[var(--color-foreground)]">
-                    Limpar Cache Global
-                  </h4>
-                  <p className="text-sm text-[var(--color-muted-foreground)]">
-                    Força a invalidação do cache do Next.js e relê os dados do BD.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  className="mt-4 sm:mt-0 border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-colors"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Limpar Cache
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Feature Flags */}
@@ -173,7 +151,14 @@ export default function AdminSistemaPage() {
                 <Settings2 className="h-5 w-5 text-[var(--color-primary)]" />
                 Feature Flags
               </CardTitle>
-              <CardDescription>Ative ou desative recursos para todos</CardDescription>
+              <CardDescription>
+                Ative ou desative recursos para todos
+                {saveMessage && (
+                  <span className="ml-4 text-green-500 font-medium animate-pulse">
+                    {saveMessage}
+                  </span>
+                )}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
