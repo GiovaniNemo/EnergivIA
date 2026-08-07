@@ -53,43 +53,26 @@ export class ChatbaseService {
       data.email = undefined;
     }
 
-    // Procura por um lead existente com o mesmo whatsapp
-    let lead = await this.prisma.lead.findFirst({
-      where: { tenantId: data.tenantId, whatsapp: whatsappStr },
+    // Cria novo lead sempre
+    const lead = await this.prisma.lead.create({
+      data: {
+        tenantId: data.tenantId,
+        name: nameStr || "Cliente sem nome",
+        whatsapp: whatsappStr,
+        email: data.email,
+        source: data.source || "Chatbase Bot",
+      },
     });
 
-    if (lead) {
-      // Atualiza o lead existente
-      lead = await this.prisma.lead.update({
-        where: { id: lead.id },
-        data: {
-          name: nameStr && nameStr !== lead.name ? nameStr : undefined,
-          email: data.email && data.email !== lead.email ? data.email : undefined,
-          source: data.source || lead.source,
-        },
-      });
-    } else {
-      // Cria novo lead
-      lead = await this.prisma.lead.create({
-        data: {
-          tenantId: data.tenantId,
-          name: nameStr || "Cliente sem nome",
-          whatsapp: whatsappStr,
-          email: data.email,
-          source: data.source || "Chatbase Bot",
-        },
-      });
-
-      // Registra a atividade apenas para novos leads
-      await this.prisma.leadActivityLog.create({
-        data: {
-          tenantId: lead.tenantId,
-          leadId: lead.id,
-          kind: "LEAD_CREATED",
-          label: "Lead criado através do chatbot.",
-        },
-      });
-    }
+    // Registra a atividade
+    await this.prisma.leadActivityLog.create({
+      data: {
+        tenantId: lead.tenantId,
+        leadId: lead.id,
+        kind: "LEAD_CREATED",
+        label: "Lead criado através do chatbot.",
+      },
+    });
 
     return {
       success: true,
@@ -130,31 +113,16 @@ export class ChatbaseService {
       data.email = undefined;
     }
 
-    // 1. Cria ou atualiza o Lead
-    let lead = await this.prisma.lead.findFirst({
-      where: { tenantId: data.tenantId, whatsapp: whatsappStr },
+    // 1. Cria o Lead (sempre cria um novo, permitindo múltiplos leads para o mesmo whatsapp/cliente)
+    const lead = await this.prisma.lead.create({
+      data: {
+        tenantId: data.tenantId,
+        name: nameStr || "Cliente sem nome",
+        whatsapp: whatsappStr,
+        email: data.email,
+        source: data.source || "Chatbase Bot (Simulação)",
+      },
     });
-
-    if (lead) {
-      lead = await this.prisma.lead.update({
-        where: { id: lead.id },
-        data: {
-          name: nameStr && nameStr !== lead.name ? nameStr : undefined,
-          email: data.email && data.email !== lead.email ? data.email : undefined,
-          source: data.source || "Chatbase Bot (Simulação)",
-        },
-      });
-    } else {
-      lead = await this.prisma.lead.create({
-        data: {
-          tenantId: data.tenantId,
-          name: nameStr || "Cliente sem nome",
-          whatsapp: whatsappStr,
-          email: data.email,
-          source: data.source || "Chatbase Bot (Simulação)",
-        },
-      });
-    }
 
     // 2. Calcula as grandezas básicas (como fazia antes para criar o Deal)
     const kwhPerKwMonth = 150;
