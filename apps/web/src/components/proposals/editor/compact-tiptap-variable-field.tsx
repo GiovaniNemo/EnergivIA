@@ -89,30 +89,49 @@ export function CompactTipTapVariableField({
       >
         <EditorContent editor={editor} />
       </div>
-      <div className="mt-1.5 flex flex-wrap gap-1.5">
-        {(Object.keys(VARIABLE_LABELS) as VariableToken[]).map((token) => (
-          <button
-            key={`${label}-${token}`}
-            type="button"
-            className="rounded-full border border-emerald-500/25 bg-emerald-500/8 px-2 py-0.5 text-[10px] font-medium text-emerald-300/90 transition hover:border-emerald-400/50 hover:bg-emerald-500/15"
-            onClick={() => {
-              editor
-                ?.chain()
-                .focus()
-                .insertContent([
-                  {
-                    type: "text",
-                    text: `{{${token}}}`,
-                    marks: [{ type: "variableToken", attrs: { name: token } }],
-                  },
-                ])
-                .run();
-            }}
+      <details className="group mt-1.5">
+        <summary className="flex cursor-pointer list-none items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-[var(--color-muted-foreground)] transition hover:text-[var(--color-foreground)]">
+          Variáveis suportadas
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="opacity-70 transition group-open:rotate-180"
           >
-            {`{{${token}}}`}
-          </button>
-        ))}
-      </div>
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </summary>
+        <div className="mt-2 flex flex-wrap gap-1.5 pl-1">
+          {(Object.keys(VARIABLE_LABELS) as VariableToken[]).map((token) => (
+            <button
+              key={`${label}-${token}`}
+              type="button"
+              className="rounded-full border border-emerald-500/25 bg-emerald-500/8 px-2 py-0.5 text-[10px] font-medium text-emerald-300/90 transition hover:border-emerald-400/50 hover:bg-emerald-500/15"
+              onClick={() => {
+                editor
+                  ?.chain()
+                  .focus()
+                  .insertContent([
+                    {
+                      type: "text",
+                      text: `{{${token}}}`,
+                      marks: [{ type: "variableToken", attrs: { name: token } }],
+                    },
+                  ])
+                  .run();
+              }}
+            >
+              {`{{${token}}}`}
+            </button>
+          ))}
+        </div>
+      </details>
     </div>
   );
 }

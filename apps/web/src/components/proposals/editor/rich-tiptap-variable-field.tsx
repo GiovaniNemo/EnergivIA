@@ -86,10 +86,9 @@ export function RichTipTapVariableField({
   }, [editor, value]);
 
   const toolbarButtonClass = (active: boolean) =>
-    `inline-flex h-8 w-8 items-center justify-center rounded-md border transition ${
-      active
-        ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-300"
-        : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
+    `inline-flex h-8 w-8 items-center justify-center rounded-md border transition ${active
+      ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-300"
+      : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
     }`;
 
   return (
@@ -206,11 +205,25 @@ export function RichTipTapVariableField({
           </button>
         </div>
         <EditorContent editor={editor} />
-        <div className="border-t border-[var(--color-border)] p-2">
-          <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-            Variáveis
-          </p>
-          <div className="flex flex-wrap gap-1.5">
+        <details className="group border-t border-[var(--color-border)] p-2">
+          <summary className="flex cursor-pointer list-none items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-[var(--color-muted-foreground)] transition hover:text-[var(--color-foreground)]">
+            Variáveis suportadas
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="opacity-70 transition group-open:rotate-180"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </summary>
+          <div className="mt-2 flex flex-wrap gap-1.5 pl-1">
             {(Object.keys(VARIABLE_LABELS) as VariableToken[]).map((token) => (
               <button
                 key={`${label}-${token}`}
@@ -234,7 +247,7 @@ export function RichTipTapVariableField({
               </button>
             ))}
           </div>
-        </div>
+        </details>
       </div>
     </div>
   );

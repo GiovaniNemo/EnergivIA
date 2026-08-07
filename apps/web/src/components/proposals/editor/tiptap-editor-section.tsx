@@ -31,10 +31,9 @@ export function TipTapEditorSection({
   onInsertVariable,
 }: TipTapEditorSectionProps): JSX.Element {
   const toolbarButtonClass = (active: boolean) =>
-    `inline-flex h-8 w-8 items-center justify-center rounded-md border transition ${
-      active
-        ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-300"
-        : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
+    `inline-flex h-8 w-8 items-center justify-center rounded-md border transition ${active
+      ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-300"
+      : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
     }`;
 
   return (
@@ -144,11 +143,25 @@ export function TipTapEditorSection({
       <div className="min-h-[360px] max-h-[520px] overflow-auto">
         <EditorContent editor={editor} />
       </div>
-      <div className="shrink-0 border-t border-[var(--color-border)] p-3">
-        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-          Variáveis
-        </p>
-        <div className="flex flex-wrap gap-2">
+      <details className="group shrink-0 border-t border-[var(--color-border)] p-3">
+        <summary className="flex cursor-pointer list-none items-center gap-1 text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--color-muted-foreground)] transition hover:text-[var(--color-foreground)]">
+          Variáveis suportadas
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="opacity-70 transition group-open:rotate-180"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </summary>
+        <div className="mt-3 flex flex-wrap gap-2 pl-1">
           {(Object.keys(VARIABLE_LABELS) as VariableToken[]).map((token) => (
             <button
               key={token}
@@ -160,7 +173,7 @@ export function TipTapEditorSection({
             </button>
           ))}
         </div>
-      </div>
+      </details>
     </div>
   );
 }
