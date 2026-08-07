@@ -133,6 +133,7 @@ export function ProposalEquipmentEditorCard({
           unitPrice: i.unitPrice,
           unavailable: false,
           changed: false,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           specs: (i as any).specs ?? null,
         }))
       );
@@ -196,9 +197,10 @@ export function ProposalEquipmentEditorCard({
         };
 
         const originalStrs = new Map<string, { qty: number, maxMods: number }>();
-        sortedKits.forEach(sk => originalStrs.set(sk.productId, { qty: sk.quantity, maxMods: sk.maxMods }));
+        sortedKits.forEach((sk) =>
+          originalStrs.set(sk.productId, { qty: sk.quantity, maxMods: sk.maxMods })
+        );
 
-        const ceramicOrig = currentModuleQty % 2 === 0 ? currentModuleQty : currentModuleQty + 1;
         const metalOrig = getMetalProfileQty(currentModuleQty, originalStrs);
 
         let roofType: "metal" | "ceramic" | "ground" = "ceramic";
@@ -346,6 +348,7 @@ export function ProposalEquipmentEditorCard({
 
     if (moduleLine && moduleLine.quantity > 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const invSpecs = inverterLine?.specs as any;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const modSpecs = moduleLine?.specs as any;
@@ -446,6 +449,7 @@ export function ProposalEquipmentEditorCard({
             unitPrice: option.unitPrice,
             unavailable: false,
             changed: true,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             specs: (option as any).specs ?? null,
           }
           : l
