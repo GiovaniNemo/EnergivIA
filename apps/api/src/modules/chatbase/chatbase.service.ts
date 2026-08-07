@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException, BadRequestException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHmac } from "node:crypto";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -36,19 +36,15 @@ export class ChatbaseService {
     source?: string;
   }) {
     if (!data.tenantId || !data.name || !data.whatsapp) {
-      throw new BadRequestException("Faltam campos obrigatórios (tenantId, name, whatsapp).");
+      return {
+        success: false,
+        message: "Faltam campos obrigatórios (tenantId, name, whatsapp).",
+      };
     }
 
     const nameStr = String(data.name || "");
     const whatsappStr = String(data.whatsapp || "");
 
-    if (nameStr.includes("{name}") || whatsappStr.includes("{whatsapp}")) {
-      return {
-        success: false,
-        message:
-          "Por favor, preencha os dados reais do cliente em vez de usar variáveis como {name}.",
-      };
-    }
     if (data.email && String(data.email).includes("{email}")) {
       data.email = undefined;
     }
@@ -88,6 +84,7 @@ export class ChatbaseService {
     monthlyConsumptionKwh: number;
     email?: string;
     source?: string;
+    leadId?: string;
   }) {
     // Remove caracteres não numéricos (ex: "300 kWh" -> "300")
     const rawConsumption = String(data.monthlyConsumptionKwh)
@@ -96,7 +93,11 @@ export class ChatbaseService {
     const consumption = parseFloat(rawConsumption);
 
     if (!data.tenantId || !consumption || isNaN(consumption)) {
-      throw new BadRequestException("Faltam campos (tenantId ou monthlyConsumptionKwh válido).");
+      return {
+        success: false,
+        message:
+          "Faltam campos obrigatórios (tenantId ou monthlyConsumptionKwh). Certifique-se de que o consumo é um número válido.",
+      };
     }
 
     const nameStr = String(data.name || "");
@@ -113,16 +114,30 @@ export class ChatbaseService {
       data.email = undefined;
     }
 
-    // 1. Cria o Lead (sempre cria um novo, permitindo múltiplos leads para o mesmo whatsapp/cliente)
-    const lead = await this.prisma.lead.create({
-      data: {
-        tenantId: data.tenantId,
-        name: nameStr || "Cliente sem nome",
-        whatsapp: whatsappStr,
-        email: data.email,
-        source: data.source || "Chatbase Bot (Simulação)",
-      },
-    });
+    let lead;
+    if (data.leadId && data.leadId !== "{leadId}" && data.leadId.trim() !== "") {
+      try {
+        const foundLead = await this.prisma.lead.findUnique({ where: { id: data.leadId } });
+        if (foundLead && foundLead.tenantId === data.tenantId) {
+          lead = foundLead;
+        }
+      } catch {
+        // Ignore errors, we'll just create a new lead below
+      }
+    }
+
+    if (!lead) {
+      // Cria o Lead (sempre cria um novo, permitindo múltiplos leads se falhar em achar)
+      lead = await this.prisma.lead.create({
+        data: {
+          tenantId: data.tenantId,
+          name: nameStr || "Cliente sem nome",
+          whatsapp: whatsappStr,
+          email: data.email,
+          source: data.source || "Chatbase Bot (Simulação)",
+        },
+      });
+    }
 
     // 2. Calcula as grandezas básicas (como fazia antes para criar o Deal)
     const kwhPerKwMonth = 150;

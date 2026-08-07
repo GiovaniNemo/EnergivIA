@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from "@nestjs/common";
+import { Controller, Get, Post, Body, Query, UseGuards } from "@nestjs/common";
 import type { JwtPayload } from "@energivia/types";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -17,15 +17,23 @@ export class ChatbaseController {
 
   @Public()
   @Post("lead")
-  async createLeadFromChat(@Body() data: { tenantId: string; name: string; whatsapp: string; email?: string; source?: string }) {
+  async createLeadFromChat(
+    @Body() body: Record<string, unknown>,
+    @Query() query: Record<string, unknown>
+  ) {
     // Rota pública acessível pelo Chatbase para criar leads durante a conversa
+    const data = { ...query, ...body };
     return this.chatbase.createLead(data);
   }
 
   @Public()
   @Post("proposta")
-  async createProposalFromChat(@Body() data: { tenantId: string; name: string; whatsapp: string; monthlyConsumptionKwh: number; email?: string; source?: string }) {
+  async createProposalFromChat(
+    @Body() body: Record<string, unknown>,
+    @Query() query: Record<string, unknown>
+  ) {
     // Rota pública para Chatbase gerar simulação/proposta rápida
+    const data = { ...query, ...body };
     return this.chatbase.createFastSimulation(data);
   }
 }
