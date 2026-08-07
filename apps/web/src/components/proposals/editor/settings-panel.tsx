@@ -194,9 +194,9 @@ const LIGHT_SUGGESTED_PALETTES = SUGGESTED_PALETTES.filter((palette) => {
   const value = Number.parseInt(
     bg.length === 3
       ? bg
-          .split("")
-          .map((c) => c + c)
-          .join("")
+        .split("")
+        .map((c) => c + c)
+        .join("")
       : bg,
     16
   );
@@ -234,7 +234,7 @@ export function SettingsPanel({
     <div
       className={
         isInline
-          ? "h-[calc(100vh-190px)] min-h-[520px] w-full min-w-0 rounded-2xl border border-[color:color-mix(in_srgb,var(--color-border)_84%,transparent)] bg-[color:color-mix(in_srgb,var(--color-card)_96%,white_3%)] p-3 shadow-[0_18px_42px_rgba(2,6,23,0.14)] lg:h-[calc(100vh-160px)] lg:min-h-[640px] lg:w-[clamp(500px,44vw,800px)] lg:shrink-0 lg:p-4"
+          ? "h-[calc(100vh-190px)] min-h-[520px] w-full min-w-0 rounded-2xl border border-[color:color-mix(in_srgb,var(--color-border)_84%,transparent)] bg-[color:color-mix(in_srgb,var(--color-card)_96%,white_3%)] p-3 shadow-[0_18px_42px_rgba(2,6,23,0.14)] lg:h-[calc(100vh-160px)] lg:min-h-[640px] lg:w-[clamp(400px,34vw,560px)] lg:shrink-0 lg:p-4"
           : "fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
       }
     >
@@ -262,11 +262,10 @@ export function SettingsPanel({
               key={tab.id}
               type="button"
               onClick={() => onChangeTab(tab.id)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                settingsTab === tab.id
+              className={`rounded-full px-3 py-1 text-xs font-medium transition ${settingsTab === tab.id
                   ? "bg-emerald-500 text-zinc-950"
                   : "border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)]"
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -290,13 +289,13 @@ export function SettingsPanel({
                   onClear={
                     documentState.styles.branding.logoUrl
                       ? () =>
-                          onChangeDocument((prev) => ({
-                            ...prev,
-                            styles: {
-                              ...prev.styles,
-                              branding: { ...prev.styles.branding, logoUrl: "" },
-                            },
-                          }))
+                        onChangeDocument((prev) => ({
+                          ...prev,
+                          styles: {
+                            ...prev.styles,
+                            branding: { ...prev.styles.branding, logoUrl: "" },
+                          },
+                        }))
                       : undefined
                   }
                   isUploading={false}
