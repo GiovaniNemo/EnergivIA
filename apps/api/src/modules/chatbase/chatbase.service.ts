@@ -106,8 +106,9 @@ export class ChatbaseService {
     email?: string;
     source?: string;
   }) {
-    if (!data.tenantId || !data.monthlyConsumptionKwh) {
-      throw new BadRequestException("Faltam campos (tenantId ou monthlyConsumptionKwh).");
+    const consumption = Number(data.monthlyConsumptionKwh);
+    if (!data.tenantId || !consumption || isNaN(consumption)) {
+      throw new BadRequestException("Faltam campos (tenantId ou monthlyConsumptionKwh válido).");
     }
 
     const nameStr = String(data.name || "");
@@ -152,8 +153,7 @@ export class ChatbaseService {
 
     // 2. Calcula as grandezas básicas (como fazia antes para criar o Deal)
     const kwhPerKwMonth = 150;
-    const recommendedPowerKw =
-      Math.ceil((data.monthlyConsumptionKwh / kwhPerKwMonth) * 1.1 * 10) / 10;
+    const recommendedPowerKw = Math.ceil((consumption / kwhPerKwMonth) * 1.1 * 10) / 10;
     const panelW = 550;
     const panelCount = Math.ceil((recommendedPowerKw * 1000) / panelW);
     const estimatedValue = recommendedPowerKw * 3500;
@@ -174,7 +174,7 @@ export class ChatbaseService {
       investmentAmount: estimatedValue,
       financingType: "CASH", // Padrão
       sizing: {
-        monthlyConsumptionKwh: data.monthlyConsumptionKwh,
+        monthlyConsumptionKwh: consumption,
       },
     };
     const simulation = await this.financialSimulation.create(
