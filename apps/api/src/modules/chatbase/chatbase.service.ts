@@ -42,8 +42,10 @@ export class ChatbaseService {
       };
     }
 
-    const nameStr = String(data.name || "");
-    const whatsappStr = String(data.whatsapp || "");
+    let nameStr = String(data.name || "");
+    if (nameStr.includes("{name}") || nameStr.includes("{{name}}")) nameStr = "Cliente";
+    let whatsappStr = String(data.whatsapp || "");
+    if (whatsappStr.includes("{whatsapp}") || whatsappStr.includes("{{whatsapp}}")) whatsappStr = "";
 
     if (data.email && String(data.email).includes("{email}")) {
       data.email = undefined;
@@ -100,16 +102,10 @@ export class ChatbaseService {
       };
     }
 
-    const nameStr = String(data.name || "");
-    const whatsappStr = String(data.whatsapp || "");
-
-    if (nameStr.includes("{name}") || whatsappStr.includes("{whatsapp}")) {
-      return {
-        success: false,
-        message:
-          "Por favor, preencha os dados reais do cliente em vez de usar variáveis como {name}.",
-      };
-    }
+    let nameStr = String(data.name || "");
+    if (nameStr.includes("{name}") || nameStr.includes("{{name}}")) nameStr = "Cliente";
+    let whatsappStr = String(data.whatsapp || "");
+    if (whatsappStr.includes("{whatsapp}") || whatsappStr.includes("{{whatsapp}}")) whatsappStr = "";
     if (data.email && String(data.email).includes("{email}")) {
       data.email = undefined;
     }
