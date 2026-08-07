@@ -230,8 +230,7 @@ export class ProposalEquipmentService {
         include: { product: { include: { brand: true, category: true } } },
       });
       const extraStructures = extraProducts.filter(
-        (dp: { product: { specs: Record<string, unknown> | null } }) =>
-          dp.product.specs?.["roof_type"] === roofType
+        (dp) => (dp.product.specs as Record<string, unknown>)?.["roof_type"] === roofType
       );
       for (const dp of extraStructures) {
         if (!items.find((i: (typeof items)[0]) => i.productId === dp.productId)) {
