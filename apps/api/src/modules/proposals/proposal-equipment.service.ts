@@ -219,9 +219,9 @@ export class ProposalEquipmentService {
     const currentStructure = items.find(
       (i: (typeof items)[0]) => i.categoryName === "structure_kit"
     );
-    const roofType = (currentStructure?.specs as Record<string, unknown>)?.roof_type || "ceramic";
+    const roofType =
+      (currentStructure?.specs as Record<string, unknown>)?.["roof_type"] || "ceramic";
     if (chosenId && !ownStock) {
-      // @ts-expect-error - Prisma typings are complex for nested includes
       const extraProducts = await this.prisma.distributorProduct.findMany({
         where: {
           distributorId: chosenId,
@@ -230,13 +230,10 @@ export class ProposalEquipmentService {
         include: { product: { include: { brand: true, category: true } } },
       });
       const extraStructures = extraProducts.filter(
-        // @ts-expect-error - Typings from include are incomplete
         (dp: { product: { specs: Record<string, unknown> | null } }) =>
-          dp.product.specs?.roof_type === roofType
+          dp.product.specs?.["roof_type"] === roofType
       );
-      // @ts-expect-error - Prisma typings are complex for nested includes
       for (const dp of extraStructures) {
-        // @ts-expect-error - item types are loosely typed
         if (!items.find((i: (typeof items)[0]) => i.productId === dp.productId)) {
           items.push({
             productId: dp.productId,
