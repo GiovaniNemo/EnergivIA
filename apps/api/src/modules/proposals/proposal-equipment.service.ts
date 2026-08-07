@@ -83,7 +83,7 @@ export class ProposalEquipmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stockReservation: StockReservationService
-  ) { }
+  ) {}
 
   private estimateSystemPowerKw(
     kitItems: ProposalIntegratorKitLine[],
@@ -164,7 +164,10 @@ export class ProposalEquipmentService {
         category: { select: { id: true, name: true } },
       },
     });
-    const productById = new Map(products.map((p) => [p.id, p])) as Map<string, any>;
+    const productById = new Map(products.map((p) => [p.id, p])) as Map<
+      string,
+      (typeof products)[0]
+    >;
 
     const eligibleDistributors = await this.findDistributorsWithAllProducts(productIds);
 
@@ -213,10 +216,12 @@ export class ProposalEquipmentService {
     const systemPowerKw = this.estimateSystemPowerKw(integrator.kitItems, productById, integrator);
 
     // Injeta outras estruturas compatíveis com qtd 0 para que a heurística do front-end funcione corretamente (possa adicionar kits de 2 moduli)
-    const currentStructure = items.find((i: any) => i.categoryName === "structure_kit");
-    const roofType = (currentStructure?.specs as any)?.roof_type || "ceramic";
+    const currentStructure = items.find(
+      (i: (typeof items)[0]) => i.categoryName === "structure_kit"
+    );
+    const roofType = (currentStructure?.specs as Record<string, unknown>)?.roof_type || "ceramic";
     if (chosenId && !ownStock) {
-      // @ts-ignore
+      // @ts-expect-error - Prisma typings are complex for nested includes
       const extraProducts = await this.prisma.distributorProduct.findMany({
         where: {
           distributorId: chosenId,
@@ -225,13 +230,14 @@ export class ProposalEquipmentService {
         include: { product: { include: { brand: true, category: true } } },
       });
       const extraStructures = extraProducts.filter(
-        // @ts-ignore
-        (dp: any) => (dp.product.specs as any)?.roof_type === roofType
+        // @ts-expect-error - Typings from include are incomplete
+        (dp: { product: { specs: Record<string, unknown> | null } }) =>
+          dp.product.specs?.roof_type === roofType
       );
-      // @ts-ignore
+      // @ts-expect-error - Prisma typings are complex for nested includes
       for (const dp of extraStructures) {
-        // @ts-ignore
-        if (!items.find((i: any) => i.productId === dp.productId)) {
+        // @ts-expect-error - item types are loosely typed
+        if (!items.find((i: (typeof items)[0]) => i.productId === dp.productId)) {
           items.push({
             productId: dp.productId,
             productName: dp.product.name,
@@ -296,9 +302,9 @@ export class ProposalEquipmentService {
       }),
       productIds.length > 0
         ? this.prisma.distributorProduct.findMany({
-          where: { productId: { in: productIds } },
-          select: { distributorId: true, productId: true, price: true },
-        })
+            where: { productId: { in: productIds } },
+            select: { distributorId: true, productId: true, price: true },
+          })
         : Promise.resolve([]),
     ]);
 
@@ -501,7 +507,10 @@ export class ProposalEquipmentService {
         category: { select: { name: true } },
       },
     });
-    const productById = new Map(products.map((p) => [p.id, p])) as Map<string, any>;
+    const productById = new Map(products.map((p) => [p.id, p])) as Map<
+      string,
+      (typeof products)[0]
+    >;
     const missingProduct = productIds.find((id) => !productById.has(id));
     if (missingProduct) {
       throw new BadRequestException("Produto não encontrado no catálogo.");
@@ -562,15 +571,15 @@ export class ProposalEquipmentService {
     const freightCostLines =
       freightState && freightBrl > 0
         ? [
-          {
-            ruleId: null,
-            name: `Frete (${freightState})`,
-            calculationType: "FIXED" as const,
-            value: freightBrl,
-            appliedAmountBrl: freightBrl,
-            source: "organization" as const,
-          },
-        ]
+            {
+              ruleId: null,
+              name: `Frete (${freightState})`,
+              calculationType: "FIXED" as const,
+              value: freightBrl,
+              appliedAmountBrl: freightBrl,
+              source: "organization" as const,
+            },
+          ]
         : [];
 
     const renderedData = (proposal.renderedData ?? {}) as Record<string, unknown>;

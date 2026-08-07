@@ -37,7 +37,7 @@ interface EditableLine {
   unitPrice: number;
   unavailable?: boolean;
   changed?: boolean;
-  specs?: any | null;
+  specs?: Record<string, unknown> | null;
 }
 
 type LineRole = "module" | "inverter" | "locked_bos" | "bos";
@@ -159,14 +159,16 @@ export function ProposalEquipmentEditorCard({
       const isProfile = targetLine.categoryName === "profile";
 
       const structureKits = lines.filter((l) => l.categoryName === "structure_kit");
-      const sortedKits = [...structureKits].map(sk => {
-        const match = sk.productName.match(/([0-9]+)\s*MOD/i);
-        const maxMods = match && match[1] ? parseInt(match[1], 10) : 1;
-        return { ...sk, maxMods };
-      }).sort((a, b) => b.maxMods - a.maxMods);
+      const sortedKits = [...structureKits]
+        .map((sk) => {
+          const match = sk.productName.match(/([0-9]+)\s*MOD/i);
+          const maxMods = match && match[1] ? parseInt(match[1], 10) : 1;
+          return { ...sk, maxMods };
+        })
+        .sort((a, b) => b.maxMods - a.maxMods);
 
       let rem = targetModuleQty;
-      const proposedStrs = new Map<string, { qty: number, maxMods: number }>();
+      const proposedStrs = new Map<string, { qty: number; maxMods: number }>();
 
       for (let i = 0; i < sortedKits.length; i++) {
         const sk = sortedKits[i]!;
@@ -185,7 +187,10 @@ export function ProposalEquipmentEditorCard({
       }
 
       if (isProfile) {
-        const getMetalProfileQty = (modQty: number, strMap: Map<string, { qty: number, maxMods: number }>) => {
+        const getMetalProfileQty = (
+          modQty: number,
+          strMap: Map<string, { qty: number; maxMods: number }>
+        ) => {
           let profs = 0;
           for (const s of Array.from(strMap.values())) {
             if (s.maxMods === 4) profs += s.qty * 10;
@@ -196,7 +201,7 @@ export function ProposalEquipmentEditorCard({
           return profs;
         };
 
-        const originalStrs = new Map<string, { qty: number, maxMods: number }>();
+        const originalStrs = new Map<string, { qty: number; maxMods: number }>();
         sortedKits.forEach((sk) =>
           originalStrs.set(sk.productId, { qty: sk.quantity, maxMods: sk.maxMods })
         );
@@ -348,7 +353,6 @@ export function ProposalEquipmentEditorCard({
 
     if (moduleLine && moduleLine.quantity > 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const invSpecs = inverterLine?.specs as any;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const modSpecs = moduleLine?.specs as any;
@@ -357,16 +361,13 @@ export function ProposalEquipmentEditorCard({
         if (typeof invSpecs.max_dc_power === "number" && invSpecs.max_dc_power <= 10000) {
           min = 4;
         }
-        const ratio = typeof invSpecs.recommended_dc_ac_ratio_max === "number" ? invSpecs.recommended_dc_ac_ratio_max : 1.0;
-        if (
-          typeof invSpecs.max_dc_power === "number" &&
-          typeof modSpecs?.power_w === "number"
-        ) {
+        const ratio =
+          typeof invSpecs.recommended_dc_ac_ratio_max === "number"
+            ? invSpecs.recommended_dc_ac_ratio_max
+            : 1.0;
+        if (typeof invSpecs.max_dc_power === "number" && typeof modSpecs?.power_w === "number") {
           const inverterQty = inverterLine?.quantity || 1;
-          max = Math.floor(
-            (invSpecs.max_dc_power * inverterQty * ratio) /
-            modSpecs.power_w
-          );
+          max = Math.floor((invSpecs.max_dc_power * inverterQty * ratio) / modSpecs.power_w);
         }
       } else if (invSpecs?.type === "micro") {
         if (typeof invSpecs.channels === "number") {
@@ -441,17 +442,17 @@ export function ProposalEquipmentEditorCard({
       prev.map((l, i) =>
         i === swapTargetIndex
           ? {
-            ...l,
-            productId: option.productId,
-            productName: option.productName,
-            brandName: option.brandName,
-            categoryName: option.categoryName,
-            unitPrice: option.unitPrice,
-            unavailable: false,
-            changed: true,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            specs: (option as any).specs ?? null,
-          }
+              ...l,
+              productId: option.productId,
+              productName: option.productName,
+              brandName: option.brandName,
+              categoryName: option.categoryName,
+              unitPrice: option.unitPrice,
+              unavailable: false,
+              changed: true,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              specs: (option as any).specs ?? null,
+            }
           : l
       )
     );
@@ -559,10 +560,11 @@ export function ProposalEquipmentEditorCard({
                       key={opt.productId}
                       type="button"
                       disabled={isCurrent}
-                      className={`flex w-full items-center gap-2.5 border-b border-[var(--color-border)]/60 px-3.5 py-2.5 text-left last:border-0 ${isCurrent
-                        ? "bg-emerald-500/[0.06]"
-                        : "transition-colors hover:bg-emerald-500/[0.04]"
-                        }`}
+                      className={`flex w-full items-center gap-2.5 border-b border-[var(--color-border)]/60 px-3.5 py-2.5 text-left last:border-0 ${
+                        isCurrent
+                          ? "bg-emerald-500/[0.06]"
+                          : "transition-colors hover:bg-emerald-500/[0.04]"
+                      }`}
                       onClick={() => applySwap(opt)}
                     >
                       {isCurrent ? (
@@ -588,10 +590,11 @@ export function ProposalEquipmentEditorCard({
                       </span>
                       {!isCurrent && delta != null && delta !== 0 ? (
                         <span
-                          className={`shrink-0 text-xs font-semibold tabular-nums ${delta < 0
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-red-600 dark:text-red-400"
-                            }`}
+                          className={`shrink-0 text-xs font-semibold tabular-nums ${
+                            delta < 0
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-red-600 dark:text-red-400"
+                          }`}
                         >
                           {delta > 0 ? "+" : "−"} {formatBRL(Math.abs(delta))}
                         </span>
@@ -695,10 +698,11 @@ export function ProposalEquipmentEditorCard({
                           ? `${d.name}: todos os ${d.totalCount} itens disponíveis`
                           : `${d.name}: ${d.matchedCount} de ${d.totalCount} itens — os demais precisam ser substituídos`
                       }
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${selected
-                        ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
-                        : "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
-                        } ${distributorSwitchLoading ? "opacity-60" : ""}`}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${
+                        selected
+                          ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
+                          : "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
+                      } ${distributorSwitchLoading ? "opacity-60" : ""}`}
                       onClick={() => void changeDistributor(d.id)}
                     >
                       {d.name}
@@ -854,12 +858,13 @@ export function ProposalEquipmentEditorCard({
                     return (
                       <Fragment key={`${line.productId}-${idx}`}>
                         <tr
-                          className={`border-b border-[var(--color-border)]/80 transition-colors last:border-0 hover:bg-emerald-500/[0.04] ${line.unavailable
-                            ? "bg-red-500/5"
-                            : idx % 2 === 1
-                              ? "bg-[var(--color-muted)]/15"
-                              : ""
-                            }`}
+                          className={`border-b border-[var(--color-border)]/80 transition-colors last:border-0 hover:bg-emerald-500/[0.04] ${
+                            line.unavailable
+                              ? "bg-red-500/5"
+                              : idx % 2 === 1
+                                ? "bg-[var(--color-muted)]/15"
+                                : ""
+                          }`}
                         >
                           <td className="p-3 font-medium text-[var(--color-foreground)]">
                             {line.productName}
@@ -933,7 +938,11 @@ export function ProposalEquipmentEditorCard({
                                 <button
                                   type="button"
                                   disabled={qty <= minAllowedModules}
-                                  title={qty <= minAllowedModules ? "Quantidade mínima (startup)" : "Um módulo a menos"}
+                                  title={
+                                    qty <= minAllowedModules
+                                      ? "Quantidade mínima (startup)"
+                                      : "Um módulo a menos"
+                                  }
                                   aria-label="Um módulo a menos"
                                   className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--color-border)] text-sm leading-none hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
                                   onClick={() => adjustModuleQuantity(line, -1)}
@@ -944,7 +953,11 @@ export function ProposalEquipmentEditorCard({
                                 <button
                                   type="button"
                                   disabled={qty >= maxAllowedModules}
-                                  title={qty >= maxAllowedModules ? "Limite máximo de módulos para este inversor" : "Um módulo a mais"}
+                                  title={
+                                    qty >= maxAllowedModules
+                                      ? "Limite máximo de módulos para este inversor"
+                                      : "Um módulo a mais"
+                                  }
                                   aria-label="Um módulo a mais"
                                   className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--color-border)] text-sm leading-none hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-[var(--color-border)]"
                                   onClick={() => adjustModuleQuantity(line, 1)}
@@ -965,10 +978,11 @@ export function ProposalEquipmentEditorCard({
                                 min={1}
                                 inputMode="numeric"
                                 aria-label={`Quantidade de ${line.productName}`}
-                                className={`h-7 w-16 rounded-md border bg-[var(--color-background)] px-1.5 text-right tabular-nums outline-none focus:border-red-400 ${belowCalculated
-                                  ? "border-red-500/60 focus:border-red-400"
-                                  : "border-[var(--color-border)] focus:border-emerald-400"
-                                  }`}
+                                className={`h-7 w-16 rounded-md border bg-[var(--color-background)] px-1.5 text-right tabular-nums outline-none focus:border-red-400 ${
+                                  belowCalculated
+                                    ? "border-red-500/60 focus:border-red-400"
+                                    : "border-[var(--color-border)] focus:border-emerald-400"
+                                }`}
                                 value={raw ?? String(line.quantity)}
                                 onChange={(e) => {
                                   setQtyResetNotice(false);
@@ -976,10 +990,10 @@ export function ProposalEquipmentEditorCard({
                                   setQtyDrafts((prev) =>
                                     value === String(line.quantity)
                                       ? (() => {
-                                        const clone = { ...prev };
-                                        delete clone[line.productId];
-                                        return clone;
-                                      })()
+                                          const clone = { ...prev };
+                                          delete clone[line.productId];
+                                          return clone;
+                                        })()
                                       : { ...prev, [line.productId]: value }
                                   );
                                 }}

@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LoadingState } from "@/components/ui/loading-state";
-import { Button } from "@/components/ui/button";
 import {
   Activity,
   Server,
@@ -71,12 +70,13 @@ export default function AdminSistemaPage() {
     <div className="flex items-center justify-between p-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-card)]">
       <div className="flex items-center gap-3">
         <div
-          className={`p-2 rounded-full ${status === "operational"
-            ? "bg-green-500/10 text-green-500"
-            : status === "degraded"
-              ? "bg-yellow-500/10 text-yellow-500"
-              : "bg-red-500/10 text-red-500"
-            }`}
+          className={`p-2 rounded-full ${
+            status === "operational"
+              ? "bg-green-500/10 text-green-500"
+              : status === "degraded"
+                ? "bg-yellow-500/10 text-yellow-500"
+                : "bg-red-500/10 text-red-500"
+          }`}
         >
           <Icon className="h-5 w-5" />
         </div>
@@ -140,7 +140,6 @@ export default function AdminSistemaPage() {
               </div>
             </CardContent>
           </Card>
-
         </div>
 
         {/* Feature Flags */}
