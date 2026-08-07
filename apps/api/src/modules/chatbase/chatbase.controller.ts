@@ -23,7 +23,9 @@ export class ChatbaseController {
   ) {
     // Rota pública acessível pelo Chatbase para criar leads durante a conversa
     const data = { ...query, ...body };
-    return this.chatbase.createLead(data);
+    return this.chatbase.createLead(
+      data as unknown as Parameters<typeof this.chatbase.createLead>[0]
+    );
   }
 
   @Public()
@@ -34,6 +36,8 @@ export class ChatbaseController {
   ) {
     // Rota pública para Chatbase gerar simulação/proposta rápida
     const data = { ...query, ...body };
-    return this.chatbase.createFastSimulation(data);
+    return this.chatbase.createFastSimulation(
+      data as unknown as Parameters<typeof this.chatbase.createFastSimulation>[0]
+    );
   }
 }
