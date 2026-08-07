@@ -39,20 +39,23 @@ export class ChatbaseService {
       throw new BadRequestException("Faltam campos obrigatórios (tenantId, name, whatsapp).");
     }
 
-    if (data.name.includes("{name}") || data.whatsapp.includes("{whatsapp}")) {
+    const nameStr = String(data.name || "");
+    const whatsappStr = String(data.whatsapp || "");
+
+    if (nameStr.includes("{name}") || whatsappStr.includes("{whatsapp}")) {
       return {
         success: false,
         message:
           "Por favor, preencha os dados reais do cliente em vez de usar variáveis como {name}.",
       };
     }
-    if (data.email && data.email.includes("{email}")) {
+    if (data.email && String(data.email).includes("{email}")) {
       data.email = undefined;
     }
 
     // Procura por um lead existente com o mesmo whatsapp
     let lead = await this.prisma.lead.findFirst({
-      where: { tenantId: data.tenantId, whatsapp: data.whatsapp },
+      where: { tenantId: data.tenantId, whatsapp: whatsappStr },
     });
 
     if (lead) {
@@ -60,7 +63,7 @@ export class ChatbaseService {
       lead = await this.prisma.lead.update({
         where: { id: lead.id },
         data: {
-          name: data.name !== lead.name ? data.name : undefined,
+          name: nameStr && nameStr !== lead.name ? nameStr : undefined,
           email: data.email && data.email !== lead.email ? data.email : undefined,
           source: data.source || lead.source,
         },
@@ -70,8 +73,8 @@ export class ChatbaseService {
       lead = await this.prisma.lead.create({
         data: {
           tenantId: data.tenantId,
-          name: data.name,
-          whatsapp: data.whatsapp,
+          name: nameStr || "Cliente sem nome",
+          whatsapp: whatsappStr,
           email: data.email,
           source: data.source || "Chatbase Bot",
         },
@@ -107,27 +110,30 @@ export class ChatbaseService {
       throw new BadRequestException("Faltam campos (tenantId ou monthlyConsumptionKwh).");
     }
 
-    if (data.name.includes("{name}") || data.whatsapp.includes("{whatsapp}")) {
+    const nameStr = String(data.name || "");
+    const whatsappStr = String(data.whatsapp || "");
+
+    if (nameStr.includes("{name}") || whatsappStr.includes("{whatsapp}")) {
       return {
         success: false,
         message:
           "Por favor, preencha os dados reais do cliente em vez de usar variáveis como {name}.",
       };
     }
-    if (data.email && data.email.includes("{email}")) {
+    if (data.email && String(data.email).includes("{email}")) {
       data.email = undefined;
     }
 
     // 1. Cria ou atualiza o Lead
     let lead = await this.prisma.lead.findFirst({
-      where: { tenantId: data.tenantId, whatsapp: data.whatsapp },
+      where: { tenantId: data.tenantId, whatsapp: whatsappStr },
     });
 
     if (lead) {
       lead = await this.prisma.lead.update({
         where: { id: lead.id },
         data: {
-          name: data.name !== lead.name ? data.name : undefined,
+          name: nameStr && nameStr !== lead.name ? nameStr : undefined,
           email: data.email && data.email !== lead.email ? data.email : undefined,
           source: data.source || "Chatbase Bot (Simulação)",
         },
@@ -136,8 +142,8 @@ export class ChatbaseService {
       lead = await this.prisma.lead.create({
         data: {
           tenantId: data.tenantId,
-          name: data.name,
-          whatsapp: data.whatsapp,
+          name: nameStr || "Cliente sem nome",
+          whatsapp: whatsappStr,
           email: data.email,
           source: data.source || "Chatbase Bot (Simulação)",
         },
@@ -157,7 +163,7 @@ export class ChatbaseService {
       data: {
         tenantId: data.tenantId,
         leadId: lead.id,
-        title: `Simulação Chatbot - ${data.name}`,
+        title: `Simulação Chatbot - ${nameStr || "Cliente"}`,
         value: estimatedValue,
       },
     });
