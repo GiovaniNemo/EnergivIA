@@ -106,7 +106,12 @@ export class ChatbaseService {
     email?: string;
     source?: string;
   }) {
-    const consumption = Number(data.monthlyConsumptionKwh);
+    // Remove caracteres não numéricos (ex: "300 kWh" -> "300")
+    const rawConsumption = String(data.monthlyConsumptionKwh)
+      .replace(/[^\d.,]/g, "")
+      .replace(",", ".");
+    const consumption = parseFloat(rawConsumption);
+
     if (!data.tenantId || !consumption || isNaN(consumption)) {
       throw new BadRequestException("Faltam campos (tenantId ou monthlyConsumptionKwh válido).");
     }
