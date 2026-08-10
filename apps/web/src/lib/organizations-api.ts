@@ -34,6 +34,7 @@ export interface MeResponse {
   tenantId?: string | null;
   organizations?: Organization[];
   currentOrganizationId?: string | null;
+  isTrialLocked?: boolean;
 }
 
 export class MeRequestError extends Error {

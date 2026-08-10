@@ -11,7 +11,10 @@ import { Public } from "../../common/decorators/public.decorator";
 import { StripeService } from "./stripe.service";
 import { Request } from "express";
 
+import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator";
+
 @Controller("stripe")
+@SkipTrialLock()
 export class StripeController {
   constructor(private stripeService: StripeService) {}
 

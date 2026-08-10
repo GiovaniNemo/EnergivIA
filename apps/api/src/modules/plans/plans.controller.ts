@@ -5,7 +5,10 @@ import { PlansService } from "./plans.service";
 // import { Roles } from '../auth/roles.decorator';
 // import { UserRole } from '@prisma/client';
 
+import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator";
+
 @Controller("plans")
+@SkipTrialLock()
 export class PlansController {
   constructor(private readonly plansService: PlansService) {}
 

@@ -5,6 +5,7 @@ import { ConfigModule } from "@nestjs/config";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
 import { UnifiedAuthGuard } from "./common/guards/unified-auth.guard";
+import { TrialLockGuard } from "./common/guards/trial-lock.guard";
 import { AuthModule } from "./modules/auth/auth.module";
 import { OrganizationsModule } from "./modules/organizations/organizations.module";
 import { TenantsModule } from "./modules/tenants/tenants.module";
@@ -88,6 +89,7 @@ import { PlansModule } from "./modules/plans/plans.module";
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: UnifiedAuthGuard },
+    { provide: APP_GUARD, useClass: TrialLockGuard },
   ],
 })
 export class AppModule {}

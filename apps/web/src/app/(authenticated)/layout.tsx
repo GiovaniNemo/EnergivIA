@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { isAuth0Configured } from "@/lib/auth0-config";
 import { auth0 } from "@/lib/auth0";
 import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
+import { TrialLockOverlay } from "@/components/TrialLockOverlay";
 import Script from "next/script";
 export default async function AuthenticatedLayout({
   children,
@@ -17,6 +18,7 @@ export default async function AuthenticatedLayout({
   }
   return (
     <>
+      <TrialLockOverlay />
       <AuthenticatedShell>{children}</AuthenticatedShell>
       {/* Script de Integração com o Chatbase - EnergivIA (Apenas Dashboard) */}
       <Script
