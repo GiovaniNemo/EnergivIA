@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useOrganization } from "@/components/providers/organization-provider";
 
-export default function PaymentForm({ planId }: { planId: string }) {
+export default function PaymentForm({ planId, planName }: { planId: string; planName?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { currentOrganization } = useOrganization();
@@ -51,25 +51,14 @@ export default function PaymentForm({ planId }: { planId: string }) {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 max-w-md mx-auto p-6 bg-[var(--color-card)] rounded-xl shadow-lg border border-[var(--color-border)] transition-colors duration-300"
-    >
-      <h3 className="text-xl font-semibold text-[var(--color-foreground)] mb-4">
-        Assinatura com Stripe
-      </h3>
-      <div className="p-4 border border-[var(--color-border)] rounded-md bg-[var(--color-background)]">
-        <p className="text-sm text-[var(--color-foreground)] text-center font-medium">
-          Você será redirecionado para o ambiente seguro do Stripe para finalizar o pagamento.
-        </p>
-      </div>
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+    <form onSubmit={handleSubmit} className="space-y-4 w-full mt-4">
+      {error && <p className="text-red-500 text-sm text-center font-medium">{error}</p>}
       <button
         type="submit"
         disabled={loading}
         className="w-full bg-[var(--color-primary)] text-[var(--color-primary-foreground)] py-3 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
       >
-        {loading ? "Iniciando Checkout..." : "Ir para o Pagamento Seguro"}
+        {loading ? "Iniciando Checkout..." : `Assinar Plano ${planName || ""}`.trim()}
       </button>
       <p className="text-xs text-center text-[var(--color-muted-foreground)] mt-4 flex items-center justify-center gap-1">
         <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
