@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "postinstall": "puppeteer browsers install chrome",
-    "build": "prisma generate && prisma db push --accept-data-loss && nest build",
+    "build": "prisma generate && nest build",
     "dev": "nest start --watch",
     "start": "nest start",
-    "start:prod": "node dist/main",
+    "start:prod": "prisma db push --accept-data-loss && node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
