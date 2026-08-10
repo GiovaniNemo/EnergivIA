@@ -1,58 +1,56 @@
 "use client";
 
 import { useState } from "react";
-// import { loadStripe } from '@stripe/stripe-js';
-// import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { useOrganization } from "@/components/providers/organization-provider";
 
-// NOTA: Para rodar, instale: npm install @stripe/stripe-js @stripe/react-stripe-js
-// const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_KEY!);
-
-function CheckoutForm({ planId: _planId }: { planId: string }) {
-  // const stripe = useStripe();
-  // const elements = useElements();
-  const [error, _setError] = useState<string | null>(null);
-  const [loading, _setLoading] = useState(false);
+export default function PaymentForm({ planId }: { planId: string }) {
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { currentOrganization } = useOrganization();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    /*
-    if (!stripe || !elements) return;
-
     setLoading(true);
-    const cardElement = elements.getElement(CardElement);
+    setError(null);
 
-    // O Stripe envia os dados do cartão criptografados DIRETAMENTE para a API deles.
-    // O nosso servidor NUNCA tem acesso ao número do cartão (PCI Compliance).
-    const { error: stripeError, paymentMethod } = await stripe.createPaymentMethod({
-      type: 'card',
-      card: cardElement!,
-    });
-
-    if (stripeError) {
-      setError(stripeError.message ?? 'Erro ao processar cartão');
+    if (!currentOrganization) {
+      setError("Usuário não está associado a uma organização/tenant.");
       setLoading(false);
       return;
     }
 
-    // Apenas o token seguro (paymentMethod.id) é enviado ao nosso backend.
     try {
-      const response = await fetch('/api/payments/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          planId,
-          paymentMethodId: paymentMethod.id,
-        }),
-      });
+      const response = await fetch(
+        `${process.env["NEXT_PUBLIC_API_URL"] || "http://localhost:4000"}/stripe/create-checkout-session`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            planId,
+            tenantId: currentOrganization.id, // ID da organização atual
+          }),
+        }
+      );
 
-      if (!response.ok) throw new Error('Erro na assinatura');
-      alert('Assinatura realizada com sucesso!');
-    } catch (err) {
-      setError('Erro ao concluir assinatura no sistema.');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || "Erro ao iniciar assinatura");
+      }
+
+      const { url } = await response.json();
+
+      // Redireciona o usuário para a página de Checkout segura do Stripe
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error("URL de checkout não retornada pelo servidor.");
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Erro ao comunicar com o servidor.";
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-    */
-    alert("Simulação de assinatura: Stripe não configurado ainda.");
   };
 
   return (
@@ -61,12 +59,11 @@ function CheckoutForm({ planId: _planId }: { planId: string }) {
       className="space-y-4 max-w-md mx-auto p-6 bg-[var(--color-card)] rounded-xl shadow-lg border border-[var(--color-border)] transition-colors duration-300"
     >
       <h3 className="text-xl font-semibold text-[var(--color-foreground)] mb-4">
-        Dados de Pagamento
+        Assinatura com Stripe
       </h3>
-      <div className="p-3 border border-[var(--color-border)] rounded-md bg-[var(--color-background)]">
-        {/* <CardElement options={{ hidePostalCode: true }} /> */}
-        <p className="text-sm text-[var(--color-muted-foreground)] text-center">
-          Formulário Seguro do Stripe será renderizado aqui.
+      <div className="p-4 border border-[var(--color-border)] rounded-md bg-[var(--color-background)]">
+        <p className="text-sm text-[var(--color-foreground)] text-center font-medium">
+          Você será redirecionado para o ambiente seguro do Stripe para finalizar o pagamento.
         </p>
       </div>
       {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -75,7 +72,7 @@ function CheckoutForm({ planId: _planId }: { planId: string }) {
         disabled={loading}
         className="w-full bg-[var(--color-primary)] text-[var(--color-primary-foreground)] py-3 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
       >
-        {loading ? "Processando..." : "Confirmar Assinatura Seguro"}
+        {loading ? "Iniciando Checkout..." : "Ir para o Pagamento Seguro"}
       </button>
       <p className="text-xs text-center text-[var(--color-muted-foreground)] mt-4 flex items-center justify-center gap-1">
         <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
@@ -85,16 +82,8 @@ function CheckoutForm({ planId: _planId }: { planId: string }) {
             clipRule="evenodd"
           />
         </svg>
-        Pagamento 100% Seguro. Seus dados não são armazenados.
+        Pagamento 100% Seguro via Stripe.
       </p>
     </form>
-  );
-}
-
-export default function PaymentWrapper({ planId }: { planId: string }) {
-  return (
-    // <Elements stripe={stripePromise}>
-    <CheckoutForm planId={planId} />
-    // </Elements>
   );
 }
