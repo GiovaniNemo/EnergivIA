@@ -20,17 +20,14 @@ export default function PaymentForm({ planId }: { planId: string }) {
     }
 
     try {
-      const response = await fetch(
-        `${process.env["NEXT_PUBLIC_API_URL"] || "http://localhost:4000"}/stripe/create-checkout-session`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            planId,
-            tenantId: currentOrganization.id, // ID da organização atual
-          }),
-        }
-      );
+      const response = await fetch("/api/proxy/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId,
+          tenantId: currentOrganization.id, // ID da organização atual
+        }),
+      });
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
