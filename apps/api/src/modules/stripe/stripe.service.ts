@@ -17,7 +17,6 @@ export class StripeService {
       this.logger.warn("STRIPE_SECRET_KEY is not defined. Stripe integration will not work.");
     }
     this.stripe = new Stripe(secretKey || "sk_test_mock", {
-      // @ts-expect-error api version type mismatch in stripe package
       apiVersion: "2026-07-29.dahlia",
     });
   }
