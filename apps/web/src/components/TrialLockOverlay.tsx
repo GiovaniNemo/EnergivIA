@@ -108,15 +108,34 @@ export function TrialLockOverlay() {
                 <ul className="space-y-3 mb-6">
                   {(() => {
                     let feats: string[] = [];
-                    if (Array.isArray(plan.features)) {
-                      feats = plan.features;
-                    } else if (typeof plan.features === "string") {
-                      try {
-                        const parsed = JSON.parse(plan.features);
-                        if (Array.isArray(parsed)) feats = parsed;
-                        else feats = plan.features.split(",");
-                      } catch {
-                        feats = plan.features.split(",");
+                    if (plan.features) {
+                      if (Array.isArray(plan.features)) {
+                        feats = plan.features;
+                      } else if (typeof plan.features === "string") {
+                        try {
+                          const parsed = JSON.parse(plan.features);
+                          if (Array.isArray(parsed)) feats = parsed;
+                          else feats = plan.features.split(",");
+                        } catch {
+                          feats = plan.features.split(",");
+                        }
+                      }
+                    }
+
+                    if (feats.length === 0) {
+                      if (plan.name.toLowerCase().includes("básico")) {
+                        feats = [
+                          "Até 50 propostas/mês",
+                          "Suporte por email",
+                          "Acesso ao CRM básico",
+                        ];
+                      } else if (plan.name.toLowerCase().includes("profissional")) {
+                        feats = [
+                          "Propostas ilimitadas",
+                          "Suporte WhatsApp",
+                          "CRM Completo",
+                          "Integração de pagamentos",
+                        ];
                       }
                     }
 
