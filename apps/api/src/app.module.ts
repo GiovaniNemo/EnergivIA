@@ -34,6 +34,7 @@ import { StockModule } from "./modules/stock/stock.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { ChatbaseModule } from "./modules/chatbase/chatbase.module";
 import { StripeModule } from "./modules/stripe/stripe.module";
+import { PlansModule } from "./modules/plans/plans.module";
 
 @Module({
   controllers: [HealthController],
@@ -81,6 +82,7 @@ import { StripeModule } from "./modules/stripe/stripe.module";
     NotificationsModule,
     ChatbaseModule,
     StripeModule,
+    PlansModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
