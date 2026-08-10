@@ -34,7 +34,7 @@ export class AuthController {
     const organizations = await this.organizationsService.findAllForUser(user.sub);
 
     let isTrialLocked = false;
-    if (user.tenantId) {
+    if (user.role !== "ADMIN" && user.tenantId) {
       const tenant = await this.prisma.tenant.findUnique({
         where: { id: user.tenantId },
         include: { subscription: true },
