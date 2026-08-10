@@ -23,6 +23,8 @@ import {
   updateProposalMarginOverride,
   updateProposalLaborOverride,
   downloadProposalPdf,
+  patchDeal,
+  waMeUrl,
   type ProposalDetail,
   type SystemSizingInputJson,
   type SystemSizingResultJson,
@@ -241,6 +243,17 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
       a.download = `Proposta - ${proposal.deal.lead.name}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
+
+      if (
+        proposal.deal.stage !== "NEGOTIATION" &&
+        proposal.deal.stage !== "WON" &&
+        proposal.deal.stage !== "LOST"
+      ) {
+        await patchDeal(currentOrganizationId, proposal.deal.id, { stage: "NEGOTIATION" }).catch(
+          () => {}
+        );
+        void reload();
+      }
     } catch (e) {
       setPdfError(e instanceof Error ? e.message : "Falha ao gerar PDF.");
     } finally {
@@ -264,6 +277,38 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
   function handleEquipmentSaved(publicToken: string): void {
     setRegeneratedPublicUrl(`${window.location.origin}/proposta/${publicToken}`);
     void reload();
+  }
+
+  async function handleSendToClient(): Promise<void> {
+    if (!currentOrganizationId || !proposal) return;
+    try {
+      if (
+        proposal.deal.stage !== "NEGOTIATION" &&
+        proposal.deal.stage !== "WON" &&
+        proposal.deal.stage !== "LOST"
+      ) {
+        await patchDeal(currentOrganizationId, proposal.deal.id, { stage: "NEGOTIATION" });
+      }
+      const publicUrl = `${window.location.origin}/proposta/${proposal.publicToken ?? proposal.id}`;
+      const message = `Olá ${proposal.deal.lead.name}, sua proposta já está disponível! Acesse o link para visualizar: ${publicUrl}`;
+      const waUrl = waMeUrl(proposal.deal.lead.whatsapp, message);
+      window.open(waUrl, "_blank", "noopener,noreferrer");
+      await reload();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Erro ao enviar proposta");
+    }
+  }
+
+  async function handleCloseProposal(): Promise<void> {
+    if (!currentOrganizationId || !proposal) return;
+    try {
+      if (proposal.deal.stage !== "WON") {
+        await patchDeal(currentOrganizationId, proposal.deal.id, { stage: "WON" });
+      }
+      await reload();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Erro ao fechar proposta");
+    }
   }
 
   async function sharePublicLinkWithTemplate(): Promise<void> {
@@ -487,7 +532,8 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
         title={proposal.title}
         statusLabel={STATUS_LABEL[proposal.status] ?? proposal.status}
         validUntilLabel={new Date(proposal.validUntil).toLocaleDateString("pt-BR")}
-        onSendToClient={() => setShareDialogOpen(true)}
+        onSendToClient={() => void handleSendToClient()}
+        onCloseProposal={() => void handleCloseProposal()}
         publicProposalPath={publicProposalPath}
         templateEditorUrl={templateEditorPath}
         canEditTemplate={Boolean(templateIdForEditor)}

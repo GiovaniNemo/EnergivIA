@@ -61,6 +61,7 @@ export type ProposalInternalHeaderProps = {
   statusLabel: string;
   validUntilLabel: string;
   onSendToClient: () => void;
+  onCloseProposal: () => void;
   publicProposalPath: string;
   templateEditorUrl: string | null;
   canEditTemplate: boolean;
@@ -81,6 +82,7 @@ export function ProposalInternalHeader({
   statusLabel,
   validUntilLabel,
   onSendToClient,
+  onCloseProposal,
   publicProposalPath,
   templateEditorUrl,
   canEditTemplate,
@@ -127,15 +129,26 @@ export function ProposalInternalHeader({
         </div>
 
         <div className="flex w-full flex-col gap-3 lg:max-w-md lg:shrink-0">
-          <Button
-            type="button"
-            size="lg"
-            className="h-12 w-full gap-2 bg-emerald-600 text-base font-semibold text-white shadow-md shadow-emerald-900/20 hover:bg-emerald-700"
-            onClick={onSendToClient}
-          >
-            <Send className="h-5 w-5 shrink-0" />
-            Enviar proposta ao cliente
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="lg"
+              className="h-12 flex-1 gap-2 bg-emerald-600 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 hover:bg-emerald-700"
+              onClick={onSendToClient}
+            >
+              <Send className="h-4 w-4 shrink-0" />
+              Enviar proposta
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              className="h-12 flex-1 gap-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-500 dark:hover:bg-emerald-950/50 text-sm font-semibold shadow-sm"
+              variant="outline"
+              onClick={onCloseProposal}
+            >
+              Fechar proposta
+            </Button>
+          </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
             <a
               href={publicProposalPath}
