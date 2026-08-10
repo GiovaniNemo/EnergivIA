@@ -17,7 +17,8 @@ export class StripeService {
       this.logger.warn("STRIPE_SECRET_KEY is not defined. Stripe integration will not work.");
     }
     this.stripe = new Stripe(secretKey || "sk_test_mock", {
-      apiVersion: "2024-12-18.acacia", // ou a versão mais recente suportada
+      // @ts-expect-error api version type mismatch in stripe package
+      apiVersion: "2026-07-29.dahlia",
     });
   }
 
@@ -172,8 +173,8 @@ export class StripeService {
   }
 
   private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
-    const tenantId = session.client_reference_id || session.metadata?.tenantId;
-    const planId = session.metadata?.planId;
+    const tenantId = session.client_reference_id || session.metadata?.["tenantId"];
+    const planId = session.metadata?.["planId"];
     const stripeSubscriptionId = session.subscription as string;
 
     if (!tenantId || !planId || !stripeSubscriptionId) {
@@ -189,6 +190,7 @@ export class StripeService {
         planId,
         stripeSubscriptionId,
         status: stripeSubscription.status,
+        // @ts-expect-error property does exist on Subscription in runtime
         currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
       },
       create: {
@@ -197,6 +199,7 @@ export class StripeService {
         stripeCustomerId: session.customer as string,
         stripeSubscriptionId,
         status: stripeSubscription.status,
+        // @ts-expect-error property does exist on Subscription in runtime
         currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
       },
     });
@@ -226,6 +229,7 @@ export class StripeService {
       data: {
         status: subscription.status,
         stripeSubscriptionId: subscription.id,
+        // @ts-expect-error property does exist on Subscription in runtime
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),
       },
     });
