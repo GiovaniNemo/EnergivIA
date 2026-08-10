@@ -38,7 +38,7 @@ export default function PaymentForm({ planId }: { planId: string }) {
 
       // Redireciona o usuário para a página de Checkout segura do Stripe
       if (url) {
-        window.location.href = url;
+        window.open(url, "_blank");
       } else {
         throw new Error("URL de checkout não retornada pelo servidor.");
       }
