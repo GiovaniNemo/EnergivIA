@@ -160,7 +160,7 @@ export default function AdminPlanosPage() {
                     {plan.name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-muted-foreground)]">
-                    R$ {(plan.price ?? 0).toFixed(2)}
+                    R$ {Number(plan.price ?? 0).toFixed(2)}
                   </td>
                   <td className="px-6 py-4 text-sm text-[var(--color-muted-foreground)]">
                     {plan.features || "---"}
