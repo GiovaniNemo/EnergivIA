@@ -54,12 +54,34 @@ export class StripeService {
   }
 
   async createCheckoutSession(planId: string, tenantId: string) {
-    const plan = await this.prisma.plan.findUnique({
+    let plan = await this.prisma.plan.findUnique({
       where: { id: planId },
     });
 
-    if (!plan || !plan.stripeId) {
-      throw new Error("Plan not found or not synced with Stripe.");
+    if (!plan) {
+      if (planId === "plan_1" || planId === "plan_2") {
+        const name = planId === "plan_1" ? "Básico" : "Profissional";
+        const price = planId === "plan_1" ? 99.9 : 199.9;
+
+        const product = await this.createProduct(`Plano ${name} EnergivIA`);
+        const stripePrice = await this.createPrice(product.id, price, "month");
+
+        plan = await this.prisma.plan.create({
+          data: {
+            id: planId,
+            name: name,
+            price: price,
+            interval: "month",
+            stripeId: stripePrice.id,
+          },
+        });
+      } else {
+        throw new Error("Plan not found or not synced with Stripe.");
+      }
+    }
+
+    if (!plan.stripeId) {
+      throw new Error("Plan not synced with Stripe.");
     }
 
     // Procura ou cria o customer no Stripe
