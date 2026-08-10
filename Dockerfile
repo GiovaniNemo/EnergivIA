@@ -16,4 +16,4 @@ ENV NODE_ENV=production
 COPY --from=api-builder /app ./
 WORKDIR /app/apps/api
 EXPOSE 4000
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
