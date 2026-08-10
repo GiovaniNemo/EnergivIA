@@ -50,8 +50,8 @@ function formatBRL(v: number): string {
 
 function ExplainerBlock(): JSX.Element {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-4 py-3.5">
+    <div className="grid gap-4 sm:grid-cols-2 mb-6">
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] px-4 py-4 shadow-sm">
         <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]">
           <Globe className="h-4 w-4 text-[var(--color-muted-foreground)]" />
           Catálogo global
@@ -61,9 +61,9 @@ function ExplainerBlock(): JSX.Element {
           onde você <strong>escolhe</strong> os produtos — sem quantidade nem preço seu.
         </p>
       </div>
-      <div className="rounded-xl border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 px-4 py-3.5">
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] px-4 py-4 shadow-sm">
         <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]">
-          <Warehouse className="h-4 w-4 text-[var(--color-primary)]" />
+          <Warehouse className="h-4 w-4 text-[var(--color-muted-foreground)]" />
           Seu estoque próprio
         </div>
         <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--color-muted-foreground)]">
