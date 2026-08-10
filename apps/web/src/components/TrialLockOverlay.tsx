@@ -21,6 +21,20 @@ export function TrialLockOverlay() {
       // Evita o scroll do body quando o modal estiver aberto
       document.body.style.overflow = "hidden";
 
+      const style = document.createElement("style");
+      style.id = "hide-chatbase-style";
+      style.innerHTML = `
+        #chatbase-bubble-button,
+        #chatbase-bubble-window,
+        iframe[src*="chatbase.co"] {
+          display: none !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          z-index: -1 !important;
+        }
+      `;
+      document.head.appendChild(style);
+
       const fetchPlans = async () => {
         try {
           const response = await fetch("/api/proxy/plans");
@@ -35,10 +49,14 @@ export function TrialLockOverlay() {
       fetchPlans();
     } else {
       document.body.style.overflow = "auto";
+      const styleEl = document.getElementById("hide-chatbase-style");
+      if (styleEl) styleEl.remove();
     }
 
     return () => {
       document.body.style.overflow = "auto";
+      const styleEl = document.getElementById("hide-chatbase-style");
+      if (styleEl) styleEl.remove();
     };
   }, [user?.isTrialLocked]);
 
@@ -47,7 +65,7 @@ export function TrialLockOverlay() {
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-500 overflow-y-auto">
+    <div className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-500 overflow-y-auto">
       <div className="bg-[var(--color-background)] w-full max-w-5xl rounded-3xl shadow-2xl p-8 border border-[var(--color-border)] my-8">
         <div className="text-center mb-10">
           <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
