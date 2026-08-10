@@ -7,6 +7,7 @@ import {
   BadRequestException,
   RawBodyRequest,
 } from "@nestjs/common";
+import { Public } from "../../common/auth-public.metadata";
 import { StripeService } from "./stripe.service";
 import { Request } from "express";
 
@@ -29,6 +30,7 @@ export class StripeController {
     }
   }
 
+  @Public()
   @Post("webhook")
   async webhook(
     @Headers("stripe-signature") signature: string,
