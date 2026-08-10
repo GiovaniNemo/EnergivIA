@@ -7,7 +7,7 @@ import {
   BadRequestException,
   RawBodyRequest,
 } from "@nestjs/common";
-import { Public } from "../../common/auth-public.metadata";
+import { Public } from "../../common/decorators/public.decorator";
 import { StripeService } from "./stripe.service";
 import { Request } from "express";
 
