@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useOrganization } from "./providers/organization-provider";
 import PaymentWrapper from "./PaymentForm";
+import { Rocket, Gem, CheckCircle2, LockKeyhole } from "lucide-react";
 
 interface Plan {
   id: string;
@@ -18,7 +19,6 @@ export function TrialLockOverlay() {
 
   useEffect(() => {
     if (user?.isTrialLocked) {
-      // Evita o scroll do body quando o modal estiver aberto
       document.body.style.overflow = "hidden";
 
       const style = document.createElement("style");
@@ -65,116 +65,176 @@ export function TrialLockOverlay() {
   }
 
   return (
-    <div className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-500 overflow-y-auto">
-      <div className="bg-[var(--color-background)] w-full max-w-5xl rounded-3xl shadow-2xl p-8 border border-[var(--color-border)] my-8">
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7z"
-              />
-            </svg>
+    <div className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-500 overflow-y-auto px-4 py-12">
+      {/* Background glow effects */}
+      <div className="pointer-events-none fixed left-1/4 top-1/4 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/20 blur-[128px]" />
+      <div className="pointer-events-none fixed right-1/4 top-1/2 h-96 w-96 translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-500/10 blur-[128px]" />
+
+      <div className="relative w-full max-w-5xl rounded-3xl p-6 lg:p-12 mt-12 md:mt-0">
+        <div className="text-center mb-12">
+          <div className="w-14 h-14 bg-red-500/10 text-red-500 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+            <LockKeyhole className="w-6 h-6" />
           </div>
-          <h2 className="text-3xl font-extrabold text-[var(--color-foreground)] mb-2">
-            Seu período de testes acabou!
+          <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">
+            Seu período de testes <span className="text-emerald-400">acabou!</span>
           </h2>
-          <p className="text-lg text-[var(--color-muted-foreground)]">
-            Para continuar usando a plataforma EnergivIA, por favor escolha um dos nossos planos
-            abaixo.
+          <p className="text-lg md:text-xl text-gray-400 mb-2 font-medium">
+            Continue impulsionando seus resultados com a plataforma EnergivIA.
           </p>
+          <div className="inline-flex items-center gap-2 bg-gray-900/50 border border-gray-800 rounded-full px-5 py-2 mt-2">
+            <span className="text-emerald-400">✨</span>
+            <span className="text-sm text-gray-300">
+              Escolha o plano ideal e leve sua gestão solar para o próximo nível.
+            </span>
+          </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-lg hover:shadow-xl transition-shadow flex flex-col"
-            >
-              <div className="p-6 bg-[var(--color-muted)]/30 border-b border-[var(--color-border)]">
-                <h3 className="text-2xl font-bold text-[var(--color-foreground)] mb-2">
-                  {plan.name}
-                </h3>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-[var(--color-primary)]">
-                    R$ {Number(plan.price ?? 0).toFixed(2)}
-                  </span>
-                  <span className="text-[var(--color-muted-foreground)] font-medium">/mês</span>
+        <div className="grid md:grid-cols-2 gap-8 lg:gap-10 items-stretch">
+          {plans.map((plan) => {
+            const isBasic = plan.name.toLowerCase().includes("básic");
+            const isPro = plan.name.toLowerCase().includes("profissional");
+            const isHighlighted = isPro || (!isBasic && plan.price > 100);
+
+            // Cores e Icones baseados no plano
+            const cardBorder = isHighlighted
+              ? "border-yellow-500/50 shadow-[0_0_40px_rgba(234,179,8,0.15)]"
+              : "border-gray-800";
+            const iconBg = isHighlighted
+              ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+              : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
+            const priceColor = isHighlighted ? "text-yellow-400" : "text-emerald-400";
+
+            return (
+              <div
+                key={plan.id}
+                className={`relative bg-gray-950/80 backdrop-blur-sm rounded-3xl border ${cardBorder} flex flex-col pt-8 p-8 transition-transform hover:-translate-y-1 duration-300`}
+              >
+                {isHighlighted && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-950 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase shadow-[0_0_15px_rgba(250,204,21,0.5)] flex items-center gap-1.5">
+                    <span>⭐️</span> MAIS ESCOLHIDO
+                  </div>
+                )}
+
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center border ${iconBg}`}
+                    >
+                      {isHighlighted ? <Gem className="w-6 h-6" /> : <Rocket className="w-6 h-6" />}
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-white leading-tight">{plan.name}</h3>
+                      <p className="text-sm text-gray-400 mt-1">
+                        {isHighlighted ? "Mais recursos. Mais controle." : "Tudo que você precisa."}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex flex-col items-end">
+                      <div className="flex items-baseline gap-1">
+                        <span className={`text-3xl font-extrabold tracking-tight ${priceColor}`}>
+                          R${" "}
+                          {Number(plan.price ?? 0)
+                            .toFixed(2)
+                            .replace(".", ",")}
+                        </span>
+                      </div>
+                      <span className="text-gray-500 text-sm font-medium">/mês</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="p-6 flex-grow">
-                <ul className="space-y-3 mb-6">
-                  {(() => {
-                    let feats: string[] = [];
-                    if (plan.features) {
-                      if (Array.isArray(plan.features)) {
-                        feats = plan.features;
-                      } else if (typeof plan.features === "string") {
-                        try {
-                          const parsed = JSON.parse(plan.features);
-                          if (Array.isArray(parsed)) feats = parsed;
-                          else feats = plan.features.split(",");
-                        } catch {
-                          feats = plan.features.split(",");
+
+                <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent my-6" />
+
+                <div className="flex-grow">
+                  <ul className="space-y-4 mb-8">
+                    {(() => {
+                      let feats: string[] = [];
+                      if (plan.features) {
+                        if (Array.isArray(plan.features)) {
+                          feats = plan.features;
+                        } else if (typeof plan.features === "string") {
+                          try {
+                            const parsed = JSON.parse(plan.features);
+                            if (Array.isArray(parsed)) feats = parsed;
+                            else feats = plan.features.split(",");
+                          } catch {
+                            feats = plan.features.split(",");
+                          }
                         }
                       }
-                    }
 
-                    if (feats.length === 0) {
-                      if (plan.name.toLowerCase().includes("básico")) {
-                        feats = [
-                          "Até 50 propostas/mês",
-                          "Suporte por email",
-                          "Acesso ao CRM básico",
-                        ];
-                      } else if (plan.name.toLowerCase().includes("profissional")) {
-                        feats = [
-                          "Propostas ilimitadas",
-                          "Suporte WhatsApp",
-                          "CRM Completo",
-                          "Integração de pagamentos",
-                        ];
+                      if (feats.length === 0) {
+                        if (isBasic) {
+                          feats = [
+                            "Até 50 propostas/mês",
+                            "Suporte por email",
+                            "Acesso ao CRM básico",
+                          ];
+                        } else if (isPro) {
+                          feats = [
+                            "Propostas ilimitadas",
+                            "Suporte WhatsApp prioritário",
+                            "CRM Completo",
+                            "Integração de pagamentos",
+                          ];
+                        }
                       }
-                    }
 
-                    if (feats.length > 0) {
-                      return feats.map((feat: string, idx: number) => (
-                        <li
-                          key={idx}
-                          className="flex items-center gap-2 text-sm text-[var(--color-foreground)]"
-                        >
-                          <svg
-                            className="w-5 h-5 text-green-500"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
+                      if (feats.length > 0) {
+                        return feats.map((feat: string, idx: number) => (
+                          <li
+                            key={idx}
+                            className="flex items-start gap-3 text-[15px] text-gray-300"
                           >
-                            <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
+                            <CheckCircle2
+                              className={`w-5 h-5 shrink-0 ${isHighlighted ? "text-yellow-500" : "text-emerald-500"}`}
                             />
-                          </svg>
-                          {feat.trim()}
-                        </li>
-                      ));
-                    }
+                            <span className="leading-tight mt-0.5">{feat.trim()}</span>
+                          </li>
+                        ));
+                      }
 
-                    return (
-                      <li className="text-sm text-[var(--color-muted-foreground)]">
-                        Assine para liberar os recursos!
-                      </li>
-                    );
-                  })()}
-                </ul>
-                <PaymentWrapper planId={plan.id} planName={plan.name} />
+                      return <li className="text-gray-400">Assine para liberar os recursos!</li>;
+                    })()}
+                  </ul>
+                </div>
+
+                {isHighlighted && (
+                  <div className="bg-yellow-500/5 border border-yellow-500/10 rounded-xl p-4 mb-6 flex items-start gap-3">
+                    <span className="text-yellow-500 text-lg">📈</span>
+                    <p className="text-sm text-yellow-200/80 leading-relaxed">
+                      Tenha uma gestão completa do seu negócio e escale seus resultados com
+                      eficiência.
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-auto">
+                  {/* Container to wrapper the PaymentForm button to inherit styles visually */}
+                  <div
+                    className={`[&_button]:w-full [&_button]:py-3.5 [&_button]:rounded-xl [&_button]:text-base [&_button]:font-bold [&_button]:shadow-lg [&_button]:transition-all [&_button:hover]:scale-[1.02] ${
+                      isHighlighted
+                        ? "[&_button]:bg-gradient-to-r [&_button]:from-yellow-400 [&_button]:to-amber-500 [&_button]:text-yellow-950 [&_button:hover]:shadow-yellow-500/25"
+                        : "[&_button]:bg-emerald-500 [&_button]:text-white [&_button:hover]:bg-emerald-400 [&_button:hover]:shadow-emerald-500/25"
+                    }`}
+                  >
+                    <PaymentWrapper planId={plan.id} planName={plan.name} />
+                  </div>
+
+                  <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-gray-500">
+                    <LockKeyhole className="w-3.5 h-3.5" />
+                    <span>Pagamento 100% seguro via Stripe.</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
+
           {plans.length === 0 && (
-            <div className="col-span-full text-center p-8 text-[var(--color-muted-foreground)]">
-              Carregando planos disponíveis...
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-gray-500">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mb-4"></div>
+              <p>Carregando planos disponíveis...</p>
             </div>
           )}
         </div>
