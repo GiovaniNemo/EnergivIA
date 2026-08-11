@@ -1,34 +1,69 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { useChat, UIMessage } from "@ai-sdk/react";
 import { Bot, X, Send, ImageIcon } from "lucide-react";
 import clsx from "clsx";
+
+type Message = {
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+};
 
 export function AIAssistantWidget() {
     const [isOpen, setIsOpen] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
+    const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
-    const { messages, status, sendMessage } = useChat({
-        api: "/api/chat",
-        onError: (error: Error) => {
-            console.error("Error in AI chat:", error);
-        }
-    });
-
-    const isLoading = status === "submitted" || status === "streaming";
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setInput(e.target.value);
     };
 
-    const handleSubmit = (e?: React.FormEvent) => {
+    const handleSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault();
         if (!input.trim() || isLoading) return;
-        // Na nova versão do SDK, a função de envio foi renomeada para sendMessage
-        sendMessage({ content: input, role: "user" } as any);
+
+        const userMsg: Message = { id: Date.now().toString(), role: "user", content: input.trim() };
+        const newMessages = [...messages, userMsg];
+        setMessages(newMessages);
         setInput("");
+        setIsLoading(true);
+
+        try {
+            const res = await fetch("/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ messages: newMessages })
+            });
+
+            if (!res.ok) throw new Error("API falhou");
+            if (!res.body) throw new Error("Sem Reader");
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+
+            const assistMsg: Message = { id: (Date.now() + 1).toString(), role: "assistant", content: "" };
+            setMessages((prev) => [...prev, assistMsg]);
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const textChunk = decoder.decode(value, { stream: true });
+                assistMsg.content += textChunk;
+
+                setMessages((prev) =>
+                    prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m)
+                );
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // Auto-scroll to bottom
@@ -43,7 +78,6 @@ export function AIAssistantWidget() {
             {/* Chat Window */}
             {isOpen && (
                 <div className="flex flex-col bg-gray-950 border border-gray-800 shadow-[0_0_40px_rgba(16,185,129,0.15)] rounded-2xl w-[380px] h-[600px] max-h-[80vh] max-w-[calc(100vw-32px)] mb-4 overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
-
                     {/* Header */}
                     <div className="bg-gray-900 border-b border-gray-800 p-4 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-3">
@@ -74,7 +108,7 @@ export function AIAssistantWidget() {
                             </div>
                         )}
 
-                        {messages.map((m: UIMessage) => (
+                        {messages.map((m) => (
                             <div
                                 key={m.id}
                                 className={clsx(
