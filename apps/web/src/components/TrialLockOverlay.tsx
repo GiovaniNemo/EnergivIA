@@ -221,11 +221,6 @@ export function TrialLockOverlay() {
                   >
                     <PaymentWrapper planId={plan.id} planName={plan.name} />
                   </div>
-
-                  <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-gray-500">
-                    <LockKeyhole className="w-3.5 h-3.5" />
-                    <span>Pagamento 100% seguro via Stripe.</span>
-                  </div>
                 </div>
               </div>
             );
