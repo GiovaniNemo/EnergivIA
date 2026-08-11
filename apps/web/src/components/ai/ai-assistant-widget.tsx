@@ -9,12 +9,27 @@ export function AIAssistantWidget() {
     const [isOpen, setIsOpen] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+    const [input, setInput] = useState("");
+    const { messages, status, sendMessage } = useChat({
         api: "/api/chat",
         onError: (error: Error) => {
             console.error("Error in AI chat:", error);
         }
     });
+
+    const isLoading = status === "submitted" || status === "streaming";
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setInput(e.target.value);
+    };
+
+    const handleSubmit = (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!input.trim() || isLoading) return;
+        // Na nova versão do SDK, a função de envio foi renomeada para sendMessage
+        sendMessage({ content: input, role: "user" } as any);
+        setInput("");
+    };
 
     // Auto-scroll to bottom
     useEffect(() => {
