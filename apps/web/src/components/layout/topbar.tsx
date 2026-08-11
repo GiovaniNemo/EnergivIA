@@ -5,7 +5,7 @@ import { useTheme } from "@/components/providers/theme-provider";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, LogOut, Menu, UserRound, Sparkles } from "lucide-react";
+import { Moon, Sun, LogOut, Menu, UserRound, Sparkles, Timer } from "lucide-react";
 import { useSidebar } from "@/components/layout/sidebar-inset";
 import { OrganizationSwitcher } from "@/components/layout/organization-switcher";
 import { NotificationsBell } from "@/components/layout/notifications-bell";
@@ -170,15 +170,16 @@ export function Topbar() {
       </div>
 
       <div className="flex shrink-0 items-center gap-1 px-3 md:gap-2">
-        <div
-          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-100 text-orange-800 text-xs font-semibold rounded-lg border border-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-900/50"
-          title="Dias restantes do teste grátis"
+        <Link
+          href="/gestao/meus-planos"
+          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-100 text-orange-800 text-xs font-semibold rounded-lg border border-orange-200 transition-colors hover:bg-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-900/50 dark:hover:bg-orange-900/60"
+          title="Teste grátis"
         >
-          <span>{trialDaysLeft}</span>
-          <span className="font-medium opacity-80">
-            {trialDaysLeft === 1 ? "dia gratuito" : "dias gratuitos"}
+          <Timer className="h-4 w-4" />
+          <span>
+            {trialDaysLeft} {trialDaysLeft === 1 ? "dia restante" : "dias restantes"}
           </span>
-        </div>
+        </Link>
         <a href="/chat" className="hidden sm:block">
           <button
             type="button"
