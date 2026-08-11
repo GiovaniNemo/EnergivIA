@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
@@ -20,12 +20,14 @@ import { DataGrid, type GridColDef, type GridRenderCellParams } from "@mui/x-dat
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import {
   fetchProducts,
   fetchBrands,
   fetchCategories,
   updateProduct,
+  deleteProduct,
   type Product,
   type QueryProductsParams,
 } from "@/lib/admin-api";
@@ -84,6 +86,13 @@ export default function AdminProductsPage(): JSX.Element {
 
   const deactivateMutation = useMutation({
     mutationFn: ({ id }: { id: string }) => updateProduct(id, { active: false }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: ({ id }: { id: string }) => deleteProduct(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
     },
@@ -150,7 +159,7 @@ export default function AdminProductsPage(): JSX.Element {
             >
               <EditIcon fontSize="small" />
             </IconButton>
-            {cellParams.row.active && (
+            {cellParams.row.active ? (
               <IconButton
                 size="small"
                 onClick={() => deactivateMutation.mutate({ id: cellParams.row.id })}
@@ -158,7 +167,21 @@ export default function AdminProductsPage(): JSX.Element {
               >
                 <VisibilityOffIcon fontSize="small" />
               </IconButton>
-            )}
+            ) : null}
+            <IconButton
+              size="small"
+              onClick={() => {
+                if (
+                  window.confirm("Tem certeza que deseja excluir permanentemente este produto?")
+                ) {
+                  deleteMutation.mutate({ id: cellParams.row.id });
+                }
+              }}
+              color="error"
+              aria-label="Excluir"
+            >
+              <DeleteOutlineIcon fontSize="small" />
+            </IconButton>
           </Box>
         ),
       },
@@ -173,6 +196,21 @@ export default function AdminProductsPage(): JSX.Element {
       page: 1,
     }));
   };
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setParams((prev) => {
+        const newSearch = searchInput.trim() || undefined;
+        if (prev.search === newSearch) return prev;
+        return {
+          ...prev,
+          search: newSearch,
+          page: 1,
+        };
+      });
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
 
   return (
     <Box>
@@ -289,6 +327,7 @@ export default function AdminProductsPage(): JSX.Element {
                 pageSize: model.pageSize,
               }))
             }
+            onRowDoubleClick={(params) => router.push(`/admin/produtos/${params.row.id}`)}
             pageSizeOptions={[10, 25, 50]}
             disableRowSelectionOnClick
             getRowId={(row) => row.id}

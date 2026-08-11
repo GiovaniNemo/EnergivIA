@@ -199,6 +199,14 @@ export async function updateProduct(
   return res.json();
 }
 
+export async function deleteProduct(id: string): Promise<void> {
+  const res = await fetch(`${getApiUrl()}/products/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message ?? "Falha ao excluir produto.");
+  }
+}
+
 export type UploadFolder = "products" | "brands" | "distributors" | "datasheets";
 
 export async function createPresignedUploadUrl(data: {
