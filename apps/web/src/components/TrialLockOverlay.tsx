@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useOrganization } from "./providers/organization-provider";
 import PaymentWrapper from "./PaymentForm";
-import { Rocket, Gem, CheckCircle2, LockKeyhole, TrendingUp } from "lucide-react";
+import { Rocket, Gem, CheckCircle2, LockKeyhole, TrendingUp, LogOut } from "lucide-react";
 
 interface Plan {
   id: string;
@@ -69,6 +69,14 @@ export function TrialLockOverlay() {
       {/* Background glow effects */}
       <div className="pointer-events-none fixed left-1/4 top-1/4 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/20 blur-[128px]" />
       <div className="pointer-events-none fixed right-1/4 top-1/2 h-96 w-96 translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-500/10 blur-[128px]" />
+
+      <a
+        href="/auth/logout"
+        className="absolute top-6 right-6 lg:top-8 lg:right-8 z-50 flex items-center gap-2 text-gray-400 hover:text-white bg-gray-900/50 hover:bg-gray-800 backdrop-blur-sm border border-gray-800 rounded-full px-4 py-2 text-sm font-medium transition-all"
+      >
+        <LogOut className="w-4 h-4" />
+        Sair da conta
+      </a>
 
       <div className="relative w-full max-w-5xl rounded-3xl p-6 lg:p-12 mt-12 md:mt-0">
         <div className="text-center mb-12">
