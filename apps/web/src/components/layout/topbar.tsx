@@ -136,7 +136,7 @@ export function Topbar() {
 
   return (
     <header className="sticky top-0 z-[60] flex h-14 shrink-0 items-center border-b border-[var(--color-border)] bg-[var(--color-card)]">
-      {}
+      { }
       <div className="hidden w-[18rem] shrink-0 items-center px-4 md:flex">
         <Link href="/painel" className="flex min-w-0 items-center">
           <Image
@@ -150,7 +150,7 @@ export function Topbar() {
         </Link>
       </div>
 
-      {}
+      { }
       <div className="flex min-w-0 flex-1 items-center gap-2 px-4">
         {isMobile ? (
           <Button
@@ -180,16 +180,15 @@ export function Topbar() {
             {trialDaysLeft} {trialDaysLeft === 1 ? "dia restante" : "dias restantes"}
           </span>
         </Link>
-        <a href="/chat" className="hidden sm:block">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-gradient-to-br from-violet-50 to-blue-50 px-2.5 py-1.5 text-xs font-semibold text-violet-600 transition-colors hover:from-violet-100 hover:to-blue-100 dark:border-violet-800 dark:from-violet-950/40 dark:to-blue-950/40 dark:text-violet-400"
-            title="Abrir assistente IA"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            IA
-          </button>
-        </a>
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent("toggle-ai-chat"))}
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-gradient-to-br from-violet-50 to-blue-50 px-2.5 py-1.5 text-xs font-semibold text-violet-600 transition-colors hover:from-violet-100 hover:to-blue-100 dark:border-violet-800 dark:from-violet-950/40 dark:to-blue-950/40 dark:text-violet-400"
+          title="Abrir assistente IA"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          IA
+        </button>
         <NotificationsBell />
         <Button
           variant="ghost"

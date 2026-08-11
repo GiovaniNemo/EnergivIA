@@ -73,6 +73,13 @@ export function AIAssistantWidget() {
         }
     }, [messages]);
 
+    // Handle toggle event from topbar
+    useEffect(() => {
+        const handleToggle = () => setIsOpen((prev) => !prev);
+        window.addEventListener("toggle-ai-chat", handleToggle);
+        return () => window.removeEventListener("toggle-ai-chat", handleToggle);
+    }, []);
+
     return (
         <div className="fixed flex flex-col items-end bottom-6 right-6 z-[9999]">
             {/* Chat Window */}
