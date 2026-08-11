@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useOrganization } from "./providers/organization-provider";
 import PaymentWrapper from "./PaymentForm";
-import { Rocket, Gem, CheckCircle2, LockKeyhole } from "lucide-react";
+import { Rocket, Gem, CheckCircle2, LockKeyhole, TrendingUp } from "lucide-react";
 
 interface Plan {
   id: string;
@@ -202,7 +202,7 @@ export function TrialLockOverlay() {
 
                 {isHighlighted && (
                   <div className="bg-yellow-500/5 border border-yellow-500/10 rounded-xl p-4 mb-6 flex items-start gap-3">
-                    <span className="text-yellow-500 text-lg">📈</span>
+                    <TrendingUp className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                     <p className="text-sm text-yellow-200/80 leading-relaxed">
                       Tenha uma gestão completa do seu negócio e escale seus resultados com
                       eficiência.
