@@ -107,10 +107,15 @@ function UserMenu(): JSX.Element {
 export function Topbar() {
   const { resolvedTheme, setTheme } = useTheme();
   const { user } = useUser();
-  const { user: profile } = useOrganization();
+  const { user: profile, currentOrganization } = useOrganization();
   const { setOpen } = useSidebar();
   const isMobile = useIsMobile();
   const searchHandleRef = useRef<GlobalSearchHandle | null>(null);
+
+  const createdAt = currentOrganization?.createdAt ? new Date(currentOrganization.createdAt) : null;
+  const trialDaysLeft = createdAt
+    ? Math.max(0, 7 - Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)))
+    : 7;
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -165,6 +170,15 @@ export function Topbar() {
       </div>
 
       <div className="flex shrink-0 items-center gap-1 px-3 md:gap-2">
+        <div
+          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-100 text-orange-800 text-xs font-semibold rounded-lg border border-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-900/50"
+          title="Dias restantes do teste grátis"
+        >
+          <span>{trialDaysLeft}</span>
+          <span className="font-medium opacity-80">
+            {trialDaysLeft === 1 ? "dia gratuito" : "dias gratuitos"}
+          </span>
+        </div>
         <a href="/chat" className="hidden sm:block">
           <button
             type="button"
