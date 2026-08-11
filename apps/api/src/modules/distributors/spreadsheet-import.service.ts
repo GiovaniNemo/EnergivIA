@@ -6,7 +6,7 @@ import * as xlsx from 'xlsx';
 export class SpreadsheetImportService {
   private readonly logger = new Logger(SpreadsheetImportService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async importSpreadsheet(distributorId: string, fileBuffer: Buffer) {
     this.logger.log(`Iniciando importação de planilha para distribuidor: ${distributorId}`);
@@ -14,20 +14,20 @@ export class SpreadsheetImportService {
     // Ler o buffer usando xlsx
     const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
-    
+
     if (!sheetName) {
       throw new Error('Nenhuma aba encontrada na planilha.');
     }
 
     const sheet = workbook.Sheets[sheetName];
-    
+
     if (!sheet) {
       throw new Error('Aba não encontrada ou inválida na planilha.');
     }
 
     // Converter aba para JSON (array de arrays)
     const rows = xlsx.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
-    
+
     if (rows.length < 2) {
       throw new Error('Planilha vazia ou sem dados válidos.');
     }
@@ -40,17 +40,17 @@ export class SpreadsheetImportService {
     for (let r = 0; r < Math.min(rows.length, 20); r++) {
       const row = rows[r] as unknown[];
       if (!row) continue;
-      
+
       let tempCod = -1, tempProd = -1, tempMarca = -1, tempPreco = -1;
-      
+
       for (let i = 0; i < row.length; i++) {
         const h = normalizeStr(row[i]);
         if (h === 'cod' || h === 'código' || h === 'codigo') tempCod = i;
-        if (h.includes('produto') || h.includes('descri')) tempProd = i;
+        if (h.includes('produto') || h.includes('descri') || h.includes('modelo')) tempProd = i;
         if (h.includes('marca')) tempMarca = i;
         if (h.includes('preço') || h.includes('preco') || h.includes('valor')) tempPreco = i;
       }
-      
+
       // Se achou pelo menos PRODUTO, consideramos como a linha de cabeçalho
       if (tempProd !== -1) {
         headerRowIndex = r;
@@ -79,13 +79,13 @@ export class SpreadsheetImportService {
     for (let r = headerRowIndex + 1; r < rows.length; r++) {
       const row = rows[r] as unknown[];
       if (!row || !row[produtoIndex]) {
-        if (!skippedReason) skippedReason = `Linha ${r+1}: Coluna PRODUTO vazia.`;
+        if (!skippedReason) skippedReason = `Linha ${r + 1}: Coluna PRODUTO vazia.`;
         continue;
       }
 
       const produtoStr = String(row[produtoIndex]).trim();
       if (!produtoStr) {
-        if (!skippedReason) skippedReason = `Linha ${r+1}: PRODUTO vazio.`;
+        if (!skippedReason) skippedReason = `Linha ${r + 1}: PRODUTO vazio.`;
         continue;
       }
 
@@ -127,10 +127,10 @@ export class SpreadsheetImportService {
       } else if (typeof precoRaw === 'string') {
         price = parseFloat(precoRaw.replace(/\./g, '').replace(',', '.'));
       }
-      
+
       if (isNaN(price) || price <= 0) {
-         if (!skippedReason) skippedReason = `Linha ${r+1} (${produtoStr}): Preço inválido (${precoRaw}).`;
-         continue; // Ignorar itens sem preço válido
+        if (!skippedReason) skippedReason = `Linha ${r + 1} (${produtoStr}): Preço inválido (${precoRaw}).`;
+        continue; // Ignorar itens sem preço válido
       }
 
       // 3. Inferir Categoria
@@ -144,7 +144,7 @@ export class SpreadsheetImportService {
       else if (prodLower.includes('estrutura')) catName = 'structure_kit';
 
       // --- Operações de Banco ---
-      
+
       // Upsert Marca
       let brand = await this.prisma.brand.findFirst({
         where: { name: { equals: marcaStr, mode: 'insensitive' } },

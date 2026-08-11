@@ -65,6 +65,6 @@ export class ImageIngestService {
 
   private async buildFileUrl(key: string): Promise<string> {
     if (this.cdnBaseUrl) return `${this.cdnBaseUrl}/${key}`;
-    return createS3GetUrl(this.s3, this.bucketName, key);
+    return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
   }
 }

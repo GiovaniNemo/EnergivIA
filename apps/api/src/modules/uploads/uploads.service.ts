@@ -39,13 +39,13 @@ export class UploadsService {
     const allowedByFolder =
       dto.folder === "financing_documents" || dto.folder === "datasheets"
         ? {
-            set: ALLOWED_DOCUMENT_CONTENT_TYPES,
-            message: "Tipo de arquivo não suportado. Permitidos: pdf, jpg, jpeg, png, webp.",
-          }
+          set: ALLOWED_DOCUMENT_CONTENT_TYPES,
+          message: "Tipo de arquivo não suportado. Permitidos: pdf, jpg, jpeg, png, webp.",
+        }
         : {
-            set: ALLOWED_IMAGE_CONTENT_TYPES,
-            message: "Tipo de arquivo não suportado. Permitidos: jpg, jpeg, png, webp.",
-          };
+          set: ALLOWED_IMAGE_CONTENT_TYPES,
+          message: "Tipo de arquivo não suportado. Permitidos: jpg, jpeg, png, webp.",
+        };
     if (!allowedByFolder.set.has(dto.contentType.toLowerCase())) {
       throw new BadRequestException(allowedByFolder.message);
     }
@@ -72,6 +72,9 @@ export class UploadsService {
     if (this.cdnBaseUrl) {
       return `${this.cdnBaseUrl}/${key}`;
     }
-    return createS3GetUrl(this.s3, this.bucketName, key);
+
+    // Always return a permanent URL instead of an expiring presigned GET URL
+    // because these URLs are saved to the database.
+    return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
   }
 }

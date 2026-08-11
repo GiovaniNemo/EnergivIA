@@ -132,7 +132,7 @@ export class EnergyBillsService {
       ContentType: ct,
     });
     const uploadUrl = await getSignedUrl(this.s3, command, presignedPutObjectUrlOptions(60 * 5));
-    const fileUrl = await createS3GetUrl(this.s3, this.bucketName, key);
+    const fileUrl = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
 
     return { uploadUrl, fileUrl, key };
   }

@@ -21,20 +21,6 @@ export function TrialLockOverlay() {
     if (user?.isTrialLocked) {
       document.body.style.overflow = "hidden";
 
-      const style = document.createElement("style");
-      style.id = "hide-chatbase-style";
-      style.innerHTML = `
-        #chatbase-bubble-button,
-        #chatbase-bubble-window,
-        iframe[src*="chatbase.co"] {
-          display: none !important;
-          opacity: 0 !important;
-          pointer-events: none !important;
-          z-index: -1 !important;
-        }
-      `;
-      document.head.appendChild(style);
-
       const fetchPlans = async () => {
         try {
           const response = await fetch("/api/proxy/plans");
@@ -49,14 +35,10 @@ export function TrialLockOverlay() {
       fetchPlans();
     } else {
       document.body.style.overflow = "auto";
-      const styleEl = document.getElementById("hide-chatbase-style");
-      if (styleEl) styleEl.remove();
     }
 
     return () => {
       document.body.style.overflow = "auto";
-      const styleEl = document.getElementById("hide-chatbase-style");
-      if (styleEl) styleEl.remove();
     };
   }, [user?.isTrialLocked]);
 
@@ -221,11 +203,10 @@ export function TrialLockOverlay() {
                 <div className="mt-auto">
                   {/* Container to wrapper the PaymentForm button to inherit styles visually */}
                   <div
-                    className={`[&_button]:w-full [&_button]:py-3.5 [&_button]:rounded-xl [&_button]:text-base [&_button]:font-bold [&_button]:shadow-lg [&_button]:transition-all [&_button:hover]:scale-[1.02] ${
-                      isHighlighted
+                    className={`[&_button]:w-full [&_button]:py-3.5 [&_button]:rounded-xl [&_button]:text-base [&_button]:font-bold [&_button]:shadow-lg [&_button]:transition-all [&_button:hover]:scale-[1.02] ${isHighlighted
                         ? "[&_button]:bg-gradient-to-r [&_button]:from-yellow-400 [&_button]:to-amber-500 [&_button]:text-yellow-950 [&_button:hover]:shadow-yellow-500/25"
                         : "[&_button]:bg-emerald-500 [&_button]:text-white [&_button:hover]:bg-emerald-400 [&_button:hover]:shadow-emerald-500/25"
-                    }`}
+                      }`}
                   >
                     <PaymentWrapper planId={plan.id} planName={plan.name} />
                   </div>

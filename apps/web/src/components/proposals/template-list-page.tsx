@@ -26,7 +26,7 @@ import {
   TEMPLATE_THUMBNAIL_DATA_URL_KEY,
 } from "@/lib/proposal-document-to-template-config";
 import { createScratchProposalDocument } from "@/components/proposals/scratch-template-document";
-import { DEFAULT_PROPOSAL_TEMPLATE_CONFIG } from "@energivia/shared-types";
+
 
 function getStatusLabel(status: "DRAFT" | "PUBLISHED" | "ARCHIVED"): string {
   if (status === "DRAFT") return "Ativo";
@@ -56,6 +56,15 @@ function getTemplateThumbnail(template: ProposalTemplateEntity): string | undefi
   return undefined;
 }
 
+import { useQuery } from "@tanstack/react-query";
+import { ImportTemplateModal } from "./editor/import-template-modal";
+import { BUILTIN_TEMPLATE_PRESETS } from "./editor/utils";
+import {
+  getTemplateBlueprint,
+  listPublishedTemplateBlueprints,
+} from "@/lib/template-blueprints-api";
+import type { ProposalDocumentJson } from "./editor/types";
+
 export function TemplateListPage(): JSX.Element {
   const router = useRouter();
   const { currentOrganizationId } = useOrganization();
@@ -63,8 +72,20 @@ export function TemplateListPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [catalogImportingId, setCatalogImportingId] = useState<string | null>(null);
   const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  const {
+    data: catalogBlueprints = [],
+    isLoading: catalogBlueprintsLoading,
+    error: catalogBlueprintsError,
+  } = useQuery({
+    queryKey: ["published-template-blueprints", currentOrganizationId],
+    queryFn: () => listPublishedTemplateBlueprints(currentOrganizationId!),
+    enabled: importOpen && Boolean(currentOrganizationId),
+  });
 
   useEffect(() => {
     if (!currentOrganizationId) return;
@@ -84,32 +105,67 @@ export function TemplateListPage(): JSX.Element {
 
   async function handleCreateTemplateChoice(mode: "preset" | "scratch") {
     if (!currentOrganizationId || creating) return;
+    if (mode === "preset") {
+      setCreateDialogOpen(false);
+      setImportOpen(true);
+      return;
+    }
+
     try {
       setCreating(true);
       setError("");
       setCreateDialogOpen(false);
-      const config =
-        mode === "scratch"
-          ? proposalDocumentJsonToTemplateConfig(createScratchProposalDocument())
-          : DEFAULT_PROPOSAL_TEMPLATE_CONFIG;
-      const descriptions: Record<typeof mode, string> = {
-        preset: "Escolha um modelo pré-definido ou do catálogo na janela de importação.",
-        scratch: "Estrutura inicial mínima para montar o template do zero no editor.",
-      };
+      const config = proposalDocumentJsonToTemplateConfig(createScratchProposalDocument());
       const created = await createProposalTemplate(
         {
           name: "Novo template",
-          description: descriptions[mode],
+          description: "Estrutura inicial mínima para montar o template do zero no editor.",
           config,
         },
         currentOrganizationId
       );
-      const query = mode === "preset" ? "?novo=modelo" : "";
-      router.push(`/proposals/templates/${created.id}${query}`);
+      router.push(`/proposals/templates/${created.id}`);
     } catch {
       setError("Nao foi possivel criar o template.");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleImportConfig(payload: ProposalDocumentJson, name: string) {
+    if (!currentOrganizationId) return;
+    try {
+      setCreating(true);
+      setError("");
+      const config = proposalDocumentJsonToTemplateConfig(payload);
+      const created = await createProposalTemplate(
+        {
+          name,
+          description: "Template carregado a partir de modelo.",
+          config,
+        },
+        currentOrganizationId
+      );
+      setImportOpen(false);
+      setTemplates((prev) => [created, ...prev]);
+      router.push(`/proposals/templates/${created.id}`);
+    } catch {
+      setError("Nao foi possivel carregar o modelo.");
+    } finally {
+      setCreating(false);
+      setCatalogImportingId(null);
+    }
+  }
+
+  async function handleImportCatalogBlueprint(blueprintId: string) {
+    if (!currentOrganizationId) return;
+    setCatalogImportingId(blueprintId);
+    try {
+      const detail = await getTemplateBlueprint(blueprintId, currentOrganizationId);
+      await handleImportConfig(detail.document, detail.name);
+    } catch {
+      setError("Nao foi possivel baixar o modelo do catálogo.");
+      setCatalogImportingId(null);
     }
   }
 
@@ -148,6 +204,22 @@ export function TemplateListPage(): JSX.Element {
           {creating ? "Criando..." : "Novo template"}
         </Button>
       </header>
+
+      {importOpen && (
+        <ImportTemplateModal
+          onClose={() => setImportOpen(false)}
+          catalogItems={catalogBlueprints}
+          catalogLoading={catalogBlueprintsLoading}
+          catalogError={
+            catalogBlueprintsError instanceof Error ? catalogBlueprintsError.message : null
+          }
+          catalogImportingId={catalogImportingId}
+          onImportCatalog={handleImportCatalogBlueprint}
+          presets={BUILTIN_TEMPLATE_PRESETS}
+          savedTemplates={[]}
+          onImport={handleImportConfig}
+        />
+      )}
 
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent
