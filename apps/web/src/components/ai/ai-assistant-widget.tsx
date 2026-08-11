@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { useChat, Message } from "@ai-sdk/react";
+import { useChat, UIMessage } from "@ai-sdk/react";
 import { Bot, X, Send, ImageIcon } from "lucide-react";
 import clsx from "clsx";
 
@@ -59,7 +59,7 @@ export function AIAssistantWidget() {
                             </div>
                         )}
 
-                        {messages.map((m: Message) => (
+                        {messages.map((m: UIMessage) => (
                             <div
                                 key={m.id}
                                 className={clsx(
