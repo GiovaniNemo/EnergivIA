@@ -164,7 +164,16 @@ export function AIAssistantWidget() {
                                     )}
                                 >
                                     {m.imageUrl && (
-                                        <img src={m.imageUrl} alt="Anexo" className="w-full max-h-48 object-cover rounded-lg mb-2" />
+                                        m.imageUrl.startsWith("data:application/pdf") ? (
+                                            <div className="flex items-center gap-2 bg-emerald-700/50 p-2 rounded-lg mb-2">
+                                                <div className="w-8 h-8 flex items-center justify-center bg-emerald-600 rounded">
+                                                    <span className="text-[10px] font-bold text-white">PDF</span>
+                                                </div>
+                                                <span className="text-xs text-emerald-100 font-medium">Documento Anexado</span>
+                                            </div>
+                                        ) : (
+                                            <img src={m.imageUrl} alt="Anexo" className="w-full max-h-48 object-cover rounded-lg mb-2" />
+                                        )
                                     )}
                                     {m.content}
                                 </div>
@@ -187,7 +196,13 @@ export function AIAssistantWidget() {
                     <div className="p-4 bg-gray-900 border-t border-gray-800 shrink-0">
                         {selectedImage && (
                             <div className="mb-3 relative inline-block">
-                                <img src={selectedImage} alt="Preview" className="h-16 rounded border border-gray-700" />
+                                {selectedImage.startsWith("data:application/pdf") ? (
+                                    <div className="flex items-center justify-center w-16 h-16 bg-gray-800 rounded border border-gray-700">
+                                        <span className="text-xs font-bold text-gray-400">PDF</span>
+                                    </div>
+                                ) : (
+                                    <img src={selectedImage} alt="Preview" className="h-16 rounded border border-gray-700" />
+                                )}
                                 <button
                                     onClick={removeImage}
                                     className="absolute -top-2 -right-2 bg-gray-800 rounded-full p-0.5 shadow hover:bg-gray-700"
@@ -202,7 +217,7 @@ export function AIAssistantWidget() {
                         >
                             <input
                                 type="file"
-                                accept="image/jpeg,image/png,image/webp"
+                                accept="image/jpeg,image/png,image/webp,.pdf,application/pdf"
                                 className="hidden"
                                 ref={fileInputRef}
                                 onChange={handleImageSelect}

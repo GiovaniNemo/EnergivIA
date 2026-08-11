@@ -353,6 +353,9 @@ importers:
       pdf-lib:
         specifier: 1.17.1
         version: 1.17.1
+      pdf-parse:
+        specifier: ^1.1.4
+        version: 1.1.4
       pdfjs-dist:
         specifier: 4.8.69
         version: 4.8.69
@@ -393,6 +396,9 @@ importers:
       '@types/node':
         specifier: ^22.10.2
         version: 22.19.13
+      '@types/pdf-parse':
+        specifier: ^1.1.5
+        version: 1.1.5
       '@types/react':
         specifier: ^18.3.12
         version: 18.3.28
