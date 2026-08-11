@@ -28,8 +28,8 @@ export class TrialLockGuard implements CanActivate {
     const user = request.user;
     if (!user) return true; // Handled by auth guard
 
-    if (user.role === "ADMIN") {
-      return true; // Admins bypass trial lock
+    if (user.role === "ADMIN" || user.role === "OWNER") {
+      return true; // Admins and Owners bypass trial lock
     }
 
     if (!user.tenantId) {
