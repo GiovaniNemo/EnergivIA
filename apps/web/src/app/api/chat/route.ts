@@ -58,9 +58,9 @@ Se o usuário pedir para dimensionar e não passar informações suficientes (co
                 "Cache-Control": "no-cache",
             },
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Erro na API de Chat:', error);
-        return new Response(JSON.stringify({ error: 'Falha na comunicação com a IA' }), {
+        return new Response(JSON.stringify({ error: error?.message || 'Falha na comunicação com a IA' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
         });

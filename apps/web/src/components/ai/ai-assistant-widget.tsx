@@ -64,7 +64,10 @@ export function AIAssistantWidget() {
                 body: JSON.stringify({ messages: newMessages })
             });
 
-            if (!res.ok) throw new Error("API falhou");
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.error || `Status ${res.status}`);
+            }
             if (!res.body) throw new Error("Sem Reader");
 
             const reader = res.body.getReader();
@@ -84,8 +87,12 @@ export function AIAssistantWidget() {
                     prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m)
                 );
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
+            setMessages((prev) => [
+                ...prev,
+                { id: Date.now().toString(), role: "assistant", content: `❌ Erro de comunicação: ${error.message}` }
+            ]);
         } finally {
             setIsLoading(false);
         }
@@ -195,7 +202,7 @@ export function AIAssistantWidget() {
                         >
                             <input
                                 type="file"
-                                accept="image/*,.pdf"
+                                accept="image/jpeg,image/png,image/webp"
                                 className="hidden"
                                 ref={fileInputRef}
                                 onChange={handleImageSelect}
