@@ -33,8 +33,13 @@ export function Sidebar(): JSX.Element {
   const isMobile = useIsMobile();
   const collapsed = !open && !isMobile;
   const showDrawer = isMobile && open;
-  const { user } = useOrganization();
+  const { user, currentOrganization } = useOrganization();
   const userRole = user?.role ?? null;
+
+  const createdAt = currentOrganization?.createdAt ? new Date(currentOrganization.createdAt) : null;
+  const trialDaysLeft = createdAt
+    ? Math.max(0, 7 - Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)))
+    : 7;
 
   const [surface, setSurface] = useState<Surface>("all");
   useEffect(() => {
@@ -61,6 +66,14 @@ export function Sidebar(): JSX.Element {
           )
             return false;
           return true;
+        }).map((item) => {
+          if (item.label === "Meus Planos") {
+            return {
+              ...item,
+              badge: `${trialDaysLeft} ${trialDaysLeft === 1 ? "DIA" : "DIAS"}`,
+            };
+          }
+          return item;
         }),
       }))
       .filter((section) => section.items.length > 0);
