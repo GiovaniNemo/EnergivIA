@@ -8,6 +8,7 @@ type Message = {
     id: string;
     role: "user" | "assistant";
     content: string;
+    imageUrl?: string;
 };
 
 export function AIAssistantWidget() {
@@ -17,19 +18,43 @@ export function AIAssistantWidget() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setInput(e.target.value);
     };
 
+    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setSelectedImage(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const removeImage = () => {
+        setSelectedImage(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
     const handleSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault();
-        if (!input.trim() || isLoading) return;
+        if ((!input.trim() && !selectedImage) || isLoading) return;
 
-        const userMsg: Message = { id: Date.now().toString(), role: "user", content: input.trim() };
+        const userMsg: Message = {
+            id: Date.now().toString(),
+            role: "user",
+            content: input.trim(),
+            imageUrl: selectedImage || undefined
+        };
         const newMessages = [...messages, userMsg];
         setMessages(newMessages);
         setInput("");
+        removeImage();
         setIsLoading(true);
 
         try {
@@ -131,6 +156,9 @@ export function AIAssistantWidget() {
                                             : "bg-gray-900 text-gray-200 rounded-bl-none border border-gray-800"
                                     )}
                                 >
+                                    {m.imageUrl && (
+                                        <img src={m.imageUrl} alt="Anexo" className="w-full max-h-48 object-cover rounded-lg mb-2" />
+                                    )}
                                     {m.content}
                                 </div>
                             </div>
@@ -150,12 +178,31 @@ export function AIAssistantWidget() {
 
                     {/* Input Area */}
                     <div className="p-4 bg-gray-900 border-t border-gray-800 shrink-0">
+                        {selectedImage && (
+                            <div className="mb-3 relative inline-block">
+                                <img src={selectedImage} alt="Preview" className="h-16 rounded border border-gray-700" />
+                                <button
+                                    onClick={removeImage}
+                                    className="absolute -top-2 -right-2 bg-gray-800 rounded-full p-0.5 shadow hover:bg-gray-700"
+                                >
+                                    <X className="w-4 h-4 text-white" />
+                                </button>
+                            </div>
+                        )}
                         <form
                             onSubmit={handleSubmit}
                             className="flex items-end gap-2 bg-gray-950 border border-gray-800 rounded-xl p-1.5 focus-within:border-emerald-500/50 transition-colors"
                         >
+                            <input
+                                type="file"
+                                accept="image/*,.pdf"
+                                className="hidden"
+                                ref={fileInputRef}
+                                onChange={handleImageSelect}
+                            />
                             <button
                                 type="button"
+                                onClick={() => fileInputRef.current?.click()}
                                 className="p-2 text-gray-400 hover:text-emerald-400 transition-colors rounded-lg hover:bg-gray-900 shrink-0"
                                 title="Anexar Fatura"
                             >

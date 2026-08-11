@@ -15,9 +15,22 @@ Você é proativa, eficiente, e se comunica com um tom profissional e amigável.
 Sempre seja objetiva nas suas respostas.
 Se o usuário pedir para dimensionar e não passar informações suficientes (como padrão de conexão ou tipo de telhado), você DEVE perguntar antes de prosseguir.`;
 
+        const formattedMessages = messages.map((m: any) => {
+            if (m.imageUrl) {
+                return {
+                    role: m.role,
+                    content: [
+                        { type: "text", text: m.content || "Segue a imagem:" },
+                        { type: "image_url", image_url: { url: m.imageUrl } }
+                    ]
+                };
+            }
+            return { role: m.role, content: m.content };
+        });
+
         const stream = await openai.chat.completions.create({
             model: "gpt-4o",
-            messages: [{ role: "system", content: systemPrompt }, ...messages],
+            messages: [{ role: "system", content: systemPrompt }, ...formattedMessages],
             stream: true,
         });
 
