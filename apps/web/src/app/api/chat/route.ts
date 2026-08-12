@@ -241,16 +241,24 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                         nome: z.string().min(2).describe("Nome real do cliente fornecido no chat"),
                         whatsapp: z.string().min(8).describe("WhatsApp do cliente fornecido no chat")
                     }),
-                    execute: async ({ nome, whatsapp }: any) => {
+                    execute: async (args: any) => {
                         try {
+                            const rawNome = args.nome || args.name || args.Nome || args.Name || "";
+                            const rawWhatsapp = args.whatsapp || args.phone || args.telefone || args.Whatsapp || "";
+
+                            if (!rawNome || !rawWhatsapp || String(rawNome).includes("undefined") || String(rawNome).includes("null")) {
+                                return { error: `Você tentou cadastrar sem o nome real do cliente. Leia todo o histórico da conversa, encontre a mensagem onde o cliente informou o nome dele e chame a ferramenta novamente usando o nome real. (Recebido: ${JSON.stringify(args)})` };
+                            }
+
+                            const nome = String(rawNome).trim();
+                            const whatsapp = String(rawWhatsapp).trim();
                             const session = await auth0.getSession();
                             if (!session) return { error: "Sem sessão do admin." };
                             const result = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
                             const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
-
                             const payload = {
-                                name: String(nome || "Cliente Sem Nome").trim(),
-                                whatsapp: String(whatsapp || "0000000000").trim(),
+                                name: nome,
+                                whatsapp: whatsapp,
                                 source: "Chatbot IA"
                             };
 
