@@ -24,8 +24,9 @@ Quando o usuário pedir para dimensionar, gerar proposta, ou citar consumo (kWh)
    - Cidade e Estado (ex: Maringá, PR).
    - Tipo de telhado/estrutura (cerâmica, fibrocimento, metálico, solo, laje, ou 'sem estrutura').
 2. NUNCA INVENTE DADOS. Se o integrador não passar a cidade ou o telhado, e isso não constar na fatura, pergunte a ele gentilmente o que está faltando.
-3. Se ele informar "sem estrutura", na hora de chamar a ferramenta, mapeie para 'laje' ou 'ceramic' como fallback interno, mas deixe claro que a cotação vai sem perfis.
-4. PROATIVIDADE COM FATURAS: Se o usuário subir uma fatura (imagem ou PDF), não fique descrevendo a fatura pra ele à toa! Leia o consumo, identifique a cidade (se possível) e **inicie imediatamente o fluxo de gerar a proposta/dimensionamento**. Avise "Li sua fatura e vi que o consumo médio é X. Para eu dimensionar o melhor kit, me diga apenas o tipo de telhado e a cidade (caso falte)!"`;
+3. Se ele informar "sem estrutura", deixe claro que a cotação vai sem perfis e mapeie internamente para 'ceramic' ou 'laje'.
+4. PROATIVIDADE COM FATURAS: Se o usuário subir uma fatura (imagem ou PDF), identifique o consumo e a cidade (se possível) e **inicie imediatamente o fluxo de gerar a proposta**. Avise "Li sua fatura e vi que o consumo médio é X. Para eu dimensionar o melhor kit, me diga apenas o tipo de telhado e a cidade (caso falte)!"
+5. CHAMADA DUPLA (OBRIGATÓRIO): Após usar a ferramenta 'dimensionar_kit' e receber a lista de kits, VOCÊ DEVE obrigatoriamente chamar a ferramenta 'consultar_precos_mercado' para o Painel e o Inversor recomendados no "Melhor Custo-Benefício". NUNCA responda o usuário antes de colher os preços de mercado! Quando tiver tudo, apresente o dimensionamento E a lista de distribuidores encontrados.`;
 
         const formattedMessages = await Promise.all(
             messages.map(async (m: any) => {
@@ -66,7 +67,7 @@ Quando o usuário pedir para dimensionar, gerar proposta, ou citar consumo (kWh)
                     parameters: z.object({
                         monthlyConsumption: z.number().describe("O consumo mensal em kWh da fatura ou pedido do cliente. Se o cliente passou kWp, multiplique por 130."),
                         location: z.string().describe("A cidade e estado (ex: 'maringa, pr')."),
-                        roofType: z.enum(['ceramic', 'metal', 'fibromadeira', 'fibrometal', 'ground', 'laje']).describe("O tipo de telhado onde os painéis serão instalados.")
+                        roofType: z.enum(['ceramic', 'metal', 'fibromadeira', 'fibrometal', 'ground', 'laje']).describe("Traduza a palavra do usuário EXATAMENTE para as chaves deste Enum: cerâmica -> 'ceramic', metálico -> 'metal', fibrocimento -> 'fibromadeira', solo -> 'ground', laje -> 'laje'.")
                     }),
                     execute: async ({ monthlyConsumption, location, roofType }: { monthlyConsumption: number, location: string, roofType: 'ceramic' | 'metal' | 'fibromadeira' | 'fibrometal' | 'ground' | 'laje' }) => {
                         const results = generateSolarKits({
@@ -81,7 +82,7 @@ Quando o usuário pedir para dimensionar, gerar proposta, ou citar consumo (kWh)
                     }
                 }),
                 consultar_precos_mercado: tool({
-                    description: "Busca os preços reais de mercado de componentes (módulos, inversores) no banco de distribuidores ATIVOS da EnergivIA. Use essa ferramenta se o usuário perguntar o preço de uma peça específica ou distribuidor.",
+                    description: "Busca preços de distribuidores reais para compor a proposta. OBRIGATÓRIO chamar essa ferramenta após dimensionar_kit.",
                     parameters: z.object({
                         keyword: z.string().describe("O nome da peça ou modelo. Ex: 'Growatt 5kW' ou 'Canadian 550W'.")
                     }),
