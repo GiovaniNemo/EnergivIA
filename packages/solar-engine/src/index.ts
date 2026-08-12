@@ -68,6 +68,7 @@ function roundToHalf(kw: number): number {
 }
 
 function normalizeLocation(location: string): string {
+  if (!location) return "";
   return location
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")

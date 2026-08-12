@@ -98,7 +98,10 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                             else if (roofStr.includes('laje')) mappedRoof = 'laje';
                             else if (roofStr.includes('solo') || roofStr.includes('ground')) mappedRoof = 'ground';
 
-                            const mathResults = generateSolarKits({ monthlyConsumption, location, roofType: mappedRoof });
+                            const safeLocation = location || "São Paulo, SP";
+                            const safeConsumption = monthlyConsumption || 300;
+
+                            const mathResults = generateSolarKits({ monthlyConsumption: safeConsumption, location: safeLocation, roofType: mappedRoof });
                             const target = mathResults.kits[0]; // Usamos o Custo-Benefício como guia matemático
                             if (!target) return { error: "Erro simulando math results." };
                             const targetKWp = parseFloat(target.systemSize.replace('kWp', ''));
