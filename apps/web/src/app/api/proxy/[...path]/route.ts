@@ -15,33 +15,40 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return proxy(request, await params, "POST");
+  const body = await request.arrayBuffer();
+  return proxy(request, await params, "POST", body);
 }
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return proxy(request, await params, "PATCH");
+  const body = await request.arrayBuffer();
+  return proxy(request, await params, "PATCH", body);
 }
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return proxy(request, await params, "PUT");
+  const body = await request.arrayBuffer();
+  return proxy(request, await params, "PUT", body);
 }
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return proxy(request, await params, "DELETE");
+  const body = await request.arrayBuffer();
+  return proxy(request, await params, "DELETE", body);
 }
 
-async function proxy(request: NextRequest, params: { path: string[] }, method: string) {
-  const body = method !== "GET" ? await request.arrayBuffer() : undefined;
-
+async function proxy(
+  request: NextRequest,
+  params: { path: string[] },
+  method: string,
+  body?: ArrayBuffer
+) {
   const session = await auth0.getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
