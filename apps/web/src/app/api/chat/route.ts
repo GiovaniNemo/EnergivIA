@@ -182,6 +182,9 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                 const con = cons[0];
                                 const est = ests[0];
 
+                                // Ignora o `target.modules` estático do pacote mathResults e calcula dinamicamente pela potência do módulo escolhido
+                                const moduleQ = Math.ceil((targetKWp * 1000) / modPowerW);
+
                                 const precoInv = inv.price;
                                 const precoMod = mod.price * moduleQ;
                                 const precoCab = cab ? cab.price : 0;
@@ -190,7 +193,15 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
 
                                 finalQuotes.push({
                                     distribuidora: d.name,
-                                    totalReal: precoInv + precoMod + precoCab + precoCon + precoEst
+                                    totalReal: precoInv + precoMod + precoCab + precoCon + precoEst,
+                                    // A IA precisa lembrar desses itens para o passo 8, mas é orientada a ocultá-los agora
+                                    kit_itens_salvos: [
+                                        `1x Inversor: ${inv.product.name} (R$ ${precoInv})`,
+                                        `${moduleQ}x Módulo: ${mod.product.name} (R$ ${precoMod})`,
+                                        cab ? `1x Cabo: ${cab.product.name} (R$ ${precoCab})` : null,
+                                        con ? `2x Conector: ${con.product.name} (R$ ${precoCon})` : null,
+                                        (includeStructure && est) ? `1x Estrutura: ${est.product.name} (R$ ${precoEst})` : null,
+                                    ].filter(Boolean)
                                 });
                             }
 
