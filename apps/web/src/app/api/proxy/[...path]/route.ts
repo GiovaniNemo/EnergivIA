@@ -15,39 +15,34 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const body = await request.text();
-  return proxy(request, await params, "POST", body);
+  return proxy(request, await params, "POST");
 }
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const body = await request.text();
-  return proxy(request, await params, "PATCH", body);
+  return proxy(request, await params, "PATCH");
 }
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const body = await request.text();
-  return proxy(request, await params, "PUT", body);
+  return proxy(request, await params, "PUT");
 }
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const body = await request.text();
-  return proxy(request, await params, "DELETE", body);
+  return proxy(request, await params, "DELETE");
 }
 
 async function proxy(
   request: NextRequest,
   params: { path: string[] },
-  method: string,
-  body?: string
+  method: string
 ) {
   const session = await auth0.getSession();
   if (!session?.user) {
@@ -108,7 +103,18 @@ async function proxy(
   }
   if (orgId) headers["X-Organization-Id"] = orgId;
 
-  const res = await fetch(url.toString(), { method, headers, body });
+  const fetchOptions: RequestInit = {
+    method,
+    headers,
+  };
+
+  // Next.js (Node fetch) requires duplex: 'half' when streaming request bodies
+  if (method !== "GET" && method !== "HEAD") {
+    fetchOptions.body = request.body;
+    (fetchOptions as any).duplex = "half";
+  }
+
+  const res = await fetch(url.toString(), fetchOptions);
 
   if (isSseStream) {
     const contentType = res.headers.get("Content-Type") ?? "text/event-stream";
