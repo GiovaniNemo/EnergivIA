@@ -13,32 +13,26 @@ export async function POST(req: Request) {
         const { messages } = await req.json();
 
         const systemPrompt = `Você é a assistente inteligente oficial da plataforma EnergivIA. 
-Seu objetivo é guiar o usuário (integrador solar) através de um menu de opções numéricas. Como o fluxo será espelhado no WhatsApp futuramente, **comunique-se primariamente através de menus numerados curtos e objetivos**.
+Seu objetivo é guiar o usuário (integrador solar) através de um fluxo rígido passo-a-passo. Como o fluxo será espelhado no WhatsApp futuramente, **comunique-se primariamente de forma curta, objetiva e formatada**.
 
 INÍCIO DA CONVERSA:
-Sempre que a conversa iniciar ou o usuário saudar (oi, olá, menu), apresente o seguinte menu OBRIGATORIAMENTE nesta formatação exata:
+Sempre apresente o menu:
 "Olá! Sou a assistente da EnergivIA. Como posso te ajudar hoje? (Digite o número da opção)
 1 - Gerar Orçamento / Ler Fatura
 2 - Dúvidas sobre o Sistema"
 
-FLUXO 1 (ORÇAMENTO E FATURAS):
-- Se o usuário digitar "1", pedir para dimensionar, ou enviar um arquivo (PDF/Imagem da fatura), você entra no Fluxo de Orçamento.
-- DADOS OBRIGATÓRIOS PARA ORÇAMENTO:
-   1. Consumo mensal (kWh) ou Potência (kWp) - se kwp, multiplique por 130 para achar kWh.
-   2. Cidade e Estado (ex: Maringá, PR).
-   3. Tipo de telhado/estrutura (cerâmica, fibrocimento, metálico, solo, laje, ou 'sem estrutura').
-- QUANDO RECEBER UMA FATURA (PDF/IMAGEM):
-   - Extraia IMEDIATAMENTE o "Consumo Mensal" e a "Cidade e Estado" presentes no texto da fatura.
-   - NÃO PERGUNTE A CIDADE/ESTADO se você já encontrou no texto da fatura. Apenas peça o tipo de telhado e confirme o que foi lido.
-   - Se a Cidade/Estado não constar na fatura, peça gentilmente ao usuário.
-- Mapeamento de telhado: Se "sem estrutura", mapeie para 'laje' ou 'ceramic' internamente para a cotação.
-- AO TER OS 3 DADOS: Chame OBRIGATORIAMENTE a ferramenta 'gerar_cotacao_distribuidor'. Nunca dê preços inventados.
-
-FLUXO 2 (DÚVIDAS):
-- Se o usuário digitar "2", responda que você está pronta para tirar dúvidas sobre a plataforma, CRM ou sobre os equipamentos.
+Siga ESTRITAMENTE a seguinte ordem (Os 8 Passos) caso a opção 1 seja escolhida:
+1. O usuário manda o PDF (ou digita 1 e insere os dados).
+2. Extraia imediatamente as informações da fatura: Consumo (kWh) e Cidade/Estado. (Se não achar, pergunte).
+3. Pergunte qual vai ser a estrutura do telhado (cerâmica, fibrocimento, metálico, solo, laje, ou 'sem estrutura').
+4. Ao ter os 3 dados, chame a ferramenta 'gerar_cotacao_distribuidor' para dimensionar.
+5. Apresente os valores de cada distribuidor de forma muito simplificada: Exiba APENAS o nome da distribuidora e o valor total em reais. Não exiba a lista de itens.
+6. Após exibir os valores, PERGUNTE explicitamente qual distribuidora o usuário seleciona.
+7. Quando ele selecionar, inicie o cadastro do cliente final no CRM: Peça Nome, Email, Telefone e Endereço do cliente final.
+8. Ao receber os dados do cliente, confirme que o cliente foi cadastrado no CRM EnergivIA e informe que a "Proposta em PDF / Link com template" foi gerada e será enviada.
 
 REGRA CRÍTICA:
-Você NÃO DEVE dar respostas abertas longas. Conduza o usuário a escolher opções do menu, a fornecer os dados faltantes do orçamento ou chame a ferramenta de cotação.
+Você NÃO DEVE dar respostas abertas longas.
 Se a ferramenta de cotação retornar erro, repasse o erro EXATO para o usuário ("*Falha interna: [erro]*").
 Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar com o sistema EnergivIA.`;
 
@@ -129,7 +123,22 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                 const cons = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('conector'));
                                 const ests = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('estrutura') || JSON.stringify(p).toLowerCase().includes('perfil'));
 
-                                const inv = invs[0];
+                                let bestInv = null;
+                                let minDiff = Infinity;
+                                for (const invObj of invs) {
+                                    const name = invObj.product.name.toUpperCase();
+                                    const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
+                                    if (match) {
+                                        let val = parseFloat(match[1].replace(',', '.'));
+                                        if (match[2] === 'W') val = val / 1000;
+                                        const diff = Math.abs(val - targetKWp);
+                                        if (diff < minDiff) {
+                                            minDiff = diff;
+                                            bestInv = invObj;
+                                        }
+                                    }
+                                }
+                                const inv = bestInv || invs[0];
                                 const mod = mods[0];
                                 const cab = cabs[0];
                                 const con = cons[0];
@@ -147,14 +156,6 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
 
                                 finalQuotes.push({
                                     distribuidora: d.name,
-                                    potenciaFinal: target.systemSize,
-                                    itens: [
-                                        `1x Inversor: ${inv.product.name} (R$ ${precoInv})`,
-                                        `${moduleQ}x Módulo: ${mod.product.name} (R$ ${precoMod})`,
-                                        cab ? `1x Cabo: ${cab.product.name} (R$ ${precoCab})` : null,
-                                        con ? `2x Conector: ${con.product.name} (R$ ${precoCon})` : null,
-                                        (includeStructure && est) ? `1x Estrutura: ${est.product.name} (R$ ${precoEst})` : null,
-                                    ].filter(Boolean),
                                     totalReal: precoInv + precoMod + precoCab + precoCon + precoEst
                                 });
                             }
