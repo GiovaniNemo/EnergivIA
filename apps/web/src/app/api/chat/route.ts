@@ -123,42 +123,45 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                 const cons = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('conector'));
                                 const ests = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('estrutura') || JSON.stringify(p).toLowerCase().includes('perfil'));
 
-                                // 1. Filtrar Módulo com Ficha Técnica
+                                // 1. Módulo
                                 const validMods = mods.filter(m => m.product.specs && m.product.specs.isc && m.product.specs.power_w);
-                                const mod = validMods.length > 0 ? validMods[0] : null;
+                                const mod = validMods.length > 0 ? validMods[0] : mods[0];
                                 
-                                if (!mod) continue; // Pula se não tiver módulo com ficha técnica
+                                if (!mod) continue; // Pula se não tiver nenhum módulo
 
-                                // Assume a potência real do módulo (W) ou usa 550W como fallback
-                                const modPowerW = Number(mod.product.specs.power_w) || 550;
+                                const modPowerW = mod.product.specs ? (Number(mod.product.specs.power_w) || 550) : 550;
                                 const moduleQ = target.modules || Math.ceil((targetKWp * 1000) / modPowerW);
                                 const totalDcPower = modPowerW * moduleQ;
-                                const modIsc = Number(mod.product.specs.isc) || 0;
+                                const modIsc = mod.product.specs ? (Number(mod.product.specs.isc) || 0) : 0;
 
-                                // 2. Buscar Inversor Compatível
+                                // 2. Inversor
                                 let bestInv = null;
                                 let minDiff = Infinity;
 
                                 for (const invObj of invs) {
                                     const specs = invObj.product.specs;
-                                    // Pega só oq tem ficha técnica preenchida
-                                    if (!specs || !specs.max_input_current || !specs.max_dc_power) continue;
+                                    
+                                    // Se tem specs preenchidas, fazemos validação técnica
+                                    if (specs && specs.max_input_current && specs.max_dc_power) {
+                                        const maxInputCurrent = Number(specs.max_input_current);
+                                        const maxDcPower = Number(specs.max_dc_power);
+                                        // Pula apenas se ultrapassar grosseiramente (10% de margem extra no DC Power)
+                                        if (modIsc > maxInputCurrent + 1) continue; 
+                                        if (totalDcPower > maxDcPower * 1.1) continue;
+                                    }
 
-                                    const maxInputCurrent = Number(specs.max_input_current);
-                                    const maxDcPower = Number(specs.max_dc_power);
-
-                                    // Validação Técnica
-                                    if (modIsc > maxInputCurrent) continue;
-                                    if (totalDcPower > maxDcPower) continue;
-
-                                    // Chegar o mais próximo do targetKWp
+                                    // Chegar o mais próximo do targetKWp pelo nome ou spec
                                     const name = invObj.product.name.toUpperCase();
                                     const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
-                                    let invKWp = targetKWp; // fallback pro target original
+                                    let invKWp = null;
                                     
                                     if (match) {
                                         invKWp = parseFloat(match[1].replace(',', '.'));
                                         if (match[2] === 'W') invKWp = invKWp / 1000;
+                                    } else if (specs && specs.max_dc_power) {
+                                        invKWp = Number(specs.max_dc_power) / 1000;
+                                    } else {
+                                        invKWp = 10; // fallback pra não explodir
                                     }
 
                                     const diff = Math.abs(invKWp - targetKWp);
@@ -168,8 +171,8 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                     }
                                 }
 
-                                const inv = bestInv;
-                                if (!inv) continue; // Pula se nenhum inversor for compatível tecnicamente
+                                const inv = bestInv || invs[0];
+                                if (!inv) continue;
 
                                 const cab = cabs[0];
                                 const con = cons[0];
