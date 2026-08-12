@@ -106,11 +106,11 @@ Quando o usuário pedir para dimensionar, gerar proposta, ou citar consumo (kWh)
                                 headers: { "Authorization": `Bearer ${result.token}` }
                             });
                             const pJson = await pRes.json();
-                            if (!pJson.data || pJson.data.length === 0) return { error: "Produto não encontrado no catálogo global." };
+                            if (!pJson.data || pJson.data.length === 0) return { success: true, catalog: [], message: `Produto '${keyword}' não encontrado no catálogo global. Tente uma palavra-chave mais genérica ou curta (apenas a marca).` };
 
                             const offersResult = [];
                             for (const prod of pJson.data) {
-                                const dRes = await fetch(`${baseURL}/products/${prod.id}/distributors`, {
+                                const dRes = await fetch(`${baseURL} /products/${prod.id}/distributors`, {
                                     headers: { "Authorization": `Bearer ${result.token}` }
                                 });
                                 const dJson = await dRes.json();
