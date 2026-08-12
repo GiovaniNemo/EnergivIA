@@ -227,10 +227,10 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                     }
                 }),
                 cadastrar_cliente_crm: tool({
-                    description: "Registra um novo cliente/lead no CRM da plataforma EnergivIA.",
+                    description: "Registra um novo cliente/lead no CRM da plataforma EnergivIA. NUNCA chame essa ferramenta com valores vazios, apenas quando o usuário já tiver fornecido os dados reais.",
                     parameters: z.object({
-                        nome: z.string().describe("Nome do cliente"),
-                        whatsapp: z.string().describe("Telefone ou WhatsApp do cliente")
+                        nome: z.string().min(2).describe("Nome real do cliente fornecido no chat"),
+                        whatsapp: z.string().min(8).describe("WhatsApp do cliente fornecido no chat")
                     }),
                     execute: async ({ nome, whatsapp }: any) => {
                         try {
