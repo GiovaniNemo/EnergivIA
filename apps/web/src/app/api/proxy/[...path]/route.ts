@@ -114,7 +114,16 @@ async function proxy(
     (fetchOptions as any).duplex = "half";
   }
 
-  const res = await fetch(url.toString(), fetchOptions);
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), fetchOptions);
+  } catch (error: any) {
+    console.error("Proxy fetch error:", error);
+    return NextResponse.json(
+      { error: "Proxy Request Failed", details: error.message },
+      { status: 500 }
+    );
+  }
 
   if (isSseStream) {
     const contentType = res.headers.get("Content-Type") ?? "text/event-stream";
@@ -128,6 +137,12 @@ async function proxy(
     return new NextResponse(res.body, { status: res.status, headers: outHeaders });
   }
 
-  const data = await res.json().catch(() => ({}));
-  return NextResponse.json(data, { status: res.status });
+  const outHeaders = new Headers(res.headers);
+  outHeaders.delete("content-encoding");
+  outHeaders.delete("content-length");
+
+  return new NextResponse(res.body, {
+    status: res.status,
+    headers: outHeaders,
+  });
 }
