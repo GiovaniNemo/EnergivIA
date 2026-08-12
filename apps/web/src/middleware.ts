@@ -43,6 +43,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname.startsWith("/api/proxy")) {
+    return NextResponse.next();
+  }
+
   const authResponse = await auth0.middleware(request);
 
   // Se o usuário estiver na raiz e já autenticado, envia para o painel
