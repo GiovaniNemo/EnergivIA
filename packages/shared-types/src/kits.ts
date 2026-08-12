@@ -12,8 +12,6 @@ export interface KitSuggestion {
   citySolarIndexKwhM2Day?: number;
   performanceRatio?: number;
   indexSource?: string;
-  targetKWp?: number;
-  netConsumption?: number;
 }
 
 export interface KitPreferences {
@@ -29,8 +27,6 @@ export interface GenerateSolarKitsInput {
   monthlyConsumption: number;
   location: string;
   roofType: RoofType;
-  history?: number[];
-  connectionType?: string;
   preferences?: KitPreferences;
   pinned_module_id?: string;
   pinned_inverter_id?: string;

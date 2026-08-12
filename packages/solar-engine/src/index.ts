@@ -113,7 +113,6 @@ function inverterName(brand: string, kw: number): string {
 function buildKit(
   label: KitSuggestion["label"],
   sizeKw: number,
-  netConsumption: number,
   moduleBrand: string,
   inverterBrand: string,
   priceMultiplier: number,
@@ -137,49 +136,15 @@ function buildKit(
     citySolarIndexKwhM2Day: citySolarIndex,
     performanceRatio,
     indexSource: "Base interna Energivia (cidade/UF)",
-    targetKWp: sizeKw,
-    netConsumption: netConsumption
   };
 }
 
 export function generateSolarKits(input: GenerateSolarKitsInput): GenerateSolarKitsOutput {
-  const performanceRatio = DEFAULT_PR;
-  
-  // ETAPA 2.A: Tratamento do histórico
-  let cMedio = input.monthlyConsumption;
-  if (input.history && Array.isArray(input.history) && input.history.length > 0) {
-    const validMonths = input.history.filter(h => h > 0);
-    if (validMonths.length > 0) {
-      const sum = validMonths.reduce((acc, val) => acc + val, 0);
-      cMedio = sum / validMonths.length;
-    }
-  }
-
-  // ETAPA 2.B: Custo de Disponibilidade
-  let custoDisponibilidade = 50; // Bifásico por padrão se nada for fornecido
-  if (input.connectionType) {
-    const conn = input.connectionType.toLowerCase();
-    if (conn.includes("mono")) custoDisponibilidade = 30;
-    else if (conn.includes("tri")) custoDisponibilidade = 100;
-  }
-
-  // ETAPA 3.2: Consumo a Compensar
-  const cCompensar = Math.max(0, cMedio - custoDisponibilidade);
-
-  // ETAPA 3.3: Índice HSP
+  const base = calculateBaseSystemKw(input.monthlyConsumption);
+  const roofAdjustedBase = base * ROOF_TYPE_FACTOR[input.roofType];
+  const adjusted = roundToHalf(applyPreferenceFactor(roofAdjustedBase, input.preferences));
   const citySolarIndex = getCitySolarIndex(input.location);
-
-  // ETAPA 3.5: Cálculo da Potência do Sistema (kWp)
-  let pKwp = 0;
-  if (cCompensar > 0) {
-    pKwp = cCompensar / (citySolarIndex * 30 * performanceRatio);
-  }
-
-  // Se P_kWp zerar (consumo muito baixo), fallback para o mínimo (1 painel)
-  if (pKwp <= 0) pKwp = 0.55;
-
-  const roofAdjustedBase = pKwp * ROOF_TYPE_FACTOR[input.roofType];
-  const adjusted = applyPreferenceFactor(roofAdjustedBase, input.preferences);
+  const performanceRatio = DEFAULT_PR;
 
   const moduleBrand = input.preferences?.moduleBrand || DEFAULT_MODULE_BRAND;
   const inverterBrand = input.preferences?.inverterBrand || DEFAULT_INVERTER_BRAND;
@@ -188,7 +153,6 @@ export function generateSolarKits(input: GenerateSolarKitsInput): GenerateSolarK
     buildKit(
       "Melhor Custo-Benefício",
       adjusted,
-      cCompensar,
       moduleBrand,
       inverterBrand,
       1,
@@ -197,8 +161,7 @@ export function generateSolarKits(input: GenerateSolarKitsInput): GenerateSolarK
     ),
     buildKit(
       "Menor Preço",
-      Math.max(0.55, adjusted - 0.5),
-      cCompensar,
+      Math.max(2, adjusted - 0.5),
       input.preferences?.moduleBrand || "JA Solar",
       "Solis",
       0.92,
@@ -208,7 +171,6 @@ export function generateSolarKits(input: GenerateSolarKitsInput): GenerateSolarK
     buildKit(
       "Premium",
       adjusted + 0.5,
-      cCompensar,
       moduleBrand,
       "Fronius",
       1.15,
