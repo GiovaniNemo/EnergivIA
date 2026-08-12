@@ -240,7 +240,7 @@ export function AIAssistantWidget() {
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                         e.preventDefault();
-                                        if (input.trim()) {
+                                        if (input.trim() || selectedImage) {
                                             e.currentTarget.form?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
                                         }
                                     }
@@ -249,7 +249,7 @@ export function AIAssistantWidget() {
 
                             <button
                                 type="submit"
-                                disabled={isLoading || !input.trim()}
+                                disabled={isLoading || (!input.trim() && !selectedImage)}
                                 className="p-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                             >
                                 <Send className="w-4 h-4" />
