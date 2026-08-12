@@ -1241,11 +1241,13 @@ export const ProposalEconomicsModal = forwardRef<
     if (!currentOrganizationId) return;
     setProposalLoading(true);
     setProposalError(null);
+    let currentStep = "Iniciando fluxo";
     try {
       const roof = input.roofType ?? "ceramic";
       let simulationInput: SimulationInput = { ...input, roofType: roof };
       let proposalEstimateNote: string | undefined;
 
+      currentStep = "Preparando dados da fatura";
       if (opts?.energyBill) {
         const ex = opts.energyBill.extractedData ?? null;
         const debugRaw =
@@ -1269,11 +1271,15 @@ export const ProposalEconomicsModal = forwardRef<
         proposalEstimateNote = prepared.estimateNote;
       }
 
+      currentStep = "Calculando simulação (simulateProposal)";
       const result = simulateProposal(simulationInput);
-      const leadDetail = await getLead(currentOrganizationId, deal.leadId);
-      let targetDealId = deal.dealId;
 
+      currentStep = "Buscando dados do lead (getLead)";
+      const leadDetail = await getLead(currentOrganizationId, deal.leadId);
+
+      let targetDealId = deal.dealId;
       if (!targetDealId) {
+        currentStep = "Criando novo negócio (createDeal)";
         const createdDeal = await createDeal(currentOrganizationId, deal.leadId, {
           title: buildSystemDealTitle(result.tamanhoSistema),
           value: result.valorSistema ?? deal.value ?? 0,
@@ -1283,14 +1289,19 @@ export const ProposalEconomicsModal = forwardRef<
         targetDealId = createdDeal.id;
       }
 
+      currentStep = "Preparando histórico de consumo";
       const cityRowForSim = geoCities.find((c) => c.id === selectedCity?.id);
       const billHistorySizing = sizingBillHistoryFromExtracted(
         opts?.energyBill ? (opts.energyBill.extractedData ?? null) : null
       );
+
+      currentStep = "Criando rascunho da simulação (quickResultToPersistedSimulationDraft)";
       const persistedDraft = quickResultToPersistedSimulationDraft(result, {
         sizingExtras: billHistorySizing,
         solarResource: cityRowForSim?.solarResource,
       });
+
+      currentStep = "Salvando simulação no banco (createLeadFinancialSimulation)";
       await createLeadFinancialSimulation(currentOrganizationId, leadDetail.id, {
         input: persistedDraft,
         name: `Funil — ${deal.clientName}`,
@@ -1298,8 +1309,9 @@ export const ProposalEconomicsModal = forwardRef<
 
       const billLabelForDeal =
         billAttachment.status === "ready" ? billAttachment.displayName : "arquivo";
-
       const computedDealValue = result.valorSistema ?? deal.value ?? 0;
+
+      currentStep = "Atualizando negócio (patchDeal)";
       await patchDeal(currentOrganizationId, targetDealId, {
         stage: "PROPOSAL",
         ...(Number.isFinite(computedDealValue) && computedDealValue > 0
@@ -1335,7 +1347,9 @@ export const ProposalEconomicsModal = forwardRef<
       setProposalFormOpen(false);
       proposalStudyBridge.notifyStudyComplete();
     } catch (e) {
-      setProposalError(e instanceof Error ? e.message : "Erro ao gerar proposta");
+      console.error("[runProposalFlow] error", e, "at step:", currentStep);
+      const msg = e instanceof Error ? e.message : String(e);
+      setProposalError(`Falha em [${currentStep}]: ${msg}`);
     } finally {
       setProposalLoading(false);
     }
