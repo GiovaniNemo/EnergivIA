@@ -72,7 +72,7 @@ Quando o usuário pedir para dimensionar, gerar proposta, ou citar consumo (kWh)
                     }),
                     execute: async ({ monthlyConsumption, location, roofType }: { monthlyConsumption: number, location: string, roofType: string }) => {
                         let mappedRoof: any = 'metal';
-                        const roofStr = roofType.toLowerCase();
+                        const roofStr = (roofType || "").toLowerCase();
                         if (roofStr.includes('ceramic') || roofStr.includes('cerâmica') || roofStr.includes('ceramica')) mappedRoof = 'ceramic';
                         else if (roofStr.includes('fibro') || roofStr.includes('amianto')) mappedRoof = 'fibromadeira';
                         else if (roofStr.includes('laje')) mappedRoof = 'laje';
