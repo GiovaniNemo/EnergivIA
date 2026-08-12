@@ -123,30 +123,57 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                 const cons = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('conector'));
                                 const ests = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('estrutura') || JSON.stringify(p).toLowerCase().includes('perfil'));
 
+                                // 1. Filtrar Módulo com Ficha Técnica
+                                const validMods = mods.filter(m => m.product.specs && m.product.specs.isc && m.product.specs.power_w);
+                                const mod = validMods.length > 0 ? validMods[0] : null;
+                                
+                                if (!mod) continue; // Pula se não tiver módulo com ficha técnica
+
+                                // Assume a potência real do módulo (W) ou usa 550W como fallback
+                                const modPowerW = Number(mod.product.specs.power_w) || 550;
+                                const moduleQ = target.modules || Math.ceil((targetKWp * 1000) / modPowerW);
+                                const totalDcPower = modPowerW * moduleQ;
+                                const modIsc = Number(mod.product.specs.isc) || 0;
+
+                                // 2. Buscar Inversor Compatível
                                 let bestInv = null;
                                 let minDiff = Infinity;
+
                                 for (const invObj of invs) {
+                                    const specs = invObj.product.specs;
+                                    // Pega só oq tem ficha técnica preenchida
+                                    if (!specs || !specs.max_input_current || !specs.max_dc_power) continue;
+
+                                    const maxInputCurrent = Number(specs.max_input_current);
+                                    const maxDcPower = Number(specs.max_dc_power);
+
+                                    // Validação Técnica
+                                    if (modIsc > maxInputCurrent) continue;
+                                    if (totalDcPower > maxDcPower) continue;
+
+                                    // Chegar o mais próximo do targetKWp
                                     const name = invObj.product.name.toUpperCase();
                                     const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
+                                    let invKWp = targetKWp; // fallback pro target original
+                                    
                                     if (match) {
-                                        let val = parseFloat(match[1].replace(',', '.'));
-                                        if (match[2] === 'W') val = val / 1000;
-                                        const diff = Math.abs(val - targetKWp);
-                                        if (diff < minDiff) {
-                                            minDiff = diff;
-                                            bestInv = invObj;
-                                        }
+                                        invKWp = parseFloat(match[1].replace(',', '.'));
+                                        if (match[2] === 'W') invKWp = invKWp / 1000;
+                                    }
+
+                                    const diff = Math.abs(invKWp - targetKWp);
+                                    if (diff < minDiff) {
+                                        minDiff = diff;
+                                        bestInv = invObj;
                                     }
                                 }
-                                const inv = bestInv || invs[0];
-                                const mod = mods[0];
+
+                                const inv = bestInv;
+                                if (!inv) continue; // Pula se nenhum inversor for compatível tecnicamente
+
                                 const cab = cabs[0];
                                 const con = cons[0];
                                 const est = ests[0];
-
-                                if (!inv || !mod) continue;
-
-                                const moduleQ = target.modules || Math.ceil((targetKWp * 1000) / 550);
 
                                 const precoInv = inv.price;
                                 const precoMod = mod.price * moduleQ;
