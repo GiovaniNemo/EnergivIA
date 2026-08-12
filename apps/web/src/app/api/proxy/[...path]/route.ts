@@ -15,7 +15,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const body = await request.arrayBuffer();
+  const body = await request.text();
   return proxy(request, await params, "POST", body);
 }
 
@@ -23,7 +23,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const body = await request.arrayBuffer();
+  const body = await request.text();
   return proxy(request, await params, "PATCH", body);
 }
 
@@ -31,7 +31,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const body = await request.arrayBuffer();
+  const body = await request.text();
   return proxy(request, await params, "PUT", body);
 }
 
@@ -39,7 +39,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const body = await request.arrayBuffer();
+  const body = await request.text();
   return proxy(request, await params, "DELETE", body);
 }
 
@@ -47,7 +47,7 @@ async function proxy(
   request: NextRequest,
   params: { path: string[] },
   method: string,
-  body?: ArrayBuffer
+  body?: string
 ) {
   const session = await auth0.getSession();
   if (!session?.user) {
