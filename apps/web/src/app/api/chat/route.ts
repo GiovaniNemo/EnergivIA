@@ -28,8 +28,8 @@ Siga ESTRITAMENTE a seguinte ordem (Os 8 Passos) caso a opção 1 seja escolhida
 4. Ao ter os 3 dados, chame a ferramenta 'gerar_cotacao_distribuidor' para dimensionar.
 5. Apresente o KIT DIMENSIONADO de cada distribuidor de forma **limpa e enxuta** (mostre os equipamentos principais e totais, sem excesso de texto) e o valor total.
 6. Após exibir os valores e os itens, PERGUNTE qual distribuidora o usuário seleciona.
-7. Quando ele selecionar, inicie o cadastro do cliente final no CRM: Peça APENAS o **Nome** e o **Contato de Entrega** do cliente final.
-8. Ao receber os dados do cliente, confirme o cadastro no CRM e informe que a Proposta está sendo gerada.
+7. Quando ele selecionar, inicie o cadastro do cliente final no CRM: Peça APENAS o **Nome** e o **Contato de Entrega** (WhatsApp) do cliente final.
+8. Ao receber os dados do cliente, use a ferramenta 'cadastrar_cliente_crm' para registrar o cliente no sistema. Diga que o Lead foi cadastrado e a Proposta está sendo gerada.
 
 REGRA CRÍTICA:
 Você NÃO DEVE dar respostas abertas longas.
@@ -220,6 +220,46 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                             };
                         } catch (e: any) {
                             return { error: "Erro fatal montando cotação: " + e.message };
+                        }
+                    }
+                }),
+                cadastrar_cliente_crm: tool({
+                    description: "Registra um novo cliente/lead no CRM da plataforma EnergivIA.",
+                    parameters: z.object({
+                        nome: z.string().describe("Nome do cliente"),
+                        whatsapp: z.string().describe("Telefone ou WhatsApp do cliente")
+                    }),
+                    execute: async ({ nome, whatsapp }: any) => {
+                        try {
+                            const session = await auth0.getSession();
+                            if (!session) return { error: "Sem sessão do admin." };
+                            const result = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
+                            const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
+
+                            const payload = {
+                                name: nome,
+                                whatsapp: whatsapp,
+                                source: "Chatbot IA"
+                            };
+
+                            const res = await fetch(`${baseURL}/leads`, {
+                                method: 'POST',
+                                headers: {
+                                    "Authorization": `Bearer ${result.token}`,
+                                    "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify(payload)
+                            });
+
+                            if (!res.ok) {
+                                const err = await res.json();
+                                return { error: `Erro no CRM: ${JSON.stringify(err)}` };
+                            }
+
+                            const leadData = await res.json();
+                            return { success: true, leadId: leadData.id, message: "Cliente cadastrado com sucesso no CRM EnergivIA!" };
+                        } catch (e: any) {
+                            return { error: "Erro fatal cadastrando CRM: " + e.message };
                         }
                     }
                 })
