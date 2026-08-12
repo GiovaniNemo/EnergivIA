@@ -1,3 +1,4 @@
+/* eslint-disable */
 // @ts-nocheck
 import { openai } from "@ai-sdk/openai";
 import { streamText, tool, stepCountIs } from "ai";
@@ -35,6 +36,7 @@ Siga ESTRITAMENTE a seguinte ordem (Os 8 Passos) caso a opção 1 seja escolhida
 REGRA CRÍTICA:
 - Você NÃO DEVE dar respostas abertas longas.
 - Seja o mais sucinto possível.
+- Sempre que houver várias opções de escolha para o usuário, elenque-as obrigatoriamente em números (ex: 1 - Opção A, 2 - Opção B).
 - NÃO USE asteriscos (**) para negrito ou qualquer outra formatação, responda sempre em texto simples.
 Na apresentação dos valores (Passo 5), mostre os itens salvos para que o cliente veja o que está sendo orçado.
 Se a ferramenta de cotação retornar erro, repasse o erro EXATO para o usuário ("Falha interna: [erro]").
@@ -94,7 +96,7 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                             let mappedRoof: any = 'metal';
                             const roofStr = (roofType || "").toLowerCase();
                             if (roofStr.includes('ceramic') || roofStr.includes('cerâmica')) mappedRoof = 'ceramic';
-                            else if (roofStr.includes('fibro')) mappedRoof = 'fibro';
+                            else if (roofStr.includes('fibro')) mappedRoof = 'fibromadeira';
                             else if (roofStr.includes('laje')) mappedRoof = 'laje';
                             else if (roofStr.includes('solo') || roofStr.includes('ground')) mappedRoof = 'ground';
                             else if (roofStr.includes('sem') || roofStr.includes('nenhuma')) mappedRoof = 'none';
