@@ -130,7 +130,7 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                 if (!mod) continue; // Pula se não tiver nenhum módulo
 
                                 const modPowerW = mod.product.specs ? (Number(mod.product.specs.power_w) || 550) : 550;
-                                const moduleQ = target.modules || Math.ceil((targetKWp * 1000) / modPowerW);
+                                const moduleQ = Math.ceil((targetKWp * 1000) / modPowerW);
                                 const totalDcPower = modPowerW * moduleQ;
                                 const modIsc = mod.product.specs ? (Number(mod.product.specs.isc) || 0) : 0;
 
@@ -181,9 +181,6 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                 const cab = cabs[0];
                                 const con = cons[0];
                                 const est = ests[0];
-
-                                // Ignora o `target.modules` estático do pacote mathResults e calcula dinamicamente pela potência do módulo escolhido
-                                const moduleQ = Math.ceil((targetKWp * 1000) / modPowerW);
 
                                 const precoInv = inv.price;
                                 const precoMod = mod.price * moduleQ;
