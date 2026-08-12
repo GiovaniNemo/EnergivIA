@@ -36,7 +36,6 @@ REGRA CRÍTICA:
 - Você NÃO DEVE dar respostas abertas longas.
 - Seja o mais sucinto possível.
 - NÃO USE asteriscos (**) para negrito ou qualquer outra formatação, responda sempre em texto simples.
-- Quando usar a ferramenta 'cadastrar_cliente_crm', VOCÊ DEVE COPIAR E COLAR a mensagem exata de retorno da ferramenta na sua resposta final, sem alterar uma vírgula (para podermos ver o DEBUG ARGS na tela).
 Na apresentação dos valores (Passo 5), mostre os itens salvos para que o cliente veja o que está sendo orçado.
 Se a ferramenta de cotação retornar erro, repasse o erro EXATO para o usuário ("Falha interna: [erro]").
 Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar com o sistema EnergivIA.`;
@@ -292,7 +291,7 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                             }
 
                             const leadData = await res.json();
-                            return { success: true, leadId: leadData.id, message: `Cliente cadastrado com sucesso! DEBUG ARGS: nome='${nome}', whatsapp='${whatsapp}'` };
+                            return { success: true, leadId: leadData.id, message: `Cliente cadastrado com sucesso!` };
                         } catch (e: any) {
                             return { error: "Erro fatal cadastrando CRM: " + e.message };
                         }
