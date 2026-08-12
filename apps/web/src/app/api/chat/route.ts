@@ -92,7 +92,7 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                             let mappedRoof: any = 'metal';
                             const roofStr = (roofType || "").toLowerCase();
                             if (roofStr.includes('ceramic') || roofStr.includes('cerâmica')) mappedRoof = 'ceramic';
-                            else if (roofStr.includes('fibro')) mappedRoof = 'fibromadeira';
+                            else if (roofStr.includes('fibro')) mappedRoof = 'fibro';
                             else if (roofStr.includes('laje')) mappedRoof = 'laje';
                             else if (roofStr.includes('solo') || roofStr.includes('ground')) mappedRoof = 'ground';
                             else if (roofStr.includes('sem') || roofStr.includes('nenhuma')) mappedRoof = 'none';
@@ -185,20 +185,26 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                 const inv = bestInv || invs[0];
                                 if (!inv) continue;
 
-                                const cab = cabs[0];
+                                const cabPreto = cabs.find(c => JSON.stringify(c).toLowerCase().includes('preto')) || cabs[0];
+                                const cabVermelho = cabs.find(c => JSON.stringify(c).toLowerCase().includes('vermelho')) || (cabs.length > 1 && cabs[1] !== cabPreto ? cabs[1] : null);
                                 const con = cons[0];
                                 
                                 // Tenta buscar a estrutura correta para o tipo de telhado
                                 const matchedEsts = ests.filter(p => JSON.stringify(p).toLowerCase().includes(mappedRoof));
-                                const est = matchedEsts.length > 0 ? matchedEsts[0] : ests[0];
+                                const estPrinc = matchedEsts.length > 0 ? matchedEsts[0] : ests[0];
+                                
+                                // Se o telhado não for 'none' e houver perfis disponíveis (que não sejam a estrutura principal), adiciona o primeiro perfil
+                                const perfil = ests.find(p => JSON.stringify(p).toLowerCase().includes('perfil') && p.id !== estPrinc?.id);
 
                                 const precoInv = Number(inv.price) || 0;
                                 const precoMod = (Number(mod.price) || 0) * moduleQ;
-                                const precoCab = cab ? (Number(cab.price) || 0) : 0;
+                                const precoCabPreto = cabPreto ? (Number(cabPreto.price) || 0) : 0;
+                                const precoCabVermelho = cabVermelho ? (Number(cabVermelho.price) || 0) : 0;
                                 const precoCon = con ? (Number(con.price) || 0) * 2 : 0;
-                                const precoEst = (forcedIncludeStructure && est) ? (Number(est.price) || 0) : 0;
+                                const precoEst = (forcedIncludeStructure && estPrinc) ? (Number(estPrinc.price) || 0) : 0;
+                                const precoPerfil = (forcedIncludeStructure && perfil) ? (Number(perfil.price) || 0) : 0;
 
-                                const somaTotal = precoInv + precoMod + precoCab + precoCon + precoEst;
+                                const somaTotal = precoInv + precoMod + precoCabPreto + precoCabVermelho + precoCon + precoEst + precoPerfil;
 
                                 finalQuotes.push({
                                     distribuidora: d.name,
@@ -206,9 +212,11 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                     kit_itens_salvos: [
                                         `Inv: ${inv.product.name} (R$ ${precoInv})`,
                                         `Mod: ${moduleQ}x ${mod.product.name} (R$ ${precoMod})`,
-                                        cab ? `Cab: ${cab.product.name} (R$ ${precoCab})` : null,
+                                        cabPreto ? `Cab Preto: ${cabPreto.product.name} (R$ ${precoCabPreto})` : null,
+                                        cabVermelho ? `Cab Vermelho: ${cabVermelho.product.name} (R$ ${precoCabVermelho})` : null,
                                         con ? `Con: 2x ${con.product.name} (R$ ${precoCon})` : null,
-                                        (forcedIncludeStructure && est) ? `Est: ${est.product.name} (R$ ${precoEst})` : null,
+                                        (forcedIncludeStructure && estPrinc) ? `Est: ${estPrinc.product.name} (R$ ${precoEst})` : null,
+                                        (forcedIncludeStructure && perfil) ? `Perfil: ${perfil.product.name} (R$ ${precoPerfil})` : null,
                                     ].filter(Boolean)
                                 });
                             }
