@@ -26,10 +26,10 @@ Siga ESTRITAMENTE a seguinte ordem (Os 8 Passos) caso a opção 1 seja escolhida
 2. Extraia imediatamente as informações da fatura: Consumo (kWh) e Cidade/Estado. (Se não achar, pergunte).
 3. Pergunte qual vai ser a estrutura do telhado (cerâmica, fibrocimento, metálico, solo, laje, ou 'sem estrutura').
 4. Ao ter os 3 dados, chame a ferramenta 'gerar_cotacao_distribuidor' para dimensionar.
-5. Apresente o KIT DIMENSIONADO de cada distribuidor (mostre a lista de equipamentos que foi retornada na variável 'kit_itens_salvos') e o valor total final em reais.
-6. Após exibir os valores e os itens, PERGUNTE explicitamente qual distribuidora o usuário seleciona.
-7. Quando ele selecionar, inicie o cadastro do cliente final no CRM: Peça Nome, Email, Telefone e Endereço do cliente final.
-8. Ao receber os dados do cliente, confirme que o cliente foi cadastrado no CRM EnergivIA e informe que a "Proposta em PDF / Link com template" foi gerada e será enviada.
+5. Apresente o KIT DIMENSIONADO de cada distribuidor de forma **limpa e enxuta** (mostre os equipamentos principais e totais, sem excesso de texto) e o valor total.
+6. Após exibir os valores e os itens, PERGUNTE qual distribuidora o usuário seleciona.
+7. Quando ele selecionar, inicie o cadastro do cliente final no CRM: Peça APENAS o **Nome** e o **Contato de Entrega** do cliente final.
+8. Ao receber os dados do cliente, confirme o cadastro no CRM e informe que a Proposta está sendo gerada.
 
 REGRA CRÍTICA:
 Você NÃO DEVE dar respostas abertas longas.
@@ -92,6 +92,9 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                             else if (roofStr.includes('fibro')) mappedRoof = 'fibromadeira';
                             else if (roofStr.includes('laje')) mappedRoof = 'laje';
                             else if (roofStr.includes('solo') || roofStr.includes('ground')) mappedRoof = 'ground';
+                            else if (roofStr.includes('sem') || roofStr.includes('nenhuma')) mappedRoof = 'none';
+
+                            const forcedIncludeStructure = mappedRoof !== 'none';
 
                             const safeLocation = location || "São Paulo, SP";
                             const safeConsumption = monthlyConsumption || 300;
@@ -181,24 +184,26 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
 
                                 const cab = cabs[0];
                                 const con = cons[0];
-                                const est = ests[0];
+                                
+                                // Tenta buscar a estrutura correta para o tipo de telhado
+                                const matchedEsts = ests.filter(p => JSON.stringify(p).toLowerCase().includes(mappedRoof));
+                                const est = matchedEsts.length > 0 ? matchedEsts[0] : ests[0];
 
                                 const precoInv = inv.price;
                                 const precoMod = mod.price * moduleQ;
                                 const precoCab = cab ? cab.price : 0;
                                 const precoCon = con ? con.price * 2 : 0;
-                                const precoEst = (includeStructure && est) ? est.price : 0;
+                                const precoEst = (forcedIncludeStructure && est) ? est.price : 0;
 
                                 finalQuotes.push({
                                     distribuidora: d.name,
                                     totalReal: precoInv + precoMod + precoCab + precoCon + precoEst,
-                                    // A IA precisa lembrar desses itens para o passo 8, mas é orientada a ocultá-los agora
                                     kit_itens_salvos: [
-                                        `1x Inversor: ${inv.product.name} (R$ ${precoInv})`,
-                                        `${moduleQ}x Módulo: ${mod.product.name} (R$ ${precoMod})`,
-                                        cab ? `1x Cabo: ${cab.product.name} (R$ ${precoCab})` : null,
-                                        con ? `2x Conector: ${con.product.name} (R$ ${precoCon})` : null,
-                                        (includeStructure && est) ? `1x Estrutura: ${est.product.name} (R$ ${precoEst})` : null,
+                                        `Inv: ${inv.product.name} (R$ ${precoInv})`,
+                                        `Mod: ${moduleQ}x ${mod.product.name} (R$ ${precoMod})`,
+                                        cab ? `Cab: ${cab.product.name} (R$ ${precoCab})` : null,
+                                        con ? `Con: 2x ${con.product.name} (R$ ${precoCon})` : null,
+                                        (forcedIncludeStructure && est) ? `Est: ${est.product.name} (R$ ${precoEst})` : null,
                                     ].filter(Boolean)
                                 });
                             }
