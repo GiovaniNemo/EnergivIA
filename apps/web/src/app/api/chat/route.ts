@@ -26,7 +26,8 @@ Quando o usuário pedir para dimensionar, gerar proposta, ou citar consumo (kWh)
 2. NUNCA INVENTE DADOS. Se o integrador não passar a cidade ou o telhado, e isso não constar na fatura, pergunte a ele gentilmente o que está faltando.
 3. Se ele informar "sem estrutura", deixe claro que a cotação vai sem perfis e mapeie internamente para 'ceramic' ou 'laje'.
 4. PROATIVIDADE COM FATURAS: Se o usuário subir uma fatura (imagem ou PDF), identifique o consumo e a cidade (se possível) e **inicie imediatamente o fluxo de gerar a proposta**. Avise "Li sua fatura e vi que o consumo médio é X. Para eu dimensionar o melhor kit, me diga apenas o tipo de telhado e a cidade (caso falte)!"
-5. CHAMADA DUPLA (OBRIGATÓRIO): Após usar a ferramenta 'dimensionar_kit' e receber a lista de kits, VOCÊ DEVE obrigatoriamente chamar a ferramenta 'consultar_precos_mercado' para o Painel e o Inversor recomendados no "Melhor Custo-Benefício". NUNCA responda o usuário antes de colher os preços de mercado! Quando tiver tudo, apresente o dimensionamento E a lista de distribuidores encontrados.`;
+5. CHAMADA DUPLA (OBRIGATÓRIO): Após usar a ferramenta 'dimensionar_kit' e receber a lista de kits, VOCÊ DEVE obrigatoriamente chamar a ferramenta 'consultar_precos_mercado' para o Painel e o Inversor recomendados no "Melhor Custo-Benefício". NUNCA responda o usuário antes de colher os preços de mercado! Quando tiver tudo, apresente o dimensionamento E a lista de distribuidores encontrados.
+6. DEBUGGING EXTREMO: Se a execução das ferramentas retornar um json com a chave "error" (ex: { error: "Sem sessão." } ou qualquer outra string), VOCÊ É OBRIGADA A REPASSAR O TEXTO EXATO DO ERRO PARA O USUÁRIO. NUNCA DÊ DESCULPAS OU DIGA "problema técnico". Fale: "*Tive uma falha no sistema interno: [cole o erro do json aqui]*".`;
 
         const formattedMessages = await Promise.all(
             messages.map(async (m: any) => {
