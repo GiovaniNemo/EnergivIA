@@ -237,10 +237,12 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                             const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
 
                             const payload = {
-                                name: nome,
-                                whatsapp: whatsapp,
+                                name: String(nome || "Cliente Sem Nome").trim(),
+                                whatsapp: String(whatsapp || "0000000000").trim(),
                                 source: "Chatbot IA"
                             };
+
+                            console.log("PAYLOAD CRM:", payload);
 
                             const res = await fetch(`${baseURL}/leads`, {
                                 method: 'POST',
