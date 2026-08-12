@@ -266,11 +266,11 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
 
                             if (!res.ok) {
                                 const err = await res.json();
-                                return { error: `Erro no CRM: ${JSON.stringify(err)}` };
+                                return { error: `Erro no CRM: ${JSON.stringify(err)} | ARGS: ${JSON.stringify({nome, whatsapp, typeNome: typeof nome})}` };
                             }
 
                             const leadData = await res.json();
-                            return { success: true, leadId: leadData.id, message: "Cliente cadastrado com sucesso no CRM EnergivIA!" };
+                            return { success: true, leadId: leadData.id, message: `Cliente cadastrado com sucesso! DEBUG ARGS: nome='${nome}', whatsapp='${whatsapp}'` };
                         } catch (e: any) {
                             return { error: "Erro fatal cadastrando CRM: " + e.message };
                         }
