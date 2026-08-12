@@ -4,6 +4,7 @@ import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
 import pdfParse from "pdf-parse";
 import { generateSolarKits } from "@energivia/solar-engine";
+import { auth0 } from "@/lib/auth0";
 
 export const maxDuration = 60;
 
@@ -77,6 +78,46 @@ Quando o usuário pedir para dimensionar, gerar proposta, ou citar consumo (kWh)
                             success: true,
                             kits: results.kits
                         };
+                    }
+                }),
+                consultar_precos_mercado: tool({
+                    description: "Busca os preços reais de mercado de componentes (módulos, inversores) no banco de distribuidores ATIVOS da EnergivIA. Use essa ferramenta se o usuário perguntar o preço de uma peça específica ou distribuidor.",
+                    parameters: z.object({
+                        keyword: z.string().describe("O nome da peça ou modelo. Ex: 'Growatt 5kW' ou 'Canadian 550W'.")
+                    }),
+                    execute: async ({ keyword }: { keyword: string }) => {
+                        try {
+                            const session = await auth0.getSession();
+                            if (!session) return { error: "Sem sessão." };
+                            const result = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
+                            const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
+
+                            // Busca os produtos
+                            const pRes = await fetch(`${baseURL}/products?search=${encodeURIComponent(keyword)}&pageSize=2`, {
+                                headers: { "Authorization": `Bearer ${result.token}` }
+                            });
+                            const pJson = await pRes.json();
+                            if (!pJson.data || pJson.data.length === 0) return { error: "Produto não encontrado no catálogo global." };
+
+                            const offersResult = [];
+                            for (const prod of pJson.data) {
+                                const dRes = await fetch(`${baseURL}/products/${prod.id}/distributors`, {
+                                    headers: { "Authorization": `Bearer ${result.token}` }
+                                });
+                                const dJson = await dRes.json();
+                                offersResult.push({
+                                    product: prod.name,
+                                    offers: Array.isArray(dJson) ? dJson.map((o: any) => ({
+                                        distributor: o.distributor?.name,
+                                        price: o.price,
+                                        stock: o.stock_quantity
+                                    })) : []
+                                });
+                            }
+                            return { success: true, catalog: offersResult };
+                        } catch (e: any) {
+                            return { error: "Erro ao buscar distribuidores: " + e.message };
+                        }
                     }
                 })
             }
