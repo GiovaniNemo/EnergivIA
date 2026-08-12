@@ -243,11 +243,24 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                     }),
                     execute: async (args: any) => {
                         try {
-                            const rawNome = args.nome || args.name || args.Nome || args.Name || "";
-                            const rawWhatsapp = args.whatsapp || args.phone || args.telefone || args.Whatsapp || "";
+                            let rawNome = args.nome || args.name || args.Nome || args.Name || "";
+                            let rawWhatsapp = args.whatsapp || args.phone || args.telefone || args.Whatsapp || "";
 
                             if (!rawNome || !rawWhatsapp || String(rawNome).includes("undefined") || String(rawNome).includes("null")) {
-                                return { error: `Você tentou cadastrar sem o nome real do cliente. Leia todo o histórico da conversa, encontre a mensagem onde o cliente informou o nome dele e chame a ferramenta novamente usando o nome real. (Recebido: ${JSON.stringify(args)})` };
+                                // Fallback automático: a IA mandou vazio, então pegamos as 2 últimas mensagens do usuário
+                                const userMsgs = formattedMessages.filter(m => m.role === 'user');
+                                if (userMsgs.length >= 2) {
+                                    const lastMsg = userMsgs[userMsgs.length - 1].content as string;
+                                    const penultMsg = userMsgs[userMsgs.length - 2].content as string;
+                                    
+                                    // Consideramos que a última mensagem é o WhatsApp e a penúltima é o Nome
+                                    rawWhatsapp = lastMsg;
+                                    rawNome = penultMsg;
+                                }
+
+                                if (!rawNome || !rawWhatsapp) {
+                                    return { error: `Erro na IA: Falta nome ou whatsapp. Os argumentos recebidos foram: ${JSON.stringify(args)}` };
+                                }
                             }
 
                             const nome = String(rawNome).trim();
