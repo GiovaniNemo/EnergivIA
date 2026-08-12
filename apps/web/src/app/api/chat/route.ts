@@ -145,9 +145,13 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                     if (specs && specs.max_input_current && specs.max_dc_power) {
                                         const maxInputCurrent = Number(specs.max_input_current);
                                         const maxDcPower = Number(specs.max_dc_power);
-                                        // Pula apenas se ultrapassar grosseiramente (10% de margem extra no DC Power)
-                                        if (modIsc > maxInputCurrent + 1) continue; 
-                                        if (totalDcPower > maxDcPower * 1.1) continue;
+                                        
+                                        // Overload dinâmico baseado na marca
+                                        const isSaj = invObj.product.name.toUpperCase().includes('SAJ');
+                                        const overloadFactor = isSaj ? 2.0 : 1.3; // 100% para SAJ, 30% padrão
+
+                                        if (modIsc > maxInputCurrent + 1.5) continue; 
+                                        if (totalDcPower > maxDcPower * overloadFactor) continue;
                                     }
 
                                     // Chegar o mais próximo do targetKWp pelo nome ou spec
