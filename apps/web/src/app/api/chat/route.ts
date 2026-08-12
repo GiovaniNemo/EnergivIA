@@ -65,15 +65,22 @@ Quando o usuário pedir para dimensionar, gerar proposta, ou citar consumo (kWh)
                 dimensionar_kit: tool({
                     description: "Dimensiona um kit solar com base no consumo mensal (kWh) e localidade para retornar as opções mais recomendadas do Catálogo.",
                     parameters: z.object({
-                        monthlyConsumption: z.number().describe("O consumo mensal em kWh da fatura ou pedido do cliente. Se o cliente passou kWp, multiplique por 130."),
+                        monthlyConsumption: z.coerce.number().describe("O consumo mensal em kWh. (ex: 327.6, NUNCA mande letras)"),
                         location: z.string().describe("A cidade e estado (ex: 'maringa, pr')."),
-                        roofType: z.enum(['ceramic', 'metal', 'fibromadeira', 'fibrometal', 'ground', 'laje']).describe("Traduza a palavra do usuário EXATAMENTE para as chaves deste Enum: cerâmica -> 'ceramic', metálico -> 'metal', fibrocimento -> 'fibromadeira', solo -> 'ground', laje -> 'laje'.")
+                        roofType: z.string().describe("O tipo de telhado onde os painéis serão instalados (ex: 'fibrocimento', 'cerâmica', 'laje', 'metal', 'solo').")
                     }),
-                    execute: async ({ monthlyConsumption, location, roofType }: { monthlyConsumption: number, location: string, roofType: 'ceramic' | 'metal' | 'fibromadeira' | 'fibrometal' | 'ground' | 'laje' }) => {
+                    execute: async ({ monthlyConsumption, location, roofType }: { monthlyConsumption: number, location: string, roofType: string }) => {
+                        let mappedRoof: any = 'metal';
+                        const roofStr = roofType.toLowerCase();
+                        if (roofStr.includes('ceramic') || roofStr.includes('cerâmica') || roofStr.includes('ceramica')) mappedRoof = 'ceramic';
+                        else if (roofStr.includes('fibro') || roofStr.includes('amianto')) mappedRoof = 'fibromadeira';
+                        else if (roofStr.includes('laje')) mappedRoof = 'laje';
+                        else if (roofStr.includes('solo') || roofStr.includes('chão') || roofStr.includes('ground')) mappedRoof = 'ground';
+
                         const results = generateSolarKits({
                             monthlyConsumption,
                             location,
-                            roofType,
+                            roofType: mappedRoof,
                         });
                         return {
                             success: true,
