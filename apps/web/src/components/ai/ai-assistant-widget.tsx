@@ -141,8 +141,8 @@ export function AIAssistantWidget() {
                         {messages.length === 0 && (
                             <div className="flex flex-col items-center justify-center h-full text-center space-y-3 opacity-60">
                                 <Bot className="w-12 h-12 text-gray-500" />
-                                <p className="text-sm text-gray-400">
-                                    Olá! Sou sua assistente. Como posso ajudar com seus orçamentos ou leitura de faturas hoje?
+                                <p className="text-sm text-gray-400 whitespace-pre-line text-left">
+                                    {`Olá! Sou a assistente da EnergivIA. Como posso te ajudar hoje? (Digite o número da opção)\n\n1 - Gerar Orçamento / Ler Fatura\n2 - Dúvidas sobre o Sistema`}
                                 </p>
                             </div>
                         )}
