@@ -25,9 +25,9 @@ Quando o usuário pedir para dimensionar, gerar proposta, ou citar consumo (kWh)
    - Tipo de telhado/estrutura (cerâmica, fibrocimento, metálico, solo, laje, ou 'sem estrutura').
 2. NUNCA INVENTE DADOS. Se o integrador não passar a cidade ou o telhado, e isso não constar na fatura, pergunte a ele gentilmente o que está faltando.
 3. Se ele informar "sem estrutura", deixe claro que a cotação vai sem perfis e mapeie internamente para 'ceramic' ou 'laje'.
-4. PROATIVIDADE COM FATURAS: Se o usuário subir uma fatura (imagem ou PDF), identifique o consumo e a cidade (se possível) e **inicie imediatamente o fluxo de gerar a proposta**. Avise "Li sua fatura e vi que o consumo médio é X. Para eu dimensionar o melhor kit, me diga apenas o tipo de telhado e a cidade (caso falte)!"
-5. CHAMADA DUPLA (OBRIGATÓRIO): Após usar a ferramenta 'dimensionar_kit' e receber a lista de kits, VOCÊ DEVE obrigatoriamente chamar a ferramenta 'consultar_precos_mercado' para o Painel e o Inversor recomendados no "Melhor Custo-Benefício". NUNCA responda o usuário antes de colher os preços de mercado! Quando tiver tudo, apresente o dimensionamento E a lista de distribuidores encontrados.
-6. DEBUGGING EXTREMO: Se a execução das ferramentas retornar um json com a chave "error" (ex: { error: "Sem sessão." } ou qualquer outra string), VOCÊ É OBRIGADA A REPASSAR O TEXTO EXATO DO ERRO PARA O USUÁRIO. NUNCA DÊ DESCULPAS OU DIGA "problema técnico". Fale: "*Tive uma falha no sistema interno: [cole o erro do json aqui]*".`;
+4. PROATIVIDADE COM FATURAS: Se o usuário subir uma fatura (imagem ou PDF), identifique o consumo e a cidade (se possível) e **inicie imediatamente o fluxo de gerar a cotação**. Avise "Li sua fatura e vi que o consumo médio é X. Para eu gerar a cotação real, me diga apenas o tipo de telhado e a cidade (caso falte)!"
+5. MONTAGEM OBRIGATÓRIA DA COTAÇÃO: Você agora VAI USAR a ferramenta 'gerar_cotacao_distribuidor' sempre que o usuário pedir dimensionamento/cotação (informou kwp ou kwh). NUNCA dê preços "chutados". OBRIGATORIAMENTE gere a cotação utilizando o seu banco de distribuidores através da ferramenta!
+6. DEBUGGING EXTREMO: Se a execução da ferramenta retornar um json com a chave "error" (ex: { error: "Sem sessão." } ou qualquer outra string), VOCÊ É OBRIGADA A REPASSAR O TEXTO EXATO DO ERRO PARA O USUÁRIO na íntegra. Fale: "*Tive uma falha no sistema interno: [cole o erro do json aqui]*".`;
 
         const formattedMessages = await Promise.all(
             messages.map(async (m: any) => {
@@ -63,69 +63,96 @@ Quando o usuário pedir para dimensionar, gerar proposta, ou citar consumo (kWh)
             messages: formattedMessages,
             stopWhen: stepCountIs(5),
             tools: {
-                dimensionar_kit: tool({
-                    description: "Dimensiona um kit solar com base no consumo mensal (kWh) e localidade para retornar as opções mais recomendadas do Catálogo.",
+                gerar_cotacao_distribuidor: tool({
+                    description: "Usa o motor de cálculo da EnergivIA para descobrir os componentes físicos e puxar orçamentos REAIS cruzando todos os distribuidores ativos (Edeltec, etc) para a potência solicitada.",
                     parameters: z.object({
-                        monthlyConsumption: z.coerce.number().describe("O consumo mensal em kWh. (ex: 327.6, NUNCA mande letras)"),
-                        location: z.string().describe("A cidade e estado (ex: 'maringa, pr')."),
-                        roofType: z.string().describe("O tipo de telhado onde os painéis serão instalados (ex: 'fibrocimento', 'cerâmica', 'laje', 'metal', 'solo').")
+                        monthlyConsumption: z.coerce.number().describe("Consumo mensal (kWh)"),
+                        location: z.string().describe("Cidade e Estado"),
+                        roofType: z.string().describe("Tipo de telhado"),
+                        includeStructure: z.boolean().describe("True se precisar de estrutura, False se for opcional/sem telhado averbado.")
                     }),
-                    execute: async ({ monthlyConsumption, location, roofType }: { monthlyConsumption: number, location: string, roofType: string }) => {
-                        let mappedRoof: any = 'metal';
-                        const roofStr = (roofType || "").toLowerCase();
-                        if (roofStr.includes('ceramic') || roofStr.includes('cerâmica') || roofStr.includes('ceramica')) mappedRoof = 'ceramic';
-                        else if (roofStr.includes('fibro') || roofStr.includes('amianto')) mappedRoof = 'fibromadeira';
-                        else if (roofStr.includes('laje')) mappedRoof = 'laje';
-                        else if (roofStr.includes('solo') || roofStr.includes('chão') || roofStr.includes('ground')) mappedRoof = 'ground';
-
-                        const results = generateSolarKits({
-                            monthlyConsumption,
-                            location,
-                            roofType: mappedRoof,
-                        });
-                        return {
-                            success: true,
-                            kits: results.kits
-                        };
-                    }
-                }),
-                consultar_precos_mercado: tool({
-                    description: "Busca preços de distribuidores reais para compor a proposta. OBRIGATÓRIO chamar essa ferramenta após dimensionar_kit.",
-                    parameters: z.object({
-                        keyword: z.string().describe("O nome da peça ou modelo. Ex: 'Growatt 5kW' ou 'Canadian 550W'.")
-                    }),
-                    execute: async ({ keyword }: { keyword: string }) => {
+                    execute: async ({ monthlyConsumption, location, roofType, includeStructure }: any) => {
                         try {
                             const session = await auth0.getSession();
-                            if (!session) return { error: "Sem sessão." };
+                            if (!session) return { error: "Sem sessão do admin." };
                             const result = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
                             const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
 
-                            // Busca os produtos
-                            const pRes = await fetch(`${baseURL}/products?search=${encodeURIComponent(keyword)}&pageSize=2`, {
+                            let mappedRoof: any = 'metal';
+                            const roofStr = (roofType || "").toLowerCase();
+                            if (roofStr.includes('ceramic') || roofStr.includes('cerâmica')) mappedRoof = 'ceramic';
+                            else if (roofStr.includes('fibro')) mappedRoof = 'fibromadeira';
+                            else if (roofStr.includes('laje')) mappedRoof = 'laje';
+                            else if (roofStr.includes('solo') || roofStr.includes('ground')) mappedRoof = 'ground';
+
+                            const mathResults = generateSolarKits({ monthlyConsumption, location, roofType: mappedRoof });
+                            const target = mathResults.kits[0]; // Usamos o Custo-Benefício como guia matemático
+                            if (!target) return { error: "Erro simulando math results." };
+                            const targetKWp = parseFloat(target.systemSize.replace('kWp', ''));
+
+                            const distRes = await fetch(`${baseURL}/distributors`, {
                                 headers: { "Authorization": `Bearer ${result.token}` }
                             });
-                            const pJson = await pRes.json();
-                            if (!pJson.data || pJson.data.length === 0) return { success: true, catalog: [], message: `Produto '${keyword}' não encontrado no catálogo global. Tente uma palavra-chave mais genérica ou curta (apenas a marca).` };
+                            const distList = await distRes.json();
+                            if (!distList || distList.length === 0) return { error: "Nenhum distribuidor ativo no banco." };
 
-                            const offersResult = [];
-                            for (const prod of pJson.data) {
-                                const dRes = await fetch(`${baseURL} /products/${prod.id}/distributors`, {
+                            const finalQuotes = [];
+
+                            for (const d of distList) {
+                                const resProds = await fetch(`${baseURL}/distributors/${d.id}/products?limit=250`, {
                                     headers: { "Authorization": `Bearer ${result.token}` }
                                 });
-                                const dJson = await dRes.json();
-                                offersResult.push({
-                                    product: prod.name,
-                                    offers: Array.isArray(dJson) ? dJson.map((o: any) => ({
-                                        distributor: o.distributor?.name,
-                                        price: o.price,
-                                        stock: o.stock_quantity
-                                    })) : []
+                                const jsonProds = await resProds.json();
+                                const allProds = jsonProds.data || [];
+
+                                if (allProds.length === 0) continue;
+
+                                const invs = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('inversor'));
+                                const mods = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('módulo') || JSON.stringify(p).toLowerCase().includes('modulo') || JSON.stringify(p).toLowerCase().includes('painel'));
+                                const cabs = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('cabo'));
+                                const cons = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('conector'));
+                                const ests = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('estrutura') || JSON.stringify(p).toLowerCase().includes('perfil'));
+
+                                const inv = invs[0];
+                                const mod = mods[0];
+                                const cab = cabs[0];
+                                const con = cons[0];
+                                const est = ests[0];
+
+                                if (!inv || !mod) continue;
+
+                                const moduleQ = target.modules || Math.ceil((targetKWp * 1000) / 550);
+
+                                const precoInv = inv.price;
+                                const precoMod = mod.price * moduleQ;
+                                const precoCab = cab ? cab.price : 0;
+                                const precoCon = con ? con.price * 2 : 0;
+                                const precoEst = (includeStructure && est) ? est.price : 0;
+
+                                finalQuotes.push({
+                                    distribuidora: d.name,
+                                    potenciaFinal: target.systemSize,
+                                    itens: [
+                                        `1x Inversor: ${inv.product.name} (R$ ${precoInv})`,
+                                        `${moduleQ}x Módulo: ${mod.product.name} (R$ ${precoMod})`,
+                                        cab ? `1x Cabo: ${cab.product.name} (R$ ${precoCab})` : null,
+                                        con ? `2x Conector: ${con.product.name} (R$ ${precoCon})` : null,
+                                        (includeStructure && est) ? `1x Estrutura: ${est.product.name} (R$ ${precoEst})` : null,
+                                    ].filter(Boolean),
+                                    totalReal: precoInv + precoMod + precoCab + precoCon + precoEst
                                 });
                             }
-                            return { success: true, catalog: offersResult };
+
+                            return {
+                                success: true,
+                                matematicaGuia: {
+                                    geracaoEstimada: target.estimatedGeneration,
+                                    tamanhoRecomendado: target.systemSize
+                                },
+                                ofertasDistribuidores: finalQuotes.length > 0 ? finalQuotes : "Nenhum distribuidor tinha módulos e inversores em estoque suficientes para formar um kit."
+                            };
                         } catch (e: any) {
-                            return { error: "Erro ao buscar distribuidores: " + e.message };
+                            return { error: "Erro fatal montando cotação: " + e.message };
                         }
                     }
                 })
