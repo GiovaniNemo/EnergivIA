@@ -121,11 +121,11 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
 
                                 if (allProds.length === 0) continue;
 
-                                const invs = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('inversor'));
-                                const mods = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('módulo') || JSON.stringify(p).toLowerCase().includes('modulo') || JSON.stringify(p).toLowerCase().includes('painel'));
-                                const cabs = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('cabo'));
-                                const cons = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('conector'));
-                                const ests = allProds.filter(p => JSON.stringify(p).toLowerCase().includes('estrutura') || JSON.stringify(p).toLowerCase().includes('perfil'));
+                                const invs = allProds.filter(p => p.price > 0 && JSON.stringify(p).toLowerCase().includes('inversor'));
+                                const mods = allProds.filter(p => p.price > 0 && (JSON.stringify(p).toLowerCase().includes('módulo') || JSON.stringify(p).toLowerCase().includes('modulo') || JSON.stringify(p).toLowerCase().includes('painel')));
+                                const cabs = allProds.filter(p => p.price > 0 && JSON.stringify(p).toLowerCase().includes('cabo'));
+                                const cons = allProds.filter(p => p.price > 0 && JSON.stringify(p).toLowerCase().includes('conector'));
+                                const ests = allProds.filter(p => p.price > 0 && (JSON.stringify(p).toLowerCase().includes('estrutura') || JSON.stringify(p).toLowerCase().includes('perfil')));
 
                                 // 1. Módulo
                                 const validMods = mods.filter(m => m.product.specs && m.product.specs.isc && m.product.specs.power_w);
@@ -189,15 +189,17 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                 const matchedEsts = ests.filter(p => JSON.stringify(p).toLowerCase().includes(mappedRoof));
                                 const est = matchedEsts.length > 0 ? matchedEsts[0] : ests[0];
 
-                                const precoInv = inv.price;
-                                const precoMod = mod.price * moduleQ;
-                                const precoCab = cab ? cab.price : 0;
-                                const precoCon = con ? con.price * 2 : 0;
-                                const precoEst = (forcedIncludeStructure && est) ? est.price : 0;
+                                const precoInv = Number(inv.price) || 0;
+                                const precoMod = (Number(mod.price) || 0) * moduleQ;
+                                const precoCab = cab ? (Number(cab.price) || 0) : 0;
+                                const precoCon = con ? (Number(con.price) || 0) * 2 : 0;
+                                const precoEst = (forcedIncludeStructure && est) ? (Number(est.price) || 0) : 0;
+
+                                const somaTotal = precoInv + precoMod + precoCab + precoCon + precoEst;
 
                                 finalQuotes.push({
                                     distribuidora: d.name,
-                                    totalReal: precoInv + precoMod + precoCab + precoCon + precoEst,
+                                    valor_total_do_kit: `R$ ${somaTotal.toFixed(2).replace('.', ',')}`,
                                     kit_itens_salvos: [
                                         `Inv: ${inv.product.name} (R$ ${precoInv})`,
                                         `Mod: ${moduleQ}x ${mod.product.name} (R$ ${precoMod})`,
