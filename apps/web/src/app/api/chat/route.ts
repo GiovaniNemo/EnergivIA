@@ -23,9 +23,9 @@ Sempre apresente o menu:
 
 Siga ESTRITAMENTE a seguinte ordem (Os 8 Passos) caso a opção 1 seja escolhida:
 1. O usuário manda o PDF (ou digita 1 e insere os dados).
-2. Extraia imediatamente as informações da fatura: Consumo (kWh) e Cidade/Estado. (Se não achar, pergunte).
+2. Extraia imediatamente: Consumo ou Histórico (um array dos últimos 12 meses em kWh), a Cidade/Estado, e o Tipo de Conexão (Monofásico, Bifásico, Trifásico). Se não achar o tipo de conexão, assuma 'Bifásico'. (Se faltar consumo ou cidade, pergunte).
 3. Pergunte qual vai ser a estrutura do telhado (cerâmica, fibrocimento, metálico, solo, laje, ou 'sem estrutura').
-4. Ao ter os 3 dados, chame a ferramenta 'gerar_cotacao_distribuidor' para dimensionar.
+4. Ao ter os dados, chame a ferramenta 'gerar_cotacao_distribuidor' repassando o array de consumo, o tipo de conexão, cidade e telhado.
 5. Apresente o KIT DIMENSIONADO de cada distribuidor de forma limpa e enxuta (mostre os equipamentos principais e totais, sem excesso de texto) e o valor total.
 6. Após exibir os valores e os itens, PERGUNTE qual distribuidora o usuário seleciona.
 7. Quando ele selecionar, inicie o cadastro do cliente final no CRM: Peça APENAS o Nome do cliente final. NUNCA CHAME a ferramenta de CRM nesta etapa, APENAS FAÇA A PERGUNTA E ESPERE A RESPOSTA.
@@ -77,12 +77,14 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                 gerar_cotacao_distribuidor: tool({
                     description: "Usa o motor de cálculo da EnergivIA para descobrir os componentes físicos e puxar orçamentos REAIS cruzando todos os distribuidores ativos (Edeltec, etc) para a potência solicitada.",
                     parameters: z.object({
-                        monthlyConsumption: z.coerce.number().describe("Consumo mensal (kWh)"),
+                        monthlyConsumption: z.coerce.number().describe("Consumo mensal fallback (se não tiver history)"),
+                        history: z.array(z.number()).optional().describe("Array com histórico de consumo dos últimos meses extraído da fatura"),
+                        connectionType: z.string().optional().describe("Tipo de conexão: Monofásico, Bifásico, Trifásico"),
                         location: z.string().describe("Cidade e Estado"),
                         roofType: z.string().describe("Tipo de telhado"),
                         includeStructure: z.boolean().describe("True se precisar de estrutura, False se for opcional/sem telhado averbado.")
                     }),
-                    execute: async ({ monthlyConsumption, location, roofType, includeStructure }: any) => {
+                    execute: async ({ monthlyConsumption, history, connectionType, location, roofType, includeStructure }: any) => {
                         try {
                             const session = await auth0.getSession();
                             if (!session) return { error: "Sem sessão do admin." };
@@ -102,10 +104,18 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                             const safeLocation = location || "São Paulo, SP";
                             const safeConsumption = monthlyConsumption || 300;
 
-                            const mathResults = generateSolarKits({ monthlyConsumption: safeConsumption, location: safeLocation, roofType: mappedRoof });
+                            const mathResults = generateSolarKits({ 
+                                monthlyConsumption: safeConsumption, 
+                                location: safeLocation, 
+                                roofType: mappedRoof,
+                                history: history || [],
+                                connectionType: connectionType || 'bifasico' 
+                            });
                             const target = mathResults.kits[0]; // Usamos o Custo-Benefício como guia matemático
                             if (!target) return { error: "Erro simulando math results." };
-                            const targetKWp = parseFloat(target.systemSize.replace('kWp', ''));
+                            
+                            // targetKWp retornado pelo motor exato
+                            const targetKWp = target.targetKWp || parseFloat(target.systemSize.replace('kWp', ''));
 
                             const distRes = await fetch(`${baseURL}/distributors`, {
                                 headers: { "Authorization": `Bearer ${result.token}` }
@@ -153,11 +163,15 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                         const maxInputCurrent = Number(specs.max_input_current);
                                         const maxDcPower = Number(specs.max_dc_power);
                                         
-                                        // Overload dinâmico baseado na marca
+                                        // Overload entre 75% e 90% (o inversor pode ser menor)
+                                        // P_inversor = P_kWp * Fator (0.77 a 0.90), mas aceitamos de 0.77 a 1.0 ou +1.3 para SAJ, se necessário
                                         const isSaj = invObj.product.name.toUpperCase().includes('SAJ');
                                         const overloadFactor = isSaj ? 2.0 : 1.3; // 100% para SAJ, 30% padrão
 
+                                        // Impede a queima do inversor por excesso de corrente
                                         if (modIsc > maxInputCurrent + 1.5) continue; 
+                                        
+                                        // Garante que o painel caiba no overload do inversor
                                         if (totalDcPower > maxDcPower * overloadFactor) continue;
                                     }
 
@@ -175,11 +189,22 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                         invKWp = 10; // fallback pra não explodir
                                     }
 
-                                    const diff = Math.abs(invKWp - targetKWp);
-                                    if (diff < minDiff) {
-                                        minDiff = diff;
-                                        bestInv = invObj;
-                                    }
+                                     const diff = Math.abs(invKWp - targetKWp);
+                                     
+                                     // ETAPA 4.B: Limite de Overload (inversor deve ser 77% a 90% das placas)
+                                     // Ou seja, kWp Inversor <= targetKWp * 0.9 e kWp Inversor >= targetKWp * 0.77
+                                     // Se o inversor for muito maior ou muito menor, penaliza o diff
+                                     const pMin = targetKWp * 0.77;
+                                     const pMax = targetKWp * 1.0; // Extendendo até 1.0 para flexibilizar o estoque
+                                     
+                                     if (invKWp < pMin || invKWp > pMax) {
+                                         continue; // Pula inversores fora do range de overloading recomendado
+                                     }
+
+                                     if (diff < minDiff) {
+                                         minDiff = diff;
+                                         bestInv = invObj;
+                                     }
                                 }
 
                                 const inv = bestInv || invs[0];
