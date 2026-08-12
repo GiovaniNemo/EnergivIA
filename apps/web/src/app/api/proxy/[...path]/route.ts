@@ -40,6 +40,8 @@ export async function DELETE(
 }
 
 async function proxy(request: NextRequest, params: { path: string[] }, method: string) {
+  const body = method !== "GET" ? await request.arrayBuffer() : undefined;
+
   const session = await auth0.getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -99,7 +101,6 @@ async function proxy(request: NextRequest, params: { path: string[] }, method: s
   }
   if (orgId) headers["X-Organization-Id"] = orgId;
 
-  const body = method !== "GET" ? await request.arrayBuffer() : undefined;
   const res = await fetch(url.toString(), { method, headers, body });
 
   if (isSseStream) {
