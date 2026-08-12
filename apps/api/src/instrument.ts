@@ -10,9 +10,8 @@ if (dsn) {
     dsn,
     environment: process.env["NODE_ENV"] ?? "development",
     release: process.env["SENTRY_RELEASE"] ?? process.env["RAILWAY_GIT_COMMIT_SHA"],
-    integrations: (defaults) => {
-      const integrations = typeof defaults === "function" ? defaults() : defaults;
-      return [...integrations, nodeProfilingIntegration()].filter((i) => i.name !== "Express");
+    integrations: (integrations) => {
+      return integrations.filter((i) => i.name !== "Express").concat(nodeProfilingIntegration());
     },
     tracesSampleRate: Number(process.env["SENTRY_TRACES_SAMPLE_RATE"] ?? 0.1),
     profilesSampleRate: Number(process.env["SENTRY_PROFILES_SAMPLE_RATE"] ?? 0.1),
