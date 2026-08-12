@@ -221,7 +221,13 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                 const con = cons[0];
                                 
                                 // Tenta buscar a estrutura correta para o tipo de telhado
-                                const matchedEsts = ests.filter(p => JSON.stringify(p).toLowerCase().includes(mappedRoof));
+                                const matchedEsts = ests.filter(p => {
+                                    const s = JSON.stringify(p).toLowerCase();
+                                    if (mappedRoof === 'fibromadeira') {
+                                        return s.includes('fibromadeira') || s.includes('fibrocimento');
+                                    }
+                                    return s.includes(mappedRoof);
+                                });
                                 const estPrinc = matchedEsts.length > 0 ? matchedEsts[0] : ests[0];
                                 
                                 // Se o telhado não for 'none' e houver perfis disponíveis (que não sejam a estrutura principal), adiciona o primeiro perfil
