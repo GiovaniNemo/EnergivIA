@@ -2,12 +2,55 @@
 import { openai } from "@ai-sdk/openai";
 import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
-import hspBrasilData from '@/data/hsp-brasil.json';
+import fs from "fs";
+import path from "path";
 
 const normalizeString = (str: string) => {
     if (!str) return '';
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
 };
+
+const ufToState: Record<string, string> = {
+    'AC': 'ACRE', 'AL': 'ALAGOAS', 'AP': 'AMAPÁ', 'AM': 'AMAZONAS', 'BA': 'BAHIA', 'CE': 'CEARÁ',
+    'DF': 'DISTRITO FEDERAL', 'ES': 'ESPÍRITO SANTO', 'GO': 'GOIÁS', 'MA': 'MARANHÃO',
+    'MT': 'MATO GROSSO', 'MS': 'MATO GROSSO DO SUL', 'MG': 'MINAS GERAIS', 'PA': 'PARÁ',
+    'PB': 'PARAÍBA', 'PR': 'PARANÁ', 'PE': 'PERNAMBUCO', 'PI': 'PIAUÍ', 'RJ': 'RIO DE JANEIRO',
+    'RN': 'RIO GRANDE DO NORTE', 'RS': 'RIO GRANDE DO SUL', 'RO': 'RONDÔNIA', 'RR': 'RORAIMA',
+    'SC': 'SANTA CATARINA', 'SP': 'SÃO PAULO', 'SE': 'SERGIPE', 'TO': 'TOCANTINS'
+};
+
+let cachedCsvData: string[] | null = null;
+const getHspFromCsv = (cidade: string, estado: string) => {
+    try {
+        if (!cachedCsvData) {
+            const csvPath = path.join(process.cwd(), 'hsp_brasil_todos_municipios hsp_medio_anual.csv');
+            cachedCsvData = fs.readFileSync(csvPath, 'utf8').split('\n');
+        }
+
+        const searchCity = normalizeString(cidade);
+        const uf = estado.trim().toUpperCase();
+        const searchState = normalizeString(ufToState[uf] || uf);
+
+        for (let i = 1; i < cachedCsvData.length; i++) {
+            const cols = cachedCsvData[i].split(';');
+            if (cols.length >= 7) {
+                const csvCity = normalizeString(cols[3]);
+                const csvState = normalizeString(cols[5]);
+
+                if (csvCity === searchCity && csvState === searchState) {
+                    const hspValue = parseInt(cols[6], 10);
+                    const lat = parseFloat(cols[2]);
+                    const lon = parseFloat(cols[1]);
+                    return { hsp: hspValue / 1000, lat, lon };
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Erro lendo CSV HSP:", e);
+    }
+    return null;
+}
+
 import pdfParse from "pdf-parse";
 import { generateSolarKits } from "@energivia/solar-engine";
 import { auth0 } from "@/lib/auth0";
@@ -138,17 +181,16 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
             stopWhen: stepCountIs(5),
             tools: {
                 buscar_hsp_localidade: tool({
-                    description: "Busca o índice de irradiação solar (HSP) médio anual de uma cidade conectando na base da NASA POWER.",
+                    description: "Busca o índice de irradiação solar (HSP) médio anual de uma cidade conectando na base local fornecida pelo INPE/IBGE.",
                     parameters: z.object({
                         cidade: z.string().describe("Nome da cidade"),
                         estado: z.string().describe("Sigla do estado (UF)")
                     }),
                     execute: async ({ cidade, estado }) => {
-                        const key = `${normalizeString(cidade)}-${normalizeString(estado)}`;
-                        const hspData = (hspBrasilData as Record<string, {hsp: number, lat: number, lon: number}>)[key];
+                        const csvData = getHspFromCsv(cidade, estado);
 
-                        if (hspData) {
-                            return { hsp: hspData.hsp, latitude: hspData.lat, longitude: hspData.lon, info: "HSP recuperado com sucesso (Base INPE/IBGE)" };
+                        if (csvData) {
+                            return { hsp: csvData.hsp, latitude: csvData.lat, longitude: csvData.lon, info: "HSP recuperado com sucesso (Base INPE/IBGE)" };
                         }
 
                         // Fallback do Estado (se a cidade nao for encontrada)
@@ -195,16 +237,15 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                             // Busca HSP interna no motor para não depender do chute da IA
                             const cid = cidade || safeLocation.split(',')[0].trim();
                             const est = estado || safeLocation.split(',')[1]?.trim() || "SP";
-                            const key = `${normalizeString(cid)}-${normalizeString(est)}`;
-                            const hspData = (hspBrasilData as Record<string, {hsp: number}>)[key];
-                            
+                            const csvData = getHspFromCsv(cid, est);
+
                             const UF_HSP: Record<string, number> = {
                                 ac: 4.8, al: 5.5, am: 4.5, ap: 4.9, ba: 5.4, ce: 5.7, df: 5.5,
                                 es: 5.1, go: 5.6, ma: 5.3, mg: 5.3, ms: 5.5, mt: 5.4, pa: 4.8,
                                 pb: 5.6, pe: 5.3, pi: 5.6, pr: 4.9, rj: 5.0, rn: 5.7, ro: 4.8,
                                 rr: 5.1, rs: 4.8, sc: 4.9, se: 5.4, sp: 4.8, to: 5.4
                             };
-                            const finalHsp = hspData?.hsp || UF_HSP[est.toLowerCase()] || 5.0;
+                            const finalHsp = csvData?.hsp || UF_HSP[est.toLowerCase()] || 5.0;
 
                             // Cálculo forçado e cravado
                             let targetKWp = Number(((safeConsumption / 30.4) / finalHsp).toFixed(2));
@@ -236,7 +277,7 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                                 // 1. Módulo
                                 const validMods = mods.filter(m => m.product.specs && m.product.specs.isc && m.product.specs.power_w);
                                 const mod = validMods.length > 0 ? validMods[0] : mods[0];
-                                
+
                                 if (!mod) continue; // Pula se não tiver nenhum módulo
 
                                 const modPowerW = mod.product.specs ? (Number(mod.product.specs.power_w) || 550) : 550;
@@ -249,12 +290,12 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
 
                                 for (const invObj of invs) {
                                     const specs = invObj.product.specs;
-                                    
+
                                     // Chegar o mais próximo do targetKWp pelo nome ou spec
                                     const name = invObj.product.name.toUpperCase();
                                     const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
                                     let invKWp = null;
-                                    
+
                                     if (match) {
                                         invKWp = parseFloat(match[1].replace(',', '.'));
                                         if (match[2] === 'W') invKWp = invKWp / 1000;
@@ -271,8 +312,8 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                                     if (specs && specs.max_input_current && specs.max_dc_power) {
                                         const maxInputCurrent = Number(specs.max_input_current);
                                         const maxDcPower = Number(specs.max_dc_power);
-                                        
-                                        if (modIsc > maxInputCurrent + 1.5) continue; 
+
+                                        if (modIsc > maxInputCurrent + 1.5) continue;
                                         if (totalDcPower > maxDcPower * overloadFactor) continue;
                                     } else {
                                         // Sem specs, aplica overload pelo nome
@@ -308,7 +349,7 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                                 const cabPreto = cabs.find(c => JSON.stringify(c).toLowerCase().includes('preto')) || cabs[0];
                                 const cabVermelho = cabs.find(c => JSON.stringify(c).toLowerCase().includes('vermelho')) || (cabs.length > 1 && cabs[1] !== cabPreto ? cabs[1] : null);
                                 const con = cons[0];
-                                
+
                                 // Tenta buscar a estrutura correta para o tipo de telhado
                                 const matchedEsts = ests.filter(p => {
                                     const s = p.product.name.toLowerCase();
@@ -318,14 +359,14 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                                     return s.includes(mappedRoof);
                                 });
                                 const estPrinc = matchedEsts.length > 0 ? matchedEsts[0] : ests[0];
-                                
+
                                 // Se o telhado não for 'none' e houver perfis disponíveis (que não sejam a estrutura principal e NÃO contenham "s/ perfil" ou "sem perfil")
                                 const perfil = ests.find(p => {
                                     const name = p.product.name.toLowerCase();
-                                    return name.includes('perfil') && 
-                                           !name.includes('s/ perfil') && 
-                                           !name.includes('sem perfil') && 
-                                           p.id !== estPrinc?.id;
+                                    return name.includes('perfil') &&
+                                        !name.includes('s/ perfil') &&
+                                        !name.includes('sem perfil') &&
+                                        p.id !== estPrinc?.id;
                                 });
 
                                 const precoInv = Number(inv.price) || 0;
@@ -383,7 +424,7 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                                 if (userMsgs.length >= 2) {
                                     const lastMsg = userMsgs[userMsgs.length - 1].content as string;
                                     const penultMsg = userMsgs[userMsgs.length - 2].content as string;
-                                    
+
                                     // Consideramos que a última mensagem é o WhatsApp e a penúltima é o Nome
                                     rawWhatsapp = lastMsg;
                                     rawNome = penultMsg;
@@ -419,7 +460,7 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
 
                             if (!res.ok) {
                                 const err = await res.json();
-                                return { error: `Erro no CRM: ${JSON.stringify(err)} | ARGS: ${JSON.stringify({nome, whatsapp, typeNome: typeof nome})}` };
+                                return { error: `Erro no CRM: ${JSON.stringify(err)} | ARGS: ${JSON.stringify({ nome, whatsapp, typeNome: typeof nome })}` };
                             }
 
                             const leadData = await res.json();
