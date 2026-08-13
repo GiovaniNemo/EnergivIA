@@ -51,7 +51,7 @@ B. Identificação Automática da Taxa de Disponibilidade: Monofásico -> 30, Bi
 ETAPA 3: O ALGORITMO MATEMÁTICO PASSO A PASSO
 Passo 1: Cálculo do Consumo Médio Mensal Target (C_medio): Soma-se o histórico e divide-se pelo nº de meses válidos.
 Passo 2: Cálculo do Consumo Líquido a Compensar (C_compensar): C_medio - taxa de disponibilidade.
-Passo 3: Definição do Índice de Irradiação Solar (HSP): Média anual para a localidade.
+Passo 3: Definição do Índice de Irradiação Solar (HSP): OBRIGATÓRIO chamar a ferramenta 'buscar_hsp_localidade' passando a cidade e estado extraídos para obter a média anual real da NASA. NUNCA tente adivinhar esse valor.
 Passo 4: Taxa de Perda Global (PR = 0.80).
 Passo 5: Potência do Sistema (P_kWp): C_compensar / (HSP * 30 * PR).
 
@@ -105,6 +105,34 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
             messages: formattedMessages,
             stopWhen: stepCountIs(5),
             tools: {
+                buscar_hsp_localidade: tool({
+                    description: "Busca o índice de irradiação solar (HSP) médio anual de uma cidade conectando na base da NASA POWER.",
+                    parameters: z.object({
+                        cidade: z.string().describe("Nome da cidade"),
+                        estado: z.string().describe("Sigla do estado (UF)")
+                    }),
+                    execute: async ({ cidade, estado }) => {
+                        try {
+                            const geocodeUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cidade)},${encodeURIComponent(estado)},Brazil&format=json&limit=1`;
+                            const geoRes = await fetch(geocodeUrl, { headers: { "User-Agent": "EnergivIA-Bot" } });
+                            const geoData = await geoRes.json();
+                            if (!geoData || geoData.length === 0) return { error: "Localização não encontrada." };
+                            
+                            const { lat, lon } = geoData[0];
+                            const nasaUrl = `https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=ALLSKY_SFC_SW_DWN&community=RE&longitude=${lon}&latitude=${lat}&format=JSON`;
+                            const nasaRes = await fetch(nasaUrl);
+                            const nasaData = await nasaRes.json();
+                            
+                            const hspAnual = nasaData?.properties?.parameter?.ALLSKY_SFC_SW_DWN?.ANN;
+                            if (hspAnual) {
+                                return { hsp: hspAnual, latitude: lat, longitude: lon, info: "Dados da NASA POWER Climatology" };
+                            }
+                            return { error: "Falha ao extrair HSP da NASA." };
+                        } catch (err: any) {
+                            return { error: "Erro na consulta de HSP: " + err.message };
+                        }
+                    }
+                }),
                 gerar_cotacao_distribuidor: tool({
                     description: "Usa o motor de cálculo da EnergivIA para descobrir os componentes físicos e puxar orçamentos REAIS cruzando todos os distribuidores ativos (Edeltec, etc) para a potência solicitada.",
                     parameters: z.object({
