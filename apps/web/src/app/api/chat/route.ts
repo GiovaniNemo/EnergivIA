@@ -102,11 +102,12 @@ A. Consumo Médio Mensal (Cmed):
 B. Potência do Gerador Fotovoltaico em Corrente Contínua (P_DC em kWp):
    Realize o cálculo direto da potência necessária sem deduções:
    
-   P_DC (kWp) = (Cmed / 30,4) / HSP
+   P_DC (kWp) = (Cmed / HSP) / 30
    
    Onde:
-   - 30,4: Média exata de dias do mês.
-   - HSP: Horas de Sol Pico. OBRIGATÓRIO chamar a ferramenta 'buscar_hsp_localidade'. O valor retornado DEVE ser utilizado de forma EXATA na equação. Nunca invente ou altere o HSP. PROIBIDO CHUTAR 3.0 kWp! Faça a divisão matemática real.
+   - Cmed: Consumo mensal em kWh/mês
+   - HSP: irradiação solar média da cidade (kWh/m²/dia). OBRIGATÓRIO chamar a ferramenta 'buscar_hsp_localidade'. O valor retornado DEVE ser utilizado de forma EXATA na equação. Nunca invente ou altere o HSP. PROIBIDO CHUTAR 3.0 kWp! Faça a divisão matemática real.
+   - 30: dias do mês.
 
 C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétricos:
    - Determine a potência nominal do inversor (P_AC em kW).
@@ -258,7 +259,7 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                             const finalHsp = csvData?.hsp || UF_HSP[est.toLowerCase()] || 5.0;
 
                             // Cálculo forçado e cravado
-                            let targetKWp = Number(((safeConsumption / 30.4) / finalHsp).toFixed(2));
+                            let targetKWp = Number(((safeConsumption / finalHsp) / 30).toFixed(2));
                             let target: any = null;
 
                             const distRes = await fetch(`${baseURL}/distributors`, {
