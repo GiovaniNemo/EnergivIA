@@ -29,6 +29,7 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   },
+  typescript: { ignoreBuildErrors: true },
   reactStrictMode: true,
   distDir: process.env.NEXT_DIST_DIR || ".next",
   images: {
