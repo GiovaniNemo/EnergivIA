@@ -198,7 +198,7 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                             const safeConsumption = monthlyConsumption || 300;
 
                             let targetKWp = potenciaRecomendadaKWp;
-                            let target = null;
+                            let target: any = null;
                             if (!targetKWp) {
                                 const mathResults = generateSolarKits({ monthlyConsumption: safeConsumption, location: safeLocation, roofType: mappedRoof });
                                 target = mathResults.kits[0]; 
