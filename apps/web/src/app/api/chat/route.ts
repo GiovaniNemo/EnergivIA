@@ -2,6 +2,12 @@
 import { openai } from "@ai-sdk/openai";
 import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
+import hspBrasilData from '@/data/hsp-brasil.json';
+
+const normalizeString = (str: string) => {
+    if (!str) return '';
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+};
 import pdfParse from "pdf-parse";
 import { generateSolarKits } from "@energivia/solar-engine";
 import { auth0 } from "@/lib/auth0";
@@ -136,6 +142,14 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                         estado: z.string().describe("Sigla do estado (UF)")
                     }),
                     execute: async ({ cidade, estado }) => {
+                        const key = `${normalizeString(cidade)}-${normalizeString(estado)}`;
+                        const hspData = (hspBrasilData as Record<string, {hsp: number, lat: number, lon: number}>)[key];
+
+                        if (hspData) {
+                            return { hsp: hspData.hsp, latitude: hspData.lat, longitude: hspData.lon, info: "HSP recuperado com sucesso (Base INPE/IBGE)" };
+                        }
+
+                        // Fallback do Estado (se a cidade nao for encontrada)
                         const UF_HSP: Record<string, number> = {
                             ac: 4.8, al: 5.5, am: 4.5, ap: 4.9, ba: 5.4, ce: 5.7, df: 5.5,
                             es: 5.1, go: 5.6, ma: 5.3, mg: 5.3, ms: 5.5, mt: 5.4, pa: 4.8,
@@ -143,29 +157,7 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                             rr: 5.1, rs: 4.8, sc: 4.9, se: 5.4, sp: 4.8, to: 5.4
                         };
                         const fallbackHsp = UF_HSP[(estado || "").toLowerCase()] || 5.0;
-
-                        try {
-                            const geocodeUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cidade)}&count=5&language=pt&format=json`;
-                            const geoRes = await fetch(geocodeUrl);
-                            const geoData = await geoRes.json();
-                            if (!geoData || !geoData.results || geoData.results.length === 0) {
-                                return { hsp: fallbackHsp, info: `HSP recuperado com sucesso (Base Interna ${(estado || "").toUpperCase()})` };
-                            }
-                            
-                            const brResult = geoData.results.find((r: any) => r.country_code === 'BR') || geoData.results[0];
-                            const { latitude: lat, longitude: lon } = brResult;
-                            const nasaUrl = `https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=ALLSKY_SFC_SW_DWN&community=RE&longitude=${lon}&latitude=${lat}&format=JSON`;
-                            const nasaRes = await fetch(nasaUrl);
-                            const nasaData = await nasaRes.json();
-                            
-                            const hspAnual = nasaData?.properties?.parameter?.ALLSKY_SFC_SW_DWN?.ANN;
-                            if (hspAnual) {
-                                return { hsp: hspAnual, latitude: lat, longitude: lon, info: "HSP recuperado com sucesso (NASA)" };
-                            }
-                            return { hsp: fallbackHsp, info: `HSP recuperado com sucesso (Base Interna ${(estado || "").toUpperCase()})` };
-                        } catch (err: any) {
-                            return { hsp: fallbackHsp, info: `HSP recuperado com sucesso (Base Interna ${(estado || "").toUpperCase()})` };
-                        }
+                        return { hsp: fallbackHsp, info: `HSP recuperado com sucesso (Base Interna ${(estado || "").toUpperCase()})` };
                     }
                 }),
                 gerar_cotacao_distribuidor: tool({
