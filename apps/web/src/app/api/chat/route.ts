@@ -137,12 +137,13 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                     }),
                     execute: async ({ cidade, estado }) => {
                         try {
-                            const geocodeUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cidade + ' ' + estado)}&count=1&language=pt&format=json`;
+                            const geocodeUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cidade)}&count=5&language=pt&format=json`;
                             const geoRes = await fetch(geocodeUrl);
                             const geoData = await geoRes.json();
                             if (!geoData || !geoData.results || geoData.results.length === 0) return { error: "Localização não encontrada no Geocoding." };
                             
-                            const { latitude: lat, longitude: lon } = geoData.results[0];
+                            const brResult = geoData.results.find((r: any) => r.country_code === 'BR') || geoData.results[0];
+                            const { latitude: lat, longitude: lon } = brResult;
                             const nasaUrl = `https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=ALLSKY_SFC_SW_DWN&community=RE&longitude=${lon}&latitude=${lat}&format=JSON`;
                             const nasaRes = await fetch(nasaUrl);
                             const nasaData = await nasaRes.json();
@@ -187,9 +188,10 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                             const safeConsumption = monthlyConsumption || 300;
 
                             let targetKWp = potenciaRecomendadaKWp;
+                            let target = null;
                             if (!targetKWp) {
                                 const mathResults = generateSolarKits({ monthlyConsumption: safeConsumption, location: safeLocation, roofType: mappedRoof });
-                                const target = mathResults.kits[0]; 
+                                target = mathResults.kits[0]; 
                                 if (!target) return { error: "Erro simulando math results." };
                                 targetKWp = parseFloat(target.systemSize.replace('kWp', ''));
                             }
@@ -323,8 +325,8 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                             return {
                                 success: true,
                                 matematicaGuia: {
-                                    geracaoEstimada: target.estimatedGeneration,
-                                    tamanhoRecomendado: target.systemSize
+                                    geracaoEstimada: target ? target.estimatedGeneration : `${(targetKWp * 130).toFixed(0)} kWh/mês`,
+                                    tamanhoRecomendado: target ? target.systemSize : `${targetKWp} kWp`
                                 },
                                 ofertasDistribuidores: finalQuotes.length > 0 ? finalQuotes : "Nenhum distribuidor tinha módulos e inversores em estoque suficientes para formar um kit."
                             };
