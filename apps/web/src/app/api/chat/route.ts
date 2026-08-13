@@ -169,9 +169,10 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                         location: z.string().describe("Cidade e Estado"),
                         roofType: z.string().describe("Tipo de telhado"),
                         includeStructure: z.boolean().describe("True se precisar de estrutura, False se for opcional/sem telhado averbado."),
-                        potenciaRecomendadaKWp: z.coerce.number().optional().describe("A potência calculada (P_DC em kWp) que você acabou de calcular. Passe este valor para que o motor utilize sua matemática.")
+                        cidade: z.string().optional().describe("Nome da cidade para o motor calcular HSP internamente"),
+                        estado: z.string().optional().describe("Sigla do estado (UF) para o motor calcular HSP internamente")
                     }),
-                    execute: async ({ monthlyConsumption, location, roofType, includeStructure, potenciaRecomendadaKWp }: any) => {
+                    execute: async ({ monthlyConsumption, location, roofType, includeStructure, cidade, estado }: any) => {
                         try {
                             const session = await auth0.getSession();
                             if (!session) return { error: "Sem sessão do admin." };
@@ -191,14 +192,23 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                             const safeLocation = location || "São Paulo, SP";
                             const safeConsumption = monthlyConsumption || 300;
 
-                            let targetKWp = potenciaRecomendadaKWp;
+                            // Busca HSP interna no motor para não depender do chute da IA
+                            const cid = cidade || safeLocation.split(',')[0].trim();
+                            const est = estado || safeLocation.split(',')[1]?.trim() || "SP";
+                            const key = `${normalizeString(cid)}-${normalizeString(est)}`;
+                            const hspData = (hspBrasilData as Record<string, {hsp: number}>)[key];
+                            
+                            const UF_HSP: Record<string, number> = {
+                                ac: 4.8, al: 5.5, am: 4.5, ap: 4.9, ba: 5.4, ce: 5.7, df: 5.5,
+                                es: 5.1, go: 5.6, ma: 5.3, mg: 5.3, ms: 5.5, mt: 5.4, pa: 4.8,
+                                pb: 5.6, pe: 5.3, pi: 5.6, pr: 4.9, rj: 5.0, rn: 5.7, ro: 4.8,
+                                rr: 5.1, rs: 4.8, sc: 4.9, se: 5.4, sp: 4.8, to: 5.4
+                            };
+                            const finalHsp = hspData?.hsp || UF_HSP[est.toLowerCase()] || 5.0;
+
+                            // Cálculo forçado e cravado
+                            let targetKWp = Number(((safeConsumption / 30.4) / finalHsp).toFixed(2));
                             let target: any = null;
-                            if (!targetKWp) {
-                                const mathResults = generateSolarKits({ monthlyConsumption: safeConsumption, location: safeLocation, roofType: mappedRoof });
-                                target = mathResults.kits[0]; 
-                                if (!target) return { error: "Erro simulando math results." };
-                                targetKWp = parseFloat(target.systemSize.replace('kWp', ''));
-                            }
 
                             const distRes = await fetch(`${baseURL}/distributors`, {
                                 headers: { "Authorization": `Bearer ${result.token}` }
