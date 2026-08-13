@@ -149,7 +149,7 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                             const geoRes = await fetch(geocodeUrl);
                             const geoData = await geoRes.json();
                             if (!geoData || !geoData.results || geoData.results.length === 0) {
-                                return { hsp: fallbackHsp, info: `HSP recuperado com sucesso (Base Interna ${estado.toUpperCase()})` };
+                                return { hsp: fallbackHsp, info: `HSP recuperado com sucesso (Base Interna ${(estado || "").toUpperCase()})` };
                             }
                             
                             const brResult = geoData.results.find((r: any) => r.country_code === 'BR') || geoData.results[0];
@@ -162,9 +162,9 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                             if (hspAnual) {
                                 return { hsp: hspAnual, latitude: lat, longitude: lon, info: "HSP recuperado com sucesso (NASA)" };
                             }
-                            return { hsp: fallbackHsp, info: `HSP recuperado com sucesso (Base Interna ${estado.toUpperCase()})` };
+                            return { hsp: fallbackHsp, info: `HSP recuperado com sucesso (Base Interna ${(estado || "").toUpperCase()})` };
                         } catch (err: any) {
-                            return { hsp: fallbackHsp, info: `HSP recuperado com sucesso (Base Interna ${estado.toUpperCase()})` };
+                            return { hsp: fallbackHsp, info: `HSP recuperado com sucesso (Base Interna ${(estado || "").toUpperCase()})` };
                         }
                     }
                 }),
