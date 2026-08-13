@@ -136,11 +136,21 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                         estado: z.string().describe("Sigla do estado (UF)")
                     }),
                     execute: async ({ cidade, estado }) => {
+                        const UF_HSP: Record<string, number> = {
+                            ac: 4.8, al: 5.5, am: 4.5, ap: 4.9, ba: 5.4, ce: 5.7, df: 5.5,
+                            es: 5.1, go: 5.6, ma: 5.3, mg: 5.3, ms: 5.5, mt: 5.4, pa: 4.8,
+                            pb: 5.6, pe: 5.3, pi: 5.6, pr: 4.9, rj: 5.0, rn: 5.7, ro: 4.8,
+                            rr: 5.1, rs: 4.8, sc: 4.9, se: 5.4, sp: 4.8, to: 5.4
+                        };
+                        const fallbackHsp = UF_HSP[(estado || "").toLowerCase()] || 5.0;
+
                         try {
                             const geocodeUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cidade)}&count=5&language=pt&format=json`;
                             const geoRes = await fetch(geocodeUrl);
                             const geoData = await geoRes.json();
-                            if (!geoData || !geoData.results || geoData.results.length === 0) return { error: "Localização não encontrada no Geocoding." };
+                            if (!geoData || !geoData.results || geoData.results.length === 0) {
+                                return { hsp: fallbackHsp, info: `Base de Dados Interna (Fallback do Estado: ${estado.toUpperCase()})` };
+                            }
                             
                             const brResult = geoData.results.find((r: any) => r.country_code === 'BR') || geoData.results[0];
                             const { latitude: lat, longitude: lon } = brResult;
@@ -152,9 +162,9 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                             if (hspAnual) {
                                 return { hsp: hspAnual, latitude: lat, longitude: lon, info: "Dados da NASA POWER Climatology" };
                             }
-                            return { error: "Falha ao extrair HSP da NASA." };
+                            return { hsp: fallbackHsp, info: `Base de Dados Interna (Fallback do Estado: ${estado.toUpperCase()})` };
                         } catch (err: any) {
-                            return { error: "Erro na consulta de HSP: " + err.message };
+                            return { hsp: fallbackHsp, info: `Base de Dados Interna (Fallback do Estado: ${estado.toUpperCase()})` };
                         }
                     }
                 }),
