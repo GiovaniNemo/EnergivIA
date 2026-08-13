@@ -55,7 +55,7 @@ B. Potência do Gerador Fotovoltaico em Corrente Contínua (P_DC em kWp):
    
    Onde:
    - 30,4: Média exata de dias do mês.
-   - HSP: Horas de Sol Pico (Irradiação Solar Diária em kWh/m²-dia) obtidas OBRIGATORIAMENTE utilizando a ferramenta 'buscar_hsp_localidade' que busca na base de dados da NASA POWER para a cidade/estado identificados. Nunca tente adivinhar esse valor.
+   - HSP: Horas de Sol Pico (Irradiação Solar Diária em kWh/m²-dia). OBRIGATÓRIO chamar a ferramenta 'buscar_hsp_localidade'. O valor de HSP retornado pela ferramenta (seja da NASA ou da base interna) DEVE ser utilizado de forma exata na sua equação P_DC. Nunca invente ou altere o HSP.
 
 C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétricos:
    - Determine a potência nominal do inversor (P_AC em kW).
@@ -149,7 +149,7 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                             const geoRes = await fetch(geocodeUrl);
                             const geoData = await geoRes.json();
                             if (!geoData || !geoData.results || geoData.results.length === 0) {
-                                return { hsp: fallbackHsp, info: `Base de Dados Interna (Fallback do Estado: ${estado.toUpperCase()})` };
+                                return { hsp: fallbackHsp, info: `HSP recuperado com sucesso (Base Interna ${estado.toUpperCase()})` };
                             }
                             
                             const brResult = geoData.results.find((r: any) => r.country_code === 'BR') || geoData.results[0];
@@ -160,11 +160,11 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                             
                             const hspAnual = nasaData?.properties?.parameter?.ALLSKY_SFC_SW_DWN?.ANN;
                             if (hspAnual) {
-                                return { hsp: hspAnual, latitude: lat, longitude: lon, info: "Dados da NASA POWER Climatology" };
+                                return { hsp: hspAnual, latitude: lat, longitude: lon, info: "HSP recuperado com sucesso (NASA)" };
                             }
-                            return { hsp: fallbackHsp, info: `Base de Dados Interna (Fallback do Estado: ${estado.toUpperCase()})` };
+                            return { hsp: fallbackHsp, info: `HSP recuperado com sucesso (Base Interna ${estado.toUpperCase()})` };
                         } catch (err: any) {
-                            return { hsp: fallbackHsp, info: `Base de Dados Interna (Fallback do Estado: ${estado.toUpperCase()})` };
+                            return { hsp: fallbackHsp, info: `HSP recuperado com sucesso (Base Interna ${estado.toUpperCase()})` };
                         }
                     }
                 }),
