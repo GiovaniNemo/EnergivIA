@@ -114,7 +114,7 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                     execute: async ({ cidade, estado }) => {
                         try {
                             const geocodeUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cidade)},${encodeURIComponent(estado)},Brazil&format=json&limit=1`;
-                            const geoRes = await fetch(geocodeUrl, { headers: { "User-Agent": "EnergivIA-Bot" } });
+                            const geoRes = await fetch(geocodeUrl, { headers: { "User-Agent": "EnergivIA-Bot (sgiovanimendes@gmail.com)" } });
                             const geoData = await geoRes.json();
                             if (!geoData || geoData.length === 0) return { error: "Localização não encontrada." };
                             
@@ -250,16 +250,22 @@ Se o assunto for fora de energia solar/plataforma, responda que só pode ajudar 
                                 
                                 // Tenta buscar a estrutura correta para o tipo de telhado
                                 const matchedEsts = ests.filter(p => {
-                                    const s = JSON.stringify(p).toLowerCase();
+                                    const s = p.product.name.toLowerCase();
                                     if (mappedRoof === 'fibromadeira') {
-                                        return s.includes('fibromadeira') || s.includes('fibrocimento');
+                                        return s.includes('fibromadeira') || s.includes('fibrocimento') || s.includes('fibrometal');
                                     }
                                     return s.includes(mappedRoof);
                                 });
                                 const estPrinc = matchedEsts.length > 0 ? matchedEsts[0] : ests[0];
                                 
-                                // Se o telhado não for 'none' e houver perfis disponíveis (que não sejam a estrutura principal), adiciona o primeiro perfil
-                                const perfil = ests.find(p => JSON.stringify(p).toLowerCase().includes('perfil') && p.id !== estPrinc?.id);
+                                // Se o telhado não for 'none' e houver perfis disponíveis (que não sejam a estrutura principal e NÃO contenham "s/ perfil" ou "sem perfil")
+                                const perfil = ests.find(p => {
+                                    const name = p.product.name.toLowerCase();
+                                    return name.includes('perfil') && 
+                                           !name.includes('s/ perfil') && 
+                                           !name.includes('sem perfil') && 
+                                           p.id !== estPrinc?.id;
+                                });
 
                                 const precoInv = Number(inv.price) || 0;
                                 const precoMod = (Number(mod.price) || 0) * moduleQ;
