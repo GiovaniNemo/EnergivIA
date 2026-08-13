@@ -68,8 +68,9 @@ function computeStringConfiguration(
   const upperBound = Math.min(maxModulesPerString, moduleQuantity);
   for (let mps = upperBound; mps >= minModulesPerString; mps--) {
     const stringCount = Math.ceil(moduleQuantity / mps);
-    const totalCurrent = mod.imp * stringCount;
-    const currentOk = totalCurrent <= inv.max_input_current;
+    const maxStringsPerMppt = Math.ceil(stringCount / (inv.mppt_count || 1));
+    const maxCurrentOnOneMppt = mod.imp * maxStringsPerMppt;
+    const currentOk = maxCurrentOnOneMppt <= inv.max_input_current;
     if (currentOk && ratioOk) {
       return {
         config: {
@@ -86,7 +87,9 @@ function computeStringConfiguration(
 
   const modulesPerString = Math.min(maxModulesPerString, moduleQuantity);
   const stringCount = Math.ceil(moduleQuantity / (modulesPerString || 1));
-  const totalCurrent = mod.imp * stringCount;
+  const maxStringsPerMppt = Math.ceil(stringCount / (inv.mppt_count || 1));
+  const maxCurrentOnOneMppt = mod.imp * maxStringsPerMppt;
+
   return {
     config: {
       modules_per_string: modulesPerString || moduleQuantity, // fallback se max for 0
@@ -97,7 +100,7 @@ function computeStringConfiguration(
     },
     validated: {
       voltage: true, // Se não passou no loop ideal, mas estamos retornando, forçamos true para aceitar o kit
-      current: totalCurrent <= inv.max_input_current,
+      current: maxCurrentOnOneMppt <= inv.max_input_current,
       dc_ac_ratio: ratioOk,
     },
   };
