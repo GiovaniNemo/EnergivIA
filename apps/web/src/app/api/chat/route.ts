@@ -245,25 +245,11 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                                 const modIsc = mod.product.specs ? (Number(mod.product.specs.isc) || 0) : 0;
 
                                 // 2. Inversor
-                                let bestInv = null;
-                                let minDiff = Infinity;
+                                let validInvs = [];
 
                                 for (const invObj of invs) {
                                     const specs = invObj.product.specs;
                                     
-                                    // Se tem specs preenchidas, fazemos validação técnica
-                                    if (specs && specs.max_input_current && specs.max_dc_power) {
-                                        const maxInputCurrent = Number(specs.max_input_current);
-                                        const maxDcPower = Number(specs.max_dc_power);
-                                        
-                                        // Overload dinâmico baseado na marca
-                                        const isSaj = invObj.product.name.toUpperCase().includes('SAJ');
-                                        const overloadFactor = isSaj ? 2.0 : 1.3; // 100% para SAJ, 30% padrão
-
-                                        if (modIsc > maxInputCurrent + 1.5) continue; 
-                                        if (totalDcPower > maxDcPower * overloadFactor) continue;
-                                    }
-
                                     // Chegar o mais próximo do targetKWp pelo nome ou spec
                                     const name = invObj.product.name.toUpperCase();
                                     const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
@@ -275,17 +261,48 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                                     } else if (specs && specs.max_dc_power) {
                                         invKWp = Number(specs.max_dc_power) / 1000;
                                     } else {
-                                        invKWp = 10; // fallback pra não explodir
+                                        invKWp = targetKWp; // fallback conservador
                                     }
 
-                                    const diff = Math.abs(invKWp - targetKWp);
-                                    if (diff < minDiff) {
-                                        minDiff = diff;
-                                        bestInv = invObj;
+                                    const isSaj = name.includes('SAJ');
+                                    const overloadFactor = isSaj ? 2.0 : 1.3; // 100% para SAJ, 30% padrão
+
+                                    // Validação técnica e Overload
+                                    if (specs && specs.max_input_current && specs.max_dc_power) {
+                                        const maxInputCurrent = Number(specs.max_input_current);
+                                        const maxDcPower = Number(specs.max_dc_power);
+                                        
+                                        if (modIsc > maxInputCurrent + 1.5) continue; 
+                                        if (totalDcPower > maxDcPower * overloadFactor) continue;
+                                    } else {
+                                        // Sem specs, aplica overload pelo nome
+                                        if (totalDcPower > (invKWp * 1000) * overloadFactor) continue;
                                     }
+
+                                    // Evitar superdimensionar demais o inversor (mínimo 70% de carga)
+                                    if (totalDcPower < (invKWp * 1000) * 0.7) continue;
+
+                                    validInvs.push(invObj);
                                 }
 
-                                const inv = bestInv || invs[0];
+                                // Se filtrou todos, recua para uma busca mais solta só por targetKWp
+                                if (validInvs.length === 0) {
+                                    let minDiff = Infinity;
+                                    let bestFallback = null;
+                                    for (const invObj of invs) {
+                                        const name = invObj.product.name.toUpperCase();
+                                        const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
+                                        let invKWp = match ? parseFloat(match[1].replace(',', '.')) : targetKWp;
+                                        if (match && match[2] === 'W') invKWp = invKWp / 1000;
+                                        const diff = Math.abs(invKWp - targetKWp);
+                                        if (diff < minDiff) { minDiff = diff; bestFallback = invObj; }
+                                    }
+                                    if (bestFallback) validInvs.push(bestFallback);
+                                }
+
+                                // Escolhe o mais barato dos válidos
+                                validInvs.sort((a, b) => Number(a.price) - Number(b.price));
+                                const inv = validInvs.length > 0 ? validInvs[0] : invs[0];
                                 if (!inv) continue;
 
                                 const cabPreto = cabs.find(c => JSON.stringify(c).toLowerCase().includes('preto')) || cabs[0];
