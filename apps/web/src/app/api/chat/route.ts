@@ -125,7 +125,7 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
 
 - Responda de forma direta, objetiva e sucinta (formato adequado para integração via WhatsApp).
 - NUNCA utilize asteriscos (**) para aplicar negrito ou qualquer outra formatação Markdown. É ESTRITAMENTE PROIBIDO USAR ** OU *.
-- SEMPRE utilize DUAS quebras de linha (Enter duas vezes) para separar cada linha de informação. NUNCA utilize tags HTML como `<br>`. Se você não pular linha DUAS vezes, o sistema vai renderizar tudo colado de forma ilegível.
+- SEMPRE utilize DUAS quebras de linha (Enter duas vezes) para separar cada linha de informação. NUNCA utilize tags HTML como <br>. Se você não pular linha DUAS vezes, o sistema vai renderizar tudo colado de forma ilegível.
 
 ---
 ### REGRA DE APRESENTAÇÃO DE KITS E EXIBIÇÃO DE kWp (LEITURA CLEAN E BOTÕES)
