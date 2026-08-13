@@ -137,12 +137,12 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                     }),
                     execute: async ({ cidade, estado }) => {
                         try {
-                            const geocodeUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cidade)},${encodeURIComponent(estado)},Brazil&format=json&limit=1`;
-                            const geoRes = await fetch(geocodeUrl, { headers: { "User-Agent": "EnergivIA-Bot (sgiovanimendes@gmail.com)" } });
+                            const geocodeUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cidade + ' ' + estado)}&count=1&language=pt&format=json`;
+                            const geoRes = await fetch(geocodeUrl);
                             const geoData = await geoRes.json();
-                            if (!geoData || geoData.length === 0) return { error: "Localização não encontrada." };
+                            if (!geoData || !geoData.results || geoData.results.length === 0) return { error: "Localização não encontrada no Geocoding." };
                             
-                            const { lat, lon } = geoData[0];
+                            const { latitude: lat, longitude: lon } = geoData.results[0];
                             const nasaUrl = `https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=ALLSKY_SFC_SW_DWN&community=RE&longitude=${lon}&latitude=${lat}&format=JSON`;
                             const nasaRes = await fetch(nasaUrl);
                             const nasaData = await nasaRes.json();
@@ -163,9 +163,10 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                         monthlyConsumption: z.coerce.number().describe("Consumo mensal (kWh)"),
                         location: z.string().describe("Cidade e Estado"),
                         roofType: z.string().describe("Tipo de telhado"),
-                        includeStructure: z.boolean().describe("True se precisar de estrutura, False se for opcional/sem telhado averbado.")
+                        includeStructure: z.boolean().describe("True se precisar de estrutura, False se for opcional/sem telhado averbado."),
+                        potenciaRecomendadaKWp: z.coerce.number().optional().describe("A potência calculada (P_DC em kWp) que você acabou de calcular. Passe este valor para que o motor utilize sua matemática.")
                     }),
-                    execute: async ({ monthlyConsumption, location, roofType, includeStructure }: any) => {
+                    execute: async ({ monthlyConsumption, location, roofType, includeStructure, potenciaRecomendadaKWp }: any) => {
                         try {
                             const session = await auth0.getSession();
                             if (!session) return { error: "Sem sessão do admin." };
@@ -185,10 +186,13 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                             const safeLocation = location || "São Paulo, SP";
                             const safeConsumption = monthlyConsumption || 300;
 
-                            const mathResults = generateSolarKits({ monthlyConsumption: safeConsumption, location: safeLocation, roofType: mappedRoof });
-                            const target = mathResults.kits[0]; // Usamos o Custo-Benefício como guia matemático
-                            if (!target) return { error: "Erro simulando math results." };
-                            const targetKWp = parseFloat(target.systemSize.replace('kWp', ''));
+                            let targetKWp = potenciaRecomendadaKWp;
+                            if (!targetKWp) {
+                                const mathResults = generateSolarKits({ monthlyConsumption: safeConsumption, location: safeLocation, roofType: mappedRoof });
+                                const target = mathResults.kits[0]; 
+                                if (!target) return { error: "Erro simulando math results." };
+                                targetKWp = parseFloat(target.systemSize.replace('kWp', ''));
+                            }
 
                             const distRes = await fetch(`${baseURL}/distributors`, {
                                 headers: { "Authorization": `Bearer ${result.token}` }
