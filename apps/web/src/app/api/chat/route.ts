@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { openai } from "@ai-sdk/openai";
-import { streamText, tool, stepCountIs } from "ai";
+import { streamText, tool } from "ai";
 import { z } from "zod";
 import fs from "fs";
 import path from "path";
@@ -180,7 +180,7 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
             model: openai("gpt-4o"),
             system: systemPrompt,
             messages: formattedMessages,
-            stopWhen: stepCountIs(5),
+            maxSteps: 5,
             tools: {
                 buscar_hsp_localidade: tool({
                     description: "Busca o índice de irradiação solar (HSP) médio anual de uma cidade conectando na base local fornecida pelo INPE/IBGE.",
@@ -475,11 +475,10 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
             }
         });
 
-        return new Response(result.textStream, {
+        return result.toTextStreamResponse({
             headers: {
-                "Content-Type": "text/plain; charset=utf-8",
                 "Cache-Control": "no-cache",
-            },
+            }
         });
     } catch (error: any) {
         console.error('Erro na API de Chat:', error);
