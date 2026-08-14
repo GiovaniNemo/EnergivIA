@@ -134,6 +134,7 @@ export async function POST(req: Request) {
                         estado: z.string().optional().describe("Sigla do estado (UF) para o motor calcular HSP internamente")
                     }),
                     execute: async ({ monthlyConsumption, location, roofType, includeStructure, cidade, estado }: any) => {
+                        try {
                             let token = "";
                             try {
                                 const session = await auth0.getSession();
