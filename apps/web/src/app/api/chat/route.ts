@@ -359,7 +359,11 @@ export async function POST(req: Request) {
                                 ofertasDistribuidores: finalQuotes.length > 0 ? finalQuotes : "Nenhum distribuidor tinha módulos e inversores em estoque suficientes para formar um kit."
                             };
                         } catch (e: any) {
-                            return { error: "Erro fatal montando cotação: " + e.message };
+                            return {
+                                success: true,
+                                matematicaGuia: { geracaoEstimada: "Erro de conexão", tamanhoRecomendado: "Erro de conexão" },
+                                ofertasDistribuidores: "Falha ao buscar distribuidores. Por favor, avise o suporte técnico que a API está fora do ar ou inacessível. Erro interno: " + e.message
+                            };
                         }
                     }
                 }),
@@ -439,10 +443,18 @@ export async function POST(req: Request) {
                     }
                 })
             },
-            maxSteps: 5
+            maxSteps: 5,
+            onError: (err) => {
+                console.error("[STREAMTEXT ERROR]", err);
+            },
+            onFinish: async (event) => {
+                const finishLog = `[STREAM FINISH] Text: ${event.text}, FinishReason: ${event.finishReason}, ToolCalls: ${JSON.stringify(event.toolCalls)}, ToolResults: ${JSON.stringify(event.toolResults)}`;
+                fs.appendFileSync(path.join(process.cwd(), 'app-logs.txt'), new Date().toISOString() + ': ' + finishLog + '\n');
+                console.log(finishLog);
+            }
         });
 
-        return result.toTextStreamResponse({ 
+        return result.toUIMessageStreamResponse({ 
             headers: { "Cache-Control": "no-cache" },
         });
     } catch (error: any) {
