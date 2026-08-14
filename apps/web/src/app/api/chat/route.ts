@@ -476,7 +476,7 @@ export async function POST(req: Request) {
             }
         });
 
-        return result.toDataStreamResponse({ 
+        return result.toTextStreamResponse({ 
             headers: { "Cache-Control": "no-cache" },
         });
     } catch (error: any) {
