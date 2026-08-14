@@ -107,8 +107,11 @@ export function AIAssistantWidget() {
                 buffer = lines.pop() || '';
 
                 let newText = '';
+                let debugRawStream = '';
+
                 for (const line of lines) {
                     if (line.trim() === '') continue;
+                    debugRawStream += line + '\\n';
                     
                     if (line.startsWith('0:')) {
                         // Text chunk
@@ -119,14 +122,14 @@ export function AIAssistantWidget() {
                         // Error chunk
                         try {
                             const errObj = JSON.parse(line.slice(2));
-                            newText += `\n⚠️ Erro: ${errObj.message || JSON.stringify(errObj)}`;
+                            newText += `\\n⚠️ Erro: ${errObj.message || JSON.stringify(errObj)}`;
                         } catch (e) {}
                     }
                     // We intentionally ignore 9: (tool calls), a: (tool results), etc.
                 }
 
                 if (newText) {
-                    assistMsg.content += newText.replace(/\n$/, '');
+                    assistMsg.content += newText.replace(/\\n$/, '');
                     setMessages((prev) =>
                         prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m)
                     );
@@ -134,7 +137,7 @@ export function AIAssistantWidget() {
             }
             
             if (assistMsg.content === "") {
-                assistMsg.content = "⚠️ A ferramenta interna falhou e encerrou a conexão precocemente. Se você estiver gerando cotações, por favor tente novamente mais tarde.";
+                assistMsg.content = `⚠️ Falha técnica. RAW STREAM:\\n${debugRawStream || 'NENHUM DADO RECEBIDO'}`;
                 setMessages((prev) =>
                     prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m)
                 );
