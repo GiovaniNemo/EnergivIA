@@ -174,7 +174,7 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
                 }
                 return { role: m.role, content: m.content };
             })
-        );
+        )).filter(m => m.content && (typeof m.content === 'string' ? m.content.trim().length > 0 : m.content.length > 0));
 
         console.log('TYPE OF SYSTEM PROMPT:', typeof systemPrompt);
         console.log('MESSAGES LENGTH:', formattedMessages.length);

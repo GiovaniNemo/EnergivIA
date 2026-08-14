@@ -58,10 +58,11 @@ export function AIAssistantWidget() {
         setIsLoading(true);
 
         try {
-            const res = await fetch("/api/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ messages: newMessages })
+            const validMessages = newMessages.filter(m => m.content && m.content.trim().length > 0);
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: validMessages })
             });
 
             if (!res.ok) {
