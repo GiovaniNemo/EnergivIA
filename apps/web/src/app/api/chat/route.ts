@@ -200,16 +200,16 @@ export async function POST(req: Request) {
                                 name: "Edeltec",
                                 nome: "Edeltec",
                                 products: [
-                                    { price: 600, descricao: "Módulo Solar 610W Monocristalino", product: { specs: { power_w: 610, isc: 13.5 } } },
-                                    { price: 5000, descricao: "Inversor String 5kW 220V", product: { specs: { max_input_power_w: 7000, mppts: 2, max_input_current_per_mppt: 15 } } },
-                                    { price: 8000, descricao: "Inversor String 10kW 220V", product: { specs: { max_input_power_w: 13000, mppts: 2, max_input_current_per_mppt: 15 } } },
-                                    { price: 4, descricao: "Cabo Solar Preto 4mm", product: { specs: {} } },
-                                    { price: 4, descricao: "Cabo Solar Vermelho 4mm", product: { specs: {} } },
-                                    { price: 15, descricao: "Conector MC4 Par", product: { specs: {} } },
-                                    { price: 250, descricao: "Estrutura Metálica para Telhado Cerâmica (Colonial)", product: { specs: {} } },
-                                    { price: 200, descricao: "Estrutura Metálica para Telhado Fibromadeira", product: { specs: {} } },
-                                    { price: 300, descricao: "Estrutura Metálica para Laje", product: { specs: {} } },
-                                    { price: 400, descricao: "Estrutura de Solo", product: { specs: {} } }
+                                    { price: 600, descricao: "Módulo Solar 610W Monocristalino", product: { name: "Módulo Solar 610W Monocristalino", specs: { power_w: 610, isc: 13.5 } } },
+                                    { price: 5000, descricao: "Inversor String 5kW 220V", product: { name: "Inversor String 5kW 220V", specs: { max_input_power_w: 7000, mppts: 2, max_input_current_per_mppt: 15 } } },
+                                    { price: 8000, descricao: "Inversor String 10kW 220V", product: { name: "Inversor String 10kW 220V", specs: { max_input_power_w: 13000, mppts: 2, max_input_current_per_mppt: 15 } } },
+                                    { price: 4, descricao: "Cabo Solar Preto 4mm", product: { name: "Cabo Solar Preto 4mm", specs: {} } },
+                                    { price: 4, descricao: "Cabo Solar Vermelho 4mm", product: { name: "Cabo Solar Vermelho 4mm", specs: {} } },
+                                    { price: 15, descricao: "Conector MC4 Par", product: { name: "Conector MC4 Par", specs: {} } },
+                                    { price: 250, descricao: "Estrutura Metálica para Telhado Cerâmica (Colonial)", product: { name: "Estrutura Metálica para Telhado Cerâmica (Colonial)", specs: {} } },
+                                    { price: 200, descricao: "Estrutura Metálica para Telhado Fibromadeira", product: { name: "Estrutura Metálica para Telhado Fibromadeira", specs: {} } },
+                                    { price: 300, descricao: "Estrutura Metálica para Laje", product: { name: "Estrutura Metálica para Laje", specs: {} } },
+                                    { price: 400, descricao: "Estrutura de Solo", product: { name: "Estrutura de Solo", specs: {} } }
                                 ]
                             };
 
@@ -218,16 +218,16 @@ export async function POST(req: Request) {
                                 name: "Aldo Solar",
                                 nome: "Aldo Solar",
                                 products: [
-                                    { price: 580, descricao: "Módulo Solar 550W Monocristalino", product: { specs: { power_w: 550, isc: 13.0 } } },
-                                    { price: 4800, descricao: "Inversor 5kW", product: { specs: { max_input_power_w: 6500, mppts: 2, max_input_current_per_mppt: 14 } } },
-                                    { price: 7500, descricao: "Inversor 10kW", product: { specs: { max_input_power_w: 12000, mppts: 2, max_input_current_per_mppt: 14 } } },
-                                    { price: 3.5, descricao: "Cabo Solar Preto 6mm", product: { specs: {} } },
-                                    { price: 3.5, descricao: "Cabo Solar Vermelho 6mm", product: { specs: {} } },
-                                    { price: 12, descricao: "Conector MC4 Par", product: { specs: {} } },
-                                    { price: 230, descricao: "Estrutura Metálica Cerâmica (Colonial)", product: { specs: {} } },
-                                    { price: 180, descricao: "Estrutura Metálica Fibromadeira", product: { specs: {} } },
-                                    { price: 280, descricao: "Estrutura Metálica Laje", product: { specs: {} } },
-                                    { price: 380, descricao: "Estrutura de Solo", product: { specs: {} } }
+                                    { price: 580, descricao: "Módulo Solar 550W Monocristalino", product: { name: "Módulo Solar 550W Monocristalino", specs: { power_w: 550, isc: 13.0 } } },
+                                    { price: 4800, descricao: "Inversor 5kW", product: { name: "Inversor 5kW", specs: { max_input_power_w: 6500, mppts: 2, max_input_current_per_mppt: 14 } } },
+                                    { price: 7500, descricao: "Inversor 10kW", product: { name: "Inversor 10kW", specs: { max_input_power_w: 12000, mppts: 2, max_input_current_per_mppt: 14 } } },
+                                    { price: 3.5, descricao: "Cabo Solar Preto 6mm", product: { name: "Cabo Solar Preto 6mm", specs: {} } },
+                                    { price: 3.5, descricao: "Cabo Solar Vermelho 6mm", product: { name: "Cabo Solar Vermelho 6mm", specs: {} } },
+                                    { price: 12, descricao: "Conector MC4 Par", product: { name: "Conector MC4 Par", specs: {} } },
+                                    { price: 230, descricao: "Estrutura Metálica Cerâmica (Colonial)", product: { name: "Estrutura Metálica Cerâmica (Colonial)", specs: {} } },
+                                    { price: 180, descricao: "Estrutura Metálica Fibromadeira", product: { name: "Estrutura Metálica Fibromadeira", specs: {} } },
+                                    { price: 280, descricao: "Estrutura Metálica Laje", product: { name: "Estrutura Metálica Laje", specs: {} } },
+                                    { price: 380, descricao: "Estrutura de Solo", product: { name: "Estrutura de Solo", specs: {} } }
                                 ]
                             };
 
@@ -267,7 +267,7 @@ export async function POST(req: Request) {
                                     const specs = invObj.product.specs;
 
                                     // Chegar o mais próximo do targetKWp pelo nome ou spec
-                                    const name = invObj.product.name.toUpperCase();
+                                    const name = (invObj.product?.name || invObj.descricao || "").toUpperCase();
                                     const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
                                     let invKWp = null;
 
@@ -306,7 +306,7 @@ export async function POST(req: Request) {
                                     let minDiff = Infinity;
                                     let bestFallback = null;
                                     for (const invObj of invs) {
-                                        const name = invObj.product.name.toUpperCase();
+                                        const name = (invObj.product?.name || invObj.descricao || "").toUpperCase();
                                         const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
                                         let invKWp = match ? parseFloat(match[1].replace(',', '.')) : finalTargetKWp;
                                         if (match && match[2] === 'W') invKWp = invKWp / 1000;
@@ -327,7 +327,7 @@ export async function POST(req: Request) {
 
                                 // Tenta buscar a estrutura correta para o tipo de telhado
                                 const matchedEsts = ests.filter(p => {
-                                    const s = p.product.name.toLowerCase();
+                                    const s = (p.product?.name || p.descricao || "").toLowerCase();
                                     if (mappedRoof === 'fibromadeira') {
                                         return s.includes('fibromadeira') || s.includes('fibrocimento') || s.includes('fibrometal');
                                     }
@@ -337,7 +337,7 @@ export async function POST(req: Request) {
 
                                 // Se o telhado não for 'none' e houver perfis disponíveis (que não sejam a estrutura principal e NÃO contenham "s/ perfil" ou "sem perfil")
                                 const perfil = ests.find(p => {
-                                    const name = p.product.name.toLowerCase();
+                                    const name = (p.product?.name || p.descricao || "").toLowerCase();
                                     return name.includes('perfil') &&
                                         !name.includes('s/ perfil') &&
                                         !name.includes('sem perfil') &&
@@ -358,13 +358,13 @@ export async function POST(req: Request) {
                                     distribuidora: d.name,
                                     valor_total_do_kit: `R$ ${somaTotal.toFixed(2).replace('.', ',')}`,
                                     kit_itens_salvos: [
-                                        `Inv: ${inv.product.name} (R$ ${precoInv})`,
-                                        `Mod: ${moduleQ}x ${mod.product.name} (R$ ${precoMod})`,
-                                        cabPreto ? `Cab Preto: ${cabPreto.product.name} (R$ ${precoCabPreto})` : null,
-                                        cabVermelho ? `Cab Vermelho: ${cabVermelho.product.name} (R$ ${precoCabVermelho})` : null,
-                                        con ? `Con: 2x ${con.product.name} (R$ ${precoCon})` : null,
-                                        (forcedIncludeStructure && estPrinc) ? `Est: ${estPrinc.product.name} (R$ ${precoEst})` : null,
-                                        (forcedIncludeStructure && perfil) ? `Perfil: ${perfil.product.name} (R$ ${precoPerfil})` : null,
+                                        `Inv: ${inv.product?.name || inv.descricao} (R$ ${precoInv})`,
+                                        `Mod: ${moduleQ}x ${mod.product?.name || mod.descricao} (R$ ${precoMod})`,
+                                        cabPreto ? `Cab Preto: ${cabPreto.product?.name || cabPreto.descricao} (R$ ${precoCabPreto})` : null,
+                                        cabVermelho ? `Cab Vermelho: ${cabVermelho.product?.name || cabVermelho.descricao} (R$ ${precoCabVermelho})` : null,
+                                        con ? `Con: 2x ${con.product?.name || con.descricao} (R$ ${precoCon})` : null,
+                                        (forcedIncludeStructure && estPrinc) ? `Est: ${estPrinc.product?.name || estPrinc.descricao} (R$ ${precoEst})` : null,
+                                        (forcedIncludeStructure && perfil) ? `Perfil: ${perfil.product?.name || perfil.descricao} (R$ ${precoPerfil})` : null,
                                     ].filter(Boolean)
                                 });
                             }
