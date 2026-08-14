@@ -437,24 +437,16 @@ export async function POST(req: Request) {
             maxSteps: 5
         });
 
-        if (typeof (result as any).toDataStreamResponse === 'function') {
-            return (result as any).toDataStreamResponse({ headers: { "Cache-Control": "no-cache" } });
-        } else if (typeof (result as any).toAIStreamResponse === 'function') {
-            return (result as any).toAIStreamResponse({ headers: { "Cache-Control": "no-cache" } });
-        } else if (typeof result.toTextStreamResponse === 'function') {
-            return result.toTextStreamResponse({ headers: { "Cache-Control": "no-cache" } });
-        } else if (result.textStream) {
-            return new Response(result.textStream, {
-                headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache" }
-            });
-        }
-        
-        throw new Error("Nenhum método de stream encontrado no resultado.");
+        return result.toDataStreamResponse({ 
+            headers: { "Cache-Control": "no-cache" },
+        });
     } catch (error: any) {
         console.error('Erro na API de Chat:', error);
-        return new Response(JSON.stringify({ error: error?.message || 'Falha na comunicação com a IA' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
+        // Return a plain text response so the widget can display it
+        const errorMessage = `Desculpe, ocorreu um erro interno: ${error?.message || 'Falha na comunicação com a IA'}. Por favor, tente novamente.`;
+        return new Response(errorMessage, {
+            status: 200,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache' },
         });
     }
 }

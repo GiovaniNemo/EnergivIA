@@ -74,7 +74,6 @@ export function AIAssistantWidget() {
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
-            let allRawLines: string[] = [];
 
             const assistMsg: Message = { id: (Date.now() + 1).toString(), role: "assistant", content: "" };
             setMessages((prev) => [...prev, assistMsg]);
@@ -83,9 +82,7 @@ export function AIAssistantWidget() {
                 const trimmed = line.trim();
                 if (!trimmed) return '';
 
-                allRawLines.push(trimmed);
-
-                // 0: = text delta from the AI
+                // 0: = text delta from the AI (data stream protocol)
                 if (trimmed.startsWith('0:')) {
                     try { return JSON.parse(trimmed.slice(2)); } catch { return ''; }
                 }
@@ -96,18 +93,18 @@ export function AIAssistantWidget() {
                         return `\n⚠️ Erro: ${typeof err === 'string' ? err : (err.message || JSON.stringify(err))}`;
                     } catch { return ''; }
                 }
-                // e: = finish step data (we ignore)
-                // 9: = tool call (we ignore)  
-                // a: = tool result (we ignore)
-                // d: = done signal (we ignore)
-                return '';
+                // Known non-text prefixes: ignore silently
+                if (/^[0-9a-f]:/.test(trimmed)) {
+                    return '';
+                }
+                // Plain text (no prefix) — return as-is
+                return trimmed + '\n';
             };
 
             while (true) {
                 const { done, value } = await reader.read();
 
                 if (done) {
-                    // Process any remaining data in the buffer
                     if (buffer.trim()) {
                         const remaining = buffer.split('\n');
                         let tail = '';
@@ -138,9 +135,11 @@ export function AIAssistantWidget() {
                 }
             }
 
+            // Clean up trailing newline
+            assistMsg.content = assistMsg.content.replace(/\n+$/, '');
+
             if (assistMsg.content === "") {
-                const rawDump = allRawLines.length > 0 ? allRawLines.join('\n') : 'NENHUM DADO RECEBIDO';
-                assistMsg.content = `⚠️ A IA processou a solicitação mas não gerou texto visível.\n\nDados do stream (${allRawLines.length} linhas):\n${rawDump}`;
+                assistMsg.content = "Desculpe, não consegui processar sua solicitação. Por favor, tente novamente.";
                 setMessages((prev) => prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m));
             }
         } catch (error: any) {
