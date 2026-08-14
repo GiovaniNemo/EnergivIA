@@ -89,15 +89,19 @@ export function AIAssistantWidget() {
 
                 let newText = '';
                 for (const line of lines) {
+                    if (line.trim() === '') continue;
                     if (line.startsWith('0:')) {
                         try {
                             newText += JSON.parse(line.slice(2));
                         } catch (e) {}
+                    } else if (!line.match(/^[0-9]+:/)) {
+                        // If it's not a data stream line, treat it as raw text
+                        newText += line + '\n';
                     }
                 }
 
                 if (newText) {
-                    assistMsg.content += newText;
+                    assistMsg.content += newText.replace(/\n$/, '');
                     setMessages((prev) =>
                         prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m)
                     );

@@ -183,7 +183,6 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
             model: openai("gpt-4o"),
             system: systemPrompt,
             messages: formattedMessages,
-            maxSteps: 5,
             tools: {
                 buscar_hsp_localidade: tool({
                     description: "Busca o índice de irradiação solar (HSP) médio anual de uma cidade conectando na base local fornecida pelo INPE/IBGE.",
@@ -478,9 +477,19 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
             }
         });
 
-        return result.toDataStreamResponse({
-            headers: { "Cache-Control": "no-cache" }
-        });
+        if (typeof (result as any).toDataStreamResponse === 'function') {
+            return (result as any).toDataStreamResponse({ headers: { "Cache-Control": "no-cache" } });
+        } else if (typeof (result as any).toAIStreamResponse === 'function') {
+            return (result as any).toAIStreamResponse({ headers: { "Cache-Control": "no-cache" } });
+        } else if (typeof result.toTextStreamResponse === 'function') {
+            return result.toTextStreamResponse({ headers: { "Cache-Control": "no-cache" } });
+        } else if (result.textStream) {
+            return new Response(result.textStream, {
+                headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache" }
+            });
+        }
+        
+        throw new Error("Nenhum método de stream encontrado no resultado.");
     } catch (error: any) {
         console.error('Erro na API de Chat:', error);
         return new Response(JSON.stringify({ error: error?.message || 'Falha na comunicação com a IA' }), {
