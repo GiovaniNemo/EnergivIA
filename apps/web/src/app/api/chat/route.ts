@@ -134,10 +134,17 @@ export async function POST(req: Request) {
                         estado: z.string().optional().describe("Sigla do estado (UF) para o motor calcular HSP internamente")
                     }),
                     execute: async ({ monthlyConsumption, location, roofType, includeStructure, cidade, estado }: any) => {
-                        try {
-                            const session = await auth0.getSession();
-                            if (!session) return { error: "Sem sessão do admin." };
-                            const result = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
+                            let token = "";
+                            try {
+                                const session = await auth0.getSession();
+                                if (session) {
+                                    const authResult = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
+                                    token = authResult.token || "";
+                                }
+                            } catch (e) {
+                                console.warn("Sessão Auth0 não encontrada ou falha ao pegar token:", e);
+                            }
+                            
                             const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
 
                             let mappedRoof: any = 'metal';
@@ -170,9 +177,16 @@ export async function POST(req: Request) {
                             let targetKWp = Number(((safeConsumption / finalHsp) / 30).toFixed(2));
                             let target: any = null;
 
+                            const headers: any = {};
+                            if (token) headers["Authorization"] = `Bearer ${token}`;
+
                             const distRes = await fetch(`${baseURL}/distributors`, {
-                                headers: { "Authorization": `Bearer ${result.token}` }
+                                headers
                             });
+                            
+                            if (!distRes.ok) {
+                                return { error: `Acesso negado ou erro ao buscar distribuidores: ${distRes.status}` };
+                            }
                             const distList = await distRes.json();
                             if (!distList || distList.length === 0) return { error: "Nenhum distribuidor ativo no banco." };
 
@@ -180,7 +194,7 @@ export async function POST(req: Request) {
 
                             for (const d of distList) {
                                 const resProds = await fetch(`${baseURL}/distributors/${d.id}/products?limit=250`, {
-                                    headers: { "Authorization": `Bearer ${result.token}` }
+                                    headers
                                 });
                                 const jsonProds = await resProds.json();
                                 const allProds = jsonProds.data || [];
@@ -356,9 +370,18 @@ export async function POST(req: Request) {
 
                             const nome = String(rawNome).trim();
                             const whatsapp = String(rawWhatsapp).trim();
-                            const session = await auth0.getSession();
-                            if (!session) return { error: "Sem sessão do admin." };
-                            const result = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
+
+                            let token = "";
+                            try {
+                                const session = await auth0.getSession();
+                                if (session) {
+                                    const authResult = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
+                                    token = authResult.token || "";
+                                }
+                            } catch (e) {
+                                console.warn("Sessão Auth0 não encontrada ou falha ao pegar token:", e);
+                            }
+                            
                             const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
                             const payload = {
                                 name: nome,
@@ -368,12 +391,14 @@ export async function POST(req: Request) {
 
                             console.log("PAYLOAD CRM:", payload);
 
+                            const headers: any = {
+                                "Content-Type": "application/json"
+                            };
+                            if (token) headers["Authorization"] = `Bearer ${token}`;
+
                             const res = await fetch(`${baseURL}/leads`, {
                                 method: 'POST',
-                                headers: {
-                                    "Authorization": `Bearer ${result.token}`,
-                                    "Content-Type": "application/json"
-                                },
+                                headers,
                                 body: JSON.stringify(payload)
                             });
 
