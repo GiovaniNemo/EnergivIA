@@ -148,7 +148,7 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
    - 1 - Opção A
    - 2 - Opção B`;
 
-        const formattedMessages = await Promise.all(
+        const formattedMessages = (await Promise.all(
             messages.map(async (m: any) => {
                 if (m.imageUrl) {
                     if (m.imageUrl.startsWith("data:application/pdf")) {
