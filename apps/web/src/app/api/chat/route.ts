@@ -176,11 +176,13 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
             })
         );
 
+        console.log('TYPE OF SYSTEM PROMPT:', typeof systemPrompt);
+        console.log('MESSAGES LENGTH:', formattedMessages.length);
+        console.log('IS ARRAY:', Array.isArray(formattedMessages));
         const result = await streamText({
             model: openai("gpt-4o"),
             system: systemPrompt,
             messages: formattedMessages,
-            maxSteps: 5,
             tools: {
                 buscar_hsp_localidade: tool({
                     description: "Busca o índice de irradiação solar (HSP) médio anual de uma cidade conectando na base local fornecida pelo INPE/IBGE.",
@@ -475,10 +477,14 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
             }
         });
 
+        console.log('FORMATTED MESSAGES BEFORE:', JSON.stringify(formattedMessages, null, 2));
+        if (result.toDataStreamResponse) {
+            return result.toDataStreamResponse({
+                headers: { "Cache-Control": "no-cache" }
+            });
+        }
         return result.toTextStreamResponse({
-            headers: {
-                "Cache-Control": "no-cache",
-            }
+            headers: { "Cache-Control": "no-cache" }
         });
     } catch (error: any) {
         console.error('Erro na API de Chat:', error);
