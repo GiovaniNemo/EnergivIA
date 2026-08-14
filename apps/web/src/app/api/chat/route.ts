@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 
 import { systemPrompt } from './prompt';
+
 const normalizeString = (str: string) => {
     if (!str) return '';
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
@@ -53,7 +54,6 @@ const getHspFromCsv = (cidade: string, estado: string) => {
 }
 
 import pdfParse from "pdf-parse";
-import { generateSolarKits } from "@energivia/solar-engine";
 import { auth0 } from "@/lib/auth0";
 
 export const maxDuration = 60;
@@ -62,14 +62,12 @@ export async function POST(req: Request) {
     try {
         const { messages } = await req.json();
 
-
         const formattedMessages = (await Promise.all(
             messages.map(async (m: any, index: number) => {
                 const isLastMessage = index === messages.length - 1;
 
                 if (m.imageUrl) {
                     if (!isLastMessage) {
-                        // Avoid sending massive PDFs or base64 images in history
                         return { role: m.role, content: `[Documento/Imagem enviada pelo usuário no início da conversa]` };
                     }
 
@@ -98,50 +96,22 @@ export async function POST(req: Request) {
             })
         )).filter(m => m.content && (typeof m.content === 'string' ? m.content.trim().length > 0 : m.content.length > 0));
 
-        console.log('TYPE OF SYSTEM PROMPT:', typeof systemPrompt);
-        console.log('MESSAGES LENGTH:', formattedMessages.length);
-        console.log('IS ARRAY:', Array.isArray(formattedMessages));
         const result = await streamText({
             model: openai("gpt-4o"),
             system: systemPrompt,
             messages: formattedMessages,
             tools: {
-                buscar_hsp_localidade: tool({
-                    description: "Busca o índice de irradiação solar (HSP) médio anual de uma cidade conectando na base local fornecida pelo INPE/IBGE.",
-                    parameters: z.object({
-                        cidade: z.string().optional().describe("Nome da cidade"),
-                        estado: z.string().optional().describe("Sigla do estado (UF)")
-                    }),
-                    execute: async ({ cidade, estado }) => {
-                        const csvData = getHspFromCsv(cidade || "", estado || "");
-
-                        if (csvData) {
-                            return { hsp: csvData.hsp, latitude: csvData.lat, longitude: csvData.lon, info: "HSP recuperado com sucesso (Base INPE/IBGE)" };
-                        }
-
-                        // Fallback do Estado (se a cidade nao for encontrada)
-                        const UF_HSP: Record<string, number> = {
-                            ac: 4.8, al: 5.5, am: 4.5, ap: 4.9, ba: 5.4, ce: 5.7, df: 5.5,
-                            es: 5.1, go: 5.6, ma: 5.3, mg: 5.3, ms: 5.5, mt: 5.4, pa: 4.8,
-                            pb: 5.6, pe: 5.3, pi: 5.6, pr: 4.9, rj: 5.0, rn: 5.7, ro: 4.8,
-                            rr: 5.1, rs: 4.8, sc: 4.9, se: 5.4, sp: 4.8, to: 5.4
-                        };
-                        const fallbackHsp = UF_HSP[(estado || "").toLowerCase()] || 5.0;
-                        return { hsp: fallbackHsp, info: `HSP recuperado com sucesso (Base Interna ${(estado || "").toUpperCase()})` };
-                    }
-                }),
                 gerar_cotacao_distribuidor: tool({
-                    description: "Usa o motor de cálculo da EnergivIA para descobrir os componentes físicos e puxar orçamentos REAIS cruzando todos os distribuidores ativos (Edeltec, etc) para a potência solicitada.",
+                    description: "Usa o motor de cálculo da EnergivIA para dimensionar os componentes físicos e puxar orçamentos REAIS cruzando todos os distribuidores ativos.",
                     parameters: z.object({
-                        monthlyConsumption: z.coerce.number().optional().describe("Consumo mensal (kWh). Opcional se targetKWp for fornecido."),
-                        targetKWp: z.coerce.number().optional().describe("Potência alvo do sistema em kWp. Forneça isso se o usuário pedir kWp ou módulos diretamente."),
+                        monthlyConsumption: z.coerce.number().optional().describe("Consumo mensal (kWh)."),
+                        targetKWp: z.coerce.number().optional().describe("Potência alvo do sistema em kWp."),
                         location: z.string().optional().describe("Cidade e Estado"),
                         roofType: z.string().optional().describe("Tipo de telhado. Padrão: metal."),
-                        includeStructure: z.boolean().optional().describe("True se precisar de estrutura. Padrão: true."),
-                        cidade: z.string().optional().describe("Nome da cidade para o motor calcular HSP internamente"),
-                        estado: z.string().optional().describe("Sigla do estado (UF) para o motor calcular HSP internamente")
+                        cidade: z.string().optional().describe("Nome da cidade para o motor calcular HSP"),
+                        estado: z.string().optional().describe("Sigla do estado (UF) para o motor calcular HSP")
                     }),
-                    execute: async ({ monthlyConsumption, targetKWp, location, roofType, includeStructure, cidade, estado }: any) => {
+                    execute: async ({ monthlyConsumption, targetKWp, location, roofType, cidade, estado }: any) => {
                         try {
                             let token = "";
                             try {
@@ -157,20 +127,22 @@ export async function POST(req: Request) {
                             const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
 
                             let mappedRoof: any = 'metal';
+                            let roofFactor = 1.0;
                             const roofStr = (roofType || "").toLowerCase();
-                            if (roofStr === '1' || roofStr.includes('ceramic') || roofStr.includes('cerâmica') || roofStr.includes('colonial')) mappedRoof = 'ceramic';
-                            else if (roofStr === '2' || roofStr.includes('fibro') || roofStr.includes('fibromadeira')) mappedRoof = 'fibromadeira';
-                            else if (roofStr === '3' || roofStr.includes('metal') || roofStr.includes('metálic')) mappedRoof = 'metal';
-                            else if (roofStr === '4' || roofStr.includes('solo') || roofStr.includes('ground')) mappedRoof = 'ground';
-                            else if (roofStr === '5' || roofStr.includes('laje')) mappedRoof = 'laje';
-                            else if (roofStr === '6' || roofStr.includes('sem') || roofStr.includes('nenhuma')) mappedRoof = 'none';
+                            if (roofStr === '1' || roofStr.includes('ceramic') || roofStr.includes('cerâmica') || roofStr.includes('colonial')) { mappedRoof = 'ceramic'; }
+                            else if (roofStr === '2' || roofStr.includes('fibro') || roofStr.includes('fibromadeira')) { mappedRoof = 'fibromadeira'; }
+                            else if (roofStr === '3' || roofStr.includes('metal') || roofStr.includes('metálic')) { mappedRoof = 'metal'; }
+                            else if (roofStr === '4' || roofStr.includes('solo') || roofStr.includes('ground')) { mappedRoof = 'ground'; }
+                            else if (roofStr === '5' || roofStr.includes('laje')) { mappedRoof = 'laje'; }
+                            else if (roofStr === '6' || roofStr.includes('sem') || roofStr.includes('nenhuma')) { mappedRoof = 'none'; }
 
-                            const forcedIncludeStructure = includeStructure !== undefined ? includeStructure : (mappedRoof !== 'none');
+                            // Fator de face: Norte = 1.0 (default)
+                            // Para ser mais preciso, a IA poderia pedir a face, mas como default vamos usar Norte = 1.0
+                            const forcedIncludeStructure = mappedRoof !== 'none';
 
                             const safeLocation = location || "São Paulo, SP";
                             const safeConsumption = monthlyConsumption || 300;
 
-                            // Busca HSP interna no motor para não depender do chute da IA
                             const cid = cidade || safeLocation.split(',')[0].trim();
                             const est = estado || safeLocation.split(',')[1]?.trim() || "SP";
                             const csvData = getHspFromCsv(cid, est);
@@ -183,65 +155,36 @@ export async function POST(req: Request) {
                             };
                             const finalHsp = csvData?.hsp || UF_HSP[est.toLowerCase()] || 5.0;
 
-                            // Cálculo forçado e cravado
+                            // Aplicando a formula do CRM
+                            const perdas = 0.284;
+                            const PR = 1 - perdas;
+                            const aumentoConsumo = 1.07;
+                            const fatorFace = roofFactor;
+                            
+                            const geracaoPorKwp = finalHsp * 30 * PR;
+                            const consumoAjustado = safeConsumption * aumentoConsumo;
+                            
                             let finalTargetKWp = targetKWp;
                             if (!finalTargetKWp) {
-                                finalTargetKWp = Number(((safeConsumption / finalHsp) / 30).toFixed(2));
+                                finalTargetKWp = consumoAjustado / (geracaoPorKwp * fatorFace);
                             }
-                            let target: any = null;
 
                             const headers: any = {};
                             if (token) headers["Authorization"] = `Bearer ${token}`;
 
-                            console.log(`[COTACAO] Usando distribuidores mockados (Edeltec e Genérico) pois a API real não está conectada.`);
+                            // Buscar distribuidores da API real
+                            const distRes = await fetch(`${baseURL}/distributors`, { headers });
+                            if (!distRes.ok) throw new Error("Falha ao buscar distribuidores na API real.");
+                            const allDistributors = await distRes.json();
                             
-                            const mockEdeltec = {
-                                id: 1,
-                                name: "Edeltec",
-                                nome: "Edeltec",
-                                products: [
-                                    { price: 600, descricao: "Módulo Solar 610W Monocristalino", product: { name: "Módulo Solar 610W Monocristalino", specs: { power_w: 610, isc: 13.5 } } },
-                                    { price: 5000, descricao: "Inversor String 5kW 220V", product: { name: "Inversor String 5kW 220V", specs: { max_input_power_w: 7000, mppts: 2, max_input_current_per_mppt: 15 } } },
-                                    { price: 8000, descricao: "Inversor String 10kW 220V", product: { name: "Inversor String 10kW 220V", specs: { max_input_power_w: 13000, mppts: 2, max_input_current_per_mppt: 15 } } },
-                                    { price: 4, descricao: "Cabo Solar Preto 4mm", product: { name: "Cabo Solar Preto 4mm", specs: {} } },
-                                    { price: 4, descricao: "Cabo Solar Vermelho 4mm", product: { name: "Cabo Solar Vermelho 4mm", specs: {} } },
-                                    { price: 15, descricao: "Conector MC4 Par", product: { name: "Conector MC4 Par", specs: {} } },
-                                    { price: 250, descricao: "Estrutura Metálica para Telhado Cerâmica (Colonial)", product: { name: "Estrutura Metálica para Telhado Cerâmica (Colonial)", specs: {} } },
-                                    { price: 200, descricao: "Estrutura Metálica para Telhado Fibromadeira", product: { name: "Estrutura Metálica para Telhado Fibromadeira", specs: {} } },
-                                    { price: 300, descricao: "Estrutura Metálica para Laje", product: { name: "Estrutura Metálica para Laje", specs: {} } },
-                                    { price: 400, descricao: "Estrutura de Solo", product: { name: "Estrutura de Solo", specs: {} } }
-                                ]
-                            };
-
-                            const mockAldo = {
-                                id: 2,
-                                name: "Aldo Solar",
-                                nome: "Aldo Solar",
-                                products: [
-                                    { price: 580, descricao: "Módulo Solar 550W Monocristalino", product: { name: "Módulo Solar 550W Monocristalino", specs: { power_w: 550, isc: 13.0 } } },
-                                    { price: 4800, descricao: "Inversor 5kW", product: { name: "Inversor 5kW", specs: { max_input_power_w: 6500, mppts: 2, max_input_current_per_mppt: 14 } } },
-                                    { price: 7500, descricao: "Inversor 10kW", product: { name: "Inversor 10kW", specs: { max_input_power_w: 12000, mppts: 2, max_input_current_per_mppt: 14 } } },
-                                    { price: 3.5, descricao: "Cabo Solar Preto 6mm", product: { name: "Cabo Solar Preto 6mm", specs: {} } },
-                                    { price: 3.5, descricao: "Cabo Solar Vermelho 6mm", product: { name: "Cabo Solar Vermelho 6mm", specs: {} } },
-                                    { price: 12, descricao: "Conector MC4 Par", product: { name: "Conector MC4 Par", specs: {} } },
-                                    { price: 230, descricao: "Estrutura Metálica Cerâmica (Colonial)", product: { name: "Estrutura Metálica Cerâmica (Colonial)", specs: {} } },
-                                    { price: 180, descricao: "Estrutura Metálica Fibromadeira", product: { name: "Estrutura Metálica Fibromadeira", specs: {} } },
-                                    { price: 280, descricao: "Estrutura Metálica Laje", product: { name: "Estrutura Metálica Laje", specs: {} } },
-                                    { price: 380, descricao: "Estrutura de Solo", product: { name: "Estrutura de Solo", specs: {} } }
-                                ]
-                            };
-
-                            const distributorsData = [
-                                { distributor: mockEdeltec, products: mockEdeltec.products },
-                                { distributor: mockAldo, products: mockAldo.products }
-                            ];
-                            
-                            console.log(`[COTACAO] Produtos retornados. Montando kits para ${finalTargetKWp} kWp...`);
-
                             const finalQuotes = [];
-                            for (const dData of distributorsData) {
-                                if (!dData || dData.products.length === 0) continue;
-                                const { distributor: d, products: allProds } = dData;
+                            for (const d of allDistributors) {
+                                const prodsRes = await fetch(`${baseURL}/distributors/${d.id}/products?limit=500`, { headers });
+                                if (!prodsRes.ok) continue;
+                                const prodsJson = await prodsRes.json();
+                                const allProds = prodsJson.data || [];
+                                
+                                if (allProds.length === 0) continue;
 
                                 const invs = allProds.filter((p: any) => p.price > 0 && JSON.stringify(p).toLowerCase().includes('inversor'));
                                 const mods = allProds.filter((p: any) => p.price > 0 && (JSON.stringify(p).toLowerCase().includes('módulo') || JSON.stringify(p).toLowerCase().includes('modulo') || JSON.stringify(p).toLowerCase().includes('painel')));
@@ -249,25 +192,22 @@ export async function POST(req: Request) {
                                 const cons = allProds.filter((p: any) => p.price > 0 && JSON.stringify(p).toLowerCase().includes('conector'));
                                 const ests = allProds.filter((p: any) => p.price > 0 && (JSON.stringify(p).toLowerCase().includes('estrutura') || JSON.stringify(p).toLowerCase().includes('perfil')));
 
-                                // 1. Módulo
-                                const validMods = mods.filter((m: any) => m.product.specs && m.product.specs.isc && m.product.specs.power_w);
+                                const validMods = mods.filter((m: any) => m.product?.specs?.power_w);
                                 const mod = validMods.length > 0 ? validMods[0] : mods[0];
+                                if (!mod) continue;
 
-                                if (!mod) continue; // Pula se não tiver nenhum módulo
-
-                                const modPowerW = mod.product.specs ? (Number(mod.product.specs.power_w) || 550) : 550;
+                                const modPowerW = Number(mod.product?.specs?.power_w) || 550;
+                                // Number of panels: always rounds up
                                 const moduleQ = Math.ceil((finalTargetKWp * 1000) / modPowerW);
-                                const totalDcPower = modPowerW * moduleQ;
-                                const modIsc = mod.product.specs ? (Number(mod.product.specs.isc) || 0) : 0;
+                                const realKWp = (moduleQ * modPowerW) / 1000;
+                                const estGeneration = realKWp * geracaoPorKwp * fatorFace;
 
-                                // 2. Inversor
                                 let validInvs = [];
-
                                 for (const invObj of invs) {
-                                    const specs = invObj.product.specs;
-
-                                    // Chegar o mais próximo do targetKWp pelo nome ou spec
+                                    const specs = invObj.product?.specs;
                                     const name = (invObj.product?.name || invObj.descricao || "").toUpperCase();
+                                    
+                                    // Extract kWp
                                     const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
                                     let invKWp = null;
 
@@ -277,32 +217,18 @@ export async function POST(req: Request) {
                                     } else if (specs && specs.max_dc_power) {
                                         invKWp = Number(specs.max_dc_power) / 1000;
                                     } else {
-                                        invKWp = finalTargetKWp; // fallback conservador
+                                        invKWp = finalTargetKWp;
                                     }
 
-                                    const isSaj = name.includes('SAJ');
-                                    const overloadFactor = isSaj ? 2.0 : 1.3; // 100% para SAJ, 30% padrão
-
-                                    // Validação técnica e Overload
-                                    if (specs && specs.max_input_current && specs.max_dc_power) {
-                                        const maxInputCurrent = Number(specs.max_input_current);
-                                        const maxDcPower = Number(specs.max_dc_power);
-
-                                        if (modIsc > maxInputCurrent + 1.5) continue;
-                                        if (totalDcPower > maxDcPower * overloadFactor) continue;
-                                    } else {
-                                        // Sem specs, aplica overload pelo nome
-                                        if (totalDcPower > (invKWp * 1000) * overloadFactor) continue;
-                                    }
-
-                                    // Evitar superdimensionar demais o inversor (mínimo 70% de carga)
-                                    if (totalDcPower < (invKWp * 1000) * 0.7) continue;
-
+                                    // Ratio CC/CA constraint (max 1.15 if we enforce strictly, but let's just make sure it's not wildly oversized or undersized)
+                                    const ratio = realKWp / invKWp;
+                                    if (ratio < 0.7 || ratio > 1.35) continue; // Allow up to 35% overload usually
+                                    
                                     validInvs.push(invObj);
                                 }
 
-                                // Se filtrou todos, recua para uma busca mais solta só por targetKWp
                                 if (validInvs.length === 0) {
+                                    // Fallback to nearest
                                     let minDiff = Infinity;
                                     let bestFallback = null;
                                     for (const invObj of invs) {
@@ -310,39 +236,26 @@ export async function POST(req: Request) {
                                         const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
                                         let invKWp = match ? parseFloat(match[1].replace(',', '.')) : finalTargetKWp;
                                         if (match && match[2] === 'W') invKWp = invKWp / 1000;
-                                        const diff = Math.abs(invKWp - finalTargetKWp);
+                                        const diff = Math.abs(invKWp - realKWp);
                                         if (diff < minDiff) { minDiff = diff; bestFallback = invObj; }
                                     }
                                     if (bestFallback) validInvs.push(bestFallback);
                                 }
 
-                                // Escolhe o mais barato dos válidos
                                 validInvs.sort((a, b) => Number(a.price) - Number(b.price));
                                 const inv = validInvs.length > 0 ? validInvs[0] : invs[0];
                                 if (!inv) continue;
 
-                                const cabPreto = cabs.find(c => JSON.stringify(c).toLowerCase().includes('preto')) || cabs[0];
-                                const cabVermelho = cabs.find(c => JSON.stringify(c).toLowerCase().includes('vermelho')) || (cabs.length > 1 && cabs[1] !== cabPreto ? cabs[1] : null);
+                                const cabPreto = cabs.find((c:any) => JSON.stringify(c).toLowerCase().includes('preto')) || cabs[0];
+                                const cabVermelho = cabs.find((c:any) => JSON.stringify(c).toLowerCase().includes('vermelho')) || (cabs.length > 1 && cabs[1] !== cabPreto ? cabs[1] : null);
                                 const con = cons[0];
 
-                                // Tenta buscar a estrutura correta para o tipo de telhado
-                                const matchedEsts = ests.filter(p => {
+                                const matchedEsts = ests.filter((p:any) => {
                                     const s = (p.product?.name || p.descricao || "").toLowerCase();
-                                    if (mappedRoof === 'fibromadeira') {
-                                        return s.includes('fibromadeira') || s.includes('fibrocimento') || s.includes('fibrometal');
-                                    }
+                                    if (mappedRoof === 'fibromadeira') return s.includes('fibromadeira') || s.includes('fibrocimento') || s.includes('fibrometal');
                                     return s.includes(mappedRoof);
                                 });
                                 const estPrinc = matchedEsts.length > 0 ? matchedEsts[0] : ests[0];
-
-                                // Se o telhado não for 'none' e houver perfis disponíveis (que não sejam a estrutura principal e NÃO contenham "s/ perfil" ou "sem perfil")
-                                const perfil = ests.find(p => {
-                                    const name = (p.product?.name || p.descricao || "").toLowerCase();
-                                    return name.includes('perfil') &&
-                                        !name.includes('s/ perfil') &&
-                                        !name.includes('sem perfil') &&
-                                        p.id !== estPrinc?.id;
-                                });
 
                                 const precoInv = Number(inv.price) || 0;
                                 const precoMod = (Number(mod.price) || 0) * moduleQ;
@@ -350,72 +263,43 @@ export async function POST(req: Request) {
                                 const precoCabVermelho = cabVermelho ? (Number(cabVermelho.price) || 0) : 0;
                                 const precoCon = con ? (Number(con.price) || 0) * 2 : 0;
                                 const precoEst = (forcedIncludeStructure && estPrinc) ? (Number(estPrinc.price) || 0) : 0;
-                                const precoPerfil = (forcedIncludeStructure && perfil) ? (Number(perfil.price) || 0) : 0;
 
-                                const somaTotal = precoInv + precoMod + precoCabPreto + precoCabVermelho + precoCon + precoEst + precoPerfil;
+                                const somaTotal = precoInv + precoMod + precoCabPreto + precoCabVermelho + precoCon + precoEst;
 
                                 finalQuotes.push({
                                     distribuidora: d.name,
                                     valor_total_do_kit: `R$ ${somaTotal.toFixed(2).replace('.', ',')}`,
                                     kit_itens_salvos: [
-                                        `Inv: ${inv.product?.name || inv.descricao} (R$ ${precoInv})`,
-                                        `Mod: ${moduleQ}x ${mod.product?.name || mod.descricao} (R$ ${precoMod})`,
-                                        cabPreto ? `Cab Preto: ${cabPreto.product?.name || cabPreto.descricao} (R$ ${precoCabPreto})` : null,
-                                        cabVermelho ? `Cab Vermelho: ${cabVermelho.product?.name || cabVermelho.descricao} (R$ ${precoCabVermelho})` : null,
-                                        con ? `Con: 2x ${con.product?.name || con.descricao} (R$ ${precoCon})` : null,
-                                        (forcedIncludeStructure && estPrinc) ? `Est: ${estPrinc.product?.name || estPrinc.descricao} (R$ ${precoEst})` : null,
-                                        (forcedIncludeStructure && perfil) ? `Perfil: ${perfil.product?.name || perfil.descricao} (R$ ${precoPerfil})` : null,
-                                    ].filter(Boolean)
+                                        `Inv: ${inv.product?.name || inv.descricao}`,
+                                        `Mod: ${moduleQ}x ${mod.product?.name || mod.descricao}`,
+                                        (forcedIncludeStructure && estPrinc) ? `Est: ${estPrinc.product?.name || estPrinc.descricao}` : null,
+                                    ].filter(Boolean),
+                                    info_adicional: `Geração Estimada: ${estGeneration.toFixed(1)} kWh/mês (Kit Real: ${realKWp.toFixed(2)} kWp)`
                                 });
                             }
 
                             return {
                                 success: true,
-                                matematicaGuia: {
-                                    geracaoEstimada: target ? target.estimatedGeneration : `${(finalTargetKWp * 130).toFixed(0)} kWh/mês`,
-                                    tamanhoRecomendado: target ? target.systemSize : `${finalTargetKWp} kWp`
-                                },
-                                ofertasDistribuidores: finalQuotes.length > 0 ? finalQuotes : "Nenhum distribuidor tinha módulos e inversores em estoque suficientes para formar um kit."
+                                ofertasDistribuidores: finalQuotes.length > 0 ? finalQuotes : "Nenhum distribuidor retornou kits com estoque na API."
                             };
                         } catch (e: any) {
                             return {
-                                success: true,
-                                matematicaGuia: { geracaoEstimada: "Erro de conexão", tamanhoRecomendado: "Erro de conexão" },
-                                ofertasDistribuidores: "Falha ao buscar distribuidores. Por favor, avise o suporte técnico que a API está fora do ar ou inacessível. Erro interno: " + e.message
+                                success: false,
+                                ofertasDistribuidores: "Falha ao buscar distribuidores da API real. " + e.message
                             };
                         }
                     }
                 }),
                 cadastrar_cliente_crm: tool({
-                    description: "Registra um novo cliente/lead no CRM da plataforma EnergivIA. NUNCA chame essa ferramenta com valores vazios, apenas quando o usuário já tiver fornecido os dados reais.",
+                    description: "Registra um novo cliente/lead no CRM da plataforma EnergivIA.",
                     parameters: z.object({
-                        nome: z.string().min(2).describe("Nome real do cliente fornecido no chat"),
-                        whatsapp: z.string().min(8).describe("WhatsApp do cliente fornecido no chat")
+                        nome: z.string().describe("Nome do cliente"),
+                        whatsapp: z.string().describe("WhatsApp do cliente")
                     }),
                     execute: async (args: any) => {
                         try {
-                            let rawNome = args.nome || args.name || args.Nome || args.Name || "";
-                            let rawWhatsapp = args.whatsapp || args.phone || args.telefone || args.Whatsapp || "";
-
-                            if (!rawNome || !rawWhatsapp || String(rawNome).includes("undefined") || String(rawNome).includes("null")) {
-                                // Fallback automático: a IA mandou vazio, então pegamos as 2 últimas mensagens do usuário
-                                const userMsgs = formattedMessages.filter(m => m.role === 'user');
-                                if (userMsgs.length >= 2) {
-                                    const lastMsg = userMsgs[userMsgs.length - 1].content as string;
-                                    const penultMsg = userMsgs[userMsgs.length - 2].content as string;
-
-                                    // Consideramos que a última mensagem é o WhatsApp e a penúltima é o Nome
-                                    rawWhatsapp = lastMsg;
-                                    rawNome = penultMsg;
-                                }
-
-                                if (!rawNome || !rawWhatsapp) {
-                                    return { error: `Erro na IA: Falta nome ou whatsapp. Os argumentos recebidos foram: ${JSON.stringify(args)}` };
-                                }
-                            }
-
-                            const nome = String(rawNome).trim();
-                            const whatsapp = String(rawWhatsapp).trim();
+                            const nome = String(args.nome || "").trim();
+                            const whatsapp = String(args.whatsapp || "").trim();
 
                             let token = "";
                             try {
@@ -424,40 +308,27 @@ export async function POST(req: Request) {
                                     const authResult = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
                                     token = authResult.token || "";
                                 }
-                            } catch (e) {
-                                console.warn("Sessão Auth0 não encontrada ou falha ao pegar token:", e);
-                            }
+                            } catch (e) {}
                             
                             const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
-                            const payload = {
-                                name: nome,
-                                whatsapp: whatsapp,
-                                source: "Chatbot IA"
-                            };
-
-                            console.log("PAYLOAD CRM:", payload);
-
-                            const headers: any = {
-                                "Content-Type": "application/json"
-                            };
+                            const payload = { name: nome, whatsapp: whatsapp, source: "Chatbot IA" };
+                            const headers: any = { "Content-Type": "application/json" };
                             if (token) headers["Authorization"] = `Bearer ${token}`;
 
                             const res = await fetch(`${baseURL}/leads`, {
                                 method: 'POST',
                                 headers,
-                                body: JSON.stringify(payload),
-                                signal: AbortSignal.timeout(15000)
+                                body: JSON.stringify(payload)
                             });
 
                             if (!res.ok) {
-                                const err = await res.json();
-                                return { error: `Erro no CRM: ${JSON.stringify(err)} | ARGS: ${JSON.stringify({ nome, whatsapp, typeNome: typeof nome })}` };
+                                return { error: `Erro no CRM` };
                             }
 
                             const leadData = await res.json();
                             return { success: true, leadId: leadData.id, message: `Cliente cadastrado com sucesso!` };
                         } catch (e: any) {
-                            return { error: "Erro fatal cadastrando CRM: " + e.message };
+                            return { error: "Erro fatal CRM: " + e.message };
                         }
                     }
                 })
@@ -465,15 +336,8 @@ export async function POST(req: Request) {
             maxSteps: 5,
             onError: (err) => {
                 console.error("[STREAMTEXT ERROR]", err);
-                try {
-                    fs.appendFileSync(path.join(process.cwd(), 'error-logs.txt'), new Date().toISOString() + ': ' + (err instanceof Error ? err.stack || err.message : JSON.stringify(err)) + '\n');
-                } catch (e) {}
             },
-            onFinish: async (event) => {
-                const finishLog = `[STREAM FINISH] Text: ${event.text}, FinishReason: ${event.finishReason}, ToolCalls: ${JSON.stringify(event.toolCalls)}, ToolResults: ${JSON.stringify(event.toolResults)}`;
-                fs.appendFileSync(path.join(process.cwd(), 'app-logs.txt'), new Date().toISOString() + ': ' + finishLog + '\n');
-                console.log(finishLog);
-            }
+            onFinish: async (event) => {}
         });
 
         return result.toTextStreamResponse({ 
@@ -481,9 +345,7 @@ export async function POST(req: Request) {
         });
     } catch (error: any) {
         console.error('Erro na API de Chat:', error);
-        // Return a plain text response so the widget can display it
-        const errorMessage = `Desculpe, ocorreu um erro interno: ${error?.message || 'Falha na comunicação com a IA'}. Por favor, tente novamente.`;
-        return new Response(errorMessage, {
+        return new Response(`Desculpe, ocorreu um erro interno: ${error?.message}. Por favor, tente novamente.`, {
             status: 200,
             headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache' },
         });
