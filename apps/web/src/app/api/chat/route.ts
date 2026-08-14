@@ -83,7 +83,7 @@ export async function POST(req: Request) {
                         role: m.role,
                         content: [
                             { type: "text", text: m.content || "Imagem anexa:" },
-                            { type: "image_url", image_url: { url: m.imageUrl } }
+                            { type: "image", image: m.imageUrl }
                         ]
                     };
                 }
