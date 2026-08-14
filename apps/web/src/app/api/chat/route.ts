@@ -102,11 +102,11 @@ export async function POST(req: Request) {
                 buscar_hsp_localidade: tool({
                     description: "Busca o índice de irradiação solar (HSP) médio anual de uma cidade conectando na base local fornecida pelo INPE/IBGE.",
                     parameters: z.object({
-                        cidade: z.string().describe("Nome da cidade"),
-                        estado: z.string().describe("Sigla do estado (UF)")
+                        cidade: z.string().optional().describe("Nome da cidade"),
+                        estado: z.string().optional().describe("Sigla do estado (UF)")
                     }),
                     execute: async ({ cidade, estado }) => {
-                        const csvData = getHspFromCsv(cidade, estado);
+                        const csvData = getHspFromCsv(cidade || "", estado || "");
 
                         if (csvData) {
                             return { hsp: csvData.hsp, latitude: csvData.lat, longitude: csvData.lon, info: "HSP recuperado com sucesso (Base INPE/IBGE)" };
@@ -129,8 +129,8 @@ export async function POST(req: Request) {
                         monthlyConsumption: z.coerce.number().optional().describe("Consumo mensal (kWh). Opcional se targetKWp for fornecido."),
                         targetKWp: z.coerce.number().optional().describe("Potência alvo do sistema em kWp. Forneça isso se o usuário pedir kWp ou módulos diretamente."),
                         location: z.string().optional().describe("Cidade e Estado"),
-                        roofType: z.string().describe("Tipo de telhado"),
-                        includeStructure: z.boolean().describe("True se precisar de estrutura, False se for opcional/sem telhado averbado."),
+                        roofType: z.string().optional().describe("Tipo de telhado. Padrão: metal."),
+                        includeStructure: z.boolean().optional().describe("True se precisar de estrutura. Padrão: true."),
                         cidade: z.string().optional().describe("Nome da cidade para o motor calcular HSP internamente"),
                         estado: z.string().optional().describe("Sigla do estado (UF) para o motor calcular HSP internamente")
                     }),
@@ -158,7 +158,7 @@ export async function POST(req: Request) {
                             else if (roofStr === '5' || roofStr.includes('laje')) mappedRoof = 'laje';
                             else if (roofStr === '6' || roofStr.includes('sem') || roofStr.includes('nenhuma')) mappedRoof = 'none';
 
-                            const forcedIncludeStructure = mappedRoof !== 'none';
+                            const forcedIncludeStructure = includeStructure !== undefined ? includeStructure : (mappedRoof !== 'none');
 
                             const safeLocation = location || "São Paulo, SP";
                             const safeConsumption = monthlyConsumption || 300;
