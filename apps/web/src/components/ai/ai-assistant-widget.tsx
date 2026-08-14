@@ -80,7 +80,25 @@ export function AIAssistantWidget() {
 
             while (true) {
                 const { done, value } = await reader.read();
-                if (done) break;
+                if (done) {
+                    if (buffer) {
+                        let newText = '';
+                        const lines = [buffer];
+                        for (const line of lines) {
+                            if (line.trim() === '') continue;
+                            if (line.startsWith('0:')) {
+                                try { newText += JSON.parse(line.slice(2)); } catch (e) {}
+                            } else if (!line.match(/^[0-9]+:/)) {
+                                newText += line;
+                            }
+                        }
+                        if (newText) {
+                            assistMsg.content += newText;
+                            setMessages((prev) => prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m));
+                        }
+                    }
+                    break;
+                }
 
                 const textChunk = decoder.decode(value, { stream: true });
                 buffer += textChunk;
@@ -95,7 +113,6 @@ export function AIAssistantWidget() {
                             newText += JSON.parse(line.slice(2));
                         } catch (e) {}
                     } else if (!line.match(/^[0-9]+:/)) {
-                        // If it's not a data stream line, treat it as raw text
                         newText += line + '\n';
                     }
                 }
