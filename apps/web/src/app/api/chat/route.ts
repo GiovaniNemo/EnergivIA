@@ -458,6 +458,9 @@ export async function POST(req: Request) {
             maxSteps: 5,
             onError: (err) => {
                 console.error("[STREAMTEXT ERROR]", err);
+                try {
+                    fs.appendFileSync(path.join(process.cwd(), 'error-logs.txt'), new Date().toISOString() + ': ' + (err instanceof Error ? err.stack || err.message : JSON.stringify(err)) + '\n');
+                } catch (e) {}
             },
             onFinish: async (event) => {
                 const finishLog = `[STREAM FINISH] Text: ${event.text}, FinishReason: ${event.finishReason}, ToolCalls: ${JSON.stringify(event.toolCalls)}, ToolResults: ${JSON.stringify(event.toolResults)}`;
