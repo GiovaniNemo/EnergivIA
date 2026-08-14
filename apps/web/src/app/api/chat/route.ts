@@ -437,7 +437,7 @@ export async function POST(req: Request) {
             maxSteps: 5
         });
 
-        return result.toDataStreamResponse({ 
+        return result.toTextStreamResponse({ 
             headers: { "Cache-Control": "no-cache" },
         });
     } catch (error: any) {
