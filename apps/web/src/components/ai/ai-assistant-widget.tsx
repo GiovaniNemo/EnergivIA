@@ -73,11 +73,11 @@ export function AIAssistantWidget() {
 
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
+            let buffer = '';
+            let debugRawStream = '';
 
             const assistMsg: Message = { id: (Date.now() + 1).toString(), role: "assistant", content: "" };
             setMessages((prev) => [...prev, assistMsg]);
-
-            let buffer = '';
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -107,8 +107,6 @@ export function AIAssistantWidget() {
                 buffer = lines.pop() || '';
 
                 let newText = '';
-                let debugRawStream = '';
-
                 for (const line of lines) {
                     if (line.trim() === '') continue;
                     debugRawStream += line + '\\n';
