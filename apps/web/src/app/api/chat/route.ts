@@ -478,11 +478,9 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
             }
         });
 
-        const responseStream = result.toDataStreamResponse
-            ? result.toDataStreamResponse({ headers: { "Cache-Control": "no-cache" } })
-            : (result as any).toAIStreamResponse({ headers: { "Cache-Control": "no-cache" } });
-            
-        return responseStream;
+        return result.toDataStreamResponse({
+            headers: { "Cache-Control": "no-cache" }
+        });
     } catch (error: any) {
         console.error('Erro na API de Chat:', error);
         return new Response(JSON.stringify({ error: error?.message || 'Falha na comunicação com a IA' }), {
