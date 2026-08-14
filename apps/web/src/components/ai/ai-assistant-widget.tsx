@@ -78,6 +78,8 @@ export function AIAssistantWidget() {
             const assistMsg: Message = { id: (Date.now() + 1).toString(), role: "assistant", content: "" };
             setMessages((prev) => [...prev, assistMsg]);
 
+            let fullStreamDump = '';
+
             const processLine = (line: string) => {
                 const trimmed = line.trim();
                 if (!trimmed) return '';
@@ -108,6 +110,7 @@ export function AIAssistantWidget() {
 
                 if (done) {
                     if (buffer.trim()) {
+                        fullStreamDump += buffer + '\n';
                         const remaining = buffer.split('\n');
                         let tail = '';
                         for (const line of remaining) {
@@ -122,6 +125,7 @@ export function AIAssistantWidget() {
                 }
 
                 const textChunk = decoder.decode(value, { stream: true });
+                fullStreamDump += textChunk;
                 buffer += textChunk;
                 const lines = buffer.split('\n');
                 buffer = lines.pop() || '';
@@ -141,7 +145,7 @@ export function AIAssistantWidget() {
             assistMsg.content = assistMsg.content.replace(/\n+$/, '');
 
             if (assistMsg.content === "") {
-                assistMsg.content = "Desculpe, não consegui processar sua solicitação. Por favor, tente novamente.";
+                assistMsg.content = `[DEBUG] O modelo não gerou texto. Stream completo recebido:\n${fullStreamDump}\n(Fim do stream)`;
                 setMessages((prev) => prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m));
             }
         } catch (error: any) {

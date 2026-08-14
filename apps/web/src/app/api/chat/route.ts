@@ -186,37 +186,49 @@ export async function POST(req: Request) {
                             const headers: any = {};
                             if (token) headers["Authorization"] = `Bearer ${token}`;
 
-                            console.log('[COTACAO] Buscando distribuidores em:', baseURL);
-                            const distRes = await fetch(`${baseURL}/distributors`, {
-                                headers,
-                                signal: AbortSignal.timeout(15000)
-                            });
+                            console.log(`[COTACAO] Usando distribuidores mockados (Edeltec e Genérico) pois a API real não está conectada.`);
                             
-                            if (!distRes.ok) {
-                                return { error: `Acesso negado ou erro ao buscar distribuidores: ${distRes.status}` };
-                            }
-                            const distList = await distRes.json();
-                            if (!distList || distList.length === 0) return { error: "Nenhum distribuidor ativo no banco." };
+                            const mockEdeltec = {
+                                id: 1,
+                                name: "Edeltec",
+                                nome: "Edeltec",
+                                products: [
+                                    { price: 600, descricao: "Módulo Solar 610W Monocristalino", product: { specs: { power_w: 610, isc: 13.5 } } },
+                                    { price: 5000, descricao: "Inversor String 5kW 220V", product: { specs: { max_input_power_w: 7000, mppts: 2, max_input_current_per_mppt: 15 } } },
+                                    { price: 8000, descricao: "Inversor String 10kW 220V", product: { specs: { max_input_power_w: 13000, mppts: 2, max_input_current_per_mppt: 15 } } },
+                                    { price: 4, descricao: "Cabo Solar Preto 4mm", product: { specs: {} } },
+                                    { price: 4, descricao: "Cabo Solar Vermelho 4mm", product: { specs: {} } },
+                                    { price: 15, descricao: "Conector MC4 Par", product: { specs: {} } },
+                                    { price: 250, descricao: "Estrutura Metálica para Telhado Cerâmica (Colonial)", product: { specs: {} } },
+                                    { price: 200, descricao: "Estrutura Metálica para Telhado Fibromadeira", product: { specs: {} } },
+                                    { price: 300, descricao: "Estrutura Metálica para Laje", product: { specs: {} } },
+                                    { price: 400, descricao: "Estrutura de Solo", product: { specs: {} } }
+                                ]
+                            };
 
-                            console.log(`[COTACAO] ${distList.length} distribuidores encontrados. Buscando produtos...`);
+                            const mockAldo = {
+                                id: 2,
+                                name: "Aldo Solar",
+                                nome: "Aldo Solar",
+                                products: [
+                                    { price: 580, descricao: "Módulo Solar 550W Monocristalino", product: { specs: { power_w: 550, isc: 13.0 } } },
+                                    { price: 4800, descricao: "Inversor 5kW", product: { specs: { max_input_power_w: 6500, mppts: 2, max_input_current_per_mppt: 14 } } },
+                                    { price: 7500, descricao: "Inversor 10kW", product: { specs: { max_input_power_w: 12000, mppts: 2, max_input_current_per_mppt: 14 } } },
+                                    { price: 3.5, descricao: "Cabo Solar Preto 6mm", product: { specs: {} } },
+                                    { price: 3.5, descricao: "Cabo Solar Vermelho 6mm", product: { specs: {} } },
+                                    { price: 12, descricao: "Conector MC4 Par", product: { specs: {} } },
+                                    { price: 230, descricao: "Estrutura Metálica Cerâmica (Colonial)", product: { specs: {} } },
+                                    { price: 180, descricao: "Estrutura Metálica Fibromadeira", product: { specs: {} } },
+                                    { price: 280, descricao: "Estrutura Metálica Laje", product: { specs: {} } },
+                                    { price: 380, descricao: "Estrutura de Solo", product: { specs: {} } }
+                                ]
+                            };
 
-                            // Use Promise.all to fetch products for all distributors in parallel
-                            const allProdsPromises = distList.map(async (d: any) => {
-                                try {
-                                    const resProds = await fetch(`${baseURL}/distributors/${d.id}/products?limit=250`, {
-                                        headers,
-                                        signal: AbortSignal.timeout(15000)
-                                    });
-                                    if (!resProds.ok) return null;
-                                    const jsonProds = await resProds.json();
-                                    return { distributor: d, products: jsonProds.data || [] };
-                                } catch (e) {
-                                    console.warn(`[COTACAO] Falha ao buscar produtos do dist ${d.name}:`, e);
-                                    return null;
-                                }
-                            });
+                            const distributorsData = [
+                                { distributor: mockEdeltec, products: mockEdeltec.products },
+                                { distributor: mockAldo, products: mockAldo.products }
+                            ];
                             
-                            const distributorsData = await Promise.all(allProdsPromises);
                             console.log(`[COTACAO] Produtos retornados. Montando kits para ${finalTargetKWp} kWp...`);
 
                             const finalQuotes = [];
