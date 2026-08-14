@@ -454,7 +454,7 @@ export async function POST(req: Request) {
             }
         });
 
-        return result.toUIMessageStreamResponse({ 
+        return result.toTextStreamResponse({ 
             headers: { "Cache-Control": "no-cache" },
         });
     } catch (error: any) {
