@@ -109,13 +109,20 @@ export function AIAssistantWidget() {
                 let newText = '';
                 for (const line of lines) {
                     if (line.trim() === '') continue;
+                    
                     if (line.startsWith('0:')) {
+                        // Text chunk
                         try {
                             newText += JSON.parse(line.slice(2));
                         } catch (e) {}
-                    } else if (!line.match(/^[0-9]+:/)) {
-                        newText += line + '\n';
+                    } else if (line.startsWith('3:')) {
+                        // Error chunk
+                        try {
+                            const errObj = JSON.parse(line.slice(2));
+                            newText += `\n⚠️ Erro: ${errObj.message || JSON.stringify(errObj)}`;
+                        } catch (e) {}
                     }
+                    // We intentionally ignore 9: (tool calls), a: (tool results), etc.
                 }
 
                 if (newText) {
@@ -124,6 +131,13 @@ export function AIAssistantWidget() {
                         prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m)
                     );
                 }
+            }
+            
+            if (assistMsg.content === "") {
+                assistMsg.content = "⚠️ A ferramenta interna falhou e encerrou a conexão precocemente. Se você estiver gerando cotações, por favor tente novamente mais tarde.";
+                setMessages((prev) =>
+                    prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m)
+                );
             }
         } catch (error: any) {
             console.error(error);
