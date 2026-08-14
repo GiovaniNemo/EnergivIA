@@ -389,7 +389,8 @@ export async function POST(req: Request) {
                         }
                     }
                 })
-            }
+            },
+            maxSteps: 5
         });
 
         if (typeof (result as any).toDataStreamResponse === 'function') {
