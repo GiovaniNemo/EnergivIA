@@ -191,25 +191,33 @@ export async function POST(req: Request) {
                             const distList = await distRes.json();
                             if (!distList || distList.length === 0) return { error: "Nenhum distribuidor ativo no banco." };
 
+                            // Use Promise.all to fetch products for all distributors in parallel
+                            const allProdsPromises = distList.map(async (d: any) => {
+                                try {
+                                    const resProds = await fetch(`${baseURL}/distributors/${d.id}/products?limit=250`, { headers });
+                                    if (!resProds.ok) return null;
+                                    const jsonProds = await resProds.json();
+                                    return { distributor: d, products: jsonProds.data || [] };
+                                } catch (e) {
+                                    return null;
+                                }
+                            });
+                            
+                            const distributorsData = await Promise.all(allProdsPromises);
+
                             const finalQuotes = [];
+                            for (const dData of distributorsData) {
+                                if (!dData || dData.products.length === 0) continue;
+                                const { distributor: d, products: allProds } = dData;
 
-                            for (const d of distList) {
-                                const resProds = await fetch(`${baseURL}/distributors/${d.id}/products?limit=250`, {
-                                    headers
-                                });
-                                const jsonProds = await resProds.json();
-                                const allProds = jsonProds.data || [];
-
-                                if (allProds.length === 0) continue;
-
-                                const invs = allProds.filter(p => p.price > 0 && JSON.stringify(p).toLowerCase().includes('inversor'));
-                                const mods = allProds.filter(p => p.price > 0 && (JSON.stringify(p).toLowerCase().includes('módulo') || JSON.stringify(p).toLowerCase().includes('modulo') || JSON.stringify(p).toLowerCase().includes('painel')));
-                                const cabs = allProds.filter(p => p.price > 0 && JSON.stringify(p).toLowerCase().includes('cabo'));
-                                const cons = allProds.filter(p => p.price > 0 && JSON.stringify(p).toLowerCase().includes('conector'));
-                                const ests = allProds.filter(p => p.price > 0 && (JSON.stringify(p).toLowerCase().includes('estrutura') || JSON.stringify(p).toLowerCase().includes('perfil')));
+                                const invs = allProds.filter((p: any) => p.price > 0 && JSON.stringify(p).toLowerCase().includes('inversor'));
+                                const mods = allProds.filter((p: any) => p.price > 0 && (JSON.stringify(p).toLowerCase().includes('módulo') || JSON.stringify(p).toLowerCase().includes('modulo') || JSON.stringify(p).toLowerCase().includes('painel')));
+                                const cabs = allProds.filter((p: any) => p.price > 0 && JSON.stringify(p).toLowerCase().includes('cabo'));
+                                const cons = allProds.filter((p: any) => p.price > 0 && JSON.stringify(p).toLowerCase().includes('conector'));
+                                const ests = allProds.filter((p: any) => p.price > 0 && (JSON.stringify(p).toLowerCase().includes('estrutura') || JSON.stringify(p).toLowerCase().includes('perfil')));
 
                                 // 1. Módulo
-                                const validMods = mods.filter(m => m.product.specs && m.product.specs.isc && m.product.specs.power_w);
+                                const validMods = mods.filter((m: any) => m.product.specs && m.product.specs.isc && m.product.specs.power_w);
                                 const mod = validMods.length > 0 ? validMods[0] : mods[0];
 
                                 if (!mod) continue; // Pula se não tiver nenhum módulo
