@@ -126,14 +126,15 @@ export async function POST(req: Request) {
                 gerar_cotacao_distribuidor: tool({
                     description: "Usa o motor de cálculo da EnergivIA para descobrir os componentes físicos e puxar orçamentos REAIS cruzando todos os distribuidores ativos (Edeltec, etc) para a potência solicitada.",
                     parameters: z.object({
-                        monthlyConsumption: z.coerce.number().describe("Consumo mensal (kWh)"),
-                        location: z.string().describe("Cidade e Estado"),
+                        monthlyConsumption: z.coerce.number().optional().describe("Consumo mensal (kWh). Opcional se targetKWp for fornecido."),
+                        targetKWp: z.coerce.number().optional().describe("Potência alvo do sistema em kWp. Forneça isso se o usuário pedir kWp ou módulos diretamente."),
+                        location: z.string().optional().describe("Cidade e Estado"),
                         roofType: z.string().describe("Tipo de telhado"),
                         includeStructure: z.boolean().describe("True se precisar de estrutura, False se for opcional/sem telhado averbado."),
                         cidade: z.string().optional().describe("Nome da cidade para o motor calcular HSP internamente"),
                         estado: z.string().optional().describe("Sigla do estado (UF) para o motor calcular HSP internamente")
                     }),
-                    execute: async ({ monthlyConsumption, location, roofType, includeStructure, cidade, estado }: any) => {
+                    execute: async ({ monthlyConsumption, targetKWp, location, roofType, includeStructure, cidade, estado }: any) => {
                         try {
                             let token = "";
                             try {
@@ -175,7 +176,10 @@ export async function POST(req: Request) {
                             const finalHsp = csvData?.hsp || UF_HSP[est.toLowerCase()] || 5.0;
 
                             // Cálculo forçado e cravado
-                            let targetKWp = Number(((safeConsumption / finalHsp) / 30).toFixed(2));
+                            let finalTargetKWp = targetKWp;
+                            if (!finalTargetKWp) {
+                                finalTargetKWp = Number(((safeConsumption / finalHsp) / 30).toFixed(2));
+                            }
                             let target: any = null;
 
                             const headers: any = {};
@@ -212,7 +216,7 @@ export async function POST(req: Request) {
                             });
                             
                             const distributorsData = await Promise.all(allProdsPromises);
-                            console.log(`[COTACAO] Produtos retornados. Montando kits para ${targetKWp} kWp...`);
+                            console.log(`[COTACAO] Produtos retornados. Montando kits para ${finalTargetKWp} kWp...`);
 
                             const finalQuotes = [];
                             for (const dData of distributorsData) {
@@ -232,7 +236,7 @@ export async function POST(req: Request) {
                                 if (!mod) continue; // Pula se não tiver nenhum módulo
 
                                 const modPowerW = mod.product.specs ? (Number(mod.product.specs.power_w) || 550) : 550;
-                                const moduleQ = Math.ceil((targetKWp * 1000) / modPowerW);
+                                const moduleQ = Math.ceil((finalTargetKWp * 1000) / modPowerW);
                                 const totalDcPower = modPowerW * moduleQ;
                                 const modIsc = mod.product.specs ? (Number(mod.product.specs.isc) || 0) : 0;
 
@@ -253,7 +257,7 @@ export async function POST(req: Request) {
                                     } else if (specs && specs.max_dc_power) {
                                         invKWp = Number(specs.max_dc_power) / 1000;
                                     } else {
-                                        invKWp = targetKWp; // fallback conservador
+                                        invKWp = finalTargetKWp; // fallback conservador
                                     }
 
                                     const isSaj = name.includes('SAJ');
@@ -284,9 +288,9 @@ export async function POST(req: Request) {
                                     for (const invObj of invs) {
                                         const name = invObj.product.name.toUpperCase();
                                         const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
-                                        let invKWp = match ? parseFloat(match[1].replace(',', '.')) : targetKWp;
+                                        let invKWp = match ? parseFloat(match[1].replace(',', '.')) : finalTargetKWp;
                                         if (match && match[2] === 'W') invKWp = invKWp / 1000;
-                                        const diff = Math.abs(invKWp - targetKWp);
+                                        const diff = Math.abs(invKWp - finalTargetKWp);
                                         if (diff < minDiff) { minDiff = diff; bestFallback = invObj; }
                                     }
                                     if (bestFallback) validInvs.push(bestFallback);
@@ -348,8 +352,8 @@ export async function POST(req: Request) {
                             return {
                                 success: true,
                                 matematicaGuia: {
-                                    geracaoEstimada: target ? target.estimatedGeneration : `${(targetKWp * 130).toFixed(0)} kWh/mês`,
-                                    tamanhoRecomendado: target ? target.systemSize : `${targetKWp} kWp`
+                                    geracaoEstimada: target ? target.estimatedGeneration : `${(finalTargetKWp * 130).toFixed(0)} kWh/mês`,
+                                    tamanhoRecomendado: target ? target.systemSize : `${finalTargetKWp} kWp`
                                 },
                                 ofertasDistribuidores: finalQuotes.length > 0 ? finalQuotes : "Nenhum distribuidor tinha módulos e inversores em estoque suficientes para formar um kit."
                             };
