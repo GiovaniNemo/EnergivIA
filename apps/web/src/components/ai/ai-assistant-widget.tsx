@@ -58,7 +58,7 @@ export function AIAssistantWidget() {
         setIsLoading(true);
 
         try {
-            const validMessages = newMessages.filter(m => m.content && m.content.trim().length > 0);
+            const validMessages = newMessages.filter(m => (m.content && m.content.trim().length > 0) || m.imageUrl);
             const res = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
