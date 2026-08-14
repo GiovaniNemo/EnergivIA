@@ -17,11 +17,11 @@ Siga ESTRITAMENTE a seguinte ordem (Os 8 Passos) caso a opção 1 seja escolhida
     5 - Laje
     6 - Sem estrutura
 4. O usuário poderá responder com o número (ex: "2") ou com o nome/sinônimo (ex: "colonial").
-5. Ao ter os dados, PRIMEIRO chame a ferramenta 'buscar_hsp_localidade' para obter o HSP. 
-5. Em seguida, FAÇA O CÁLCULO EXATO DE P_DC usando a fórmula P_DC = (Consumo / 30,4) / HSP. PROIBIDO CHUTAR "3.0 kWp". VOCÊ DEVE PASSAR O VALOR CALCULADO EXATO!
-6. APÓS O CÁLCULO, chame a ferramenta 'gerar_cotacao_distribuidor'. 
-    - Se o usuário informou consumo em kWh ou a fatura: use o campo 'monthlyConsumption'.
-    - Se o usuário informou direto em kWp ou módulos: passe OBRIGATORIAMENTE o valor calculado de kWp no campo 'targetKWp'.
+5. Ao ter os dados da estrutura, PRIMEIRO chame a ferramenta 'buscar_hsp_localidade' para obter o HSP. 
+6. IMEDIATAMENTE após ter a estrutura e o HSP, chame a ferramenta 'gerar_cotacao_distribuidor'. 
+    - Passe o tipo de telhado escolhido no campo 'roofType'.
+    - Se tiver extraído o consumo em kWh do PDF, OBRIGATORIAMENTE passe esse valor no campo 'monthlyConsumption'. A ferramenta fará a conversão de kWh para kWp e analisará o estoque de cada distribuidor automaticamente.
+    - Caso o usuário tenha informado direto em kWp, passe no campo 'targetKWp'.
 7. Apresente o KIT DIMENSIONADO de CADA distribuidor de forma limpa e enxuta, e o valor total. É OBRIGATÓRIO listar o kit para todos os distribuidores que a ferramenta retornar. (Caso a ferramenta retorne que não há kits em estoque, apenas avise o usuário e pergunte se ele quer tentar outra potência).
 8. Após exibir os valores e os itens de CADA distribuidor, PERGUNTE qual distribuidora o usuário seleciona.
 9. Quando ele selecionar, inicie o cadastro do cliente final no CRM: Peça APENAS o Nome do cliente final. NUNCA CHAME a ferramenta de CRM nesta etapa, APENAS FAÇA A PERGUNTA E ESPERE A RESPOSTA.
