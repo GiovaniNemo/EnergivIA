@@ -86,15 +86,17 @@ export function AIAssistantWidget() {
                 if (trimmed.startsWith('0:')) {
                     try { return JSON.parse(trimmed.slice(2)); } catch { return ''; }
                 }
-                // 3: = error from the SDK
-                if (trimmed.startsWith('3:')) {
+                // 3: or e: = error from the SDK
+                if (trimmed.startsWith('3:') || trimmed.startsWith('e:')) {
                     try {
                         const err = JSON.parse(trimmed.slice(2));
-                        return `\n⚠️ Erro: ${typeof err === 'string' ? err : (err.message || JSON.stringify(err))}`;
-                    } catch { return ''; }
+                        return `\n⚠️ Erro do servidor/ferramenta: ${typeof err === 'string' ? err : (err.message || JSON.stringify(err))}`;
+                    } catch { 
+                        return `\n⚠️ Erro do servidor: ${trimmed.slice(2)}`;
+                    }
                 }
-                // Known non-text prefixes: ignore silently
-                if (/^[0-9a-f]:/.test(trimmed)) {
+                // Known non-text prefixes (a-d, f, 1-2, 4-9): ignore silently
+                if (/^[124-9a-df]:/.test(trimmed)) {
                     return '';
                 }
                 // Plain text (no prefix) — return as-is
