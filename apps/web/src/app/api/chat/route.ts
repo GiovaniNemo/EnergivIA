@@ -478,7 +478,7 @@ C. Compatibilização do Inversor (AC) e Validação de Limites Térmicos/Elétr
             }
         });
 
-        return result.toTextStreamResponse({
+        return result.toDataStreamResponse({
             headers: { "Cache-Control": "no-cache" }
         });
     } catch (error: any) {

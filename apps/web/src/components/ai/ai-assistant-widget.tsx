@@ -76,16 +76,32 @@ export function AIAssistantWidget() {
             const assistMsg: Message = { id: (Date.now() + 1).toString(), role: "assistant", content: "" };
             setMessages((prev) => [...prev, assistMsg]);
 
+            let buffer = '';
+
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
                 const textChunk = decoder.decode(value, { stream: true });
-                assistMsg.content += textChunk;
+                buffer += textChunk;
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
 
-                setMessages((prev) =>
-                    prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m)
-                );
+                let newText = '';
+                for (const line of lines) {
+                    if (line.startsWith('0:')) {
+                        try {
+                            newText += JSON.parse(line.slice(2));
+                        } catch (e) {}
+                    }
+                }
+
+                if (newText) {
+                    assistMsg.content += newText;
+                    setMessages((prev) =>
+                        prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m)
+                    );
+                }
             }
         } catch (error: any) {
             console.error(error);

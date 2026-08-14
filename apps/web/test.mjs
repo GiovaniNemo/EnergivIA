@@ -1,0 +1,1 @@
+const req = await fetch('http://localhost:3000/api/chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ messages: [{ role: 'user', content: 'cadastre o nome Giovani e o whatsapp 44997423865 no crm' }] }) }); const text = await req.text(); console.log(text);
