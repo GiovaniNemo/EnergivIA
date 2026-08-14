@@ -181,8 +181,10 @@ export async function POST(req: Request) {
                             const headers: any = {};
                             if (token) headers["Authorization"] = `Bearer ${token}`;
 
+                            console.log('[COTACAO] Buscando distribuidores em:', baseURL);
                             const distRes = await fetch(`${baseURL}/distributors`, {
-                                headers
+                                headers,
+                                signal: AbortSignal.timeout(15000)
                             });
                             
                             if (!distRes.ok) {
@@ -191,19 +193,26 @@ export async function POST(req: Request) {
                             const distList = await distRes.json();
                             if (!distList || distList.length === 0) return { error: "Nenhum distribuidor ativo no banco." };
 
+                            console.log(`[COTACAO] ${distList.length} distribuidores encontrados. Buscando produtos...`);
+
                             // Use Promise.all to fetch products for all distributors in parallel
                             const allProdsPromises = distList.map(async (d: any) => {
                                 try {
-                                    const resProds = await fetch(`${baseURL}/distributors/${d.id}/products?limit=250`, { headers });
+                                    const resProds = await fetch(`${baseURL}/distributors/${d.id}/products?limit=250`, {
+                                        headers,
+                                        signal: AbortSignal.timeout(15000)
+                                    });
                                     if (!resProds.ok) return null;
                                     const jsonProds = await resProds.json();
                                     return { distributor: d, products: jsonProds.data || [] };
                                 } catch (e) {
+                                    console.warn(`[COTACAO] Falha ao buscar produtos do dist ${d.name}:`, e);
                                     return null;
                                 }
                             });
                             
                             const distributorsData = await Promise.all(allProdsPromises);
+                            console.log(`[COTACAO] Produtos retornados. Montando kits para ${targetKWp} kWp...`);
 
                             const finalQuotes = [];
                             for (const dData of distributorsData) {
@@ -408,7 +417,8 @@ export async function POST(req: Request) {
                             const res = await fetch(`${baseURL}/leads`, {
                                 method: 'POST',
                                 headers,
-                                body: JSON.stringify(payload)
+                                body: JSON.stringify(payload),
+                                signal: AbortSignal.timeout(15000)
                             });
 
                             if (!res.ok) {

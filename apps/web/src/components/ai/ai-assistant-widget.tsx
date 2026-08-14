@@ -74,27 +74,48 @@ export function AIAssistantWidget() {
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
-            let debugRawStream = '';
+            let allRawLines: string[] = [];
 
             const assistMsg: Message = { id: (Date.now() + 1).toString(), role: "assistant", content: "" };
             setMessages((prev) => [...prev, assistMsg]);
 
+            const processLine = (line: string) => {
+                const trimmed = line.trim();
+                if (!trimmed) return '';
+
+                allRawLines.push(trimmed);
+
+                // 0: = text delta from the AI
+                if (trimmed.startsWith('0:')) {
+                    try { return JSON.parse(trimmed.slice(2)); } catch { return ''; }
+                }
+                // 3: = error from the SDK
+                if (trimmed.startsWith('3:')) {
+                    try {
+                        const err = JSON.parse(trimmed.slice(2));
+                        return `\n⚠️ Erro: ${typeof err === 'string' ? err : (err.message || JSON.stringify(err))}`;
+                    } catch { return ''; }
+                }
+                // e: = finish step data (we ignore)
+                // 9: = tool call (we ignore)  
+                // a: = tool result (we ignore)
+                // d: = done signal (we ignore)
+                return '';
+            };
+
             while (true) {
                 const { done, value } = await reader.read();
+
                 if (done) {
-                    if (buffer) {
-                        let newText = '';
-                        const lines = [buffer];
-                        for (const line of lines) {
-                            if (line.trim() === '') continue;
-                            if (line.startsWith('0:')) {
-                                try { newText += JSON.parse(line.slice(2)); } catch (e) {}
-                            } else if (!line.match(/^[0-9]+:/)) {
-                                newText += line;
-                            }
+                    // Process any remaining data in the buffer
+                    if (buffer.trim()) {
+                        const remaining = buffer.split('\n');
+                        let tail = '';
+                        for (const line of remaining) {
+                            tail += processLine(line);
                         }
-                        if (newText) {
-                            assistMsg.content += newText;
+                        if (tail) {
+                            assistMsg.content += tail;
                             setMessages((prev) => prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m));
                         }
                     }
@@ -108,50 +129,19 @@ export function AIAssistantWidget() {
 
                 let newText = '';
                 for (const line of lines) {
-                    if (line.trim() === '') continue;
-                    debugRawStream += line + '\\n';
-                    
-                    if (line.startsWith('0:')) {
-                        // Text chunk
-                        try {
-                            newText += JSON.parse(line.slice(2));
-                        } catch (e) {}
-                    } else if (line.startsWith('3:')) {
-                        // Error chunk
-                        try {
-                            const errObj = JSON.parse(line.slice(2));
-                            newText += `\\n⚠️ Erro: ${errObj.message || JSON.stringify(errObj)}`;
-                        } catch (e) {}
-                    }
-                    // We intentionally ignore 9: (tool calls), a: (tool results), etc.
-                }
-                
-                // Process any remaining buffer after stream ends
-                if (buffer.trim() !== '') {
-                    debugRawStream += buffer + '\\n';
-                    if (buffer.startsWith('0:')) {
-                        try { newText += JSON.parse(buffer.slice(2)); } catch(e) {}
-                    } else if (buffer.startsWith('3:')) {
-                        try { 
-                            const errObj = JSON.parse(buffer.slice(2));
-                            newText += `\\n⚠️ Erro: ${errObj.message || JSON.stringify(errObj)}`;
-                        } catch(e) {}
-                    }
+                    newText += processLine(line);
                 }
 
                 if (newText) {
-                    assistMsg.content += newText.replace(/\\n$/, '');
-                    setMessages((prev) =>
-                        prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m)
-                    );
+                    assistMsg.content += newText;
+                    setMessages((prev) => prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m));
                 }
             }
-            
+
             if (assistMsg.content === "") {
-                assistMsg.content = `⚠️ Falha técnica. RAW STREAM:\\n${debugRawStream || 'NENHUM DADO RECEBIDO'}`;
-                setMessages((prev) =>
-                    prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m)
-                );
+                const rawDump = allRawLines.length > 0 ? allRawLines.join('\n') : 'NENHUM DADO RECEBIDO';
+                assistMsg.content = `⚠️ A IA processou a solicitação mas não gerou texto visível.\n\nDados do stream (${allRawLines.length} linhas):\n${rawDump}`;
+                setMessages((prev) => prev.map((m) => m.id === assistMsg.id ? { ...assistMsg } : m));
             }
         } catch (error: any) {
             console.error(error);
@@ -241,7 +231,7 @@ export function AIAssistantWidget() {
                                             <img src={m.imageUrl} alt="Anexo" className="w-full max-h-48 object-cover rounded-lg mb-2" />
                                         )
                                     )}
-                                    {m.content}
+                                    <span style={{ whiteSpace: 'pre-line' }}>{m.content}</span>
                                 </div>
                             </div>
                         ))}
