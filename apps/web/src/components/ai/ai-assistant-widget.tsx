@@ -125,6 +125,19 @@ export function AIAssistantWidget() {
                     }
                     // We intentionally ignore 9: (tool calls), a: (tool results), etc.
                 }
+                
+                // Process any remaining buffer after stream ends
+                if (buffer.trim() !== '') {
+                    debugRawStream += buffer + '\\n';
+                    if (buffer.startsWith('0:')) {
+                        try { newText += JSON.parse(buffer.slice(2)); } catch(e) {}
+                    } else if (buffer.startsWith('3:')) {
+                        try { 
+                            const errObj = JSON.parse(buffer.slice(2));
+                            newText += `\\n⚠️ Erro: ${errObj.message || JSON.stringify(errObj)}`;
+                        } catch(e) {}
+                    }
+                }
 
                 if (newText) {
                     assistMsg.content += newText.replace(/\\n$/, '');
