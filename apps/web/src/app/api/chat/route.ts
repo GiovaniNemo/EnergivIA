@@ -64,8 +64,15 @@ export async function POST(req: Request) {
 
 
         const formattedMessages = (await Promise.all(
-            messages.map(async (m: any) => {
+            messages.map(async (m: any, index: number) => {
+                const isLastMessage = index === messages.length - 1;
+
                 if (m.imageUrl) {
+                    if (!isLastMessage) {
+                        // Avoid sending massive PDFs or base64 images in history
+                        return { role: m.role, content: `[Documento/Imagem enviada pelo usuário no início da conversa]` };
+                    }
+
                     if (m.imageUrl.startsWith("data:application/pdf")) {
                         const base64Data = m.imageUrl.split(',')[1];
                         const buffer = Buffer.from(base64Data, "base64");
