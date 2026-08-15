@@ -84,23 +84,7 @@ export function AIAssistantWidget() {
                 const trimmed = line.trim();
                 if (!trimmed) return '';
 
-                // New Vercel AI SDK UIMessageStream Protocol (data: {...})
-                if (trimmed.startsWith('data:')) {
-                    try {
-                        const parsed = JSON.parse(trimmed.slice(5).trim());
-                        if (parsed.type === 'text-delta') {
-                            return parsed.delta || '';
-                        }
-                        if (parsed.type === 'error') {
-                            return `\n⚠️ Erro do servidor: ${parsed.error}`;
-                        }
-                        return ''; // Ignore other types like start, finish, etc.
-                    } catch {
-                        return '';
-                    }
-                }
-
-                // Legacy Data Stream Protocol (0:"text")
+                // 0: = text delta from the AI (data stream protocol)
                 if (trimmed.startsWith('0:')) {
                     try { return JSON.parse(trimmed.slice(2)); } catch { return ''; }
                 }
@@ -109,7 +93,7 @@ export function AIAssistantWidget() {
                     try {
                         const err = JSON.parse(trimmed.slice(2));
                         return `\n⚠️ Erro do servidor/ferramenta: ${typeof err === 'string' ? err : (err.message || JSON.stringify(err))}`;
-                    } catch { 
+                    } catch {
                         return `\n⚠️ Erro do servidor: ${trimmed.slice(2)}`;
                     }
                 }

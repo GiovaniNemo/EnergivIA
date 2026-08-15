@@ -200,7 +200,13 @@ export async function POST(req: Request) {
                                 const mod = validMods.length > 0 ? validMods[0] : mods[0];
                                 if (!mod) continue;
 
-                                const modPowerW = Number(mod.product?.specs?.power_w) || 550;
+                                let modPowerW = Number(mod.product?.specs?.power_w);
+                                if (!modPowerW) {
+                                    const modName = (mod.product?.name || mod.descricao || "").toUpperCase();
+                                    const modMatch = modName.match(/(\d{3,4})\s*W/);
+                                    if (modMatch) modPowerW = parseInt(modMatch[1], 10);
+                                    else modPowerW = 550;
+                                }
                                 // Number of panels: always rounds up
                                 const moduleQ = Math.ceil((finalTargetKWp * 1000) / modPowerW);
                                 const realKWp = (moduleQ * modPowerW) / 1000;
@@ -231,23 +237,10 @@ export async function POST(req: Request) {
                                     validInvs.push(invObj);
                                 }
 
-                                if (validInvs.length === 0) {
-                                    // Fallback to nearest
-                                    let minDiff = Infinity;
-                                    let bestFallback = null;
-                                    for (const invObj of invs) {
-                                        const name = (invObj.product?.name || invObj.descricao || "").toUpperCase();
-                                        const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
-                                        let invKWp = match ? parseFloat(match[1].replace(',', '.')) : finalTargetKWp;
-                                        if (match && match[2] === 'W') invKWp = invKWp / 1000;
-                                        const diff = Math.abs(invKWp - realKWp);
-                                        if (diff < minDiff) { minDiff = diff; bestFallback = invObj; }
-                                    }
-                                    if (bestFallback) validInvs.push(bestFallback);
-                                }
+                                if (validInvs.length === 0) continue; // Skip distributor if no valid inverter found
 
                                 validInvs.sort((a, b) => Number(a.price) - Number(b.price));
-                                const inv = validInvs.length > 0 ? validInvs[0] : invs[0];
+                                const inv = validInvs[0];
                                 if (!inv) continue;
 
                                 const cabPreto = cabs.find((c:any) => JSON.stringify(c).toLowerCase().includes('preto')) || cabs[0];
@@ -325,6 +318,10 @@ export async function POST(req: Request) {
                             const headers: any = { "Content-Type": "application/json" };
                             if (token) headers["Authorization"] = `Bearer ${token}`;
 
+                            if (!token) {
+                                return { error: `Autenticação ausente. O sistema não encontrou um token válido na sua sessão.` };
+                            }
+
                             const res = await fetch(`${baseURL}/leads`, {
                                 method: 'POST',
                                 headers,
@@ -332,7 +329,8 @@ export async function POST(req: Request) {
                             });
 
                             if (!res.ok) {
-                                return { error: `Erro no CRM` };
+                                const errText = await res.text().catch(() => "");
+                                return { error: `Erro no CRM (Status ${res.status}): ${errText}` };
                             }
 
                             const leadData = await res.json();
