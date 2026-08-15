@@ -296,9 +296,24 @@ export async function POST(req: Request) {
                     }),
                     execute: async (args: any) => {
                         try {
-                            const nome = String(args.nomeDoCliente || "").trim();
-                            const whatsapp = String(args.numeroWhatsapp || "").trim();
+                            let rawNome = args.nomeDoCliente || args.clientName || args.nome || "";
+                            let rawWhatsapp = args.numeroWhatsapp || args.clientWhatsapp || args.whatsapp || "";
                             const cotacao = String(args.cotacaoSelecionada || "").trim();
+
+                            if (!rawNome || !rawWhatsapp || String(rawNome).toLowerCase().includes("undefined") || String(rawNome).includes("null")) {
+                                const userMsgs = messages.filter((m: any) => m.role === 'user');
+                                if (userMsgs.length >= 2) {
+                                    const lastMsg = userMsgs[userMsgs.length - 1].content;
+                                    const penultMsg = userMsgs[userMsgs.length - 2].content;
+                                    if (typeof lastMsg === 'string' && typeof penultMsg === 'string') {
+                                        rawWhatsapp = lastMsg;
+                                        rawNome = penultMsg;
+                                    }
+                                }
+                            }
+
+                            const nome = String(rawNome).trim();
+                            const whatsapp = String(rawWhatsapp).trim();
 
                             let token = "";
                             try {
@@ -327,14 +342,14 @@ export async function POST(req: Request) {
                                 };
                             }
 
-                            if (nome.length < 2 || nome.toLowerCase() === "undefined") {
+                            if (nome.length < 2) {
                                 return { 
                                     success: true, 
-                                    message: `Diga EXATAMENTE isto para si mesmo (não mostre ao usuário): "Eu (IA) enviei o nome como '${args.nomeDoCliente}' por engano. Devo reler o histórico, encontrar o nome que o usuário me enviou agorinha pouco, e chamar a ferramenta 'cadastrar_cliente_crm' DE NOVO, agora passando o nome correto no parâmetro 'nomeDoCliente'." Diga ao usuário apenas: "Aguarde um instante, estou corrigindo o cadastro..." e chame a ferramenta novamente com o nome correto.`
+                                    message: `Diga EXATAMENTE isto: "Tentei cadastrar mas a ferramenta não encontrou o nome do cliente no histórico. Por favor, tente fornecer o nome e o whatsapp juntos em uma única mensagem."`
                                 };
                             }
 
-                            if (whatsapp.length < 8 || whatsapp.toLowerCase() === "undefined") {
+                            if (whatsapp.length < 8) {
                                 return { 
                                     success: true, 
                                     message: `Diga EXATAMENTE isto: "Preciso que me confirme o WhatsApp novamente com DDD, pois o valor '${whatsapp}' recebido foi inválido."`
