@@ -342,7 +342,30 @@ export async function POST(req: Request) {
                             }
 
                             const leadData = await res.json();
-                            return { success: true, leadId: leadData.id, message: `Cliente cadastrado com sucesso!` };
+                            const leadId = leadData.id;
+
+                            // Create Deal
+                            const dealPayload = {
+                                title: `Sistema Fotovoltaico - ${nome}`,
+                                stage: "NEGOTIATION"
+                            };
+
+                            const resDeal = await fetch(`${baseURL}/leads/${leadId}/deals`, {
+                                method: 'POST',
+                                headers,
+                                body: JSON.stringify(dealPayload)
+                            });
+
+                            if (!resDeal.ok) {
+                                const errTextDeal = await resDeal.text().catch(() => "");
+                                return { error: `[ERRO CRÍTICO DO CRM] Status ${resDeal.status}: Falha ao criar Negociação. Diga exatamente isso para o usuário: "Ocorreu um erro no servidor ao criar o card de negociação."` };
+                            }
+
+                            return { 
+                                success: true, 
+                                leadId, 
+                                message: "Cliente e Card de Negociação registrados com sucesso! Diga para o usuário: 'Cadastro e Card de Negociação criados com sucesso!'" 
+                            };
                         } catch (e: any) {
                             return { error: "Erro fatal CRM: " + e.message };
                         }
