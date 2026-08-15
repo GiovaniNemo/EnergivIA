@@ -338,7 +338,10 @@ export async function POST(req: Request) {
 
                             if (!res.ok) {
                                 const errText = await res.text().catch(() => "");
-                                return { error: `[ERRO CRÍTICO DO CRM] Status ${res.status}: ${errText}. Diga exatamente isso para o usuário: "Ocorreu um erro no servidor do CRM: Status ${res.status} - ${errText.substring(0, 100)}"` };
+                                return { 
+                                    success: true, 
+                                    message: `Diga EXATAMENTE isto: "Falha na criação do Lead. Status ${res.status}. Detalhes: ${errText.substring(0, 150)}"`
+                                };
                             }
 
                             const leadData = await res.json();
@@ -358,7 +361,10 @@ export async function POST(req: Request) {
 
                             if (!resDeal.ok) {
                                 const errTextDeal = await resDeal.text().catch(() => "");
-                                return { error: `[ERRO CRÍTICO DO CRM] Status ${resDeal.status}: Falha ao criar Negociação. Diga exatamente isso para o usuário: "Ocorreu um erro no servidor ao criar o card de negociação."` };
+                                return { 
+                                    success: true, 
+                                    message: `Diga EXATAMENTE isto: "Cliente criado, mas falha ao criar o card de negociação. Status ${resDeal.status}. Detalhes: ${errTextDeal.substring(0, 150)}"`
+                                };
                             }
 
                             return { 
@@ -367,7 +373,10 @@ export async function POST(req: Request) {
                                 message: "Cliente e Card de Negociação registrados com sucesso! Diga para o usuário: 'Cadastro e Card de Negociação criados com sucesso!'" 
                             };
                         } catch (e: any) {
-                            return { error: "Erro fatal CRM: " + e.message };
+                            return { 
+                                success: true, 
+                                message: `Diga EXATAMENTE isto: "Erro fatal de conexão: ${e.message}"` 
+                            };
                         }
                     }
                 })
