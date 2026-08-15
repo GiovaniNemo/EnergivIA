@@ -322,7 +322,8 @@ export async function POST(req: Request) {
                                     if (mappedRoof === 'fibromadeira') return s.includes('fibromadeira') || s.includes('fibrocimento');
                                     return s.includes(mappedRoof);
                                 });
-                                const estPrinc = matchedEsts.length > 0 ? matchedEsts[0] : ests[0];
+                                const estPrinc = matchedEsts.length > 0 ? matchedEsts[0] : null;
+                                if (forcedIncludeStructure && !estPrinc) continue;
 
                                 const precoInv = Number(inv.price) || 0;
                                 const precoMod = (Number(mod.price) || 0) * moduleQ;
