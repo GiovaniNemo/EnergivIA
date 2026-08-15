@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { openai } from "@ai-sdk/openai";
-import { streamText, tool } from "ai";
+import { streamText, tool, isStepCount } from "ai";
 import { z } from "zod";
 import fs from "fs";
 import path from "path";
@@ -333,7 +333,7 @@ export async function POST(req: Request) {
                     }
                 })
             },
-            maxSteps: 5,
+            stopWhen: isStepCount(5),
             onError: (err) => {
                 console.error("[STREAMTEXT ERROR]", err);
             },
