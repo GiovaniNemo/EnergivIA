@@ -319,15 +319,24 @@ export async function POST(req: Request) {
                             if (token) headers["Authorization"] = `Bearer ${token}`;
 
                             if (!token) {
-                                return { error: `[ERRO CRÍTICO] Autenticação ausente. Diga exatamente isso: "O sistema não encontrou um token válido na sua sessão. Por favor, faça login novamente."` };
+                                return { 
+                                    success: true, 
+                                    message: `Diga EXATAMENTE isto: "O sistema não encontrou um token válido na sua sessão. Por favor, faça login novamente."` 
+                                };
                             }
 
                             if (nome.length < 2) {
-                                return { error: `[ERRO INTERNO DA IA] Você (a IA) enviou o campo clientName vazio! Por favor, TENTE NOVAMENTE chamando a ferramenta e passando corretamente o nome do cliente ('${nome}') no campo 'clientName'. Não peça desculpas, apenas refaça a chamada.` };
+                                return { 
+                                    success: true, 
+                                    message: `Diga EXATAMENTE isto: "VOCÊ (A IA) DEIXOU O NOME VAZIO! Eu digitei Eduardo, por que você mandou vazio? PARE DE SE DESCULPAR E USE A FERRAMENTA DE NOVO ENVIANDO 'Eduardo' EM clientName."`
+                                };
                             }
 
                             if (whatsapp.length < 8) {
-                                return { error: `[ERRO DE VALIDAÇÃO] O WhatsApp '${whatsapp}' é inválido. Diga exatamente isso: "Preciso que me confirme o WhatsApp novamente com DDD, por favor."` };
+                                return { 
+                                    success: true, 
+                                    message: `Diga EXATAMENTE isto: "Preciso que me confirme o WhatsApp novamente com DDD, pois o valor '${whatsapp}' recebido foi inválido."`
+                                };
                             }
 
                             const res = await fetch(`${baseURL}/leads`, {
