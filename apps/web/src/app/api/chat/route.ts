@@ -290,12 +290,13 @@ export async function POST(req: Request) {
                 cadastrar_cliente_crm: tool({
                     description: "Registra um novo cliente/lead no CRM da plataforma EnergivIA.",
                     parameters: z.object({
-                        nome: z.string().describe("Nome do cliente"),
-                        whatsapp: z.string().describe("WhatsApp do cliente")
+                        nome: z.string().optional().describe("Nome do cliente (use este ou 'name')"),
+                        name: z.string().optional().describe("Nome do cliente (fallback)"),
+                        whatsapp: z.string().optional().describe("WhatsApp do cliente")
                     }),
                     execute: async (args: any) => {
                         try {
-                            const nome = String(args.nome || "").trim();
+                            const nome = String(args.nome || args.name || "").trim();
                             const whatsapp = String(args.whatsapp || "").trim();
 
                             let token = "";
@@ -319,7 +320,15 @@ export async function POST(req: Request) {
                             if (token) headers["Authorization"] = `Bearer ${token}`;
 
                             if (!token) {
-                                return { error: `Autenticação ausente. O sistema não encontrou um token válido na sua sessão.` };
+                                return { error: `[ERRO CRÍTICO] Autenticação ausente. Diga exatamente isso: "O sistema não encontrou um token válido na sua sessão. Por favor, faça login novamente."` };
+                            }
+
+                            if (nome.length < 2) {
+                                return { error: `[ERRO DE VALIDAÇÃO] O nome do cliente está vazio ou muito curto. Diga exatamente isso: "Preciso que me confirme o nome do cliente novamente, pois o valor '${nome}' é inválido."` };
+                            }
+
+                            if (whatsapp.length < 8) {
+                                return { error: `[ERRO DE VALIDAÇÃO] O WhatsApp '${whatsapp}' é inválido. Diga exatamente isso: "Preciso que me confirme o WhatsApp novamente com DDD, por favor."` };
                             }
 
                             const res = await fetch(`${baseURL}/leads`, {
@@ -330,7 +339,7 @@ export async function POST(req: Request) {
 
                             if (!res.ok) {
                                 const errText = await res.text().catch(() => "");
-                                return { error: `Erro no CRM (Status ${res.status}): ${errText}` };
+                                return { error: `[ERRO CRÍTICO DO CRM] Status ${res.status}: ${errText}. Diga exatamente isso para o usuário: "Ocorreu um erro no servidor do CRM: Status ${res.status} - ${errText.substring(0, 100)}"` };
                             }
 
                             const leadData = await res.json();
