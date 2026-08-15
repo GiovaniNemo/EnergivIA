@@ -334,15 +334,59 @@ export async function POST(req: Request) {
                                     if (mappedRoof === 'metal') return s.includes('metal') && !s.includes('fibrometal');
                                     return s.includes(mappedRoof);
                                 });
-                                const estPrinc = matchedEsts.length > 0 ? matchedEsts[0] : null;
-                                if (forcedIncludeStructure && !estPrinc) continue;
+                                const parsedEsts = matchedEsts.map((p: any) => {
+                                    const n = (p.product?.name || "").toUpperCase();
+                                    const m = n.match(/(\d+)\s*(MOD|PAIN|PLAC)/);
+                                    let cap = m ? parseInt(m[1], 10) : 0;
+                                    return { ...p, cap };
+                                }).filter(p => p.cap > 0);
+
+                                let selectedStructures: any[] = [];
+                                if (parsedEsts.length > 0) {
+                                    let remaining = moduleQ;
+                                    const bestByCap: Record<number, any> = {};
+                                    for (const p of parsedEsts) {
+                                        if (!bestByCap[p.cap] || Number(p.price) < Number(bestByCap[p.cap].price)) {
+                                            bestByCap[p.cap] = p;
+                                        }
+                                    }
+                                    const uniqueCaps = Object.values(bestByCap).sort((a: any, b: any) => b.cap - a.cap);
+                                    
+                                    while (remaining > 0) {
+                                        let best = uniqueCaps.find((p: any) => p.cap <= remaining);
+                                        if (!best) {
+                                            const larger = [...uniqueCaps].sort((a: any, b: any) => a.cap - b.cap);
+                                            best = larger.find((p: any) => p.cap >= remaining);
+                                        }
+                                        if (!best) break;
+                                        selectedStructures.push(best);
+                                        remaining -= best.cap;
+                                    }
+                                } else if (matchedEsts.length > 0) {
+                                    selectedStructures.push(matchedEsts[0]);
+                                }
+
+                                if (forcedIncludeStructure && selectedStructures.length === 0) continue;
+
+                                let precoEst = 0;
+                                const estLines: string[] = [];
+                                if (forcedIncludeStructure && selectedStructures.length > 0) {
+                                    const counts = new Map();
+                                    for (const est of selectedStructures) {
+                                        precoEst += Number(est.price) || 0;
+                                        const name = est.product?.name || est.descricao;
+                                        counts.set(name, (counts.get(name) || 0) + 1);
+                                    }
+                                    for (const [name, count] of counts.entries()) {
+                                        estLines.push(`- Estrutura: ${count}x ${name}`);
+                                    }
+                                }
 
                                 const precoInv = Number(inv.price) || 0;
                                 const precoMod = (Number(mod.price) || 0) * moduleQ;
                                 const precoCabPreto = cabPreto ? (Number(cabPreto.price) || 0) : 0;
                                 const precoCabVermelho = cabVermelho ? (Number(cabVermelho.price) || 0) : 0;
                                 const precoCon = con ? (Number(con.price) || 0) * 2 : 0;
-                                const precoEst = (forcedIncludeStructure && estPrinc) ? (Number(estPrinc.price) || 0) : 0;
 
                                 const somaTotal = precoInv + precoMod + precoCabPreto + precoCabVermelho + precoCon + precoEst;
 
@@ -352,7 +396,7 @@ export async function POST(req: Request) {
                                     kit_itens_salvos: [
                                         `- Inversor: ${inv.product?.name || inv.descricao}`,
                                         `- Módulos: ${moduleQ}x ${mod.product?.name || mod.descricao}`,
-                                        (forcedIncludeStructure && estPrinc) ? `- Estrutura: ${estPrinc.product?.name || estPrinc.descricao}` : null,
+                                        ...estLines,
                                         cabPreto ? `- Cabo Preto: ${cabPreto.product?.name || cabPreto.descricao}` : null,
                                         cabVermelho ? `- Cabo Vermelho: ${cabVermelho.product?.name || cabVermelho.descricao}` : null,
                                         con ? `- Conectores: 2x ${con.product?.name || con.descricao}` : null,
