@@ -290,8 +290,8 @@ export async function POST(req: Request) {
                 cadastrar_cliente_crm: tool({
                     description: "Registra um novo cliente/lead no CRM da plataforma EnergivIA.",
                     parameters: z.object({
-                        clientName: z.string().describe("Nome do cliente final"),
-                        clientWhatsapp: z.string().describe("WhatsApp numérico do cliente")
+                        clientName: z.string().optional().describe("Nome do cliente final"),
+                        clientWhatsapp: z.string().optional().describe("WhatsApp numérico do cliente")
                     }),
                     execute: async (args: any) => {
                         try {
