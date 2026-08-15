@@ -117,11 +117,15 @@ export async function POST(req: Request) {
                             try {
                                 const session = await auth0.getSession();
                                 if (session) {
-                                    const authResult = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
-                                    token = authResult.token || "";
+                                    try {
+                                        const authResult = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
+                                        token = authResult.token || session.accessToken || "";
+                                    } catch (e) {
+                                        token = session.accessToken || "";
+                                    }
                                 }
                             } catch (e) {
-                                console.warn("Sessão Auth0 não encontrada ou falha ao pegar token:", e);
+                                console.warn("Sessão Auth0 não encontrada:", e);
                             }
                             
                             const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
@@ -305,10 +309,16 @@ export async function POST(req: Request) {
                             try {
                                 const session = await auth0.getSession();
                                 if (session) {
-                                    const authResult = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
-                                    token = authResult.token || "";
+                                    try {
+                                        const authResult = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
+                                        token = authResult.token || session.accessToken || "";
+                                    } catch (e) {
+                                        token = session.accessToken || "";
+                                    }
                                 }
-                            } catch (e) {}
+                            } catch (e) {
+                                console.warn("Sessão Auth0 não encontrada:", e);
+                            }
                             
                             const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
                             const payload = { name: nome, whatsapp: whatsapp, source: "Chatbot IA" };
