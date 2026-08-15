@@ -290,12 +290,12 @@ export async function POST(req: Request) {
                 cadastrar_cliente_crm: tool({
                     description: "Registra um novo cliente/lead no CRM da plataforma EnergivIA.",
                     parameters: z.object({
-                        nome: z.string().min(2).describe("Nome do cliente final"),
+                        name: z.string().min(2).describe("Nome do cliente final (Client Name)"),
                         whatsapp: z.string().min(8).describe("WhatsApp numérico do cliente")
                     }),
                     execute: async (args: any) => {
                         try {
-                            const nome = String(args.nome || "").trim();
+                            const nome = String(args.name || "").trim();
                             const whatsapp = String(args.whatsapp || "").trim();
 
                             let token = "";
