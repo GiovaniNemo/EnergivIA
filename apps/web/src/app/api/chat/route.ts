@@ -132,7 +132,16 @@ export async function POST(req: Request) {
             console.error("Erro ao buscar dados do integrador:", e);
         }
 
-        const dynamicSystemPrompt = systemPrompt.replace(/da EnergivIA/g, `da ${integratorCompanyName}`);
+        const formatter = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: 'numeric' });
+        const currentHour = parseInt(formatter.format(new Date()), 10);
+        let saudacao = "Olá";
+        if (currentHour >= 5 && currentHour < 12) saudacao = "Bom dia";
+        else if (currentHour >= 12 && currentHour < 18) saudacao = "Boa tarde";
+        else saudacao = "Boa noite";
+
+        const dynamicSystemPrompt = systemPrompt
+            .replace(/\[SAUDACAO\]/g, saudacao)
+            .replace(/\[EMPRESA\]/g, integratorCompanyName);
 
         const result = await streamText({
             model: openai("gpt-4o"),
@@ -308,9 +317,9 @@ export async function POST(req: Request) {
 
                                 const matchedEsts = ests.filter((p:any) => {
                                     const s = (p.product?.name || p.descricao || "").toLowerCase();
-                                    if (mappedRoof === 'fibrocimento') return s.includes('fibrocimento');
+                                    if (mappedRoof === 'fibrocimento') return s.includes('fibrocimento') || s.includes('fibromadeira');
                                     if (mappedRoof === 'fibrometal') return s.includes('fibrometal');
-                                    if (mappedRoof === 'fibromadeira') return s.includes('fibromadeira') || s.includes('fibrocimento') || s.includes('fibrometal');
+                                    if (mappedRoof === 'fibromadeira') return s.includes('fibromadeira') || s.includes('fibrocimento');
                                     return s.includes(mappedRoof);
                                 });
                                 const estPrinc = matchedEsts.length > 0 ? matchedEsts[0] : ests[0];
