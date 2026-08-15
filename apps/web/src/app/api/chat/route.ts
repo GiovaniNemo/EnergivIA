@@ -294,9 +294,12 @@ export async function POST(req: Request) {
                         clientWhatsapp: z.string().optional().describe("WhatsApp numérico do cliente")
                     }),
                     execute: async (args: any) => {
+                        const fs = require('fs');
                         try {
                             const nome = String(args.clientName || "").trim();
                             const whatsapp = String(args.clientWhatsapp || "").trim();
+
+                            fs.writeFileSync("LAST_CRM_ERROR.txt", `--- NEW REQUEST ---\nPayload: ${JSON.stringify(args)}\n`);
 
                             let token = "";
                             try {
@@ -338,6 +341,7 @@ export async function POST(req: Request) {
 
                             if (!res.ok) {
                                 const errText = await res.text().catch(() => "");
+                                fs.appendFileSync("LAST_CRM_ERROR.txt", `POST /leads FAILED: ${res.status} ${errText}\n`);
                                 return { 
                                     success: true, 
                                     message: `Diga EXATAMENTE isto: "Falha na criação do Lead. Status ${res.status}. Detalhes: ${errText.substring(0, 150)}"`
@@ -361,6 +365,7 @@ export async function POST(req: Request) {
 
                             if (!resDeal.ok) {
                                 const errTextDeal = await resDeal.text().catch(() => "");
+                                fs.appendFileSync("LAST_CRM_ERROR.txt", `POST /deals FAILED: ${resDeal.status} ${errTextDeal}\n`);
                                 return { 
                                     success: true, 
                                     message: `Diga EXATAMENTE isto: "Cliente criado, mas falha ao criar o card de negociação. Status ${resDeal.status}. Detalhes: ${errTextDeal.substring(0, 150)}"`
@@ -373,6 +378,7 @@ export async function POST(req: Request) {
                                 message: "Cliente e Card de Negociação registrados com sucesso! Diga para o usuário: 'Cadastro e Card de Negociação criados com sucesso!'" 
                             };
                         } catch (e: any) {
+                            fs.appendFileSync("LAST_CRM_ERROR.txt", `EXCEPTION: ${e.stack}\n`);
                             return { 
                                 success: true, 
                                 message: `Diga EXATAMENTE isto: "Erro fatal de conexão: ${e.message}"` 
