@@ -290,13 +290,13 @@ export async function POST(req: Request) {
                 cadastrar_cliente_crm: tool({
                     description: "Registra um novo cliente/lead no CRM da plataforma EnergivIA.",
                     parameters: z.object({
-                        name: z.string().min(2).describe("Nome do cliente final (Client Name)"),
-                        whatsapp: z.string().min(8).describe("WhatsApp numérico do cliente")
+                        clientName: z.string().describe("Nome do cliente final"),
+                        clientWhatsapp: z.string().describe("WhatsApp numérico do cliente")
                     }),
                     execute: async (args: any) => {
                         try {
-                            const nome = String(args.name || "").trim();
-                            const whatsapp = String(args.whatsapp || "").trim();
+                            const nome = String(args.clientName || "").trim();
+                            const whatsapp = String(args.clientWhatsapp || "").trim();
 
                             let token = "";
                             try {
@@ -323,7 +323,7 @@ export async function POST(req: Request) {
                             }
 
                             if (nome.length < 2) {
-                                return { error: `[ERRO DE VALIDAÇÃO] O nome do cliente está vazio ou muito curto. Diga exatamente isso: "Preciso que me confirme o nome do cliente novamente, pois o valor '${nome}' é inválido."` };
+                                return { error: `[ERRO INTERNO DA IA] Você (a IA) enviou o campo clientName vazio! Por favor, TENTE NOVAMENTE chamando a ferramenta e passando corretamente o nome do cliente ('${nome}') no campo 'clientName'. Não peça desculpas, apenas refaça a chamada.` };
                             }
 
                             if (whatsapp.length < 8) {
