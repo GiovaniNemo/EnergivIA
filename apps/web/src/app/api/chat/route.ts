@@ -154,7 +154,7 @@ export async function POST(req: Request) {
                         monthlyConsumption: z.any().optional().describe("Consumo mensal (kWh). Pode ser número ou string."),
                         targetKWp: z.any().optional().describe("Potência alvo do sistema em kWp. Pode ser número ou string."),
                         location: z.string().optional().describe("Cidade e Estado"),
-                        roofType: z.string().optional().describe("Tipo de telhado. Padrão: metal."),
+                        roofType: z.string().describe("Tipo de telhado. OBRIGATÓRIO (ex: '2', 'fibrocimento', 'metal', 'ceramica')."),
                         cidade: z.string().optional().describe("Nome da cidade para o motor calcular HSP"),
                         estado: z.string().optional().describe("Sigla do estado (UF) para o motor calcular HSP")
                     }),
