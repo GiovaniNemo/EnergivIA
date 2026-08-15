@@ -290,8 +290,8 @@ export async function POST(req: Request) {
                 cadastrar_cliente_crm: tool({
                     description: "Registra um novo cliente/lead no CRM da plataforma EnergivIA.",
                     parameters: z.object({
-                        clientName: z.string().optional().describe("Nome do cliente final"),
-                        clientWhatsapp: z.string().optional().describe("WhatsApp numérico do cliente")
+                        clientName: z.string().min(2, "Você precisa obrigatoriamente preencher o nome do cliente.").describe("Nome do cliente final extraído da conversa"),
+                        clientWhatsapp: z.string().min(8, "Você precisa obrigatoriamente preencher o whatsapp numérico.").describe("WhatsApp numérico do cliente")
                     }),
                     execute: async (args: any) => {
                         try {
@@ -328,7 +328,7 @@ export async function POST(req: Request) {
                             if (nome.length < 2) {
                                 return { 
                                     success: true, 
-                                    message: `Diga EXATAMENTE isto: "VOCÊ (A IA) DEIXOU O NOME VAZIO! Eu digitei Eduardo, por que você mandou vazio? PARE DE SE DESCULPAR E USE A FERRAMENTA DE NOVO ENVIANDO 'Eduardo' EM clientName."`
+                                    message: `Diga EXATAMENTE isto: "VOCÊ (A IA) DEIXOU O NOME VAZIO! Por favor, use a ferramenta novamente enviando o nome do cliente em clientName e o WhatsApp em clientWhatsapp."`
                                 };
                             }
 
