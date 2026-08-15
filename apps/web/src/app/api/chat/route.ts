@@ -340,7 +340,7 @@ export async function POST(req: Request) {
             onFinish: async (event) => {}
         });
 
-        return result.toDataStreamResponse({ 
+        return result.toUIMessageStreamResponse({ 
             headers: { "Cache-Control": "no-cache" },
         });
     } catch (error: any) {
