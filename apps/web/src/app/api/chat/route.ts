@@ -327,14 +327,14 @@ export async function POST(req: Request) {
                                 };
                             }
 
-                            if (nome.length < 2) {
+                            if (nome.length < 2 || nome.toLowerCase() === "undefined") {
                                 return { 
                                     success: true, 
-                                    message: `Diga EXATAMENTE isto: "Tentei cadastrar mas a ferramenta recebeu o nome como: '${args.clientName}'. Por favor, chame a ferramenta novamente e certifique-se de preencher o parâmetro clientName corretamente com o nome que o usuário digitou no histórico."`
+                                    message: `Diga EXATAMENTE isto para si mesmo (não mostre ao usuário): "Eu (IA) enviei o nome como '${args.nomeDoCliente}' por engano. Devo reler o histórico, encontrar o nome que o usuário me enviou agorinha pouco, e chamar a ferramenta 'cadastrar_cliente_crm' DE NOVO, agora passando o nome correto no parâmetro 'nomeDoCliente'." Diga ao usuário apenas: "Aguarde um instante, estou corrigindo o cadastro..." e chame a ferramenta novamente com o nome correto.`
                                 };
                             }
 
-                            if (whatsapp.length < 8) {
+                            if (whatsapp.length < 8 || whatsapp.toLowerCase() === "undefined") {
                                 return { 
                                     success: true, 
                                     message: `Diga EXATAMENTE isto: "Preciso que me confirme o WhatsApp novamente com DDD, pois o valor '${whatsapp}' recebido foi inválido."`
