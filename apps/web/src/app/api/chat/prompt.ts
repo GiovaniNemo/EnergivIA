@@ -40,7 +40,8 @@ REGRAS:
 
 MODELO DE EXIBIÇÃO DE KITS:
 [Número] - [Nome Distribuidor] - R$ [Valor Total]
-  Kit: [Inversor] + [Qtd]x [Módulos] + [Estrutura] (Completo)
-  Info: [info_adicional retornado]
+Itens do Kit:
+[liste exatos os itens retornados em kit_itens_salvos, um por linha]
+Info: [info_adicional retornado]
 
 Pergunte qual ele prefere ou se deseja ajustar algo.`;

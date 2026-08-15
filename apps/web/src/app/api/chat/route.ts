@@ -96,16 +96,54 @@ export async function POST(req: Request) {
             })
         )).filter(m => m.content && (typeof m.content === 'string' ? m.content.trim().length > 0 : m.content.length > 0));
 
+        let integratorCompanyName = "EnergivIA";
+        try {
+            const session = await auth0.getSession();
+            if (session) {
+                let token = "";
+                try {
+                    const authResult = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
+                    token = authResult.token || session.accessToken || session.idToken || "";
+                } catch (e) {
+                    token = session.idToken || session.accessToken || "";
+                }
+                
+                if (token) {
+                    const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
+                    const meRes = await fetch(`${baseURL}/auth/me`, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+                    if (meRes.ok) {
+                        const meData = await meRes.json();
+                        if (meData.organizations && meData.organizations.length > 0) {
+                            const currentOrg = meData.organizations.find((o: any) => o.id === meData.currentOrganizationId) || meData.organizations[0];
+                            if (currentOrg && currentOrg.name) {
+                                integratorCompanyName = currentOrg.name;
+                            }
+                        } else if (meData.company) {
+                            integratorCompanyName = meData.company;
+                        } else if (meData.name) {
+                            integratorCompanyName = meData.name;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Erro ao buscar dados do integrador:", e);
+        }
+
+        const dynamicSystemPrompt = systemPrompt.replace(/da EnergivIA/g, `da ${integratorCompanyName}`);
+
         const result = await streamText({
             model: openai("gpt-4o"),
-            system: systemPrompt,
+            system: dynamicSystemPrompt,
             messages: formattedMessages,
             tools: {
                 gerar_cotacao_distribuidor: tool({
                     description: "Usa o motor de cálculo da EnergivIA para dimensionar os componentes físicos e puxar orçamentos REAIS cruzando todos os distribuidores ativos.",
                     parameters: z.object({
-                        monthlyConsumption: z.coerce.number().optional().describe("Consumo mensal (kWh)."),
-                        targetKWp: z.coerce.number().optional().describe("Potência alvo do sistema em kWp."),
+                        monthlyConsumption: z.any().optional().describe("Consumo mensal (kWh). Pode ser número ou string."),
+                        targetKWp: z.any().optional().describe("Potência alvo do sistema em kWp. Pode ser número ou string."),
                         location: z.string().optional().describe("Cidade e Estado"),
                         roofType: z.string().optional().describe("Tipo de telhado. Padrão: metal."),
                         cidade: z.string().optional().describe("Nome da cidade para o motor calcular HSP"),
@@ -134,6 +172,8 @@ export async function POST(req: Request) {
                             let roofFactor = 1.0;
                             const roofStr = (roofType || "").toLowerCase();
                             if (roofStr === '1' || roofStr.includes('ceramic') || roofStr.includes('cerâmica') || roofStr.includes('colonial')) { mappedRoof = 'ceramic'; }
+                            else if (roofStr.includes('fibrocimento')) { mappedRoof = 'fibrocimento'; }
+                            else if (roofStr.includes('fibrometal')) { mappedRoof = 'fibrometal'; }
                             else if (roofStr === '2' || roofStr.includes('fibro') || roofStr.includes('fibromadeira')) { mappedRoof = 'fibromadeira'; }
                             else if (roofStr === '3' || roofStr.includes('metal') || roofStr.includes('metálic')) { mappedRoof = 'metal'; }
                             else if (roofStr === '4' || roofStr.includes('solo') || roofStr.includes('ground')) { mappedRoof = 'ground'; }
@@ -145,7 +185,17 @@ export async function POST(req: Request) {
                             const forcedIncludeStructure = mappedRoof !== 'none';
 
                             const safeLocation = location || "São Paulo, SP";
-                            const safeConsumption = monthlyConsumption || 300;
+                            
+                            let parsedConsumption = 300;
+                            if (monthlyConsumption !== undefined && monthlyConsumption !== null) {
+                                if (typeof monthlyConsumption === 'number') {
+                                    parsedConsumption = monthlyConsumption;
+                                } else if (typeof monthlyConsumption === 'string') {
+                                    const parsed = parseFloat(monthlyConsumption.replace(/[^0-9.,]/g, '').replace(',', '.'));
+                                    if (!isNaN(parsed)) parsedConsumption = parsed;
+                                }
+                            }
+                            const safeConsumption = parsedConsumption;
 
                             const cid = cidade || safeLocation.split(',')[0].trim();
                             const est = estado || safeLocation.split(',')[1]?.trim() || "SP";
@@ -168,7 +218,16 @@ export async function POST(req: Request) {
                             const geracaoPorKwp = finalHsp * 30 * PR;
                             const consumoAjustado = safeConsumption * aumentoConsumo;
                             
-                            let finalTargetKWp = targetKWp;
+                            let parsedTargetKWp = undefined;
+                            if (targetKWp !== undefined && targetKWp !== null) {
+                                if (typeof targetKWp === 'number') parsedTargetKWp = targetKWp;
+                                else if (typeof targetKWp === 'string') {
+                                    const parsed = parseFloat(targetKWp.replace(/[^0-9.,]/g, '').replace(',', '.'));
+                                    if (!isNaN(parsed)) parsedTargetKWp = parsed;
+                                }
+                            }
+                            
+                            let finalTargetKWp = parsedTargetKWp;
                             if (!finalTargetKWp) {
                                 finalTargetKWp = consumoAjustado / (geracaoPorKwp * fatorFace);
                             }
@@ -249,6 +308,8 @@ export async function POST(req: Request) {
 
                                 const matchedEsts = ests.filter((p:any) => {
                                     const s = (p.product?.name || p.descricao || "").toLowerCase();
+                                    if (mappedRoof === 'fibrocimento') return s.includes('fibrocimento');
+                                    if (mappedRoof === 'fibrometal') return s.includes('fibrometal');
                                     if (mappedRoof === 'fibromadeira') return s.includes('fibromadeira') || s.includes('fibrocimento') || s.includes('fibrometal');
                                     return s.includes(mappedRoof);
                                 });
@@ -267,9 +328,12 @@ export async function POST(req: Request) {
                                     distribuidora: d.name,
                                     valor_total_do_kit: `R$ ${somaTotal.toFixed(2).replace('.', ',')}`,
                                     kit_itens_salvos: [
-                                        `Inv: ${inv.product?.name || inv.descricao}`,
-                                        `Mod: ${moduleQ}x ${mod.product?.name || mod.descricao}`,
-                                        (forcedIncludeStructure && estPrinc) ? `Est: ${estPrinc.product?.name || estPrinc.descricao}` : null,
+                                        `- Inversor: ${inv.product?.name || inv.descricao}`,
+                                        `- Módulos: ${moduleQ}x ${mod.product?.name || mod.descricao}`,
+                                        (forcedIncludeStructure && estPrinc) ? `- Estrutura: ${estPrinc.product?.name || estPrinc.descricao}` : null,
+                                        cabPreto ? `- Cabo Preto: ${cabPreto.product?.name || cabPreto.descricao}` : null,
+                                        cabVermelho ? `- Cabo Vermelho: ${cabVermelho.product?.name || cabVermelho.descricao}` : null,
+                                        con ? `- Conectores: 2x ${con.product?.name || con.descricao}` : null,
                                     ].filter(Boolean),
                                     info_adicional: `Geração Estimada: ${estGeneration.toFixed(1)} kWh/mês (Kit Real: ${realKWp.toFixed(2)} kWp)`
                                 });
