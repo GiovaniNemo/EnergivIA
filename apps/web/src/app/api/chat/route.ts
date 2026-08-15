@@ -179,7 +179,17 @@ export async function POST(req: Request) {
 
                             let mappedRoof: any = 'metal';
                             let roofFactor = 1.0;
-                            const roofStr = (roofType || "").toLowerCase();
+                            let finalRoofStr = (roofType || "").toLowerCase();
+                            
+                            // Robust fallback: if AI passed metal but user explicitly asked for fibrocimento recently, override it.
+                            const userMsgs = messages.filter((m: any) => m.role === 'user').slice(-2).map((m:any) => typeof m.content === 'string' ? m.content.toLowerCase() : "").join(" ");
+                            if (userMsgs.includes('fibrocimento') || userMsgs.includes('fibromadeira')) {
+                                if (!finalRoofStr.includes('fibrocimento') && !finalRoofStr.includes('fibromadeira')) {
+                                    finalRoofStr = 'fibrocimento';
+                                }
+                            }
+
+                            const roofStr = finalRoofStr;
                             if (roofStr === '1' || roofStr.includes('ceramic') || roofStr.includes('cerâmica') || roofStr.includes('colonial')) { mappedRoof = 'ceramic'; }
                             else if (roofStr === '2' || roofStr.includes('fibrocimento')) { mappedRoof = 'fibrocimento'; }
                             else if (roofStr === '6' || roofStr.includes('fibrometal')) { mappedRoof = 'fibrometal'; }
