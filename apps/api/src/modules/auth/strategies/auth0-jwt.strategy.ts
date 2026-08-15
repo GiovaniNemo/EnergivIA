@@ -180,10 +180,13 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
       this.config.get<string>("AUTH0_CLAIMS_NAMESPACE") ?? "https://energivia.app";
     const auth0Domain = this.config.get<string>("AUTH0_DOMAIN");
     const auth0Audience = this.config.get<string>("AUTH0_AUDIENCE");
-    if (auth0Audience) {
+    const auth0ClientId = this.config.get<string>("AUTH0_CLIENT_ID");
+    
+    if (auth0Audience || auth0ClientId) {
       const aud = payload.aud;
-      const validAud = aud === auth0Audience || (Array.isArray(aud) && aud.includes(auth0Audience));
-      if (!validAud) {
+      const isValidAud = (auth0Audience && (aud === auth0Audience || (Array.isArray(aud) && aud.includes(auth0Audience)))) ||
+                         (auth0ClientId && (aud === auth0ClientId || (Array.isArray(aud) && aud.includes(auth0ClientId))));
+      if (!isValidAud) {
         throw new UnauthorizedException("Audiência do token inválida.");
       }
     }

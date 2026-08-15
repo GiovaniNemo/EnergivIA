@@ -119,9 +119,9 @@ export async function POST(req: Request) {
                                 if (session) {
                                     try {
                                         const authResult = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
-                                        token = authResult.token || session.accessToken || "";
+                                        token = authResult.token || session.accessToken || session.idToken || "";
                                     } catch (e) {
-                                        token = session.accessToken || "";
+                                        token = session.idToken || session.accessToken || "";
                                     }
                                 }
                             } catch (e) {
@@ -304,9 +304,9 @@ export async function POST(req: Request) {
                                 if (session) {
                                     try {
                                         const authResult = await auth0.getAccessToken({ audience: process.env["AUTH0_AUDIENCE"] });
-                                        token = authResult.token || session.accessToken || "";
+                                        token = authResult.token || session.accessToken || session.idToken || "";
                                     } catch (e) {
-                                        token = session.accessToken || "";
+                                        token = session.idToken || session.accessToken || "";
                                     }
                                 }
                             } catch (e) {
