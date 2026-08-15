@@ -316,10 +316,21 @@ export async function POST(req: Request) {
                                 const con = cons[0];
 
                                 const matchedEsts = ests.filter((p:any) => {
-                                    const s = (p.product?.name || p.descricao || "").toLowerCase();
-                                    if (mappedRoof === 'fibrocimento') return s.includes('fibrocimento') || s.includes('fibromadeira');
+                                    const n = (p.product?.name || "").toLowerCase();
+                                    const d = (p.descricao || "").toLowerCase();
+                                    const s = n + " " + d;
+
+                                    if (mappedRoof === 'fibrocimento') {
+                                        if (n.includes('fibrocimento') || n.includes('fibromadeira')) return true;
+                                        if ((d.includes('fibrocimento') || d.includes('fibromadeira')) && !n.includes('metal') && !n.includes('ceramica') && !n.includes('colonial')) return true;
+                                        return false;
+                                    }
                                     if (mappedRoof === 'fibrometal') return s.includes('fibrometal');
-                                    if (mappedRoof === 'fibromadeira') return s.includes('fibromadeira') || s.includes('fibrocimento');
+                                    if (mappedRoof === 'fibromadeira') {
+                                        if (n.includes('fibromadeira') || n.includes('fibrocimento')) return true;
+                                        if ((d.includes('fibromadeira') || d.includes('fibrocimento')) && !n.includes('metal') && !n.includes('ceramica')) return true;
+                                        return false;
+                                    }
                                     if (mappedRoof === 'metal') return s.includes('metal') && !s.includes('fibrometal');
                                     return s.includes(mappedRoof);
                                 });
