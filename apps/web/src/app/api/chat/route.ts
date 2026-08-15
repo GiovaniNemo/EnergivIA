@@ -288,15 +288,17 @@ export async function POST(req: Request) {
                     }
                 }),
                 cadastrar_cliente_crm: tool({
-                    description: "Registra um novo cliente/lead no CRM da plataforma EnergivIA.",
+                    description: "Registra um novo cliente/lead no CRM da plataforma EnergivIA, salva a cotação e anexa o PDF da fatura.",
                     parameters: z.object({
                         clientName: z.string().min(2, "Você precisa obrigatoriamente preencher o nome do cliente.").describe("Nome do cliente final extraído da conversa"),
-                        clientWhatsapp: z.string().min(8, "Você precisa obrigatoriamente preencher o whatsapp numérico.").describe("WhatsApp numérico do cliente")
+                        clientWhatsapp: z.string().min(8, "Você precisa obrigatoriamente preencher o whatsapp numérico.").describe("WhatsApp numérico do cliente"),
+                        cotacaoSelecionada: z.string().optional().describe("Detalhes da cotação/kit escolhido para salvar no card do cliente")
                     }),
                     execute: async (args: any) => {
                         try {
                             const nome = String(args.clientName || "").trim();
                             const whatsapp = String(args.clientWhatsapp || "").trim();
+                            const cotacao = String(args.cotacaoSelecionada || "").trim();
 
                             let token = "";
                             try {
@@ -375,11 +377,66 @@ export async function POST(req: Request) {
                                     message: `Diga EXATAMENTE isto: "Cliente criado, mas falha ao criar o card de negociação. Status ${resDeal.status}. Detalhes: ${errTextDeal.substring(0, 150)}"`
                                 };
                             }
+                            
+                            // Adicionar nota com a cotação
+                            if (cotacao) {
+                                await fetch(`${baseURL}/leads/${leadId}/activity`, {
+                                    method: 'POST',
+                                    headers,
+                                    body: JSON.stringify({ kind: "NOTE", text: `Cotação escolhida no Chat:\n\n${cotacao}` })
+                                });
+                            }
+
+                            // Procurar a fatura (PDF ou Imagem) no histórico e fazer upload
+                            try {
+                                let fileToUpload = null;
+                                for (let i = messages.length - 1; i >= 0; i--) {
+                                    if (messages[i].imageUrl) {
+                                        fileToUpload = messages[i].imageUrl;
+                                        break;
+                                    }
+                                }
+                                
+                                if (fileToUpload) {
+                                    const match = fileToUpload.match(/^data:(.+);base64,(.+)$/);
+                                    if (match) {
+                                        const mimeType = match[1];
+                                        const base64Data = match[2];
+                                        const buffer = Buffer.from(base64Data, "base64");
+                                        const ext = mimeType === "application/pdf" ? "pdf" : mimeType.split("/")[1] || "png";
+                                        const fileName = `fatura_${leadId}.${ext}`;
+                                        
+                                        const presignRes = await fetch(`${baseURL}/leads/${leadId}/energy-bills/presign`, {
+                                            method: "POST",
+                                            headers,
+                                            body: JSON.stringify({ fileName, contentType: mimeType })
+                                        });
+                                        
+                                        if (presignRes.ok) {
+                                            const presignData = await presignRes.json();
+                                            const uploadRes = await fetch(presignData.uploadUrl, {
+                                                method: "PUT",
+                                                headers: { "Content-Type": mimeType },
+                                                body: buffer
+                                            });
+                                            if (uploadRes.ok) {
+                                                await fetch(`${baseURL}/leads/${leadId}/energy-bills`, {
+                                                    method: "POST",
+                                                    headers,
+                                                    body: JSON.stringify({ fileUrl: presignData.fileUrl, fileName })
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (uploadErr) {
+                                console.error("Erro ao subir fatura no chat:", uploadErr);
+                            }
 
                             return { 
                                 success: true, 
                                 leadId, 
-                                message: "Cliente e Card de Negociação registrados com sucesso! Diga para o usuário: 'Cadastro e Card de Negociação criados com sucesso!'" 
+                                message: "Cliente, Cotação e Fatura registrados com sucesso! Diga para o usuário: 'Cadastro e Card de Negociação criados com sucesso na plataforma, incluindo a sua fatura e cotação!'" 
                             };
                         } catch (e: any) {
                             return { 
