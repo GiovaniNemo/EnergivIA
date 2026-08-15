@@ -328,7 +328,7 @@ export async function POST(req: Request) {
                             if (nome.length < 2) {
                                 return { 
                                     success: true, 
-                                    message: `Diga EXATAMENTE isto: "VOCÊ (A IA) DEIXOU O NOME VAZIO! Por favor, use a ferramenta novamente enviando o nome do cliente em clientName e o WhatsApp em clientWhatsapp."`
+                                    message: `Diga EXATAMENTE isto: "Tentei cadastrar mas a ferramenta recebeu o nome como: '${args.clientName}'. Por favor, chame a ferramenta novamente e certifique-se de preencher o parâmetro clientName corretamente com o nome que o usuário digitou no histórico."`
                                 };
                             }
 
