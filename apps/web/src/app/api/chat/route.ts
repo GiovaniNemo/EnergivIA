@@ -320,6 +320,7 @@ export async function POST(req: Request) {
                                     if (mappedRoof === 'fibrocimento') return s.includes('fibrocimento') || s.includes('fibromadeira');
                                     if (mappedRoof === 'fibrometal') return s.includes('fibrometal');
                                     if (mappedRoof === 'fibromadeira') return s.includes('fibromadeira') || s.includes('fibrocimento');
+                                    if (mappedRoof === 'metal') return s.includes('metal') && !s.includes('fibrometal');
                                     return s.includes(mappedRoof);
                                 });
                                 const estPrinc = matchedEsts.length > 0 ? matchedEsts[0] : null;
