@@ -290,14 +290,14 @@ export async function POST(req: Request) {
                 cadastrar_cliente_crm: tool({
                     description: "Registra um novo cliente/lead no CRM da plataforma EnergivIA, salva a cotação e anexa o PDF da fatura.",
                     parameters: z.object({
-                        clientName: z.string().min(2, "Você precisa obrigatoriamente preencher o nome do cliente.").describe("Nome do cliente final extraído da conversa"),
-                        clientWhatsapp: z.string().min(8, "Você precisa obrigatoriamente preencher o whatsapp numérico.").describe("WhatsApp numérico do cliente"),
+                        nomeDoCliente: z.string().describe("Nome do cliente final extraído da conversa"),
+                        numeroWhatsapp: z.string().describe("WhatsApp numérico do cliente"),
                         cotacaoSelecionada: z.string().optional().describe("Detalhes da cotação/kit escolhido para salvar no card do cliente")
                     }),
                     execute: async (args: any) => {
                         try {
-                            const nome = String(args.clientName || "").trim();
-                            const whatsapp = String(args.clientWhatsapp || "").trim();
+                            const nome = String(args.nomeDoCliente || "").trim();
+                            const whatsapp = String(args.numeroWhatsapp || "").trim();
                             const cotacao = String(args.cotacaoSelecionada || "").trim();
 
                             let token = "";

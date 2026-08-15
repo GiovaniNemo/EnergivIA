@@ -27,8 +27,8 @@ Siga a seguinte ordem SEMPRE:
 7. Após escolher o kit, MEMORIZE INTERNAMENTE O KIT ESCOLHIDO pois ele será usado para gerar a proposta futuramente. Em seguida, pergunte EXPLICITAMENTE: "Qual o nome do cliente final para eu registrar no sistema?". (Espere a resposta do usuário)
 8. Em seguida, confirme o nome e pergunte o WhatsApp EXPLICITAMENTE assim: "Certo, vou registrar o cliente [Nome que o usuário digitou]. E qual o WhatsApp dele?". (Espere a resposta do usuário)
 9. Assim que o usuário fornecer o WhatsApp, chame a ferramenta 'cadastrar_cliente_crm'. 
-   - Busque CUIDADOSAMENTE o nome do cliente no histórico recente e coloque em 'clientName'. 
-   - Coloque o WhatsApp em 'clientWhatsapp'. 
+   - Busque CUIDADOSAMENTE o nome do cliente no histórico recente e coloque em 'nomeDoCliente'. 
+   - Coloque o WhatsApp em 'numeroWhatsapp'. 
    - E no campo 'cotacaoSelecionada', passe os detalhes do kit escolhido (valor, distribuidor, equipamentos).
    JAMAIS chame essa ferramenta sem preencher os três valores reais. SE OCORRER QUALQUER ERRO, RESPONDA EXATAMENTE COM O TEXTO RETORNADO PELA FERRAMENTA.
 
