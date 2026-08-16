@@ -181,22 +181,44 @@ export async function POST(req: Request) {
                             let roofFactor = 1.0;
                             let finalRoofStr = (roofType || "").toLowerCase();
                             
-                            // Robust fallback: if AI passed metal but user explicitly asked for fibrocimento recently, override it.
-                            const userMsgs = messages.filter((m: any) => m.role === 'user').slice(-2).map((m:any) => typeof m.content === 'string' ? m.content.toLowerCase() : "").join(" ");
-                            if (userMsgs.includes('fibrocimento') || userMsgs.includes('fibromadeira') || userMsgs.includes('estrutura 2') || userMsgs.includes('número 2') || userMsgs.includes('numero 2') || userMsgs.includes('tipo 2')) {
-                                if (!finalRoofStr.includes('fibrocimento') && !finalRoofStr.includes('fibromadeira') && finalRoofStr !== '2') {
-                                    finalRoofStr = 'fibromadeira';
+                            // Robust fallback: search all user messages for the last mentioned structure
+                            const allUserMsgs = messages.filter((m: any) => m.role === 'user').map((m:any) => typeof m.content === 'string' ? m.content.toLowerCase() : "");
+                            let userForcedRoof = "";
+                            for (let i = allUserMsgs.length - 1; i >= 0; i--) {
+                                const msg = allUserMsgs[i];
+                                if (msg.includes('fibrocimento') || msg.includes('fibromadeira') || msg.includes('estrutura 2') || msg.match(/n[uú]mero 2/) || msg.match(/tipo 2/) || msg.match(/\b2\b/)) {
+                                    userForcedRoof = 'fibromadeira';
+                                    break;
+                                } else if (msg.includes('ceramic') || msg.includes('cerâmica') || msg.includes('colonial') || msg.includes('estrutura 1') || msg.match(/n[uú]mero 1/) || msg.match(/tipo 1/) || msg.match(/\b1\b/)) {
+                                    userForcedRoof = 'ceramic';
+                                    break;
+                                } else if (msg.includes('metal') || msg.includes('metálic') || msg.includes('estrutura 3') || msg.match(/n[uú]mero 3/) || msg.match(/tipo 3/) || msg.match(/\b3\b/)) {
+                                    userForcedRoof = 'metal';
+                                    break;
+                                } else if (msg.includes('fibrometal') || msg.includes('estrutura 6') || msg.match(/n[uú]mero 6/)) {
+                                    userForcedRoof = 'fibrometal';
+                                    break;
+                                } else if (msg.includes('solo') || msg.includes('ground') || msg.includes('estrutura 4') || msg.match(/n[uú]mero 4/)) {
+                                    userForcedRoof = 'ground';
+                                    break;
+                                } else if (msg.includes('laje') || msg.includes('estrutura 5') || msg.match(/n[uú]mero 5/)) {
+                                    userForcedRoof = 'laje';
+                                    break;
                                 }
                             }
 
-                            const roofStr = finalRoofStr;
-                            if (roofStr === '1' || roofStr.includes('ceramic') || roofStr.includes('cerâmica') || roofStr.includes('colonial')) { mappedRoof = 'ceramic'; }
-                            else if (roofStr === '2' || roofStr.includes('fibrocimento') || roofStr.includes('fibro') || roofStr.includes('fibromadeira')) { mappedRoof = 'fibromadeira'; }
-                            else if (roofStr === '6' || roofStr.includes('fibrometal')) { mappedRoof = 'fibrometal'; }
-                            else if (roofStr === '3' || roofStr.includes('metal') || roofStr.includes('metálic')) { mappedRoof = 'metal'; }
-                            else if (roofStr === '4' || roofStr.includes('solo') || roofStr.includes('ground')) { mappedRoof = 'ground'; }
-                            else if (roofStr === '5' || roofStr.includes('laje')) { mappedRoof = 'laje'; }
-                            else if (roofStr === '7' || roofStr.includes('sem') || roofStr.includes('nenhuma')) { mappedRoof = 'none'; }
+                            if (userForcedRoof) {
+                                mappedRoof = userForcedRoof;
+                            } else {
+                                const roofStr = finalRoofStr;
+                                if (roofStr === '1' || roofStr.includes('ceramic') || roofStr.includes('cerâmica') || roofStr.includes('colonial')) { mappedRoof = 'ceramic'; }
+                                else if (roofStr === '2' || roofStr.includes('fibrocimento') || roofStr.includes('fibro') || roofStr.includes('fibromadeira')) { mappedRoof = 'fibromadeira'; }
+                                else if (roofStr === '6' || roofStr.includes('fibrometal')) { mappedRoof = 'fibrometal'; }
+                                else if (roofStr === '3' || roofStr.includes('metal') || roofStr.includes('metálic')) { mappedRoof = 'metal'; }
+                                else if (roofStr === '4' || roofStr.includes('solo') || roofStr.includes('ground')) { mappedRoof = 'ground'; }
+                                else if (roofStr === '5' || roofStr.includes('laje')) { mappedRoof = 'laje'; }
+                                else if (roofStr === '7' || roofStr.includes('sem') || roofStr.includes('nenhuma')) { mappedRoof = 'none'; }
+                            }
 
                             // Fator de face: Norte = 1.0 (default)
                             // Para ser mais preciso, a IA poderia pedir a face, mas como default vamos usar Norte = 1.0
