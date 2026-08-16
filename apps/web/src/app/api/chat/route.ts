@@ -183,17 +183,16 @@ export async function POST(req: Request) {
                             
                             // Robust fallback: if AI passed metal but user explicitly asked for fibrocimento recently, override it.
                             const userMsgs = messages.filter((m: any) => m.role === 'user').slice(-2).map((m:any) => typeof m.content === 'string' ? m.content.toLowerCase() : "").join(" ");
-                            if (userMsgs.includes('fibrocimento') || userMsgs.includes('fibromadeira')) {
-                                if (!finalRoofStr.includes('fibrocimento') && !finalRoofStr.includes('fibromadeira')) {
-                                    finalRoofStr = 'fibrocimento';
+                            if (userMsgs.includes('fibrocimento') || userMsgs.includes('fibromadeira') || userMsgs.includes('estrutura 2') || userMsgs.includes('número 2') || userMsgs.includes('numero 2') || userMsgs.includes('tipo 2')) {
+                                if (!finalRoofStr.includes('fibrocimento') && !finalRoofStr.includes('fibromadeira') && finalRoofStr !== '2') {
+                                    finalRoofStr = 'fibromadeira';
                                 }
                             }
 
                             const roofStr = finalRoofStr;
                             if (roofStr === '1' || roofStr.includes('ceramic') || roofStr.includes('cerâmica') || roofStr.includes('colonial')) { mappedRoof = 'ceramic'; }
-                            else if (roofStr === '2' || roofStr.includes('fibrocimento')) { mappedRoof = 'fibrocimento'; }
+                            else if (roofStr === '2' || roofStr.includes('fibrocimento') || roofStr.includes('fibro') || roofStr.includes('fibromadeira')) { mappedRoof = 'fibromadeira'; }
                             else if (roofStr === '6' || roofStr.includes('fibrometal')) { mappedRoof = 'fibrometal'; }
-                            else if (roofStr.includes('fibro') || roofStr.includes('fibromadeira')) { mappedRoof = 'fibromadeira'; }
                             else if (roofStr === '3' || roofStr.includes('metal') || roofStr.includes('metálic')) { mappedRoof = 'metal'; }
                             else if (roofStr === '4' || roofStr.includes('solo') || roofStr.includes('ground')) { mappedRoof = 'ground'; }
                             else if (roofStr === '5' || roofStr.includes('laje')) { mappedRoof = 'laje'; }
@@ -330,15 +329,10 @@ export async function POST(req: Request) {
                                     const d = (p.descricao || "").toLowerCase();
                                     const s = n + " " + d;
 
-                                    if (mappedRoof === 'fibrocimento') {
-                                        if (n.includes('fibrocimento') || n.includes('fibromadeira')) return true;
-                                        if ((d.includes('fibrocimento') || d.includes('fibromadeira')) && !n.includes('metal') && !n.includes('ceramica') && !n.includes('colonial')) return true;
-                                        return false;
-                                    }
                                     if (mappedRoof === 'fibrometal') return s.includes('fibrometal');
                                     if (mappedRoof === 'fibromadeira') {
                                         if (n.includes('fibromadeira') || n.includes('fibrocimento')) return true;
-                                        if ((d.includes('fibromadeira') || d.includes('fibrocimento')) && !n.includes('metal') && !n.includes('ceramica')) return true;
+                                        if ((d.includes('fibromadeira') || d.includes('fibrocimento')) && !n.includes('metal') && !n.includes('ceramica') && !n.includes('colonial')) return true;
                                         return false;
                                     }
                                     if (mappedRoof === 'metal') return s.includes('metal') && !s.includes('fibrometal');
