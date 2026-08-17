@@ -195,14 +195,17 @@ export async function POST(req: Request) {
                                 } else if (msg.includes('metal') || msg.includes('metálic') || msg.includes('estrutura 3') || msg.match(/n[uú]mero 3/) || msg.match(/tipo 3/) || msg.match(/\b3\b/)) {
                                     userForcedRoof = 'metal';
                                     break;
-                                } else if (msg.includes('fibrometal') || msg.includes('estrutura 6') || msg.match(/n[uú]mero 6/)) {
+                                } else if (msg.includes('fibrometal') || msg.includes('estrutura 6') || msg.match(/n[uú]mero 6/) || msg.match(/tipo 6/) || msg.match(/\b6\b/)) {
                                     userForcedRoof = 'fibrometal';
                                     break;
-                                } else if (msg.includes('solo') || msg.includes('ground') || msg.includes('estrutura 4') || msg.match(/n[uú]mero 4/)) {
+                                } else if (msg.includes('solo') || msg.includes('ground') || msg.includes('estrutura 4') || msg.match(/n[uú]mero 4/) || msg.match(/tipo 4/) || msg.match(/\b4\b/)) {
                                     userForcedRoof = 'ground';
                                     break;
-                                } else if (msg.includes('laje') || msg.includes('estrutura 5') || msg.match(/n[uú]mero 5/)) {
+                                } else if (msg.includes('laje') || msg.includes('estrutura 5') || msg.match(/n[uú]mero 5/) || msg.match(/tipo 5/) || msg.match(/\b5\b/)) {
                                     userForcedRoof = 'laje';
+                                    break;
+                                } else if (msg.includes('sem estrutura') || msg.includes('nenhuma') || msg.includes('estrutura 7') || msg.match(/n[uú]mero 7/) || msg.match(/tipo 7/) || msg.match(/\b7\b/)) {
+                                    userForcedRoof = 'none';
                                     break;
                                 }
                             }
@@ -217,7 +220,7 @@ export async function POST(req: Request) {
                                 else if (roofStr === '3' || roofStr.includes('metal') || roofStr.includes('metálic')) { mappedRoof = 'metal'; }
                                 else if (roofStr === '4' || roofStr.includes('solo') || roofStr.includes('ground')) { mappedRoof = 'ground'; }
                                 else if (roofStr === '5' || roofStr.includes('laje')) { mappedRoof = 'laje'; }
-                                else if (roofStr === '7' || roofStr.includes('sem') || roofStr.includes('nenhuma')) { mappedRoof = 'none'; }
+                                else if (roofStr === '7' || roofStr.includes('sem') || roofStr.includes('nenhum')) { mappedRoof = 'none'; }
                             }
 
                             // Fator de face: Norte = 1.0 (default)
