@@ -965,9 +965,8 @@ export async function POST(req: Request) {
           parameters: z.object({
             leadId: z
               .string()
-              .optional()
               .describe(
-                "O ID do cliente recém-cadastrado. Passe ele aqui para o sistema memorizar."
+                "O ID do cliente recém-cadastrado. OBRIGATÓRIO passar ele aqui para o sistema memorizar."
               ),
           }),
           execute: async (args: any) => {
