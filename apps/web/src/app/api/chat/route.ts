@@ -523,14 +523,20 @@ export async function POST(req: Request) {
                   else modPowerW = 550;
                 }
                 // Number of panels: always rounds up
-                const moduleQ = Math.ceil((finalTargetKWp * 1000) / modPowerW);
-                const realKWp = (moduleQ * modPowerW) / 1000;
-                const estGeneration = realKWp * geracaoPorKwp * fatorFace;
+                let moduleQ = Math.ceil((finalTargetKWp * 1000) / modPowerW);
+                let realKWp = (moduleQ * modPowerW) / 1000;
+                let estGeneration = realKWp * geracaoPorKwp * fatorFace;
 
                 let validInvs = [];
                 for (const invObj of invs) {
                   const specs = invObj.product?.specs;
                   const name = (invObj.product?.name || invObj.descricao || "").toUpperCase();
+
+                  let testModuleQ = moduleQ;
+                  if ((name.includes("MONOF") || name.includes("MONO")) && testModuleQ < 4) {
+                    testModuleQ = 4;
+                  }
+                  let testRealKWp = (testModuleQ * modPowerW) / 1000;
 
                   // Extract kWp
                   const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
@@ -546,10 +552,14 @@ export async function POST(req: Request) {
                   }
 
                   // Ratio CC/CA constraint (max 1.15 if we enforce strictly, but let's just make sure it's not wildly oversized or undersized)
-                  const ratio = realKWp / invKWp;
+                  const ratio = testRealKWp / invKWp;
                   if (ratio < 0.5 || ratio > 1.45) continue; // Allow up to 45% overload and significant underload
 
-                  validInvs.push(invObj);
+                  validInvs.push({
+                    ...invObj,
+                    _testModuleQ: testModuleQ,
+                    _testRealKWp: testRealKWp,
+                  });
                 }
 
                 if (validInvs.length === 0) continue; // Skip distributor if no valid inverter found
@@ -557,6 +567,10 @@ export async function POST(req: Request) {
                 validInvs.sort((a, b) => Number(a.price) - Number(b.price));
                 const inv = validInvs[0];
                 if (!inv) continue;
+
+                moduleQ = inv._testModuleQ;
+                realKWp = inv._testRealKWp;
+                estGeneration = realKWp * geracaoPorKwp * fatorFace;
 
                 const cabPreto =
                   cabs.find((c: any) => JSON.stringify(c).toLowerCase().includes("preto")) ||
