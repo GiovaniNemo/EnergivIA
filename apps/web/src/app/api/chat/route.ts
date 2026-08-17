@@ -615,6 +615,9 @@ export async function POST(req: Request) {
                     const n = (p.product?.name || "").toUpperCase();
                     const m = n.match(/(\d+)\s*(MOD|PAIN|PLAC)/);
                     let cap = m ? parseInt(m[1], 10) : 0;
+                    if (cap > 4 && mappedRoof !== "ground") {
+                      cap = 0;
+                    }
                     return { ...p, cap };
                   })
                   .filter((p) => p.cap > 0);
