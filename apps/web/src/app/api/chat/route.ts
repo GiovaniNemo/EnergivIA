@@ -407,6 +407,43 @@ export async function POST(req: Request) {
 
                                 if (forcedIncludeStructure && selectedStructures.length === 0) continue;
 
+                                let profileQty = 0;
+                                let profileProd: any = null;
+
+                                if (forcedIncludeStructure) {
+                                    const perfis = ests.filter((p:any) => {
+                                        const n = (p.product?.name || p.descricao || "").toLowerCase();
+                                        return n.includes("perfil") && !n.includes("s/ perfil") && !n.includes("sem perfil");
+                                    });
+
+                                    if (perfis.length > 0) {
+                                        if (mappedRoof === "metal") {
+                                            profileProd = perfis.find((p:any) => {
+                                                const n = (p.product?.name || p.descricao || "").toLowerCase();
+                                                return n.includes("baixo") || n.includes("mini trilho");
+                                            }) || perfis[0];
+                                        } else {
+                                            profileProd = perfis.find((p:any) => {
+                                                const n = (p.product?.name || p.descricao || "").toLowerCase();
+                                                return !n.includes("baixo") && !n.includes("mini trilho") && !n.includes("fechamento");
+                                            }) || perfis[0];
+                                        }
+
+                                        if (mappedRoof === "metal") {
+                                            for (const est of selectedStructures) {
+                                                if (est.cap === 4) profileQty += 10;
+                                                else if (est.cap === 2) profileQty += 5;
+                                                else profileQty += Math.ceil((est.cap || 1) * 2.5);
+                                            }
+                                            if (moduleQ % 2 !== 0) profileQty += 1;
+                                        } else if (mappedRoof === "ground") {
+                                            profileQty = 1;
+                                        } else {
+                                            profileQty = moduleQ % 2 === 0 ? moduleQ : moduleQ + 1;
+                                        }
+                                    }
+                                }
+
                                 let precoEst = 0;
                                 const estLines: string[] = [];
                                 if (forcedIncludeStructure && selectedStructures.length > 0) {
@@ -426,8 +463,9 @@ export async function POST(req: Request) {
                                 const precoCabPreto = cabPreto ? (Number(cabPreto.price) || 0) : 0;
                                 const precoCabVermelho = cabVermelho ? (Number(cabVermelho.price) || 0) : 0;
                                 const precoCon = con ? (Number(con.price) || 0) * 2 : 0;
+                                const precoPerfil = (profileProd && profileQty > 0) ? (Number(profileProd.price) || 0) * profileQty : 0;
 
-                                const somaTotal = precoInv + precoMod + precoCabPreto + precoCabVermelho + precoCon + precoEst;
+                                const somaTotal = precoInv + precoMod + precoCabPreto + precoCabVermelho + precoCon + precoEst + precoPerfil;
 
                                 finalQuotes.push({
                                     distribuidora: d.name,
@@ -436,6 +474,7 @@ export async function POST(req: Request) {
                                         `- Inversor: ${inv.product?.name || inv.descricao}`,
                                         `- Módulos: ${moduleQ}x ${mod.product?.name || mod.descricao}`,
                                         ...estLines,
+                                        (profileProd && profileQty > 0) ? `- Perfil: ${profileQty}x ${profileProd.product?.name || profileProd.descricao}` : null,
                                         cabPreto ? `- Cabo Preto: ${cabPreto.product?.name || cabPreto.descricao}` : null,
                                         cabVermelho ? `- Cabo Vermelho: ${cabVermelho.product?.name || cabVermelho.descricao}` : null,
                                         con ? `- Conectores: 2x ${con.product?.name || con.descricao}` : null,
