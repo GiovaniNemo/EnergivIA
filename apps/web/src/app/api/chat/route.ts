@@ -151,7 +151,7 @@ export async function POST(req: Request) {
                 gerar_cotacao_distribuidor: tool({
                     description: "Usa o motor de cálculo da EnergivIA para dimensionar os componentes físicos e puxar orçamentos REAIS cruzando todos os distribuidores ativos.",
                     parameters: z.object({
-                        monthlyConsumption: z.any().optional().describe("Consumo mensal (kWh). Pode ser número ou string."),
+                        monthlyConsumption: z.any().optional().describe("OBRIGATÓRIO: Consumo mensal (kWh) extraído da fatura. Passe o valor exato em número."),
                         targetKWp: z.any().optional().describe("Potência alvo do sistema em kWp. Pode ser número ou string."),
                         location: z.string().optional().describe("Cidade e Estado"),
                         roofType: z.string().describe("Tipo de telhado. OBRIGATÓRIO (ex: '2', 'fibrocimento', 'metal', 'ceramica')."),
@@ -227,12 +227,25 @@ export async function POST(req: Request) {
                             const safeLocation = location || "São Paulo, SP";
                             
                             let parsedConsumption = 300;
-                            if (monthlyConsumption !== undefined && monthlyConsumption !== null) {
-                                if (typeof monthlyConsumption === 'number') {
-                                    parsedConsumption = monthlyConsumption;
-                                } else if (typeof monthlyConsumption === 'string') {
-                                    const parsed = parseFloat(monthlyConsumption.replace(/[^0-9.,]/g, '').replace(',', '.'));
-                                    if (!isNaN(parsed)) parsedConsumption = parsed;
+                            let rawConsumptionStr = String(monthlyConsumption || "").toLowerCase();
+                            if (rawConsumptionStr && rawConsumptionStr !== 'undefined' && rawConsumptionStr !== 'null') {
+                                const parsed = parseFloat(rawConsumptionStr.replace(/[^0-9.,]/g, '').replace(',', '.'));
+                                if (!isNaN(parsed) && parsed > 0) parsedConsumption = parsed;
+                            }
+                            
+                            // Fallback agressivo: se for 300 (default), vamos vasculhar o histórico todo
+                            if (parsedConsumption === 300) {
+                                const allText = messages.map((m:any) => typeof m.content === 'string' ? m.content.toLowerCase() : "").join(" ");
+                                const matches = [...allText.matchAll(/consumo m[ée]dio[^0-9]*(\d+)/g)];
+                                if (matches.length > 0) {
+                                    // Pega o último mencionado no chat
+                                    parsedConsumption = parseInt(matches[matches.length - 1][1], 10);
+                                } else {
+                                    // Tenta achar qualquer 'XXX kwh'
+                                    const kwhMatches = [...allText.matchAll(/(\d+)\s*kwh/g)];
+                                    if (kwhMatches.length > 0) {
+                                        parsedConsumption = parseInt(kwhMatches[kwhMatches.length - 1][1], 10);
+                                    }
                                 }
                             }
                             const safeConsumption = parsedConsumption;
