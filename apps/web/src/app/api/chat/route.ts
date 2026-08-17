@@ -959,6 +959,154 @@ export async function POST(req: Request) {
             }
           },
         }),
+        listar_templates_proposta: tool({
+          description:
+            "Busca os modelos de template de proposta disponíveis na plataforma para que o usuário possa escolher um pelo número.",
+          parameters: z.object({}),
+          execute: async () => {
+            try {
+              const session = await auth0.getSession();
+              if (!session) return { success: false, message: "Sessão Auth0 não encontrada." };
+              let token = "";
+              try {
+                const authResult = await auth0.getAccessToken({
+                  audience: process.env["AUTH0_AUDIENCE"],
+                });
+                token = authResult.token || session.accessToken || session.idToken || "";
+              } catch (e) {
+                token = session.idToken || session.accessToken || "";
+              }
+              const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
+              const res = await fetch(`${baseURL}/proposal-templates`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (!res.ok) throw new Error("Falha ao buscar templates");
+              const templates = await res.json();
+
+              if (!templates || templates.length === 0) {
+                return {
+                  success: true,
+                  message:
+                    "Diga EXATAMENTE isto: Nenhum template de proposta encontrado na sua conta. Crie um em Configurações > Templates de Proposta.",
+                };
+              }
+
+              const list = templates
+                .map((t: any, i: number) => `${i + 1} - ${t.name} (ID: ${t.id})`)
+                .join("\n");
+
+              return {
+                success: true,
+                templates: list,
+                message:
+                  "Diga para o usuário escolher o número do template desejado. Apresente apenas a lista com Número e Nome (não mostre os IDs).",
+              };
+            } catch (e: any) {
+              return { success: false, message: `Erro: ${e.message}` };
+            }
+          },
+        }),
+        gerar_proposta_crm: tool({
+          description:
+            "Gera a proposta a partir do kit selecionado, cria o dimensionamento, a simulação e atrela ao lead criado.",
+          parameters: z.object({
+            leadId: z.string().describe("O ID do cliente/lead (retornado no passo anterior)."),
+            templateId: z.string().describe("O ID do template escolhido pelo usuário."),
+            consumoMensalKwh: z.number().describe("O consumo médio mensal do cliente em kWh."),
+            potenciaSistemaKw: z.number().describe("A potência real do kit em kWp."),
+            valorKitTotal: z.number().describe("O valor total do kit em Reais (R$)."),
+          }),
+          execute: async (args: any) => {
+            try {
+              const session = await auth0.getSession();
+              if (!session) return { success: false, message: "Sessão Auth0 não encontrada." };
+              let token = "";
+              try {
+                const authResult = await auth0.getAccessToken({
+                  audience: process.env["AUTH0_AUDIENCE"],
+                });
+                token = authResult.token || session.accessToken || session.idToken || "";
+              } catch (e) {
+                token = session.idToken || session.accessToken || "";
+              }
+
+              const headers: any = {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              };
+              const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
+
+              // 1. Get the Deal ID for the Lead
+              const leadRes = await fetch(`${baseURL}/leads/${args.leadId}`, { headers });
+              if (!leadRes.ok)
+                return { success: false, message: "Falha ao encontrar o cliente no sistema." };
+              const leadData = await leadRes.json();
+              if (!leadData.deals || leadData.deals.length === 0) {
+                return { success: false, message: "Nenhuma negociação aberta para este cliente." };
+              }
+              const dealId = leadData.deals[0].id;
+
+              // 2. Create Sizing
+              const sizingInput = {
+                monthlyConsumptionKwh: args.consumoMensalKwh || 300,
+              };
+              const sizingRes = await fetch(`${baseURL}/leads/${args.leadId}/sizing`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({ input: sizingInput, name: "Dimensionamento IA" }),
+              });
+              if (!sizingRes.ok)
+                return { success: false, message: "Falha ao criar dimensionamento." };
+              const sizingData = await sizingRes.json();
+
+              // 3. Create Simulation
+              const simulationInput = {
+                systemSizeKw: args.potenciaSistemaKw || 3,
+                investmentAmount: args.valorKitTotal || 10000,
+                financingType: "CASH",
+                sizing: sizingInput,
+              };
+              const simRes = await fetch(`${baseURL}/leads/${args.leadId}/simulations`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({ input: simulationInput, name: "Simulação IA" }),
+              });
+              if (!simRes.ok) return { success: false, message: "Falha ao criar simulação." };
+              const simData = await simRes.json();
+
+              // 4. Create Proposal
+              const propPayload = {
+                simulationId: simData.id,
+                title: `Proposta - ${leadData.name}`,
+                validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                proposalTemplateId: args.templateId,
+              };
+              const propRes = await fetch(`${baseURL}/deals/${dealId}/proposals`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify(propPayload),
+              });
+              if (!propRes.ok) {
+                const errText = await propRes.text();
+                return {
+                  success: false,
+                  message: `Falha ao gerar proposta: ${errText.substring(0, 150)}`,
+                };
+              }
+              const propData = await propRes.json();
+
+              const baseUrlForLinks =
+                process.env["NEXT_PUBLIC_APP_URL"] || "https://app.energivia.com.br";
+
+              return {
+                success: true,
+                message: `Proposta gerada com sucesso! Diga EXATAMENTE isto: "Proposta gerada com sucesso! Aqui está o link da proposta: ${baseUrlForLinks}/propostas/${propData.id}"`,
+              };
+            } catch (e: any) {
+              return { success: false, message: `Erro ao gerar proposta: ${e.message}` };
+            }
+          },
+        }),
       },
       stopWhen: isStepCount(5),
       onError: (err) => {
