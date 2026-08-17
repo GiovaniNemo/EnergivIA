@@ -962,8 +962,15 @@ export async function POST(req: Request) {
         listar_templates_proposta: tool({
           description:
             "Busca os modelos de template de proposta disponíveis na plataforma para que o usuário possa escolher um pelo número.",
-          parameters: z.object({}),
-          execute: async () => {
+          parameters: z.object({
+            leadId: z
+              .string()
+              .optional()
+              .describe(
+                "O ID do cliente recém-cadastrado. Passe ele aqui para o sistema memorizar."
+              ),
+          }),
+          execute: async (args: any) => {
             try {
               const session = await auth0.getSession();
               if (!session) return { success: false, message: "Sessão Auth0 não encontrada." };
@@ -998,8 +1005,7 @@ export async function POST(req: Request) {
               return {
                 success: true,
                 templates: list,
-                message:
-                  "Diga para o usuário escolher o número do template desejado. Apresente apenas a lista com Número e Nome (não mostre os IDs).",
+                message: `Diga para o usuário escolher o número do template desejado. Apresente apenas a lista com Número e Nome. Lembrete INTERNO vitalício para você: o leadId do cliente é '${args.leadId || "não-fornecido"}'. Guarde esse ID para passar para gerar_proposta_crm.`,
               };
             } catch (e: any) {
               return { success: false, message: `Erro: ${e.message}` };
