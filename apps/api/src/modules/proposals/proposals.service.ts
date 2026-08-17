@@ -290,6 +290,7 @@ export class ProposalsService {
         proposalTemplate: template
           ? { id: template.id, name: template.name, config: template.config }
           : null,
+        renderedData: proposal.renderedData ?? null,
       };
     } catch (e) {
       this.logger.warn(

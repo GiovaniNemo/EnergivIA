@@ -13,6 +13,31 @@ export interface PublicProposalPayload {
   publicToken?: string | null;
   discountBrl?: number | null;
   companyName?: string | null;
+  renderedData?: {
+    integrator?: {
+      version: number;
+      kitItems: Array<{
+        productId?: string;
+        productName: string;
+        brandName?: string;
+        quantity: number;
+        unitPrice: number;
+        lineTotal: number;
+        categoryName?: string;
+      }>;
+      equipmentSubtotalBrl: number;
+      quotedSaleBrl: number;
+      systemPowerKw?: number;
+      projectCostLines?: Array<{
+        name: string;
+        calculationType: string;
+        value: number;
+        appliedAmountBrl: number;
+        source: string;
+      }>;
+      computedSaleFromCostRulesBrl?: number;
+    };
+  } | null;
   deal: {
     lead: {
       name: string;

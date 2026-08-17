@@ -14,6 +14,34 @@ export function mergePublicProposalVariables(
 
   merged["nome_cliente"] = payload.deal.lead.name;
 
+  // Integrator snapshot: kit items and project costs
+  const integrator = payload.renderedData?.integrator;
+  if (integrator) {
+    // Override investimento_total with the real quoted sale price (equipment + costs)
+    const quotedSale = integrator.computedSaleFromCostRulesBrl ?? integrator.quotedSaleBrl;
+    if (typeof quotedSale === "number" && quotedSale > 0) {
+      merged["investimento_total"] = formatBRL(quotedSale);
+    }
+
+    // Build kit items list for template variable
+    if (integrator.kitItems && integrator.kitItems.length > 0) {
+      const kitListLines = integrator.kitItems.map(
+        (item) =>
+          `${item.quantity}x ${item.productName}${item.brandName ? ` (${item.brandName})` : ""} — ${formatBRL(item.lineTotal)}`
+      );
+      merged["kit_itens_lista"] = kitListLines.join("\n");
+      merged["equipamentos_subtotal"] = formatBRL(integrator.equipmentSubtotalBrl);
+    }
+
+    // Build project cost lines for template variable
+    if (integrator.projectCostLines && integrator.projectCostLines.length > 0) {
+      const costLines = integrator.projectCostLines.map(
+        (c) => `${c.name}: ${formatBRL(c.appliedAmountBrl)}`
+      );
+      merged["custos_projeto_lista"] = costLines.join("\n");
+    }
+  }
+
   if (payload.companyName && payload.companyName.trim()) {
     merged["nome_empresa"] = payload.companyName.trim();
   }
