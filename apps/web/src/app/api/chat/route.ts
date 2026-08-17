@@ -206,6 +206,12 @@ export async function POST(req: Request) {
               .any()
               .optional()
               .describe("Potência alvo do sistema em kWp. Pode ser número ou string."),
+            targetModules: z
+              .number()
+              .optional()
+              .describe(
+                "Quantidade exata de módulos alvo, se o usuário pedir (ex: 'coloque 5 módulos')."
+              ),
             location: z.string().optional().describe("Cidade e Estado"),
             roofType: z
               .string()
@@ -221,6 +227,7 @@ export async function POST(req: Request) {
           execute: async ({
             monthlyConsumption,
             targetKWp,
+            targetModules,
             location,
             roofType,
             cidade,
@@ -523,7 +530,9 @@ export async function POST(req: Request) {
                   else modPowerW = 550;
                 }
                 // Number of panels: always rounds up
-                let moduleQ = Math.ceil((finalTargetKWp * 1000) / modPowerW);
+                let moduleQ = targetModules
+                  ? targetModules
+                  : Math.ceil((finalTargetKWp * 1000) / modPowerW);
                 let realKWp = (moduleQ * modPowerW) / 1000;
                 let estGeneration = realKWp * geracaoPorKwp * fatorFace;
 
