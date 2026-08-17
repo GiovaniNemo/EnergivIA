@@ -1019,6 +1019,20 @@ export async function POST(req: Request) {
             consumoMensalKwh: z.number().describe("O consumo médio mensal do cliente em kWh."),
             potenciaSistemaKw: z.number().describe("A potência real do kit em kWp."),
             valorKitTotal: z.number().describe("O valor total do kit em Reais (R$)."),
+            kitItems: z
+              .array(
+                z.object({
+                  productId: z.string().optional().describe("ID do produto, se houver."),
+                  productName: z.string().describe("Nome do produto/equipamento."),
+                  brandName: z.string().optional().describe("Marca do produto."),
+                  quantity: z.number().describe("Quantidade."),
+                  unitPrice: z.number().describe("Preço unitário em R$."),
+                  lineTotal: z.number().describe("Total da linha em R$."),
+                  categoryName: z.string().optional().describe("Categoria do produto."),
+                })
+              )
+              .optional()
+              .describe("Lista de itens do kit cotado na conversa."),
           }),
           execute: async (args: any) => {
             try {
@@ -1116,12 +1130,75 @@ export async function POST(req: Request) {
               }
               const simData = await simRes.json();
 
-              // 4. Create Proposal
+              // 4. Buscar cost-rules (mão de obra, margem etc) cadastradas pelo integrador
+              const costRulesRes = await fetch(`${baseURL}/cost-rules`, { headers });
+              let projectCostLines: any[] = [];
+              let totalCosts = 0;
+              if (costRulesRes.ok) {
+                const costRules: any[] = await costRulesRes.json();
+                const systemKwp = args.potenciaSistemaKw || 0;
+                const equipmentSubtotal = args.valorKitTotal || 0;
+                for (const rule of costRules) {
+                  // filter by kWp range if set
+                  if (rule.minKwp != null && systemKwp < rule.minKwp) continue;
+                  if (rule.maxKwp != null && systemKwp > rule.maxKwp) continue;
+                  let applied = 0;
+                  if (rule.calculationType === "FIXED") {
+                    applied = rule.value;
+                  } else if (rule.calculationType === "PER_KWP") {
+                    applied = rule.value * systemKwp;
+                  } else if (rule.calculationType === "PERCENTAGE") {
+                    applied = (rule.value / 100) * equipmentSubtotal;
+                  }
+                  applied = Math.round(applied * 100) / 100;
+                  totalCosts += applied;
+                  projectCostLines.push({
+                    ruleId: rule.id,
+                    name: rule.name,
+                    calculationType: rule.calculationType,
+                    value: rule.value,
+                    appliedAmountBrl: applied,
+                    minKwp: rule.minKwp ?? null,
+                    maxKwp: rule.maxKwp ?? null,
+                    source: "organization",
+                    percentageBase: rule.percentageBase ?? undefined,
+                  });
+                }
+              }
+
+              // 5. Build kitItems from conversation
+              const rawKitItems: any[] = args.kitItems ?? [];
+              const kitItemsMapped = rawKitItems.map((item: any) => ({
+                productId: item.productId || "",
+                productName: item.productName || "Equipamento",
+                brandName: item.brandName || "",
+                quantity: item.quantity || 1,
+                unitPrice: item.unitPrice || 0,
+                lineTotal: item.lineTotal || item.unitPrice * item.quantity || 0,
+                categoryName: item.categoryName || "equipment",
+              }));
+
+              const equipmentSubtotalBrl = args.valorKitTotal || 0;
+              const quotedSaleBrl = equipmentSubtotalBrl + totalCosts;
+
+              const integratorSnapshot = {
+                version: 1 as const,
+                kitItems: kitItemsMapped,
+                equipmentSubtotalBrl,
+                quotedSaleBrl,
+                systemPowerKw: args.potenciaSistemaKw || 0,
+                sourceType: "distributor" as const,
+                projectCostLines,
+                computedSaleFromCostRulesBrl: quotedSaleBrl,
+              };
+
+              // 6. Create Proposal with full renderedData
               const propPayload = {
                 simulationId: simData.id,
                 title: `Proposta - ${leadData.name}`,
-                validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
                 proposalTemplateId: args.templateId,
+                renderedData: { integrator: integratorSnapshot },
               };
               const propRes = await fetch(`${baseURL}/deals/${dealId}/proposals`, {
                 method: "POST",

@@ -39,7 +39,11 @@ Siga a seguinte ordem SEMPRE:
     - Passe o 'templateId' correspondente ao número escolhido.
     - Passe 'consumoMensalKwh' (consumo extraído da fatura).
     - Passe 'potenciaSistemaKw' (a potência real do kit escolhido em kWp, ex: se for 5.5 kWp, passe 5.5).
-    - A ferramenta retornará o link (URL) da proposta pronta. Envie esse link INTEIRO E REAL na sua resposta (exemplo: https://app.energivia.com.br/propostas/123).
+    - Passe 'valorKitTotal' (valor total do kit em R$).
+    - Passe 'kitItems': a lista completa dos equipamentos cotados na conversa, no formato:
+      [{ productName: "Nome do produto", brandName: "Marca", quantity: 1, unitPrice: 1000, lineTotal: 1000, categoryName: "modulo" }]
+      Use todos os itens que apareceram no kit dimensionado (módulos, inversor, estrutura, cabeamento, etc).
+    - A ferramenta retornará o link (URL) da proposta pronta. Envie esse link INTEIRO E REAL na sua resposta (exemplo: https://app.energivia.com.br/proposta/123).
     - NUNCA use placeholders como '[Link da Proposta]'. Sempre mostre a URL final que a ferramenta retornar.
     - SE OCORRER QUALQUER ERRO, RESPONDA EXATAMENTE COM O TEXTO RETORNADO PELA FERRAMENTA, SEM ALTERAR NADA.
 
