@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { auth0 } from "@/lib/auth0";
 
@@ -39,11 +40,7 @@ export async function DELETE(
   return proxy(request, await params, "DELETE");
 }
 
-async function proxy(
-  request: NextRequest,
-  params: { path: string[] },
-  method: string
-) {
+async function proxy(request: NextRequest, params: { path: string[] }, method: string) {
   const session = await auth0.getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
