@@ -547,7 +547,7 @@ export async function POST(req: Request) {
 
                   // Ratio CC/CA constraint (max 1.15 if we enforce strictly, but let's just make sure it's not wildly oversized or undersized)
                   const ratio = realKWp / invKWp;
-                  if (ratio < 0.7 || ratio > 1.35) continue; // Allow up to 35% overload usually
+                  if (ratio < 0.5 || ratio > 1.45) continue; // Allow up to 45% overload and significant underload
 
                   validInvs.push(invObj);
                 }
