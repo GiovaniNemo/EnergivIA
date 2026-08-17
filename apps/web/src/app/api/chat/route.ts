@@ -1038,8 +1038,13 @@ export async function POST(req: Request) {
 
               // 1. Get the Deal ID for the Lead
               const leadRes = await fetch(`${baseURL}/leads/${args.leadId}`, { headers });
-              if (!leadRes.ok)
-                return { success: false, message: "Falha ao encontrar o cliente no sistema." };
+              if (!leadRes.ok) {
+                const errTxt = await leadRes.text();
+                return {
+                  success: false,
+                  message: `Falha ao encontrar o cliente no sistema. LeadID: ${args.leadId}. Status: ${leadRes.status}. Detalhes: ${errTxt.substring(0, 100)}`,
+                };
+              }
               const leadData = await leadRes.json();
               if (!leadData.deals || leadData.deals.length === 0) {
                 return { success: false, message: "Nenhuma negociação aberta para este cliente." };
@@ -1055,8 +1060,13 @@ export async function POST(req: Request) {
                 headers,
                 body: JSON.stringify({ input: sizingInput, name: "Dimensionamento IA" }),
               });
-              if (!sizingRes.ok)
-                return { success: false, message: "Falha ao criar dimensionamento." };
+              if (!sizingRes.ok) {
+                const errTxt = await sizingRes.text();
+                return {
+                  success: false,
+                  message: `Falha ao criar dimensionamento. Status: ${sizingRes.status}. Detalhes: ${errTxt.substring(0, 100)}`,
+                };
+              }
               const sizingData = await sizingRes.json();
 
               // 3. Create Simulation
@@ -1071,7 +1081,13 @@ export async function POST(req: Request) {
                 headers,
                 body: JSON.stringify({ input: simulationInput, name: "Simulação IA" }),
               });
-              if (!simRes.ok) return { success: false, message: "Falha ao criar simulação." };
+              if (!simRes.ok) {
+                const errTxt = await simRes.text();
+                return {
+                  success: false,
+                  message: `Falha ao criar simulação. Status: ${simRes.status}. Detalhes: ${errTxt.substring(0, 100)}`,
+                };
+              }
               const simData = await simRes.json();
 
               // 4. Create Proposal
