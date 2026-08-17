@@ -204,7 +204,7 @@ export async function POST(req: Request) {
                                 } else if (msg.includes('laje') || msg.includes('estrutura 5') || msg.match(/n[uú]mero 5/) || msg.match(/tipo 5/) || msg.match(/\b5\b/)) {
                                     userForcedRoof = 'laje';
                                     break;
-                                } else if (msg.includes('sem estrutura') || msg.includes('nenhuma') || msg.includes('estrutura 7') || msg.match(/n[uú]mero 7/) || msg.match(/tipo 7/) || msg.match(/\b7\b/)) {
+                                } else if (msg === '7' || msg.includes('sem estrutura') || msg.includes('nenhuma') || msg.includes('estrutura 7') || msg.match(/n[uú]mero 7/) || msg.match(/tipo 7/) || msg.match(/\b7\b/)) {
                                     userForcedRoof = 'none';
                                     break;
                                 }
@@ -408,7 +408,9 @@ export async function POST(req: Request) {
                                     selectedStructures.push(matchedEsts[0]);
                                 }
 
-                                if (forcedIncludeStructure && selectedStructures.length === 0) continue;
+                                if (forcedIncludeStructure && selectedStructures.length === 0) {
+                                    continue;
+                                }
 
                                 let profileQty = 0;
                                 let profileProd: any = null;
