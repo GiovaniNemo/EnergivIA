@@ -620,7 +620,7 @@ export async function POST(req: Request) {
                             return { 
                                 success: true, 
                                 leadId, 
-                                message: "Cliente, Cotação e Fatura registrados com sucesso! Diga para o usuário: 'Cadastro e Card de Negociação criados com sucesso na plataforma, incluindo a sua fatura e cotação!'" 
+                                message: "Cliente, Cotação e Fatura registrados com sucesso! Diga para o usuário EXATAMENTE isto: 'Cadastro e Card de Negociação criados com sucesso na plataforma, incluindo a sua fatura e cotação! Se precisar de algo mais, a equipe da EnergivIA está à disposição.'" 
                             };
                         } catch (e: any) {
                             return { 
