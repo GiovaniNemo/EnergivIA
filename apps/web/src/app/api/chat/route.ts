@@ -1122,7 +1122,8 @@ export async function POST(req: Request) {
 
               return {
                 success: true,
-                message: `Proposta gerada com sucesso! Diga EXATAMENTE isto: "Proposta gerada com sucesso! Aqui está o link da proposta: ${baseUrlForLinks}/propostas/${propData.id}"`,
+                urlDaProposta: `${baseUrlForLinks}/propostas/${propData.id}`,
+                message: `SUCESSO! Mostre ao usuário o seguinte link clicável para a proposta: ${baseUrlForLinks}/propostas/${propData.id}`,
               };
             } catch (e: any) {
               return { success: false, message: `Erro ao gerar proposta: ${e.message}` };
