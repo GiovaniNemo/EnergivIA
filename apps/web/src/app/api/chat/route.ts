@@ -1081,7 +1081,7 @@ export async function POST(req: Request) {
               const sizingInput = {
                 monthlyConsumptionKwh: args.consumoMensalKwh || 300,
               };
-              const sizingRes = await fetch(`${baseURL}/leads/${args.leadId}/sizing`, {
+              const sizingRes = await fetch(`${baseURL}/leads/${finalLeadId}/sizing`, {
                 method: "POST",
                 headers,
                 body: JSON.stringify({ input: sizingInput, name: "Dimensionamento IA" }),
@@ -1102,7 +1102,7 @@ export async function POST(req: Request) {
                 financingType: "CASH",
                 sizing: sizingInput,
               };
-              const simRes = await fetch(`${baseURL}/leads/${args.leadId}/simulations`, {
+              const simRes = await fetch(`${baseURL}/leads/${finalLeadId}/simulations`, {
                 method: "POST",
                 headers,
                 body: JSON.stringify({ input: simulationInput, name: "Simulação IA" }),
@@ -1132,7 +1132,7 @@ export async function POST(req: Request) {
                 const errText = await propRes.text();
                 return {
                   success: false,
-                  message: `Falha ao gerar proposta: ${errText.substring(0, 150)}`,
+                  message: `Falha ao gerar proposta (Status ${propRes.status}): ${errText.substring(0, 200)} | Payload enviado: templateId=${args.templateId}, simulationId=${simData.id}, dealId=${dealId}`,
                 };
               }
               const propData = await propRes.json();
