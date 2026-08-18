@@ -1,9 +1,47 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
 import { Bot, X, Send, ImageIcon } from "lucide-react";
 import clsx from "clsx";
+
+/** Renderiza texto com links Markdown [label](url) e URLs brutas como <a> clicáveis. */
+function renderMessageContent(text: string): React.ReactNode[] {
+  // Regex que pega links Markdown [label](url) OU URLs brutas https://...
+  const parts = text.split(/(\[[^\]]+\]\([^)]+\)|https?:\/\/[^\s]+)/g);
+  return parts.map((part, i) => {
+    const mdLink = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (mdLink) {
+      return (
+        <a
+          key={i}
+          href={mdLink[2]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-emerald-400 underline underline-offset-2 hover:text-emerald-300 break-all"
+        >
+          {mdLink[1]}
+        </a>
+      );
+    }
+    if (part.startsWith("http")) {
+      return (
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-emerald-400 underline underline-offset-2 hover:text-emerald-300 break-all"
+        >
+          🔗 Acessar Proposta
+        </a>
+      );
+    }
+    // Preserva quebras de linha
+    return part
+      .split("\n")
+      .map((line, j, arr) => (j < arr.length - 1 ? [line, <br key={`${i}-${j}`} />] : line));
+  });
+}
 
 type Message = {
   id: string;
@@ -59,13 +97,10 @@ export function AIAssistantWidget() {
     setIsLoading(true);
 
     try {
-      const validMessages = newMessages.filter(
-        (m) => (m.content && m.content.trim().length > 0) || m.imageUrl
-      );
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: validMessages }),
+        body: JSON.stringify({ messages: newMessages }),
       });
 
       if (!res.ok) {
@@ -76,7 +111,6 @@ export function AIAssistantWidget() {
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = "";
 
       const assistMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -85,106 +119,24 @@ export function AIAssistantWidget() {
       };
       setMessages((prev) => [...prev, assistMsg]);
 
-      let fullStreamDump = "";
-
-      const processLine = (line: string) => {
-        const trimmed = line.trim();
-        if (!trimmed) return "";
-
-        // New Vercel AI SDK UIMessageStream Protocol (data: {...})
-        if (trimmed.startsWith("data:")) {
-          try {
-            const parsed = JSON.parse(trimmed.slice(5).trim());
-            if (parsed.type === "text-delta") {
-              return parsed.delta || "";
-            }
-            if (parsed.type === "error") {
-              return `\n⚠️ Erro do servidor: ${parsed.error}`;
-            }
-            return ""; // Ignore other types like start, finish, etc.
-          } catch {
-            return "";
-          }
-        }
-
-        // Legacy Data Stream Protocol (0:"text")
-        if (trimmed.startsWith("0:")) {
-          try {
-            return JSON.parse(trimmed.slice(2));
-          } catch {
-            return "";
-          }
-        }
-        // 3: or e: = error from the SDK
-        if (trimmed.startsWith("3:") || trimmed.startsWith("e:")) {
-          try {
-            const err = JSON.parse(trimmed.slice(2));
-            return `\n⚠️ Erro do servidor/ferramenta: ${typeof err === "string" ? err : err.message || JSON.stringify(err)}`;
-          } catch {
-            return `\n⚠️ Erro do servidor: ${trimmed.slice(2)}`;
-          }
-        }
-        // Known non-text prefixes (a-d, f, 1-2, 4-9): ignore silently
-        if (/^[124-9a-df]:/.test(trimmed)) {
-          return "";
-        }
-        // Plain text (no prefix) — return as-is
-        return trimmed + "\n";
-      };
-
       while (true) {
         const { done, value } = await reader.read();
-
-        if (done) {
-          if (buffer.trim()) {
-            fullStreamDump += buffer + "\n";
-            const remaining = buffer.split("\n");
-            let tail = "";
-            for (const line of remaining) {
-              tail += processLine(line);
-            }
-            if (tail) {
-              assistMsg.content += tail;
-              setMessages((prev) =>
-                prev.map((m) => (m.id === assistMsg.id ? { ...assistMsg } : m))
-              );
-            }
-          }
-          break;
-        }
+        if (done) break;
 
         const textChunk = decoder.decode(value, { stream: true });
-        fullStreamDump += textChunk;
-        buffer += textChunk;
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
+        assistMsg.content += textChunk;
 
-        let newText = "";
-        for (const line of lines) {
-          newText += processLine(line);
-        }
-
-        if (newText) {
-          assistMsg.content += newText;
-          setMessages((prev) => prev.map((m) => (m.id === assistMsg.id ? { ...assistMsg } : m)));
-        }
-      }
-
-      // Clean up trailing newline
-      assistMsg.content = assistMsg.content.replace(/\n+$/, "");
-
-      if (assistMsg.content === "") {
-        assistMsg.content = `[DEBUG] O modelo não gerou texto. Stream completo recebido:\n${fullStreamDump}\n(Fim do stream)`;
         setMessages((prev) => prev.map((m) => (m.id === assistMsg.id ? { ...assistMsg } : m)));
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
+      const errMsg = error instanceof Error ? error.message : String(error);
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString(),
           role: "assistant",
-          content: `❌ Erro de comunicação: ${error.message}`,
+          content: `❌ Erro de comunicação: ${errMsg}`,
         },
       ]);
     } finally {
@@ -271,7 +223,7 @@ export function AIAssistantWidget() {
                         className="w-full max-h-48 object-cover rounded-lg mb-2"
                       />
                     ))}
-                  <span style={{ whiteSpace: "pre-line" }}>{m.content}</span>
+                  {renderMessageContent(m.content)}
                 </div>
               </div>
             ))}
