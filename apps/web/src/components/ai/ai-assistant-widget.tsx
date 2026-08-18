@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Bot, X, Send, ImageIcon } from "lucide-react";
+import { Bot, X, Send, ImageIcon, ExternalLink, Copy, Check } from "lucide-react";
 import clsx from "clsx";
 
 type Message = {
@@ -10,7 +10,167 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   imageUrl?: string;
+  proposalUrl?: string;
+  clientName?: string;
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Extrai a primeira URL de proposta que aparecer no texto */
+function extractProposalUrl(text: string): string | null {
+  const match = text.match(/https?:\/\/[^\s)>\]"']+\/proposta\/[^\s)>\]"']+/i);
+  return match ? match[0] : null;
+}
+
+/** Tenta extrair o nome do cliente a partir do contexto da mensagem */
+function extractClientName(text: string): string | null {
+  const patterns = [
+    /proposta\s+d[eoa]\s+([A-ZÁÉÍÓÚÃÕÂÊÎÔÛÀÈÌÒÙ][a-záéíóúãõâêîôûàèìòù]+(?:\s+[A-ZÁÉÍÓÚÃÕÂÊÎÔÛÀÈÌÒÙ][a-záéíóúãõâêîôûàèìòù]+)*)/i,
+    /cliente[:\s]+([A-ZÁÉÍÓÚÃÕÂÊÎÔÛÀÈÌÒÙ][a-záéíóúãõâêîôûàèìòù]+(?:\s+[A-ZÁÉÍÓÚÃÕÂÊÎÔÛÀÈÌÒÙ][a-záéíóúãõâêîôûàèìòù]+)*)/i,
+    /\[Veja aqui a proposta de\s+([^\]]+)\]/i,
+  ];
+  for (const re of patterns) {
+    const m = text.match(re);
+    if (m) return m[1].trim();
+  }
+  return null;
+}
+
+/** Renderiza texto com URLs como botões clicáveis */
+function parseContent(text: string): React.ReactNode[] {
+  const regex = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)|(https?:\/\/\S+)/g;
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(
+        <span key={`t-${lastIndex}`} style={{ whiteSpace: "pre-line" }}>
+          {text.slice(lastIndex, match.index)}
+        </span>
+      );
+    }
+    const url = match[2] ?? match[3];
+    nodes.push(<ProposalLinkButton key={`l-${match.index}`} url={url} />);
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(
+      <span key={`t-${lastIndex}`} style={{ whiteSpace: "pre-line" }}>
+        {text.slice(lastIndex)}
+      </span>
+    );
+  }
+  return nodes;
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function ProposalLinkButton({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <span className="flex flex-wrap items-center gap-2 my-2">
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                   bg-emerald-500 hover:bg-emerald-400 text-white shadow-md
+                   transition-all duration-200 hover:scale-[1.03] active:scale-95"
+      >
+        <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+        Acessar Cotação
+      </a>
+      <button
+        onClick={handleCopy}
+        title="Copiar link"
+        className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium
+                   bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700
+                   transition-all duration-200 active:scale-95"
+      >
+        {copied ? (
+          <>
+            <Check className="w-3 h-3 text-emerald-400" />
+            <span className="text-emerald-400">Copiado!</span>
+          </>
+        ) : (
+          <>
+            <Copy className="w-3 h-3" />
+            Copiar link
+          </>
+        )}
+      </button>
+    </span>
+  );
+}
+
+function ForwardBubble({
+  proposalUrl,
+  clientName,
+}: {
+  proposalUrl: string;
+  clientName?: string | null;
+}) {
+  const [copied, setCopied] = useState(false);
+  const greeting = clientName ? `Olá, ${clientName.split(" ")[0]}! 👋` : "Olá! 👋";
+  const forwardText = `${greeting}\n\nTemos uma cotação personalizada de energia solar preparada especialmente para você! ☀️⚡\n\nAcesse agora e veja o quanto você pode economizar na conta de luz:\n\n👉 ${proposalUrl}\n\nQualquer dúvida, estou à disposição!`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(forwardText).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  };
+
+  return (
+    <div className="flex justify-start animate-in fade-in slide-in-from-bottom-3 duration-500">
+      <div className="max-w-[92%] rounded-2xl rounded-bl-none bg-gray-900 border border-emerald-500/30 text-gray-200 text-sm leading-relaxed overflow-hidden shadow-[0_0_16px_rgba(16,185,129,0.12)]">
+        <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border-b border-emerald-500/20">
+          <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-400">
+            📤 Mensagem para o Cliente
+          </span>
+        </div>
+        <div className="px-3 py-2.5">
+          <p className="whitespace-pre-line text-gray-300 text-xs leading-relaxed">{forwardText}</p>
+        </div>
+        <div className="px-3 pb-3">
+          <button
+            onClick={handleCopy}
+            className={clsx(
+              "w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 active:scale-95",
+              copied
+                ? "bg-emerald-600/30 text-emerald-300 border border-emerald-500/30"
+                : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-md hover:scale-[1.02]"
+            )}
+          >
+            {copied ? (
+              <>
+                <Check className="w-3.5 h-3.5" /> Mensagem Copiada!
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5" /> Copiar para WhatsApp
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function AIAssistantWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -177,6 +337,22 @@ export function AIAssistantWidget() {
         assistMsg.content = `[DEBUG] O modelo não gerou texto. Stream completo recebido:\n${fullStreamDump}\n(Fim do stream)`;
         setMessages((prev) => prev.map((m) => (m.id === assistMsg.id ? { ...assistMsg } : m)));
       }
+
+      // ── Detecta URL de proposta e injeta balão de encaminhamento ──
+      const proposalUrl = extractProposalUrl(assistMsg.content);
+      if (proposalUrl) {
+        const clientName = extractClientName(assistMsg.content);
+        setTimeout(() => {
+          const forwardMsg: Message = {
+            id: (Date.now() + 2).toString(),
+            role: "assistant",
+            content: "__forward_bubble__",
+            proposalUrl,
+            clientName: clientName ?? undefined,
+          };
+          setMessages((prev) => [...prev, forwardMsg]);
+        }, 600);
+      }
     } catch (error: any) {
       console.error(error);
       setMessages((prev) => [
@@ -241,40 +417,50 @@ export function AIAssistantWidget() {
               </div>
             )}
 
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={clsx("flex", m.role === "user" ? "justify-end" : "justify-start")}
-              >
+            {messages.map((m) => {
+              // Balão especial de encaminhamento para o cliente
+              if (m.content === "__forward_bubble__" && m.proposalUrl) {
+                return (
+                  <ForwardBubble key={m.id} proposalUrl={m.proposalUrl} clientName={m.clientName} />
+                );
+              }
+
+              return (
                 <div
-                  className={clsx(
-                    "max-w-[85%] rounded-2xl p-3 text-sm leading-relaxed",
-                    m.role === "user"
-                      ? "bg-emerald-600 text-white rounded-br-none"
-                      : "bg-gray-900 text-gray-200 rounded-bl-none border border-gray-800"
-                  )}
+                  key={m.id}
+                  className={clsx("flex", m.role === "user" ? "justify-end" : "justify-start")}
                 >
-                  {m.imageUrl &&
-                    (m.imageUrl.startsWith("data:application/pdf") ? (
-                      <div className="flex items-center gap-2 bg-emerald-700/50 p-2 rounded-lg mb-2">
-                        <div className="w-8 h-8 flex items-center justify-center bg-emerald-600 rounded">
-                          <span className="text-[10px] font-bold text-white">PDF</span>
+                  <div
+                    className={clsx(
+                      "max-w-[85%] rounded-2xl p-3 text-sm leading-relaxed",
+                      m.role === "user"
+                        ? "bg-emerald-600 text-white rounded-br-none"
+                        : "bg-gray-900 text-gray-200 rounded-bl-none border border-gray-800"
+                    )}
+                  >
+                    {m.imageUrl &&
+                      (m.imageUrl.startsWith("data:application/pdf") ? (
+                        <div className="flex items-center gap-2 bg-emerald-700/50 p-2 rounded-lg mb-2">
+                          <div className="w-8 h-8 flex items-center justify-center bg-emerald-600 rounded">
+                            <span className="text-[10px] font-bold text-white">PDF</span>
+                          </div>
+                          <span className="text-xs text-emerald-100 font-medium">
+                            Documento Anexado
+                          </span>
                         </div>
-                        <span className="text-xs text-emerald-100 font-medium">
-                          Documento Anexado
-                        </span>
-                      </div>
-                    ) : (
-                      <img
-                        src={m.imageUrl}
-                        alt="Anexo"
-                        className="w-full max-h-48 object-cover rounded-lg mb-2"
-                      />
-                    ))}
-                  <span style={{ whiteSpace: "pre-line" }}>{m.content}</span>
+                      ) : (
+                        <img
+                          src={m.imageUrl}
+                          alt="Anexo"
+                          className="w-full max-h-48 object-cover rounded-lg mb-2"
+                        />
+                      ))}
+                    {/* Renderiza links como botões clicáveis */}
+                    <span>{parseContent(m.content)}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {isLoading && messages[messages.length - 1]?.role === "user" && (
               <div className="flex justify-start">
