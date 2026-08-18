@@ -8,6 +8,8 @@ export interface ProposalIntegratorKitLine {
   unitPrice: number;
   lineTotal: number;
   categoryName?: string;
+  imageUrl?: string;
+  specs?: Record<string, unknown>;
 }
 
 export type ProposalProjectCostLineSource = "organization" | "system_default";

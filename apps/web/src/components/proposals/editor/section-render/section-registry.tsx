@@ -391,11 +391,6 @@ function renderProposalEquipmentCards(items: ProposalEquipmentItem[]): JSX.Eleme
               ) : (
                 <span className="px-2 text-center text-[0.65rem] leading-tight opacity-60">
                   Sem imagem
-                  {item.productId.trim() ? (
-                    <span className="mt-1 block font-mono text-[0.6rem] opacity-80">
-                      ID: {item.productId}
-                    </span>
-                  ) : null}
                 </span>
               )}
             </div>

@@ -8,6 +8,7 @@ import { getPublicProposal, type PublicProposalPayload } from "@/lib/public-prop
 import { buildGenerationConsumptionChartFromSimulation } from "@/lib/generation-consumption-series";
 import { mergePublicProposalVariables } from "@/lib/public-proposal-variables";
 import { templateConfigToPreviewDocument } from "@/lib/proposal-template-document";
+import { buildProposalEquipmentItemsFromKit } from "@/components/proposals/editor/proposal-equipment-model";
 
 export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.Element {
   const [data, setData] = useState<PublicProposalPayload | null>(null);
@@ -27,9 +28,37 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
   const documentState = useMemo(() => {
     if (!data?.proposalTemplate?.config) return null;
     const base = templateConfigToPreviewDocument(data.proposalTemplate.config);
+    const variables = mergePublicProposalVariables(base.variables, data);
+
+    const kitItems = data.renderedData?.integrator?.kitItems;
+    const equipmentItems =
+      kitItems && kitItems.length > 0 ? buildProposalEquipmentItemsFromKit(kitItems) : [];
+
+    const sections = base.sections.map((sec) => {
+      if (sec.type === "proposal_equipment") {
+        const secItems = Array.isArray(sec.fields?.["equipmentItems"])
+          ? (sec.fields["equipmentItems"] as Array<Record<string, unknown>>)
+          : [];
+        if (
+          equipmentItems.length > 0 &&
+          (!secItems.length || secItems.every((it) => !String(it["title"] ?? "").trim()))
+        ) {
+          return {
+            ...sec,
+            fields: {
+              ...sec.fields,
+              equipmentItems,
+            },
+          };
+        }
+      }
+      return sec;
+    });
+
     return {
       ...base,
-      variables: mergePublicProposalVariables(base.variables, data),
+      sections,
+      variables,
     };
   }, [data]);
 

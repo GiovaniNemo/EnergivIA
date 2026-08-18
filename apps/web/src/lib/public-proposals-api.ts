@@ -24,6 +24,8 @@ export interface PublicProposalPayload {
         unitPrice: number;
         lineTotal: number;
         categoryName?: string;
+        imageUrl?: string;
+        specs?: Record<string, unknown>;
       }>;
       equipmentSubtotalBrl: number;
       quotedSaleBrl: number;

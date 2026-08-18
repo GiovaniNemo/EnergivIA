@@ -282,10 +282,152 @@ export function parseProposalEquipmentItems(raw: unknown): ProposalEquipmentItem
   });
 }
 
+export function inferSpecsFromProductDetails(
+  cat: string,
+  productName: string,
+  quantity: number
+): ProposalEquipmentSpec[] {
+  const qSpec = quantitySpec(quantity);
+  let a = emptyProposalEquipmentSpec();
+  let b = emptyProposalEquipmentSpec();
+
+  if (cat === "module") {
+    const match = productName.match(/(\d+)\s*W(?:p)?\b/i);
+    const powerW = match ? match[1] : undefined;
+    if (powerW) {
+      a = { label: "Potência", value: `${powerW} Wp`, icon: "zap" };
+    }
+    b = { label: "Garantia", value: "25 anos", icon: "shield" };
+  } else if (cat === "inverter" || cat === "microinverter") {
+    const matchKw = productName.match(/(\d+(?:[.,]\d+)?)\s*KW\b/i);
+    const matchW = productName.match(/(\d{3,5})\s*W\b/i);
+    if (matchKw) {
+      const kwVal = matchKw[1].replace(",", ".");
+      a = { label: "Potência", value: `${kwVal} kW`, icon: "zap" };
+    } else if (matchW) {
+      a = { label: "Potência", value: `${matchW[1]} W`, icon: "zap" };
+    }
+    b = { label: "Garantia", value: "15 anos", icon: "shield" };
+  }
+
+  const out = [a, b, qSpec];
+  while (out.length < PROPOSAL_EQUIPMENT_SPEC_SLOTS) {
+    out.push(emptyProposalEquipmentSpec());
+  }
+  return out.slice(0, PROPOSAL_EQUIPMENT_SPEC_SLOTS);
+}
+
+export function buildEquipmentItemFromKitLine(
+  line: {
+    productId?: string;
+    productName: string;
+    brandName?: string;
+    quantity: number;
+    categoryName?: string;
+    imageUrl?: string;
+    specs?: Record<string, unknown>;
+  },
+  index: number
+): ProposalEquipmentItem {
+  const rawCat = (line.categoryName ?? "").trim().toLowerCase();
+  let cat = rawCat;
+  if (!cat) {
+    const lowerName = line.productName.toLowerCase();
+    if (
+      lowerName.includes("modulo") ||
+      lowerName.includes("módulo") ||
+      lowerName.includes("painel")
+    ) {
+      cat = "module";
+    } else if (lowerName.includes("microinversor")) {
+      cat = "microinverter";
+    } else if (lowerName.includes("inversor")) {
+      cat = "inverter";
+    } else if (lowerName.includes("estrutura") || lowerName.includes("perfil")) {
+      cat = "structure_kit";
+    } else if (lowerName.includes("cabo")) {
+      cat = "dc_cable";
+    } else if (lowerName.includes("conector")) {
+      cat = "connector";
+    }
+  }
+
+  const catLabel =
+    cat === "module"
+      ? "Módulo fotovoltaico"
+      : cat === "inverter"
+        ? "Inversor"
+        : cat === "microinverter"
+          ? "Microinversor"
+          : (CATEGORY_LABELS[cat] ?? "Equipamento");
+
+  const brand = (line.brandName ?? "").trim();
+  const title = brand ? `${catLabel} — ${brand}` : catLabel;
+  const subtitle = line.productName;
+  const quantity = Math.max(1, Math.floor(line.quantity || 1));
+
+  let specs: ProposalEquipmentSpec[] = [];
+  if (line.specs && typeof line.specs === "object" && Object.keys(line.specs).length > 0) {
+    specs = buildEquipmentDisplaySpecs(cat, line.specs, quantity);
+  } else {
+    specs = inferSpecsFromProductDetails(cat, line.productName, quantity);
+  }
+
+  return {
+    id: line.productId ? `eq-kit-${line.productId}-${index}` : `eq-kit-${index}`,
+    productId: line.productId ?? "",
+    imageUrl: String(line.imageUrl ?? "").trim(),
+    title,
+    subtitle,
+    categoryName: cat || undefined,
+    specs,
+  };
+}
+
+export function buildProposalEquipmentItemsFromKit(
+  kitItems: Array<{
+    productId?: string;
+    productName: string;
+    brandName?: string;
+    quantity: number;
+    categoryName?: string;
+    imageUrl?: string;
+    specs?: Record<string, unknown>;
+  }>
+): ProposalEquipmentItem[] {
+  if (!Array.isArray(kitItems) || kitItems.length === 0) return [];
+
+  const categoryRank: Record<string, number> = {
+    module: 1,
+    inverter: 2,
+    microinverter: 2,
+    battery: 3,
+    structure_kit: 4,
+    profile: 5,
+    string_box: 6,
+    dc_cable: 7,
+    connector: 8,
+  };
+
+  const sorted = [...kitItems].sort((x, y) => {
+    const cx = (x.categoryName ?? "").toLowerCase();
+    const cy = (y.categoryName ?? "").toLowerCase();
+    const rx = categoryRank[cx] ?? 50;
+    const ry = categoryRank[cy] ?? 50;
+    return rx - ry;
+  });
+
+  return sorted.map((line, idx) => buildEquipmentItemFromKitLine(line, idx));
+}
+
 export function resolveProposalEquipmentItemsForPreview(
   fields: Record<string, unknown>,
   catalog: Record<string, ProposalEquipmentProductSnapshot> | undefined
 ): ProposalEquipmentItem[] {
+  const manualItems = parseProposalEquipmentItems(fields["equipmentItems"]);
+  if (manualItems.length > 0 && manualItems.some((it) => it.title.trim() || it.subtitle.trim())) {
+    return manualItems;
+  }
   const lines = parseProposalEquipmentLines(fields["equipmentLines"]);
   if (lines.length > 0) {
     return lines.map((line, index) => {
@@ -295,7 +437,7 @@ export function resolveProposalEquipmentItemsForPreview(
       return missingProductItem(line, index);
     });
   }
-  return parseProposalEquipmentItems(fields["equipmentItems"]);
+  return manualItems;
 }
 
 export const DEMO_PROPOSAL_EQUIPMENT_ITEMS: ProposalEquipmentItem[] = [

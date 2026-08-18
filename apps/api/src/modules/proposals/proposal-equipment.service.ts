@@ -524,6 +524,8 @@ export class ProposalEquipmentService {
         unitPrice,
         lineTotal,
         categoryName: product.category.name,
+        imageUrl: product.imageUrl ?? undefined,
+        specs: (product.specs as Record<string, unknown>) ?? undefined,
       };
     });
 

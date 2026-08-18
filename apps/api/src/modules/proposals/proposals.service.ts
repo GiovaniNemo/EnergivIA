@@ -276,6 +276,45 @@ export class ProposalsService {
         template = await findPublishedTemplateRow(this.prisma, proposal.tenantId);
       }
       await this.notificationsService.handlePublicProposalView(proposal.id);
+
+      let renderedData = (proposal.renderedData as Record<string, unknown> | null) ?? null;
+      const integrator = parseIntegratorFromRendered(renderedData);
+      if (integrator?.kitItems?.length) {
+        const productIds = integrator.kitItems
+          .map((i) => i.productId)
+          .filter((id): id is string => typeof id === "string" && Boolean(id.trim()));
+        if (productIds.length > 0) {
+          const products = await this.prisma.product.findMany({
+            where: { id: { in: productIds } },
+            select: {
+              id: true,
+              imageUrl: true,
+              specs: true,
+              brand: { select: { name: true } },
+              category: { select: { name: true } },
+            },
+          });
+          const prodMap = new Map(products.map((p) => [p.id, p]));
+          const enrichedKitItems = integrator.kitItems.map((item) => {
+            const p = prodMap.get(item.productId);
+            return {
+              ...item,
+              imageUrl: item.imageUrl || p?.imageUrl || undefined,
+              specs: item.specs || (p?.specs as Record<string, unknown>) || undefined,
+              brandName: item.brandName || p?.brand?.name || item.brandName,
+              categoryName: item.categoryName || p?.category?.name || item.categoryName,
+            };
+          });
+          renderedData = {
+            ...renderedData,
+            integrator: {
+              ...integrator,
+              kitItems: enrichedKitItems,
+            },
+          };
+        }
+      }
+
       return {
         id: proposal.id,
         title: proposal.title,
@@ -290,7 +329,7 @@ export class ProposalsService {
         proposalTemplate: template
           ? { id: template.id, name: template.name, config: template.config }
           : null,
-        renderedData: proposal.renderedData ?? null,
+        renderedData,
       };
     } catch (e) {
       this.logger.warn(
