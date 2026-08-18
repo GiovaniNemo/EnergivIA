@@ -331,8 +331,65 @@ export function buildEquipmentItemFromKitLine(
 ): ProposalEquipmentItem {
   const rawCat = (line.categoryName ?? "").trim().toLowerCase();
   let cat = rawCat;
-  if (!cat) {
-    const lowerName = line.productName.toLowerCase();
+  if (
+    cat === "modulo" ||
+    cat === "módulo" ||
+    cat === "painel" ||
+    cat === "painéis" ||
+    cat === "paineis" ||
+    cat === "module" ||
+    cat === "modules"
+  ) {
+    cat = "module";
+  } else if (
+    cat === "inversor" ||
+    cat === "inversores" ||
+    cat === "inverter" ||
+    cat === "inverters"
+  ) {
+    cat = "inverter";
+  } else if (
+    cat === "microinversor" ||
+    cat === "microinversores" ||
+    cat === "microinverter" ||
+    cat === "microinverters"
+  ) {
+    cat = "microinverter";
+  } else if (
+    cat === "estrutura" ||
+    cat === "estruturas" ||
+    cat === "estrutura_fixacao" ||
+    cat === "structure_kit" ||
+    cat === "structure"
+  ) {
+    cat = "structure_kit";
+  } else if (
+    cat === "cabo" ||
+    cat === "cabos" ||
+    cat === "cabo_cc" ||
+    cat === "cabos_cc" ||
+    cat === "dc_cable" ||
+    cat === "cable"
+  ) {
+    cat = "dc_cable";
+  } else if (
+    cat === "conector" ||
+    cat === "conectores" ||
+    cat === "mc4" ||
+    cat === "connector" ||
+    cat === "connectors"
+  ) {
+    cat = "connector";
+  } else if (
+    cat === "perfil" ||
+    cat === "perfis" ||
+    cat === "trilho" ||
+    cat === "trilhos" ||
+    cat === "profile"
+  ) {
+    cat = "profile";
+  } else {
+    const lowerName = (line.productName || "").toLowerCase();
     if (
       lowerName.includes("modulo") ||
       lowerName.includes("módulo") ||
@@ -343,11 +400,13 @@ export function buildEquipmentItemFromKitLine(
       cat = "microinverter";
     } else if (lowerName.includes("inversor")) {
       cat = "inverter";
-    } else if (lowerName.includes("estrutura") || lowerName.includes("perfil")) {
+    } else if (lowerName.includes("estrutura")) {
       cat = "structure_kit";
+    } else if (lowerName.includes("perfil") || lowerName.includes("trilho")) {
+      cat = "profile";
     } else if (lowerName.includes("cabo")) {
       cat = "dc_cable";
-    } else if (lowerName.includes("conector")) {
+    } else if (lowerName.includes("conector") || lowerName.includes("mc4")) {
       cat = "connector";
     }
   }

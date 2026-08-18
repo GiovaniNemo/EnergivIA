@@ -36,13 +36,7 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
 
     const sections = base.sections.map((sec) => {
       if (sec.type === "proposal_equipment") {
-        const secItems = Array.isArray(sec.fields?.["equipmentItems"])
-          ? (sec.fields["equipmentItems"] as Array<Record<string, unknown>>)
-          : [];
-        if (
-          equipmentItems.length > 0 &&
-          (!secItems.length || secItems.every((it) => !String(it["title"] ?? "").trim()))
-        ) {
+        if (equipmentItems.length > 0) {
           return {
             ...sec,
             fields: {

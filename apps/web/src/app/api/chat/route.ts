@@ -9,6 +9,7 @@ import fs from "fs";
 import path from "path";
 
 import { systemPrompt } from "./prompt";
+import { computeProjectCostSection } from "@energivia/proposal-economia";
 
 const normalizeString = (str: string) => {
   if (!str) return "";
@@ -729,9 +730,132 @@ export async function POST(req: Request) {
                   precoEst +
                   precoPerfil;
 
+                const structuredItems = [];
+                if (inv) {
+                  const invPrice = Number(inv.price) || 0;
+                  structuredItems.push({
+                    productId: inv.product?.id || inv.productId || inv.id || "",
+                    productName: inv.product?.name || inv.descricao || "Inversor",
+                    brandName: inv.product?.brand?.name || "",
+                    categoryName: "inverter",
+                    quantity: 1,
+                    unitPrice: invPrice,
+                    lineTotal: invPrice,
+                    imageUrl: inv.product?.imageUrl || "",
+                    specs: inv.product?.specs || {},
+                  });
+                }
+                if (mod) {
+                  const modUnit = Number(mod.price) || 0;
+                  structuredItems.push({
+                    productId: mod.product?.id || mod.productId || mod.id || "",
+                    productName: mod.product?.name || mod.descricao || "Módulo Fotovoltaico",
+                    brandName: mod.product?.brand?.name || "",
+                    categoryName: "module",
+                    quantity: moduleQ,
+                    unitPrice: modUnit,
+                    lineTotal: precoMod,
+                    imageUrl: mod.product?.imageUrl || "",
+                    specs: mod.product?.specs || {},
+                  });
+                }
+                if (forcedIncludeStructure && selectedStructures.length > 0) {
+                  const estMap = new Map();
+                  for (const est of selectedStructures) {
+                    const key =
+                      est.product?.id ||
+                      est.productId ||
+                      est.id ||
+                      est.product?.name ||
+                      est.descricao;
+                    if (!estMap.has(key)) {
+                      estMap.set(key, { est, count: 0 });
+                    }
+                    estMap.get(key).count += 1;
+                  }
+                  for (const { est, count } of estMap.values()) {
+                    const uPrice = Number(est.price) || 0;
+                    structuredItems.push({
+                      productId: est.product?.id || est.productId || est.id || "",
+                      productName: est.product?.name || est.descricao || "Estrutura de Fixação",
+                      brandName: est.product?.brand?.name || "",
+                      categoryName: "structure_kit",
+                      quantity: count,
+                      unitPrice: uPrice,
+                      lineTotal: uPrice * count,
+                      imageUrl: est.product?.imageUrl || "",
+                      specs: est.product?.specs || {},
+                    });
+                  }
+                }
+                if (profileProd && profileQty > 0) {
+                  const uPrice = Number(profileProd.price) || 0;
+                  structuredItems.push({
+                    productId:
+                      profileProd.product?.id || profileProd.productId || profileProd.id || "",
+                    productName:
+                      profileProd.product?.name || profileProd.descricao || "Perfil / Trilho",
+                    brandName: profileProd.product?.brand?.name || "",
+                    categoryName: "profile",
+                    quantity: profileQty,
+                    unitPrice: uPrice,
+                    lineTotal: precoPerfil,
+                    imageUrl: profileProd.product?.imageUrl || "",
+                    specs: profileProd.product?.specs || {},
+                  });
+                }
+                if (cabPreto) {
+                  const uPrice = Number(cabPreto.price) || 0;
+                  structuredItems.push({
+                    productId: cabPreto.product?.id || cabPreto.productId || cabPreto.id || "",
+                    productName: cabPreto.product?.name || cabPreto.descricao || "Cabo Solar Preto",
+                    brandName: cabPreto.product?.brand?.name || "",
+                    categoryName: "dc_cable",
+                    quantity: 1,
+                    unitPrice: uPrice,
+                    lineTotal: precoCabPreto,
+                    imageUrl: cabPreto.product?.imageUrl || "",
+                    specs: cabPreto.product?.specs || {},
+                  });
+                }
+                if (cabVermelho) {
+                  const uPrice = Number(cabVermelho.price) || 0;
+                  structuredItems.push({
+                    productId:
+                      cabVermelho.product?.id || cabVermelho.productId || cabVermelho.id || "",
+                    productName:
+                      cabVermelho.product?.name || cabVermelho.descricao || "Cabo Solar Vermelho",
+                    brandName: cabVermelho.product?.brand?.name || "",
+                    categoryName: "dc_cable",
+                    quantity: 1,
+                    unitPrice: uPrice,
+                    lineTotal: precoCabVermelho,
+                    imageUrl: cabVermelho.product?.imageUrl || "",
+                    specs: cabVermelho.product?.specs || {},
+                  });
+                }
+                if (con) {
+                  const uPrice = Number(con.price) || 0;
+                  structuredItems.push({
+                    productId: con.product?.id || con.productId || con.id || "",
+                    productName: con.product?.name || con.descricao || "Conectores MC4",
+                    brandName: con.product?.brand?.name || "",
+                    categoryName: "connector",
+                    quantity: 2,
+                    unitPrice: uPrice,
+                    lineTotal: precoCon,
+                    imageUrl: con.product?.imageUrl || "",
+                    specs: con.product?.specs || {},
+                  });
+                }
+
                 finalQuotes.push({
+                  distribuidoraId: d.id,
                   distribuidora: d.name,
                   valor_total_do_kit: `R$ ${somaTotal.toFixed(2).replace(".", ",")}`,
+                  valor_kit_num: somaTotal,
+                  potencia_kwp: realKWp,
+                  itens_estruturados: structuredItems,
                   kit_itens_salvos: [
                     `- Inversor: ${inv.product?.name || inv.descricao}`,
                     `- Módulos: ${moduleQ}x ${mod.product?.name || mod.descricao}`,
@@ -1019,6 +1143,7 @@ export async function POST(req: Request) {
           parameters: z.object({
             leadId: z.string().describe("O ID do cliente/lead (retornado no passo anterior)."),
             templateId: z.string().describe("O ID do template escolhido pelo usuário."),
+            distributorId: z.string().optional().describe("O ID da distribuidora do kit cotado."),
             consumoMensalKwh: z.number().describe("O consumo médio mensal do cliente em kWh."),
             potenciaSistemaKw: z.number().describe("A potência real do kit em kWp."),
             valorKitTotal: z.number().describe("O valor total do kit em Reais (R$)."),
@@ -1032,6 +1157,8 @@ export async function POST(req: Request) {
                   unitPrice: z.number().describe("Preço unitário em R$."),
                   lineTotal: z.number().describe("Total da linha em R$."),
                   categoryName: z.string().optional().describe("Categoria do produto."),
+                  imageUrl: z.string().optional().describe("URL da imagem do equipamento."),
+                  specs: z.record(z.any()).optional().describe("Especificações do equipamento."),
                 })
               )
               .optional()
@@ -1094,9 +1221,34 @@ export async function POST(req: Request) {
               }
               const dealId = leadData.deals[0].id;
 
-              // 2. Create Sizing
+              // 2. Buscar cost-rules (mão de obra, margem etc) cadastradas pelo integrador
+              let costRules: any[] = [];
+              try {
+                const costRulesRes = await fetch(`${baseURL}/cost-rules`, { headers });
+                if (costRulesRes.ok) {
+                  costRules = await costRulesRes.json();
+                }
+              } catch (e) {
+                console.warn("Falha ao buscar cost rules:", e);
+              }
+
+              const systemKwp = Number(args.potenciaSistemaKw) || 0;
+              const equipmentSubtotalBrl = Number(args.valorKitTotal) || 0;
+              const costCalc = computeProjectCostSection(
+                equipmentSubtotalBrl,
+                systemKwp,
+                costRules
+              );
+              const quotedSaleBrl =
+                costCalc.computedSaleFromCostRulesBrl > 0
+                  ? costCalc.computedSaleFromCostRulesBrl
+                  : equipmentSubtotalBrl > 0
+                    ? equipmentSubtotalBrl
+                    : 10000;
+
+              // 3. Create Sizing
               const sizingInput = {
-                monthlyConsumptionKwh: args.consumoMensalKwh || 300,
+                monthlyConsumptionKwh: Number(args.consumoMensalKwh) || 300,
               };
               const sizingRes = await fetch(`${baseURL}/leads/${finalLeadId}/sizing`, {
                 method: "POST",
@@ -1112,10 +1264,10 @@ export async function POST(req: Request) {
               }
               const sizingData = await sizingRes.json();
 
-              // 3. Create Simulation
+              // 4. Create Simulation
               const simulationInput = {
-                systemSizeKw: args.potenciaSistemaKw || 3,
-                investmentAmount: args.valorKitTotal || 10000,
+                systemSizeKw: systemKwp || 3,
+                investmentAmount: Math.round(quotedSaleBrl),
                 financingType: "CASH",
                 sizing: sizingInput,
               };
@@ -1133,65 +1285,33 @@ export async function POST(req: Request) {
               }
               const simData = await simRes.json();
 
-              // 4. Buscar cost-rules (mão de obra, margem etc) cadastradas pelo integrador
-              const costRulesRes = await fetch(`${baseURL}/cost-rules`, { headers });
-              let projectCostLines: any[] = [];
-              let totalCosts = 0;
-              if (costRulesRes.ok) {
-                const costRules: any[] = await costRulesRes.json();
-                const systemKwp = args.potenciaSistemaKw || 0;
-                const equipmentSubtotal = args.valorKitTotal || 0;
-                for (const rule of costRules) {
-                  // filter by kWp range if set
-                  if (rule.minKwp != null && systemKwp < rule.minKwp) continue;
-                  if (rule.maxKwp != null && systemKwp > rule.maxKwp) continue;
-                  let applied = 0;
-                  if (rule.calculationType === "FIXED") {
-                    applied = rule.value;
-                  } else if (rule.calculationType === "PER_KWP") {
-                    applied = rule.value * systemKwp;
-                  } else if (rule.calculationType === "PERCENTAGE") {
-                    applied = (rule.value / 100) * equipmentSubtotal;
-                  }
-                  applied = Math.round(applied * 100) / 100;
-                  totalCosts += applied;
-                  projectCostLines.push({
-                    ruleId: rule.id,
-                    name: rule.name,
-                    calculationType: rule.calculationType,
-                    value: rule.value,
-                    appliedAmountBrl: applied,
-                    minKwp: rule.minKwp ?? null,
-                    maxKwp: rule.maxKwp ?? null,
-                    source: "organization",
-                    percentageBase: rule.percentageBase ?? undefined,
-                  });
-                }
-              }
-
-              // 5. Build kitItems from conversation
+              // 5. Build kitItems from conversation / distributor quote
               const rawKitItems: any[] = args.kitItems ?? [];
               const kitItemsMapped = rawKitItems.map((item: any) => ({
                 productId: item.productId || "",
                 productName: item.productName || "Equipamento",
                 brandName: item.brandName || "",
-                quantity: item.quantity || 1,
-                unitPrice: item.unitPrice || 0,
-                lineTotal: item.lineTotal || item.unitPrice * item.quantity || 0,
+                quantity: Number(item.quantity) || 1,
+                unitPrice: Number(item.unitPrice) || 0,
+                lineTotal:
+                  Number(item.lineTotal) ||
+                  (Number(item.unitPrice) || 0) * (Number(item.quantity) || 1) ||
+                  0,
                 categoryName: item.categoryName || "equipment",
+                imageUrl: item.imageUrl || undefined,
+                specs: item.specs || undefined,
               }));
-
-              const equipmentSubtotalBrl = args.valorKitTotal || 0;
-              const quotedSaleBrl = equipmentSubtotalBrl + totalCosts;
 
               const integratorSnapshot = {
                 version: 1 as const,
                 kitItems: kitItemsMapped,
                 equipmentSubtotalBrl,
                 quotedSaleBrl,
-                systemPowerKw: args.potenciaSistemaKw || 0,
+                systemPowerKw: systemKwp,
                 sourceType: "distributor" as const,
-                projectCostLines,
+                distributorId: args.distributorId || undefined,
+                projectCostLines: costCalc.projectCostLines,
+                defaultEssentialCostNames: costCalc.defaultEssentialCostNames,
                 computedSaleFromCostRulesBrl: quotedSaleBrl,
               };
 
