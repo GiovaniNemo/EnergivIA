@@ -16,9 +16,11 @@ export function mergePublicProposalVariables(
 
   // Integrator snapshot: kit items and project costs
   const integrator = payload.renderedData?.integrator;
+  const quotedSale = integrator
+    ? (integrator.computedSaleFromCostRulesBrl ?? integrator.quotedSaleBrl)
+    : null;
   if (integrator) {
     // Override investimento_total with the real quoted sale price (equipment + costs)
-    const quotedSale = integrator.computedSaleFromCostRulesBrl ?? integrator.quotedSaleBrl;
     if (typeof quotedSale === "number" && quotedSale > 0) {
       merged["investimento_total"] = formatBRL(quotedSale);
     }
@@ -75,7 +77,10 @@ export function mergePublicProposalVariables(
 
     merged["tamanho_sistema_kw"] = `${String(input.systemSizeKw)} kWp`;
     merged["potencia_sistema_kwp"] = input.systemSizeKw;
-    merged["investimento_total"] = formatBRL(input.investmentAmount);
+    // Só sobrescreve investimento_total se o integrator não definiu um valor real (via cotação)
+    if (!(typeof quotedSale === "number" && quotedSale > 0)) {
+      merged["investimento_total"] = formatBRL(input.investmentAmount);
+    }
     merged["economia_mensal"] = formatBRL(result.monthlySavings);
     merged["payback_anos"] = `${String(result.paybackYears)} anos`;
 

@@ -24,6 +24,28 @@ function parseAmount(
 const BASE_LINE_LABEL = "Sistema solar";
 const BASE_LINE_DESCRIPTION = "Solução fotovoltaica completa";
 
+/** Parseia kit_itens_lista (texto multiline) em array de objetos para exibição */
+function parseKitItems(
+  raw: string | number | undefined | null
+): Array<{ label: string; description: string; price: string }> {
+  if (!raw || typeof raw !== "string" || !raw.trim()) return [];
+  return raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      // Formato esperado: "2x Nome Produto (Marca) — R$ 1.000,00"
+      const priceMatch = line.match(/—\s*(R\$[\s\d.,]+)$/);
+      const price = priceMatch ? priceMatch[1].trim() : "";
+      const rest = priceMatch ? line.slice(0, priceMatch.index).trim() : line;
+      // Separa "2x Nome (Marca)" em quantidade+nome e marca
+      const brandMatch = rest.match(/\(([^)]+)\)$/);
+      const brand = brandMatch ? brandMatch[1].trim() : "";
+      const label = brandMatch ? rest.slice(0, brandMatch.index).trim() : rest;
+      return { label, description: brand, price };
+    });
+}
+
 export type PricingBranding = {
   primaryColor: string;
   secondaryColor: string;
@@ -106,6 +128,9 @@ export function PricingSectionPreview({
       }
     : undefined;
 
+  const kitItems = parseKitItems(vars.kit_itens_lista as string | undefined);
+  const hasKitItems = kitItems.length > 0;
+
   return (
     <div
       className={cn("space-y-5", !palette && "text-[var(--color-foreground)]")}
@@ -122,42 +147,90 @@ export function PricingSectionPreview({
         style={cardStyle}
       >
         <div className={palette ? "" : "divide-y divide-[var(--color-border)]"}>
-          <div
-            className={cn(
-              "flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-6",
-              rowPad,
-              palette && "border-b"
-            )}
-            style={palette ? { borderColor: palette.divider } : undefined}
-          >
-            <div className="min-w-0 flex-1">
+          {hasKitItems ? (
+            // Renderiza cada item cotado pela IA
+            kitItems.map((item, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  "flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-6",
+                  rowPad,
+                  palette && idx < kitItems.length - 1 && "border-b"
+                )}
+                style={palette ? { borderColor: palette.divider } : undefined}
+              >
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={cn(
+                      "text-sm font-medium leading-snug",
+                      !palette && "text-[var(--color-foreground)]"
+                    )}
+                  >
+                    {item.label}
+                  </p>
+                  {item.description && (
+                    <p
+                      className={cn(
+                        "mt-0.5 text-xs leading-relaxed",
+                        !palette && "text-[var(--color-muted-foreground)]"
+                      )}
+                      style={palette ? { color: palette.muted } : undefined}
+                    >
+                      {item.description}
+                    </p>
+                  )}
+                </div>
+                {item.price && (
+                  <p
+                    className={cn(
+                      "shrink-0 text-sm font-semibold tabular-nums sm:pt-0.5 sm:text-right",
+                      !palette && "text-[var(--color-foreground)]"
+                    )}
+                  >
+                    {item.price}
+                  </p>
+                )}
+              </div>
+            ))
+          ) : (
+            // Fallback genérico quando não há itens da IA
+            <div
+              className={cn(
+                "flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-6",
+                rowPad,
+                palette && "border-b"
+              )}
+              style={palette ? { borderColor: palette.divider } : undefined}
+            >
+              <div className="min-w-0 flex-1">
+                <p
+                  className={cn(
+                    "text-base font-semibold leading-snug",
+                    !palette && "text-[var(--color-foreground)]"
+                  )}
+                >
+                  {BASE_LINE_LABEL}
+                </p>
+                <p
+                  className={cn(
+                    "mt-1 max-w-xl text-sm leading-relaxed",
+                    !palette && "text-[var(--color-muted-foreground)]"
+                  )}
+                  style={palette ? { color: palette.muted } : undefined}
+                >
+                  {BASE_LINE_DESCRIPTION}
+                </p>
+              </div>
               <p
                 className={cn(
-                  "text-base font-semibold leading-snug",
+                  "shrink-0 text-base font-semibold tabular-nums sm:pt-0.5 sm:text-lg sm:text-right",
                   !palette && "text-[var(--color-foreground)]"
                 )}
               >
-                {BASE_LINE_LABEL}
-              </p>
-              <p
-                className={cn(
-                  "mt-1 max-w-xl text-sm leading-relaxed",
-                  !palette && "text-[var(--color-muted-foreground)]"
-                )}
-                style={palette ? { color: palette.muted } : undefined}
-              >
-                {BASE_LINE_DESCRIPTION}
+                {baseDisplay}
               </p>
             </div>
-            <p
-              className={cn(
-                "shrink-0 text-base font-semibold tabular-nums sm:pt-0.5 sm:text-lg sm:text-right",
-                !palette && "text-[var(--color-foreground)]"
-              )}
-            >
-              {baseDisplay}
-            </p>
-          </div>
+          )}
 
           {effectiveShowDiscount ? (
             <div
