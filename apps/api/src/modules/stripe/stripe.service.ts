@@ -53,7 +53,7 @@ export class StripeService {
     }
   }
 
-  async createCheckoutSession(planId: string, tenantId: string) {
+  async createCheckoutSession(planId: string, tenantId: string, returnUrl?: string) {
     let plan = await this.prisma.plan.findUnique({
       where: { id: planId },
     });
@@ -124,8 +124,9 @@ export class StripeService {
       }
     }
 
-    // Use environment variable for the web URL, falling back to localhost for dev
-    const webUrl = this.configService.get<string>("NEXT_PUBLIC_APP_URL") || "http://localhost:3000";
+    // Use environment variable for the web URL, or use passed returnUrl / origin
+    const webUrl =
+      returnUrl || this.configService.get<string>("NEXT_PUBLIC_APP_URL") || "http://localhost:3000";
 
     const session = await this.stripe.checkout.sessions.create({
       customer: stripeCustomerId,
@@ -138,7 +139,7 @@ export class StripeService {
       ],
       mode: "subscription",
       success_url: `${webUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${webUrl}/pipeline`, // Redirect back to pipeline or wherever the payment was initiated
+      cancel_url: `${webUrl}/gestao/meus-planos`,
       client_reference_id: tenantId,
       metadata: {
         tenantId,
@@ -147,6 +148,89 @@ export class StripeService {
     });
 
     return session;
+  }
+
+  async verifySession(sessionId: string) {
+    try {
+      const session = await this.stripe.checkout.sessions.retrieve(sessionId);
+      if (session.payment_status === "paid" || session.status === "complete") {
+        await this.handleCheckoutSessionCompleted(session);
+        const tenantId = session.client_reference_id || session.metadata?.["tenantId"];
+        const subscription = tenantId
+          ? await this.prisma.subscription.findUnique({
+              where: { tenantId },
+              include: { plan: true },
+            })
+          : null;
+        return { success: true, session, subscription };
+      }
+      return { success: false, status: session.status, paymentStatus: session.payment_status };
+    } catch (error) {
+      this.logger.error(`Error verifying checkout session ${sessionId}: ${error}`);
+      throw error;
+    }
+  }
+
+  async getSubscriptionByTenant(tenantId: string) {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { tenantId },
+      include: { plan: true },
+    });
+    return subscription;
+  }
+
+  async createPortalSession(tenantId: string, returnUrl?: string) {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { tenantId },
+    });
+
+    if (!subscription?.stripeCustomerId) {
+      throw new Error("Cliente Stripe não encontrado para esta organização.");
+    }
+
+    const defaultReturnUrl =
+      returnUrl || this.configService.get<string>("NEXT_PUBLIC_APP_URL") || "http://localhost:3000";
+
+    const portalSession = await this.stripe.billingPortal.sessions.create({
+      customer: subscription.stripeCustomerId,
+      return_url: `${defaultReturnUrl}/gestao/meus-planos`,
+    });
+
+    return { url: portalSession.url };
+  }
+
+  async cancelSubscription(tenantId: string) {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { tenantId },
+    });
+
+    if (!subscription) {
+      throw new Error("Assinatura não encontrada.");
+    }
+
+    if (subscription.stripeSubscriptionId) {
+      try {
+        await this.stripe.subscriptions.cancel(subscription.stripeSubscriptionId);
+      } catch (stripeErr) {
+        this.logger.warn(`Stripe cancel error (might already be cancelled): ${stripeErr}`);
+      }
+    }
+
+    const updated = await this.prisma.subscription.update({
+      where: { tenantId },
+      data: {
+        status: "canceled",
+      },
+    });
+
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        subscriptionPlan: null,
+      },
+    });
+
+    return { success: true, subscription: updated };
   }
 
   async handleWebhook(signature: string, payload: Buffer) {

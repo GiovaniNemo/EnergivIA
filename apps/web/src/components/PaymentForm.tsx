@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { useOrganization } from "@/components/providers/organization-provider";
 
-export default function PaymentForm({ planId, planName }: { planId: string; planName?: string }) {
+interface PaymentFormProps {
+  planId: string;
+  planName?: string;
+  buttonText?: string;
+  className?: string;
+}
+
+export default function PaymentForm({ planId, planName, buttonText, className }: PaymentFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { currentOrganization } = useOrganization();
@@ -20,12 +27,15 @@ export default function PaymentForm({ planId, planName }: { planId: string; plan
     }
 
     try {
+      const returnUrl = typeof window !== "undefined" ? window.location.origin : undefined;
+
       const response = await fetch("/api/proxy/stripe/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           planId,
-          tenantId: currentOrganization.id, // ID da organização atual
+          tenantId: currentOrganization.id,
+          returnUrl,
         }),
       });
 
@@ -38,7 +48,7 @@ export default function PaymentForm({ planId, planName }: { planId: string; plan
 
       // Redireciona o usuário para a página de Checkout segura do Stripe
       if (url) {
-        window.open(url, "_blank");
+        window.location.href = url;
       } else {
         throw new Error("URL de checkout não retornada pelo servidor.");
       }
@@ -51,16 +61,19 @@ export default function PaymentForm({ planId, planName }: { planId: string; plan
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 w-full mt-4">
+    <form onSubmit={handleSubmit} className="space-y-3 w-full">
       {error && <p className="text-red-500 text-sm text-center font-medium">{error}</p>}
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-[var(--color-primary)] text-[var(--color-primary-foreground)] py-3 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+        className={
+          className ||
+          "w-full bg-[var(--color-primary)] text-[var(--color-primary-foreground)] py-3 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+        }
       >
-        {loading ? "Iniciando Checkout..." : `Assinar Plano ${planName || ""}`.trim()}
+        {loading ? "Iniciando Checkout..." : buttonText || `Assinar Plano ${planName || ""}`.trim()}
       </button>
-      <p className="text-xs text-center text-[var(--color-muted-foreground)] mt-4 flex items-center justify-center gap-1">
+      <p className="text-xs text-center text-[var(--color-muted-foreground)] flex items-center justify-center gap-1">
         <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
           <path
             fillRule="evenodd"
