@@ -279,49 +279,104 @@ export class StripeService {
 
   private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
     const tenantId = session.client_reference_id || session.metadata?.["tenantId"];
-    const planId = session.metadata?.["planId"];
-    const stripeSubscriptionId = session.subscription as string;
+    const rawPlanId = session.metadata?.["planId"];
+    const stripeSubscriptionId =
+      typeof session.subscription === "string"
+        ? session.subscription
+        : (session.subscription as Stripe.Subscription | null)?.id;
+    const stripeCustomerId =
+      typeof session.customer === "string"
+        ? session.customer
+        : (session.customer as Stripe.Customer | null)?.id;
 
-    if (!tenantId || !planId || !stripeSubscriptionId) {
-      this.logger.warn("Missing required metadata in checkout session.");
+    if (!tenantId) {
+      this.logger.warn("Missing tenantId in checkout session.");
       return;
     }
 
-    const stripeSubscription = await this.stripe.subscriptions.retrieve(stripeSubscriptionId);
+    // Resolve valid plan in database
+    let plan = rawPlanId ? await this.prisma.plan.findUnique({ where: { id: rawPlanId } }) : null;
+
+    if (!plan && rawPlanId) {
+      plan = await this.prisma.plan.findFirst({
+        where: {
+          OR: [{ stripeId: rawPlanId }, { name: rawPlanId }],
+        },
+      });
+    }
+
+    if (!plan) {
+      plan = await this.prisma.plan.findFirst({
+        where: { active: true },
+        orderBy: { price: "asc" },
+      });
+    }
+
+    if (!plan) {
+      this.logger.error("No valid plan found to link subscription to.");
+      return;
+    }
+
+    let status = "active";
+    let currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    if (stripeSubscriptionId) {
+      try {
+        const stripeSub = await this.stripe.subscriptions.retrieve(stripeSubscriptionId);
+        if (stripeSub?.status) {
+          status = stripeSub.status;
+        }
+        const rawEnd = (stripeSub as unknown as Record<string, unknown>)?.["current_period_end"];
+        if (typeof rawEnd === "number" && !isNaN(rawEnd) && rawEnd > 0) {
+          currentPeriodEnd = new Date(rawEnd * 1000);
+        }
+      } catch (err) {
+        this.logger.warn(`Could not retrieve Stripe subscription ${stripeSubscriptionId}: ${err}`);
+      }
+    }
 
     await this.prisma.subscription.upsert({
       where: { tenantId },
       update: {
-        planId,
-        stripeSubscriptionId,
-        status: stripeSubscription.status,
-        // @ts-expect-error property does exist on Subscription in runtime
-        currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
+        planId: plan.id,
+        stripeSubscriptionId: stripeSubscriptionId || undefined,
+        stripeCustomerId: stripeCustomerId || undefined,
+        status,
+        currentPeriodEnd,
       },
       create: {
         tenantId,
-        planId,
-        stripeCustomerId: session.customer as string,
-        stripeSubscriptionId,
-        status: stripeSubscription.status,
-        // @ts-expect-error property does exist on Subscription in runtime
-        currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
+        planId: plan.id,
+        stripeCustomerId: stripeCustomerId || undefined,
+        stripeSubscriptionId: stripeSubscriptionId || undefined,
+        status,
+        currentPeriodEnd,
       },
     });
 
-    // Option: also update the Tenant record to reflect active plan
     await this.prisma.tenant.update({
       where: { id: tenantId },
-      data: { subscriptionPlan: planId },
+      data: { subscriptionPlan: plan.id },
     });
+
+    this.logger.log(
+      `Subscription activated successfully for tenant ${tenantId}, plan ${plan.name} (${plan.id})`
+    );
   }
 
   private async handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-    const stripeCustomerId = subscription.customer as string;
+    const stripeCustomerId =
+      typeof subscription.customer === "string"
+        ? subscription.customer
+        : (subscription.customer as Stripe.Customer | null)?.id;
 
-    // Find the subscription by customer ID
     const dbSubscription = await this.prisma.subscription.findFirst({
-      where: { stripeCustomerId },
+      where: {
+        OR: [
+          { stripeSubscriptionId: subscription.id },
+          ...(stripeCustomerId ? [{ stripeCustomerId }] : []),
+        ],
+      },
     });
 
     if (!dbSubscription) {
@@ -329,22 +384,35 @@ export class StripeService {
       return;
     }
 
+    let currentPeriodEnd = dbSubscription.currentPeriodEnd;
+    const rawEnd = (subscription as unknown as Record<string, unknown>)?.["current_period_end"];
+    if (typeof rawEnd === "number" && !isNaN(rawEnd) && rawEnd > 0) {
+      currentPeriodEnd = new Date(rawEnd * 1000);
+    }
+
     await this.prisma.subscription.update({
       where: { id: dbSubscription.id },
       data: {
         status: subscription.status,
         stripeSubscriptionId: subscription.id,
-        // @ts-expect-error property does exist on Subscription in runtime
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        currentPeriodEnd,
       },
     });
   }
 
   private async handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-    const stripeCustomerId = subscription.customer as string;
+    const stripeCustomerId =
+      typeof subscription.customer === "string"
+        ? subscription.customer
+        : (subscription.customer as Stripe.Customer | null)?.id;
 
     const dbSubscription = await this.prisma.subscription.findFirst({
-      where: { stripeCustomerId },
+      where: {
+        OR: [
+          { stripeSubscriptionId: subscription.id },
+          ...(stripeCustomerId ? [{ stripeCustomerId }] : []),
+        ],
+      },
     });
 
     if (!dbSubscription) return;
@@ -353,6 +421,13 @@ export class StripeService {
       where: { id: dbSubscription.id },
       data: {
         status: "canceled",
+      },
+    });
+
+    await this.prisma.tenant.update({
+      where: { id: dbSubscription.tenantId },
+      data: {
+        subscriptionPlan: null,
       },
     });
   }
