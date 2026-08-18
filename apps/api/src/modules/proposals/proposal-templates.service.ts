@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, OnModuleInit } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { Prisma } from "@prisma/client";
 import {
@@ -18,12 +18,32 @@ function isTemplateSectionKey(value: string): value is ProposalTemplateSectionKe
 }
 
 @Injectable()
-export class ProposalTemplatesService {
+export class ProposalTemplatesService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
+
+  async onModuleInit() {
+    try {
+      await this.prisma.proposalTemplate.updateMany({
+        where: {
+          status: "ARCHIVED",
+          deletedAt: null,
+        },
+        data: {
+          deletedAt: new Date(),
+        },
+      });
+    } catch {
+      // ignore
+    }
+  }
 
   async list(tenantId: string) {
     return this.prisma.proposalTemplate.findMany({
-      where: { tenantId, ...soft },
+      where: {
+        tenantId,
+        status: { not: "ARCHIVED" },
+        deletedAt: null,
+      },
       orderBy: [{ isDefault: "desc" }, { updatedAt: "desc" }],
     });
   }
@@ -164,7 +184,7 @@ export class ProposalTemplatesService {
     await this.findOne(tenantId, id);
     return this.prisma.proposalTemplate.update({
       where: { id },
-      data: { status: "ARCHIVED" },
+      data: { status: "ARCHIVED", deletedAt: new Date() },
     });
   }
 

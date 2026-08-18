@@ -987,8 +987,11 @@ export async function POST(req: Request) {
               });
               if (!res.ok) throw new Error("Falha ao buscar templates");
               const templates = await res.json();
+              const activeTemplates = (Array.isArray(templates) ? templates : []).filter(
+                (t: any) => t && t.status !== "ARCHIVED" && !t.deletedAt
+              );
 
-              if (!templates || templates.length === 0) {
+              if (activeTemplates.length === 0) {
                 return {
                   success: true,
                   message:
@@ -996,7 +999,7 @@ export async function POST(req: Request) {
                 };
               }
 
-              const list = templates
+              const list = activeTemplates
                 .map((t: any, i: number) => `${i + 1} - ${t.name} (ID: ${t.id})`)
                 .join("\n");
 
