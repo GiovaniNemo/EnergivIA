@@ -146,23 +146,29 @@ export function PricingSectionPreview({
         )}
         style={cardStyle}
       >
-        <div className={palette ? "" : "divide-y divide-[var(--color-border)]"}>
+        <div
+          className={cn(
+            "divide-y",
+            palette ? "divide-[var(--palette-divider)]" : "divide-[var(--color-border)]"
+          )}
+          style={
+            palette ? ({ "--palette-divider": palette.divider } as React.CSSProperties) : undefined
+          }
+        >
           {hasKitItems ? (
             // Renderiza cada item cotado pela IA
             kitItems.map((item, idx) => (
               <div
                 key={idx}
                 className={cn(
-                  "flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-6",
-                  rowPad,
-                  palette && idx < kitItems.length - 1 && "border-b"
+                  "flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-6",
+                  rowPad
                 )}
-                style={palette ? { borderColor: palette.divider } : undefined}
               >
                 <div className="min-w-0 flex-1">
                   <p
                     className={cn(
-                      "text-sm font-medium leading-snug",
+                      "text-sm font-semibold uppercase leading-snug tracking-wide",
                       !palette && "text-[var(--color-foreground)]"
                     )}
                   >
@@ -263,7 +269,7 @@ export function PricingSectionPreview({
             palette
               ? {
                   backgroundColor: palette.footerBg,
-                  borderTopColor: palette.border,
+                  borderTopColor: palette.accent,
                   color: palette.fg,
                 }
               : undefined
