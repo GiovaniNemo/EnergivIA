@@ -7,7 +7,7 @@ interface Plan {
   id: string;
   name: string;
   price: number;
-  features: string;
+  features?: string | string[];
   active?: boolean;
 }
 
@@ -36,18 +36,25 @@ export default function AdminPlanosPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const featuresList = form.features
+        ? form.features
+            .split(",")
+            .map((f) => f.trim())
+            .filter(Boolean)
+        : [];
+
       const response = await fetch("/api/proxy/plans", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: `plan_${Date.now()}`,
           name: form.name,
           price: Number(form.price),
+          features: featuresList,
         }),
       });
       if (response.ok) {
         const newPlan = await response.json();
-        setPlans([...plans, newPlan]);
+        setPlans((prev) => [...prev, newPlan]);
         setForm({ name: "", price: "", features: "" });
       }
     } catch (error) {
@@ -58,7 +65,7 @@ export default function AdminPlanosPage() {
   const handleDeactivate = async (id: string) => {
     try {
       await fetch(`/api/proxy/plans/${id}`, { method: "DELETE" });
-      setPlans(plans.map((p) => (p.id === id ? { ...p, active: false } : p)));
+      setPlans(plans.filter((p) => p.id !== id));
     } catch (error) {
       console.error("Erro ao desativar plano", error);
     }
@@ -163,7 +170,9 @@ export default function AdminPlanosPage() {
                     R$ {Number(plan.price ?? 0).toFixed(2)}
                   </td>
                   <td className="px-6 py-4 text-sm text-[var(--color-muted-foreground)]">
-                    {plan.features || "---"}
+                    {Array.isArray(plan.features)
+                      ? plan.features.join(", ")
+                      : plan.features || "---"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
