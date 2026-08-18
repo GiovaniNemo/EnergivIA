@@ -1394,14 +1394,31 @@ export async function POST(req: Request) {
                 };
               }
               const propData = await propRes.json();
+              const originHeader = req.headers.get("origin") || req.headers.get("referer");
+              let baseUrlForLinks = process.env["NEXT_PUBLIC_APP_URL"];
+              if (!baseUrlForLinks && originHeader) {
+                try {
+                  const parsed = new URL(originHeader);
+                  baseUrlForLinks = parsed.origin;
+                } catch {}
+              }
+              if (!baseUrlForLinks) {
+                const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+                const proto = req.headers.get("x-forwarded-proto") || "http";
+                if (host) {
+                  baseUrlForLinks = `${proto}://${host}`;
+                }
+              }
+              if (!baseUrlForLinks) {
+                baseUrlForLinks = "https://app.energivia.com.br";
+              }
 
-              const baseUrlForLinks =
-                process.env["NEXT_PUBLIC_APP_URL"] || "https://app.energivia.com.br";
+              const proposalUrl = `${baseUrlForLinks}/proposta/${propData.id}`;
 
               return {
                 success: true,
-                urlDaProposta: `${baseUrlForLinks}/proposta/${propData.id}`,
-                message: `SUCESSO! Mostre ao usuário o seguinte link clicável para a proposta: ${baseUrlForLinks}/proposta/${propData.id}`,
+                urlDaProposta: proposalUrl,
+                message: `SUCESSO! Link real da proposta gerada: ${proposalUrl}`,
               };
             } catch (e: any) {
               return { success: false, message: `Erro ao gerar proposta: ${e.message}` };
