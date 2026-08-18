@@ -495,7 +495,11 @@ function MeusPlanosContent() {
                         <PaymentWrapper
                           planId={plan.id}
                           planName={plan.name}
-                          buttonText={`Fazer Upgrade para ${plan.name}`}
+                          buttonText={
+                            plan.name.toLowerCase().startsWith("plano")
+                              ? `Fazer Upgrade para ${plan.name}`
+                              : `Fazer Upgrade para Plano ${plan.name}`
+                          }
                           className="w-full bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-slate-950 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-yellow-500/20 hover:scale-[1.02]"
                         />
                       ) : (
@@ -504,8 +508,12 @@ function MeusPlanosContent() {
                           planName={plan.name}
                           buttonText={
                             subscription
-                              ? `Trocar para Plano ${plan.name}`
-                              : `Assinar Plano ${plan.name}`
+                              ? plan.name.toLowerCase().startsWith("plano")
+                                ? `Trocar para ${plan.name}`
+                                : `Trocar para Plano ${plan.name}`
+                              : plan.name.toLowerCase().startsWith("plano")
+                                ? `Assinar ${plan.name}`
+                                : `Assinar Plano ${plan.name}`
                           }
                           className="w-full bg-[var(--color-primary)] text-white py-3.5 rounded-xl font-bold hover:opacity-90 transition-all shadow-md hover:scale-[1.02]"
                         />
