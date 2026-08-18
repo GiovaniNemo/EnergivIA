@@ -1,8 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import { Bot, X, Send, ImageIcon, ExternalLink, Copy, Check } from "lucide-react";
+import {
+  Bot,
+  X,
+  Send,
+  ImageIcon,
+  ExternalLink,
+  Copy,
+  Check,
+  RotateCcw,
+  FileText,
+  Zap,
+  HelpCircle,
+  Sparkles,
+} from "lucide-react";
 import clsx from "clsx";
 
 type Message = {
@@ -382,38 +394,127 @@ export function AIAssistantWidget() {
     return () => window.removeEventListener("toggle-ai-chat", handleToggle);
   }, []);
 
+  const handleNewChat = () => {
+    setMessages([]);
+    setInput("");
+    setSelectedImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <div className="fixed flex flex-col items-end bottom-6 right-6 z-[9999]">
       {/* Chat Window */}
       {isOpen && (
         <div className="flex flex-col bg-gray-950 border border-gray-800 shadow-[0_0_40px_rgba(16,185,129,0.15)] rounded-2xl w-[380px] h-[600px] max-h-[80vh] max-w-[calc(100vw-32px)] mb-4 overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
           {/* Header */}
-          <div className="bg-gray-900 border-b border-gray-800 p-4 flex items-center justify-between shrink-0">
+          <div className="bg-gray-900 border-b border-gray-800 p-3.5 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20">
+              <div className="w-9 h-9 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20">
                 <Bot className="w-5 h-5 text-emerald-400" />
               </div>
               <div>
-                <h3 className="text-white font-semibold text-sm">EnergivIA</h3>
-                <p className="text-emerald-400 text-xs">Assistente Inteligente</p>
+                <h3 className="text-white font-semibold text-sm leading-tight">EnergivIA</h3>
+                <p className="text-emerald-400 text-[11px]">Assistente Inteligente</p>
               </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-gray-800"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleNewChat}
+                  className="text-gray-400 hover:text-emerald-400 transition-colors px-2 py-1 rounded-lg hover:bg-gray-800 flex items-center gap-1.5 text-xs font-medium"
+                  title="Iniciar nova conversa / Limpar chat"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span className="text-[11px]">Novo</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-full hover:bg-gray-800"
+                title="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center space-y-3 opacity-60">
-                <Bot className="w-12 h-12 text-gray-500" />
-                <p className="text-sm text-gray-400 whitespace-pre-line text-left">
-                  {`Olá! Sou a assistente da EnergivIA. Como posso te ajudar hoje? (Digite o número da opção)\n\n1 - Gerar Orçamento / Ler Fatura\n2 - Dúvidas sobre o Sistema`}
-                </p>
+              <div className="flex flex-col items-center justify-center h-full px-2 py-4 space-y-4 animate-in fade-in duration-300">
+                <div className="w-12 h-12 bg-gradient-to-tr from-emerald-500/20 to-teal-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.12)]">
+                  <Sparkles className="w-6 h-6 text-emerald-400" />
+                </div>
+                <div className="text-center space-y-1">
+                  <h4 className="text-white font-medium text-sm">Assistente Solar EnergivIA</h4>
+                  <p className="text-xs text-gray-400 max-w-[260px] leading-relaxed">
+                    Envie uma fatura para extrair o consumo e orçar nos distribuidores em segundos.
+                  </p>
+                </div>
+
+                <div className="w-full space-y-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-gray-900/90 hover:bg-gray-800 border border-gray-800 hover:border-emerald-500/40 text-left transition-all group active:scale-[0.98]"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/20 shrink-0 transition-colors">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-200 group-hover:text-emerald-300 transition-colors">
+                        Enviar fatura de energia
+                      </p>
+                      <p className="text-[10px] text-gray-400 truncate">
+                        Anexar PDF ou foto para ler consumo
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInput("Quero dimensionar um sistema para um consumo de 500 kWh/mês");
+                    }}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-gray-900/90 hover:bg-gray-800 border border-gray-800 hover:border-emerald-500/40 text-left transition-all group active:scale-[0.98]"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/20 shrink-0 transition-colors">
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-200 group-hover:text-emerald-300 transition-colors">
+                        Dimensionar por consumo (kWh)
+                      </p>
+                      <p className="text-[10px] text-gray-400 truncate">
+                        Digitar consumo mensal estimado
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInput("Como funciona a compensação de créditos de energia solar?");
+                    }}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-gray-900/90 hover:bg-gray-800 border border-gray-800 hover:border-emerald-500/40 text-left transition-all group active:scale-[0.98]"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/20 shrink-0 transition-colors">
+                      <HelpCircle className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-200 group-hover:text-emerald-300 transition-colors">
+                        Dúvidas e regras solares
+                      </p>
+                      <p className="text-[10px] text-gray-400 truncate">
+                        Inversores, regras e tributação
+                      </p>
+                    </div>
+                  </button>
+                </div>
               </div>
             )}
 
