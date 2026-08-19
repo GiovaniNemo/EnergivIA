@@ -265,14 +265,18 @@ function processExtractedBillData(data: ExtractedBillData, rawText?: string): Bi
     validHistory.push(item);
   }
 
+  // Padronização Solar: Um ano tem 12 meses. Se a concessionária trouxer 13 meses
+  // (ex: AGO/26 até AGO/25), usamos os 12 meses mais recentes (excluindo o mês repetido do ano anterior)
+  const normalizedHistory = validHistory.length > 12 ? validHistory.slice(0, 12) : validHistory;
+
   const currentMonthKwh = parseBrazilianKwh(data.consumo_mes_atual_kwh);
 
   let totalSum = 0;
   let exactAverage = 0;
-  let monthCount = validHistory.length;
+  let monthCount = normalizedHistory.length;
 
   if (monthCount > 0) {
-    totalSum = validHistory.reduce((acc, curr) => acc + curr.consumo_kwh, 0);
+    totalSum = normalizedHistory.reduce((acc, curr) => acc + curr.consumo_kwh, 0);
     exactAverage = Math.round(totalSum / monthCount);
   } else if (currentMonthKwh > 0) {
     exactAverage = currentMonthKwh;
@@ -286,8 +290,8 @@ function processExtractedBillData(data: ExtractedBillData, rawText?: string): Bi
   }
 
   const historyLines =
-    validHistory.length > 0
-      ? validHistory
+    normalizedHistory.length > 0
+      ? normalizedHistory
           .map(
             (h, i) =>
               `  ${i + 1}. ${h.mes_ano}: ${h.consumo_kwh} kWh${h.dias ? ` (${h.dias} dias)` : ""}`
@@ -314,7 +318,7 @@ ${historyLines}
   return {
     data: {
       ...data,
-      historico_consumo: validHistory,
+      historico_consumo: normalizedHistory,
     },
     exactAverageKwh: exactAverage,
     totalSumKwh: totalSum,
