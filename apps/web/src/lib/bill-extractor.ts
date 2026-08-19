@@ -38,15 +38,21 @@ const BILL_EXTRACTION_SYSTEM_PROMPT = `Você é um motor especialista em visão 
 Sua missão é extrair com 100% DE PRECISÃO MATEMÁTICA todos os dados da conta de luz, com foco ABSOLUTO em extrair TODOS os meses reais da tabela de Histórico de Consumo/Faturamento.
 
 REGRAS DE LEITURA E PARSING CRÍTICAS:
-1. TABELA DE HISTÓRICO DE CONSUMO ("Histórico de Consumo", "CONSUMO / kWh", "HISTÓRICO DE CONSUMO / kWh", "Evolução do Consumo", "Demonstrativo"):
-   - Localize a tabela onde constam os meses de histórico faturados (geralmente entre 11 e 13 meses visíveis).
+1. TABELA DE HISTÓRICO DE CONSUMO ("CONSUMO / kWh", "HISTÓRICO DE CONSUMO", "Evolução do Consumo"):
+   - Localize a tabela onde constam os meses de histórico faturados (geralmente entre 11 e 13 meses).
    - Percorra TODAS as linhas da tabela de cima a baixo.
    - Para CADA linha que contiver dados impressos, extraia:
-     * 'mes_ano': Sigla do mês e ano (ex: "AGO/26", "JUL/26", "JAN/25", "DEZ/24", etc.).
-     * 'consumo_kwh': Valor numérico exato do consumo ativo faturado em kWh.
-   - ATENÇÃO A NÚMEROS COM PONTO DE MILHAR: "1.198" é 1198; "1.525" é 1525; "1.099" é 1099. Sempre converta para NÚMERO INTEIRO no JSON.
-   - Se a fatura tiver 12 ou 13 meses com valores impressos (como é o padrão da Enel, CPFL, Cemig), extraia TODOS os 12 ou 13 meses sem omitir nenhum!
-   - Se a instalação for recente e tiver apenas alguns meses preenchidos e os demais em branco (como algumas faturas novas da Copel), extraia apenas as linhas que tiverem números impressos.
+     * 'mes_ano': Sigla do mês e ano (ex: "AGO/26", "JUL/26", "JUN/26", "MAI/26", etc.).
+     * 'consumo_kwh': Valor numérico exato do consumo ativo faturado em kWh como NÚMERO INTEIRO.
+   
+   - ATENÇÃO CRÍTICA À FORMATAÇÃO DA ENEL E DISTRIBUIDORAS:
+     * Na Enel e diversas distribuidoras, os números na tabela de consumo aparecem formatados com ponto de milhar e 3 casas decimais (ex: "1.198,000", "1.525,000", "1.099,000", "965,000", "703,000").
+     * "1.198,000" significa 1198 kWh (NUNCA retorne 1 nem 1.198). Retorne 1198.
+     * "1.525,000" significa 1525 kWh. Retorne 1525.
+     * "965,000" significa 965 kWh. Retorne 965.
+     * "703,000" significa 703 kWh. Retorne 703.
+   
+   - Extraia TODOS os 12 ou 13 meses visíveis na tabela sem pular nenhum!
    - NUNCA confunda 'consumo_kwh' com:
      * Quantidade de dias de faturamento (ex: 28, 29, 30, 31, 33).
      * Média diária (ex: 12.5 kWh/dia).
@@ -57,11 +63,11 @@ REGRAS DE LEITURA E PARSING CRÍTICAS:
      * Valores de energia injetada / saldo GD.
 
 2. CONSUMO ATIVO E GERAÇÃO DISTRIBUÍDA (GD):
-   - Se a fatura tiver créditos solares / GD, utilize sempre o Consumo Ativo Total Faturado/Consumido da rede.
+   - Se a fatura tiver créditos solares / GD, utilize sempre o Consumo Ativo Total Faturado/Consumido da rede (coluna de consumo faturado da tabela de histórico).
 
 3. DADOS GERAIS:
    - distribuidora: Nome da concessionária identificada no cabeçalho ou logotipo (ex: Enel, Copel, CPFL, Cemig, Equatorial, Energisa, etc.).
-   - cidade: Cidade da unidade consumidora indicada no endereço.
+   - cidade: Cidade da unidade consumidora indicada no endereço (ex: SAO PAULO).
    - uf: Sigla do estado com 2 letras (ex: SP, PR, MG, RJ, BA, GO, etc.).
    - tipo_conexao: "Monofásico", "Bifásico" ou "Trifásico" (identifique no campo Tipo de Fornecimento / Ligação).
    - nome_cliente: Nome completo do titular da conta.
@@ -187,6 +193,36 @@ export async function extractEnergyBillFromPdfBuffer(
   return extractEnergyBillFromText(pdfText, apiKey);
 }
 
+function parseBrazilianKwh(raw: unknown): number {
+  if (typeof raw === "number") {
+    // Se o número for ex: 1.198 ou 1.525 vindo de JSON, converte para 1198 / 1525
+    if (raw > 0 && raw < 10 && raw % 1 !== 0) {
+      return Math.round(raw * 1000);
+    }
+    return Math.round(raw);
+  }
+  const s = String(raw || "").trim();
+  if (!s) return 0;
+  // Ex: "1.198,000" ou "1.198,00" -> 1198
+  if (s.includes(".") && s.includes(",")) {
+    const clean = s.replace(/\./g, "").replace(",", ".");
+    return Math.round(parseFloat(clean));
+  }
+  // Ex: "1.198" (com ponto de milhar brasileiro seguido de 3 dígitos) -> 1198
+  if (/^\d{1,3}\.\d{3}$/.test(s)) {
+    return parseInt(s.replace(".", ""), 10);
+  }
+  // Ex: "965,000" -> 965
+  if (/^\d+,\d+$/.test(s)) {
+    return Math.round(parseFloat(s.replace(",", ".")));
+  }
+  const num = parseFloat(s.replace(/[^0-9.]/g, ""));
+  if (num > 0 && num < 10 && num % 1 !== 0) {
+    return Math.round(num * 1000);
+  }
+  return isNaN(num) ? 0 : Math.round(num);
+}
+
 function processExtractedBillData(data: ExtractedBillData, rawText?: string): BillExtractionResult {
   const rawList = Array.isArray(data.historico_consumo) ? data.historico_consumo : [];
 
@@ -194,14 +230,12 @@ function processExtractedBillData(data: ExtractedBillData, rawText?: string): Bi
   for (const item of rawList) {
     if (!item) continue;
     const label = String(item.mes_ano || "").trim();
-    let val = Number(item.consumo_kwh);
-    if (!Number.isFinite(val) || isNaN(val)) {
-      const rawObj = item as Record<string, unknown>;
-      const parsedStr = String(rawObj["consumo"] || rawObj["kwh"] || "")
-        .replace(/[^0-9.,]/g, "")
-        .replace(",", ".");
-      val = parseFloat(parsedStr);
-    }
+    const rawVal =
+      item.consumo_kwh ??
+      (item as Record<string, unknown>)["consumo"] ??
+      (item as Record<string, unknown>)["kwh"];
+    const val = parseBrazilianKwh(rawVal);
+
     // Aceita apenas valores numéricos positivos
     if (Number.isFinite(val) && val > 0 && val < 500000) {
       candidates.push({
@@ -230,6 +264,8 @@ function processExtractedBillData(data: ExtractedBillData, rawText?: string): Bi
     validHistory.push(item);
   }
 
+  const currentMonthKwh = parseBrazilianKwh(data.consumo_mes_atual_kwh);
+
   let totalSum = 0;
   let exactAverage = 0;
   let monthCount = validHistory.length;
@@ -237,8 +273,8 @@ function processExtractedBillData(data: ExtractedBillData, rawText?: string): Bi
   if (monthCount > 0) {
     totalSum = validHistory.reduce((acc, curr) => acc + curr.consumo_kwh, 0);
     exactAverage = Math.round(totalSum / monthCount);
-  } else if (data.consumo_mes_atual_kwh && Number(data.consumo_mes_atual_kwh) > 0) {
-    exactAverage = Math.round(Number(data.consumo_mes_atual_kwh));
+  } else if (currentMonthKwh > 0) {
+    exactAverage = currentMonthKwh;
     totalSum = exactAverage;
     monthCount = 1;
   } else {
