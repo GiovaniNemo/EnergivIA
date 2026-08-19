@@ -35,24 +35,25 @@ export interface BillExtractionResult {
 
 const BILL_EXTRACTION_SYSTEM_PROMPT = `Você é um motor especialista em visão computacional forense e extração de dados estruturados de faturas de energia elétrica brasileiras (Enel, CPFL, Cemig, Copel, Equatorial, Energisa, Neoenergia, Light, EDP, RGE, Celesc, etc.).
 
-Sua missão é extrair com 100% DE PRECISÃO MATEMÁTICA todos os dados da conta de luz, com foco ABSOLUTO em extrair TODOS os meses reais da tabela de Histórico de Consumo/Faturamento.
+Sua missão é extrair com 100% DE PRECISÃO MATEMÁTICA E VISUAL todos os dados da conta de luz, com foco ABSOLUTO em ler sem erros cada número da tabela de Histórico de Consumo/Faturamento.
 
 REGRAS DE LEITURA E PARSING CRÍTICAS:
 1. TABELA DE HISTÓRICO DE CONSUMO ("CONSUMO / kWh", "HISTÓRICO DE CONSUMO", "Evolução do Consumo"):
-   - Localize a tabela onde constam os meses de histórico faturados (geralmente entre 11 e 13 meses).
-   - Percorra TODAS as linhas da tabela de cima a baixo.
-   - Para CADA linha que contiver dados impressos, extraia:
-     * 'mes_ano': Sigla do mês e ano (ex: "AGO/26", "JUL/26", "JUN/26", "MAI/26", etc.).
-     * 'consumo_kwh': Valor numérico exato do consumo ativo faturado em kWh como NÚMERO INTEIRO.
+   - Localize a tabela onde constam os meses de histórico faturados (geralmente entre 11 e 13 meses visíveis).
+   - LEITURA SEQUENCIAL COMPLETA: Percorra CADA UMA das linhas da tabela, da primeira à última linha impressa, sem pular nenhuma linha.
+   - Para CADA linha:
+     * Identifique o mês/ano (ex: "AGO/26", "JUL/26", "JUN/26", "MAI/26", "ABR/26", "MAR/26", "FEV/26", "JAN/26", "DEZ/25", "NOV/25", "OUT/25", "SET/25", "AGO/25").
+     * Identifique com máxima precisão o valor numérico na coluna de consumo faturado em kWh.
    
    - ATENÇÃO CRÍTICA À FORMATAÇÃO DA ENEL E DISTRIBUIDORAS:
-     * Na Enel e diversas distribuidoras, os números na tabela de consumo aparecem formatados com ponto de milhar e 3 casas decimais (ex: "1.198,000", "1.525,000", "1.099,000", "965,000", "703,000").
-     * "1.198,000" significa 1198 kWh (NUNCA retorne 1 nem 1.198). Retorne 1198.
+     * Na Enel e diversas distribuidoras, os números na tabela de consumo aparecem formatados com ponto de milhar e 3 casas decimais (ex: "1.198,000", "1.525,000", "1.099,000", "965,000", "967,000", "939,000", "703,000", "698,000", "793,000", "961,000", "699,000", "807,000", "794,000").
+     * "1.198,000" significa 1198 kWh. Retorne 1198.
      * "1.525,000" significa 1525 kWh. Retorne 1525.
+     * "1.099,000" significa 1099 kWh. Retorne 1099.
      * "965,000" significa 965 kWh. Retorne 965.
      * "703,000" significa 703 kWh. Retorne 703.
    
-   - Extraia TODOS os 12 ou 13 meses visíveis na tabela sem pular nenhum!
+   - Extraia TODOS os 12 ou 13 meses visíveis na tabela sem omitir as linhas inferiores!
    - NUNCA confunda 'consumo_kwh' com:
      * Quantidade de dias de faturamento (ex: 28, 29, 30, 31, 33).
      * Média diária (ex: 12.5 kWh/dia).
