@@ -106,6 +106,7 @@ const ROOF_TYPE_SELECT_OPTIONS: { value: RoofType; label: string }[] = [
   { value: "fibrometal", label: "Fibrometal (autobrocante)" },
   { value: "ground", label: "Solo" },
   { value: "laje", label: "Laje" },
+  { value: "none", label: "Sem estrutura" },
 ];
 
 const MODULE_BRAND_SELECT_OPTIONS: { value: string; label: string }[] = [

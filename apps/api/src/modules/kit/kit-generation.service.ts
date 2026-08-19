@@ -440,8 +440,13 @@ export class KitGenerationService {
       : sizingResult.module_quantity;
     const dcCableMeters = stringCount * 20 * 2;
 
+    const isNoStructure =
+      roofType === "none" || roofType === "sem_estrutura" || roofType === "sem estrutura";
+
     const [structureKits, dcCables, connector] = await Promise.all([
-      this.productRepo.findStructureKitsByRoofType(roofType, source),
+      isNoStructure
+        ? Promise.resolve([])
+        : this.productRepo.findStructureKitsByRoofType(roofType, source),
       this.productRepo.findDcCablesBySection(DC_CABLE_SECTION_MM2, source),
       this.productRepo.findConnectorByType("mc4", source),
     ]);
@@ -454,7 +459,9 @@ export class KitGenerationService {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const modulePower = (sizingResult.module.specs as any).power_w || 0;
     const profileLength = modulePower >= 700 ? 2.75 : 2.4;
-    const profile = await this.productRepo.findProfile(profileLength, roofType, source);
+    const profile = isNoStructure
+      ? null
+      : await this.productRepo.findProfile(profileLength, roofType, source);
 
     // We no longer fail the kit if structures or cables are missing.
     // They will just be omitted from the kit if they don't exist in stock.

@@ -19,7 +19,8 @@ export type QuickEconomiaRoofType =
   | "fibromadeira"
   | "fibrometal"
   | "ground"
-  | "laje";
+  | "laje"
+  | "none";
 
 export const ROOF_SOLAR_FACTOR: Record<QuickEconomiaRoofType, number> = {
   ceramic: 1,
@@ -28,6 +29,7 @@ export const ROOF_SOLAR_FACTOR: Record<QuickEconomiaRoofType, number> = {
   fibrometal: 0.96,
   ground: 1,
   laje: 1,
+  none: 1,
 };
 
 export interface QuickEconomiaSimulationInput {
