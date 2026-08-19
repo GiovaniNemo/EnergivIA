@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import { useOrganization } from "@/components/providers/organization-provider";
 import {
   addWhatsappInboundPhone,
+  generateWhatsappPairingCode,
   listWhatsappInboundPhones,
   removeWhatsappInboundPhone,
   updateOrganization,
   uploadOrganizationLogo,
   type WhatsappInboundPhoneRow,
+  type WhatsappPairingCodeResponse,
 } from "@/lib/organizations-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,9 +35,48 @@ export default function OrganizationSettingsPage() {
   const [newInboundPhone, setNewInboundPhone] = useState("");
   const [newInboundLabel, setNewInboundLabel] = useState("");
   const [inboundSaving, setInboundSaving] = useState(false);
+  const [pairingInfo, setPairingInfo] = useState<WhatsappPairingCodeResponse | null>(null);
+  const [pairingLoading, setPairingLoading] = useState(false);
 
   const canEditWhatsappPhones =
-    currentOrganization?.role === "OWNER" || currentOrganization?.role === "ADMIN";
+    currentOrganization?.role === "OWNER" ||
+    currentOrganization?.role === "ADMIN" ||
+    currentOrganization?.role === "SALES" ||
+    currentOrganization?.role === "ENGINEER";
+
+  const handleGeneratePairingCode = async () => {
+    if (!currentOrganizationId) return;
+    setPairingLoading(true);
+    setInboundPhonesError(null);
+    try {
+      const res = await generateWhatsappPairingCode(currentOrganizationId);
+      setPairingInfo(res);
+    } catch (err) {
+      setInboundPhonesError(
+        err instanceof Error ? err.message : "Falha ao gerar código de pareamento."
+      );
+    } finally {
+      setPairingLoading(false);
+    }
+  };
+
+  // Polling automático enquanto o código de pareamento estiver na tela
+  useEffect(() => {
+    if (!pairingInfo || !currentOrganizationId) return;
+    const initialCount = inboundPhones.length;
+    const interval = setInterval(async () => {
+      try {
+        const rows = await listWhatsappInboundPhones(currentOrganizationId);
+        setInboundPhones(rows);
+        if (rows.length > initialCount) {
+          setPairingInfo(null); // Pareamento concluído com sucesso!
+        }
+      } catch {
+        // Ignora erro momentâneo de polling
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [pairingInfo, currentOrganizationId, inboundPhones.length]);
 
   useEffect(() => {
     if (currentOrganization) {
@@ -203,98 +244,174 @@ export default function OrganizationSettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-[var(--color-primary)]/20 shadow-sm">
         <CardHeader>
-          <CardTitle>WhatsApp — números da sua empresa</CardTitle>
-          <CardDescription>
-            Cadastre os números dos <strong>vendedores da integradora</strong> (WhatsApp com o qual
-            eles falam com clientes). Para a integração Cloud API, o sistema também precisa
-            reconhecer o <strong>número da linha WhatsApp Business que recebe as mensagens</strong>{" "}
-            (o mesmo da Meta, como no Gerenciador do WhatsApp): inclua esse número nesta lista além
-            dos vendedores, sem mudar o fluxo de cadastro. Cada número pode estar ligado a{" "}
-            <strong>apenas uma</strong> organização.
-          </CardDescription>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <span>📲 Assistente de IA no WhatsApp</span>
+                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  Exclusivo para Assinantes
+                </span>
+              </CardTitle>
+              <CardDescription>
+                Conecte seu WhatsApp pessoal ou da sua equipe para dimensionar kits solares,
+                calcular economia e gerar propostas comerciais automáticas direto pelo WhatsApp.
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {inboundPhonesLoading ? (
-            <p className="text-sm text-[var(--color-muted-foreground)]">Carregando…</p>
-          ) : null}
-          {inboundPhonesError ? (
-            <p className="text-sm text-[var(--color-destructive)]">{inboundPhonesError}</p>
-          ) : null}
-          {!inboundPhonesLoading && inboundPhones.length === 0 ? (
-            <p className="text-sm text-[var(--color-muted-foreground)]">
-              Nenhum telefone cadastrado ainda.
-            </p>
-          ) : (
-            <ul className="divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)]">
-              {inboundPhones.map((row) => (
-                <li
-                  key={row.id}
-                  className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
-                >
-                  <div>
-                    <span className="font-mono">{maskWhatsappBr(row.phoneDigits)}</span>
-                    {row.label ? (
-                      <span className="ml-2 text-[var(--color-muted-foreground)]">
-                        ({row.label})
-                      </span>
-                    ) : null}
-                  </div>
-                  {canEditWhatsappPhones ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-[var(--color-destructive)]"
-                      onClick={() => void handleRemoveInboundPhone(row.id)}
-                    >
-                      Remover
-                    </Button>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          )}
-          {canEditWhatsappPhones ? (
-            <form
-              onSubmit={handleAddInboundPhone}
-              className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start"
-            >
-              <div className="min-w-[200px] flex-1">
-                <Input
-                  type="tel"
-                  label="Telefone do vendedor (com DDD)"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  value={newInboundPhone}
-                  onChange={(e) => setNewInboundPhone(maskWhatsappBr(e.target.value))}
-                  placeholder="(11) 98765-4321"
-                  disabled={inboundSaving}
-                  helperText="Pode informar com ou sem +55: salvamos só DDD + número. Móvel com ou sem o 9 após o DDD é tratado como o mesmo número."
-                />
-              </div>
-              <div className="min-w-[160px] flex-1">
-                <Input
-                  label="Rótulo (opcional)"
-                  value={newInboundLabel}
-                  onChange={(e) => setNewInboundLabel(e.target.value)}
-                  placeholder="Ex.: Comercial SP"
-                  disabled={inboundSaving}
-                />
+        <CardContent className="space-y-6">
+          {/* Seção do Código de Pareamento */}
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h4 className="text-sm font-semibold text-[var(--color-foreground)]">
+                  ⚡ Conexão Rápida por Código (Pareamento)
+                </h4>
+                <p className="text-xs text-[var(--color-muted-foreground)]">
+                  Gere um código exclusivo e envie para o robô no WhatsApp para vincular seu número
+                  instantaneamente à empresa.
+                </p>
               </div>
               <Button
-                type="submit"
-                disabled={inboundSaving || digitsOnly(newInboundPhone).length < 10}
+                type="button"
+                onClick={handleGeneratePairingCode}
+                disabled={pairingLoading || !canEditWhatsappPhones}
+                className="shrink-0 bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
               >
-                {inboundSaving ? "Adicionando…" : "Adicionar"}
+                {pairingLoading ? "Gerando código…" : "📲 Conectar meu WhatsApp"}
               </Button>
-            </form>
-          ) : (
-            <p className="text-xs text-[var(--color-muted-foreground)]">
-              Apenas proprietários e administradores podem alterar esta lista.
-            </p>
-          )}
+            </div>
+
+            {pairingInfo && (
+              <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
+                <p className="text-xs font-medium text-emerald-800 dark:text-emerald-300">
+                  Envie a mensagem abaixo para o número <strong>{pairingInfo.botNumber}</strong>:
+                </p>
+                <div className="my-2 select-all rounded-md bg-white/80 py-2 font-mono text-2xl font-black tracking-widest text-emerald-700 shadow-inner dark:bg-black/40 dark:text-emerald-300">
+                  {pairingInfo.formattedMessage}
+                </div>
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  <a
+                    href={pairingInfo.whatsappUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-emerald-700"
+                  >
+                    <span>💬 Abrir WhatsApp e Enviar Código</span>
+                  </a>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => setPairingInfo(null)}
+                  >
+                    Fechar
+                  </Button>
+                </div>
+                <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
+                  ⏳ Este código expira em 15 minutos. A tela atualizará assim que você enviar.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Lista de Telefones Autorizados */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-[var(--color-foreground)]">
+              Números Autorizados ({inboundPhones.length})
+            </h4>
+
+            {inboundPhonesLoading ? (
+              <p className="text-sm text-[var(--color-muted-foreground)]">Carregando números…</p>
+            ) : null}
+            {inboundPhonesError ? (
+              <p className="text-sm text-[var(--color-destructive)]">{inboundPhonesError}</p>
+            ) : null}
+            {!inboundPhonesLoading && inboundPhones.length === 0 ? (
+              <p className="text-sm text-[var(--color-muted-foreground)]">
+                Nenhum número de WhatsApp vinculado ainda. Clique em{" "}
+                <strong>"Conectar meu WhatsApp"</strong> acima para vincular.
+              </p>
+            ) : (
+              <ul className="divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)]">
+                {inboundPhones.map((row) => (
+                  <li
+                    key={row.id}
+                    className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
+                      <span className="font-mono font-medium">
+                        {maskWhatsappBr(row.phoneDigits)}
+                      </span>
+                      {row.label ? (
+                        <span className="rounded bg-[var(--color-muted)] px-1.5 py-0.5 text-xs text-[var(--color-muted-foreground)]">
+                          {row.label}
+                        </span>
+                      ) : null}
+                    </div>
+                    {canEditWhatsappPhones ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-[var(--color-destructive)] hover:bg-[var(--color-destructive)]/10"
+                        onClick={() => void handleRemoveInboundPhone(row.id)}
+                      >
+                        Desvincular
+                      </Button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* Cadastro Manual Alternativo */}
+            {canEditWhatsappPhones && (
+              <details className="mt-4 text-xs text-[var(--color-muted-foreground)]">
+                <summary className="cursor-pointer font-medium hover:text-[var(--color-foreground)]">
+                  + Adicionar número de vendedor manualmente
+                </summary>
+                <form
+                  onSubmit={handleAddInboundPhone}
+                  className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start"
+                >
+                  <div className="min-w-[200px] flex-1">
+                    <Input
+                      type="tel"
+                      label="Telefone com DDD"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      value={newInboundPhone}
+                      onChange={(e) => setNewInboundPhone(maskWhatsappBr(e.target.value))}
+                      placeholder="(44) 99158-5309"
+                      disabled={inboundSaving}
+                    />
+                  </div>
+                  <div className="min-w-[160px] flex-1">
+                    <Input
+                      label="Nome do Vendedor / Rótulo"
+                      value={newInboundLabel}
+                      onChange={(e) => setNewInboundLabel(e.target.value)}
+                      placeholder="Ex.: Vendedor João"
+                      disabled={inboundSaving}
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={inboundSaving || digitsOnly(newInboundPhone).length < 10}
+                    className="mt-6"
+                  >
+                    {inboundSaving ? "Salvando…" : "Salvar"}
+                  </Button>
+                </form>
+              </details>
+            )}
+          </div>
         </CardContent>
       </Card>
 

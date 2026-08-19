@@ -280,6 +280,35 @@ function getHsp(cidade: string, estado: string): number {
 
 const SESSION_INACTIVITY_MS = 5 * 60 * 1000; // 5 minutos
 
+import { WhatsappPairingService } from "./whatsapp-pairing.service";
+
+function expandInboundPhoneCandidates(raw: string): string[] {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length < 10) return [];
+  const out = new Set<string>();
+  out.add(digits);
+  if (digits.startsWith("55") && digits.length >= 12) {
+    const without55 = digits.slice(2);
+    out.add(without55);
+    if (without55.length === 10) {
+      out.add(`${without55.slice(0, 2)}9${without55.slice(2)}`);
+    }
+    if (without55.length === 11 && without55.charAt(2) === "9") {
+      out.add(`${without55.slice(0, 2)}${without55.slice(3)}`);
+    }
+  } else if (digits.length === 10) {
+    out.add(`${digits.slice(0, 2)}9${digits.slice(2)}`);
+    out.add(`55${digits}`);
+    out.add(`55${digits.slice(0, 2)}9${digits.slice(2)}`);
+  } else if (digits.length === 11) {
+    if (digits.charAt(2) === "9") {
+      out.add(`${digits.slice(0, 2)}${digits.slice(3)}`);
+    }
+    out.add(`55${digits}`);
+  }
+  return [...out];
+}
+
 @Injectable()
 export class WhatsappBotService {
   private readonly logger = new Logger(WhatsappBotService.name);
@@ -288,7 +317,8 @@ export class WhatsappBotService {
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
-    private readonly whatsappCloud: WhatsappCloudService
+    private readonly whatsappCloud: WhatsappCloudService,
+    private readonly whatsappPairing: WhatsappPairingService
   ) {
     const geminiKey =
       this.config.get<string>("GOOGLE_GEMINI_API_KEY") ||
@@ -330,16 +360,11 @@ export class WhatsappBotService {
   }
 
   private async resolveAuthorizedTenant(fromWaId: string) {
-    const cleanDigits = fromWaId.replace(/\D/g, "");
+    const candidates = expandInboundPhoneCandidates(fromWaId);
 
-    // 1. Procura se este número exato está vinculado a alguma organização
     const boundPhone = await this.prisma.tenantWhatsappInboundPhone.findFirst({
       where: {
-        OR: [
-          { phoneDigits: cleanDigits },
-          { phoneDigits: cleanDigits.slice(2) }, // sem DDI 55
-          { phoneDigits: { endsWith: cleanDigits.slice(-8) } },
-        ],
+        phoneDigits: { in: candidates },
       },
       include: {
         organization: {
@@ -354,31 +379,6 @@ export class WhatsappBotService {
       return boundPhone.organization;
     }
 
-    // 2. Fallback para organização principal existente no banco
-    const firstTenant = await this.prisma.tenant.findFirst({
-      include: {
-        subscription: true,
-      },
-    });
-
-    if (firstTenant) {
-      // Auto-registra o número para a organização principal se ainda não houver nenhum
-      try {
-        await this.prisma.tenantWhatsappInboundPhone.upsert({
-          where: { phoneDigits: cleanDigits },
-          update: {},
-          create: {
-            organizationId: firstTenant.id,
-            phoneDigits: cleanDigits,
-            label: "WhatsApp Autorizado",
-          },
-        });
-      } catch {
-        // Ignora conflito
-      }
-      return firstTenant;
-    }
-
     return null;
   }
 
@@ -386,19 +386,17 @@ export class WhatsappBotService {
     createdAt: Date;
     subscription?: { status: string } | null;
   }): boolean {
-    // 1. Se tem assinatura ativa
     if (tenant.subscription && tenant.subscription.status === "active") {
       return true;
     }
 
-    // 2. Período de teste / Trial nos primeiros 7 dias
     const diffTime = Math.abs(Date.now() - new Date(tenant.createdAt).getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     if (diffDays <= 7) {
       return true;
     }
 
-    return true; // Mantém ativo para integradores credenciados
+    return true;
   }
 
   private async processSingleMessage({
@@ -425,17 +423,61 @@ export class WhatsappBotService {
       return;
     }
 
-    // 2. Resolução da Organização / Tenant do Integrador
+    // 2. Extração inicial do texto para verificar comando de pareamento
+    let incomingText = "";
+    if (msgType === "text") {
+      incomingText = (message.text?.body || "").trim();
+    }
+
+    // 3. Verificação de Código de Pareamento (Token de Ativação)
+    const pairingMatch = incomingText.match(/(?:CONECTAR[ -]*)?(\b\d{6}\b)/i);
+    if (pairingMatch && pairingMatch[1]) {
+      const code = pairingMatch[1];
+      const pairingInfo = this.whatsappPairing.consumePairingCode(code);
+      if (pairingInfo) {
+        const cleanDigits = fromWaId.replace(/\D/g, "");
+        const candidates = expandInboundPhoneCandidates(fromWaId);
+
+        // Remove número de outra organização se estivesse cadastrado
+        await this.prisma.tenantWhatsappInboundPhone.deleteMany({
+          where: { phoneDigits: { in: candidates } },
+        });
+
+        // Cadastra o número na organização correta
+        await this.prisma.tenantWhatsappInboundPhone.create({
+          data: {
+            organizationId: pairingInfo.organizationId,
+            phoneDigits: cleanDigits.startsWith("55") ? cleanDigits.slice(2) : cleanDigits,
+            label: `WhatsApp de ${contactName}`,
+          },
+        });
+
+        const successMsg =
+          `🎉 *WhatsApp Vinculado com Sucesso!* ☀️\n\n` +
+          `Seu número foi conectado à empresa *${pairingInfo.organizationName}*.\n` +
+          `Status: *Autorizado e Ativo* ✅\n\n` +
+          `A partir de agora, você pode me enviar contas de luz (PDF ou foto) ou solicitar dimensionamentos solares diretamente por aqui!`;
+
+        await this.whatsappCloud.sendTextMessage({
+          phoneNumberId,
+          toWaId: fromWaId,
+          body: successMsg,
+        });
+        return;
+      }
+    }
+
+    // 4. Resolução da Organização / Tenant do Integrador
     const tenant = await this.resolveAuthorizedTenant(fromWaId);
     if (!tenant) {
       this.logger.warn(`Número não autorizado tentando usar o bot: ${fromWaId}`);
       const salesMsg =
-        `Olá! ☀️ O assistente de inteligência artificial da *EnergivIA* é um recurso exclusivo para integradores solares credenciados com planos ativos.\n\n` +
-        `Com a nossa plataforma, você:\n` +
-        `⚡ Dimensiona projetos fotovoltaicos com precisão em segundos\n` +
-        `📦 Cota kits com os maiores distribuidores do país em tempo real\n` +
-        `📋 Gera e envia propostas comerciais profissionais direto pelo WhatsApp\n\n` +
-        `👉 Acesse *https://energivia.com.br* para conhecer nossos planos e ativar o seu acesso exclusivo!`;
+        `Olá! ☀️ O assistente de inteligência artificial da *EnergivIA* é um recurso exclusivo para integradores parceiros credenciados.\n\n` +
+        `Para vincular este WhatsApp à sua conta:\n` +
+        `1️⃣ Acesse *https://energivia.com.br/configuracoes/organizacao*\n` +
+        `2️⃣ Clique em *"Conectar WhatsApp"* e envie o código gerado aqui.\n\n` +
+        `Se você ainda não possui um plano ativo, conheça nossos recursos e comece a gerar propostas solares em segundos:\n` +
+        `👉 *https://energivia.com.br*`;
 
       await this.whatsappCloud.sendTextMessage({
         phoneNumberId,
@@ -445,7 +487,7 @@ export class WhatsappBotService {
       return;
     }
 
-    // 3. Verificação de Assinatura / Plano Ativo
+    // 5. Verificação de Assinatura / Plano Ativo
     if (!this.isTenantPlanActive(tenant)) {
       this.logger.warn(`Plano expirado para organização ${tenant.id} no WhatsApp ${fromWaId}`);
       const expiredMsg =
@@ -515,7 +557,6 @@ export class WhatsappBotService {
     });
 
     // 5. Extração de Conteúdo (Fatura / Texto / Imagem)
-    let incomingText = "";
     let extractionResult: BillExtractionResult | null = null;
 
     this.logger.log(`Mensagem recebida do WhatsApp: tipo=${msgType}, de=${fromWaId}`);

@@ -39,6 +39,11 @@ export class OrganizationsController {
     return this.organizations.listWhatsappInboundPhones(id, user.sub);
   }
 
+  @Post(":id/whatsapp-pairing-code")
+  generateWhatsappPairingCode(@Param("id") id: string, @CurrentUser() user: JwtPayload) {
+    return this.organizations.generateWhatsappPairingCode(id, user.sub);
+  }
+
   @Post(":id/whatsapp-inbound-phones")
   addWhatsappInboundPhone(
     @Param("id") id: string,

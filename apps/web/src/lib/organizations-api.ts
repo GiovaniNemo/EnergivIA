@@ -309,3 +309,29 @@ export async function removeWhatsappInboundPhone(
     throw new Error((err as { message?: string }).message ?? "Falha ao remover telefone.");
   }
 }
+
+export interface WhatsappPairingCodeResponse {
+  code: string;
+  formattedMessage: string;
+  expiresAt: number;
+  whatsappUrl: string;
+  botNumber: string;
+}
+
+export async function generateWhatsappPairingCode(
+  organizationId: string
+): Promise<WhatsappPairingCodeResponse> {
+  const res = await apiProxy(
+    "POST",
+    `/organizations/${organizationId}/whatsapp-pairing-code`,
+    undefined,
+    organizationId
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      (err as { message?: string }).message ?? "Falha ao gerar código de pareamento."
+    );
+  }
+  return res.json();
+}

@@ -122,12 +122,25 @@ function buildTemplateSettings(dto: {
   };
 }
 
+import { WhatsappPairingService } from "../whatsapp/whatsapp-pairing.service";
+
 @Injectable()
 export class OrganizationsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService
+    private readonly emailService: EmailService,
+    private readonly whatsappPairing: WhatsappPairingService
   ) {}
+
+  async generateWhatsappPairingCode(organizationId: string, userId: string) {
+    await this.requireRole(organizationId, userId, [
+      OrgRole.OWNER,
+      OrgRole.ADMIN,
+      OrgRole.SALES,
+      OrgRole.ENGINEER,
+    ]);
+    return this.whatsappPairing.generatePairingCode(organizationId, userId);
+  }
 
   private async generateUniqueOrganizationSlug(name: string): Promise<string> {
     const base = buildSlugFromName(name);
