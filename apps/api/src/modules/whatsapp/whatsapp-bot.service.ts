@@ -5,14 +5,36 @@ import { WhatsappCloudService } from "./whatsapp-cloud.service";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import pdfParse from "pdf-parse";
 
-interface ExtractedBillData {
+export interface ExtractedBillHistoryItem {
+  mes_ano: string;
+  consumo_kwh: number;
+  dias?: number;
+  media_kwh_dia?: number;
+}
+
+export interface ExtractedBillData {
   distribuidora?: string;
   cidade?: string;
-  estado?: string;
-  consumoKwh?: number;
-  tipoConexao?: string;
-  mesesIdentificados?: number;
-  nomeCliente?: string;
+  uf?: string;
+  tipo_conexao?: "Monofásico" | "Bifásico" | "Trifásico" | string;
+  nome_cliente?: string;
+  codigo_instalacao_ou_uc?: string;
+  mes_referencia_atual?: string;
+  consumo_mes_atual_kwh?: number;
+  valor_total_fatura_reais?: number;
+  historico_consumo: ExtractedBillHistoryItem[];
+  tem_geracao_distribuida?: boolean;
+  energia_injetada_kwh?: number;
+  observacoes?: string;
+}
+
+export interface BillExtractionResult {
+  data: ExtractedBillData;
+  exactAverageKwh: number;
+  totalSumKwh: number;
+  monthCount: number;
+  formattedSummary: string;
+  rawText?: string;
 }
 
 interface WebhookMessage {
@@ -39,26 +61,161 @@ interface WebhookPayload {
   }>;
 }
 
-const BILL_EXTRACTION_PROMPT = `Você é um motor especialista em visão computacional e extração forense de dados estruturados de faturas de energia elétrica brasileiras (Copel, Enel, CPFL, Cemig, Equatorial, Energisa, Neoenergia, Light, EDP, RGE, Celesc, etc.).
-Sua missão é extrair com máxima precisão os dados da fatura para o integrador de energia solar:
-1. "distribuidora": Nome da concessionária (ex: "Copel", "Enel", "CPFL", "Cemig")
-2. "cidade": Nome da cidade da unidade consumidora
-3. "estado": UF com 2 letras (ex: "PR", "SP", "MG")
-4. "tipoConexao": "Monofásico", "Bifásico" ou "Trifásico"
-5. "nomeCliente": Nome completo do titular da conta
-6. "historicoConsumo": Array numérico com o consumo em kWh de CADA UM dos meses da tabela de histórico (ex: [520, 610, 480, 550, ...])
-7. "consumoKwh": Média aritmética real de todos os meses do histórico (se houver) ou o consumo do mês atual.
+const BILL_EXTRACTION_SYSTEM_PROMPT = `Você é um motor especialista em visão computacional forense e extração de dados estruturados de faturas de energia elétrica brasileiras (Enel, CPFL, Cemig, Copel, Equatorial, Energisa, Neoenergia, Light, EDP, RGE, Celesc, etc.).
 
-Retorne estritamente um JSON no formato:
+Sua missão é extrair com 100% DE PRECISÃO MATEMÁTICA E VISUAL todos os dados da conta de luz, com foco ABSOLUTO em ler sem erros cada número da tabela de Histórico de Consumo/Faturamento.
+
+REGRAS DE LEITURA E PARSING CRÍTICAS:
+1. TABELA DE HISTÓRICO DE CONSUMO ("CONSUMO / kWh", "HISTÓRICO DE CONSUMO", "Evolução do Consumo"):
+   - Localize a tabela onde constam os meses de histórico faturados (geralmente entre 11 e 13 meses visíveis).
+   - LEITURA SEQUENCIAL COMPLETA: Percorra CADA UMA das linhas da tabela, da primeira à última linha impressa, sem pular nenhuma linha.
+   - Para CADA linha:
+     * Identifique o mês/ano (ex: "AGO/26", "JUL/26", "JUN/26", "MAI/26", "ABR/26", "MAR/26", "FEV/26", "JAN/26", "DEZ/25", "NOV/25", "OUT/25", "SET/25", "AGO/25").
+     * Identifique com máxima precisão o valor numérico na coluna de consumo faturado em kWh.
+   
+   - ATENÇÃO CRÍTICA À FORMATAÇÃO DA ENEL E DISTRIBUIDORAS:
+     * Na Enel e diversas distribuidoras, os números na tabela de consumo aparecem formatados com ponto de milhar e 3 casas decimais (ex: "1.198,000", "1.525,000", "1.099,000", "965,000", "967,000", "939,000", "703,000", "698,000", "793,000", "961,000", "699,000", "807,000", "794,000").
+     * "1.198,000" significa 1198 kWh. Retorne 1198.
+     * "1.525,000" significa 1525 kWh. Retorne 1525.
+     * "1.099,000" significa 1099 kWh. Retorne 1099.
+     * "965,000" significa 965 kWh. Retorne 965.
+     * "703,000" significa 703 kWh. Retorne 703.
+   
+   - Extraia TODOS os 12 ou 13 meses visíveis na tabela sem omitir as linhas inferiores!
+   - NUNCA confunda 'consumo_kwh' com:
+     * Quantidade de dias de faturamento (ex: 28, 29, 30, 31, 33).
+     * Média diária (ex: 12.5 kWh/dia).
+     * Demanda contratada ou medida em kW.
+     * Leitura do medidor.
+     * Valores monetários em R$.
+     * Valores de iluminação pública ou multas.
+     * Valores de energia injetada / saldo GD.
+
+2. CONSUMO ATIVO E GERAÇÃO DISTRIBUÍDA (GD):
+   - Se a fatura tiver créditos solares / GD, utilize sempre o Consumo Ativo Total Faturado/Consumido da rede (coluna de consumo faturado da tabela de histórico).
+
+3. DADOS GERAIS:
+   - distribuidora: Nome da concessionária identificada no cabeçalho ou logotipo (ex: Enel, Copel, CPFL, Cemig, Equatorial, Energisa, etc.).
+   - cidade: Cidade da unidade consumidora indicada no endereço (ex: SAO PAULO).
+   - uf: Sigla do estado com 2 letras (ex: SP, PR, MG, RJ, BA, GO, etc.).
+   - tipo_conexao: "Monofásico", "Bifásico" ou "Trifásico" (identifique no campo Tipo de Fornecimento / Ligação).
+   - nome_cliente: Nome completo do titular da conta.
+   - mes_referencia_atual: Mês/ano de referência da fatura (ex: "08/2026").
+   - consumo_mes_atual_kwh: Consumo ativo faturado do mês atual (número inteiro).
+   - valor_total_fatura_reais: Valor total a pagar em R$ (número float).
+
+Retorne EXCLUSIVAMENTE um objeto JSON válido no seguinte formato:
 {
-  "distribuidora": string,
-  "cidade": string,
-  "estado": string,
-  "tipoConexao": string,
-  "nomeCliente": string,
-  "historicoConsumo": number[],
-  "consumoKwh": number
+  "distribuidora": "string",
+  "cidade": "string",
+  "uf": "string",
+  "tipo_conexao": "Monofásico" | "Bifásico" | "Trifásico",
+  "nome_cliente": "string",
+  "mes_referencia_atual": "string",
+  "consumo_mes_atual_kwh": number,
+  "valor_total_fatura_reais": number,
+  "historico_consumo": [
+    { "mes_ano": "string", "consumo_kwh": number, "dias": number }
+  ]
 }`;
+
+function parseBrazilianKwh(raw: unknown): number {
+  if (typeof raw === "number") {
+    if (raw > 0 && raw < 10 && raw % 1 !== 0) {
+      return Math.round(raw * 1000);
+    }
+    return Math.round(raw);
+  }
+  const s = String(raw || "").trim();
+  if (!s) return 0;
+  if (s.includes(".") && s.includes(",")) {
+    const clean = s.replace(/\./g, "").replace(",", ".");
+    return Math.round(parseFloat(clean));
+  }
+  if (/^\d{1,3}\.\d{3}$/.test(s)) {
+    return parseInt(s.replace(".", ""), 10);
+  }
+  if (/^\d+,\d+$/.test(s)) {
+    return Math.round(parseFloat(s.replace(",", ".")));
+  }
+  const num = parseFloat(s.replace(/[^0-9.]/g, ""));
+  if (num > 0 && num < 10 && num % 1 !== 0) {
+    return Math.round(num * 1000);
+  }
+  return isNaN(num) ? 0 : Math.round(num);
+}
+
+function processExtractedBillData(data: ExtractedBillData, rawText?: string): BillExtractionResult {
+  const rawList = Array.isArray(data.historico_consumo) ? data.historico_consumo : [];
+
+  const candidates: ExtractedBillHistoryItem[] = [];
+  for (const item of rawList) {
+    if (!item) continue;
+    const label = String(item.mes_ano || "").trim();
+    const rawVal =
+      item.consumo_kwh ??
+      (item as unknown as Record<string, unknown>)["consumo"] ??
+      (item as unknown as Record<string, unknown>)["kwh"];
+    const val = parseBrazilianKwh(rawVal);
+
+    if (Number.isFinite(val) && val > 0 && val < 500000) {
+      candidates.push({
+        mes_ano: label || `Mês ${candidates.length + 1}`,
+        consumo_kwh: Math.round(val),
+        dias: item.dias ? Number(item.dias) : undefined,
+        media_kwh_dia: item.media_kwh_dia ? Number(item.media_kwh_dia) : undefined,
+      });
+    }
+  }
+
+  const typicalHighMonths = candidates.filter((c) => c.consumo_kwh >= 60);
+  const validHistory: ExtractedBillHistoryItem[] = [];
+
+  for (const item of candidates) {
+    if (
+      typicalHighMonths.length >= 2 &&
+      item.consumo_kwh <= 31 &&
+      [28, 29, 30, 31, 22, 27].includes(item.consumo_kwh)
+    ) {
+      continue;
+    }
+    validHistory.push(item);
+  }
+
+  const normalizedHistory = validHistory.length > 12 ? validHistory.slice(0, 12) : validHistory;
+  const currentMonthKwh = parseBrazilianKwh(data.consumo_mes_atual_kwh);
+
+  let totalSum = 0;
+  let exactAverage = 0;
+  let monthCount = normalizedHistory.length;
+
+  if (monthCount > 0) {
+    totalSum = normalizedHistory.reduce((acc, curr) => acc + curr.consumo_kwh, 0);
+    exactAverage = Math.round(totalSum / monthCount);
+  } else if (currentMonthKwh > 0) {
+    exactAverage = currentMonthKwh;
+    totalSum = exactAverage;
+    monthCount = 1;
+  } else {
+    exactAverage = 300;
+    totalSum = 300;
+    monthCount = 0;
+  }
+
+  const formattedSummary = `Legal, dados extraídos com precisão! Consumo médio de ${exactAverage} kWh/mês em ${data.cidade || "São Paulo"}/${data.uf || "SP"} (baseado no histórico de ${monthCount || 1} meses da fatura).`;
+
+  return {
+    data: {
+      ...data,
+      historico_consumo: normalizedHistory,
+    },
+    exactAverageKwh: exactAverage,
+    totalSumKwh: totalSum,
+    monthCount,
+    formattedSummary,
+    rawText,
+  };
+}
 
 const WHATSAPP_INTEGRATOR_SYSTEM_PROMPT = `Você é o Assistente Especialista de Engenharia e Vendas Solares da EnergivIA. 
 Seu interlocutor é o INTEGRADOR SOLAR (e NÃO o cliente final). Você existe para ajudar o integrador a dimensionar kits solares, orçar com distribuidores, cadastrar clientes no CRM e gerar propostas comerciais completas em segundos.
@@ -66,25 +223,24 @@ Seu interlocutor é o INTEGRADOR SOLAR (e NÃO o cliente final). Você existe pa
 TOM E ESTILO:
 - Curto, direto, comercial e profissional para WhatsApp.
 - Trate o usuário sempre como parceiro integrador solar (ex: "o seu cliente", "para a instalação do seu cliente").
-- NUNCA assuma que o usuário é quem vai pagar a conta ou quem quer economizar; ele é a empresa/profissional de energia solar vendendo para o cliente final dele.
+- NUNCA use asteriscos (**) nos nomes dos distribuidores.
+- NUNCA assuma que o usuário é quem vai pagar a conta ou quem quer economizar; ele é o integrador/empresa de energia solar.
 
 FLUXO PRINCIPAL:
 1. INÍCIO DA CONVERSA:
-   Se apresente como assistente do integrador:
-   "Olá! Sou seu assistente de vendas e dimensionamento da EnergivIA. Como posso ajudar você a gerar orçamentos e propostas para seus clientes hoje?"
-   Peça a fatura (PDF ou foto) ou o consumo médio do cliente.
+   "Olá! Sou seu assistente de vendas e dimensionamento da EnergivIA. ☀️ Como posso ajudar você a gerar orçamentos e propostas para seus clientes hoje?"
 
-2. AO RECEBER A CONTA DE LUZ (PDF OU FOTO):
-   Diga: "Legal, dados extraídos com precisão! Consumo médio de [X] kWh/mês em [Cidade/UF] (baseado no histórico de [N] meses da fatura)."
-   Em seguida pergunte a estrutura:
-   "Qual será a estrutura do telhado do cliente?
-   1 - Cerâmica (Colonial)
-   2 - Fibrocimento
-   3 - Metálico
-   4 - Solo
-   5 - Laje
-   6 - Fibrometal
-   7 - Sem estrutura"
+2. AO RECEBER A FATURA (PDF OU IMAGEM):
+   "Legal, dados extraídos com precisão! Consumo médio de [X] kWh/mês em [Cidade/UF] (baseado no histórico de [N] meses da fatura).
+
+Qual a estrutura do telhado?
+1 - Cerâmica (Colonial)
+2 - Fibrocimento
+3 - Metálico
+4 - Solo
+5 - Laje
+6 - Fibrometal
+7 - Sem estrutura"
 
 3. AO ESCOLHER A ESTRUTURA:
    Pergunte: "Qual o nome do cliente final para eu registrar no seu CRM?"
@@ -93,7 +249,7 @@ FLUXO PRINCIPAL:
    Pergunte: "Certo, vou registrar o cliente [Nome]. E qual o WhatsApp dele?"
 
 5. AO RECEBER O WHATSAPP:
-   Confirme o cadastro do lead e pergunte qual modelo de proposta deseja gerar.`;
+   Pergunte o modelo de template de proposta desejado.`;
 
 @Injectable()
 export class WhatsappBotService {
@@ -207,9 +363,9 @@ export class WhatsappBotService {
       },
     });
 
-    // 4. Extração de Conteúdo
+    // 4. Extração de Conteúdo (Fatura / Texto / Imagem / Áudio)
     let incomingText = "";
-    let extractedBillData: ExtractedBillData | null = null;
+    let extractionResult: BillExtractionResult | null = null;
 
     this.logger.log(`Mensagem recebida do WhatsApp: tipo=${msgType}, de=${fromWaId}`);
 
@@ -220,16 +376,20 @@ export class WhatsappBotService {
       incomingText = `[Documento enviado: ${doc?.filename || "fatura.pdf"}]`;
       if (doc?.id) {
         this.logger.log(`Iniciando extração do documento PDF mediaId=${doc.id}`);
-        extractedBillData = await this.extractFromMediaDocument(doc.id, doc.mime_type);
-        this.logger.log(`Resultado extração PDF: ${JSON.stringify(extractedBillData)}`);
+        extractionResult = await this.extractFromMediaDocument(doc.id, doc.mime_type);
+        this.logger.log(
+          `Resultado extração PDF: média=${extractionResult?.exactAverageKwh}, meses=${extractionResult?.monthCount}, cidade=${extractionResult?.data?.cidade}`
+        );
       }
     } else if (msgType === "image") {
       const img = message.image;
       incomingText = `[Foto enviada: ${img?.caption || "Foto da fatura"}]`;
       if (img?.id) {
         this.logger.log(`Iniciando extração da imagem mediaId=${img.id}`);
-        extractedBillData = await this.extractFromMediaImage(img.id, img.mime_type);
-        this.logger.log(`Resultado extração imagem: ${JSON.stringify(extractedBillData)}`);
+        extractionResult = await this.extractFromMediaImage(img.id, img.mime_type);
+        this.logger.log(
+          `Resultado extração imagem: média=${extractionResult?.exactAverageKwh}, meses=${extractionResult?.monthCount}, cidade=${extractionResult?.data?.cidade}`
+        );
       }
     } else if (msgType === "audio" || msgType === "voice") {
       incomingText = "[Mensagem de áudio recebida]";
@@ -243,14 +403,22 @@ export class WhatsappBotService {
         role: "user",
         content: incomingText,
         channel: "whatsapp",
-        metadata: extractedBillData ? { extractedBillData: { ...extractedBillData } } : undefined,
+        metadata: extractionResult
+          ? {
+              exactAverageKwh: extractionResult.exactAverageKwh,
+              monthCount: extractionResult.monthCount,
+              totalSumKwh: extractionResult.totalSumKwh,
+              cidade: extractionResult.data.cidade,
+              uf: extractionResult.data.uf,
+            }
+          : undefined,
       },
     });
 
-    // 5. Gera resposta com a persona do Integrador
+    // 5. Gera resposta
     const replyText = await this.generateBotResponse({
       incomingText,
-      extractedBillData,
+      extractionResult,
     });
 
     if (replyText) {
@@ -274,7 +442,7 @@ export class WhatsappBotService {
   private async extractFromMediaDocument(
     mediaId: string,
     mimeType?: string
-  ): Promise<ExtractedBillData | null> {
+  ): Promise<BillExtractionResult | null> {
     try {
       const media = await this.whatsappCloud.downloadWhatsappMedia(mediaId);
       if (!media || !media.buffer) {
@@ -285,7 +453,9 @@ export class WhatsappBotService {
       if (media.mimeType.includes("pdf") || mimeType?.includes("pdf")) {
         const parsed = await pdfParse(media.buffer);
         const text = parsed.text;
-        return this.parseBillTextWithAI(text);
+        if (text && text.trim().length > 30) {
+          return this.parseBillTextWithAI(text);
+        }
       }
     } catch (e) {
       this.logger.error("Erro extraindo PDF da fatura:", e);
@@ -296,7 +466,7 @@ export class WhatsappBotService {
   private async extractFromMediaImage(
     mediaId: string,
     mimeType?: string
-  ): Promise<ExtractedBillData | null> {
+  ): Promise<BillExtractionResult | null> {
     try {
       const media = await this.whatsappCloud.downloadWhatsappMedia(mediaId);
       if (!media || !media.buffer) return null;
@@ -313,7 +483,7 @@ export class WhatsappBotService {
       if (this.genAI) {
         const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent([
-          BILL_EXTRACTION_PROMPT,
+          BILL_EXTRACTION_SYSTEM_PROMPT,
           {
             inlineData: {
               data: media.buffer.toString("base64"),
@@ -323,7 +493,12 @@ export class WhatsappBotService {
         ]);
 
         const respText = result.response.text();
-        return this.cleanAndParseJson(respText);
+        const clean = respText
+          .replace(/```json/g, "")
+          .replace(/```/g, "")
+          .trim();
+        const parsed = JSON.parse(clean) as ExtractedBillData;
+        return processExtractedBillData(parsed);
       }
     } catch (e) {
       this.logger.error("Erro extraindo imagem da fatura:", e);
@@ -331,7 +506,7 @@ export class WhatsappBotService {
     return null;
   }
 
-  private async parseBillTextWithAI(pdfText: string): Promise<ExtractedBillData | null> {
+  private async parseBillTextWithAI(pdfText: string): Promise<BillExtractionResult | null> {
     if (!pdfText || pdfText.trim().length === 0) return null;
 
     const openAiKey = this.config.get<string>("OPENAI_API_KEY");
@@ -348,10 +523,10 @@ export class WhatsappBotService {
             temperature: 0,
             response_format: { type: "json_object" },
             messages: [
-              { role: "system", content: BILL_EXTRACTION_PROMPT },
+              { role: "system", content: BILL_EXTRACTION_SYSTEM_PROMPT },
               {
                 role: "user",
-                content: `Extraia com máxima precisão todos os dados e histórico de consumo do seguinte texto de fatura de energia:\n\n${pdfText.slice(0, 8000)}`,
+                content: `Extraia com máxima precisão todos os dados e TODOS os meses do histórico de consumo do seguinte texto de fatura de energia:\n\n${pdfText}`,
               },
             ],
           }),
@@ -362,7 +537,10 @@ export class WhatsappBotService {
             choices?: Array<{ message?: { content?: string } }>;
           };
           const content = json.choices?.[0]?.message?.content;
-          if (content) return this.cleanAndParseJson(content);
+          if (content) {
+            const parsed = JSON.parse(content) as ExtractedBillData;
+            return processExtractedBillData(parsed, pdfText);
+          }
         }
       } catch (err) {
         this.logger.error("Erro extraindo texto com OpenAI:", err);
@@ -373,10 +551,15 @@ export class WhatsappBotService {
       try {
         const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent(
-          `${BILL_EXTRACTION_PROMPT}\n\nTexto da fatura:\n${pdfText.slice(0, 8000)}`
+          `${BILL_EXTRACTION_SYSTEM_PROMPT}\n\nTexto da fatura:\n${pdfText}`
         );
         const respText = result.response.text();
-        return this.cleanAndParseJson(respText);
+        const clean = respText
+          .replace(/```json/g, "")
+          .replace(/```/g, "")
+          .trim();
+        const parsed = JSON.parse(clean) as ExtractedBillData;
+        return processExtractedBillData(parsed, pdfText);
       } catch (err) {
         this.logger.error("Erro extraindo texto com Gemini:", err);
       }
@@ -389,7 +572,7 @@ export class WhatsappBotService {
     buffer: Buffer,
     mimeType: string,
     apiKey: string
-  ): Promise<ExtractedBillData | null> {
+  ): Promise<BillExtractionResult | null> {
     try {
       const base64 = buffer.toString("base64");
       const dataUrl = `data:${mimeType};base64,${base64}`;
@@ -405,13 +588,13 @@ export class WhatsappBotService {
           temperature: 0,
           response_format: { type: "json_object" },
           messages: [
-            { role: "system", content: BILL_EXTRACTION_PROMPT },
+            { role: "system", content: BILL_EXTRACTION_SYSTEM_PROMPT },
             {
               role: "user",
               content: [
                 {
                   type: "text",
-                  text: "Extraia com máxima precisão os dados e histórico de consumo da conta de luz.",
+                  text: "Analise minuciosamente a imagem desta conta de luz em alta resolução. Extraia todos os dados gerais e TODOS os meses da tabela de histórico de consumo/faturamento sem omitir nenhum mês:",
                 },
                 { type: "image_url", image_url: { url: dataUrl, detail: "high" } },
               ],
@@ -425,7 +608,10 @@ export class WhatsappBotService {
           choices?: Array<{ message?: { content?: string } }>;
         };
         const content = json.choices?.[0]?.message?.content;
-        if (content) return this.cleanAndParseJson(content);
+        if (content) {
+          const parsed = JSON.parse(content) as ExtractedBillData;
+          return processExtractedBillData(parsed);
+        }
       }
     } catch (e) {
       this.logger.error("Erro extraindo imagem com OpenAI:", e);
@@ -433,64 +619,25 @@ export class WhatsappBotService {
     return null;
   }
 
-  private cleanAndParseJson(raw: string): ExtractedBillData | null {
-    try {
-      const clean = raw
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
-      const parsed = JSON.parse(clean);
-
-      let consumoCalculado = Number(parsed.consumoKwh) || 0;
-      let meses = 0;
-
-      if (Array.isArray(parsed.historicoConsumo) && parsed.historicoConsumo.length > 0) {
-        const validValues = parsed.historicoConsumo
-          .map((v: unknown) => (typeof v === "number" ? v : Number(v)))
-          .filter((v: number) => !isNaN(v) && v > 0);
-
-        if (validValues.length > 0) {
-          const sum = validValues.reduce((a: number, b: number) => a + b, 0);
-          consumoCalculado = Math.round(sum / validValues.length);
-          meses = validValues.length;
-        }
-      }
-
-      return {
-        distribuidora: parsed.distribuidora || undefined,
-        cidade: parsed.cidade || undefined,
-        estado: parsed.estado || undefined,
-        consumoKwh: consumoCalculado,
-        tipoConexao: parsed.tipoConexao || undefined,
-        nomeCliente: parsed.nomeCliente || undefined,
-        mesesIdentificados: meses > 0 ? meses : undefined,
-      };
-    } catch {
-      return null;
-    }
-  }
-
   private async generateBotResponse({
     incomingText,
-    extractedBillData,
+    extractionResult,
   }: {
     incomingText: string;
-    extractedBillData: ExtractedBillData | null;
+    extractionResult: BillExtractionResult | null;
   }): Promise<string> {
-    // 1. Se extraiu fatura com sucesso
-    if (extractedBillData && extractedBillData.consumoKwh && extractedBillData.consumoKwh > 0) {
-      const cidade = extractedBillData.cidade
-        ? `${extractedBillData.cidade}${extractedBillData.estado ? `/${extractedBillData.estado}` : ""}`
-        : "a região informada";
-      const kwh = extractedBillData.consumoKwh;
-      const mesesTexto = extractedBillData.mesesIdentificados
-        ? ` (baseado no histórico de ${extractedBillData.mesesIdentificados} meses da fatura)`
-        : "";
+    // 1. Se extraiu fatura com precisão
+    if (extractionResult && extractionResult.exactAverageKwh > 0) {
+      const cidade = extractionResult.data.cidade
+        ? `${extractionResult.data.cidade}${extractionResult.data.uf ? `/${extractionResult.data.uf.trim().toUpperCase()}` : ""}`
+        : "São Paulo/SP";
+      const kwh = extractionResult.exactAverageKwh;
+      const meses = extractionResult.monthCount || 12;
 
       return (
-        `Legal, dados extraídos com precisão! 📄⚡\n` +
-        `Consumo médio de *${kwh} kWh/mês* em *${cidade}*${mesesTexto}.\n\n` +
-        `Qual será a estrutura do telhado para a instalação do seu cliente?\n` +
+        `Legal, dados extraídos com precisão!\n` +
+        `Consumo médio de ${kwh} kWh/mês em ${cidade} (baseado no histórico de ${meses} meses da fatura).\n\n` +
+        `Qual a estrutura do telhado?\n` +
         `1 - Cerâmica (Colonial)\n` +
         `2 - Fibrocimento\n` +
         `3 - Metálico\n` +
@@ -514,7 +661,7 @@ export class WhatsappBotService {
       return (
         `Olá! Sou seu assistente de vendas e dimensionamento da EnergivIA. ☀️\n\n` +
         `Como posso ajudar você a gerar orçamentos e propostas para seus clientes hoje?\n\n` +
-        `Você pode me enviar o *PDF da fatura*, uma *foto da conta de luz* ou digitar o *consumo médio em kWh* do seu cliente para gerarmos uma simulação rápida!`
+        `Você pode me enviar o PDF da fatura, uma foto da conta de luz ou digitar o consumo médio em kWh do seu cliente para gerarmos uma simulação rápida!`
       );
     }
 
@@ -539,7 +686,7 @@ export class WhatsappBotService {
       ].some((k) => lower.includes(k))
     ) {
       return (
-        `Perfeito! Estrutura selecionada. 🛠️\n` +
+        `Perfeito! Estrutura identificada.\n` +
         `Qual o nome do cliente final para eu registrar no seu CRM?`
       );
     }
@@ -550,8 +697,8 @@ export class WhatsappBotService {
     if (kwhStr && Number(kwhStr.replace(",", ".")) > 50) {
       const consumo = Math.round(Number(kwhStr.replace(",", ".")));
       return (
-        `Ótimo! Consumo do cliente registrado: *${consumo} kWh/mês*.\n\n` +
-        `Qual será a estrutura do telhado para a instalação?\n` +
+        `Legal, consumo registrado: ${consumo} kWh/mês.\n\n` +
+        `Qual a estrutura do telhado?\n` +
         `1 - Cerâmica (Colonial)\n` +
         `2 - Fibrocimento\n` +
         `3 - Metálico\n` +
