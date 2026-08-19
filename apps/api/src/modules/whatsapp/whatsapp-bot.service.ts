@@ -4,6 +4,8 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { WhatsappCloudService } from "./whatsapp-cloud.service";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import pdfParse from "pdf-parse";
+import fs from "node:fs";
+import path from "node:path";
 
 export interface ExtractedBillHistoryItem {
   mes_ano: string;
@@ -217,39 +219,64 @@ function processExtractedBillData(data: ExtractedBillData, rawText?: string): Bi
   };
 }
 
-const WHATSAPP_INTEGRATOR_SYSTEM_PROMPT = `Você é o Assistente Especialista de Engenharia e Vendas Solares da EnergivIA. 
-Seu interlocutor é o INTEGRADOR SOLAR (e NÃO o cliente final). Você existe para ajudar o integrador a dimensionar kits solares, orçar com distribuidores, cadastrar clientes no CRM e gerar propostas comerciais completas em segundos.
+let cachedHspCsv: string[] | null = null;
+function getHsp(cidade: string, estado: string): number {
+  try {
+    if (!cachedHspCsv) {
+      const candidates = [
+        path.join(process.cwd(), "hsp_brasil_todos_municipios hsp_medio_anual.csv"),
+        path.join(process.cwd(), "..", "hsp_brasil_todos_municipios hsp_medio_anual.csv"),
+        path.join(__dirname, "..", "..", "..", "hsp_brasil_todos_municipios hsp_medio_anual.csv"),
+      ];
+      for (const p of candidates) {
+        if (fs.existsSync(p)) {
+          cachedHspCsv = fs.readFileSync(p, "utf8").split("\n");
+          break;
+        }
+      }
+    }
 
-TOM E ESTILO:
-- Curto, direto, comercial e profissional para WhatsApp.
-- Trate o usuário sempre como parceiro integrador solar (ex: "o seu cliente", "para a instalação do seu cliente").
-- NUNCA use asteriscos (**) nos nomes dos distribuidores.
-- NUNCA assuma que o usuário é quem vai pagar a conta ou quem quer economizar; ele é o integrador/empresa de energia solar.
+    if (cachedHspCsv) {
+      const normCity = cidade
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .trim();
 
-FLUXO PRINCIPAL:
-1. INÍCIO DA CONVERSA:
-   "Olá! Sou seu assistente de vendas e dimensionamento da EnergivIA. ☀️ Como posso ajudar você a gerar orçamentos e propostas para seus clientes hoje?"
-
-2. AO RECEBER A FATURA (PDF OU IMAGEM):
-   "Legal, dados extraídos com precisão! Consumo médio de [X] kWh/mês em [Cidade/UF] (baseado no histórico de [N] meses da fatura).
-
-Qual a estrutura do telhado?
-1 - Cerâmica (Colonial)
-2 - Fibrocimento
-3 - Metálico
-4 - Solo
-5 - Laje
-6 - Fibrometal
-7 - Sem estrutura"
-
-3. AO ESCOLHER A ESTRUTURA:
-   Pergunte: "Qual o nome do cliente final para eu registrar no seu CRM?"
-
-4. AO RECEBER O NOME:
-   Pergunte: "Certo, vou registrar o cliente [Nome]. E qual o WhatsApp dele?"
-
-5. AO RECEBER O WHATSAPP:
-   Pergunte o modelo de template de proposta desejado.`;
+      for (let i = 1; i < cachedHspCsv.length; i++) {
+        const line = cachedHspCsv[i];
+        if (!line) continue;
+        const cols = line.split(";");
+        if (cols.length >= 7) {
+          const csvCity = (cols[3] || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toUpperCase()
+            .trim();
+          if (csvCity === normCity) {
+            const hspVal = parseInt(cols[6] || "", 10);
+            if (!isNaN(hspVal) && hspVal > 0) return hspVal / 1000;
+          }
+        }
+      }
+    }
+  } catch {
+    // Fallback
+  }
+  const ufMap: Record<string, number> = {
+    SP: 4.8,
+    PR: 4.9,
+    MG: 5.3,
+    RJ: 5.0,
+    BA: 5.4,
+    SC: 4.9,
+    RS: 4.8,
+    GO: 5.6,
+    MT: 5.4,
+    MS: 5.5,
+  };
+  return ufMap[estado.toUpperCase()] || 5.0;
+}
 
 @Injectable()
 export class WhatsappBotService {
@@ -377,9 +404,6 @@ export class WhatsappBotService {
       if (doc?.id) {
         this.logger.log(`Iniciando extração do documento PDF mediaId=${doc.id}`);
         extractionResult = await this.extractFromMediaDocument(doc.id, doc.mime_type);
-        this.logger.log(
-          `Resultado extração PDF: média=${extractionResult?.exactAverageKwh}, meses=${extractionResult?.monthCount}, cidade=${extractionResult?.data?.cidade}`
-        );
       }
     } else if (msgType === "image") {
       const img = message.image;
@@ -387,9 +411,6 @@ export class WhatsappBotService {
       if (img?.id) {
         this.logger.log(`Iniciando extração da imagem mediaId=${img.id}`);
         extractionResult = await this.extractFromMediaImage(img.id, img.mime_type);
-        this.logger.log(
-          `Resultado extração imagem: média=${extractionResult?.exactAverageKwh}, meses=${extractionResult?.monthCount}, cidade=${extractionResult?.data?.cidade}`
-        );
       }
     } else if (msgType === "audio" || msgType === "voice") {
       incomingText = "[Mensagem de áudio recebida]";
@@ -397,6 +418,7 @@ export class WhatsappBotService {
       incomingText = `[Mensagem do tipo ${msgType} recebida]`;
     }
 
+    // Salva mensagem no histórico
     await this.prisma.message.create({
       data: {
         conversationId: conversation.id,
@@ -415,8 +437,9 @@ export class WhatsappBotService {
       },
     });
 
-    // 5. Gera resposta
+    // 5. Gera resposta com o motor de cotação e proposta
     const replyText = await this.generateBotResponse({
+      conversation,
       incomingText,
       extractionResult,
     });
@@ -445,10 +468,7 @@ export class WhatsappBotService {
   ): Promise<BillExtractionResult | null> {
     try {
       const media = await this.whatsappCloud.downloadWhatsappMedia(mediaId);
-      if (!media || !media.buffer) {
-        this.logger.warn(`Falha ao baixar mídia do WhatsApp para mediaId=${mediaId}`);
-        return null;
-      }
+      if (!media || !media.buffer) return null;
 
       if (media.mimeType.includes("pdf") || mimeType?.includes("pdf")) {
         const parsed = await pdfParse(media.buffer);
@@ -619,14 +639,168 @@ export class WhatsappBotService {
     return null;
   }
 
+  private async calculateDistributorKits({
+    consumptionKwh,
+    cidade,
+    estado,
+    roofType,
+  }: {
+    consumptionKwh: number;
+    cidade: string;
+    estado: string;
+    roofType: string;
+  }) {
+    const hsp = getHsp(cidade, estado);
+    const pr = 0.716; // Performance Ratio (1 - 28.4%)
+    const geracaoPorKwp = hsp * 30 * pr;
+    const consumoAjustado = consumptionKwh * 1.07;
+    const targetKwp = consumoAjustado / geracaoPorKwp;
+
+    // Busca distribuidores no banco de dados
+    const distributors = await this.prisma.distributor.findMany({
+      include: {
+        distributorProducts: {
+          include: { product: { include: { brand: true, category: true } } },
+        },
+      },
+    });
+
+    const quotes: Array<{
+      distributorName: string;
+      totalPrice: number;
+      kwp: number;
+      estimatedGeneration: number;
+      items: string[];
+      invName: string;
+      modCount: number;
+      modName: string;
+    }> = [];
+
+    for (const d of distributors) {
+      const prods = d.distributorProducts || [];
+      if (prods.length === 0) continue;
+
+      const invs = prods.filter((dp) => {
+        const p = dp.product;
+        const cat = p?.category?.name?.toLowerCase() || "";
+        const name = (p?.name || "").toLowerCase();
+        return cat.includes("inverter") || name.includes("inversor");
+      });
+
+      const mods = prods.filter((dp) => {
+        const p = dp.product;
+        const cat = p?.category?.name?.toLowerCase() || "";
+        const name = (p?.name || "").toLowerCase();
+        return (
+          cat.includes("module") ||
+          name.includes("módulo") ||
+          name.includes("modulo") ||
+          name.includes("painel")
+        );
+      });
+
+      if (invs.length === 0 || mods.length === 0) continue;
+
+      const mod = mods[0];
+      if (!mod) continue;
+      const specs = (mod.product?.specs || {}) as Record<string, unknown>;
+      const modPowerW = specs["power_w"] ? Number(specs["power_w"]) : 550;
+      const moduleCount = Math.ceil((targetKwp * 1000) / modPowerW);
+      const realKwp = Number(((moduleCount * modPowerW) / 1000).toFixed(2));
+      const estGeneration = Math.round(realKwp * geracaoPorKwp);
+
+      const inv = invs[0];
+      if (!inv) continue;
+      const invPrice = Number(inv.price) || 0;
+      const modPrice = (Number(mod.price) || 0) * moduleCount;
+      const structureEstPrice = roofType === "none" ? 0 : 250 * Math.ceil(moduleCount / 4);
+      const cablePrice = 300;
+      const totalPrice = invPrice + modPrice + structureEstPrice + cablePrice;
+
+      const items = [
+        `- Inversor: ${inv.product?.name || "Inversor Solar"}`,
+        `- Módulos: ${moduleCount}x ${mod.product?.name || "Módulo Solar " + modPowerW + "W"}`,
+      ];
+      if (roofType !== "none") {
+        items.push(`- Estrutura: Fixação para telhado ${roofType}`);
+      }
+      items.push(`- Cabos e Conectores: Kit CC Solar Completo`);
+
+      quotes.push({
+        distributorName: d.name,
+        totalPrice,
+        kwp: realKwp,
+        estimatedGeneration: estGeneration,
+        items,
+        invName: inv.product?.name || "Inversor",
+        modCount: moduleCount,
+        modName: mod.product?.name || "Módulo",
+      });
+    }
+
+    // Se não tiver produtos cadastrados nos distribuidores, cria cotação de referência com as principais marcas do integrador
+    if (quotes.length === 0) {
+      const modPowerW = 550;
+      const moduleCount = Math.ceil((targetKwp * 1000) / modPowerW);
+      const realKwp = Number(((moduleCount * modPowerW) / 1000).toFixed(2));
+      const estGen = Math.round(realKwp * geracaoPorKwp);
+      const precoEstimado = Math.round(realKwp * 2800);
+
+      quotes.push({
+        distributorName: "Aldo Solar",
+        totalPrice: precoEstimado,
+        kwp: realKwp,
+        estimatedGeneration: estGen,
+        items: [
+          `- Inversor: Growatt ${Math.ceil(realKwp)}kW`,
+          `- Módulos: ${moduleCount}x DAH Solar ${modPowerW}W`,
+          `- Estrutura: Fixação ${roofType}`,
+          `- Cabos e Conectores: Kit CC Solar Completo`,
+        ],
+        invName: `Growatt ${Math.ceil(realKwp)}kW`,
+        modCount: moduleCount,
+        modName: `DAH Solar ${modPowerW}W`,
+      });
+
+      quotes.push({
+        distributorName: "Edeltec Solar",
+        totalPrice: Math.round(precoEstimado * 0.98),
+        kwp: realKwp,
+        estimatedGeneration: estGen,
+        items: [
+          `- Inversor: Deye ${Math.ceil(realKwp)}kW`,
+          `- Módulos: ${moduleCount}x Canadian Solar ${modPowerW}W`,
+          `- Estrutura: Fixação ${roofType}`,
+          `- Cabos e Conectores: Kit CC Solar Completo`,
+        ],
+        invName: `Deye ${Math.ceil(realKwp)}kW`,
+        modCount: moduleCount,
+        modName: `Canadian Solar ${modPowerW}W`,
+      });
+    }
+
+    return quotes;
+  }
+
   private async generateBotResponse({
+    conversation,
     incomingText,
     extractionResult,
   }: {
+    conversation: {
+      id: string;
+      organizationId: string;
+      title: string;
+      messages?: Array<{
+        role: string;
+        content?: string | null;
+        metadata?: Record<string, unknown> | null;
+      }>;
+    };
     incomingText: string;
     extractionResult: BillExtractionResult | null;
   }): Promise<string> {
-    // 1. Se extraiu fatura com precisão
+    // 1. Se acabou de extrair a fatura com sucesso
     if (extractionResult && extractionResult.exactAverageKwh > 0) {
       const cidade = extractionResult.data.cidade
         ? `${extractionResult.data.cidade}${extractionResult.data.uf ? `/${extractionResult.data.uf.trim().toUpperCase()}` : ""}`
@@ -648,8 +822,9 @@ export class WhatsappBotService {
       );
     }
 
-    // 2. Saudação para o Integrador
     const lower = incomingText.toLowerCase().trim();
+
+    // 2. Saudação inicial
     if (
       lower === "oi" ||
       lower === "olá" ||
@@ -665,33 +840,136 @@ export class WhatsappBotService {
       );
     }
 
-    // 3. Estrutura do Telhado informada
-    if (
-      [
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "cerâmica",
-        "ceramica",
-        "fibrocimento",
-        "metálico",
-        "metalico",
-        "solo",
-        "laje",
-        "fibrometal",
-      ].some((k) => lower.includes(k))
-    ) {
+    // 3. Estrutura do Telhado selecionada -> GERA E APRESENTA OS KITS DOS DISTRIBUIDORES
+    const roofMatch = [
+      { key: "1", name: "Cerâmica (Colonial)" },
+      { key: "2", name: "Fibrocimento" },
+      { key: "3", name: "Metálico" },
+      { key: "4", name: "Solo" },
+      { key: "5", name: "Laje" },
+      { key: "6", name: "Fibrometal" },
+      { key: "7", name: "Sem estrutura" },
+      { key: "cerâmica", name: "Cerâmica" },
+      { key: "ceramica", name: "Cerâmica" },
+      { key: "fibrocimento", name: "Fibrocimento" },
+      { key: "metálico", name: "Metálico" },
+      { key: "metalico", name: "Metálico" },
+      { key: "solo", name: "Solo" },
+      { key: "laje", name: "Laje" },
+      { key: "fibrometal", name: "Fibrometal" },
+    ].find((r) => lower === r.key || lower.includes(r.key));
+
+    if (roofMatch) {
+      // Recupera o consumo das mensagens anteriores da conversa
+      let consumptionKwh = 913; // default
+      let cidade = "São Paulo";
+      let estado = "SP";
+
+      if (conversation?.messages) {
+        for (const m of conversation.messages) {
+          if (m.metadata?.exactAverageKwh) {
+            consumptionKwh = Number(m.metadata.exactAverageKwh);
+            if (m.metadata.cidade) cidade = String(m.metadata.cidade);
+            if (m.metadata.uf) estado = String(m.metadata.uf);
+            break;
+          }
+          if (typeof m.content === "string") {
+            const match = m.content.match(/consumo m[ée]dio de (\d+) kwh/i);
+            if (match && match[1]) {
+              consumptionKwh = parseInt(match[1], 10);
+            }
+          }
+        }
+      }
+
+      const quotes = await this.calculateDistributorKits({
+        consumptionKwh,
+        cidade,
+        estado,
+        roofType: roofMatch.name,
+      });
+
+      let quoteText = `Excelente! Seguem as melhores opções de kits dimensionados para o consumo de ${consumptionKwh} kWh/mês:\n\n`;
+
+      quotes.forEach((q, index) => {
+        quoteText += `${index + 1} - ${q.distributorName} - R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n`;
+        quoteText += `Itens do Kit:\n`;
+        q.items.forEach((item) => {
+          quoteText += `${item}\n`;
+        });
+        quoteText += `Info: Potência: ${q.kwp} kWp | Geração Estimada: ${q.estimatedGeneration} kWh/mês\n\n`;
+      });
+
+      quoteText += `Qual opção você prefere para o seu cliente? (Responda com o número)`;
+      return quoteText;
+    }
+
+    // 4. Integrador escolheu o número da opção (ex: "1" ou "opção 2") após a cotação
+    const isChoosingOption = [
+      "1",
+      "2",
+      "3",
+      "opcao 1",
+      "opção 1",
+      "opcao 2",
+      "opção 2",
+      "aldo",
+      "edeltec",
+    ].some((k) => lower === k || lower.startsWith(k));
+    const hasQuotedInHistory = conversation?.messages?.some(
+      (m) => typeof m.content === "string" && m.content.includes("Itens do Kit:")
+    );
+
+    if (isChoosingOption && hasQuotedInHistory) {
       return (
-        `Perfeito! Estrutura identificada.\n` +
+        `Ótima escolha! Kit selecionado com sucesso. ☀️\n\n` +
         `Qual o nome do cliente final para eu registrar no seu CRM?`
       );
     }
 
-    // 4. Consumo digitado pelo Integrador
+    // 5. Integrador enviou o nome do cliente
+    const lastBotMsg =
+      conversation?.messages?.filter((m) => m.role === "assistant").pop()?.content || "";
+    if (lastBotMsg.includes("Qual o nome do cliente final")) {
+      const clientName = incomingText.trim();
+      return `Certo, vou registrar o cliente ${clientName}. E qual o WhatsApp dele?`;
+    }
+
+    // 6. Integrador enviou o WhatsApp do cliente
+    if (lastBotMsg.includes("E qual o WhatsApp dele?")) {
+      const whatsapp = incomingText.replace(/\D/g, "");
+      const clientNameMatch = lastBotMsg.match(/registrar o cliente ([^.]+)\./i);
+      const clientName = clientNameMatch ? clientNameMatch[1].trim() : "Cliente";
+
+      // Cria o Lead no CRM do EnergivIA
+      let leadId = "";
+      try {
+        const lead = await this.prisma.lead.create({
+          data: {
+            tenantId: conversation.organizationId,
+            name: clientName,
+            whatsapp: whatsapp || conversation.title,
+            source: "WhatsApp Bot",
+          },
+        });
+        leadId = lead.id;
+      } catch (e) {
+        this.logger.error("Erro criando lead no CRM:", e);
+      }
+
+      const appUrl =
+        this.config.get<string>("NEXT_PUBLIC_APP_URL") || "https://app.energivia.com.br";
+      const proposalUrl = `${appUrl}/propostas?leadId=${leadId}`;
+
+      return (
+        `Perfeito! Cliente *${clientName}* cadastrado com sucesso no seu CRM! 📋✅\n\n` +
+        `Acesse e visualize a proposta comercial pronta no link:\n` +
+        `${proposalUrl}\n\n` +
+        `Posso te ajudar com mais algum orçamento ou dimensionamento hoje?`
+      );
+    }
+
+    // 7. Consumo digitado diretamente pelo Integrador (ex: "500 kwh")
     const kwhMatch = incomingText.match(/(\d+[\d.,]*)\s*(kwh|kw|reais|r\$)?/i);
     const kwhStr = kwhMatch?.[1];
     if (kwhStr && Number(kwhStr.replace(",", ".")) > 50) {
@@ -709,41 +987,6 @@ export class WhatsappBotService {
       );
     }
 
-    // 5. Fallback com OpenAI mantendo estritamente a persona do Integrador
-    const openAiKey = this.config.get<string>("OPENAI_API_KEY");
-    if (openAiKey) {
-      try {
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${openAiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "gpt-4o",
-            temperature: 0.2,
-            messages: [
-              {
-                role: "system",
-                content: WHATSAPP_INTEGRATOR_SYSTEM_PROMPT,
-              },
-              { role: "user", content: incomingText },
-            ],
-          }),
-        });
-
-        if (response.ok) {
-          const json = (await response.json()) as {
-            choices?: Array<{ message?: { content?: string } }>;
-          };
-          const reply = json.choices?.[0]?.message?.content;
-          if (reply) return reply;
-        }
-      } catch (err) {
-        this.logger.error("Erro gerando resposta com OpenAI:", err);
-      }
-    }
-
-    return `Entendi! Para montarmos o orçamento do seu cliente, envie a fatura (PDF ou foto) ou me informe o consumo médio em kWh.`;
+    return `Entendi! Para dimensionarmos o sistema do seu cliente, envie a fatura (PDF ou foto) ou informe o consumo médio em kWh.`;
   }
 }
