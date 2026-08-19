@@ -299,12 +299,8 @@ export class ProposalsService {
             const p = prodMap.get(item.productId);
             return {
               ...item,
-              imageUrl:
-                ((item as Record<string, unknown>).imageUrl as string) || p?.imageUrl || undefined,
-              specs:
-                ((item as Record<string, unknown>).specs as Record<string, unknown>) ||
-                (p?.specs as Record<string, unknown>) ||
-                undefined,
+              imageUrl: item.imageUrl || p?.imageUrl || undefined,
+              specs: item.specs || (p?.specs as Record<string, unknown>) || undefined,
               brandName: item.brandName || p?.brand?.name || item.brandName,
               categoryName: item.categoryName || p?.category?.name || item.categoryName,
             };
