@@ -39,15 +39,15 @@ interface WebhookPayload {
   }>;
 }
 
-const BILL_EXTRACTION_PROMPT = `Você é um motor especialista em extração de dados estruturados de faturas de energia elétrica brasileiras (Copel, Enel, CPFL, Cemig, Equatorial, Energisa, Light, etc.).
-Extraia com máxima precisão os dados da fatura:
-1. "distribuidora": Nome da concessionária (ex: "Copel", "Enel", "CPFL")
-2. "cidade": Nome da cidade da instalação (ex: "Maringá", "Curitiba", "São Paulo")
+const BILL_EXTRACTION_PROMPT = `Você é um motor especialista em visão computacional e extração forense de dados estruturados de faturas de energia elétrica brasileiras (Copel, Enel, CPFL, Cemig, Equatorial, Energisa, Neoenergia, Light, EDP, RGE, Celesc, etc.).
+Sua missão é extrair com máxima precisão os dados da fatura para o integrador de energia solar:
+1. "distribuidora": Nome da concessionária (ex: "Copel", "Enel", "CPFL", "Cemig")
+2. "cidade": Nome da cidade da unidade consumidora
 3. "estado": UF com 2 letras (ex: "PR", "SP", "MG")
 4. "tipoConexao": "Monofásico", "Bifásico" ou "Trifásico"
-5. "nomeCliente": Nome do titular da conta
-6. "historicoConsumo": Array com os consumos em kWh de todos os meses visíveis na tabela de histórico (ex: [450, 520, 480, 600, ...])
-7. "consumoKwh": Média aritmética exata de todos os meses do histórico (se houver histórico) ou o consumo do mês atual.
+5. "nomeCliente": Nome completo do titular da conta
+6. "historicoConsumo": Array numérico com o consumo em kWh de CADA UM dos meses da tabela de histórico (ex: [520, 610, 480, 550, ...])
+7. "consumoKwh": Média aritmética real de todos os meses do histórico (se houver) ou o consumo do mês atual.
 
 Retorne estritamente um JSON no formato:
 {
@@ -59,6 +59,41 @@ Retorne estritamente um JSON no formato:
   "historicoConsumo": number[],
   "consumoKwh": number
 }`;
+
+const WHATSAPP_INTEGRATOR_SYSTEM_PROMPT = `Você é o Assistente Especialista de Engenharia e Vendas Solares da EnergivIA. 
+Seu interlocutor é o INTEGRADOR SOLAR (e NÃO o cliente final). Você existe para ajudar o integrador a dimensionar kits solares, orçar com distribuidores, cadastrar clientes no CRM e gerar propostas comerciais completas em segundos.
+
+TOM E ESTILO:
+- Curto, direto, comercial e profissional para WhatsApp.
+- Trate o usuário sempre como parceiro integrador solar (ex: "o seu cliente", "para a instalação do seu cliente").
+- NUNCA assuma que o usuário é quem vai pagar a conta ou quem quer economizar; ele é a empresa/profissional de energia solar vendendo para o cliente final dele.
+
+FLUXO PRINCIPAL:
+1. INÍCIO DA CONVERSA:
+   Se apresente como assistente do integrador:
+   "Olá! Sou seu assistente de vendas e dimensionamento da EnergivIA. Como posso ajudar você a gerar orçamentos e propostas para seus clientes hoje?"
+   Peça a fatura (PDF ou foto) ou o consumo médio do cliente.
+
+2. AO RECEBER A CONTA DE LUZ (PDF OU FOTO):
+   Diga: "Legal, dados extraídos com precisão! Consumo médio de [X] kWh/mês em [Cidade/UF] (baseado no histórico de [N] meses da fatura)."
+   Em seguida pergunte a estrutura:
+   "Qual será a estrutura do telhado do cliente?
+   1 - Cerâmica (Colonial)
+   2 - Fibrocimento
+   3 - Metálico
+   4 - Solo
+   5 - Laje
+   6 - Fibrometal
+   7 - Sem estrutura"
+
+3. AO ESCOLHER A ESTRUTURA:
+   Pergunte: "Qual o nome do cliente final para eu registrar no seu CRM?"
+
+4. AO RECEBER O NOME:
+   Pergunte: "Certo, vou registrar o cliente [Nome]. E qual o WhatsApp dele?"
+
+5. AO RECEBER O WHATSAPP:
+   Confirme o cadastro do lead e pergunte qual modelo de proposta deseja gerar.`;
 
 @Injectable()
 export class WhatsappBotService {
@@ -101,7 +136,7 @@ export class WhatsappBotService {
           await this.processSingleMessage({
             message,
             phoneNumberId,
-            contactName: contacts[0]?.profile?.name || "Cliente",
+            contactName: contacts[0]?.profile?.name || "Integrador",
           });
         }
       }
@@ -123,7 +158,7 @@ export class WhatsappBotService {
 
     if (!waMessageId || !fromWaId) return;
 
-    // 1. Dedup: verifica se a mensagem já foi processada
+    // 1. Dedup
     const existing = await this.prisma.whatsappInboundMessage.findUnique({
       where: { waMessageId },
     });
@@ -132,14 +167,14 @@ export class WhatsappBotService {
       return;
     }
 
-    // 2. Busca ou define a Organização/Tenant
+    // 2. Tenant
     const defaultTenant = await this.prisma.tenant.findFirst();
     if (!defaultTenant) {
-      this.logger.error("Nenhum Tenant/Organização encontrado no banco de dados.");
+      this.logger.error("Nenhum Tenant encontrado no banco de dados.");
       return;
     }
 
-    // 3. Busca ou cria a Conversation (WhatsApp)
+    // 3. Conversation
     let conversation = await this.prisma.conversation.findFirst({
       where: {
         organizationId: defaultTenant.id,
@@ -165,7 +200,6 @@ export class WhatsappBotService {
       });
     }
 
-    // Registra o ID da mensagem para evitar duplicidade
     await this.prisma.whatsappInboundMessage.create({
       data: {
         waMessageId,
@@ -173,7 +207,7 @@ export class WhatsappBotService {
       },
     });
 
-    // 4. Extrai o conteúdo da mensagem (Texto, Documento/Fatura, Imagem, Áudio)
+    // 4. Extração de Conteúdo
     let incomingText = "";
     let extractedBillData: ExtractedBillData | null = null;
 
@@ -187,7 +221,7 @@ export class WhatsappBotService {
       if (doc?.id) {
         this.logger.log(`Iniciando extração do documento PDF mediaId=${doc.id}`);
         extractedBillData = await this.extractFromMediaDocument(doc.id, doc.mime_type);
-        this.logger.log(`Resultado da extração do PDF: ${JSON.stringify(extractedBillData)}`);
+        this.logger.log(`Resultado extração PDF: ${JSON.stringify(extractedBillData)}`);
       }
     } else if (msgType === "image") {
       const img = message.image;
@@ -195,7 +229,7 @@ export class WhatsappBotService {
       if (img?.id) {
         this.logger.log(`Iniciando extração da imagem mediaId=${img.id}`);
         extractedBillData = await this.extractFromMediaImage(img.id, img.mime_type);
-        this.logger.log(`Resultado da extração da imagem: ${JSON.stringify(extractedBillData)}`);
+        this.logger.log(`Resultado extração imagem: ${JSON.stringify(extractedBillData)}`);
       }
     } else if (msgType === "audio" || msgType === "voice") {
       incomingText = "[Mensagem de áudio recebida]";
@@ -203,7 +237,6 @@ export class WhatsappBotService {
       incomingText = `[Mensagem do tipo ${msgType} recebida]`;
     }
 
-    // Registra a mensagem do usuário no banco
     await this.prisma.message.create({
       data: {
         conversationId: conversation.id,
@@ -214,14 +247,13 @@ export class WhatsappBotService {
       },
     });
 
-    // 5. Gera a resposta do Chatbot
+    // 5. Gera resposta com a persona do Integrador
     const replyText = await this.generateBotResponse({
       incomingText,
       extractedBillData,
     });
 
     if (replyText) {
-      // Salva a resposta do assistente
       await this.prisma.message.create({
         data: {
           conversationId: conversation.id,
@@ -231,7 +263,6 @@ export class WhatsappBotService {
         },
       });
 
-      // Envia via WhatsApp Cloud API
       await this.whatsappCloud.sendTextMessage({
         phoneNumberId,
         toWaId: fromWaId,
@@ -254,9 +285,6 @@ export class WhatsappBotService {
       if (media.mimeType.includes("pdf") || mimeType?.includes("pdf")) {
         const parsed = await pdfParse(media.buffer);
         const text = parsed.text;
-        if (!text || text.trim().length === 0) {
-          this.logger.warn("PDF não contém texto legível (pode ser escaneado como imagem).");
-        }
         return this.parseBillTextWithAI(text);
       }
     } catch (e) {
@@ -306,7 +334,6 @@ export class WhatsappBotService {
   private async parseBillTextWithAI(pdfText: string): Promise<ExtractedBillData | null> {
     if (!pdfText || pdfText.trim().length === 0) return null;
 
-    // 1. Tenta OpenAI GPT-4o
     const openAiKey = this.config.get<string>("OPENAI_API_KEY");
     if (openAiKey) {
       try {
@@ -324,7 +351,7 @@ export class WhatsappBotService {
               { role: "system", content: BILL_EXTRACTION_PROMPT },
               {
                 role: "user",
-                content: `Extraia os dados da seguinte fatura de energia:\n\n${pdfText.slice(0, 8000)}`,
+                content: `Extraia com máxima precisão todos os dados e histórico de consumo do seguinte texto de fatura de energia:\n\n${pdfText.slice(0, 8000)}`,
               },
             ],
           }),
@@ -342,7 +369,6 @@ export class WhatsappBotService {
       }
     }
 
-    // 2. Tenta Google Gemini
     if (this.genAI) {
       try {
         const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -385,7 +411,7 @@ export class WhatsappBotService {
               content: [
                 {
                   type: "text",
-                  text: "Extraia com máxima precisão todos os dados e o histórico de consumo desta conta de energia.",
+                  text: "Extraia com máxima precisão os dados e histórico de consumo da conta de luz.",
                 },
                 { type: "image_url", image_url: { url: dataUrl, detail: "high" } },
               ],
@@ -451,19 +477,20 @@ export class WhatsappBotService {
     incomingText: string;
     extractedBillData: ExtractedBillData | null;
   }): Promise<string> {
+    // 1. Se extraiu fatura com sucesso
     if (extractedBillData && extractedBillData.consumoKwh && extractedBillData.consumoKwh > 0) {
       const cidade = extractedBillData.cidade
         ? `${extractedBillData.cidade}${extractedBillData.estado ? `/${extractedBillData.estado}` : ""}`
-        : "sua região";
+        : "a região informada";
       const kwh = extractedBillData.consumoKwh;
       const mesesTexto = extractedBillData.mesesIdentificados
-        ? ` (baseado no histórico de ${extractedBillData.mesesIdentificados} meses)`
+        ? ` (baseado no histórico de ${extractedBillData.mesesIdentificados} meses da fatura)`
         : "";
 
       return (
         `Legal, dados extraídos com precisão! 📄⚡\n` +
         `Consumo médio de *${kwh} kWh/mês* em *${cidade}*${mesesTexto}.\n\n` +
-        `Qual será a estrutura do telhado para os painéis?\n` +
+        `Qual será a estrutura do telhado para a instalação do seu cliente?\n` +
         `1 - Cerâmica (Colonial)\n` +
         `2 - Fibrocimento\n` +
         `3 - Metálico\n` +
@@ -474,7 +501,7 @@ export class WhatsappBotService {
       );
     }
 
-    // Se for mensagem de saudação
+    // 2. Saudação para o Integrador
     const lower = incomingText.toLowerCase().trim();
     if (
       lower === "oi" ||
@@ -485,13 +512,13 @@ export class WhatsappBotService {
       lower === "boa noite"
     ) {
       return (
-        `Olá! Sou o consultor especialista em energia solar da EnergivIA. ☀️\n\n` +
-        `Como posso te ajudar a economizar até 95% na sua conta de luz hoje?\n\n` +
-        `Você pode me enviar o *PDF da sua fatura*, uma *foto da conta de luz* ou digitar o seu *consumo médio em kWh* para gerarmos uma simulação rápida!`
+        `Olá! Sou seu assistente de vendas e dimensionamento da EnergivIA. ☀️\n\n` +
+        `Como posso ajudar você a gerar orçamentos e propostas para seus clientes hoje?\n\n` +
+        `Você pode me enviar o *PDF da fatura*, uma *foto da conta de luz* ou digitar o *consumo médio em kWh* do seu cliente para gerarmos uma simulação rápida!`
       );
     }
 
-    // Se o usuário respondeu a estrutura do telhado
+    // 3. Estrutura do Telhado informada
     if (
       [
         "1",
@@ -513,19 +540,18 @@ export class WhatsappBotService {
     ) {
       return (
         `Perfeito! Estrutura selecionada. 🛠️\n` +
-        `Estamos dimensionando o kit ideal com os melhores módulos e inversores dos distribuidores parceiros.\n\n` +
-        `Qual o seu nome completo para registrarmos a simulação no sistema?`
+        `Qual o nome do cliente final para eu registrar no seu CRM?`
       );
     }
 
-    // Se o usuário digitou o consumo diretamente (ex: "500 kwh" ou "consome 650")
+    // 4. Consumo digitado pelo Integrador
     const kwhMatch = incomingText.match(/(\d+[\d.,]*)\s*(kwh|kw|reais|r\$)?/i);
     const kwhStr = kwhMatch?.[1];
     if (kwhStr && Number(kwhStr.replace(",", ".")) > 50) {
       const consumo = Math.round(Number(kwhStr.replace(",", ".")));
       return (
-        `Ótimo! Consumo registrado: *${consumo} kWh/mês*.\n\n` +
-        `Qual será a estrutura do telhado?\n` +
+        `Ótimo! Consumo do cliente registrado: *${consumo} kWh/mês*.\n\n` +
+        `Qual será a estrutura do telhado para a instalação?\n` +
         `1 - Cerâmica (Colonial)\n` +
         `2 - Fibrocimento\n` +
         `3 - Metálico\n` +
@@ -536,7 +562,7 @@ export class WhatsappBotService {
       );
     }
 
-    // Resposta contextual com IA
+    // 5. Fallback com OpenAI mantendo estritamente a persona do Integrador
     const openAiKey = this.config.get<string>("OPENAI_API_KEY");
     if (openAiKey) {
       try {
@@ -548,12 +574,11 @@ export class WhatsappBotService {
           },
           body: JSON.stringify({
             model: "gpt-4o",
-            temperature: 0.3,
+            temperature: 0.2,
             messages: [
               {
                 role: "system",
-                content:
-                  "Você é o consultor de energia solar da EnergivIA no WhatsApp. Seja sempre curto, direto, cordial e comercial. Incentive o cliente a enviar a conta de luz (PDF ou foto) ou informar o consumo em kWh para gerar uma proposta.",
+                content: WHATSAPP_INTEGRATOR_SYSTEM_PROMPT,
               },
               { role: "user", content: incomingText },
             ],
@@ -572,6 +597,6 @@ export class WhatsappBotService {
       }
     }
 
-    return `Entendi! Para montarmos sua proposta solar personalizada, por favor envie a foto ou PDF da sua conta de energia, ou me diga seu consumo médio mensal em kWh.`;
+    return `Entendi! Para montarmos o orçamento do seu cliente, envie a fatura (PDF ou foto) ou me informe o consumo médio em kWh.`;
   }
 }
