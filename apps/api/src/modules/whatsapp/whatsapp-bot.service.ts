@@ -520,8 +520,9 @@ export class WhatsappBotService {
 
     // Se o usuário digitou o consumo diretamente (ex: "500 kwh" ou "consome 650")
     const kwhMatch = incomingText.match(/(\d+[\d.,]*)\s*(kwh|kw|reais|r\$)?/i);
-    if (kwhMatch && Number(kwhMatch[1].replace(",", ".")) > 50) {
-      const consumo = Math.round(Number(kwhMatch[1].replace(",", ".")));
+    const kwhStr = kwhMatch?.[1];
+    if (kwhStr && Number(kwhStr.replace(",", ".")) > 50) {
+      const consumo = Math.round(Number(kwhStr.replace(",", ".")));
       return (
         `Ótimo! Consumo registrado: *${consumo} kWh/mês*.\n\n` +
         `Qual será a estrutura do telhado?\n` +
