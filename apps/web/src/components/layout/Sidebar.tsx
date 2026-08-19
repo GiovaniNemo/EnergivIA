@@ -133,7 +133,7 @@ export function Sidebar(): JSX.Element {
           <div className="h-3" />
         )}
 
-        <nav className="flex-1 space-y-4 overflow-y-auto pb-5 pt-1">
+        <nav className="flex-1 space-y-4 overflow-y-auto pb-5 pt-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {sections.map((section) => (
             <SidebarSection
               key={section.key}
