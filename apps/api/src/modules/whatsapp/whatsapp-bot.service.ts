@@ -971,6 +971,36 @@ export class WhatsappBotService {
     return quotes;
   }
 
+  private async getAvailableTemplates(
+    tenantId: string
+  ): Promise<Array<{ id: string; name: string }>> {
+    const orgTemplates = await this.prisma.proposalTemplate.findMany({
+      where: { tenantId, status: "PUBLISHED", deletedAt: null },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
+      take: 5,
+    });
+
+    if (orgTemplates.length > 0) {
+      return orgTemplates.map((t) => ({ id: t.id, name: t.name }));
+    }
+
+    const blueprints = await this.prisma.proposalTemplateBlueprint.findMany({
+      where: { published: true },
+      orderBy: { sortOrder: "asc" },
+      take: 5,
+    });
+
+    if (blueprints.length > 0) {
+      return blueprints.map((b) => ({ id: b.id, name: b.name }));
+    }
+
+    return [
+      { id: "default-moderno", name: "Modelo Comercial Moderno (Padrão)" },
+      { id: "default-executivo", name: "Modelo Executivo Solar" },
+      { id: "default-minimalista", name: "Modelo Minimalista" },
+    ];
+  }
+
   private async generateBotResponse({
     conversation,
     incomingText,
@@ -1022,19 +1052,35 @@ export class WhatsappBotService {
 
     // ESTADO A: O Bot acabou de apresentar os distribuidores e pediu para escolher a opção (1 ou 2)
     if (lastBotMsg.includes("Qual opção você prefere para o seu cliente?")) {
+      const templates = await this.getAvailableTemplates(conversation.organizationId);
+      let templateListText = "";
+      templates.forEach((t, i) => {
+        templateListText += `${i + 1} - ${t.name}\n`;
+      });
+
       return (
         `Ótima escolha! Kit selecionado com sucesso. ☀️\n\n` +
-        `Qual o nome do cliente final para eu registrar no seu CRM e gerar a proposta?`
+        `Qual modelo de proposta comercial você deseja usar para o seu cliente?\n` +
+        `${templateListText}\n` +
+        `(Responda com o número do modelo desejado)`
       );
     }
 
-    // ESTADO B: O Bot pediu o nome do cliente final
+    // ESTADO B: O Bot pediu para escolher o modelo de proposta
+    if (lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar")) {
+      return (
+        `Modelo de proposta selecionado com sucesso! 📄✨\n\n` +
+        `Qual o nome do cliente final para registrarmos no seu CRM e gerar a proposta?`
+      );
+    }
+
+    // ESTADO C: O Bot pediu o nome do cliente final
     if (lastBotMsg.includes("Qual o nome do cliente final")) {
       const clientName = incomingText.trim();
       return `Certo, vou registrar o cliente ${clientName}. E qual o WhatsApp dele com DDD?`;
     }
 
-    // ESTADO C: O Bot pediu o WhatsApp do cliente final -> GERA LEAD, DEAL, SIZING, SIMULAÇÃO E PROPOSTA REAL!
+    // ESTADO D: O Bot pediu o WhatsApp do cliente final -> GERA LEAD, DEAL, SIZING, SIMULAÇÃO E PROPOSTA REAL!
     if (lastBotMsg.includes("E qual o WhatsApp dele")) {
       const clientWhatsapp = incomingText.replace(/\D/g, "");
       const clientNameMatch = lastBotMsg.match(/registrar o cliente ([^.]+)\./i);
@@ -1080,6 +1126,10 @@ export class WhatsappBotService {
         estimatedGeneration: consumptionKwh,
         items: [],
       };
+
+      // Recupera template escolhido
+      const availableTemplates = await this.getAvailableTemplates(conversation.organizationId);
+      const chosenTemplate = availableTemplates[0];
 
       let proposalId = "";
       try {
@@ -1165,6 +1215,7 @@ export class WhatsappBotService {
                 systemPowerKw: selectedQuote.kwp,
                 sourceType: "distributor",
                 distributorName: selectedQuote.distributorName,
+                templateName: chosenTemplate?.name || "Modelo Comercial Padrão",
               },
             },
           },
@@ -1195,6 +1246,7 @@ export class WhatsappBotService {
         `Perfeito! Proposta comercial gerada com sucesso para o cliente *${clientName}*! 📋✅\n\n` +
         `☀️ *Potência:* ${selectedQuote.kwp} kWp\n` +
         `🏢 *Distribuidor:* ${selectedQuote.distributorName}\n` +
+        `🎨 *Modelo:* ${chosenTemplate?.name || "Comercial Moderno"}\n` +
         `💰 *Valor Total:* R$ ${selectedQuote.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
         `📄 *Acesse a Proposta Pronta no link:*\n` +
         `${proposalLink}\n\n` +
@@ -1202,7 +1254,7 @@ export class WhatsappBotService {
       );
     }
 
-    // ESTADO D: O Bot pediu a estrutura do telhado OU o usuário enviou uma estrutura
+    // ESTADO E: O Bot pediu a estrutura do telhado OU o usuário enviou uma estrutura
     const roofMatch = [
       { key: "1", name: "Cerâmica (Colonial)" },
       { key: "2", name: "Fibrocimento" },
