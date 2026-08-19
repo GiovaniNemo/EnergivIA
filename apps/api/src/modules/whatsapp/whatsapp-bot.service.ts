@@ -100,7 +100,7 @@ REGRAS DE LEITURA E PARSING CRÍTICAS:
    - distribuidora: Nome da concessionária identificada no cabeçalho ou logotipo (ex: Enel, Copel, CPFL, Cemig, Equatorial, Energisa, etc.).
    - cidade: Cidade da unidade consumidora indicada no endereço (ex: SAO PAULO).
    - uf: Sigla do estado com 2 letras (ex: SP, PR, MG, RJ, BA, GO, etc.).
-   - tipo_conexao: "Monofásico", "Bifásico" ou "Trifásico" (identifique no campo Tipo de Fornecimento / Ligação).
+   - tipo_conexao: "Monofásico" | "Bifásico" | "Trifásico" (identifique no campo Tipo de Fornecimento / Ligação).
    - nome_cliente: Nome completo do titular da conta.
    - mes_referencia_atual: Mês/ano de referência da fatura (ex: "08/2026").
    - consumo_mes_atual_kwh: Consumo ativo faturado do mês atual (número inteiro).
@@ -278,6 +278,8 @@ function getHsp(cidade: string, estado: string): number {
   return ufMap[estado.toUpperCase()] || 5.0;
 }
 
+const SESSION_INACTIVITY_MS = 5 * 60 * 1000; // 5 minutos de inatividade
+
 @Injectable()
 export class WhatsappBotService {
   private readonly logger = new Logger(WhatsappBotService.name);
@@ -357,7 +359,7 @@ export class WhatsappBotService {
       return;
     }
 
-    // 3. Conversation
+    // 3. Conversation Lookup & Inactivity Management
     let conversation = await this.prisma.conversation.findFirst({
       where: {
         organizationId: defaultTenant.id,
@@ -366,6 +368,34 @@ export class WhatsappBotService {
       },
       include: { messages: { orderBy: { createdAt: "asc" } } },
     });
+
+    const isNewMedia = msgType === "document" || msgType === "image";
+    let isSessionExpired = false;
+
+    if (conversation && conversation.messages.length > 0) {
+      const lastMsg = conversation.messages[conversation.messages.length - 1];
+      const timeSinceLastMsg = lastMsg ? Date.now() - new Date(lastMsg.createdAt).getTime() : 0;
+
+      // Se passou mais de 5 minutos OU se o usuário enviou uma nova fatura / pediu novo chat:
+      if ((lastMsg && timeSinceLastMsg > SESSION_INACTIVITY_MS) || isNewMedia) {
+        isSessionExpired = Boolean(
+          lastMsg && timeSinceLastMsg > SESSION_INACTIVITY_MS && !isNewMedia
+        );
+        this.logger.log(
+          `Reiniciando sessão do WhatsApp para ${fromWaId} (Inatividade: ${timeSinceLastMsg}ms, Nova mídia: ${isNewMedia})`
+        );
+
+        // Limpa mensagens antigas da conversa para não vazar números de simulações passadas
+        await this.prisma.message.deleteMany({
+          where: { conversationId: conversation.id },
+        });
+
+        conversation = await this.prisma.conversation.findUnique({
+          where: { id: conversation.id },
+          include: { messages: { orderBy: { createdAt: "asc" } } },
+        });
+      }
+    }
 
     if (!conversation) {
       conversation = await this.prisma.conversation.create({
@@ -390,7 +420,7 @@ export class WhatsappBotService {
       },
     });
 
-    // 4. Extração de Conteúdo (Fatura / Texto / Imagem / Áudio)
+    // 4. Extração de Conteúdo (Fatura / Texto / Imagem)
     let incomingText = "";
     let extractionResult: BillExtractionResult | null = null;
 
@@ -398,6 +428,24 @@ export class WhatsappBotService {
 
     if (msgType === "text") {
       incomingText = message.text?.body || "";
+      const lowerText = incomingText.toLowerCase().trim();
+      if (
+        lowerText === "novo" ||
+        lowerText === "reiniciar" ||
+        lowerText === "nova cotação" ||
+        lowerText === "nova cotacao"
+      ) {
+        await this.prisma.message.deleteMany({
+          where: { conversationId: conversation.id },
+        });
+        const resetMsg = `Sessão reiniciada com sucesso! ☀️\n\nEnvie a conta de luz do seu cliente (PDF ou foto) ou digite o consumo médio em kWh para iniciarmos um novo orçamento.`;
+        await this.whatsappCloud.sendTextMessage({
+          phoneNumberId,
+          toWaId: fromWaId,
+          body: resetMsg,
+        });
+        return;
+      }
     } else if (msgType === "document") {
       const doc = message.document;
       incomingText = `[Documento enviado: ${doc?.filename || "fatura.pdf"}]`;
@@ -418,7 +466,7 @@ export class WhatsappBotService {
       incomingText = `[Mensagem do tipo ${msgType} recebida]`;
     }
 
-    // Salva mensagem no histórico
+    // Salva mensagem no histórico com os metadados exatos da fatura
     await this.prisma.message.create({
       data: {
         conversationId: conversation.id,
@@ -437,9 +485,28 @@ export class WhatsappBotService {
       },
     });
 
-    // 5. Gera resposta com o motor de cotação e proposta
+    // Se a sessão anterior expirou por inatividade e o usuário mandou um texto qualquer:
+    if (isSessionExpired) {
+      const timeoutNotice =
+        `Sua sessão anterior foi finalizada por inatividade. Vamos iniciar um novo dimensionamento! ☀️\n\n` +
+        `Envie a conta de luz do seu cliente (PDF ou foto) ou digite o consumo em kWh para começarmos.`;
+      await this.whatsappCloud.sendTextMessage({
+        phoneNumberId,
+        toWaId: fromWaId,
+        body: timeoutNotice,
+      });
+      return;
+    }
+
+    // Atualiza conversa com a mensagem recém-criada
+    const freshConversation = await this.prisma.conversation.findUnique({
+      where: { id: conversation.id },
+      include: { messages: { orderBy: { createdAt: "asc" } } },
+    });
+
+    // 5. Gera resposta com cotação e proposta
     const replyText = await this.generateBotResponse({
-      conversation,
+      conversation: freshConversation || conversation,
       incomingText,
       extractionResult,
     });
@@ -468,7 +535,10 @@ export class WhatsappBotService {
   ): Promise<BillExtractionResult | null> {
     try {
       const media = await this.whatsappCloud.downloadWhatsappMedia(mediaId);
-      if (!media || !media.buffer) return null;
+      if (!media || !media.buffer) {
+        this.logger.warn(`Falha ao baixar mídia do WhatsApp para mediaId=${mediaId}`);
+        return null;
+      }
 
       if (media.mimeType.includes("pdf") || mimeType?.includes("pdf")) {
         const parsed = await pdfParse(media.buffer);
@@ -651,12 +721,11 @@ export class WhatsappBotService {
     roofType: string;
   }) {
     const hsp = getHsp(cidade, estado);
-    const pr = 0.716; // Performance Ratio (1 - 28.4%)
+    const pr = 0.716; // Performance Ratio
     const geracaoPorKwp = hsp * 30 * pr;
     const consumoAjustado = consumptionKwh * 1.07;
     const targetKwp = consumoAjustado / geracaoPorKwp;
 
-    // Busca distribuidores no banco de dados
     const distributors = await this.prisma.distributor.findMany({
       include: {
         distributorProducts: {
@@ -738,7 +807,6 @@ export class WhatsappBotService {
       });
     }
 
-    // Se não tiver produtos cadastrados nos distribuidores, cria cotação de referência com as principais marcas do integrador
     if (quotes.length === 0) {
       const modPowerW = 550;
       const moduleCount = Math.ceil((targetKwp * 1000) / modPowerW);
@@ -747,35 +815,35 @@ export class WhatsappBotService {
       const precoEstimado = Math.round(realKwp * 2800);
 
       quotes.push({
-        distributorName: "Aldo Solar",
-        totalPrice: precoEstimado,
-        kwp: realKwp,
-        estimatedGeneration: estGen,
-        items: [
-          `- Inversor: Growatt ${Math.ceil(realKwp)}kW`,
-          `- Módulos: ${moduleCount}x DAH Solar ${modPowerW}W`,
-          `- Estrutura: Fixação ${roofType}`,
-          `- Cabos e Conectores: Kit CC Solar Completo`,
-        ],
-        invName: `Growatt ${Math.ceil(realKwp)}kW`,
-        modCount: moduleCount,
-        modName: `DAH Solar ${modPowerW}W`,
-      });
-
-      quotes.push({
         distributorName: "Edeltec Solar",
         totalPrice: Math.round(precoEstimado * 0.98),
         kwp: realKwp,
         estimatedGeneration: estGen,
         items: [
-          `- Inversor: Deye ${Math.ceil(realKwp)}kW`,
-          `- Módulos: ${moduleCount}x Canadian Solar ${modPowerW}W`,
-          `- Estrutura: Fixação ${roofType}`,
+          `- Inversor: Deye ${Math.ceil(realKwp)}kW Monofásico 220V`,
+          `- Módulos: ${moduleCount}x Canadian Solar ${modPowerW}W TopCon`,
+          `- Estrutura: Fixação para telhado ${roofType}`,
           `- Cabos e Conectores: Kit CC Solar Completo`,
         ],
         invName: `Deye ${Math.ceil(realKwp)}kW`,
         modCount: moduleCount,
         modName: `Canadian Solar ${modPowerW}W`,
+      });
+
+      quotes.push({
+        distributorName: "Aldo Solar",
+        totalPrice: precoEstimado,
+        kwp: realKwp,
+        estimatedGeneration: estGen,
+        items: [
+          `- Inversor: Growatt ${Math.ceil(realKwp)}kW Monofásico 220V`,
+          `- Módulos: ${moduleCount}x DAH Solar ${modPowerW}W TopCon`,
+          `- Estrutura: Fixação para telhado ${roofType}`,
+          `- Cabos e Conectores: Kit CC Solar Completo`,
+        ],
+        invName: `Growatt ${Math.ceil(realKwp)}kW`,
+        modCount: moduleCount,
+        modName: `DAH Solar ${modPowerW}W`,
       });
     }
 
@@ -849,8 +917,8 @@ export class WhatsappBotService {
       { key: "5", name: "Laje" },
       { key: "6", name: "Fibrometal" },
       { key: "7", name: "Sem estrutura" },
-      { key: "cerâmica", name: "Cerâmica" },
-      { key: "ceramica", name: "Cerâmica" },
+      { key: "cerâmica", name: "Cerâmica (Colonial)" },
+      { key: "ceramica", name: "Cerâmica (Colonial)" },
       { key: "fibrocimento", name: "Fibrocimento" },
       { key: "metálico", name: "Metálico" },
       { key: "metalico", name: "Metálico" },
@@ -860,13 +928,14 @@ export class WhatsappBotService {
     ].find((r) => lower === r.key || lower.includes(r.key));
 
     if (roofMatch) {
-      // Recupera o consumo das mensagens anteriores da conversa
+      // Recupera o consumo MAIS RECENTE da conversa (escaneando do fim para o início)
       let consumptionKwh = 913; // default
       let cidade = "São Paulo";
       let estado = "SP";
 
-      if (conversation?.messages) {
-        for (const m of conversation.messages) {
+      if (conversation?.messages && conversation.messages.length > 0) {
+        const reversed = [...conversation.messages].reverse();
+        for (const m of reversed) {
           const meta = m.metadata as Record<string, unknown> | null | undefined;
           if (meta && meta["exactAverageKwh"]) {
             consumptionKwh = Number(meta["exactAverageKwh"]);
@@ -878,6 +947,7 @@ export class WhatsappBotService {
             const match = m.content.match(/consumo m[ée]dio de (\d+) kwh/i);
             if (match?.[1]) {
               consumptionKwh = parseInt(match[1], 10);
+              break;
             }
           }
         }
