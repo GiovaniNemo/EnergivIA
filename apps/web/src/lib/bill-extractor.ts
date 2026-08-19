@@ -33,50 +33,43 @@ export interface BillExtractionResult {
   rawText?: string;
 }
 
-const BILL_EXTRACTION_SYSTEM_PROMPT = `Você é o mais avançado especialista em análise forense e engenharia de dados de faturas de energia elétrica brasileiras (CPFL, Enel, Cemig, Copel, Equatorial, Energisa, Neoenergia/Coelba/Celpe/Cosern/Elektro, Light, EDP, RGE, Celesc, etc.).
+const BILL_EXTRACTION_SYSTEM_PROMPT = `Você é um motor especialista em visão computacional forense e extração de dados estruturados de faturas de energia elétrica brasileiras (Enel, CPFL, Cemig, Copel, Equatorial, Energisa, Neoenergia, Light, EDP, RGE, Celesc, etc.).
 
-Sua missão é extrair com 100% DE PRECISÃO MATEMÁTICA E FORENSE todos os dados da conta de luz, com foco ABSOLUTO em extrair EXATAMENTE os meses com consumo real preenchido.
+Sua missão é extrair com 100% DE PRECISÃO MATEMÁTICA todos os dados da conta de luz, com foco ABSOLUTO em extrair TODOS os meses reais da tabela de Histórico de Consumo/Faturamento.
 
 REGRAS DE LEITURA E PARSING CRÍTICAS:
-1. TABELA DE HISTÓRICO DE CONSUMO ("Histórico de Consumo", "HISTÓRICO DE CONSUMO / kWh", "Evolução do Consumo", "Consumo faturado", "Histórico de Faturamento"):
-   - Localize a tabela onde constam os meses de histórico faturados.
-   
-   - REGRA FUNDAMENTAL PARA MESES EM BRANCO / INSTALAÇÕES RECENTES:
-     * Muitas faturas (ex: COPEL, CPFL, Enel, Cemig) desenham uma grade fixa com 12 ou 13 linhas de meses, mas se a instalação for recente ou tiver poucos meses ativos (ex: apenas JUN, MAI, ABR, MAR, FEV com valores e o restante em branco), extraia APENAS e EXCLUSIVAMENTE os meses que possuem CONSUMO REAL PREENCHIDO.
-     * NUNCA crie registros para meses que estão em branco/vazios na tabela.
-     * NUNCA invente consumo nem preencha com 0 para linhas sem valor.
-   
-   - REGRA FUNDAMENTAL ANTI-CONFUSÃO DE DIAS ("Nº DIAS FAT." / "DIAS"):
-     * Na COPEL e em diversas concessionárias, a coluna "CONSUMO FATURADO" fica ao lado de "Nº DIAS FAT." (onde aparecem números de dias como 31, 30, 31, 29, 22).
-     * NUNCA coloque a quantidade de dias no campo 'consumo_kwh'.
-     * O campo 'consumo_kwh' DEVE conter unicamente o consumo de energia faturado em kWh (ex: 189, 263, 378, 355, 100).
-   
+1. TABELA DE HISTÓRICO DE CONSUMO ("Histórico de Consumo", "CONSUMO / kWh", "HISTÓRICO DE CONSUMO / kWh", "Evolução do Consumo", "Demonstrativo"):
+   - Localize a tabela onde constam os meses de histórico faturados (geralmente entre 11 e 13 meses visíveis).
+   - Percorra TODAS as linhas da tabela de cima a baixo.
+   - Para CADA linha que contiver dados impressos, extraia:
+     * 'mes_ano': Sigla do mês e ano (ex: "AGO/26", "JUL/26", "JAN/25", "DEZ/24", etc.).
+     * 'consumo_kwh': Valor numérico exato do consumo ativo faturado em kWh.
+   - ATENÇÃO A NÚMEROS COM PONTO DE MILHAR: "1.198" é 1198; "1.525" é 1525; "1.099" é 1099. Sempre converta para NÚMERO INTEIRO no JSON.
+   - Se a fatura tiver 12 ou 13 meses com valores impressos (como é o padrão da Enel, CPFL, Cemig), extraia TODOS os 12 ou 13 meses sem omitir nenhum!
+   - Se a instalação for recente e tiver apenas alguns meses preenchidos e os demais em branco (como algumas faturas novas da Copel), extraia apenas as linhas que tiverem números impressos.
    - NUNCA confunda 'consumo_kwh' com:
-     * Quantidade de dias faturados (ex: 28, 29, 30, 31, 22).
+     * Quantidade de dias de faturamento (ex: 28, 29, 30, 31, 33).
      * Média diária (ex: 12.5 kWh/dia).
      * Demanda contratada ou medida em kW.
-     * Energia reativa (kVARh).
-     * Leitura do medidor (ex: 60161, 60350).
-     * Valores monetários em R$ (ex: R$ 212,58, R$ 70,48, etc.).
-     * Taxa de iluminação pública ou multas.
-     * Valores de energia injetada / saldo de créditos GD.
-   
-   - Formatação numérica brasileira: "1.450" significa 1450. "850,00" significa 850. Sempre retorne 'consumo_kwh' como NÚMERO INTEIRO limpo no JSON.
+     * Leitura do medidor.
+     * Valores monetários em R$.
+     * Valores de iluminação pública ou multas.
+     * Valores de energia injetada / saldo GD.
 
 2. CONSUMO ATIVO E GERAÇÃO DISTRIBUÍDA (GD):
    - Se a fatura tiver créditos solares / GD, utilize sempre o Consumo Ativo Total Faturado/Consumido da rede.
 
 3. DADOS GERAIS:
-   - distribuidora: Nome da concessionária (ex: COPEL, CPFL Paulista, Enel SP, Cemig, Equatorial, etc.).
-   - cidade: Cidade da unidade consumidora (ex: Maringa).
-   - uf: Sigla do estado com 2 letras (ex: PR, SP, MG, RJ, etc.).
-   - tipo_conexao: "Monofásico", "Bifásico" ou "Trifásico" (procure por Tipo de Fornecimento, Ligação, Tensão, ex: "Trifásico /50A" -> "Trifásico").
-   - nome_cliente: Nome completo do titular se visível (ex: "MARCELO VALEZE TROVO").
-   - mes_referencia_atual: Mês/ano da fatura (ex: "06/2026").
-   - consumo_mes_atual_kwh: Consumo ativo medido/faturado do mês atual (ex: 189).
-   - valor_total_fatura_reais: Total a pagar em R$ (ex: 212.58).
+   - distribuidora: Nome da concessionária identificada no cabeçalho ou logotipo (ex: Enel, Copel, CPFL, Cemig, Equatorial, Energisa, etc.).
+   - cidade: Cidade da unidade consumidora indicada no endereço.
+   - uf: Sigla do estado com 2 letras (ex: SP, PR, MG, RJ, BA, GO, etc.).
+   - tipo_conexao: "Monofásico", "Bifásico" ou "Trifásico" (identifique no campo Tipo de Fornecimento / Ligação).
+   - nome_cliente: Nome completo do titular da conta.
+   - mes_referencia_atual: Mês/ano de referência da fatura (ex: "08/2026").
+   - consumo_mes_atual_kwh: Consumo ativo faturado do mês atual (número inteiro).
+   - valor_total_fatura_reais: Valor total a pagar em R$ (número float).
 
-Retorne EXCLUSIVAMENTE um objeto JSON válido no formato especificado:
+Retorne EXCLUSIVAMENTE um objeto JSON válido no seguinte formato:
 {
   "distribuidora": "string",
   "cidade": "string",
@@ -267,7 +260,7 @@ function processExtractedBillData(data: ExtractedBillData, rawText?: string): Bi
 
   const formattedSummary = `
 === [DADOS PRECISOS EXTRAÍDOS DA FATURA DE ENERGIA] ===
-• Distribuidora: ${data.distribuidora || "Copel"}
+• Distribuidora: ${data.distribuidora || "Não identificada"}
 • Localização: ${data.cidade ? data.cidade.trim() : "Não identificada"}/${data.uf ? data.uf.trim().toUpperCase() : "UF"}
 • Tipo de Conexão/Ligação: ${data.tipo_conexao || "Bifásico"}
 • Titular: ${data.nome_cliente || "Não informado"}
