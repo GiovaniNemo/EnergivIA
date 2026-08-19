@@ -84,6 +84,7 @@ const getHspFromCsv = (cidade: string, estado: string) => {
 
 import pdfParse from "pdf-parse";
 import { auth0 } from "@/lib/auth0";
+import { extractEnergyBillFromPdfBuffer, extractEnergyBillFromImage } from "@/lib/bill-extractor";
 
 export const maxDuration = 60;
 
@@ -237,11 +238,25 @@ async function calculateDistributorQuotes({
 
   if (parsedConsumption === 300) {
     const allText = messages
-      .map((m: any) => (typeof m.content === "string" ? m.content.toLowerCase() : ""))
+      .map((m: any) =>
+        typeof m.content === "string"
+          ? m.content.toLowerCase()
+          : Array.isArray(m.content)
+            ? m.content
+                .map((c: any) => (typeof c === "string" ? c : c.text || ""))
+                .join(" ")
+                .toLowerCase()
+            : ""
+      )
       .join(" ");
-    const matches = [...allText.matchAll(/consumo m[ée]dio[^0-9]*(\d+)/g)];
-    if (matches.length > 0) {
-      parsedConsumption = parseInt(matches[matches.length - 1][1], 10);
+
+    const exactMatch =
+      allText.match(/m[ée]dia mensal exata[^0-9]*(\d+)/i) ||
+      allText.match(/m[ée]dia mensal[^0-9]*(\d+)\s*kwh/i) ||
+      allText.match(/consumo m[ée]dio[^0-9]*(\d+)/i);
+
+    if (exactMatch) {
+      parsedConsumption = parseInt(exactMatch[1], 10);
     } else {
       const kwhMatches = [...allText.matchAll(/(\d+)\s*kwh/g)];
       if (kwhMatches.length > 0) {
@@ -695,20 +710,41 @@ export async function POST(req: Request) {
             if (m.imageUrl.startsWith("data:application/pdf")) {
               const base64Data = m.imageUrl.split(",")[1];
               const buffer = Buffer.from(base64Data, "base64");
-              let pdfText = "Fatura/PDF Extraído:\n";
+              let extractionContent = "";
               try {
-                const data = await pdfParse(buffer);
-                pdfText += data.text;
-              } catch (e) {
-                pdfText += "(Falha ao extrair PDF)";
+                const result = await extractEnergyBillFromPdfBuffer(buffer);
+                extractionContent = `${result.formattedSummary}\n\n[Texto Bruto do PDF para referência complementar]:\n${(result.rawText || "").substring(0, 3000)}`;
+              } catch (e: any) {
+                console.error("[PDF EXTRACTION ERROR]", e);
+                try {
+                  const data = await pdfParse(buffer);
+                  extractionContent = `Fatura/PDF Extraído:\n${data.text}`;
+                } catch {
+                  extractionContent = "(Falha ao extrair dados do PDF)";
+                }
               }
-              return { role: m.role, content: `${m.content || "Anexo:"}\n\n${pdfText}` };
+              return {
+                role: m.role,
+                content: `${m.content || "Fatura de Energia Anexada:"}\n\n${extractionContent}`,
+              };
             }
+
+            let imageExtractionSummary = "";
+            try {
+              const result = await extractEnergyBillFromImage(m.imageUrl);
+              imageExtractionSummary = result.formattedSummary;
+            } catch (e: any) {
+              console.error("[IMAGE EXTRACTION ERROR]", e);
+            }
+
+            const textPart = [m.content || "Fatura de Energia Anexada:", imageExtractionSummary]
+              .filter(Boolean)
+              .join("\n\n");
 
             return {
               role: m.role,
               content: [
-                { type: "text", text: m.content || "Imagem anexa:" },
+                { type: "text", text: textPart },
                 { type: "image", image: m.imageUrl },
               ],
             };

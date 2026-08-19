@@ -2,17 +2,14 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from "@nes
 import { ConfigService } from "@nestjs/config";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import {
-  createS3ClientForPresign,
-  createS3GetUrl,
-  presignedPutObjectUrlOptions,
-} from "../../common/s3/s3.util";
+import { createS3ClientForPresign, presignedPutObjectUrlOptions } from "../../common/s3/s3.util";
 import { PrismaService } from "../../prisma/prisma.service";
 import { Prisma, UtilityProvider } from "@prisma/client";
 import { extname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { assertLeadInTenant } from "../../common/assert-lead-in-tenant";
 import { softDeleteWhere as soft } from "../../prisma/soft-delete";
+import pdfParse from "pdf-parse";
 
 const BILL_CONTENT_TYPES = [
   "image/jpeg",
@@ -199,8 +196,17 @@ export class EnergyBillsService {
           const base64Image = Buffer.from(buffer).toString("base64");
           const mimeType = ext === ".png" ? "image/png" : "image/jpeg";
           extractedData = await this.extractVisionWithOpenAI(base64Image, mimeType, openAiApiKey);
+        } else if (ext === ".pdf") {
+          try {
+            const arrayBuf = await response.arrayBuffer();
+            const pdfBuffer = Buffer.from(arrayBuf);
+            const pdfData = await pdfParse(pdfBuffer);
+            const pdfText = pdfData.text || "";
+            extractedData = await this.extractDataWithOpenAI(pdfText, openAiApiKey);
+          } catch (pdfErr) {
+            this.logger.error(`Erro ao ler PDF com pdfParse: ${String(pdfErr)}`);
+          }
         } else {
-          // PDF ou outros formatos: tenta extração via texto básico
           const text = await response.text();
           extractedData = await this.extractDataWithOpenAI(text, openAiApiKey);
         }
@@ -208,8 +214,20 @@ export class EnergyBillsService {
 
       // 3. Fallback: Se a OpenAI não retornar dados ou a chave não estiver configurada, roda regex local
       if (!extractedData) {
-        const fileText = await response.text();
-        extractedData = this.parseBillText(fileText);
+        try {
+          const ext = extname(fileName).toLowerCase();
+          let fallbackText = "";
+          if (ext === ".pdf") {
+            const arrayBuf = await response.arrayBuffer();
+            const pdfData = await pdfParse(Buffer.from(arrayBuf));
+            fallbackText = pdfData.text || "";
+          } else {
+            fallbackText = await response.text();
+          }
+          extractedData = this.parseBillText(fallbackText);
+        } catch {
+          extractedData = null;
+        }
       }
 
       // 4. Salva o resultado
@@ -230,6 +248,46 @@ export class EnergyBillsService {
     }
   }
 
+  private processExtractedResultWithMath(parsed: Record<string, unknown>): Record<string, unknown> {
+    const rawList = Array.isArray(parsed["consumptionHistoryLabeled"])
+      ? (parsed["consumptionHistoryLabeled"] as Array<Record<string, unknown>>)
+      : [];
+
+    const validLabeled: Array<{ month: string; consumptionKwh: number }> = [];
+    for (const item of rawList) {
+      if (!item || typeof item !== "object") continue;
+      const month = String(item["month"] || item["mes"] || item["label"] || "").trim();
+      const kwh = Number(item["consumptionKwh"] ?? item["kwh"] ?? item["consumo_kwh"]);
+      if (Number.isFinite(kwh) && kwh > 0 && kwh < 500000) {
+        validLabeled.push({
+          month: month || `Mês ${validLabeled.length + 1}`,
+          consumptionKwh: Math.round(kwh),
+        });
+      }
+    }
+
+    let exactAverage = 0;
+    if (validLabeled.length > 0) {
+      const sum = validLabeled.reduce((acc, curr) => acc + curr.consumptionKwh, 0);
+      exactAverage = Math.round(sum / validLabeled.length);
+    } else if (
+      typeof parsed["consumptionKwh"] === "number" &&
+      (parsed["consumptionKwh"] as number) > 0
+    ) {
+      exactAverage = Math.round(parsed["consumptionKwh"] as number);
+    }
+
+    const consumptionHistoryKwh = validLabeled.map((v) => v.consumptionKwh);
+
+    return {
+      ...parsed,
+      consumptionKwh: exactAverage > 0 ? exactAverage : parsed["consumptionKwh"],
+      simulationMonthlyConsumptionKwh: exactAverage > 0 ? exactAverage : parsed["consumptionKwh"],
+      consumptionHistoryLabeled: validLabeled,
+      consumptionHistoryKwh,
+    };
+  }
+
   private async extractDataWithOpenAI(
     text: string,
     apiKey: string
@@ -243,16 +301,17 @@ export class EnergyBillsService {
         },
         body: JSON.stringify({
           model: "gpt-4o-mini",
+          temperature: 0,
           response_format: { type: "json_object" },
           messages: [
             {
               role: "system",
               content:
-                "Você é um assistente especialista em analisar contas de luz no Brasil. Extraia os dados em um JSON com os campos: consumptionKwh (número), totalAmount (número em R$), referenceMonth (string MM/YYYY), cidade (string), uf (string 2 letras), e provider (distribuidora).",
+                "Você é um especialista em analisar contas de energia do Brasil. Extraia meticulosamente TODOS os meses do histórico de consumo sem omitir nenhum mês. Extraia um JSON com os campos: consumptionKwh (número do consumo do mês atual), totalAmount (número em R$), referenceMonth (string MM/YYYY), cidade (string), uf (string 2 letras), provider (distribuidora), e consumptionHistoryLabeled (array de objetos com { month: string, consumptionKwh: number } contendo todos os meses do histórico de faturamento/consumo encontrados).",
             },
             {
               role: "user",
-              content: `Extraia os dados da seguinte fatura:\n\n${text}`,
+              content: `Extraia os dados e o histórico completo da seguinte fatura de energia:\n\n${text}`,
             },
           ],
         }),
@@ -263,7 +322,9 @@ export class EnergyBillsService {
         choices?: Array<{ message?: { content?: string } }>;
       };
       const content = data.choices?.[0]?.message?.content;
-      return content ? (JSON.parse(content) as Record<string, unknown>) : null;
+      if (!content) return null;
+      const parsed = JSON.parse(content) as Record<string, unknown>;
+      return this.processExtractedResultWithMath(parsed);
     } catch {
       return null;
     }
@@ -282,18 +343,22 @@ export class EnergyBillsService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: "gpt-4o",
+          temperature: 0,
           response_format: { type: "json_object" },
           messages: [
             {
               role: "system",
               content:
-                "Você é um assistente especialista em analisar imagens de contas de luz no Brasil. Extraia os dados em um JSON com os campos: consumptionKwh (número), totalAmount (número em R$), referenceMonth (string MM/YYYY), cidade (string), uf (string 2 letras), e provider (distribuidora).",
+                "Você é um especialista em analisar imagens de contas de energia do Brasil. Extraia meticulosamente TODOS os meses do histórico de consumo sem omitir nenhum mês. Extraia um JSON com os campos: consumptionKwh (número do consumo do mês atual), totalAmount (número em R$), referenceMonth (string MM/YYYY), cidade (string), uf (string 2 letras), provider (distribuidora), e consumptionHistoryLabeled (array de objetos com { month: string, consumptionKwh: number } contendo todos os meses do histórico de faturamento/consumo encontrados).",
             },
             {
               role: "user",
               content: [
-                { type: "text", text: "Extraia os dados desta conta de energia:" },
+                {
+                  type: "text",
+                  text: "Extraia os dados e o histórico completo desta conta de energia:",
+                },
                 {
                   type: "image_url",
                   image_url: { url: `data:${mimeType};base64,${base64Image}` },
@@ -309,7 +374,9 @@ export class EnergyBillsService {
         choices?: Array<{ message?: { content?: string } }>;
       };
       const content = data.choices?.[0]?.message?.content;
-      return content ? (JSON.parse(content) as Record<string, unknown>) : null;
+      if (!content) return null;
+      const parsed = JSON.parse(content) as Record<string, unknown>;
+      return this.processExtractedResultWithMath(parsed);
     } catch {
       return null;
     }
