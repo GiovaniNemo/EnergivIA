@@ -1,8 +1,13 @@
 import { Module } from "@nestjs/common";
 import { WhatsappCloudService } from "./whatsapp-cloud.service";
+import { WhatsappBotService } from "./whatsapp-bot.service";
+import { WhatsappWebhookController } from "./whatsapp-webhook.controller";
+import { PrismaModule } from "../../prisma/prisma.module";
 
 @Module({
-  providers: [WhatsappCloudService],
-  exports: [WhatsappCloudService],
+  imports: [PrismaModule],
+  controllers: [WhatsappWebhookController],
+  providers: [WhatsappCloudService, WhatsappBotService],
+  exports: [WhatsappCloudService, WhatsappBotService],
 })
 export class WhatsappCoreModule {}

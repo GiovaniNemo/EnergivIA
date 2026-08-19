@@ -36,6 +36,7 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
 import { ChatbaseModule } from "./modules/chatbase/chatbase.module";
 import { StripeModule } from "./modules/stripe/stripe.module";
 import { PlansModule } from "./modules/plans/plans.module";
+import { WhatsappCoreModule } from "./modules/whatsapp/whatsapp-core.module";
 
 @Module({
   controllers: [HealthController],
@@ -84,6 +85,7 @@ import { PlansModule } from "./modules/plans/plans.module";
     ChatbaseModule,
     StripeModule,
     PlansModule,
+    WhatsappCoreModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
