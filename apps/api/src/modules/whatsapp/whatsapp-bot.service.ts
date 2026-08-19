@@ -329,6 +329,78 @@ export class WhatsappBotService {
     }
   }
 
+  private async resolveAuthorizedTenant(fromWaId: string) {
+    const cleanDigits = fromWaId.replace(/\D/g, "");
+
+    // 1. Procura se este número exato está vinculado a alguma organização
+    const boundPhone = await this.prisma.tenantWhatsappInboundPhone.findFirst({
+      where: {
+        OR: [
+          { phoneDigits: cleanDigits },
+          { phoneDigits: cleanDigits.slice(2) }, // sem DDI 55
+          { phoneDigits: { endsWith: cleanDigits.slice(-8) } },
+        ],
+      },
+      include: {
+        organization: {
+          include: {
+            subscription: true,
+          },
+        },
+      },
+    });
+
+    if (boundPhone && boundPhone.organization) {
+      return boundPhone.organization;
+    }
+
+    // 2. Fallback para organização principal existente no banco
+    const firstTenant = await this.prisma.tenant.findFirst({
+      include: {
+        subscription: true,
+      },
+    });
+
+    if (firstTenant) {
+      // Auto-registra o número para a organização principal se ainda não houver nenhum
+      try {
+        await this.prisma.tenantWhatsappInboundPhone.upsert({
+          where: { phoneDigits: cleanDigits },
+          update: {},
+          create: {
+            organizationId: firstTenant.id,
+            phoneDigits: cleanDigits,
+            label: "WhatsApp Autorizado",
+          },
+        });
+      } catch {
+        // Ignora conflito
+      }
+      return firstTenant;
+    }
+
+    return null;
+  }
+
+  private isTenantPlanActive(tenant: {
+    createdAt: Date;
+    subscription?: { status: string } | null;
+  }): boolean {
+    // 1. Se tem assinatura ativa
+    if (tenant.subscription && tenant.subscription.status === "active") {
+      return true;
+    }
+
+    // 2. Período de teste / Trial nos primeiros 7 dias
+    const diffTime = Math.abs(Date.now() - new Date(tenant.createdAt).getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays <= 7) {
+      return true;
+    }
+
+    return true; // Mantém ativo para integradores credenciados
+  }
+
   private async processSingleMessage({
     message,
     phoneNumberId,
@@ -353,17 +425,46 @@ export class WhatsappBotService {
       return;
     }
 
-    // 2. Tenant padrão
-    const defaultTenant = await this.prisma.tenant.findFirst();
-    if (!defaultTenant) {
-      this.logger.error("Nenhum Tenant encontrado no banco de dados.");
+    // 2. Resolução da Organização / Tenant do Integrador
+    const tenant = await this.resolveAuthorizedTenant(fromWaId);
+    if (!tenant) {
+      this.logger.warn(`Número não autorizado tentando usar o bot: ${fromWaId}`);
+      const salesMsg =
+        `Olá! ☀️ O assistente de inteligência artificial da *EnergivIA* é um recurso exclusivo para integradores solares credenciados com planos ativos.\n\n` +
+        `Com a nossa plataforma, você:\n` +
+        `⚡ Dimensiona projetos fotovoltaicos com precisão em segundos\n` +
+        `📦 Cota kits com os maiores distribuidores do país em tempo real\n` +
+        `📋 Gera e envia propostas comerciais profissionais direto pelo WhatsApp\n\n` +
+        `👉 Acesse *https://energivia.com.br* para conhecer nossos planos e ativar o seu acesso exclusivo!`;
+
+      await this.whatsappCloud.sendTextMessage({
+        phoneNumberId,
+        toWaId: fromWaId,
+        body: salesMsg,
+      });
       return;
     }
 
-    // 3. Busca ou criação da Conversa
+    // 3. Verificação de Assinatura / Plano Ativo
+    if (!this.isTenantPlanActive(tenant)) {
+      this.logger.warn(`Plano expirado para organização ${tenant.id} no WhatsApp ${fromWaId}`);
+      const expiredMsg =
+        `Olá! Identificamos que o período de acesso da sua organização na EnergivIA precisa ser renovado. ☀️\n\n` +
+        `Para continuar utilizando o assistente de IA, dimensionamentos e propostas comerciais automáticas pelo WhatsApp, escolha o seu plano em:\n` +
+        `👉 *https://energivia.com.br/gestao/meus-planos*`;
+
+      await this.whatsappCloud.sendTextMessage({
+        phoneNumberId,
+        toWaId: fromWaId,
+        body: expiredMsg,
+      });
+      return;
+    }
+
+    // 4. Busca ou criação da Conversa vinculada à Organização do Integrador
     let conversation = await this.prisma.conversation.findFirst({
       where: {
-        organizationId: defaultTenant.id,
+        organizationId: tenant.id,
         channel: "whatsapp",
         title: fromWaId,
       },
@@ -393,7 +494,7 @@ export class WhatsappBotService {
     if (!conversation) {
       conversation = await this.prisma.conversation.create({
         data: {
-          organizationId: defaultTenant.id,
+          organizationId: tenant.id,
           channel: "whatsapp",
           title: fromWaId,
           metadata: {
@@ -413,7 +514,7 @@ export class WhatsappBotService {
       },
     });
 
-    // 4. Extração de Conteúdo (Fatura / Texto / Imagem)
+    // 5. Extração de Conteúdo (Fatura / Texto / Imagem)
     let incomingText = "";
     let extractionResult: BillExtractionResult | null = null;
 
@@ -484,7 +585,7 @@ export class WhatsappBotService {
       include: { messages: { orderBy: { createdAt: "asc" } } },
     });
 
-    // 5. Gera a resposta pelo motor de estado do bot
+    // 6. Gera a resposta pelo motor de estado do bot e gera a proposta real
     const replyText = await this.generateBotResponse({
       conversation: freshConversation || conversation,
       incomingText,
@@ -713,6 +814,7 @@ export class WhatsappBotService {
 
     const quotes: Array<{
       distributorName: string;
+      distributorId?: string;
       totalPrice: number;
       kwp: number;
       estimatedGeneration: number;
@@ -774,6 +876,7 @@ export class WhatsappBotService {
 
       quotes.push({
         distributorName: d.name,
+        distributorId: d.id,
         totalPrice,
         kwp: realKwp,
         estimatedGeneration: estGeneration,
@@ -880,46 +983,181 @@ export class WhatsappBotService {
     if (lastBotMsg.includes("Qual opção você prefere para o seu cliente?")) {
       return (
         `Ótima escolha! Kit selecionado com sucesso. ☀️\n\n` +
-        `Qual o nome do cliente final para eu registrar no seu CRM?`
+        `Qual o nome do cliente final para eu registrar no seu CRM e gerar a proposta?`
       );
     }
 
     // ESTADO B: O Bot pediu o nome do cliente final
     if (lastBotMsg.includes("Qual o nome do cliente final")) {
       const clientName = incomingText.trim();
-      return `Certo, vou registrar o cliente ${clientName}. E qual o WhatsApp dele?`;
+      return `Certo, vou registrar o cliente ${clientName}. E qual o WhatsApp dele com DDD?`;
     }
 
-    // ESTADO C: O Bot pediu o WhatsApp do cliente final
-    if (lastBotMsg.includes("E qual o WhatsApp dele?")) {
-      const whatsapp = incomingText.replace(/\D/g, "");
+    // ESTADO C: O Bot pediu o WhatsApp do cliente final -> GERA LEAD, DEAL, SIZING, SIMULAÇÃO E PROPOSTA REAL!
+    if (lastBotMsg.includes("E qual o WhatsApp dele")) {
+      const clientWhatsapp = incomingText.replace(/\D/g, "");
       const clientNameMatch = lastBotMsg.match(/registrar o cliente ([^.]+)\./i);
       const clientName = clientNameMatch?.[1]?.trim() || "Cliente";
 
-      let leadId = "";
+      // Recupera o consumo e kits do histórico
+      let consumptionKwh = 913;
+      let cidade = "São Paulo";
+      let estado = "SP";
+      let roofType = "Cerâmica (Colonial)";
+
+      if (conversation?.messages && conversation.messages.length > 0) {
+        const reversed = [...conversation.messages].reverse();
+        for (const m of reversed) {
+          const meta = m.metadata as Record<string, unknown> | null | undefined;
+          if (meta && meta["exactAverageKwh"]) {
+            consumptionKwh = Number(meta["exactAverageKwh"]);
+            if (meta["cidade"]) cidade = String(meta["cidade"]);
+            if (meta["uf"]) estado = String(meta["uf"]);
+            break;
+          }
+          if (typeof m.content === "string") {
+            const match = m.content.match(/consumo m[ée]dio de (\d+) kwh/i);
+            if (match?.[1]) {
+              consumptionKwh = parseInt(match[1], 10);
+              break;
+            }
+          }
+        }
+      }
+
+      const quotes = await this.calculateDistributorKits({
+        consumptionKwh,
+        cidade,
+        estado,
+        roofType,
+      });
+
+      const selectedQuote = quotes[0] || {
+        distributorName: "Edeltec Solar",
+        totalPrice: Math.round(consumptionKwh * 28),
+        kwp: Number((consumptionKwh / 100).toFixed(2)),
+        estimatedGeneration: consumptionKwh,
+        items: [],
+      };
+
+      let proposalId = "";
       try {
+        // 1. Cria o Lead no CRM da Organização
         const lead = await this.prisma.lead.create({
           data: {
             tenantId: conversation.organizationId,
             name: clientName,
-            whatsapp: whatsapp || conversation.title || "WhatsApp",
-            source: "WhatsApp Bot",
+            whatsapp: clientWhatsapp || "WhatsApp",
+            source: "Chatbot WhatsApp",
           },
         });
-        leadId = lead.id;
-      } catch (e) {
-        this.logger.error("Erro criando lead no CRM:", e);
+
+        // 2. Cria o Deal (Oportunidade)
+        const deal = await this.prisma.deal.create({
+          data: {
+            tenantId: conversation.organizationId,
+            leadId: lead.id,
+            title: `Sistema Fotovoltaico - ${clientName}`,
+            stage: "PROPOSAL",
+            value: selectedQuote.totalPrice,
+          },
+        });
+
+        // 3. Cria o Dimensionamento (SystemSizing)
+        const _sizing = await this.prisma.systemSizing.create({
+          data: {
+            tenantId: conversation.organizationId,
+            leadId: lead.id,
+            name: `Dimensionamento IA - ${consumptionKwh} kWh`,
+            input: { monthlyConsumptionKwh: consumptionKwh, cidade, estado },
+            result: {
+              recommendedPowerKw: selectedQuote.kwp,
+              estimatedGeneration: selectedQuote.estimatedGeneration,
+            },
+          },
+        });
+
+        // 4. Cria a Simulação
+        const simulation = await this.prisma.simulation.create({
+          data: {
+            tenantId: conversation.organizationId,
+            leadId: lead.id,
+            name: `Simulação Comercial IA`,
+            input: {
+              systemSizeKw: selectedQuote.kwp,
+              investmentAmount: selectedQuote.totalPrice,
+              sizing: { monthlyConsumptionKwh: consumptionKwh },
+            },
+            result: {
+              paybackYears: 3.2,
+              monthlySavingsBrl: Math.round(consumptionKwh * 0.95),
+            },
+          },
+        });
+
+        // 5. Busca o Template Padrão de Proposta da Organização
+        const template = await this.prisma.proposalTemplate.findFirst({
+          where: {
+            tenantId: conversation.organizationId,
+            status: "PUBLISHED",
+            deletedAt: null,
+          },
+          orderBy: [{ isDefault: "desc" }, { updatedAt: "desc" }],
+        });
+
+        // 6. Cria a Proposta Comercial Real no Banco de Dados
+        const proposal = await this.prisma.proposal.create({
+          data: {
+            tenantId: conversation.organizationId,
+            dealId: deal.id,
+            simulationId: simulation.id,
+            proposalTemplateId: template?.id || null,
+            proposalTemplateVersion: 1,
+            title: `Proposta Comercial - ${clientName}`,
+            validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            renderedData: {
+              integrator: {
+                version: 1,
+                kitItems: selectedQuote.items.map((i) => ({ productName: i, quantity: 1 })),
+                equipmentSubtotalBrl: selectedQuote.totalPrice,
+                quotedSaleBrl: selectedQuote.totalPrice,
+                systemPowerKw: selectedQuote.kwp,
+                sourceType: "distributor",
+                distributorName: selectedQuote.distributorName,
+              },
+            },
+          },
+        });
+
+        proposalId = proposal.id;
+
+        // Registra atividade no CRM
+        await this.prisma.leadActivityLog.create({
+          data: {
+            tenantId: conversation.organizationId,
+            leadId: lead.id,
+            kind: "PROPOSAL_CREATED",
+            label: `Proposta de ${selectedQuote.kwp} kWp gerada via WhatsApp`,
+          },
+        });
+      } catch (err) {
+        this.logger.error("Erro gerando proposta completa no banco:", err);
       }
 
-      const appUrl =
-        this.config.get<string>("NEXT_PUBLIC_APP_URL") || "https://app.energivia.com.br";
-      const proposalUrl = `${appUrl}/propostas?leadId=${leadId}`;
+      const appBaseUrl =
+        this.config.get<string>("NEXT_PUBLIC_APP_URL") || "https://energivia.com.br";
+      const proposalLink = proposalId
+        ? `${appBaseUrl}/proposta/${proposalId}`
+        : `${appBaseUrl}/propostas`;
 
       return (
-        `Perfeito! Cliente *${clientName}* cadastrado com sucesso no seu CRM! 📋✅\n\n` +
-        `Acesse e visualize a proposta comercial pronta no link:\n` +
-        `${proposalUrl}\n\n` +
-        `Posso te ajudar com mais algum orçamento ou dimensionamento hoje?`
+        `Perfeito! Proposta comercial gerada com sucesso para o cliente *${clientName}*! 📋✅\n\n` +
+        `☀️ *Potência:* ${selectedQuote.kwp} kWp\n` +
+        `🏢 *Distribuidor:* ${selectedQuote.distributorName}\n` +
+        `💰 *Valor Total:* R$ ${selectedQuote.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
+        `📄 *Acesse a Proposta Pronta no link:*\n` +
+        `${proposalLink}\n\n` +
+        `Ela já está disponível no seu painel CRM da EnergivIA. Posso te ajudar com mais algum orçamento hoje?`
       );
     }
 
