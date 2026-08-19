@@ -790,11 +790,11 @@ export class WhatsappBotService {
     conversation: {
       id: string;
       organizationId: string;
-      title: string;
+      title: string | null;
       messages?: Array<{
         role: string;
         content?: string | null;
-        metadata?: Record<string, unknown> | null;
+        metadata?: unknown;
       }>;
     };
     incomingText: string;
@@ -867,15 +867,16 @@ export class WhatsappBotService {
 
       if (conversation?.messages) {
         for (const m of conversation.messages) {
-          if (m.metadata?.exactAverageKwh) {
-            consumptionKwh = Number(m.metadata.exactAverageKwh);
-            if (m.metadata.cidade) cidade = String(m.metadata.cidade);
-            if (m.metadata.uf) estado = String(m.metadata.uf);
+          const meta = m.metadata as Record<string, unknown> | null | undefined;
+          if (meta && meta["exactAverageKwh"]) {
+            consumptionKwh = Number(meta["exactAverageKwh"]);
+            if (meta["cidade"]) cidade = String(meta["cidade"]);
+            if (meta["uf"]) estado = String(meta["uf"]);
             break;
           }
           if (typeof m.content === "string") {
             const match = m.content.match(/consumo m[ée]dio de (\d+) kwh/i);
-            if (match && match[1]) {
+            if (match?.[1]) {
               consumptionKwh = parseInt(match[1], 10);
             }
           }
@@ -939,7 +940,7 @@ export class WhatsappBotService {
     if (lastBotMsg.includes("E qual o WhatsApp dele?")) {
       const whatsapp = incomingText.replace(/\D/g, "");
       const clientNameMatch = lastBotMsg.match(/registrar o cliente ([^.]+)\./i);
-      const clientName = clientNameMatch ? clientNameMatch[1].trim() : "Cliente";
+      const clientName = clientNameMatch?.[1]?.trim() || "Cliente";
 
       // Cria o Lead no CRM do EnergivIA
       let leadId = "";
@@ -948,7 +949,7 @@ export class WhatsappBotService {
           data: {
             tenantId: conversation.organizationId,
             name: clientName,
-            whatsapp: whatsapp || conversation.title,
+            whatsapp: whatsapp || conversation.title || "WhatsApp",
             source: "WhatsApp Bot",
           },
         });
