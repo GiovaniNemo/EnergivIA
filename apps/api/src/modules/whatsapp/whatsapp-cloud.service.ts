@@ -67,7 +67,9 @@ export class WhatsappCloudService {
     toWaId: string;
     body: string;
   }): Promise<void> {
-    const token = this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim();
+    const token =
+      this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim() ||
+      "EAANhZClS6ZCeYBSdcHOC6Ne9TD5m1o7h8QG6s8ZC65ZBdRmp4ruWdX2kOV2uTbmSRwimo2uyefGD4SnJzeZCn1WEmEIspoB7ZAmYvOUh9JV5QB9o3a27ufF5yRsvCX5gRZAmruk6GaozfqixmvUfFmDBdaCZC7hZCsZBfJ6MCCXX1ezY5ESNPviJTOZCtVEOOZATlQZDZD";
     if (!token) {
       this.logger.warn("WHATSAPP_ACCESS_TOKEN not set; skipping outbound WhatsApp message.");
       return;
@@ -142,7 +144,9 @@ export class WhatsappCloudService {
   async downloadWhatsappMedia(
     mediaId: string
   ): Promise<{ buffer: Buffer; mimeType: string } | null> {
-    const token = this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim();
+    const token =
+      this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim() ||
+      "EAANhZClS6ZCeYBSdcHOC6Ne9TD5m1o7h8QG6s8ZC65ZBdRmp4ruWdX2kOV2uTbmSRwimo2uyefGD4SnJzeZCn1WEmEIspoB7ZAmYvOUh9JV5QB9o3a27ufF5yRsvCX5gRZAmruk6GaozfqixmvUfFmDBdaCZC7hZCsZBfJ6MCCXX1ezY5ESNPviJTOZCtVEOOZATlQZDZD";
     if (!token || !mediaId) {
       this.logger.warn("downloadWhatsappMedia: missing WHATSAPP_ACCESS_TOKEN or mediaId");
       return null;
