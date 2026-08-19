@@ -743,10 +743,7 @@ export async function POST(req: Request) {
 
             return {
               role: m.role,
-              content: [
-                { type: "text", text: textPart },
-                { type: "image", image: m.imageUrl },
-              ],
+              content: textPart,
             };
           }
           let textContent = typeof m.content === "string" ? m.content : "";

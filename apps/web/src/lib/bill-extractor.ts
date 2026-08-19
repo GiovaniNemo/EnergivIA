@@ -33,38 +33,52 @@ export interface BillExtractionResult {
   rawText?: string;
 }
 
-const BILL_EXTRACTION_SYSTEM_PROMPT = `Você é um especialista em engenharia solar e análise forense de faturas de energia elétrica brasileiras (CPFL, Enel, Cemig, Copel, Equatorial, Energisa, Neoenergia/Coelba/Celpe/Cosern/Elektro, Light, EDP, RGE, Celesc, etc.).
+const BILL_EXTRACTION_SYSTEM_PROMPT = `Você é o mais avançado especialista em análise forense e engenharia de dados de faturas de energia elétrica brasileiras (CPFL, Enel, Cemig, Copel, Equatorial, Energisa, Neoenergia/Coelba/Celpe/Cosern/Elektro, Light, EDP, RGE, Celesc, etc.).
 
-Sua missão é extrair com 100% DE PRECISÃO os dados da conta de luz, com foco ABSOLUTO em NÃO PERDER NENHUM MÊS da tabela de Histórico de Consumo.
+Sua missão é extrair com 100% DE PRECISÃO MATEMÁTICA E FORENSE todos os dados da conta de luz, com foco ABSOLUTO em NÃO PERDER NENHUM MÊS da tabela de Histórico de Consumo/Faturamento.
 
 REGRAS DE LEITURA E PARSING CRÍTICAS:
 1. TABELA DE HISTÓRICO DE CONSUMO ("Histórico de Consumo", "Evolução do Consumo", "Demonstrativo", "Consumo faturado", "Histórico de Faturamento"):
-   - Localize a tabela onde constam os meses anteriores (normalmente 11 a 13 meses, ex: DEZ/23 até NOV/24).
-   - Extraia TODOS os meses encontrados, sem omitir nenhum.
-   - Para cada mês, extraia 'mes_ano' (ex: "JAN/24", "FEV/24") e 'consumo_kwh' (o valor faturado em kWh).
+   - Localize a tabela onde constam os meses anteriores (normalmente de 11 a 13 meses, ex: DEZ/23 até NOV/24).
+   - Extraia TODOS os meses encontrados da tabela, em ordem cronológica ou na ordem em que aparecem.
+   - Para cada mês, extraia 'mes_ano' (ex: "JAN/24", "FEV/24") e 'consumo_kwh' (o valor exato faturado em kWh).
    - NUNCA confunda 'consumo_kwh' com:
-     * Quantidade de dias faturados (ex: 28, 29, 30, 31).
+     * Quantidade de dias de faturamento (ex: 28, 29, 30, 31).
      * Média diária (ex: 12.5 kWh/dia).
-     * Demanda medida/contratada em kW.
+     * Demanda contratada ou medida em kW.
      * Energia reativa (kVARh).
      * Leitura do medidor (ex: 45890).
-     * Valores monetários em R$.
-   - Formatação numérica brasileira: "1.450" significa 1450. "850,00" significa 850. Sempre retorne como número limpo no JSON.
+     * Valores monetários em R$ ou encargos de iluminação pública.
+     * Valores de energia injetada / saldo de créditos.
+   - Formatação numérica brasileira: "1.450" significa 1450. "850,00" significa 850. Sempre retorne 'consumo_kwh' como NÚMERO INTEIRO limpo no JSON.
 
 2. CONSUMO ATIVO E GERAÇÃO DISTRIBUÍDA (GD):
-   - Se a fatura tiver créditos solares / GD, utilize sempre o Consumo Ativo Total Faturado da rede.
+   - Se a fatura tiver créditos solares / GD, utilize sempre o Consumo Ativo Total Faturado/Consumido da rede.
 
 3. DADOS GERAIS:
-   - distribuidora: Nome da concessionária (ex: CPFL Paulista, Enel SP, Cemig, Copel, etc.).
-   - cidade: Cidade da instalação.
-   - uf: Estado (2 letras, ex: SP, MG, PR, RJ, etc.).
-   - tipo_conexao: "Monofásico", "Bifásico" ou "Trifásico" (procure por Tipo de Fornecimento, Ligação, Tensão, ou classifique pelo histórico).
-   - nome_cliente: Nome do titular se disponível.
+   - distribuidora: Nome da concessionária (ex: CPFL Paulista, Enel SP, Cemig, Copel, Equatorial, etc.).
+   - cidade: Cidade da unidade consumidora.
+   - uf: Sigla do estado com 2 letras (ex: SP, MG, PR, RJ, etc.).
+   - tipo_conexao: "Monofásico", "Bifásico" ou "Trifásico" (procure por Tipo de Fornecimento, Ligação, Tensão, ou classifique pelo padrão da fatura).
+   - nome_cliente: Nome do titular se visível.
    - mes_referencia_atual: Mês/ano da fatura (ex: "01/2024").
-   - consumo_mes_atual_kwh: Consumo ativo medido/faturado do mês atual.
-   - valor_total_fatura_reais: Total a pagar em R$.
+   - consumo_mes_atual_kwh: Consumo ativo medido/faturado do mês atual (número).
+   - valor_total_fatura_reais: Total a pagar em R$ (número).
 
-Retorne EXCLUSIVAMENTE um objeto JSON válido no formato especificado.`;
+Retorne EXCLUSIVAMENTE um objeto JSON válido no formato especificado:
+{
+  "distribuidora": "string",
+  "cidade": "string",
+  "uf": "string",
+  "tipo_conexao": "Monofásico" | "Bifásico" | "Trifásico",
+  "nome_cliente": "string",
+  "mes_referencia_atual": "string",
+  "consumo_mes_atual_kwh": number,
+  "valor_total_fatura_reais": number,
+  "historico_consumo": [
+    { "mes_ano": "string", "consumo_kwh": number, "dias": number }
+  ]
+}`;
 
 export async function extractEnergyBillFromText(
   rawText: string,
@@ -78,14 +92,14 @@ export async function extractEnergyBillFromText(
   const openai = new OpenAI({ apiKey: key });
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-4o",
     temperature: 0,
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: BILL_EXTRACTION_SYSTEM_PROMPT },
       {
         role: "user",
-        content: `Extraia detalhadamente todos os dados e TODOS os meses do histórico de consumo do seguinte texto de fatura de energia:\n\n${rawText}`,
+        content: `Extraia com máxima precisão todos os dados e TODOS os meses do histórico de consumo do seguinte texto de fatura de energia:\n\n${rawText}`,
       },
     ],
   });
@@ -123,11 +137,14 @@ export async function extractEnergyBillFromImage(
         content: [
           {
             type: "text",
-            text: "Extraia meticulosamente todos os dados e TODOS os meses da tabela de histórico de consumo desta imagem de conta de luz:",
+            text: "Analise minuciosamente a imagem desta conta de luz em alta resolução. Extraia todos os dados gerais e TODOS os meses da tabela de histórico de consumo/faturamento sem omitir nenhum mês:",
           },
           {
             type: "image_url",
-            image_url: { url: base64DataUrl },
+            image_url: {
+              url: base64DataUrl,
+              detail: "high",
+            },
           },
         ],
       },
