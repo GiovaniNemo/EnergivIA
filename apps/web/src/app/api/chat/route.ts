@@ -713,7 +713,7 @@ export async function POST(req: Request) {
               let extractionContent = "";
               try {
                 const result = await extractEnergyBillFromPdfBuffer(buffer);
-                extractionContent = `${result.formattedSummary}\n\n[Texto Bruto do PDF para referência complementar]:\n${(result.rawText || "").substring(0, 3000)}`;
+                extractionContent = result.formattedSummary;
               } catch (e: any) {
                 console.error("[PDF EXTRACTION ERROR]", e);
                 try {

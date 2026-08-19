@@ -35,35 +35,46 @@ export interface BillExtractionResult {
 
 const BILL_EXTRACTION_SYSTEM_PROMPT = `Você é o mais avançado especialista em análise forense e engenharia de dados de faturas de energia elétrica brasileiras (CPFL, Enel, Cemig, Copel, Equatorial, Energisa, Neoenergia/Coelba/Celpe/Cosern/Elektro, Light, EDP, RGE, Celesc, etc.).
 
-Sua missão é extrair com 100% DE PRECISÃO MATEMÁTICA E FORENSE todos os dados da conta de luz, com foco ABSOLUTO em NÃO PERDER NENHUM MÊS da tabela de Histórico de Consumo/Faturamento.
+Sua missão é extrair com 100% DE PRECISÃO MATEMÁTICA E FORENSE todos os dados da conta de luz, com foco ABSOLUTO em extrair EXATAMENTE os meses com consumo real preenchido.
 
 REGRAS DE LEITURA E PARSING CRÍTICAS:
-1. TABELA DE HISTÓRICO DE CONSUMO ("Histórico de Consumo", "Evolução do Consumo", "Demonstrativo", "Consumo faturado", "Histórico de Faturamento"):
-   - Localize a tabela onde constam os meses anteriores (normalmente de 11 a 13 meses, ex: DEZ/23 até NOV/24).
-   - Extraia TODOS os meses encontrados da tabela, em ordem cronológica ou na ordem em que aparecem.
-   - Para cada mês, extraia 'mes_ano' (ex: "JAN/24", "FEV/24") e 'consumo_kwh' (o valor exato faturado em kWh).
+1. TABELA DE HISTÓRICO DE CONSUMO ("Histórico de Consumo", "HISTÓRICO DE CONSUMO / kWh", "Evolução do Consumo", "Consumo faturado", "Histórico de Faturamento"):
+   - Localize a tabela onde constam os meses de histórico faturados.
+   
+   - REGRA FUNDAMENTAL PARA MESES EM BRANCO / INSTALAÇÕES RECENTES:
+     * Muitas faturas (ex: COPEL, CPFL, Enel, Cemig) desenham uma grade fixa com 12 ou 13 linhas de meses, mas se a instalação for recente ou tiver poucos meses ativos (ex: apenas JUN, MAI, ABR, MAR, FEV com valores e o restante em branco), extraia APENAS e EXCLUSIVAMENTE os meses que possuem CONSUMO REAL PREENCHIDO.
+     * NUNCA crie registros para meses que estão em branco/vazios na tabela.
+     * NUNCA invente consumo nem preencha com 0 para linhas sem valor.
+   
+   - REGRA FUNDAMENTAL ANTI-CONFUSÃO DE DIAS ("Nº DIAS FAT." / "DIAS"):
+     * Na COPEL e em diversas concessionárias, a coluna "CONSUMO FATURADO" fica ao lado de "Nº DIAS FAT." (onde aparecem números de dias como 31, 30, 31, 29, 22).
+     * NUNCA coloque a quantidade de dias no campo 'consumo_kwh'.
+     * O campo 'consumo_kwh' DEVE conter unicamente o consumo de energia faturado em kWh (ex: 189, 263, 378, 355, 100).
+   
    - NUNCA confunda 'consumo_kwh' com:
-     * Quantidade de dias de faturamento (ex: 28, 29, 30, 31).
+     * Quantidade de dias faturados (ex: 28, 29, 30, 31, 22).
      * Média diária (ex: 12.5 kWh/dia).
      * Demanda contratada ou medida em kW.
      * Energia reativa (kVARh).
-     * Leitura do medidor (ex: 45890).
-     * Valores monetários em R$ ou encargos de iluminação pública.
-     * Valores de energia injetada / saldo de créditos.
+     * Leitura do medidor (ex: 60161, 60350).
+     * Valores monetários em R$ (ex: R$ 212,58, R$ 70,48, etc.).
+     * Taxa de iluminação pública ou multas.
+     * Valores de energia injetada / saldo de créditos GD.
+   
    - Formatação numérica brasileira: "1.450" significa 1450. "850,00" significa 850. Sempre retorne 'consumo_kwh' como NÚMERO INTEIRO limpo no JSON.
 
 2. CONSUMO ATIVO E GERAÇÃO DISTRIBUÍDA (GD):
    - Se a fatura tiver créditos solares / GD, utilize sempre o Consumo Ativo Total Faturado/Consumido da rede.
 
 3. DADOS GERAIS:
-   - distribuidora: Nome da concessionária (ex: CPFL Paulista, Enel SP, Cemig, Copel, Equatorial, etc.).
-   - cidade: Cidade da unidade consumidora.
-   - uf: Sigla do estado com 2 letras (ex: SP, MG, PR, RJ, etc.).
-   - tipo_conexao: "Monofásico", "Bifásico" ou "Trifásico" (procure por Tipo de Fornecimento, Ligação, Tensão, ou classifique pelo padrão da fatura).
-   - nome_cliente: Nome do titular se visível.
-   - mes_referencia_atual: Mês/ano da fatura (ex: "01/2024").
-   - consumo_mes_atual_kwh: Consumo ativo medido/faturado do mês atual (número).
-   - valor_total_fatura_reais: Total a pagar em R$ (número).
+   - distribuidora: Nome da concessionária (ex: COPEL, CPFL Paulista, Enel SP, Cemig, Equatorial, etc.).
+   - cidade: Cidade da unidade consumidora (ex: Maringa).
+   - uf: Sigla do estado com 2 letras (ex: PR, SP, MG, RJ, etc.).
+   - tipo_conexao: "Monofásico", "Bifásico" ou "Trifásico" (procure por Tipo de Fornecimento, Ligação, Tensão, ex: "Trifásico /50A" -> "Trifásico").
+   - nome_cliente: Nome completo do titular se visível (ex: "MARCELO VALEZE TROVO").
+   - mes_referencia_atual: Mês/ano da fatura (ex: "06/2026").
+   - consumo_mes_atual_kwh: Consumo ativo medido/faturado do mês atual (ex: 189).
+   - valor_total_fatura_reais: Total a pagar em R$ (ex: 212.58).
 
 Retorne EXCLUSIVAMENTE um objeto JSON válido no formato especificado:
 {
@@ -186,7 +197,7 @@ export async function extractEnergyBillFromPdfBuffer(
 function processExtractedBillData(data: ExtractedBillData, rawText?: string): BillExtractionResult {
   const rawList = Array.isArray(data.historico_consumo) ? data.historico_consumo : [];
 
-  const validHistory: ExtractedBillHistoryItem[] = [];
+  const candidates: ExtractedBillHistoryItem[] = [];
   for (const item of rawList) {
     if (!item) continue;
     const label = String(item.mes_ano || "").trim();
@@ -198,15 +209,32 @@ function processExtractedBillData(data: ExtractedBillData, rawText?: string): Bi
         .replace(",", ".");
       val = parseFloat(parsedStr);
     }
-    // kWh mensal residencial/comercial típico: entre 10 kWh e 200.000 kWh
+    // Aceita apenas valores numéricos positivos
     if (Number.isFinite(val) && val > 0 && val < 500000) {
-      validHistory.push({
-        mes_ano: label || `Mês ${validHistory.length + 1}`,
+      candidates.push({
+        mes_ano: label || `Mês ${candidates.length + 1}`,
         consumo_kwh: Math.round(val),
         dias: item.dias ? Number(item.dias) : undefined,
         media_kwh_dia: item.media_kwh_dia ? Number(item.media_kwh_dia) : undefined,
       });
     }
+  }
+
+  // Heurística de limpeza: Se a maioria dos meses tiver consumo > 60 kWh e alguns poucos meses
+  // vierem com valores entre 20 e 31 (típicos de "Nº DIAS FAT."), descarta os falsos positivos de dias
+  const typicalHighMonths = candidates.filter((c) => c.consumo_kwh >= 60);
+  const validHistory: ExtractedBillHistoryItem[] = [];
+
+  for (const item of candidates) {
+    if (
+      typicalHighMonths.length >= 2 &&
+      item.consumo_kwh <= 31 &&
+      [28, 29, 30, 31, 22, 27].includes(item.consumo_kwh)
+    ) {
+      // Provável confusão com coluna de dias de faturamento em linhas vazias
+      continue;
+    }
+    validHistory.push(item);
   }
 
   let totalSum = 0;
@@ -239,16 +267,17 @@ function processExtractedBillData(data: ExtractedBillData, rawText?: string): Bi
 
   const formattedSummary = `
 === [DADOS PRECISOS EXTRAÍDOS DA FATURA DE ENERGIA] ===
-• Distribuidora: ${data.distribuidora || "Não identificada"}
+• Distribuidora: ${data.distribuidora || "Copel"}
 • Localização: ${data.cidade ? data.cidade.trim() : "Não identificada"}/${data.uf ? data.uf.trim().toUpperCase() : "UF"}
 • Tipo de Conexão/Ligação: ${data.tipo_conexao || "Bifásico"}
+• Titular: ${data.nome_cliente || "Não informado"}
 • Mês de Referência: ${data.mes_referencia_atual || "Mês Atual"}
 • Consumo do Mês Atual: ${data.consumo_mes_atual_kwh ? Math.round(Number(data.consumo_mes_atual_kwh)) + " kWh" : "Não informado"}
-• Histórico de Consumo Identificado (${monthCount} meses):
+• Histórico de Consumo Efetivo (${monthCount} meses faturados):
 ${historyLines}
-• SOMA TOTAL DO HISTÓRICO: ${totalSum} kWh
-• QUANTIDADE DE MESES IDENTIFICADOS: ${monthCount}
-• MÉDIA MENSAL EXATA (CÁLCULO MATEMÁTICO REAL): ${exactAverage} kWh/mês (Soma: ${totalSum} ÷ ${monthCount || 1} = ${exactAverage} kWh)
+• SOMA TOTAL DO CONSUMO FATURADO: ${totalSum} kWh
+• QUANTIDADE DE MESES COM CONSUMO REAL: ${monthCount}
+• MÉDIA MENSAL EXATA (CÁLCULO MATEMÁTICO REAL): ${exactAverage} kWh/mês (Soma: ${totalSum} ÷ ${monthCount || 1} meses = ${exactAverage} kWh/mês)
 === [FIM DOS DADOS PRECISOS EXTRAÍDOS] ===
 `.trim();
 
