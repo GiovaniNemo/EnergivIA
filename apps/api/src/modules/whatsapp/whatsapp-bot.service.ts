@@ -6,10 +6,13 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import pdfParse from "pdf-parse";
 
 interface ExtractedBillData {
+  distribuidora?: string;
   cidade?: string;
   estado?: string;
   consumoKwh?: number;
   tipoConexao?: string;
+  mesesIdentificados?: number;
+  nomeCliente?: string;
 }
 
 interface WebhookMessage {
@@ -35,6 +38,27 @@ interface WebhookPayload {
     }>;
   }>;
 }
+
+const BILL_EXTRACTION_PROMPT = `Você é um motor especialista em extração de dados estruturados de faturas de energia elétrica brasileiras (Copel, Enel, CPFL, Cemig, Equatorial, Energisa, Light, etc.).
+Extraia com máxima precisão os dados da fatura:
+1. "distribuidora": Nome da concessionária (ex: "Copel", "Enel", "CPFL")
+2. "cidade": Nome da cidade da instalação (ex: "Maringá", "Curitiba", "São Paulo")
+3. "estado": UF com 2 letras (ex: "PR", "SP", "MG")
+4. "tipoConexao": "Monofásico", "Bifásico" ou "Trifásico"
+5. "nomeCliente": Nome do titular da conta
+6. "historicoConsumo": Array com os consumos em kWh de todos os meses visíveis na tabela de histórico (ex: [450, 520, 480, 600, ...])
+7. "consumoKwh": Média aritmética exata de todos os meses do histórico (se houver histórico) ou o consumo do mês atual.
+
+Retorne estritamente um JSON no formato:
+{
+  "distribuidora": string,
+  "cidade": string,
+  "estado": string,
+  "tipoConexao": string,
+  "nomeCliente": string,
+  "historicoConsumo": number[],
+  "consumoKwh": number
+}`;
 
 @Injectable()
 export class WhatsappBotService {
@@ -153,19 +177,25 @@ export class WhatsappBotService {
     let incomingText = "";
     let extractedBillData: ExtractedBillData | null = null;
 
+    this.logger.log(`Mensagem recebida do WhatsApp: tipo=${msgType}, de=${fromWaId}`);
+
     if (msgType === "text") {
       incomingText = message.text?.body || "";
     } else if (msgType === "document") {
       const doc = message.document;
       incomingText = `[Documento enviado: ${doc?.filename || "fatura.pdf"}]`;
       if (doc?.id) {
+        this.logger.log(`Iniciando extração do documento PDF mediaId=${doc.id}`);
         extractedBillData = await this.extractFromMediaDocument(doc.id, doc.mime_type);
+        this.logger.log(`Resultado da extração do PDF: ${JSON.stringify(extractedBillData)}`);
       }
     } else if (msgType === "image") {
       const img = message.image;
       incomingText = `[Foto enviada: ${img?.caption || "Foto da fatura"}]`;
       if (img?.id) {
+        this.logger.log(`Iniciando extração da imagem mediaId=${img.id}`);
         extractedBillData = await this.extractFromMediaImage(img.id, img.mime_type);
+        this.logger.log(`Resultado da extração da imagem: ${JSON.stringify(extractedBillData)}`);
       }
     } else if (msgType === "audio" || msgType === "voice") {
       incomingText = "[Mensagem de áudio recebida]";
@@ -216,11 +246,17 @@ export class WhatsappBotService {
   ): Promise<ExtractedBillData | null> {
     try {
       const media = await this.whatsappCloud.downloadWhatsappMedia(mediaId);
-      if (!media || !media.buffer) return null;
+      if (!media || !media.buffer) {
+        this.logger.warn(`Falha ao baixar mídia do WhatsApp para mediaId=${mediaId}`);
+        return null;
+      }
 
       if (media.mimeType.includes("pdf") || mimeType?.includes("pdf")) {
         const parsed = await pdfParse(media.buffer);
         const text = parsed.text;
+        if (!text || text.trim().length === 0) {
+          this.logger.warn("PDF não contém texto legível (pode ser escaneado como imagem).");
+        }
         return this.parseBillTextWithAI(text);
       }
     } catch (e) {
@@ -235,28 +271,32 @@ export class WhatsappBotService {
   ): Promise<ExtractedBillData | null> {
     try {
       const media = await this.whatsappCloud.downloadWhatsappMedia(mediaId);
-      if (!media || !media.buffer || !this.genAI) return null;
+      if (!media || !media.buffer) return null;
 
-      const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const prompt =
-        'Extraia os dados desta conta de luz de energia solar: Cidade, Estado, Consumo Médio em kWh (ou histórico de consumo em kWh), Tipo de Fornecimento (Monofásico, Bifásico, Trifásico). Retorne estritamente em formato JSON: { "cidade": string, "estado": string, "consumoKwh": number, "tipoConexao": string }';
+      const openAiKey = this.config.get<string>("OPENAI_API_KEY");
+      if (openAiKey) {
+        return this.extractImageWithOpenAI(
+          media.buffer,
+          media.mimeType || mimeType || "image/jpeg",
+          openAiKey
+        );
+      }
 
-      const result = await model.generateContent([
-        prompt,
-        {
-          inlineData: {
-            data: media.buffer.toString("base64"),
-            mimeType: media.mimeType || mimeType || "image/jpeg",
+      if (this.genAI) {
+        const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const result = await model.generateContent([
+          BILL_EXTRACTION_PROMPT,
+          {
+            inlineData: {
+              data: media.buffer.toString("base64"),
+              mimeType: media.mimeType || mimeType || "image/jpeg",
+            },
           },
-        },
-      ]);
+        ]);
 
-      const respText = result.response.text();
-      const cleanJson = respText
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
-      return JSON.parse(cleanJson) as ExtractedBillData;
+        const respText = result.response.text();
+        return this.cleanAndParseJson(respText);
+      }
     } catch (e) {
       this.logger.error("Erro extraindo imagem da fatura:", e);
     }
@@ -264,28 +304,142 @@ export class WhatsappBotService {
   }
 
   private async parseBillTextWithAI(pdfText: string): Promise<ExtractedBillData | null> {
-    if (!this.genAI || !pdfText) return null;
+    if (!pdfText || pdfText.trim().length === 0) return null;
+
+    // 1. Tenta OpenAI GPT-4o
+    const openAiKey = this.config.get<string>("OPENAI_API_KEY");
+    if (openAiKey) {
+      try {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${openAiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            temperature: 0,
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: BILL_EXTRACTION_PROMPT },
+              {
+                role: "user",
+                content: `Extraia os dados da seguinte fatura de energia:\n\n${pdfText.slice(0, 8000)}`,
+              },
+            ],
+          }),
+        });
+
+        if (response.ok) {
+          const json = (await response.json()) as {
+            choices?: Array<{ message?: { content?: string } }>;
+          };
+          const content = json.choices?.[0]?.message?.content;
+          if (content) return this.cleanAndParseJson(content);
+        }
+      } catch (err) {
+        this.logger.error("Erro extraindo texto com OpenAI:", err);
+      }
+    }
+
+    // 2. Tenta Google Gemini
+    if (this.genAI) {
+      try {
+        const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const result = await model.generateContent(
+          `${BILL_EXTRACTION_PROMPT}\n\nTexto da fatura:\n${pdfText.slice(0, 8000)}`
+        );
+        const respText = result.response.text();
+        return this.cleanAndParseJson(respText);
+      } catch (err) {
+        this.logger.error("Erro extraindo texto com Gemini:", err);
+      }
+    }
+
+    return null;
+  }
+
+  private async extractImageWithOpenAI(
+    buffer: Buffer,
+    mimeType: string,
+    apiKey: string
+  ): Promise<ExtractedBillData | null> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const prompt = `Analise o seguinte texto extraído de uma conta de luz e extraia:
-1. Cidade e Estado (UF)
-2. Média mensal real de consumo em kWh (número)
-3. Tipo de fornecimento/ligação (Monofásico, Bifásico, Trifásico)
-Texto da fatura:
-${pdfText.slice(0, 4000)}
+      const base64 = buffer.toString("base64");
+      const dataUrl = `data:${mimeType};base64,${base64}`;
 
-Retorne APENAS um JSON no formato:
-{ "cidade": "Nome", "estado": "UF", "consumoKwh": 500, "tipoConexao": "Bifásico" }`;
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          temperature: 0,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: BILL_EXTRACTION_PROMPT },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Extraia com máxima precisão todos os dados e o histórico de consumo desta conta de energia.",
+                },
+                { type: "image_url", image_url: { url: dataUrl, detail: "high" } },
+              ],
+            },
+          ],
+        }),
+      });
 
-      const result = await model.generateContent(prompt);
-      const respText = result.response.text();
-      const cleanJson = respText
+      if (response.ok) {
+        const json = (await response.json()) as {
+          choices?: Array<{ message?: { content?: string } }>;
+        };
+        const content = json.choices?.[0]?.message?.content;
+        if (content) return this.cleanAndParseJson(content);
+      }
+    } catch (e) {
+      this.logger.error("Erro extraindo imagem com OpenAI:", e);
+    }
+    return null;
+  }
+
+  private cleanAndParseJson(raw: string): ExtractedBillData | null {
+    try {
+      const clean = raw
         .replace(/```json/g, "")
         .replace(/```/g, "")
         .trim();
-      return JSON.parse(cleanJson) as ExtractedBillData;
-    } catch (err) {
-      this.logger.error("Erro analisando texto da fatura com IA:", err);
+      const parsed = JSON.parse(clean);
+
+      let consumoCalculado = Number(parsed.consumoKwh) || 0;
+      let meses = 0;
+
+      if (Array.isArray(parsed.historicoConsumo) && parsed.historicoConsumo.length > 0) {
+        const validValues = parsed.historicoConsumo
+          .map((v: unknown) => (typeof v === "number" ? v : Number(v)))
+          .filter((v: number) => !isNaN(v) && v > 0);
+
+        if (validValues.length > 0) {
+          const sum = validValues.reduce((a: number, b: number) => a + b, 0);
+          consumoCalculado = Math.round(sum / validValues.length);
+          meses = validValues.length;
+        }
+      }
+
+      return {
+        distribuidora: parsed.distribuidora || undefined,
+        cidade: parsed.cidade || undefined,
+        estado: parsed.estado || undefined,
+        consumoKwh: consumoCalculado,
+        tipoConexao: parsed.tipoConexao || undefined,
+        nomeCliente: parsed.nomeCliente || undefined,
+        mesesIdentificados: meses > 0 ? meses : undefined,
+      };
+    } catch {
       return null;
     }
   }
@@ -297,15 +451,19 @@ Retorne APENAS um JSON no formato:
     incomingText: string;
     extractedBillData: ExtractedBillData | null;
   }): Promise<string> {
-    if (extractedBillData && extractedBillData.consumoKwh) {
-      const cidade = extractedBillData.cidade || "sua cidade";
-      const estado = extractedBillData.estado || "seu estado";
+    if (extractedBillData && extractedBillData.consumoKwh && extractedBillData.consumoKwh > 0) {
+      const cidade = extractedBillData.cidade
+        ? `${extractedBillData.cidade}${extractedBillData.estado ? `/${extractedBillData.estado}` : ""}`
+        : "sua região";
       const kwh = extractedBillData.consumoKwh;
+      const mesesTexto = extractedBillData.mesesIdentificados
+        ? ` (baseado no histórico de ${extractedBillData.mesesIdentificados} meses)`
+        : "";
 
       return (
         `Legal, dados extraídos com precisão! 📄⚡\n` +
-        `Identifiquei um consumo médio de *${kwh} kWh/mês* em *${cidade}/${estado}*.\n\n` +
-        `Qual será a estrutura do telhado para instalarmos os painéis?\n` +
+        `Consumo médio de *${kwh} kWh/mês* em *${cidade}*${mesesTexto}.\n\n` +
+        `Qual será a estrutura do telhado para os painéis?\n` +
         `1 - Cerâmica (Colonial)\n` +
         `2 - Fibrocimento\n` +
         `3 - Metálico\n` +
@@ -316,7 +474,7 @@ Retorne APENAS um JSON no formato:
       );
     }
 
-    // Se for mensagem de saudação ou texto livre
+    // Se for mensagem de saudação
     const lower = incomingText.toLowerCase().trim();
     if (
       lower === "oi" ||
@@ -333,7 +491,7 @@ Retorne APENAS um JSON no formato:
       );
     }
 
-    // Se o usuário digitou a estrutura do telhado (número ou nome)
+    // Se o usuário respondeu a estrutura do telhado
     if (
       [
         "1",
@@ -344,31 +502,72 @@ Retorne APENAS um JSON no formato:
         "6",
         "7",
         "cerâmica",
+        "ceramica",
         "fibrocimento",
         "metálico",
+        "metalico",
         "solo",
         "laje",
+        "fibrometal",
       ].some((k) => lower.includes(k))
     ) {
       return (
-        `Perfeito! Estrutura identificada.\n` +
-        `Estamos calculando o dimensionamento ideal e consultando a disponibilidade dos distribuidores...\n\n` +
-        `Para registrarmos a simulação no sistema, qual é o seu nome completo?`
+        `Perfeito! Estrutura selecionada. 🛠️\n` +
+        `Estamos dimensionando o kit ideal com os melhores módulos e inversores dos distribuidores parceiros.\n\n` +
+        `Qual o seu nome completo para registrarmos a simulação no sistema?`
       );
     }
 
-    // Fallback inteligente com IA se disponível
-    if (this.genAI) {
+    // Se o usuário digitou o consumo diretamente (ex: "500 kwh" ou "consome 650")
+    const kwhMatch = incomingText.match(/(\d+[\d.,]*)\s*(kwh|kw|reais|r\$)?/i);
+    if (kwhMatch && Number(kwhMatch[1].replace(",", ".")) > 50) {
+      const consumo = Math.round(Number(kwhMatch[1].replace(",", ".")));
+      return (
+        `Ótimo! Consumo registrado: *${consumo} kWh/mês*.\n\n` +
+        `Qual será a estrutura do telhado?\n` +
+        `1 - Cerâmica (Colonial)\n` +
+        `2 - Fibrocimento\n` +
+        `3 - Metálico\n` +
+        `4 - Solo\n` +
+        `5 - Laje\n` +
+        `6 - Fibrometal\n` +
+        `7 - Sem estrutura`
+      );
+    }
+
+    // Resposta contextual com IA
+    const openAiKey = this.config.get<string>("OPENAI_API_KEY");
+    if (openAiKey) {
       try {
-        const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const systemInstruction =
-          "Você é o consultor de energia solar da EnergivIA no WhatsApp. Seja sempre curto, direto, cordial e comercial. Incentive o cliente a enviar a conta de luz (PDF ou foto) ou informar o consumo em kWh para gerar uma proposta.";
-        const result = await model.generateContent(
-          `${systemInstruction}\n\nCliente disse: "${incomingText}"`
-        );
-        return result.response.text();
-      } catch (e) {
-        this.logger.error("Erro gerando resposta genAI:", e);
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${openAiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            temperature: 0.3,
+            messages: [
+              {
+                role: "system",
+                content:
+                  "Você é o consultor de energia solar da EnergivIA no WhatsApp. Seja sempre curto, direto, cordial e comercial. Incentive o cliente a enviar a conta de luz (PDF ou foto) ou informar o consumo em kWh para gerar uma proposta.",
+              },
+              { role: "user", content: incomingText },
+            ],
+          }),
+        });
+
+        if (response.ok) {
+          const json = (await response.json()) as {
+            choices?: Array<{ message?: { content?: string } }>;
+          };
+          const reply = json.choices?.[0]?.message?.content;
+          if (reply) return reply;
+        }
+      } catch (err) {
+        this.logger.error("Erro gerando resposta com OpenAI:", err);
       }
     }
 
