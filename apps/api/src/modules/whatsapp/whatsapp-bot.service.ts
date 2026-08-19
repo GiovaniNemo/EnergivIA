@@ -278,7 +278,7 @@ function getHsp(cidade: string, estado: string): number {
   return ufMap[estado.toUpperCase()] || 5.0;
 }
 
-const SESSION_INACTIVITY_MS = 5 * 60 * 1000; // 5 minutos de inatividade
+const SESSION_INACTIVITY_MS = 5 * 60 * 1000; // 5 minutos
 
 @Injectable()
 export class WhatsappBotService {
@@ -314,7 +314,8 @@ export class WhatsappBotService {
         if (!val || !val.messages || !Array.isArray(val.messages)) continue;
 
         const metadata = val.metadata;
-        const phoneNumberId = metadata?.phone_number_id || "";
+        const phoneNumberId =
+          metadata?.phone_number_id || this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID") || "";
         const contacts = val.contacts || [];
 
         for (const message of val.messages) {
@@ -343,23 +344,23 @@ export class WhatsappBotService {
 
     if (!waMessageId || !fromWaId) return;
 
-    // 1. Dedup
+    // 1. Deduplicação de Webhook
     const existing = await this.prisma.whatsappInboundMessage.findUnique({
       where: { waMessageId },
     });
     if (existing) {
-      this.logger.debug(`Mensagem duplicada já processada: ${waMessageId}`);
+      this.logger.debug(`Mensagem duplicada ignorada: ${waMessageId}`);
       return;
     }
 
-    // 2. Tenant
+    // 2. Tenant padrão
     const defaultTenant = await this.prisma.tenant.findFirst();
     if (!defaultTenant) {
       this.logger.error("Nenhum Tenant encontrado no banco de dados.");
       return;
     }
 
-    // 3. Conversation Lookup & Inactivity Management
+    // 3. Busca ou criação da Conversa
     let conversation = await this.prisma.conversation.findFirst({
       where: {
         organizationId: defaultTenant.id,
@@ -370,22 +371,14 @@ export class WhatsappBotService {
     });
 
     const isNewMedia = msgType === "document" || msgType === "image";
-    let isSessionExpired = false;
 
     if (conversation && conversation.messages.length > 0) {
       const lastMsg = conversation.messages[conversation.messages.length - 1];
       const timeSinceLastMsg = lastMsg ? Date.now() - new Date(lastMsg.createdAt).getTime() : 0;
 
-      // Se passou mais de 5 minutos OU se o usuário enviou uma nova fatura / pediu novo chat:
+      // Se inativo por mais de 5min OU enviou nova fatura (PDF/imagem):
       if ((lastMsg && timeSinceLastMsg > SESSION_INACTIVITY_MS) || isNewMedia) {
-        isSessionExpired = Boolean(
-          lastMsg && timeSinceLastMsg > SESSION_INACTIVITY_MS && !isNewMedia
-        );
-        this.logger.log(
-          `Reiniciando sessão do WhatsApp para ${fromWaId} (Inatividade: ${timeSinceLastMsg}ms, Nova mídia: ${isNewMedia})`
-        );
-
-        // Limpa mensagens antigas da conversa para não vazar números de simulações passadas
+        this.logger.log(`Resetando contexto para nova sessão: de=${fromWaId}`);
         await this.prisma.message.deleteMany({
           where: { conversationId: conversation.id },
         });
@@ -438,7 +431,7 @@ export class WhatsappBotService {
         await this.prisma.message.deleteMany({
           where: { conversationId: conversation.id },
         });
-        const resetMsg = `Sessão reiniciada com sucesso! ☀️\n\nEnvie a conta de luz do seu cliente (PDF ou foto) ou digite o consumo médio em kWh para iniciarmos um novo orçamento.`;
+        const resetMsg = `Sessão reiniciada com sucesso! ☀️\n\nEnvie a conta de luz do seu cliente (PDF ou foto) ou digite o consumo médio em kWh para começarmos uma nova simulação.`;
         await this.whatsappCloud.sendTextMessage({
           phoneNumberId,
           toWaId: fromWaId,
@@ -450,7 +443,7 @@ export class WhatsappBotService {
       const doc = message.document;
       incomingText = `[Documento enviado: ${doc?.filename || "fatura.pdf"}]`;
       if (doc?.id) {
-        this.logger.log(`Iniciando extração do documento PDF mediaId=${doc.id}`);
+        this.logger.log(`Iniciando extração do PDF mediaId=${doc.id}`);
         extractionResult = await this.extractFromMediaDocument(doc.id, doc.mime_type);
       }
     } else if (msgType === "image") {
@@ -466,7 +459,7 @@ export class WhatsappBotService {
       incomingText = `[Mensagem do tipo ${msgType} recebida]`;
     }
 
-    // Salva mensagem no histórico com os metadados exatos da fatura
+    // Salva a mensagem do usuário no banco
     await this.prisma.message.create({
       data: {
         conversationId: conversation.id,
@@ -485,26 +478,13 @@ export class WhatsappBotService {
       },
     });
 
-    // Se a sessão anterior expirou por inatividade e o usuário mandou um texto qualquer:
-    if (isSessionExpired) {
-      const timeoutNotice =
-        `Sua sessão anterior foi finalizada por inatividade. Vamos iniciar um novo dimensionamento! ☀️\n\n` +
-        `Envie a conta de luz do seu cliente (PDF ou foto) ou digite o consumo em kWh para começarmos.`;
-      await this.whatsappCloud.sendTextMessage({
-        phoneNumberId,
-        toWaId: fromWaId,
-        body: timeoutNotice,
-      });
-      return;
-    }
-
-    // Atualiza conversa com a mensagem recém-criada
+    // Atualiza conversa com a nova mensagem
     const freshConversation = await this.prisma.conversation.findUnique({
       where: { id: conversation.id },
       include: { messages: { orderBy: { createdAt: "asc" } } },
     });
 
-    // 5. Gera resposta com cotação e proposta
+    // 5. Gera a resposta pelo motor de estado do bot
     const replyText = await this.generateBotResponse({
       conversation: freshConversation || conversation,
       incomingText,
@@ -535,10 +515,7 @@ export class WhatsappBotService {
   ): Promise<BillExtractionResult | null> {
     try {
       const media = await this.whatsappCloud.downloadWhatsappMedia(mediaId);
-      if (!media || !media.buffer) {
-        this.logger.warn(`Falha ao baixar mídia do WhatsApp para mediaId=${mediaId}`);
-        return null;
-      }
+      if (!media || !media.buffer) return null;
 
       if (media.mimeType.includes("pdf") || mimeType?.includes("pdf")) {
         const parsed = await pdfParse(media.buffer);
@@ -892,23 +869,61 @@ export class WhatsappBotService {
 
     const lower = incomingText.toLowerCase().trim();
 
-    // 2. Saudação inicial
-    if (
-      lower === "oi" ||
-      lower === "olá" ||
-      lower === "ola" ||
-      lower === "bom dia" ||
-      lower === "boa tarde" ||
-      lower === "boa noite"
-    ) {
+    // Recupera a última mensagem do bot para saber o estado atual da conversa
+    const assistantMessages = (conversation?.messages || []).filter((m) => m.role === "assistant");
+    const lastBotMsg =
+      assistantMessages.length > 0
+        ? assistantMessages[assistantMessages.length - 1]?.content || ""
+        : "";
+
+    // ESTADO A: O Bot acabou de apresentar os distribuidores e pediu para escolher a opção (1 ou 2)
+    if (lastBotMsg.includes("Qual opção você prefere para o seu cliente?")) {
       return (
-        `Olá! Sou seu assistente de vendas e dimensionamento da EnergivIA. ☀️\n\n` +
-        `Como posso ajudar você a gerar orçamentos e propostas para seus clientes hoje?\n\n` +
-        `Você pode me enviar o PDF da fatura, uma foto da conta de luz ou digitar o consumo médio em kWh do seu cliente para gerarmos uma simulação rápida!`
+        `Ótima escolha! Kit selecionado com sucesso. ☀️\n\n` +
+        `Qual o nome do cliente final para eu registrar no seu CRM?`
       );
     }
 
-    // 3. Estrutura do Telhado selecionada -> GERA E APRESENTA OS KITS DOS DISTRIBUIDORES
+    // ESTADO B: O Bot pediu o nome do cliente final
+    if (lastBotMsg.includes("Qual o nome do cliente final")) {
+      const clientName = incomingText.trim();
+      return `Certo, vou registrar o cliente ${clientName}. E qual o WhatsApp dele?`;
+    }
+
+    // ESTADO C: O Bot pediu o WhatsApp do cliente final
+    if (lastBotMsg.includes("E qual o WhatsApp dele?")) {
+      const whatsapp = incomingText.replace(/\D/g, "");
+      const clientNameMatch = lastBotMsg.match(/registrar o cliente ([^.]+)\./i);
+      const clientName = clientNameMatch?.[1]?.trim() || "Cliente";
+
+      let leadId = "";
+      try {
+        const lead = await this.prisma.lead.create({
+          data: {
+            tenantId: conversation.organizationId,
+            name: clientName,
+            whatsapp: whatsapp || conversation.title || "WhatsApp",
+            source: "WhatsApp Bot",
+          },
+        });
+        leadId = lead.id;
+      } catch (e) {
+        this.logger.error("Erro criando lead no CRM:", e);
+      }
+
+      const appUrl =
+        this.config.get<string>("NEXT_PUBLIC_APP_URL") || "https://app.energivia.com.br";
+      const proposalUrl = `${appUrl}/propostas?leadId=${leadId}`;
+
+      return (
+        `Perfeito! Cliente *${clientName}* cadastrado com sucesso no seu CRM! 📋✅\n\n` +
+        `Acesse e visualize a proposta comercial pronta no link:\n` +
+        `${proposalUrl}\n\n` +
+        `Posso te ajudar com mais algum orçamento ou dimensionamento hoje?`
+      );
+    }
+
+    // ESTADO D: O Bot pediu a estrutura do telhado OU o usuário enviou uma estrutura
     const roofMatch = [
       { key: "1", name: "Cerâmica (Colonial)" },
       { key: "2", name: "Fibrocimento" },
@@ -927,8 +942,7 @@ export class WhatsappBotService {
       { key: "fibrometal", name: "Fibrometal" },
     ].find((r) => lower === r.key || lower.includes(r.key));
 
-    if (roofMatch) {
-      // Recupera o consumo MAIS RECENTE da conversa (escaneando do fim para o início)
+    if (roofMatch && (lastBotMsg.includes("Qual a estrutura do telhado?") || lastBotMsg === "")) {
       let consumptionKwh = 913; // default
       let cidade = "São Paulo";
       let estado = "SP";
@@ -975,72 +989,23 @@ export class WhatsappBotService {
       return quoteText;
     }
 
-    // 4. Integrador escolheu o número da opção (ex: "1" ou "opção 2") após a cotação
-    const isChoosingOption = [
-      "1",
-      "2",
-      "3",
-      "opcao 1",
-      "opção 1",
-      "opcao 2",
-      "opção 2",
-      "aldo",
-      "edeltec",
-    ].some((k) => lower === k || lower.startsWith(k));
-    const hasQuotedInHistory = conversation?.messages?.some(
-      (m) => typeof m.content === "string" && m.content.includes("Itens do Kit:")
-    );
-
-    if (isChoosingOption && hasQuotedInHistory) {
+    // Saudação inicial
+    if (
+      lower === "oi" ||
+      lower === "olá" ||
+      lower === "ola" ||
+      lower === "bom dia" ||
+      lower === "boa tarde" ||
+      lower === "boa noite"
+    ) {
       return (
-        `Ótima escolha! Kit selecionado com sucesso. ☀️\n\n` +
-        `Qual o nome do cliente final para eu registrar no seu CRM?`
+        `Olá! Sou seu assistente de vendas e dimensionamento da EnergivIA. ☀️\n\n` +
+        `Como posso ajudar você a gerar orçamentos e propostas para seus clientes hoje?\n\n` +
+        `Você pode me enviar o PDF da fatura, uma foto da conta de luz ou digitar o consumo médio em kWh do seu cliente para gerarmos uma simulação rápida!`
       );
     }
 
-    // 5. Integrador enviou o nome do cliente
-    const lastBotMsg =
-      conversation?.messages?.filter((m) => m.role === "assistant").pop()?.content || "";
-    if (lastBotMsg.includes("Qual o nome do cliente final")) {
-      const clientName = incomingText.trim();
-      return `Certo, vou registrar o cliente ${clientName}. E qual o WhatsApp dele?`;
-    }
-
-    // 6. Integrador enviou o WhatsApp do cliente
-    if (lastBotMsg.includes("E qual o WhatsApp dele?")) {
-      const whatsapp = incomingText.replace(/\D/g, "");
-      const clientNameMatch = lastBotMsg.match(/registrar o cliente ([^.]+)\./i);
-      const clientName = clientNameMatch?.[1]?.trim() || "Cliente";
-
-      // Cria o Lead no CRM do EnergivIA
-      let leadId = "";
-      try {
-        const lead = await this.prisma.lead.create({
-          data: {
-            tenantId: conversation.organizationId,
-            name: clientName,
-            whatsapp: whatsapp || conversation.title || "WhatsApp",
-            source: "WhatsApp Bot",
-          },
-        });
-        leadId = lead.id;
-      } catch (e) {
-        this.logger.error("Erro criando lead no CRM:", e);
-      }
-
-      const appUrl =
-        this.config.get<string>("NEXT_PUBLIC_APP_URL") || "https://app.energivia.com.br";
-      const proposalUrl = `${appUrl}/propostas?leadId=${leadId}`;
-
-      return (
-        `Perfeito! Cliente *${clientName}* cadastrado com sucesso no seu CRM! 📋✅\n\n` +
-        `Acesse e visualize a proposta comercial pronta no link:\n` +
-        `${proposalUrl}\n\n` +
-        `Posso te ajudar com mais algum orçamento ou dimensionamento hoje?`
-      );
-    }
-
-    // 7. Consumo digitado diretamente pelo Integrador (ex: "500 kwh")
+    // Consumo digitado diretamente (ex: "500 kwh")
     const kwhMatch = incomingText.match(/(\d+[\d.,]*)\s*(kwh|kw|reais|r\$)?/i);
     const kwhStr = kwhMatch?.[1];
     if (kwhStr && Number(kwhStr.replace(",", ".")) > 50) {
