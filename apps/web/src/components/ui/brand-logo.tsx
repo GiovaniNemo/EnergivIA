@@ -66,7 +66,7 @@ export function BrandLogo({
   return (
     <div
       className={cn(
-        "flex items-center gap-2.5 select-none transition-opacity hover:opacity-95",
+        "flex items-start gap-2.5 select-none transition-opacity hover:opacity-95",
         className
       )}
     >
@@ -79,7 +79,7 @@ export function BrandLogo({
         priority={priority}
         unoptimized
       />
-      <div className="flex flex-col justify-center min-w-0 font-[family-name:var(--font-montserrat),sans-serif]">
+      <div className="flex flex-col justify-start min-w-0 font-[family-name:var(--font-montserrat),sans-serif] pt-0.5">
         <div className="flex items-baseline leading-none">
           <span
             className={cn(
@@ -101,7 +101,7 @@ export function BrandLogo({
         {showTagline ? (
           <span
             className={cn(
-              "text-right w-full font-medium tracking-normal text-slate-600 dark:text-slate-300 leading-tight mt-0.5 whitespace-nowrap",
+              "text-right w-full font-medium tracking-normal text-slate-600 dark:text-slate-300 leading-tight mt-1 whitespace-nowrap",
               config.taglineClass
             )}
           >
