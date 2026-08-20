@@ -43,7 +43,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/api/proxy")) {
+  if (
+    pathname.startsWith("/api/proxy") ||
+    pathname.startsWith("/proposta/") ||
+    pathname.startsWith("/proposta") ||
+    pathname.startsWith("/icon.png") ||
+    pathname.startsWith("/manifest")
+  ) {
     return NextResponse.next();
   }
 

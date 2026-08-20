@@ -260,7 +260,7 @@ export class ProposalsService {
     try {
       const proposal = await this.prisma.proposal.findFirst({
         where: {
-          OR: [{ publicToken: idOrToken }, { publicToken: null, id: idOrToken }],
+          OR: [{ publicToken: idOrToken }, { id: idOrToken }],
           ...soft,
         },
         include: {
@@ -274,6 +274,23 @@ export class ProposalsService {
       let template = proposal.proposalTemplate;
       if (!template) {
         template = await findPublishedTemplateRow(this.prisma, proposal.tenantId);
+      }
+      let templatePayload: { id: string; name: string; config: Prisma.JsonValue } | null = template
+        ? { id: template.id, name: template.name, config: template.config }
+        : null;
+
+      if (!templatePayload) {
+        const blueprint = await this.prisma.proposalTemplateBlueprint.findFirst({
+          where: { published: true },
+          orderBy: { sortOrder: "asc" },
+        });
+        if (blueprint) {
+          templatePayload = {
+            id: blueprint.id,
+            name: blueprint.name,
+            config: blueprint.document,
+          };
+        }
       }
       await this.notificationsService.handlePublicProposalView(proposal.id);
 
@@ -326,9 +343,7 @@ export class ProposalsService {
         simulation: proposal.simulation
           ? { input: proposal.simulation.input, result: proposal.simulation.result }
           : null,
-        proposalTemplate: template
-          ? { id: template.id, name: template.name, config: template.config }
-          : null,
+        proposalTemplate: templatePayload,
         renderedData,
       };
     } catch (e) {

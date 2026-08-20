@@ -1230,6 +1230,23 @@ export class WhatsappBotService {
 
     // ESTADO A: O Bot acabou de apresentar os distribuidores e pediu para escolher a opção (1 ou 2)
     if (lastBotMsg.includes("Qual opção você prefere para o seu cliente?")) {
+      return (
+        `Ótima escolha! Kit selecionado com sucesso. ☀️\n\n` +
+        `Qual o nome do cliente final para registrarmos no seu CRM?`
+      );
+    }
+
+    // ESTADO B: O Bot pediu o nome do cliente final
+    if (lastBotMsg.includes("Qual o nome do cliente final")) {
+      const clientName = incomingText.trim();
+      return `Certo, vou registrar o cliente ${clientName}. E qual o WhatsApp dele com DDD?`;
+    }
+
+    // ESTADO C: O Bot pediu o WhatsApp do cliente final -> Apresenta os modelos de proposta
+    if (lastBotMsg.includes("E qual o WhatsApp dele")) {
+      const clientNameMatch = lastBotMsg.match(/registrar o cliente ([^.]+)\./i);
+      const clientName = clientNameMatch?.[1]?.trim() || "Cliente";
+
       const templates = await this.getAvailableTemplates(conversation.organizationId);
       let templateListText = "";
       templates.forEach((t, i) => {
@@ -1237,34 +1254,24 @@ export class WhatsappBotService {
       });
 
       return (
-        `Ótima escolha! Kit selecionado com sucesso. ☀️\n\n` +
+        `Cliente *${clientName}* anotado com sucesso! 👤✨\n\n` +
         `Qual modelo de proposta comercial você deseja usar para o seu cliente?\n` +
         `${templateListText}\n` +
         `(Responda com o número do modelo desejado)`
       );
     }
 
-    // ESTADO B: O Bot pediu para escolher o modelo de proposta
+    // ESTADO D: O Bot pediu para escolher o modelo de proposta -> GERA LEAD, DEAL, SIZING, SIMULAÇÃO E PROPOSTA REAL!
     if (lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar")) {
-      return (
-        `Modelo de proposta selecionado com sucesso! 📄✨\n\n` +
-        `Qual o nome do cliente final para registrarmos no seu CRM e gerar a proposta?`
-      );
-    }
+      const templateChoiceStr = incomingText.replace(/\D/g, "");
+      const chosenTemplateIndex = templateChoiceStr ? parseInt(templateChoiceStr, 10) - 1 : 0;
 
-    // ESTADO C: O Bot pediu o nome do cliente final
-    if (lastBotMsg.includes("Qual o nome do cliente final")) {
-      const clientName = incomingText.trim();
-      return `Certo, vou registrar o cliente ${clientName}. E qual o WhatsApp dele com DDD?`;
-    }
+      const availableTemplates = await this.getAvailableTemplates(conversation.organizationId);
+      const chosenTemplate = availableTemplates[chosenTemplateIndex] || availableTemplates[0];
 
-    // ESTADO D: O Bot pediu o WhatsApp do cliente final -> GERA LEAD, DEAL, SIZING, SIMULAÇÃO E PROPOSTA REAL!
-    if (lastBotMsg.includes("E qual o WhatsApp dele")) {
-      const clientWhatsapp = incomingText.replace(/\D/g, "");
-      const clientNameMatch = lastBotMsg.match(/registrar o cliente ([^.]+)\./i);
-      const clientName = clientNameMatch?.[1]?.trim() || "Cliente";
-
-      // Recupera o consumo, estrutura e kit escolhido do histórico
+      // Recupera o nome do cliente, whatsapp, consumo, cidade, estado, telhado e kit escolhido do histórico
+      let clientName = "Cliente";
+      let clientWhatsapp = "WhatsApp";
       let consumptionKwh = 913;
       let cidade = "São Paulo";
       let estado = "SP";
@@ -1282,11 +1289,35 @@ export class WhatsappBotService {
             if (meta["cidade"]) cidade = String(meta["cidade"]);
             if (meta["uf"]) estado = String(meta["uf"]);
           }
-          const content = typeof m.content === "string" ? m.content.toLowerCase().trim() : "";
+          const content = typeof m.content === "string" ? m.content.trim() : "";
+          const lowerContent = content.toLowerCase();
+
+          // 1. Nome do cliente
+          if (m.role === "assistant") {
+            const nameMatch1 = content.match(/registrar o cliente ([^.]+)\./i);
+            const nameMatch2 = content.match(/Cliente \*([^*]+)\* anotado/i);
+            if (nameMatch1?.[1] && clientName === "Cliente") {
+              clientName = nameMatch1[1].trim();
+            } else if (nameMatch2?.[1] && clientName === "Cliente") {
+              clientName = nameMatch2[1].trim();
+            }
+          }
+
+          // 2. WhatsApp do cliente
+          if (m.role === "assistant" && content.includes("E qual o WhatsApp dele")) {
+            const nextUserMsg = msgs[i + 1];
+            if (nextUserMsg && typeof nextUserMsg.content === "string") {
+              const digits = nextUserMsg.content.replace(/\D/g, "");
+              if (digits.length >= 8) {
+                clientWhatsapp = digits;
+              }
+            }
+          }
+
+          // 3. Kit escolhido
           if (
             m.role === "assistant" &&
-            m.content &&
-            m.content.includes("Qual opção você prefere para o seu cliente?")
+            content.includes("Qual opção você prefere para o seu cliente?")
           ) {
             const nextUserMsg = msgs[i + 1];
             if (nextUserMsg && typeof nextUserMsg.content === "string") {
@@ -1297,31 +1328,34 @@ export class WhatsappBotService {
               }
             }
           }
+
+          // 4. Tipo de telhado
           if (
-            content.includes("fibrocimento") ||
-            content.includes("fibromadeira") ||
-            content === "2" ||
-            content.includes("estrutura 2")
+            lowerContent.includes("fibrocimento") ||
+            lowerContent.includes("fibromadeira") ||
+            lowerContent === "2" ||
+            lowerContent.includes("estrutura 2")
           ) {
             roofType = "Fibrocimento";
-          } else if (content.includes("fibrometal") || content === "6") {
+          } else if (lowerContent.includes("fibrometal") || lowerContent === "6") {
             roofType = "Fibrometal";
-          } else if (content.includes("metal") || content === "3") {
+          } else if (lowerContent.includes("metal") || lowerContent === "3") {
             roofType = "Metálico";
-          } else if (content.includes("solo") || content === "4") {
+          } else if (lowerContent.includes("solo") || lowerContent === "4") {
             roofType = "Solo";
-          } else if (content.includes("laje") || content === "5") {
+          } else if (lowerContent.includes("laje") || lowerContent === "5") {
             roofType = "Laje";
-          } else if (content.includes("sem estrutura") || content === "7") {
+          } else if (lowerContent.includes("sem estrutura") || lowerContent === "7") {
             roofType = "Sem estrutura";
           } else if (
-            content.includes("cerâmica") ||
-            content.includes("ceramica") ||
-            content.includes("colonial") ||
-            content === "1"
+            lowerContent.includes("cerâmica") ||
+            lowerContent.includes("ceramica") ||
+            lowerContent.includes("colonial") ||
+            lowerContent === "1"
           ) {
             roofType = "Cerâmica (Colonial)";
           }
+
           if (typeof m.content === "string") {
             const match = m.content.match(/consumo m[ée]dio de (\d+) kwh/i);
             if (match && match[1]) {
@@ -1346,10 +1380,6 @@ export class WhatsappBotService {
           estimatedGeneration: consumptionKwh,
           items: [],
         };
-
-      // Recupera template escolhido
-      const availableTemplates = await this.getAvailableTemplates(conversation.organizationId);
-      const chosenTemplate = availableTemplates[0];
 
       let proposalId = "";
       try {
@@ -1397,24 +1427,47 @@ export class WhatsappBotService {
             input: {
               systemSizeKw: selectedQuote.kwp,
               investmentAmount: selectedQuote.totalPrice,
-              sizing: { monthlyConsumptionKwh: consumptionKwh },
+              financingType: "CASH",
+              sizing: {
+                monthlyConsumptionKwh: consumptionKwh,
+                cidade,
+                estado,
+                recommendedPowerKw: selectedQuote.kwp,
+                estimatedGeneration: selectedQuote.estimatedGeneration,
+              },
             },
             result: {
               paybackYears: 3.2,
               monthlySavingsBrl: Math.round(consumptionKwh * 0.95),
+              sizing: {
+                recommendedPowerKw: selectedQuote.kwp,
+                estimatedGeneration: selectedQuote.estimatedGeneration,
+              },
             },
           },
         });
 
-        // 5. Busca o Template Padrão de Proposta da Organização
-        const template = await this.prisma.proposalTemplate.findFirst({
-          where: {
-            tenantId: conversation.organizationId,
-            status: "PUBLISHED",
-            deletedAt: null,
-          },
-          orderBy: [{ isDefault: "desc" }, { updatedAt: "desc" }],
-        });
+        // 5. Busca o Template Escolhido ou o Padrão da Organização
+        const template = chosenTemplate?.id
+          ? await this.prisma.proposalTemplate.findFirst({
+              where: {
+                id: chosenTemplate.id,
+                tenantId: conversation.organizationId,
+                deletedAt: null,
+              },
+            })
+          : null;
+
+        const defaultTemplate = template
+          ? template
+          : await this.prisma.proposalTemplate.findFirst({
+              where: {
+                tenantId: conversation.organizationId,
+                status: "PUBLISHED",
+                deletedAt: null,
+              },
+              orderBy: [{ isDefault: "desc" }, { updatedAt: "desc" }],
+            });
 
         // 6. Cria a Proposta Comercial Real no Banco de Dados
         const proposal = await this.prisma.proposal.create({
@@ -1422,8 +1475,8 @@ export class WhatsappBotService {
             tenantId: conversation.organizationId,
             dealId: deal.id,
             simulationId: simulation.id,
-            proposalTemplateId: template?.id || null,
-            proposalTemplateVersion: 1,
+            proposalTemplateId: template?.id || defaultTemplate?.id || null,
+            proposalTemplateVersion: template?.version || defaultTemplate?.version || 1,
             title: `Proposta Comercial - ${clientName}`,
             validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             renderedData: {
@@ -1435,7 +1488,11 @@ export class WhatsappBotService {
                 systemPowerKw: selectedQuote.kwp,
                 sourceType: "distributor",
                 distributorName: selectedQuote.distributorName,
-                templateName: chosenTemplate?.name || "Modelo Comercial Padrão",
+                templateName:
+                  chosenTemplate?.name ||
+                  template?.name ||
+                  defaultTemplate?.name ||
+                  "Modelo Comercial Padrão",
               },
             },
           },
@@ -1457,7 +1514,13 @@ export class WhatsappBotService {
       }
 
       const appBaseUrl =
-        this.config.get<string>("NEXT_PUBLIC_APP_URL") || "https://energivia.com.br";
+        process.env["APP_BASE_URL"] ||
+        process.env["PUBLIC_WEB_APP_BASE_URL"] ||
+        process.env["NEXT_PUBLIC_APP_URL"] ||
+        this.config.get<string>("APP_BASE_URL") ||
+        this.config.get<string>("NEXT_PUBLIC_APP_URL") ||
+        "https://www.energivia.com.br";
+
       const proposalLink = proposalId
         ? `${appBaseUrl}/proposta/${proposalId}`
         : `${appBaseUrl}/propostas`;
