@@ -26,18 +26,18 @@ export function BrandLogo({
   const config = {
     sm: {
       iconClass: "h-7 w-7",
-      titleClass: "text-[1.15rem]",
+      titleClass: "text-[1.2rem]",
       taglineClass: "text-[8.5px]",
     },
     md: {
-      iconClass: "h-9 w-9",
-      titleClass: "text-[1.35rem]",
+      iconClass: "h-9 w-9 md:h-10 md:w-10",
+      titleClass: "text-[1.45rem]",
       taglineClass: "text-[10px]",
     },
     lg: {
-      iconClass: "h-11 w-11",
-      titleClass: "text-[1.6rem]",
-      taglineClass: "text-[11px]",
+      iconClass: "h-12 w-12",
+      titleClass: "text-[1.75rem]",
+      taglineClass: "text-[12px]",
     },
   }[size];
 
@@ -79,11 +79,11 @@ export function BrandLogo({
         priority={priority}
         unoptimized
       />
-      <div className="flex flex-col justify-center min-w-0">
-        <div className="flex items-baseline leading-tight">
+      <div className="flex flex-col justify-center min-w-0 font-[family-name:var(--font-montserrat),sans-serif]">
+        <div className="flex items-baseline leading-none">
           <span
             className={cn(
-              "font-black tracking-tight text-slate-900 dark:text-white",
+              "font-bold tracking-tight text-[#1e3a8a] dark:text-white",
               config.titleClass
             )}
           >
@@ -91,7 +91,7 @@ export function BrandLogo({
           </span>
           <span
             className={cn(
-              "font-black tracking-tight bg-gradient-to-r from-emerald-500 via-teal-400 to-green-500 dark:from-emerald-400 dark:via-teal-300 dark:to-green-400 bg-clip-text text-transparent ml-0.5",
+              "font-bold tracking-tight bg-gradient-to-r from-[#14b8a6] via-[#10b981] to-[#84cc16] dark:from-[#2dd4bf] dark:via-[#10b981] dark:to-[#a3e635] bg-clip-text text-transparent ml-0.5",
               config.titleClass
             )}
           >
@@ -101,7 +101,7 @@ export function BrandLogo({
         {showTagline ? (
           <span
             className={cn(
-              "font-semibold tracking-normal text-slate-500 dark:text-slate-400 leading-none mt-0.5 whitespace-nowrap",
+              "text-right w-full font-medium tracking-normal text-slate-600 dark:text-slate-300 leading-tight mt-0.5 whitespace-nowrap",
               config.taglineClass
             )}
           >
