@@ -94,12 +94,12 @@ export function templateConfigToPreviewDocument(config: unknown): ProposalDocume
   if (!config || typeof config !== "object") return createBaseDocument("Proposta", ["Capa"]);
   const anyConfig = config as Record<string, any>;
 
-  const rawSections: Array<Record<string, any>> = Array.isArray(anyConfig["sections"])
-    ? anyConfig["sections"]
-    : Array.isArray(anyConfig["editor"]?.["sections"])
-      ? anyConfig["editor"]["sections"]
-      : Array.isArray(anyConfig["document"]?.["sections"])
-        ? anyConfig["document"]["sections"]
+  const rawSections: Array<Record<string, any>> = Array.isArray(anyConfig["editor"]?.["sections"])
+    ? anyConfig["editor"]["sections"]
+    : Array.isArray(anyConfig["document"]?.["sections"])
+      ? anyConfig["document"]["sections"]
+      : Array.isArray(anyConfig["sections"])
+        ? anyConfig["sections"].filter((s: any) => s.enabled !== false)
         : [];
 
   if (rawSections.length === 0) {

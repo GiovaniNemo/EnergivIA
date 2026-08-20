@@ -55,6 +55,12 @@ export function proposalDocumentJsonToTemplateConfig(
   };
   return {
     ...DEFAULT_PROPOSAL_TEMPLATE_CONFIG,
+    sections: document.sections.map((section, index) => ({
+      key: toTemplateSectionKey(section.type),
+      enabled: !section.hidden,
+      position: index + 1,
+      title: section.title,
+    })),
     editor,
   };
 }

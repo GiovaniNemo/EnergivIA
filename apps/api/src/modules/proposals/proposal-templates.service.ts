@@ -243,7 +243,7 @@ export class ProposalTemplatesService implements OnModuleInit {
       );
       return {
         key,
-        enabled: true,
+        enabled: fallback?.enabled ?? false,
         position: index + 1,
         title: fallback?.title ?? key,
         content: fallback?.content,
