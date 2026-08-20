@@ -5,7 +5,8 @@ import { parseMoneyLike, replaceVariables } from "@/components/proposals/editor/
 import type { PreviewRenderVariables } from "@/components/proposals/editor/section-render/types";
 import { cn } from "@energivia/utils";
 
-function formatBRL(n: number): string {
+function formatBRL(n: number | null | undefined): string {
+  if (n == null || typeof n !== "number" || Number.isNaN(n)) return "R$ 0,00";
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 

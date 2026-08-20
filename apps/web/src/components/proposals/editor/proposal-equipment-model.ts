@@ -389,7 +389,8 @@ export function buildEquipmentItemFromKitLine(
   ) {
     cat = "profile";
   } else {
-    const lowerName = (line.productName || "").toLowerCase();
+    const rawName = (line.productName || "").trim();
+    const lowerName = rawName.toLowerCase();
     if (
       lowerName.includes("modulo") ||
       lowerName.includes("módulo") ||
@@ -420,16 +421,29 @@ export function buildEquipmentItemFromKitLine(
           ? "Microinversor"
           : (CATEGORY_LABELS[cat] ?? "Equipamento");
 
+  let rawName = (line.productName || "").trim();
+  let quantity = Math.max(1, Math.floor(line.quantity || 1));
+
+  // Remove prefixes like "- Inversor: ", "- Módulos: 10x " if present in raw string data
+  const prefixMatch = rawName.match(/^-\s*[^:]+:\s*(?:(\d+)x\s*)?(.*)$/i);
+  if (prefixMatch) {
+    if (prefixMatch[1] && (!line.quantity || line.quantity <= 1)) {
+      quantity = parseInt(prefixMatch[1], 10);
+    }
+    if (prefixMatch[2]) {
+      rawName = prefixMatch[2].trim();
+    }
+  }
+
   const brand = (line.brandName ?? "").trim();
   const title = brand ? `${catLabel} — ${brand}` : catLabel;
-  const subtitle = line.productName;
-  const quantity = Math.max(1, Math.floor(line.quantity || 1));
+  const subtitle = rawName;
 
   let specs: ProposalEquipmentSpec[] = [];
   if (line.specs && typeof line.specs === "object" && Object.keys(line.specs).length > 0) {
     specs = buildEquipmentDisplaySpecs(cat, line.specs, quantity);
   } else {
-    specs = inferSpecsFromProductDetails(cat, line.productName, quantity);
+    specs = inferSpecsFromProductDetails(cat, rawName, quantity);
   }
 
   return {

@@ -2,7 +2,8 @@ import type { ProposalDocumentJson } from "@/components/proposals/editor/types";
 import type { FinancialSimulationInputJson, FinancialSimulationResultJson } from "@/lib/leads-api";
 import type { PublicProposalPayload } from "@/lib/public-proposals-api";
 
-function formatBRL(n: number): string {
+function formatBRL(n: number | null | undefined): string {
+  if (n == null || typeof n !== "number" || Number.isNaN(n)) return "R$ 0,00";
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
@@ -27,10 +28,17 @@ export function mergePublicProposalVariables(
 
     // Build kit items list for template variable
     if (integrator.kitItems && integrator.kitItems.length > 0) {
-      const kitListLines = integrator.kitItems.map(
-        (item) =>
-          `${item.quantity}x ${item.productName}${item.brandName ? ` (${item.brandName})` : ""} — ${formatBRL(item.lineTotal)}`
-      );
+      const kitListLines = integrator.kitItems.map((item) => {
+        const qty = item.quantity || 1;
+        const brand = item.brandName ? ` (${item.brandName})` : "";
+        const priceStr =
+          typeof item.lineTotal === "number" && item.lineTotal > 0
+            ? ` — ${formatBRL(item.lineTotal)}`
+            : typeof item.unitPrice === "number" && item.unitPrice > 0
+              ? ` — ${formatBRL(item.unitPrice * qty)}`
+              : "";
+        return `${qty}x ${item.productName}${brand}${priceStr}`;
+      });
       merged["kit_itens_lista"] = kitListLines.join("\n");
       merged["equipamentos_subtotal"] = formatBRL(integrator.equipmentSubtotalBrl);
     }

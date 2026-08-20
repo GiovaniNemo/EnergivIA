@@ -1,4 +1,3 @@
-import type { ProposalTemplateConfig } from "@energivia/shared-types";
 import { createBaseDocument } from "@/components/proposals/editor/utils";
 import { SECTION_DEFAULT_FIELDS } from "@/components/proposals/editor/section-fields";
 import type { ProposalDocumentJson, ProposalSection } from "@/components/proposals/editor/types";
@@ -44,23 +43,37 @@ function resolveEditorSectionType(raw: string): ProposalSection["type"] {
   return raw in SECTION_DEFAULT_FIELDS ? (raw as ProposalSection["type"]) : "custom";
 }
 
-export function templateConfigToPreviewDocument(
-  config: ProposalTemplateConfig
-): ProposalDocumentJson {
-  if (!config.editor) return createBaseDocument("Proposta", ["Capa"]);
-  const sections = config.editor.sections.map((section) => {
-    const rawType = String(section.type);
+export function templateConfigToPreviewDocument(config: unknown): ProposalDocumentJson {
+  if (!config || typeof config !== "object") return createBaseDocument("Proposta", ["Capa"]);
+  const anyConfig = config as Record<string, unknown>;
+
+  if (Array.isArray(anyConfig["sections"])) {
+    return {
+      sections: anyConfig["sections"] as ProposalDocumentJson["sections"],
+      styles:
+        (anyConfig["styles"] as ProposalDocumentJson["styles"]) ??
+        createBaseDocument("Template", ["Capa"]).styles,
+      variables: (anyConfig["variables"] as ProposalDocumentJson["variables"]) ?? {},
+    };
+  }
+
+  const editor = anyConfig["editor"] as Record<string, unknown> | undefined;
+  if (!editor || !Array.isArray(editor["sections"]))
+    return createBaseDocument("Proposta", ["Capa"]);
+
+  const sections = (editor["sections"] as Array<Record<string, unknown>>).map((section) => {
+    const rawType = String(section["type"] ?? "custom");
     const resolvedType = resolveEditorSectionType(rawType);
     const rawText =
       resolvedType === "introduction" || resolvedType === "custom"
-        ? String((section.content as Record<string, unknown>)?.["text"] ?? "<p></p>")
+        ? String((section["content"] as Record<string, unknown>)?.["text"] ?? "<p></p>")
         : "<p>Use os campos específicos da seção para configurar este bloco.</p>";
     const mergedContent =
-      section.content && typeof section.content === "object"
+      section["content"] && typeof section["content"] === "object"
         ? normalizeSectionFields(
             {
               ...SECTION_DEFAULT_FIELDS[resolvedType],
-              ...(section.content as Record<string, unknown>),
+              ...(section["content"] as Record<string, unknown>),
             },
             resolvedType
           )
@@ -75,42 +88,40 @@ export function templateConfigToPreviewDocument(
       }
     }
     return {
-      id: section.id,
+      id: String(section["id"] ?? Math.random().toString(36).substring(2)),
       type: resolvedType,
       variant:
-        resolvedType === "cover" && section.variant === "default"
-          ? "full-image"
+        resolvedType === "cover" && section["variant"] === "default"
+          ? ("full-image" as const)
           : resolvedType === "economy_purchases"
-            ? "default"
-            : section.variant,
-      title: section.title,
+            ? ("default" as const)
+            : (section["variant"] as never),
+      title: String(section["title"] ?? ""),
       content: rawText,
       fields: mergedContent,
-      hidden: section.visible === false,
+      hidden: section["visible"] === false,
     };
   });
   return {
     sections,
     styles:
-      config.editor.styles && typeof config.editor.styles === "object"
+      editor["styles"] && typeof editor["styles"] === "object"
         ? ({
-            ...(config.editor.styles as unknown as ProposalDocumentJson["styles"]),
+            ...(editor["styles"] as unknown as ProposalDocumentJson["styles"]),
             branding: {
-              ...((config.editor.styles as unknown as ProposalDocumentJson["styles"]).branding ??
-                {}),
+              ...((editor["styles"] as unknown as ProposalDocumentJson["styles"]).branding ?? {}),
               logoUrl: normalizePutPresignedUrl(
-                (config.editor.styles as unknown as ProposalDocumentJson["styles"]).branding
-                  ?.logoUrl
+                (editor["styles"] as unknown as ProposalDocumentJson["styles"]).branding?.logoUrl
               ) as string,
             },
             cover: {
-              ...((config.editor.styles as unknown as ProposalDocumentJson["styles"]).cover ?? {}),
+              ...((editor["styles"] as unknown as ProposalDocumentJson["styles"]).cover ?? {}),
               imageUrl: normalizePutPresignedUrl(
-                (config.editor.styles as unknown as ProposalDocumentJson["styles"]).cover?.imageUrl
+                (editor["styles"] as unknown as ProposalDocumentJson["styles"]).cover?.imageUrl
               ) as string,
             },
           } as ProposalDocumentJson["styles"])
         : createBaseDocument("Template", ["Capa"]).styles,
-    variables: config.editor.variables as ProposalDocumentJson["variables"],
+    variables: (editor["variables"] as ProposalDocumentJson["variables"]) ?? {},
   };
 }

@@ -890,6 +890,17 @@ export class WhatsappBotService {
       invName: string;
       modCount: number;
       modName: string;
+      structuredItems?: Array<{
+        productId: string;
+        productName: string;
+        brandName: string;
+        categoryName: string;
+        quantity: number;
+        unitPrice: number;
+        lineTotal: number;
+        imageUrl?: string;
+        specs?: Record<string, unknown>;
+      }>;
     }> = [];
 
     for (const d of distributors) {
@@ -1121,6 +1132,138 @@ export class WhatsappBotService {
       const somaTotal =
         precoInv + precoMod + precoCabPreto + precoCabVermelho + precoCon + precoEst + precoPerfil;
 
+      const structuredItems: Array<{
+        productId: string;
+        productName: string;
+        brandName: string;
+        categoryName: string;
+        quantity: number;
+        unitPrice: number;
+        lineTotal: number;
+        imageUrl?: string;
+        specs?: Record<string, unknown>;
+      }> = [];
+
+      // 1. Inversor
+      const invProdName = inv.product?.name || "Inversor Solar";
+      const invBrand = inv.product?.brand?.name || "";
+      structuredItems.push({
+        productId: inv.product?.id || inv.productId || inv.id || "",
+        productName: invProdName,
+        brandName: invBrand,
+        categoryName: "inverter",
+        quantity: 1,
+        unitPrice: precoInv,
+        lineTotal: precoInv,
+        imageUrl: inv.product?.imageUrl || undefined,
+        specs: (inv.product?.specs as Record<string, unknown>) || undefined,
+      });
+
+      // 2. Módulos
+      const modProdName = mod.product?.name || `Módulo Solar ${modPowerW}W`;
+      const modBrand = mod.product?.brand?.name || "";
+      structuredItems.push({
+        productId: mod.product?.id || mod.productId || mod.id || "",
+        productName: modProdName,
+        brandName: modBrand,
+        categoryName: "module",
+        quantity: moduleQ,
+        unitPrice: Number(mod.price) || 0,
+        lineTotal: precoMod,
+        imageUrl: mod.product?.imageUrl || undefined,
+        specs: (mod.product?.specs as Record<string, unknown>) || undefined,
+      });
+
+      // 3. Estruturas
+      if (forcedIncludeStructure && selectedStructures.length > 0) {
+        const estMap = new Map<string, { item: any; count: number }>();
+        for (const est of selectedStructures) {
+          const key = est.product?.id || est.id || est.product?.name || "est";
+          const existing = estMap.get(key);
+          if (existing) {
+            existing.count += 1;
+          } else {
+            estMap.set(key, { item: est, count: 1 });
+          }
+        }
+        for (const { item: est, count } of estMap.values()) {
+          const uPrice = Number(est.price) || 0;
+          structuredItems.push({
+            productId: est.product?.id || est.productId || est.id || "",
+            productName: est.product?.name || "Estrutura de Fixação",
+            brandName: est.product?.brand?.name || "",
+            categoryName: "structure_kit",
+            quantity: count,
+            unitPrice: uPrice,
+            lineTotal: uPrice * count,
+            imageUrl: est.product?.imageUrl || undefined,
+            specs: (est.product?.specs as Record<string, unknown>) || undefined,
+          });
+        }
+      }
+
+      // 4. Perfil / Trilho
+      if (profileProd && profileQty > 0) {
+        const uPrice = Number(profileProd.price) || 0;
+        structuredItems.push({
+          productId: profileProd.product?.id || profileProd.productId || profileProd.id || "",
+          productName: profileProd.product?.name || "Perfil / Trilho",
+          brandName: profileProd.product?.brand?.name || "",
+          categoryName: "profile",
+          quantity: profileQty,
+          unitPrice: uPrice,
+          lineTotal: precoPerfil,
+          imageUrl: profileProd.product?.imageUrl || undefined,
+          specs: (profileProd.product?.specs as Record<string, unknown>) || undefined,
+        });
+      }
+
+      // 5. Cabos
+      if (cabPreto) {
+        const uPrice = Number(cabPreto.price) || 0;
+        structuredItems.push({
+          productId: cabPreto.product?.id || cabPreto.productId || cabPreto.id || "",
+          productName: cabPreto.product?.name || "Cabo Solar 6mm Preto",
+          brandName: cabPreto.product?.brand?.name || "",
+          categoryName: "dc_cable",
+          quantity: 1,
+          unitPrice: uPrice,
+          lineTotal: precoCabPreto,
+          imageUrl: cabPreto.product?.imageUrl || undefined,
+          specs: (cabPreto.product?.specs as Record<string, unknown>) || undefined,
+        });
+      }
+      if (cabVermelho) {
+        const uPrice = Number(cabVermelho.price) || 0;
+        structuredItems.push({
+          productId: cabVermelho.product?.id || cabVermelho.productId || cabVermelho.id || "",
+          productName: cabVermelho.product?.name || "Cabo Solar 6mm Vermelho",
+          brandName: cabVermelho.product?.brand?.name || "",
+          categoryName: "dc_cable",
+          quantity: 1,
+          unitPrice: uPrice,
+          lineTotal: precoCabVermelho,
+          imageUrl: cabVermelho.product?.imageUrl || undefined,
+          specs: (cabVermelho.product?.specs as Record<string, unknown>) || undefined,
+        });
+      }
+
+      // 6. Conectores
+      if (con) {
+        const uPrice = Number(con.price) || 0;
+        structuredItems.push({
+          productId: con.product?.id || con.productId || con.id || "",
+          productName: con.product?.name || "Conectores MC4",
+          brandName: con.product?.brand?.name || "",
+          categoryName: "connector",
+          quantity: 2,
+          unitPrice: uPrice,
+          lineTotal: precoCon,
+          imageUrl: con.product?.imageUrl || undefined,
+          specs: (con.product?.specs as Record<string, unknown>) || undefined,
+        });
+      }
+
       const items = [
         `- Inversor: ${inv.product?.name || "Inversor Solar"}`,
         `- Módulos: ${moduleQ}x ${mod.product?.name || `Módulo Solar ${modPowerW}W`}`,
@@ -1143,6 +1286,7 @@ export class WhatsappBotService {
         invName: inv.product?.name || "Inversor",
         modCount: moduleQ,
         modName: mod.product?.name || "Módulo",
+        structuredItems,
       });
     }
 
@@ -1305,11 +1449,18 @@ export class WhatsappBotService {
 
           // 2. WhatsApp do cliente
           if (m.role === "assistant" && content.includes("E qual o WhatsApp dele")) {
-            const nextUserMsg = msgs[i + 1];
-            if (nextUserMsg && typeof nextUserMsg.content === "string") {
-              const digits = nextUserMsg.content.replace(/\D/g, "");
-              if (digits.length >= 8) {
-                clientWhatsapp = digits;
+            for (let j = i + 1; j < msgs.length; j++) {
+              const nextUserMsg = msgs[j];
+              if (
+                nextUserMsg &&
+                nextUserMsg.role === "user" &&
+                typeof nextUserMsg.content === "string"
+              ) {
+                const digits = nextUserMsg.content.replace(/\D/g, "");
+                if (digits.length >= 8) {
+                  clientWhatsapp = digits;
+                }
+                break;
               }
             }
           }
@@ -1319,12 +1470,19 @@ export class WhatsappBotService {
             m.role === "assistant" &&
             content.includes("Qual opção você prefere para o seu cliente?")
           ) {
-            const nextUserMsg = msgs[i + 1];
-            if (nextUserMsg && typeof nextUserMsg.content === "string") {
-              const numMatch = nextUserMsg.content.match(/\b([1-9])\b/);
-              if (numMatch && numMatch[1]) {
-                const idx = parseInt(numMatch[1], 10) - 1;
-                if (idx >= 0) chosenQuoteIndex = idx;
+            for (let j = i + 1; j < msgs.length; j++) {
+              const nextUserMsg = msgs[j];
+              if (
+                nextUserMsg &&
+                nextUserMsg.role === "user" &&
+                typeof nextUserMsg.content === "string"
+              ) {
+                const numMatch = nextUserMsg.content.match(/\b([1-9])\b/);
+                if (numMatch && numMatch[1]) {
+                  const idx = parseInt(numMatch[1], 10) - 1;
+                  if (idx >= 0) chosenQuoteIndex = idx;
+                }
+                break;
               }
             }
           }
@@ -1375,10 +1533,12 @@ export class WhatsappBotService {
       const selectedQuote = quotes[chosenQuoteIndex] ||
         quotes[0] || {
           distributorName: "Edeltec Solar",
+          distributorId: undefined,
           totalPrice: Math.round(consumptionKwh * 28),
           kwp: Number((consumptionKwh / 100).toFixed(2)),
           estimatedGeneration: consumptionKwh,
           items: [],
+          structuredItems: [],
         };
 
       let proposalId = "";
@@ -1418,6 +1578,8 @@ export class WhatsappBotService {
           },
         });
 
+        const monthlySavingsVal = Math.round(consumptionKwh * 0.95);
+
         // 4. Cria a Simulação
         const simulation = await this.prisma.simulation.create({
           data: {
@@ -1438,17 +1600,20 @@ export class WhatsappBotService {
             },
             result: {
               paybackYears: 3.2,
-              monthlySavingsBrl: Math.round(consumptionKwh * 0.95),
+              monthlySavings: monthlySavingsVal,
+              monthlySavingsBrl: monthlySavingsVal,
+              annualSavings: [monthlySavingsVal * 12],
               sizing: {
                 recommendedPowerKw: selectedQuote.kwp,
                 estimatedGeneration: selectedQuote.estimatedGeneration,
+                estimatedProductionKwhMonth: selectedQuote.estimatedGeneration,
               },
             },
           },
         });
 
         // 5. Busca o Template Escolhido ou o Padrão da Organização
-        const template = chosenTemplate?.id
+        let template = chosenTemplate?.id
           ? await this.prisma.proposalTemplate.findFirst({
               where: {
                 id: chosenTemplate.id,
@@ -1457,6 +1622,23 @@ export class WhatsappBotService {
               },
             })
           : null;
+
+        if (!template && chosenTemplate?.id) {
+          const blueprint = await this.prisma.proposalTemplateBlueprint.findFirst({
+            where: { id: chosenTemplate.id, published: true },
+          });
+          if (blueprint) {
+            template = await this.prisma.proposalTemplate.create({
+              data: {
+                tenantId: conversation.organizationId,
+                name: blueprint.name,
+                status: "PUBLISHED",
+                config: blueprint.document as any,
+                version: 1,
+              },
+            });
+          }
+        }
 
         const defaultTemplate = template
           ? template
@@ -1468,6 +1650,18 @@ export class WhatsappBotService {
               },
               orderBy: [{ isDefault: "desc" }, { updatedAt: "desc" }],
             });
+
+        const rawKitItems = (selectedQuote as any).structuredItems?.length
+          ? (selectedQuote as any).structuredItems
+          : selectedQuote.items.map((i) => ({
+              productId: "",
+              productName: i.replace(/^-\s*[^:]+:\s*(?:\d+x\s*)?/, "").trim() || i,
+              brandName: "",
+              categoryName: "equipment",
+              quantity: 1,
+              unitPrice: 0,
+              lineTotal: 0,
+            }));
 
         // 6. Cria a Proposta Comercial Real no Banco de Dados
         const proposal = await this.prisma.proposal.create({
@@ -1482,15 +1676,16 @@ export class WhatsappBotService {
             renderedData: {
               integrator: {
                 version: 1,
-                kitItems: selectedQuote.items.map((i) => ({ productName: i, quantity: 1 })),
+                kitItems: rawKitItems,
                 equipmentSubtotalBrl: selectedQuote.totalPrice,
                 quotedSaleBrl: selectedQuote.totalPrice,
                 systemPowerKw: selectedQuote.kwp,
                 sourceType: "distributor",
+                distributorId: selectedQuote.distributorId,
                 distributorName: selectedQuote.distributorName,
                 templateName:
-                  chosenTemplate?.name ||
                   template?.name ||
+                  chosenTemplate?.name ||
                   defaultTemplate?.name ||
                   "Modelo Comercial Padrão",
               },
