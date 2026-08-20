@@ -683,7 +683,7 @@ async function calculateDistributorQuotes({
           : null,
         con ? `- Conectores: 2x ${con.product?.name || con.descricao}` : null,
       ].filter(Boolean),
-      info_adicional: `Geração Estimada: ${estGeneration.toFixed(1)} kWh/mês (Kit Real: ${realKWp.toFixed(2)} kWp)`,
+      info_adicional: `Potência: ${realKWp.toFixed(2)} kWp | Geração Estimada: ${estGeneration.toFixed(1)} kWh/mês (em condições ideais)*\n*Obs: A estimativa de geração considera condições perfeitas de irradiação solar. A geração real pode variar conforme as caídas e inclinação do telhado, orientação solar (trajetória do sol / azimute) e eventuais sombreamentos.`,
     });
   }
 

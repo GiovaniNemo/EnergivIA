@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -839,11 +840,37 @@ export class WhatsappBotService {
     estado: string;
     roofType: string;
   }) {
+    let mappedRoof = "ceramic";
+    const s = (roofType || "").toLowerCase().trim();
+    if (s === "1" || s.includes("ceramic") || s.includes("cerâmica") || s.includes("colonial")) {
+      mappedRoof = "ceramic";
+    } else if (
+      s === "2" ||
+      s.includes("fibrocimento") ||
+      s.includes("fibro") ||
+      s.includes("fibromadeira")
+    ) {
+      mappedRoof = "fibromadeira";
+    } else if (s === "6" || s.includes("fibrometal")) {
+      mappedRoof = "fibrometal";
+    } else if (s === "3" || s.includes("metal") || s.includes("metálic")) {
+      mappedRoof = "metal";
+    } else if (s === "4" || s.includes("solo") || s.includes("ground")) {
+      mappedRoof = "ground";
+    } else if (s === "5" || s.includes("laje")) {
+      mappedRoof = "laje";
+    } else if (s === "7" || s.includes("sem") || s.includes("nenhum") || s === "none") {
+      mappedRoof = "none";
+    }
+
+    const forcedIncludeStructure = mappedRoof !== "none";
+    const roofFactor = 1.0;
     const hsp = getHsp(cidade, estado);
-    const pr = 0.716; // Performance Ratio
+    const perdas = 0.284;
+    const pr = 1 - perdas; // 0.716
     const geracaoPorKwp = hsp * 30 * pr;
     const consumoAjustado = consumptionKwh * 1.07;
-    const targetKwp = consumoAjustado / geracaoPorKwp;
+    const finalTargetKWp = consumoAjustado / (geracaoPorKwp * roofFactor);
 
     const distributors = await this.prisma.distributor.findMany({
       include: {
@@ -869,102 +896,253 @@ export class WhatsappBotService {
       const prods = d.distributorProducts || [];
       if (prods.length === 0) continue;
 
-      const invs = prods.filter((dp) => {
-        const p = dp.product;
-        const cat = p?.category?.name?.toLowerCase() || "";
-        const name = (p?.name || "").toLowerCase();
-        return cat.includes("inverter") || name.includes("inversor");
+      const allProds = prods.map((dp) => ({
+        ...dp,
+        price: Number(dp.price) || 0,
+      }));
+
+      const invs = allProds.filter(
+        (p: any) => p.price > 0 && JSON.stringify(p).toLowerCase().includes("inversor")
+      );
+      const mods = allProds.filter(
+        (p: any) =>
+          p.price > 0 &&
+          (JSON.stringify(p).toLowerCase().includes("módulo") ||
+            JSON.stringify(p).toLowerCase().includes("modulo") ||
+            JSON.stringify(p).toLowerCase().includes("painel"))
+      );
+      const cabs = allProds.filter(
+        (p: any) => p.price > 0 && JSON.stringify(p).toLowerCase().includes("cabo")
+      );
+      const cons = allProds.filter(
+        (p: any) => p.price > 0 && JSON.stringify(p).toLowerCase().includes("conector")
+      );
+      const ests = allProds.filter(
+        (p: any) =>
+          p.price > 0 &&
+          (JSON.stringify(p).toLowerCase().includes("estrutura") ||
+            JSON.stringify(p).toLowerCase().includes("perfil"))
+      );
+
+      const validMods = mods.filter((m) => {
+        const sp = m.product?.specs as Record<string, any> | undefined;
+        return !!sp?.["power_w"];
       });
-
-      const mods = prods.filter((dp) => {
-        const p = dp.product;
-        const cat = p?.category?.name?.toLowerCase() || "";
-        const name = (p?.name || "").toLowerCase();
-        return (
-          cat.includes("module") ||
-          name.includes("módulo") ||
-          name.includes("modulo") ||
-          name.includes("painel")
-        );
-      });
-
-      if (invs.length === 0 || mods.length === 0) continue;
-
-      const mod = mods[0];
+      const mod = validMods.length > 0 ? validMods[0] : mods[0];
       if (!mod) continue;
-      const specs = (mod.product?.specs || {}) as Record<string, unknown>;
-      const modPowerW = specs["power_w"] ? Number(specs["power_w"]) : 550;
-      const moduleCount = Math.ceil((targetKwp * 1000) / modPowerW);
-      const realKwp = Number(((moduleCount * modPowerW) / 1000).toFixed(2));
-      const estGeneration = Math.round(realKwp * geracaoPorKwp);
 
-      const inv = invs[0];
+      const modSpecs = mod.product?.specs as Record<string, any> | undefined;
+      let modPowerW = Number(modSpecs?.["power_w"]);
+      if (!modPowerW) {
+        const modName = (mod.product?.name || "").toUpperCase();
+        const modMatch = modName.match(/(\d{3,4})\s*W/);
+        if (modMatch && modMatch[1]) modPowerW = parseInt(modMatch[1], 10);
+        else modPowerW = 550;
+      }
+      let moduleQ = Math.ceil((finalTargetKWp * 1000) / modPowerW);
+      let realKWp = (moduleQ * modPowerW) / 1000;
+      const estGeneration = realKWp * geracaoPorKwp * roofFactor;
+
+      const validInvs = [];
+      for (const invObj of invs) {
+        const specs = invObj.product?.specs as Record<string, any> | undefined;
+        const name = (invObj.product?.name || "").toUpperCase();
+
+        let testModuleQ = moduleQ;
+        if ((name.includes("MONOF") || name.includes("MONO")) && testModuleQ < 4) {
+          testModuleQ = 4;
+        }
+        const testRealKWp = (testModuleQ * modPowerW) / 1000;
+
+        const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
+        let invKWp = null;
+
+        if (match && match[1]) {
+          invKWp = parseFloat(match[1].replace(",", "."));
+          if (match[2] === "W") invKWp = invKWp / 1000;
+        } else if (specs && specs["max_dc_power"]) {
+          invKWp = Number(specs["max_dc_power"]) / 1000;
+        } else {
+          invKWp = finalTargetKWp;
+        }
+
+        const ratio = testRealKWp / invKWp;
+        if (ratio < 0.5 || ratio > 1.45) continue;
+
+        validInvs.push({
+          ...invObj,
+          _testModuleQ: testModuleQ,
+          _testRealKWp: testRealKWp,
+        });
+      }
+
+      if (validInvs.length === 0) continue;
+
+      validInvs.sort((a, b) => Number(a.price) - Number(b.price));
+      const inv = validInvs[0];
       if (!inv) continue;
-      const invPrice = Number(inv.price) || 0;
-      const modPrice = (Number(mod.price) || 0) * moduleCount;
-      const structureEstPrice = roofType === "none" ? 0 : 250 * Math.ceil(moduleCount / 4);
-      const cablePrice = 300;
-      const totalPrice = invPrice + modPrice + structureEstPrice + cablePrice;
+
+      moduleQ = inv._testModuleQ;
+      realKWp = inv._testRealKWp;
+
+      const cabPreto =
+        cabs.find((c: any) => JSON.stringify(c).toLowerCase().includes("preto")) || cabs[0];
+      const cabVermelho =
+        cabs.find((c: any) => JSON.stringify(c).toLowerCase().includes("vermelho")) ||
+        (cabs.length > 1 && cabs[1] !== cabPreto ? cabs[1] : null);
+      const con = cons[0];
+
+      const matchedEsts = ests.filter((p: any) => {
+        const n = (p.product?.name || "").toLowerCase();
+        const d = (p.product?.description || "").toLowerCase();
+        const s = n + " " + d;
+
+        if (mappedRoof === "fibrometal") return s.includes("fibrometal");
+        if (mappedRoof === "fibromadeira") {
+          if (n.includes("fibromadeira") || n.includes("fibrocimento")) return true;
+          if (
+            (d.includes("fibromadeira") || d.includes("fibrocimento")) &&
+            !n.includes("metal") &&
+            !n.includes("ceramica") &&
+            !n.includes("colonial")
+          )
+            return true;
+          return false;
+        }
+        if (mappedRoof === "metal") return s.includes("metal") && !s.includes("fibrometal");
+        return s.includes(mappedRoof);
+      });
+
+      const parsedEsts = matchedEsts
+        .map((p: any) => {
+          const n = (p.product?.name || "").toUpperCase();
+          const m = n.match(/(\d+)\s*(MOD|PAIN|PLAC)/);
+          let cap = m ? parseInt(m[1], 10) : 0;
+          if (cap > 4 && mappedRoof !== "ground") {
+            cap = 0;
+          }
+          return { ...p, cap };
+        })
+        .filter((p) => p.cap > 0);
+
+      const selectedStructures: any[] = [];
+      if (parsedEsts.length > 0) {
+        let remaining = moduleQ;
+        const bestByCap: Record<number, any> = {};
+        for (const p of parsedEsts) {
+          if (!bestByCap[p.cap] || Number(p.price) < Number(bestByCap[p.cap].price)) {
+            bestByCap[p.cap] = p;
+          }
+        }
+        const uniqueCaps = Object.values(bestByCap).sort((a: any, b: any) => b.cap - a.cap);
+
+        while (remaining > 0) {
+          let best = uniqueCaps.find((p: any) => p.cap <= remaining);
+          if (!best) {
+            const larger = [...uniqueCaps].sort((a: any, b: any) => a.cap - b.cap);
+            best = larger.find((p: any) => p.cap >= remaining);
+          }
+          if (!best) break;
+          selectedStructures.push(best);
+          remaining -= best.cap;
+        }
+      } else if (matchedEsts.length > 0) {
+        selectedStructures.push(matchedEsts[0]);
+      }
+
+      // Se o usuário selecionou uma estrutura e o distribuidor NÃO tem estrutura cadastrada, pula
+      if (forcedIncludeStructure && selectedStructures.length === 0) {
+        continue;
+      }
+
+      let profileQty = 0;
+      let profileProd: any = null;
+
+      if (forcedIncludeStructure) {
+        const perfis = ests.filter((p: any) => {
+          const n = (p.product?.name || "").toLowerCase();
+          return n.includes("perfil") && !n.includes("s/ perfil") && !n.includes("sem perfil");
+        });
+
+        if (perfis.length > 0) {
+          if (mappedRoof === "metal") {
+            profileProd =
+              perfis.find((p: any) => {
+                const n = (p.product?.name || "").toLowerCase();
+                return n.includes("baixo") || n.includes("mini trilho");
+              }) || perfis[0];
+          } else {
+            profileProd =
+              perfis.find((p: any) => {
+                const n = (p.product?.name || "").toLowerCase();
+                return (
+                  !n.includes("baixo") && !n.includes("mini trilho") && !n.includes("fechamento")
+                );
+              }) || perfis[0];
+          }
+
+          if (mappedRoof === "metal") {
+            for (const est of selectedStructures) {
+              if (est.cap === 4) profileQty += 10;
+              else if (est.cap === 2) profileQty += 5;
+              else profileQty += Math.ceil((est.cap || 1) * 2.5);
+            }
+            if (moduleQ % 2 !== 0) profileQty += 1;
+          } else if (mappedRoof === "ground") {
+            profileQty = 1;
+          } else {
+            profileQty = moduleQ % 2 === 0 ? moduleQ : moduleQ + 1;
+          }
+        }
+      }
+
+      let precoEst = 0;
+      const estLines: string[] = [];
+      if (forcedIncludeStructure && selectedStructures.length > 0) {
+        const counts = new Map<string, number>();
+        for (const est of selectedStructures) {
+          precoEst += Number(est.price) || 0;
+          const name = est.product?.name || "Estrutura de Fixação";
+          counts.set(name, (counts.get(name) || 0) + 1);
+        }
+        for (const [name, count] of counts.entries()) {
+          estLines.push(`- Estrutura: ${count}x ${name}`);
+        }
+      }
+
+      const precoInv = Number(inv.price) || 0;
+      const precoMod = (Number(mod.price) || 0) * moduleQ;
+      const precoCabPreto = cabPreto ? Number(cabPreto.price) || 0 : 0;
+      const precoCabVermelho = cabVermelho ? Number(cabVermelho.price) || 0 : 0;
+      const precoCon = con ? (Number(con.price) || 0) * 2 : 0;
+      const precoPerfil =
+        profileProd && profileQty > 0 ? (Number(profileProd.price) || 0) * profileQty : 0;
+
+      const somaTotal =
+        precoInv + precoMod + precoCabPreto + precoCabVermelho + precoCon + precoEst + precoPerfil;
 
       const items = [
         `- Inversor: ${inv.product?.name || "Inversor Solar"}`,
-        `- Módulos: ${moduleCount}x ${mod.product?.name || "Módulo Solar " + modPowerW + "W"}`,
-      ];
-      if (roofType !== "none") {
-        items.push(`- Estrutura: Fixação para telhado ${roofType}`);
-      }
-      items.push(`- Cabos e Conectores: Kit CC Solar Completo`);
+        `- Módulos: ${moduleQ}x ${mod.product?.name || `Módulo Solar ${modPowerW}W`}`,
+        ...estLines,
+        profileProd && profileQty > 0
+          ? `- Perfil: ${profileQty}x ${profileProd.product?.name}`
+          : null,
+        cabPreto ? `- Cabo Preto: ${cabPreto.product?.name}` : null,
+        cabVermelho ? `- Cabo Vermelho: ${cabVermelho.product?.name}` : null,
+        con ? `- Conectores: 2x ${con.product?.name}` : null,
+      ].filter(Boolean) as string[];
 
       quotes.push({
         distributorName: d.name,
         distributorId: d.id,
-        totalPrice,
-        kwp: realKwp,
-        estimatedGeneration: estGeneration,
+        totalPrice: somaTotal,
+        kwp: Number(realKWp.toFixed(2)),
+        estimatedGeneration: Math.round(estGeneration),
         items,
         invName: inv.product?.name || "Inversor",
-        modCount: moduleCount,
+        modCount: moduleQ,
         modName: mod.product?.name || "Módulo",
-      });
-    }
-
-    if (quotes.length === 0) {
-      const modPowerW = 550;
-      const moduleCount = Math.ceil((targetKwp * 1000) / modPowerW);
-      const realKwp = Number(((moduleCount * modPowerW) / 1000).toFixed(2));
-      const estGen = Math.round(realKwp * geracaoPorKwp);
-      const precoEstimado = Math.round(realKwp * 2800);
-
-      quotes.push({
-        distributorName: "Edeltec Solar",
-        totalPrice: Math.round(precoEstimado * 0.98),
-        kwp: realKwp,
-        estimatedGeneration: estGen,
-        items: [
-          `- Inversor: Deye ${Math.ceil(realKwp)}kW Monofásico 220V`,
-          `- Módulos: ${moduleCount}x Canadian Solar ${modPowerW}W TopCon`,
-          `- Estrutura: Fixação para telhado ${roofType}`,
-          `- Cabos e Conectores: Kit CC Solar Completo`,
-        ],
-        invName: `Deye ${Math.ceil(realKwp)}kW`,
-        modCount: moduleCount,
-        modName: `Canadian Solar ${modPowerW}W`,
-      });
-
-      quotes.push({
-        distributorName: "Aldo Solar",
-        totalPrice: precoEstimado,
-        kwp: realKwp,
-        estimatedGeneration: estGen,
-        items: [
-          `- Inversor: Growatt ${Math.ceil(realKwp)}kW Monofásico 220V`,
-          `- Módulos: ${moduleCount}x DAH Solar ${modPowerW}W TopCon`,
-          `- Estrutura: Fixação para telhado ${roofType}`,
-          `- Cabos e Conectores: Kit CC Solar Completo`,
-        ],
-        invName: `Growatt ${Math.ceil(realKwp)}kW`,
-        modCount: moduleCount,
-        modName: `DAH Solar ${modPowerW}W`,
       });
     }
 
@@ -1086,27 +1264,68 @@ export class WhatsappBotService {
       const clientNameMatch = lastBotMsg.match(/registrar o cliente ([^.]+)\./i);
       const clientName = clientNameMatch?.[1]?.trim() || "Cliente";
 
-      // Recupera o consumo e kits do histórico
+      // Recupera o consumo, estrutura e kit escolhido do histórico
       let consumptionKwh = 913;
       let cidade = "São Paulo";
       let estado = "SP";
       let roofType = "Cerâmica (Colonial)";
+      let chosenQuoteIndex = 0;
 
       if (conversation?.messages && conversation.messages.length > 0) {
-        const reversed = [...conversation.messages].reverse();
-        for (const m of reversed) {
+        const msgs = conversation.messages;
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          const m = msgs[i];
+          if (!m) continue;
           const meta = m.metadata as Record<string, unknown> | null | undefined;
           if (meta && meta["exactAverageKwh"]) {
             consumptionKwh = Number(meta["exactAverageKwh"]);
             if (meta["cidade"]) cidade = String(meta["cidade"]);
             if (meta["uf"]) estado = String(meta["uf"]);
-            break;
+          }
+          const content = typeof m.content === "string" ? m.content.toLowerCase().trim() : "";
+          if (
+            m.role === "assistant" &&
+            m.content &&
+            m.content.includes("Qual opção você prefere para o seu cliente?")
+          ) {
+            const nextUserMsg = msgs[i + 1];
+            if (nextUserMsg && typeof nextUserMsg.content === "string") {
+              const numMatch = nextUserMsg.content.match(/\b([1-9])\b/);
+              if (numMatch && numMatch[1]) {
+                const idx = parseInt(numMatch[1], 10) - 1;
+                if (idx >= 0) chosenQuoteIndex = idx;
+              }
+            }
+          }
+          if (
+            content.includes("fibrocimento") ||
+            content.includes("fibromadeira") ||
+            content === "2" ||
+            content.includes("estrutura 2")
+          ) {
+            roofType = "Fibrocimento";
+          } else if (content.includes("fibrometal") || content === "6") {
+            roofType = "Fibrometal";
+          } else if (content.includes("metal") || content === "3") {
+            roofType = "Metálico";
+          } else if (content.includes("solo") || content === "4") {
+            roofType = "Solo";
+          } else if (content.includes("laje") || content === "5") {
+            roofType = "Laje";
+          } else if (content.includes("sem estrutura") || content === "7") {
+            roofType = "Sem estrutura";
+          } else if (
+            content.includes("cerâmica") ||
+            content.includes("ceramica") ||
+            content.includes("colonial") ||
+            content === "1"
+          ) {
+            roofType = "Cerâmica (Colonial)";
           }
           if (typeof m.content === "string") {
             const match = m.content.match(/consumo m[ée]dio de (\d+) kwh/i);
-            if (match?.[1]) {
+            if (match && match[1]) {
               consumptionKwh = parseInt(match[1], 10);
-              break;
             }
           }
         }
@@ -1119,13 +1338,14 @@ export class WhatsappBotService {
         roofType,
       });
 
-      const selectedQuote = quotes[0] || {
-        distributorName: "Edeltec Solar",
-        totalPrice: Math.round(consumptionKwh * 28),
-        kwp: Number((consumptionKwh / 100).toFixed(2)),
-        estimatedGeneration: consumptionKwh,
-        items: [],
-      };
+      const selectedQuote = quotes[chosenQuoteIndex] ||
+        quotes[0] || {
+          distributorName: "Edeltec Solar",
+          totalPrice: Math.round(consumptionKwh * 28),
+          kwp: Number((consumptionKwh / 100).toFixed(2)),
+          estimatedGeneration: consumptionKwh,
+          items: [],
+        };
 
       // Recupera template escolhido
       const availableTemplates = await this.getAvailableTemplates(conversation.organizationId);
@@ -1271,6 +1491,9 @@ export class WhatsappBotService {
       { key: "solo", name: "Solo" },
       { key: "laje", name: "Laje" },
       { key: "fibrometal", name: "Fibrometal" },
+      { key: "sem estrutura", name: "Sem estrutura" },
+      { key: "sem", name: "Sem estrutura" },
+      { key: "nenhuma", name: "Sem estrutura" },
     ].find((r) => lower === r.key || lower.includes(r.key));
 
     if (roofMatch && (lastBotMsg.includes("Qual a estrutura do telhado?") || lastBotMsg === "")) {
@@ -1305,15 +1528,23 @@ export class WhatsappBotService {
         roofType: roofMatch.name,
       });
 
+      if (quotes.length === 0) {
+        return (
+          `No momento não encontramos kits com todos os componentes e estrutura (${roofMatch.name}) disponíveis nos distribuidores cadastrados.\n\n` +
+          `Você pode selecionar a opção "7 - Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado.`
+        );
+      }
+
       let quoteText = `Excelente! Seguem as melhores opções de kits dimensionados para o consumo de ${consumptionKwh} kWh/mês:\n\n`;
 
       quotes.forEach((q, index) => {
-        quoteText += `${index + 1} - ${q.distributorName} - R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n`;
+        quoteText += `${index + 1} - ${q.distributorName} - R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
         quoteText += `Itens do Kit:\n`;
         q.items.forEach((item) => {
           quoteText += `${item}\n`;
         });
-        quoteText += `Info: Potência: ${q.kwp} kWp | Geração Estimada: ${q.estimatedGeneration} kWh/mês\n\n`;
+        quoteText += `Info: Potência: ${q.kwp} kWp | Geração Estimada: ${q.estimatedGeneration} kWh/mês (em condições ideais)*\n`;
+        quoteText += `*Obs: A estimativa de geração considera condições perfeitas de irradiação solar. A geração real pode variar conforme as caídas e inclinação do telhado, orientação solar (trajetória do sol / azimute) e eventuais sombreamentos.\n\n`;
       });
 
       quoteText += `Qual opção você prefere para o seu cliente? (Responda com o número)`;
