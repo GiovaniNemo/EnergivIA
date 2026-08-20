@@ -8,6 +8,7 @@ import { useSidebar } from "@/components/layout/sidebar-inset";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { MENU_ITEMS, SECTION_LABELS, type SidebarSectionKey } from "@/config/menu.config";
 import { SidebarSection } from "./SidebarSection";
+import { SidebarNotice } from "./sidebar-notice";
 import { cn } from "@energivia/utils";
 
 const ADMIN_SURFACE_SECTIONS: ReadonlySet<SidebarSectionKey> = new Set(["admin", "platform"]);
@@ -145,6 +146,9 @@ export function Sidebar(): JSX.Element {
             />
           ))}
         </nav>
+
+        {/* System Announcement Notice */}
+        <SidebarNotice collapsed={collapsed} />
 
         {!isMobile ? (
           <button
