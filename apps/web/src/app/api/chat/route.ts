@@ -1154,12 +1154,18 @@ export async function POST(req: Request) {
           description:
             "Gera a proposta a partir do kit selecionado, cria o dimensionamento, a simulação e atrela ao lead criado.",
           parameters: z.object({
-            leadId: z.string().describe("O ID do cliente/lead (retornado no passo anterior)."),
-            templateId: z.string().describe("O ID do template escolhido pelo usuário."),
+            leadId: z.string().optional().describe("O ID do cliente/lead (se disponível)."),
+            templateId: z
+              .string()
+              .optional()
+              .describe("O ID ou número do template escolhido pelo usuário."),
             distributorId: z.string().optional().describe("O ID da distribuidora do kit cotado."),
-            consumoMensalKwh: z.number().describe("O consumo médio mensal do cliente em kWh."),
-            potenciaSistemaKw: z.number().describe("A potência real do kit em kWp."),
-            valorKitTotal: z.number().describe("O valor total do kit em Reais (R$)."),
+            consumoMensalKwh: z
+              .number()
+              .optional()
+              .describe("O consumo médio mensal do cliente em kWh."),
+            potenciaSistemaKw: z.number().optional().describe("A potência real do kit em kWp."),
+            valorKitTotal: z.number().optional().describe("O valor total do kit em Reais (R$)."),
             kitItems: z
               .array(
                 z.object({

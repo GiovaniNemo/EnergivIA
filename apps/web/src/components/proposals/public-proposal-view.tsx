@@ -90,8 +90,10 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
         <div className={`bg-[var(--color-background)] py-4 ${publicColumnClass}`}>
           <h1 className="text-xl font-semibold text-[var(--color-foreground)]">{data.title}</h1>
           <p className="text-sm text-[var(--color-muted-foreground)]">
-            Cliente: {data.deal.lead.name} · Válida até{" "}
-            {new Date(data.validUntil).toLocaleDateString("pt-BR")}
+            Cliente: {data.deal?.lead?.name ?? "Cliente"} · Válida até{" "}
+            {data.validUntil && !Number.isNaN(new Date(data.validUntil).getTime())
+              ? new Date(data.validUntil).toLocaleDateString("pt-BR")
+              : "30 dias"}
           </p>
         </div>
       )}

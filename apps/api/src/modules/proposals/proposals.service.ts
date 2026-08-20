@@ -343,7 +343,7 @@ export class ProposalsService {
         createdAt: proposal.createdAt,
         discountBrl: proposal.discountBrl ?? null,
         companyName: proposal.tenant?.name ?? null,
-        deal: { lead: { name: proposal.deal.lead.name } },
+        deal: { lead: { name: proposal.deal?.lead?.name ?? "Cliente" } },
         simulation: proposal.simulation
           ? { input: proposal.simulation.input, result: proposal.simulation.result }
           : null,

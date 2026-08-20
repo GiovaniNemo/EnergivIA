@@ -13,7 +13,7 @@ export function mergePublicProposalVariables(
 ): ProposalDocumentJson["variables"] {
   const merged: Record<string, string | number> = { ...templateVariables };
 
-  merged["nome_cliente"] = payload.deal.lead.name;
+  merged["nome_cliente"] = payload.deal?.lead?.name ?? "Cliente";
 
   // Integrator snapshot: kit items and project costs
   const integrator = payload.renderedData?.integrator;
@@ -41,6 +41,40 @@ export function mergePublicProposalVariables(
       });
       merged["kit_itens_lista"] = kitListLines.join("\n");
       merged["equipamentos_subtotal"] = formatBRL(integrator.equipmentSubtotalBrl);
+
+      const moduleItem = integrator.kitItems.find((i) => {
+        const c = (i.categoryName || "").toLowerCase();
+        const n = (i.productName || "").toLowerCase();
+        return c.includes("mod") || c.includes("pain") || n.includes("mod") || n.includes("pain");
+      });
+      const inverterItem = integrator.kitItems.find((i) => {
+        const c = (i.categoryName || "").toLowerCase();
+        const n = (i.productName || "").toLowerCase();
+        return c.includes("inv") || c.includes("micro") || n.includes("inv") || n.includes("micro");
+      });
+      const structItem = integrator.kitItems.find((i) => {
+        const c = (i.categoryName || "").toLowerCase();
+        const n = (i.productName || "").toLowerCase();
+        return c.includes("est") || c.includes("perf") || n.includes("est") || n.includes("perf");
+      });
+
+      if (moduleItem) {
+        const qty = moduleItem.quantity || 1;
+        merged["modulos_sistema"] =
+          `${qty}x ${moduleItem.productName}${moduleItem.brandName ? ` (${moduleItem.brandName})` : ""}`;
+        merged["quantidade_modulos"] = qty;
+        merged["modelo_modulo"] = moduleItem.productName;
+      }
+      if (inverterItem) {
+        const qty = inverterItem.quantity || 1;
+        merged["inversor_sistema"] =
+          `${qty}x ${inverterItem.productName}${inverterItem.brandName ? ` (${inverterItem.brandName})` : ""}`;
+        merged["quantidade_inversores"] = qty;
+        merged["modelo_inversor"] = inverterItem.productName;
+      }
+      if (structItem) {
+        merged["estrutura_fixacao"] = structItem.productName;
+      }
     }
 
     // Build project cost lines for template variable

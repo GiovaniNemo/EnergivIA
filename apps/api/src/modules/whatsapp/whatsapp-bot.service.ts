@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
 import { WhatsappCloudService } from "./whatsapp-cloud.service";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { computeProjectCostSection } from "@energivia/proposal-economia";
 import pdfParse from "pdf-parse";
 import fs from "node:fs";
 import path from "node:path";
@@ -1542,6 +1543,7 @@ export class WhatsappBotService {
         };
 
       let proposalId = "";
+      let quotedSaleBrl = selectedQuote.totalPrice;
       try {
         // 1. Cria o Lead no CRM da Organização
         const lead = await this.prisma.lead.create({
@@ -1553,14 +1555,38 @@ export class WhatsappBotService {
           },
         });
 
-        // 2. Cria o Deal (Oportunidade)
+        // 0. Busca as regras de custos do projeto (mão de obra, margem, etc.) cadastradas pelo integrador
+        const orgRuleRows = await this.prisma.companyCostRule.findMany({
+          where: { organizationId: conversation.organizationId },
+          orderBy: [{ name: "asc" }, { minKwp: "asc" }],
+        });
+        const organizationRules = orgRuleRows.map((r) => ({
+          id: r.id,
+          name: r.name,
+          calculationType: r.calculationType as "FIXED" | "PERCENTAGE" | "PER_KWP",
+          value: r.value.toNumber(),
+          minKwp: r.minKwp?.toNumber() ?? null,
+          maxKwp: r.maxKwp?.toNumber() ?? null,
+          percentageBase: r.percentageBase ?? null,
+        }));
+        const costCalc = computeProjectCostSection(
+          selectedQuote.totalPrice,
+          selectedQuote.kwp,
+          organizationRules
+        );
+        quotedSaleBrl =
+          costCalc.computedSaleFromCostRulesBrl > 0
+            ? Math.round(costCalc.computedSaleFromCostRulesBrl * 100) / 100
+            : selectedQuote.totalPrice;
+
+        // 2. Cria o Deal (Oportunidade) com o valor de venda final
         const deal = await this.prisma.deal.create({
           data: {
             tenantId: conversation.organizationId,
             leadId: lead.id,
             title: `Sistema Fotovoltaico - ${clientName}`,
             stage: "PROPOSAL",
-            value: selectedQuote.totalPrice,
+            value: quotedSaleBrl,
           },
         });
 
@@ -1579,6 +1605,10 @@ export class WhatsappBotService {
         });
 
         const monthlySavingsVal = Math.round(consumptionKwh * 0.95);
+        const calculatedPayback =
+          monthlySavingsVal > 0
+            ? Math.max(1, Math.round((quotedSaleBrl / (monthlySavingsVal * 12)) * 10) / 10)
+            : 3.2;
 
         // 4. Cria a Simulação
         const simulation = await this.prisma.simulation.create({
@@ -1588,7 +1618,7 @@ export class WhatsappBotService {
             name: `Simulação Comercial IA`,
             input: {
               systemSizeKw: selectedQuote.kwp,
-              investmentAmount: selectedQuote.totalPrice,
+              investmentAmount: quotedSaleBrl,
               financingType: "CASH",
               sizing: {
                 monthlyConsumptionKwh: consumptionKwh,
@@ -1599,7 +1629,7 @@ export class WhatsappBotService {
               },
             },
             result: {
-              paybackYears: 3.2,
+              paybackYears: calculatedPayback,
               monthlySavings: monthlySavingsVal,
               monthlySavingsBrl: monthlySavingsVal,
               annualSavings: [monthlySavingsVal * 12],
@@ -1678,18 +1708,21 @@ export class WhatsappBotService {
                 version: 1,
                 kitItems: rawKitItems,
                 equipmentSubtotalBrl: selectedQuote.totalPrice,
-                quotedSaleBrl: selectedQuote.totalPrice,
+                quotedSaleBrl: quotedSaleBrl,
                 systemPowerKw: selectedQuote.kwp,
                 sourceType: "distributor",
                 distributorId: selectedQuote.distributorId,
                 distributorName: selectedQuote.distributorName,
+                projectCostLines: costCalc.projectCostLines,
+                defaultEssentialCostNames: costCalc.defaultEssentialCostNames,
+                computedSaleFromCostRulesBrl: quotedSaleBrl,
                 templateName:
                   template?.name ||
                   chosenTemplate?.name ||
                   defaultTemplate?.name ||
                   "Modelo Comercial Padrão",
               },
-            },
+            } as any,
           },
         });
 
@@ -1725,7 +1758,7 @@ export class WhatsappBotService {
         `☀️ *Potência:* ${selectedQuote.kwp} kWp\n` +
         `🏢 *Distribuidor:* ${selectedQuote.distributorName}\n` +
         `🎨 *Modelo:* ${chosenTemplate?.name || "Comercial Moderno"}\n` +
-        `💰 *Valor Total:* R$ ${selectedQuote.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
+        `💰 *Valor Total:* R$ ${quotedSaleBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
         `📄 *Acesse a Proposta Pronta no link:*\n` +
         `${proposalLink}\n\n` +
         `Ela já está disponível no seu painel CRM da EnergivIA. Posso te ajudar com mais algum orçamento hoje?`
