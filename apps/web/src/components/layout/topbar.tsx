@@ -11,7 +11,8 @@ import { OrganizationSwitcher } from "@/components/layout/organization-switcher"
 import { NotificationsBell } from "@/components/layout/notifications-bell";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { GlobalSearch, type GlobalSearchHandle } from "@/components/layout/global-search";
-import Image from "next/image";
+import { BrandLogo } from "@/components/ui/brand-logo";
+import { cn } from "@energivia/utils";
 import Link from "next/link";
 
 function userInitials(name?: string | null, email?: string | null): string {
@@ -108,8 +109,9 @@ export function Topbar() {
   const { resolvedTheme, setTheme } = useTheme();
   const { user } = useUser();
   const { user: profile, currentOrganization } = useOrganization();
-  const { setOpen } = useSidebar();
+  const { open, setOpen } = useSidebar();
   const isMobile = useIsMobile();
+  const collapsed = !open && !isMobile;
   const searchHandleRef = useRef<GlobalSearchHandle | null>(null);
 
   const createdAt = currentOrganization?.createdAt ? new Date(currentOrganization.createdAt) : null;
@@ -132,25 +134,21 @@ export function Topbar() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const logoSrc = resolvedTheme === "dark" ? "/logo-dark.png" : "/logo.png";
-
   return (
     <header className="sticky top-0 z-[60] flex h-14 shrink-0 items-center border-b border-[var(--color-border)] bg-[var(--color-card)]">
-      { }
-      <div className="hidden w-[18rem] shrink-0 items-center px-4 md:flex">
+      {/* Brand logo container aligning with sidebar */}
+      <div
+        className={cn(
+          "hidden shrink-0 items-center border-r border-[var(--color-border)] h-full transition-[width] duration-200 md:flex",
+          collapsed ? "w-20 justify-center px-2" : "w-[18rem] px-4"
+        )}
+      >
         <Link href="/painel" className="flex min-w-0 items-center">
-          <Image
-            src={logoSrc}
-            alt="EnergivIA"
-            width={420}
-            height={120}
-            className="h-9 w-auto object-contain"
-            priority
-          />
+          <BrandLogo collapsed={collapsed} />
         </Link>
       </div>
 
-      { }
+      {}
       <div className="flex min-w-0 flex-1 items-center gap-2 px-4">
         {isMobile ? (
           <Button

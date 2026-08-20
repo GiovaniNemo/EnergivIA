@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useSidebar } from "@/components/layout/sidebar-inset";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { MENU_ITEMS, SECTION_LABELS, type SidebarSectionKey } from "@/config/menu.config";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { SidebarSection } from "./SidebarSection";
 import { SidebarNotice } from "./sidebar-notice";
 import { cn } from "@energivia/utils";
@@ -121,11 +123,15 @@ export function Sidebar(): JSX.Element {
         style={showDrawer ? undefined : { width: collapsed ? "5rem" : "18rem" }}
       >
         {showDrawer ? (
-          <div className="flex items-center justify-end px-3 pb-2 pt-3">
+          <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
+            <Link href="/painel" onClick={() => setOpen(false)} className="flex items-center">
+              <BrandLogo size="sm" />
+            </Link>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="rounded-lg p-2 text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
+              className="rounded-lg p-1.5 text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
+              aria-label="Fechar menu"
             >
               <X className="h-5 w-5" />
             </button>
