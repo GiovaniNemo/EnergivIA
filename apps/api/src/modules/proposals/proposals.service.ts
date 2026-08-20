@@ -165,8 +165,9 @@ export class ProposalsService {
         })
       : null;
     if (explicitTemplate) {
+      proposalTemplateId = explicitTemplate.id;
       templateVersion = explicitTemplate.version;
-    } else if (!proposalTemplateId) {
+    } else {
       const defaultTemplate = await this.prisma.proposalTemplate.findFirst({
         where: {
           tenantId,
@@ -184,6 +185,9 @@ export class ProposalsService {
         if (anyPublished) {
           proposalTemplateId = anyPublished.id;
           templateVersion = anyPublished.version;
+        } else {
+          proposalTemplateId = undefined;
+          templateVersion = undefined;
         }
       }
     }

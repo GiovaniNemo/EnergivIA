@@ -1406,12 +1406,43 @@ export async function POST(req: Request) {
                 computedSaleFromCostRulesBrl: quotedSaleBrl,
               };
 
+              // Resolve templateId robustly if index (e.g. "1") or template name was provided
+              let resolvedTemplateId: string | undefined = args.templateId;
+              try {
+                const tRes = await fetch(`${baseURL}/proposal-templates`, { headers });
+                if (tRes.ok) {
+                  const tList = await tRes.json();
+                  const validList = Array.isArray(tList) ? tList : [];
+                  if (resolvedTemplateId && /^\d+$/.test(resolvedTemplateId.trim())) {
+                    const idx = parseInt(resolvedTemplateId.trim(), 10) - 1;
+                    if (validList[idx]?.id) {
+                      resolvedTemplateId = validList[idx].id;
+                    }
+                  } else if (resolvedTemplateId) {
+                    const found = validList.find(
+                      (t: any) =>
+                        t.id === resolvedTemplateId ||
+                        (t.name && t.name.toLowerCase().includes(resolvedTemplateId!.toLowerCase()))
+                    );
+                    if (found) {
+                      resolvedTemplateId = found.id;
+                    } else if (validList.length > 0) {
+                      resolvedTemplateId = validList[0].id;
+                    }
+                  } else if (validList.length > 0) {
+                    resolvedTemplateId = validList[0].id;
+                  }
+                }
+              } catch (e) {
+                console.warn("Falha ao resolver template:", e);
+              }
+
               // 6. Create Proposal with full renderedData
               const propPayload = {
                 simulationId: simData.id,
                 title: `Proposta - ${leadData.name}`,
                 validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                proposalTemplateId: args.templateId,
+                proposalTemplateId: resolvedTemplateId || undefined,
                 renderedData: { integrator: integratorSnapshot },
               };
               const propRes = await fetch(`${baseURL}/deals/${dealId}/proposals`, {

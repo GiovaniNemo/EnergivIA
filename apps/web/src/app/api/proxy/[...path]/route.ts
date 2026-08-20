@@ -41,37 +41,41 @@ export async function DELETE(
 }
 
 async function proxy(request: NextRequest, params: { path: string[] }, method: string) {
-  const session = await auth0.getSession();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const path = params.path?.join("/") ?? "";
+  const isPublic = path.startsWith("public/") || params.path?.[0] === "public";
 
-  let accessToken: string;
+  let accessToken = "";
 
-  // Busca obrigatoriamente o Access Token (JWT de API)
-  try {
-    const result = await auth0.getAccessToken(
-      AUTH0_AUDIENCE ? { audience: AUTH0_AUDIENCE } : undefined
-    );
-
-    if (!result?.token) {
-      throw new Error("Token retornado está vazio");
+  if (!isPublic) {
+    const session = await auth0.getSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    accessToken = result.token;
-  } catch (error) {
-    console.error("Erro ao obter Access Token no Proxy:", error);
-    return NextResponse.json(
-      {
-        error: "No access token for API",
-        code: "ACCESS_TOKEN_UNAVAILABLE",
-        hint: "Verifique se o AUTH0_AUDIENCE está configurado e faça Logout / Login para renovar a sessão.",
-      },
-      { status: 401 }
-    );
+    // Busca obrigatoriamente o Access Token (JWT de API)
+    try {
+      const result = await auth0.getAccessToken(
+        AUTH0_AUDIENCE ? { audience: AUTH0_AUDIENCE } : undefined
+      );
+
+      if (!result?.token) {
+        throw new Error("Token retornado está vazio");
+      }
+
+      accessToken = result.token;
+    } catch (error) {
+      console.error("Erro ao obter Access Token no Proxy:", error);
+      return NextResponse.json(
+        {
+          error: "No access token for API",
+          code: "ACCESS_TOKEN_UNAVAILABLE",
+          hint: "Verifique se o AUTH0_AUDIENCE está configurado e faça Logout / Login para renovar a sessão.",
+        },
+        { status: 401 }
+      );
+    }
   }
 
-  const path = params.path?.join("/") ?? "";
   const url = new URL(path, `${BACKEND_URL}/`);
   request.nextUrl.searchParams.forEach((v, k) => url.searchParams.set(k, v));
 
@@ -84,9 +88,10 @@ async function proxy(request: NextRequest, params: { path: string[] }, method: s
     (method === "GET" && path === "notifications/stream") ||
     (method === "POST" && path === "chat/messages/stream");
 
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${accessToken}`,
-  };
+  const headers: Record<string, string> = {};
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
 
   const requestContentType = request.headers.get("Content-Type");
   if (requestContentType) {
