@@ -132,6 +132,8 @@ export async function createOrganization(data: {
   templateRegion?: string;
   templateValueProposition?: string;
   templateTone?: string;
+  referralSource?: string;
+  referredBy?: string;
 }): Promise<Organization> {
   const res = await apiProxy("POST", "/organizations", data);
   if (!res.ok) {

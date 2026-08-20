@@ -168,6 +168,8 @@ export class OrganizationsService {
         settings: {
           ...(dto.cnpj ? { cnpj: cleanCnpj(dto.cnpj) } : {}),
           ...templateSettings,
+          referralSource: dto.referralSource?.trim() || null,
+          referredBy: dto.referredBy?.trim() || null,
         },
         createdById: userId,
       },
@@ -188,6 +190,8 @@ export class OrganizationsService {
       templateRegion: readOptionalSetting(org.settings, "templateRegion"),
       templateValueProposition: readOptionalSetting(org.settings, "templateValueProposition"),
       templateTone: readOptionalSetting(org.settings, "templateTone"),
+      referralSource: readOptionalSetting(org.settings, "referralSource"),
+      referredBy: readOptionalSetting(org.settings, "referredBy"),
     };
   }
 

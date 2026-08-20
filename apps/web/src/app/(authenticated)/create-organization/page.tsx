@@ -30,8 +30,80 @@ import {
   Building,
   Factory,
   Leaf,
+  Megaphone,
+  UserCheck,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
+
+interface ReferralSourceOption {
+  id: string;
+  label: string;
+  requiresDetails: boolean;
+  detailsPlaceholder?: string;
+  active: boolean;
+}
+
+const DEFAULT_REFERRAL_SOURCES: ReferralSourceOption[] = [
+  {
+    id: "indicacao-amigo",
+    label: "Indicação de Amigo ou Integrador",
+    requiresDetails: true,
+    detailsPlaceholder: "Nome de quem recomendou a EnergivIA",
+    active: true,
+  },
+  {
+    id: "instagram",
+    label: "Instagram",
+    requiresDetails: false,
+    active: true,
+  },
+  {
+    id: "google-busca",
+    label: "Google / Pesquisa na Web",
+    requiresDetails: false,
+    active: true,
+  },
+  {
+    id: "youtube",
+    label: "YouTube / Vídeo",
+    requiresDetails: false,
+    active: true,
+  },
+  {
+    id: "linkedin",
+    label: "LinkedIn",
+    requiresDetails: false,
+    active: true,
+  },
+  {
+    id: "distribuidor-solar",
+    label: "Distribuidor Solar (Edeltec, Fortlev, etc.)",
+    requiresDetails: true,
+    detailsPlaceholder: "Qual distribuidor / representante?",
+    active: true,
+  },
+  {
+    id: "evento-feira",
+    label: "Evento / Feira Solar (Intersolar, etc.)",
+    requiresDetails: true,
+    detailsPlaceholder: "Qual evento ou feira?",
+    active: true,
+  },
+  {
+    id: "parceiro-comercial",
+    label: "Parceiro Comercial",
+    requiresDetails: true,
+    detailsPlaceholder: "Nome do parceiro",
+    active: true,
+  },
+  {
+    id: "outros",
+    label: "Outros",
+    requiresDetails: true,
+    detailsPlaceholder: "Como conheceu?",
+    active: true,
+  },
+];
 
 const steps = ["Empresa", "Propostas Inteligentes"];
 const businessSegmentOptions = [
@@ -138,6 +210,10 @@ export default function CreateOrganizationPage() {
   const [name, setName] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [referralSources, setReferralSources] =
+    useState<ReferralSourceOption[]>(DEFAULT_REFERRAL_SOURCES);
+  const [selectedReferralSource, setSelectedReferralSource] = useState("");
+  const [referredBy, setReferredBy] = useState("");
   const [selectedSegments, setSelectedSegments] = useState<string[]>([]);
   const [templateValueProposition, setTemplateValueProposition] = useState("");
   const [templateTone, setTemplateTone] = useState("Comercial");
@@ -150,6 +226,17 @@ export default function CreateOrganizationPage() {
 
   const nameRef = useRef<HTMLInputElement | null>(null);
   const segmentRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    fetch("/api/system/referral-sources")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.sources && Array.isArray(data.sources) && data.sources.length > 0) {
+          setReferralSources(data.sources);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -186,6 +273,8 @@ export default function CreateOrganizationPage() {
       .replace(/(\d{4})(\d)/, "$1-$2");
   };
 
+  const selectedSourceOption = referralSources.find((s) => s.id === selectedReferralSource);
+
   const finalizeOnboarding = async (skipTemplateStep: boolean) => {
     const selectedSegmentsSnapshot = [...selectedSegments];
     if (!skipTemplateStep && selectedSegmentsSnapshot.length === 0) {
@@ -199,6 +288,8 @@ export default function CreateOrganizationPage() {
         name: name.trim(),
         logoUrl: logoUrl || undefined,
         cnpj: cnpj.trim() || undefined,
+        referralSource: (selectedSourceOption?.label ?? selectedReferralSource.trim()) || undefined,
+        referredBy: referredBy.trim() || undefined,
         ...(skipTemplateStep
           ? {}
           : {
@@ -227,6 +318,18 @@ export default function CreateOrganizationPage() {
     }
     if (cnpj.replace(/\D/g, "").length !== 14) {
       setError("Informe um CNPJ válido com 14 dígitos.");
+      return;
+    }
+    if (!selectedReferralSource) {
+      setError("Selecione como você conheceu a EnergivIA.");
+      return;
+    }
+    if (selectedSourceOption?.requiresDetails && !referredBy.trim()) {
+      setError(
+        selectedSourceOption.id === "indicacao-amigo"
+          ? "Informe quem recomendou a EnergivIA para você."
+          : "Por favor, preencha os detalhes da indicação/origem."
+      );
       return;
     }
     setError(null);
@@ -453,6 +556,72 @@ export default function CreateOrganizationPage() {
                         ) : null
                       }
                     />
+
+                    {/* Menu Suspenso Obrigatório: De onde conheceu a EnergivIA */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-[var(--color-foreground)] flex items-center justify-between">
+                        <span>Como conheceu a EnergivIA? *</span>
+                        {selectedReferralSource ? (
+                          <span className="text-[11px] font-normal text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3" /> Selecionado
+                          </span>
+                        ) : null}
+                      </label>
+                      <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[var(--color-muted-foreground)]">
+                          <Megaphone className="h-4 w-4" />
+                        </div>
+                        <select
+                          value={selectedReferralSource}
+                          onChange={(e) => setSelectedReferralSource(e.target.value)}
+                          className="h-10 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] pl-9 pr-8 text-sm font-medium text-[var(--color-foreground)] focus:border-[#0f6b86] focus:outline-none focus:ring-2 focus:ring-[#0f6b86]/20 transition-colors cursor-pointer"
+                          required
+                        >
+                          <option value="" disabled>
+                            Selecione uma opção...
+                          </option>
+                          {referralSources
+                            .filter((s) => s.active)
+                            .map((source) => (
+                              <option key={source.id} value={source.id}>
+                                {source.label}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Detalhes / Quem recomendou (caso a opção exija) */}
+                    {selectedSourceOption?.requiresDetails ? (
+                      <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                        <Input
+                          label={
+                            selectedSourceOption.id === "indicacao-amigo"
+                              ? "Quem recomendou a EnergivIA? *"
+                              : `${selectedSourceOption.label} - Detalhes *`
+                          }
+                          value={referredBy}
+                          onChange={(e) => setReferredBy(e.target.value)}
+                          placeholder={
+                            selectedSourceOption.detailsPlaceholder ||
+                            (selectedSourceOption.id === "indicacao-amigo"
+                              ? "Nome da pessoa, amigo ou empresa que indicou"
+                              : "Informe os detalhes...")
+                          }
+                          className="w-full"
+                          required
+                          startAdornment={
+                            <UserCheck className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                          }
+                          endAdornment={
+                            referredBy.trim() ? (
+                              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                            ) : null
+                          }
+                        />
+                      </div>
+                    ) : null}
+
                     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]/70 p-3">
                       <p className="text-xs font-semibold text-[var(--color-foreground)]">
                         Dica rápida

@@ -25,8 +25,22 @@ import {
   HardDrive,
   FileText,
   CheckCircle,
+  UserCheck,
+  Plus,
+  Layers,
 } from "lucide-react";
 import { SystemAnnouncement } from "@/components/layout/sidebar-notice";
+
+export interface ReferralSourceOption {
+  id: string;
+  label: string;
+  requiresDetails: boolean;
+  detailsPlaceholder?: string;
+  active: boolean;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface ServiceHealth {
   name: string;
@@ -64,9 +78,9 @@ interface FeatureFlags {
 }
 
 export default function AdminSistemaPage() {
-  const [activeTab, setActiveTab] = useState<"health" | "announcements" | "flags" | "tools">(
-    "health"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "health" | "announcements" | "flags" | "tools" | "referrals"
+  >("health");
   const [refreshingHealth, setRefreshingHealth] = useState(false);
   const [healthData, setHealthData] = useState<HealthData | null>(null);
 
@@ -101,6 +115,15 @@ export default function AdminSistemaPage() {
   const [savingFlagKey, setSavingFlagKey] = useState<string | null>(null);
   const [flagSuccessMsg, setFlagSuccessMsg] = useState("");
 
+  // Referral Sources State
+  const [referralSources, setReferralSources] = useState<ReferralSourceOption[]>([]);
+  const [loadingReferrals, setLoadingReferrals] = useState(false);
+  const [newReferralLabel, setNewReferralLabel] = useState("");
+  const [newReferralRequiresDetails, setNewReferralRequiresDetails] = useState(false);
+  const [newReferralPlaceholder, setNewReferralPlaceholder] = useState("");
+  const [savingReferral, setSavingReferral] = useState(false);
+  const [referralFeedback, setReferralFeedback] = useState<string | null>(null);
+
   // Tools feedback
   const [toolFeedback, setToolFeedback] = useState<string | null>(null);
 
@@ -116,7 +139,6 @@ export default function AdminSistemaPage() {
     } catch (err) {
       console.error("Erro ao buscar saúde do sistema:", err);
     } finally {
-      setLoadingHealth(false);
       if (isManual) setRefreshingHealth(false);
     }
   }, []);
@@ -151,11 +173,99 @@ export default function AdminSistemaPage() {
     }
   }, []);
 
+  // Fetch Referral Sources
+  const fetchReferralSources = useCallback(async () => {
+    setLoadingReferrals(true);
+    try {
+      const res = await fetch("/api/system/referral-sources?all=true", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.sources)) {
+          setReferralSources(data.sources);
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao buscar opções de indicação:", err);
+    } finally {
+      setLoadingReferrals(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchHealth();
     fetchAnnouncement();
     fetchFlags();
-  }, [fetchHealth, fetchAnnouncement, fetchFlags]);
+    fetchReferralSources();
+  }, [fetchHealth, fetchAnnouncement, fetchFlags, fetchReferralSources]);
+
+  // Referral Sources Handlers
+  const handleToggleReferralActive = async (id: string, currentActive: boolean) => {
+    try {
+      const res = await fetch("/api/system/referral-sources", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, active: !currentActive }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.sources) setReferralSources(data.sources);
+        setReferralFeedback(
+          currentActive ? "Opção desativada do cadastro!" : "Opção ativada no cadastro!"
+        );
+        setTimeout(() => setReferralFeedback(null), 2500);
+      }
+    } catch (err) {
+      console.error("Erro ao alternar status da opção:", err);
+    }
+  };
+
+  const handleAddReferralSource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newReferralLabel.trim()) return;
+    setSavingReferral(true);
+    try {
+      const res = await fetch("/api/system/referral-sources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: newReferralLabel.trim(),
+          requiresDetails: newReferralRequiresDetails,
+          detailsPlaceholder: newReferralPlaceholder.trim() || undefined,
+          active: true,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.sources) setReferralSources(data.sources);
+        setNewReferralLabel("");
+        setNewReferralRequiresDetails(false);
+        setNewReferralPlaceholder("");
+        setReferralFeedback("Nova opção adicionada com sucesso!");
+        setTimeout(() => setReferralFeedback(null), 2500);
+      }
+    } catch (err) {
+      console.error("Erro ao adicionar opção:", err);
+    } finally {
+      setSavingReferral(false);
+    }
+  };
+
+  const handleDeleteReferralSource = async (id: string, label: string) => {
+    if (!confirm(`Deseja realmente remover a opção "${label}"?`)) return;
+    try {
+      const res = await fetch(`/api/system/referral-sources?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.sources) setReferralSources(data.sources);
+        setReferralFeedback("Opção excluída com sucesso!");
+        setTimeout(() => setReferralFeedback(null), 2500);
+      }
+    } catch (err) {
+      console.error("Erro ao excluir opção:", err);
+    }
+  };
 
   // Save Announcement
   const handleSaveAnnouncement = async (e?: React.FormEvent) => {
@@ -380,6 +490,21 @@ export default function AdminSistemaPage() {
           >
             <Cpu className="h-4 w-4" />
             Diagnóstico & DevOps
+          </button>
+
+          <button
+            onClick={() => setActiveTab("referrals")}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              activeTab === "referrals"
+                ? "bg-[var(--color-primary)] text-white shadow-md shadow-emerald-500/10"
+                : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-card)] hover:text-[var(--color-foreground)]"
+            }`}
+          >
+            <UserCheck className="h-4 w-4" />
+            Canais de Indicação & Origem
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 font-bold">
+              {referralSources.filter((s) => s.active).length} ativas
+            </span>
           </button>
         </div>
       </div>
@@ -1134,6 +1259,293 @@ export default function AdminSistemaPage() {
                       Puppeteer + Chromium Headless
                     </span>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 5: CANAIS DE INDICAÇÃO & ORIGEM */}
+        {/* ========================================================================= */}
+        {activeTab === "referrals" && (
+          <div className="space-y-6">
+            {/* Feedback Alert */}
+            {referralFeedback && (
+              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-between animate-in fade-in">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  <span>{referralFeedback}</span>
+                </div>
+                <button
+                  onClick={() => setReferralFeedback(null)}
+                  className="text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                >
+                  Fechar
+                </button>
+              </div>
+            )}
+
+            {/* Header info */}
+            <div className="p-6 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-blue-500/10 text-blue-500 dark:bg-blue-500/20">
+                    <UserCheck className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-[var(--color-foreground)]">
+                      Canais de Origem & Indicações de Integradores
+                    </h2>
+                    <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
+                      Configure as opções exibidas no menu suspenso obrigatório da tela de cadastro
+                      de novos integradores (
+                      <code className="text-[11px] font-mono text-[var(--color-primary)]">
+                        /create-organization
+                      </code>
+                      ).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1.5 rounded-lg bg-[var(--color-background)] border border-[var(--color-border)] text-xs font-semibold text-[var(--color-foreground)]">
+                    {referralSources.filter((s) => s.active).length} ativas de{" "}
+                    {referralSources.length} opções
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Form to add a new option */}
+              <div className="lg:col-span-1 space-y-6">
+                <div className="p-6 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm">
+                  <div className="flex items-center gap-2 pb-4 border-b border-[var(--color-border)]">
+                    <Plus className="h-5 w-5 text-[var(--color-primary)]" />
+                    <div>
+                      <h3 className="text-sm font-bold text-[var(--color-foreground)]">
+                        Adicionar Nova Opção
+                      </h3>
+                      <p className="text-xs text-[var(--color-muted-foreground)]">
+                        Inclua uma nova origem no menu suspenso
+                      </p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleAddReferralSource} className="space-y-4 pt-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-[var(--color-foreground)]">
+                        Nome da Opção *
+                      </label>
+                      <input
+                        type="text"
+                        value={newReferralLabel}
+                        onChange={(e) => setNewReferralLabel(e.target.value)}
+                        placeholder="Ex: Podcast Solar, Feira Regional..."
+                        className="w-full h-10 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-sm text-[var(--color-foreground)] focus:border-[#0f6b86] focus:outline-none focus:ring-2 focus:ring-[#0f6b86]/20 transition-colors"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/60 p-3.5">
+                      <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={newReferralRequiresDetails}
+                          onChange={(e) => setNewReferralRequiresDetails(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                        />
+                        <div className="text-xs">
+                          <span className="font-semibold text-[var(--color-foreground)] block">
+                            Exigir detalhes / &quot;Quem recomendou?&quot;
+                          </span>
+                          <span className="text-[var(--color-muted-foreground)] block mt-0.5">
+                            Se marcado, o integrador terá que digitar o nome da pessoa, distribuidor
+                            ou detalhes ao selecionar esta opção.
+                          </span>
+                        </div>
+                      </label>
+
+                      {newReferralRequiresDetails && (
+                        <div className="pt-2 animate-in fade-in duration-200">
+                          <label className="text-[11px] font-semibold text-[var(--color-foreground)] block mb-1">
+                            Placeholder do campo de texto (opcional)
+                          </label>
+                          <input
+                            type="text"
+                            value={newReferralPlaceholder}
+                            onChange={(e) => setNewReferralPlaceholder(e.target.value)}
+                            placeholder="Ex: Nome da pessoa que recomendou"
+                            className="w-full h-8 px-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-xs text-[var(--color-foreground)] focus:border-[#0f6b86] focus:outline-none focus:ring-1 focus:ring-[#0f6b86]"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={savingReferral || !newReferralLabel.trim()}
+                      className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[var(--color-primary)] text-white text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm cursor-pointer"
+                    >
+                      <Plus className="h-4 w-4" />
+                      {savingReferral ? "Adicionando..." : "Incluir Opção no Menu"}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Live Preview Box */}
+                <div className="p-5 rounded-2xl bg-[linear-gradient(135deg,#08324F_0%,#0A4A63_60%,#0f6b86_100%)] text-white shadow-md space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Eye className="h-4 w-4 text-emerald-300" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-200">
+                      Prévia na Tela de Cadastro
+                    </h4>
+                  </div>
+                  <p className="text-xs text-white/80">
+                    Veja como as opções ativas aparecem para os novos integradores no cadastro:
+                  </p>
+
+                  <div className="p-3.5 rounded-xl bg-white/10 border border-white/20 backdrop-blur-sm space-y-2">
+                    <label className="text-[11px] font-semibold text-white/95 block">
+                      Como conheceu a EnergivIA? *
+                    </label>
+                    <select
+                      className="w-full h-8 px-2 rounded-lg bg-white text-slate-800 text-xs font-medium focus:outline-none cursor-pointer"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>
+                        Selecione uma opção...
+                      </option>
+                      {referralSources
+                        .filter((s) => s.active)
+                        .map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.label}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* List of Referral Sources */}
+              <div className="lg:col-span-2 space-y-4">
+                <div className="p-6 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm">
+                  <div className="flex items-center justify-between pb-4 border-b border-[var(--color-border)]">
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-5 w-5 text-[var(--color-primary)]" />
+                      <div>
+                        <h3 className="text-sm font-bold text-[var(--color-foreground)]">
+                          Opções do Menu Suspenso
+                        </h3>
+                        <p className="text-xs text-[var(--color-muted-foreground)]">
+                          Ative ou desative opções instantaneamente para incluir ou tirar do
+                          cadastro
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => fetchReferralSources()}
+                      disabled={loadingReferrals}
+                      className="p-1.5 rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-background)] text-[var(--color-muted-foreground)] transition-colors cursor-pointer"
+                      title="Atualizar lista"
+                    >
+                      <RefreshCw
+                        className={`h-3.5 w-3.5 ${loadingReferrals ? "animate-spin" : ""}`}
+                      />
+                    </button>
+                  </div>
+
+                  {loadingReferrals && referralSources.length === 0 ? (
+                    <div className="py-12 text-center text-xs text-[var(--color-muted-foreground)]">
+                      Carregando opções...
+                    </div>
+                  ) : referralSources.length === 0 ? (
+                    <div className="py-12 text-center text-xs text-[var(--color-muted-foreground)]">
+                      Nenhuma opção configurada. Adicione uma no formulário ao lado.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-[var(--color-border)] pt-2">
+                      {referralSources.map((source) => (
+                        <div
+                          key={source.id}
+                          className={`py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
+                            !source.active
+                              ? "opacity-60 bg-[var(--color-background)]/30 rounded-xl px-2"
+                              : ""
+                          }`}
+                        >
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div
+                              className={`mt-1 h-2.5 w-2.5 rounded-full shrink-0 ${
+                                source.active
+                                  ? "bg-emerald-500 shadow-sm shadow-emerald-500/50"
+                                  : "bg-gray-400"
+                              }`}
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-semibold text-[var(--color-foreground)] truncate">
+                                  {source.label}
+                                </span>
+                                {source.requiresDetails && (
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40">
+                                    Exige detalhe / quem indicou
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-[var(--color-muted-foreground)] mt-0.5 font-mono">
+                                ID: {source.id}
+                                {source.detailsPlaceholder
+                                  ? ` · Campo: "${source.detailsPlaceholder}"`
+                                  : ""}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                            {/* Toggle Ativo / Inativo */}
+                            <button
+                              onClick={() => handleToggleReferralActive(source.id, source.active)}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border cursor-pointer ${
+                                source.active
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50"
+                                  : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700"
+                              }`}
+                              title={
+                                source.active
+                                  ? "Clique para tirar do cadastro"
+                                  : "Clique para incluir no cadastro"
+                              }
+                            >
+                              {source.active ? (
+                                <>
+                                  <Check className="h-3.5 w-3.5" />
+                                  Ativa no Cadastro
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  Inativa (Oculta)
+                                </>
+                              )}
+                            </button>
+
+                            {/* Delete Option */}
+                            <button
+                              onClick={() => handleDeleteReferralSource(source.id, source.label)}
+                              className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer"
+                              title="Excluir opção permanentemente"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

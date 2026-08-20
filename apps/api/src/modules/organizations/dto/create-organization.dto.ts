@@ -37,4 +37,14 @@ export class CreateOrganizationDto {
   @IsString()
   @MaxLength(80)
   templateTone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  referralSource?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  referredBy?: string;
 }
