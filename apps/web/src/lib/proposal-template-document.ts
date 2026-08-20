@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createBaseDocument } from "@/components/proposals/editor/utils";
 import { SECTION_DEFAULT_FIELDS } from "@/components/proposals/editor/section-fields";
 import type { ProposalDocumentJson, ProposalSection } from "@/components/proposals/editor/types";
@@ -43,41 +44,94 @@ function resolveEditorSectionType(raw: string): ProposalSection["type"] {
   return raw in SECTION_DEFAULT_FIELDS ? (raw as ProposalSection["type"]) : "custom";
 }
 
+function mergeDefaultStyles(
+  customStyles: unknown,
+  theme?: unknown
+): ProposalDocumentJson["styles"] {
+  const base = createBaseDocument("Template", ["Capa"]).styles;
+  const s = (customStyles && typeof customStyles === "object" ? customStyles : {}) as Record<
+    string,
+    any
+  >;
+  const th = (theme && typeof theme === "object" ? theme : {}) as Record<string, any>;
+
+  return {
+    branding: {
+      ...base.branding,
+      ...(s.branding || {}),
+      primaryColor: s.branding?.primaryColor || th.primaryColor || base.branding.primaryColor,
+      secondaryColor:
+        s.branding?.secondaryColor || th.secondaryColor || base.branding.secondaryColor,
+      backgroundColor: s.branding?.backgroundColor || base.branding.backgroundColor,
+      textColor: s.branding?.textColor || base.branding.textColor,
+      logoUrl: normalizePutPresignedUrl(
+        s.branding?.logoUrl || th.logoUrl || base.branding.logoUrl
+      ) as string,
+    },
+    typography: {
+      ...base.typography,
+      ...(s.typography || {}),
+    },
+    layout: {
+      ...base.layout,
+      ...(s.layout || {}),
+    },
+    cover: {
+      ...base.cover,
+      ...(s.cover || {}),
+      imageUrl: normalizePutPresignedUrl(
+        s.cover?.imageUrl || th.coverImageUrl || base.cover.imageUrl
+      ) as string,
+    },
+    footer: {
+      ...base.footer,
+      ...(s.footer || {}),
+    },
+  };
+}
+
 export function templateConfigToPreviewDocument(config: unknown): ProposalDocumentJson {
   if (!config || typeof config !== "object") return createBaseDocument("Proposta", ["Capa"]);
-  const anyConfig = config as Record<string, unknown>;
+  const anyConfig = config as Record<string, any>;
 
-  if (Array.isArray(anyConfig["sections"])) {
-    return {
-      sections: anyConfig["sections"] as ProposalDocumentJson["sections"],
-      styles:
-        (anyConfig["styles"] as ProposalDocumentJson["styles"]) ??
-        createBaseDocument("Template", ["Capa"]).styles,
-      variables: (anyConfig["variables"] as ProposalDocumentJson["variables"]) ?? {},
-    };
+  const rawSections: Array<Record<string, any>> = Array.isArray(anyConfig["sections"])
+    ? anyConfig["sections"]
+    : Array.isArray(anyConfig["editor"]?.["sections"])
+      ? anyConfig["editor"]["sections"]
+      : Array.isArray(anyConfig["document"]?.["sections"])
+        ? anyConfig["document"]["sections"]
+        : [];
+
+  if (rawSections.length === 0) {
+    return createBaseDocument("Proposta", ["Capa"]);
   }
 
-  const editor = anyConfig["editor"] as Record<string, unknown> | undefined;
-  if (!editor || !Array.isArray(editor["sections"]))
-    return createBaseDocument("Proposta", ["Capa"]);
+  const customStyles =
+    anyConfig["styles"] || anyConfig["editor"]?.["styles"] || anyConfig["document"]?.["styles"];
+  const styles = mergeDefaultStyles(customStyles, anyConfig["theme"]);
+  const variables = (anyConfig["variables"] ||
+    anyConfig["editor"]?.["variables"] ||
+    anyConfig["document"]?.["variables"] ||
+    {}) as ProposalDocumentJson["variables"];
 
-  const sections = (editor["sections"] as Array<Record<string, unknown>>).map((section) => {
-    const rawType = String(section["type"] ?? "custom");
+  const sections: ProposalDocumentJson["sections"] = rawSections.map((section, idx) => {
+    const rawType = String(section["type"] || section["key"] || "custom");
     const resolvedType = resolveEditorSectionType(rawType);
-    const rawText =
-      resolvedType === "introduction" || resolvedType === "custom"
-        ? String((section["content"] as Record<string, unknown>)?.["text"] ?? "<p></p>")
-        : "<p>Use os campos específicos da seção para configurar este bloco.</p>";
-    const mergedContent =
-      section["content"] && typeof section["content"] === "object"
-        ? normalizeSectionFields(
-            {
-              ...SECTION_DEFAULT_FIELDS[resolvedType],
-              ...(section["content"] as Record<string, unknown>),
-            },
-            resolvedType
-          )
-        : { ...SECTION_DEFAULT_FIELDS[resolvedType] };
+    const existingFields =
+      section["fields"] && typeof section["fields"] === "object"
+        ? section["fields"]
+        : section["content"] && typeof section["content"] === "object"
+          ? section["content"]
+          : {};
+
+    const mergedContent = normalizeSectionFields(
+      {
+        ...SECTION_DEFAULT_FIELDS[resolvedType],
+        ...existingFields,
+      },
+      resolvedType
+    );
+
     if (rawType === "savings" && resolvedType === "economy_purchases") {
       const c = mergedContent as Record<string, unknown>;
       if (!String(c["title"] ?? "").trim() && String(c["headline"] ?? "").trim()) {
@@ -87,41 +141,32 @@ export function templateConfigToPreviewDocument(config: unknown): ProposalDocume
         c["text"] = `<p>${String(c["supportText"])}</p>`;
       }
     }
+
+    const rawText =
+      resolvedType === "introduction" || resolvedType === "custom"
+        ? String(existingFields["text"] ?? section["content"] ?? "<p></p>")
+        : "<p>Use os campos específicos da seção para configurar este bloco.</p>";
+
     return {
-      id: String(section["id"] ?? Math.random().toString(36).substring(2)),
+      id: String(section["id"] || `sec_${idx}_${Math.random().toString(36).substring(2)}`),
       type: resolvedType,
       variant:
-        resolvedType === "cover" && section["variant"] === "default"
+        resolvedType === "cover" && (section["variant"] === "default" || !section["variant"])
           ? ("full-image" as const)
           : resolvedType === "economy_purchases"
             ? ("default" as const)
-            : (section["variant"] as never),
-      title: String(section["title"] ?? ""),
+            : section["variant"] || "default",
+      title: String(section["title"] || ""),
       content: rawText,
       fields: mergedContent,
-      hidden: section["visible"] === false,
+      hidden:
+        section["hidden"] === true || section["enabled"] === false || section["visible"] === false,
     };
   });
+
   return {
     sections,
-    styles:
-      editor["styles"] && typeof editor["styles"] === "object"
-        ? ({
-            ...(editor["styles"] as unknown as ProposalDocumentJson["styles"]),
-            branding: {
-              ...((editor["styles"] as unknown as ProposalDocumentJson["styles"]).branding ?? {}),
-              logoUrl: normalizePutPresignedUrl(
-                (editor["styles"] as unknown as ProposalDocumentJson["styles"]).branding?.logoUrl
-              ) as string,
-            },
-            cover: {
-              ...((editor["styles"] as unknown as ProposalDocumentJson["styles"]).cover ?? {}),
-              imageUrl: normalizePutPresignedUrl(
-                (editor["styles"] as unknown as ProposalDocumentJson["styles"]).cover?.imageUrl
-              ) as string,
-            },
-          } as ProposalDocumentJson["styles"])
-        : createBaseDocument("Template", ["Capa"]).styles,
-    variables: (editor["variables"] as ProposalDocumentJson["variables"]) ?? {},
+    styles,
+    variables,
   };
 }

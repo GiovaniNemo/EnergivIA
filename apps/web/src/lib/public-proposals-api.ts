@@ -1,8 +1,16 @@
 import type { ProposalTemplateConfig } from "@energivia/shared-types";
 import type { FinancialSimulationInputJson, FinancialSimulationResultJson } from "@/lib/leads-api";
 
-function getPublicApiBase(): string {
-  return process.env["NEXT_PUBLIC_API_URL"] ?? "/api";
+function getPublicProposalFetchUrl(id: string): string {
+  const cleanId = encodeURIComponent(id.trim());
+  if (typeof window !== "undefined") {
+    return `/api/proxy/public/proposals/${cleanId}`;
+  }
+  const apiBase = (process.env["NEXT_PUBLIC_API_URL"] || "http://localhost:4000/api").replace(
+    /\/$/,
+    ""
+  );
+  return `${apiBase}/public/proposals/${cleanId}`;
 }
 
 export interface PublicProposalPayload {
@@ -57,7 +65,8 @@ export interface PublicProposalPayload {
 }
 
 export async function getPublicProposal(id: string): Promise<PublicProposalPayload> {
-  const res = await fetch(`${getPublicApiBase()}/public/proposals/${id}`, {
+  const url = getPublicProposalFetchUrl(id);
+  const res = await fetch(url, {
     method: "GET",
     credentials: "omit",
   });
