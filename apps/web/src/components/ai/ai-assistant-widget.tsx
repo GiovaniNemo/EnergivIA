@@ -199,11 +199,6 @@ export function AIAssistantWidget() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Não exibe o robô na tela de criação de organização / onboarding antes de entrar no painel
-  if (normalizedPath === "/create-organization") {
-    return null;
-  }
-
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
   };
@@ -412,6 +407,11 @@ export function AIAssistantWidget() {
       fileInputRef.current.value = "";
     }
   };
+
+  // Não exibe o robô na tela de criação de organização / onboarding antes de entrar no painel
+  if (normalizedPath === "/create-organization") {
+    return null;
+  }
 
   return (
     <div className="fixed flex flex-col items-end bottom-6 right-6 z-[9999]">
