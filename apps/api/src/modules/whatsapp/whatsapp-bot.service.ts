@@ -77,6 +77,11 @@ REGRAS DE LEITURA E PARSING CRÍTICAS:
      * Identifique o mês/ano (ex: "AGO/26", "JUL/26", "JUN/26", "MAI/26", "ABR/26", "MAR/26", "FEV/26", "JAN/26", "DEZ/25", "NOV/25", "OUT/25", "SET/25", "AGO/25").
      * Identifique com máxima precisão o valor numérico na coluna de consumo faturado em kWh.
 
+    - ATENÇÃO CRÍTICA À COPEL E FATURAS COM HISTÓRICO PARCIAL / MENOS DE 12 MESES:
+      * Na Copel e unidades recentes, a tabela traz 13 meses no cabeçalho (ex: JUN26, MAI26, ABR26, MAR26, FEV26, JAN26, DEZ25...), mas apenas os meses ativos contêm números de consumo (ex: JUN26: 189, MAI26: 263, ABR26: 378, MAR26: 355, FEV26: 100). As linhas anteriores estão COMPLETAMENTE EM BRANCO.
+      * No texto da fatura, os números da coluna 'Nº DIAS FAT.' (ex: 31, 30, 31, 29, 22) aparecem logo após os consumos. NUNCA atribua esses números de dias como consumo dos meses em branco!
+      * Extraia ESTRITAMENTE os meses que possuem consumo medido real (ex: exatamente 5 meses). Meses vazios NÃO DEVEM entrar na lista 'historico_consumo'.
+
     - ATENÇÃO CRÍTICA À ENERGISA E DISTRIBUIDORAS COM TABELA [MÊS/ANO] [CONSUMO] [DIAS]:
       * Na Energisa e outras distribuidoras, a tabela de histórico traz colunas de Consumo e Dias lado a lado (ex: "OUT/25 1.971 45", "SET/25 2.041 29", "JAN/25 984 31", "DEZ/24 60 31", "NOV/24 59 30", "OUT/24 165 30").
       * O PRIMEIRO número após o mês é SEMPRE o CONSUMO FATURADO em kWh (ex: 1971, 2041, 984, 60, 59, 165).
@@ -92,7 +97,7 @@ REGRAS DE LEITURA E PARSING CRÍTICAS:
       * "965,000" significa 965 kWh. Retorne 965.
       * "703,000" significa 703 kWh. Retorne 703.
    
-   - Extraia TODOS os 12 ou 13 meses visíveis na tabela sem omitir as linhas inferiores!
+   - Extraia todos os meses que possuem consumo na tabela sem omitir nenhuma linha preenchida!
    - NUNCA confunda 'consumo_kwh' com:
      * Quantidade de dias de faturamento (ex: 28, 29, 30, 31, 33).
      * Média diária (ex: 12.5 kWh/dia).
@@ -179,14 +184,20 @@ function processExtractedBillData(data: ExtractedBillData, rawText?: string): Bi
     }
   }
 
-  const typicalHighMonths = candidates.filter((c) => c.consumo_kwh >= 60);
+  // Heurística de limpeza de dias: se a lista contém uma sequência de consumos reais (>= 50 kWh)
+  // seguida por números baixos que correspondem à coluna de dias (<= 35 kWh), descartamos os dias
   const validHistory: ExtractedBillHistoryItem[] = [];
+  const highCount = candidates.filter((c) => c.consumo_kwh >= 50).length;
 
-  for (const item of candidates) {
+  for (let idx = 0; idx < candidates.length; idx++) {
+    const item = candidates[idx];
+    if (!item) continue;
+    // Se já temos consumos reais antes e este item está no final da lista com valor típico de dias (<= 35)
     if (
-      typicalHighMonths.length >= 2 &&
-      item.consumo_kwh <= 31 &&
-      [28, 29, 30, 31, 22, 27].includes(item.consumo_kwh)
+      highCount >= 2 &&
+      idx >= highCount &&
+      item.consumo_kwh <= 35 &&
+      [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35].includes(item.consumo_kwh)
     ) {
       continue;
     }
@@ -194,7 +205,13 @@ function processExtractedBillData(data: ExtractedBillData, rawText?: string): Bi
   }
 
   const normalizedHistory = validHistory.length > 12 ? validHistory.slice(0, 12) : validHistory;
-  const currentMonthKwh = parseBrazilianKwh(data.consumo_mes_atual_kwh);
+  const rawCurrentKwh = parseBrazilianKwh(data.consumo_mes_atual_kwh);
+  const currentMonthKwh =
+    rawCurrentKwh > 0
+      ? rawCurrentKwh
+      : normalizedHistory.length > 0
+        ? (normalizedHistory[0]?.consumo_kwh ?? 0)
+        : 0;
 
   let totalSum = 0;
   let exactAverage = 0;
@@ -213,7 +230,11 @@ function processExtractedBillData(data: ExtractedBillData, rawText?: string): Bi
     monthCount = 0;
   }
 
-  const formattedSummary = `Legal, dados extraídos com precisão! Consumo médio de ${exactAverage} kWh/mês em ${data.cidade || "São Paulo"}/${data.uf || "SP"} (baseado no histórico de ${monthCount || 1} meses da fatura).`;
+  const baseTexto =
+    monthCount > 1
+      ? `baseado no histórico de ${monthCount} meses da fatura`
+      : `baseado no consumo do mês atual da fatura`;
+  const formattedSummary = `Legal, dados extraídos com precisão! Consumo médio de ${exactAverage} kWh/mês em ${data.cidade || "São Paulo"}/${data.uf || "SP"} (${baseTexto}).`;
 
   return {
     data: {
@@ -1355,11 +1376,15 @@ export class WhatsappBotService {
         ? `${extractionResult.data.cidade}${extractionResult.data.uf ? `/${extractionResult.data.uf.trim().toUpperCase()}` : ""}`
         : "São Paulo/SP";
       const kwh = extractionResult.exactAverageKwh;
-      const meses = extractionResult.monthCount || 12;
+      const meses = extractionResult.monthCount || 1;
+      const baseTexto =
+        meses > 1
+          ? `baseado no histórico de ${meses} meses da fatura`
+          : `baseado no consumo do mês atual da fatura`;
 
       return (
         `Legal, dados extraídos com precisão!\n` +
-        `Consumo médio de ${kwh} kWh/mês em ${cidade} (baseado no histórico de ${meses} meses da fatura).\n\n` +
+        `Consumo médio de ${kwh} kWh/mês em ${cidade} (${baseTexto}).\n\n` +
         `Qual a estrutura do telhado?\n` +
         `1 - Cerâmica (Colonial)\n` +
         `2 - Fibrocimento\n` +
