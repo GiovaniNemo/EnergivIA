@@ -3,13 +3,15 @@
 import React, { useEffect, useState } from "react";
 import { Compass, List, Map as MapIcon, RefreshCw, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/lib/api";
+import { fetchRadarInstallations } from "@/lib/radar-api";
+import { useOrganization } from "@/components/providers/organization-provider";
 import { RadarStatsHeader } from "@/components/radar/radar-stats-header";
 import { RadarFilters } from "@/components/radar/radar-filters";
 import { RadarMapView, InstallationPoint } from "@/components/radar/radar-map-view";
 import { RadarLeadModal } from "@/components/radar/radar-lead-modal";
 
 export default function RadarPage() {
+  const { currentOrganization } = useOrganization();
   const [uf, setUf] = useState("SP");
   const [cityName, setCityName] = useState("São Paulo");
   const [neighborhood, setNeighborhood] = useState("");
@@ -27,15 +29,16 @@ export default function RadarPage() {
   const fetchRadarData = async () => {
     setLoading(true);
     try {
-      const { data } = await apiClient.get("/radar/installations", {
-        params: {
+      const data = await fetchRadarInstallations(
+        {
           uf,
           cityName: cityName.trim() || undefined,
           neighborhood: neighborhood.trim() || undefined,
           classType: classType !== "ALL" ? classType : undefined,
           opportunityType: opportunityType !== "ALL" ? opportunityType : undefined,
         },
-      });
+        currentOrganization?.id
+      );
 
       if (data) {
         setInstallations(data.installations || []);

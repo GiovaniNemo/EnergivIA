@@ -11,9 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, CheckCircle2, User, Phone, MapPin, Zap } from "lucide-react";
-import { apiClient } from "@/lib/api";
+import { convertRadarToLead } from "@/lib/radar-api";
+import { useOrganization } from "@/components/providers/organization-provider";
 
 interface RadarLeadModalProps {
   isOpen: boolean;
@@ -34,6 +34,7 @@ interface RadarLeadModalProps {
 }
 
 export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: RadarLeadModalProps) {
+  const { currentOrganization } = useOrganization();
   const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [notes, setNotes] = useState("");
@@ -56,16 +57,19 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
 
     setLoading(true);
     try {
-      await apiClient.post("/radar/convert-lead", {
-        installationId: installation.codeAneel || installation.id,
-        name: name.trim(),
-        whatsapp: whatsapp.trim(),
-        neighborhood: installation.neighborhood,
-        city: installation.city,
-        uf: installation.uf,
-        systemPowerKwp: `${installation.powerKwp} kWp`,
-        notes: `${notes}\n\nCódigo ANEEL: ${installation.codeAneel} (${installation.yearsConnected} anos conectado)`,
-      });
+      await convertRadarToLead(
+        {
+          installationId: installation.codeAneel || installation.id,
+          name: name.trim(),
+          whatsapp: whatsapp.trim(),
+          neighborhood: installation.neighborhood,
+          city: installation.city,
+          uf: installation.uf,
+          systemPowerKwp: `${installation.powerKwp} kWp`,
+          notes: `${notes}\n\nCódigo ANEEL: ${installation.codeAneel} (${installation.yearsConnected} anos conectado)`,
+        },
+        currentOrganization?.id
+      );
 
       setSuccess(true);
       if (onSuccess) onSuccess();
@@ -160,11 +164,11 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 Roteiro & Pitch Sugerido de Abordagem
               </Label>
-              <Textarea
+              <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="bg-neutral-900 border-neutral-800 text-xs text-neutral-200 focus:border-amber-500"
+                className="w-full rounded-md bg-neutral-900 border border-neutral-800 p-2 text-xs text-neutral-200 focus:outline-none focus:border-amber-500"
               />
             </div>
 
