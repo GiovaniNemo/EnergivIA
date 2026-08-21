@@ -398,10 +398,34 @@ export class SpreadsheetImportService {
         category = await this.prisma.category.create({ data: { name: catName } });
       }
 
-      // 3. Produto
-      let product = await this.prisma.product.findFirst({
-        where: { name: { equals: produtoStr, mode: "insensitive" } },
-      });
+      // 3. Buscar Produto existente (1º por SKU do distribuidor, 2º por Nome exato/normalizado)
+      let product = null;
+
+      if (codStr) {
+        const existingOfferBySku = await this.prisma.distributorProduct.findFirst({
+          where: {
+            distributorId,
+            distributorSku: codStr,
+          },
+          include: { product: true },
+        });
+        if (existingOfferBySku?.product) {
+          product = existingOfferBySku.product;
+        }
+      }
+
+      if (!product) {
+        product = await this.prisma.product.findFirst({
+          where: { name: { equals: produtoStr, mode: "insensitive" } },
+        });
+      }
+
+      if (!product) {
+        const normalizedName = produtoStr.replace(/\s+/g, " ").trim();
+        product = await this.prisma.product.findFirst({
+          where: { name: { equals: normalizedName, mode: "insensitive" } },
+        });
+      }
 
       if (!product) {
         product = await this.prisma.product.create({
@@ -423,7 +447,7 @@ export class SpreadsheetImportService {
         }
       }
 
-      // 4. DistributorProduct
+      // 4. Upsert DistributorProduct (atualiza preço e quantidade se já existir)
       const existingOffer = await this.prisma.distributorProduct.findUnique({
         where: {
           distributorId_productId: {
