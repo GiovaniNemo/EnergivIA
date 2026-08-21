@@ -63,8 +63,6 @@ import {
 } from "@/lib/leads-api";
 import { sizingBillHistoryFromExtracted } from "@/lib/bill-consumption-calendar-series";
 import {
-  extractPdfText,
-  isBillPdfTextLayerUsable,
   isPasswordException,
   openPdfWithPdfJs,
   passwordExceptionNeedsPassword,
@@ -221,23 +219,6 @@ function unlockedBillImageUploadName(originalFileName: string): {
   return {
     uploadFileName: `${base}-primeira-pagina.png`,
     displayLabel: `${base}-primeira-pagina.png`,
-  };
-}
-
-function unlockedBillTextUploadName(originalFileName: string): {
-  uploadFileName: string;
-  displayLabel: string;
-} {
-  const base = originalFileName.replace(/\.pdf$/i, "").trim() || "conta";
-  if (UUID_LIKE_FILE_BASE.test(base)) {
-    return {
-      uploadFileName: "conta-luz-texto.txt",
-      displayLabel: "Conta de luz (texto extraído do PDF)",
-    };
-  }
-  return {
-    uploadFileName: `${base}-texto.txt`,
-    displayLabel: `${base}-texto.txt`,
   };
 }
 
@@ -878,105 +859,74 @@ export const ProposalEconomicsModal = forwardRef<
       leadId: string,
       pdfPassword?: string
     ) => {
-      console.log("[energy-bill-pdf] rendering first page to PNG for vision extraction", {
+      console.log("[energy-bill-pdf] uploading original PDF directly to S3", {
         fileName: originalFile.name,
+        bytes: bytes.length,
       });
       setBillAttachment({
         status: "processing",
-        message: "Processando imagem de alta resolução da conta...",
+        message: "Enviando arquivo da fatura...",
       });
+
+      let uploadFile: File = originalFile;
+      if (pdfPassword) {
+        try {
+          const decrypted = await tryCopyPdfWithoutEncryption(bytes);
+          if (decrypted) {
+            const blob = new Blob([decrypted], { type: "application/pdf" });
+            uploadFile = new File([blob], originalFile.name, { type: "application/pdf" });
+          }
+        } catch (e) {
+          console.warn("[energy-bill-pdf] tryCopyPdfWithoutEncryption failed", e);
+        }
+      }
+
+      try {
+        const uploaded = await uploadEnergyBillFileToS3(
+          orgId,
+          leadId,
+          uploadFile,
+          "application/pdf"
+        );
+        console.log("[energy-bill-pdf] upload path=application/pdf", {
+          fileName: uploadFile.name,
+          size: uploadFile.size,
+          leadId,
+        });
+        await processUploadedBill(uploaded, originalFile.name, orgId, leadId);
+        return;
+      } catch (e) {
+        console.warn("[energy-bill-pdf] direct PDF upload failed, trying fallback", e);
+      }
+
+      // Fallback: render first page to PNG
       let pngBytes: Uint8Array | null = null;
       try {
         pngBytes = await renderFirstPdfPageToPng(bytes, pdfPassword);
       } catch (err) {
-        console.warn(
-          "[energy-bill-pdf] renderFirstPdfPageToPng failed, will try text layer fallback",
-          {
-            fileName: originalFile.name,
-            message: err instanceof Error ? err.message : String(err),
-          }
-        );
+        console.warn("[energy-bill-pdf] renderFirstPdfPageToPng failed", err);
       }
 
       if (pngBytes && pngBytes.length > 0) {
         const pngBlob = new Blob([new Uint8Array(pngBytes)], { type: "image/png" });
         const { uploadFileName, displayLabel } = unlockedBillImageUploadName(originalFile.name);
-        const uploadFile = new File([pngBlob], uploadFileName, { type: "image/png" });
-        setBillAttachment({ status: "processing", message: "Enviando imagem da conta..." });
+        const uploadPngFile = new File([pngBlob], uploadFileName, { type: "image/png" });
         try {
-          const uploaded = await uploadEnergyBillFileToS3(orgId, leadId, uploadFile, "image/png");
-          console.log("[energy-bill-pdf] upload path=image/png", {
-            fileName: uploadFile.name,
-            pngBytes: pngBytes.length,
+          const uploaded = await uploadEnergyBillFileToS3(
+            orgId,
             leadId,
-          });
+            uploadPngFile,
+            "image/png"
+          );
           await processUploadedBill(uploaded, displayLabel, orgId, leadId);
           return;
-        } catch (e) {
-          console.warn("[energy-bill-pdf] PNG upload failed", {
-            message: e instanceof Error ? e.message : String(e),
-          });
-        }
-      }
-
-      // Fallback to text layer if PNG rendering or upload failed
-      setBillAttachment({
-        status: "processing",
-        message: "Extraindo texto do PDF...",
-      });
-      let pdfText: string;
-      try {
-        pdfText = await extractPdfText(bytes, pdfPassword);
-      } catch (err) {
-        console.warn("[energy-bill-pdf] extractPdfText failed", {
-          fileName: originalFile.name,
-          message: err instanceof Error ? err.message : String(err),
-        });
-        setBillAttachment({
-          status: "error",
-          message:
-            "Não foi possível ler o PDF. Exporte a conta sem senha ou envie uma imagem (JPG, PNG ou WEBP).",
-        });
-        return;
-      }
-
-      const textTrimLen = pdfText.trim().length;
-      const textUsable = isBillPdfTextLayerUsable(pdfText);
-      console.log("[energy-bill-pdf] pdf text layer fallback", {
-        fileName: originalFile.name,
-        charCount: textTrimLen,
-        usableForUpload: textUsable,
-      });
-
-      if (textUsable) {
-        const blob = new Blob([pdfText], { type: "text/plain;charset=utf-8" });
-        const { uploadFileName, displayLabel } = unlockedBillTextUploadName(originalFile.name);
-        const uploadFile = new File([blob], uploadFileName, { type: "text/plain" });
-        setBillAttachment({ status: "processing", message: "Enviando texto extraído da conta..." });
-        try {
-          const uploaded = await uploadEnergyBillFileToS3(orgId, leadId, uploadFile, "text/plain");
-          console.log("[energy-bill-pdf] upload path=text/plain", {
-            fileName: uploadFile.name,
-            charCount: textTrimLen,
-            leadId,
-          });
-          await processUploadedBill(uploaded, displayLabel, orgId, leadId);
-        } catch (e) {
-          console.warn("[energy-bill-pdf] text upload failed", {
-            message: e instanceof Error ? e.message : String(e),
-          });
-          setBillAttachment({
-            status: "error",
-            message: e instanceof Error ? e.message : "Falha ao enviar texto da conta.",
-          });
-        }
-        return;
+        } catch {}
       }
 
       setBillAttachment({
         status: "error",
         message:
-          "Não foi possível extrair dados legíveis do PDF. Por favor, envie uma foto nítida em JPG ou PNG.",
+          "Não foi possível processar o arquivo da fatura. Por favor, tente enviar novamente.",
       });
     },
     [processUploadedBill]
