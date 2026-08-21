@@ -711,9 +711,18 @@ export async function POST(req: Request) {
               const base64Data = m.imageUrl.split(",")[1];
               const buffer = Buffer.from(base64Data, "base64");
               let extractionContent = "";
+              let exactAverageKwh = 0;
+              let monthCount = 0;
+              let locationStr = "";
               try {
                 const result = await extractEnergyBillFromPdfBuffer(buffer);
                 extractionContent = result.formattedSummary;
+                exactAverageKwh = result.exactAverageKwh;
+                monthCount = result.monthCount;
+                const cid = result.data.cidade?.trim() || "";
+                const uf = result.data.uf?.trim().toUpperCase() || "";
+                locationStr =
+                  cid && uf ? `${cid}/${uf}` : cid || uf || "Localização não identificada";
               } catch (e: any) {
                 console.error("[PDF EXTRACTION ERROR]", e);
                 try {
@@ -723,21 +732,53 @@ export async function POST(req: Request) {
                   extractionContent = "(Falha ao extrair dados do PDF)";
                 }
               }
+
+              const baseMeses =
+                monthCount > 1
+                  ? `baseado no histórico de ${monthCount} meses da fatura`
+                  : `baseado no consumo do mês atual da fatura`;
+              const exactIntroInstruction =
+                exactAverageKwh > 0
+                  ? `[RESPOSTA OBRIGATÓRIA DA FATURA: Diga exatamente: "Legal, dados extraídos com precisão!\nConsumo médio de ${exactAverageKwh} kWh/mês em ${locationStr} (${baseMeses}).\n\nQual a estrutura do telhado?\n1 - Cerâmica (Colonial)\n2 - Fibrocimento\n3 - Metálico\n4 - Solo\n5 - Laje\n6 - Fibrometal\n7 - Sem estrutura"]`
+                  : "";
+
               return {
                 role: m.role,
-                content: `${m.content || "Fatura de Energia Anexada:"}\n\n${extractionContent}`,
+                content: `${m.content || "Fatura de Energia Anexada:"}\n\n${exactIntroInstruction}\n\n${extractionContent}`,
               };
             }
 
             let imageExtractionSummary = "";
+            let exactAverageKwh = 0;
+            let monthCount = 0;
+            let locationStr = "";
             try {
               const result = await extractEnergyBillFromImage(m.imageUrl);
               imageExtractionSummary = result.formattedSummary;
+              exactAverageKwh = result.exactAverageKwh;
+              monthCount = result.monthCount;
+              const cid = result.data.cidade?.trim() || "";
+              const uf = result.data.uf?.trim().toUpperCase() || "";
+              locationStr =
+                cid && uf ? `${cid}/${uf}` : cid || uf || "Localização não identificada";
             } catch (e: any) {
               console.error("[IMAGE EXTRACTION ERROR]", e);
             }
 
-            const textPart = [m.content || "Fatura de Energia Anexada:", imageExtractionSummary]
+            const baseMeses =
+              monthCount > 1
+                ? `baseado no histórico de ${monthCount} meses da fatura`
+                : `baseado no consumo do mês atual da fatura`;
+            const exactIntroInstruction =
+              exactAverageKwh > 0
+                ? `[RESPOSTA OBRIGATÓRIA DA FATURA: Diga exatamente: "Legal, dados extraídos com precisão!\nConsumo médio de ${exactAverageKwh} kWh/mês em ${locationStr} (${baseMeses}).\n\nQual a estrutura do telhado?\n1 - Cerâmica (Colonial)\n2 - Fibrocimento\n3 - Metálico\n4 - Solo\n5 - Laje\n6 - Fibrometal\n7 - Sem estrutura"]`
+                : "";
+
+            const textPart = [
+              m.content || "Fatura de Energia Anexada:",
+              exactIntroInstruction,
+              imageExtractionSummary,
+            ]
               .filter(Boolean)
               .join("\n\n");
 
