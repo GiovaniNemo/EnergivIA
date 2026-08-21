@@ -34,6 +34,7 @@ import {
   Checkbox,
   Tooltip,
   InputAdornment,
+  CircularProgress,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -51,10 +52,9 @@ import {
   addDistributorProduct,
   updateDistributorProduct,
   deleteDistributorProduct,
-  bulkUpsertDistributorProducts,
+  uploadDistributorSpreadsheet,
   type DistributorProduct,
 } from "@/lib/admin-api";
-import { parseBulkInventoryCSV } from "@/lib/csv-parse";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { distributorProductSchema, type DistributorProductFormValues } from "@/lib/admin/schemas";
@@ -140,13 +140,10 @@ export default function DistributorInventoryPage(): JSX.Element {
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<DistributorProduct | null>(null);
   const [inlinePrice, setInlinePrice] = useState<{ id: string; value: string } | null>(null);
-  const [inlineStock, setInlineStock] = useState<{ id: string; value: string } | null>(null);
-  const [bulkResult, setBulkResult] = useState<{
-    created: number;
-    updated: number;
-    skipped: { index: number; reason: string }[];
+  const [importFeedback, setImportFeedback] = useState<{
+    severity: "success" | "warning" | "error";
+    message: string;
   } | null>(null);
-  const dismissBulkResult = () => setBulkResult(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -264,34 +261,29 @@ export default function DistributorInventoryPage(): JSX.Element {
     },
   });
 
-  const bulkMutation = useMutation({
-    mutationFn: (rows: Parameters<typeof bulkUpsertDistributorProducts>[1]) =>
-      bulkUpsertDistributorProducts(id, rows),
+  const uploadSpreadsheetMutation = useMutation({
+    mutationFn: (file: File) => uploadDistributorSpreadsheet(id, file),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "distributors", id, "products"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
-      setBulkResult(result);
+      queryClient.invalidateQueries({ queryKey: ["admin", "categories"] });
+      setImportFeedback({
+        severity: "success",
+        message: result.message,
+      });
+    },
+    onError: (err: Error) => {
+      setImportFeedback({
+        severity: "error",
+        message: err.message || "Falha ao processar e importar planilha.",
+      });
     },
   });
 
-  const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = String(reader.result ?? "");
-      const rows = parseBulkInventoryCSV(text);
-      if (rows.length === 0) {
-        setBulkResult({
-          created: 0,
-          updated: 0,
-          skipped: [{ index: 0, reason: "Nenhuma linha válida no CSV." }],
-        });
-        return;
-      }
-      bulkMutation.mutate(rows);
-    };
-    reader.readAsText(file, "UTF-8");
+    uploadSpreadsheetMutation.mutate(file);
     e.target.value = "";
   };
 
@@ -419,19 +411,27 @@ export default function DistributorInventoryPage(): JSX.Element {
               </Button>
               <Button
                 variant="outlined"
-                startIcon={<UploadFileIcon />}
+                startIcon={
+                  uploadSpreadsheetMutation.isPending ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : (
+                    <UploadFileIcon />
+                  )
+                }
                 onClick={() => fileInputRef.current?.click()}
-                disabled={bulkMutation.isPending}
+                disabled={uploadSpreadsheetMutation.isPending}
               >
-                Importar CSV
+                {uploadSpreadsheetMutation.isPending
+                  ? "Importando Planilha..."
+                  : "Importar Planilha / CSV"}
               </Button>
             </Stack>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv"
+              accept=".xlsx,.xls,.csv"
               style={{ display: "none" }}
-              onChange={handleCSVUpload}
+              onChange={handleFileUpload}
             />
             <Button
               variant="contained"
@@ -724,38 +724,13 @@ export default function DistributorInventoryPage(): JSX.Element {
         ) : null}
       </Paper>
 
-      {bulkResult && (
+      {importFeedback && (
         <Alert
-          severity={bulkResult.skipped.length > 0 ? "warning" : "success"}
-          onClose={dismissBulkResult}
+          severity={importFeedback.severity}
+          onClose={() => setImportFeedback(null)}
           sx={{ mt: 2 }}
         >
-          <Typography variant="subtitle2">
-            Importação concluída: {bulkResult.created} criados, {bulkResult.updated} atualizados.
-          </Typography>
-          {bulkResult.skipped.length > 0 && (
-            <Box mt={1}>
-              <Typography variant="body2" fontWeight="bold">
-                {bulkResult.skipped.length} linha(s) ignorada(s):
-              </Typography>
-              <ul style={{ margin: 0, paddingLeft: 16 }}>
-                {bulkResult.skipped.slice(0, 10).map((s, i) => (
-                  <li key={i}>
-                    <Typography variant="body2">
-                      Linha {s.index + 2}: {s.reason}
-                    </Typography>
-                  </li>
-                ))}
-                {bulkResult.skipped.length > 10 && (
-                  <li>
-                    <Typography variant="body2">
-                      ... e mais {bulkResult.skipped.length - 10} outras
-                    </Typography>
-                  </li>
-                )}
-              </ul>
-            </Box>
-          )}
+          <Typography variant="subtitle2">{importFeedback.message}</Typography>
         </Alert>
       )}
 
