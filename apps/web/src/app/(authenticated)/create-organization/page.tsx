@@ -174,9 +174,9 @@ const OnboardingConnector = styled(StepConnector)(({ theme }) => ({
     background: "linear-gradient(90deg, #0f4966 0%, #0f6b86 55%, #22c7b2 100%)",
   },
   [`& .${stepConnectorClasses.line}`]: {
-    borderColor: theme.palette.mode === "dark" ? "#334155" : "#d4d4d8",
+    borderColor: theme?.palette?.mode === "dark" ? "#334155" : "#d4d4d8",
     borderTopWidth: 0,
-    background: theme.palette.mode === "dark" ? "#334155" : "#d4d4d8",
+    background: theme?.palette?.mode === "dark" ? "#334155" : "#d4d4d8",
     height: 3,
     borderRadius: 999,
   },

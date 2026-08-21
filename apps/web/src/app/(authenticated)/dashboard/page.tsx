@@ -314,7 +314,8 @@ export default function DashboardPage(): JSX.Element {
         icon: FileText,
         text: (
           <>
-            Proposta enviada · <strong className="font-semibold">{p.deal.lead.name}</strong>
+            Proposta enviada ·{" "}
+            <strong className="font-semibold">{p.deal?.lead?.name ?? "Cliente"}</strong>
           </>
         ),
         time: relativeTime(p.createdAt),
