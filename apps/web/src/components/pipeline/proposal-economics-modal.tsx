@@ -1652,14 +1652,34 @@ export const ProposalEconomicsModal = forwardRef<
                             </div>
                             <div className="flex flex-wrap gap-x-2 gap-y-0.5">
                               <dt className="font-medium text-[var(--color-foreground)]">
-                                Consumo (kWh)
+                                Consumo do mês (kWh)
                               </dt>
                               <dd className="text-[var(--color-muted-foreground)]">
                                 {formatExtractionValue(
-                                  billAttachment.extractedData?.consumptionKwh
+                                  billAttachment.extractedData?.currentMonthConsumptionKwh ??
+                                    billAttachment.extractedData?.consumptionKwh
                                 )}
                               </dd>
                             </div>
+                            {billAttachment.extractedData?.simulationMonthlyConsumptionKwh &&
+                            Number(
+                              billAttachment.extractedData?.simulationMonthlyConsumptionKwh
+                            ) !==
+                              Number(
+                                billAttachment.extractedData?.currentMonthConsumptionKwh ??
+                                  billAttachment.extractedData?.consumptionKwh
+                              ) ? (
+                              <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                                <dt className="font-medium text-[var(--color-foreground)]">
+                                  Média do histórico (kWh/mês)
+                                </dt>
+                                <dd className="font-medium text-emerald-600 dark:text-emerald-400">
+                                  {formatExtractionValue(
+                                    billAttachment.extractedData?.simulationMonthlyConsumptionKwh
+                                  )}
+                                </dd>
+                              </div>
+                            ) : null}
                             <div className="flex flex-wrap gap-x-2 gap-y-0.5">
                               <dt className="font-medium text-[var(--color-foreground)]">
                                 Total (R$)
