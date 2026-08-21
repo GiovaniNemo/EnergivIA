@@ -23,6 +23,7 @@ import {
   ListChecks,
   CreditCard,
   Crown,
+  Compass,
 } from "lucide-react";
 
 export type SidebarSectionKey = "operation" | "management" | "admin" | "platform";
@@ -55,6 +56,15 @@ export const MENU_ITEMS: MenuItem[] = [
     section: "operation",
     tooltip: "Painel: visão geral de leads, propostas e funil",
     highlight: true,
+  },
+  {
+    label: "Radar Solar",
+    icon: Compass,
+    path: "/radar",
+    section: "operation",
+    tooltip: "Radar Solar: mapa de usinas ANEEL e prospecção por vizinhança",
+    highlight: true,
+    badge: "NOVO",
   },
   {
     label: "Clientes",
