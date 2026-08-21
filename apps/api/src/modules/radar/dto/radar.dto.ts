@@ -60,13 +60,13 @@ export class QueryRadarDto {
 
 export class ConvertRadarLeadDto {
   @IsString()
-  installationId: string;
+  installationId!: string;
 
   @IsString()
-  name: string;
+  name!: string;
 
   @IsString()
-  whatsapp: string;
+  whatsapp!: string;
 
   @IsOptional()
   @IsString()

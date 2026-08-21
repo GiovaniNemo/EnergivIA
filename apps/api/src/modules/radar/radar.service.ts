@@ -81,10 +81,12 @@ export class RadarService {
       });
       if (state && state.cities.length > 0) {
         const c = state.cities[0];
-        cityName = c.name;
-        if (c.latitude && c.longitude) {
-          centerLat = Number(c.latitude);
-          centerLng = Number(c.longitude);
+        if (c) {
+          cityName = c.name;
+          if (c.latitude && c.longitude) {
+            centerLat = Number(c.latitude);
+            centerLng = Number(c.longitude);
+          }
         }
       }
     }
@@ -295,7 +297,7 @@ export class RadarService {
       const lng = baseLng + dist * Math.cos(angle) + Math.cos(i * 2) * 0.002;
 
       const nIndex = (i * 7) % neighborhoods.length;
-      const neighborhood = neighborhoods[nIndex];
+      const neighborhood = neighborhoods[nIndex] || "Centro";
 
       // Classes
       let classType: "RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL" | "RURAL" = "RESIDENTIAL";
