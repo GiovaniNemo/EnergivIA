@@ -16,12 +16,18 @@ import { cn } from "@energivia/utils";
 import Link from "next/link";
 
 function userInitials(name?: string | null, email?: string | null): string {
-  if (name) {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) return `${parts[0]![0]}${parts[parts.length - 1]![0]}`.toUpperCase();
-    return name.slice(0, 2).toUpperCase();
+  const clean = typeof name === "string" ? name.trim() : "";
+  if (clean) {
+    const parts = clean.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2 && parts[0] && parts[parts.length - 1]) {
+      const first = parts[0][0] || "";
+      const last = parts[parts.length - 1]![0] || "";
+      if (first || last) return `${first}${last}`.toUpperCase();
+    }
+    return clean.slice(0, 2).toUpperCase();
   }
-  return (email ?? "U").slice(0, 2).toUpperCase();
+  const cleanEmail = typeof email === "string" ? email.trim() : "U";
+  return cleanEmail.slice(0, 2).toUpperCase();
 }
 
 function UserMenu(): JSX.Element {

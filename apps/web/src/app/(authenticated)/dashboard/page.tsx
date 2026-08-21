@@ -393,7 +393,9 @@ export default function DashboardPage(): JSX.Element {
     {
       label: "Receita prevista",
       value: orgId ? formatBRL(forecastRevenue) : "—",
-      delta: stats ? `${stats.dealsInProposal + stats.dealsInNegotiation} negócios em aberto` : "",
+      delta: stats
+        ? `${(stats.dealsInProposal ?? 0) + (stats.dealsInNegotiation ?? 0)} negócios em aberto`
+        : "",
       trend: "neutral",
       icon: Wallet,
     },

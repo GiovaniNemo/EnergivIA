@@ -81,9 +81,11 @@ export function TrialLockOverlay() {
 
         <div className="grid md:grid-cols-2 gap-8 lg:gap-10 items-stretch">
           {plans.map((plan) => {
-            const isBasic = plan.name.toLowerCase().includes("básic");
-            const isPro = plan.name.toLowerCase().includes("profissional");
-            const isHighlighted = isPro || (!isBasic && plan.price > 100);
+            const planName = String(plan?.name || "");
+            const planPrice = Number(plan?.price ?? 0);
+            const isBasic = planName.toLowerCase().includes("básic");
+            const isPro = planName.toLowerCase().includes("profissional");
+            const isHighlighted = isPro || (!isBasic && planPrice > 100);
 
             // Cores e Icones baseados no plano
             const cardBorder = isHighlighted
@@ -96,7 +98,7 @@ export function TrialLockOverlay() {
 
             return (
               <div
-                key={plan.id}
+                key={plan?.id || Math.random()}
                 className={`relative bg-gray-950/80 backdrop-blur-sm rounded-3xl border ${cardBorder} flex flex-col pt-8 p-8 transition-transform hover:-translate-y-1 duration-300`}
               >
                 {isHighlighted && (
@@ -113,7 +115,9 @@ export function TrialLockOverlay() {
                       {isHighlighted ? <Gem className="w-6 h-6" /> : <Rocket className="w-6 h-6" />}
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold text-white leading-tight">{plan.name}</h3>
+                      <h3 className="text-2xl font-bold text-white leading-tight">
+                        {planName || "Plano EnergivIA"}
+                      </h3>
                       <p className="text-sm text-gray-400 mt-1">
                         {isHighlighted ? "Mais recursos. Mais controle." : "Tudo que você precisa."}
                       </p>
@@ -123,10 +127,7 @@ export function TrialLockOverlay() {
                     <div className="flex flex-col items-end">
                       <div className="flex items-baseline gap-1">
                         <span className={`text-3xl font-extrabold tracking-tight ${priceColor}`}>
-                          R${" "}
-                          {Number(plan.price ?? 0)
-                            .toFixed(2)
-                            .replace(".", ",")}
+                          R$ {planPrice.toFixed(2).replace(".", ",")}
                         </span>
                       </div>
                       <span className="text-gray-500 text-sm font-medium">/mês</span>
@@ -140,13 +141,13 @@ export function TrialLockOverlay() {
                   <ul className="space-y-4 mb-8">
                     {(() => {
                       let feats: string[] = [];
-                      if (plan.features) {
+                      if (plan?.features) {
                         if (Array.isArray(plan.features)) {
-                          feats = plan.features;
+                          feats = plan.features.map((f) => String(f ?? ""));
                         } else if (typeof plan.features === "string") {
                           try {
                             const parsed = JSON.parse(plan.features);
-                            if (Array.isArray(parsed)) feats = parsed;
+                            if (Array.isArray(parsed)) feats = parsed.map((f) => String(f ?? ""));
                             else feats = plan.features.split(",");
                           } catch {
                             feats = plan.features.split(",");
@@ -172,17 +173,21 @@ export function TrialLockOverlay() {
                       }
 
                       if (feats.length > 0) {
-                        return feats.map((feat: string, idx: number) => (
-                          <li
-                            key={idx}
-                            className="flex items-start gap-3 text-[15px] text-gray-300"
-                          >
-                            <CheckCircle2
-                              className={`w-5 h-5 shrink-0 ${isHighlighted ? "text-yellow-500" : "text-emerald-500"}`}
-                            />
-                            <span className="leading-tight mt-0.5">{feat.trim()}</span>
-                          </li>
-                        ));
+                        return feats.map((feat: unknown, idx: number) => {
+                          const featStr = String(feat || "").trim();
+                          if (!featStr) return null;
+                          return (
+                            <li
+                              key={idx}
+                              className="flex items-start gap-3 text-[15px] text-gray-300"
+                            >
+                              <CheckCircle2
+                                className={`w-5 h-5 shrink-0 ${isHighlighted ? "text-yellow-500" : "text-emerald-500"}`}
+                              />
+                              <span className="leading-tight mt-0.5">{featStr}</span>
+                            </li>
+                          );
+                        });
                       }
 
                       return <li className="text-gray-400">Assine para liberar os recursos!</li>;
@@ -203,12 +208,13 @@ export function TrialLockOverlay() {
                 <div className="mt-auto">
                   {/* Container to wrapper the PaymentForm button to inherit styles visually */}
                   <div
-                    className={`[&_button]:w-full [&_button]:py-3.5 [&_button]:rounded-xl [&_button]:text-base [&_button]:font-bold [&_button]:shadow-lg [&_button]:transition-all [&_button:hover]:scale-[1.02] ${isHighlighted
+                    className={`[&_button]:w-full [&_button]:py-3.5 [&_button]:rounded-xl [&_button]:text-base [&_button]:font-bold [&_button]:shadow-lg [&_button]:transition-all [&_button:hover]:scale-[1.02] ${
+                      isHighlighted
                         ? "[&_button]:bg-gradient-to-r [&_button]:from-yellow-400 [&_button]:to-amber-500 [&_button]:text-yellow-950 [&_button:hover]:shadow-yellow-500/25"
                         : "[&_button]:bg-emerald-500 [&_button]:text-white [&_button:hover]:bg-emerald-400 [&_button:hover]:shadow-emerald-500/25"
-                      }`}
+                    }`}
                   >
-                    <PaymentWrapper planId={plan.id} planName={plan.name} />
+                    <PaymentWrapper planId={plan?.id || ""} planName={planName} />
                   </div>
                 </div>
               </div>

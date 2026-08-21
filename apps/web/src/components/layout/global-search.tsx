@@ -227,7 +227,9 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
                       }`}
                     >
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-200 to-emerald-400 text-[11px] font-bold text-emerald-900">
-                        {lead.name.slice(0, 2).toUpperCase()}
+                        {String(lead.name || "L")
+                          .slice(0, 2)
+                          .toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
