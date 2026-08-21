@@ -284,6 +284,13 @@ function processExtractedBillData(data: ExtractedBillData, rawText?: string): Bi
   // (ex: AGO/26 até AGO/25), usamos os 12 meses mais recentes (excluindo o mês repetido do ano anterior)
   const normalizedHistory = validHistory.length > 12 ? validHistory.slice(0, 12) : validHistory;
 
+  const rawCurrentKwh = parseBrazilianKwh(
+    data.consumo_mes_atual_kwh ??
+      (data as Record<string, unknown>)["consumo_mes_atual"] ??
+      (data as Record<string, unknown>)["currentMonthConsumptionKwh"] ??
+      (data as Record<string, unknown>)["consumptionKwh"]
+  );
+
   const currentMonthKwh =
     rawCurrentKwh > 0
       ? rawCurrentKwh
