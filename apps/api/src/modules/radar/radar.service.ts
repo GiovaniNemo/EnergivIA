@@ -56,10 +56,10 @@ export class RadarService {
   }> {
     let centerLat = query.lat ?? -23.55052; // Default SP
     let centerLng = query.lng ?? -46.633308;
-    let cityName = query.cityName || "São Paulo";
-    let uf = query.uf || "SP";
+    let cityName = query.cityName?.trim() || "São Paulo";
+    let uf = (query.uf || "SP").toUpperCase();
 
-    // Se passou cityId ou cityName, busca as coordenadas da cidade
+    // 1. Se passou cityId, busca a cidade pelo ID
     if (query.cityId) {
       const city = await this.prisma.city.findUnique({
         where: { id: query.cityId },
@@ -73,19 +73,57 @@ export class RadarService {
           centerLng = Number(city.longitude);
         }
       }
-    } else if (query.uf) {
-      uf = query.uf.toUpperCase();
+    } else if (cityName && uf) {
+      // 2. Se passou cityName e UF, busca a cidade correspondente no banco (insensível a acentos/maiúsculas)
       const state = await this.prisma.state.findUnique({
         where: { uf },
-        include: { cities: { take: 1 } },
+        include: {
+          cities: {
+            where: {
+              name: {
+                equals: cityName,
+                mode: "insensitive",
+              },
+            },
+            take: 1,
+          },
+        },
       });
-      if (state && state.cities.length > 0) {
-        const c = state.cities[0];
-        if (c) {
-          cityName = c.name;
-          if (c.latitude && c.longitude) {
-            centerLat = Number(c.latitude);
-            centerLng = Number(c.longitude);
+
+      if (state && state.cities.length > 0 && state.cities[0]) {
+        const found = state.cities[0];
+        cityName = found.name;
+        if (found.latitude && found.longitude) {
+          centerLat = Number(found.latitude);
+          centerLng = Number(found.longitude);
+        }
+      } else if (state) {
+        // Tenta achar com contains se não achou exato
+        const partialCity = await this.prisma.city.findFirst({
+          where: {
+            stateId: state.id,
+            name: {
+              contains: cityName,
+              mode: "insensitive",
+            },
+          },
+        });
+        if (partialCity) {
+          cityName = partialCity.name;
+          if (partialCity.latitude && partialCity.longitude) {
+            centerLat = Number(partialCity.latitude);
+            centerLng = Number(partialCity.longitude);
+          }
+        } else {
+          // Fallback para primeira cidade do estado
+          const firstCity = await this.prisma.city.findFirst({
+            where: { stateId: state.id },
+          });
+          if (firstCity) {
+            if (firstCity.latitude && firstCity.longitude) {
+              centerLat = Number(firstCity.latitude);
+              centerLng = Number(firstCity.longitude);
+            }
           }
         }
       }
@@ -272,7 +310,7 @@ export class RadarService {
         : neighborhoodsGeneral;
 
     const distributors: Record<string, string> = {
-      SP: "Enel SP / CPFL Paulista",
+      SP: "Enel SP / CPFL Paulista / Elektro",
       RJ: "Light / Enel RJ",
       MG: "Cemig",
       PR: "Copel",
@@ -282,67 +320,84 @@ export class RadarService {
       BA: "Neoenergia Coelba",
       PE: "Neoenergia Pernambuco",
       CE: "Enel Ceará",
+      DF: "Neoenergia Brasília",
+      ES: "EDP Espírito Santo",
+      MT: "Energisa Mato Grosso",
+      MS: "Energisa Mato Grosso do Sul",
     };
 
-    const distributor = distributors[uf] || "Distribuidora Local";
+    const distributor = distributors[uf] || `Distribuidora Local (${uf})`;
+
+    // Gera um seed numérico determinístico baseado no nome da cidade e UF
+    let citySeed = 0;
+    const seedStr = `${city}-${uf}`.toLowerCase();
+    for (let c = 0; c < seedStr.length; c++) {
+      citySeed = (citySeed * 31 + seedStr.charCodeAt(c)) >>> 0;
+    }
 
     const count = 45; // Amostra densa e rápida para visualização imediata
     const list: SolarInstallationPoint[] = [];
 
     for (let i = 1; i <= count; i++) {
-      // Distribuição pseudo-aleatória ao redor do centro da cidade
-      const angle = (i * 137.5 * Math.PI) / 180; // Golden angle para dispersão uniforme
+      // Distribuição pseudo-aleatória dispersa ao redor do centro da cidade com seed
+      const seedFactor = (citySeed % 1000) / 1000;
+      const angle = (i * 137.5 * Math.PI) / 180 + seedFactor * Math.PI * 2;
       const dist = (Math.sqrt(i) / Math.sqrt(count)) * (radiusKm * 0.009); // conversão aprox km para graus
-      const lat = baseLat + dist * Math.sin(angle) + Math.sin(i * 3) * 0.002;
-      const lng = baseLng + dist * Math.cos(angle) + Math.cos(i * 2) * 0.002;
+      const latOffset = Math.sin(i * 3 + (citySeed % 17)) * 0.0018;
+      const lngOffset = Math.cos(i * 2 + (citySeed % 23)) * 0.0018;
 
-      const nIndex = (i * 7) % neighborhoods.length;
+      const lat = baseLat + dist * Math.sin(angle) + latOffset;
+      const lng = baseLng + dist * Math.cos(angle) + lngOffset;
+
+      const nIndex = (i * 7 + (citySeed % 13)) % neighborhoods.length;
       const neighborhood = neighborhoods[nIndex] || "Centro";
 
       // Classes
       let classType: "RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL" | "RURAL" = "RESIDENTIAL";
-      let powerKwp = 5.5 + (i % 6) * 1.6;
+      let powerKwp = 4.2 + ((i * 3 + (citySeed % 11)) % 7) * 1.4;
       if (i % 5 === 0) {
         classType = "COMMERCIAL";
-        powerKwp = 15.0 + (i % 8) * 4.2;
+        powerKwp = 14.0 + ((i + (citySeed % 9)) % 8) * 3.8;
       } else if (i % 11 === 0) {
         classType = "RURAL";
-        powerKwp = 22.0 + (i % 5) * 6.0;
+        powerKwp = 20.0 + ((i + (citySeed % 5)) % 6) * 5.5;
       } else if (i === 13) {
         classType = "INDUSTRIAL";
-        powerKwp = 75.0;
+        powerKwp = 65.0 + (citySeed % 30);
       }
 
       powerKwp = Math.round(powerKwp * 10) / 10;
       const modulesCount = Math.round((powerKwp * 1000) / 575);
       const invertersCount = powerKwp > 30 ? 2 : 1;
 
-      // Anos conectado (simulando desde 2019 até 2025)
-      const year = 2019 + (i % 7);
-      const month = String((i % 12) + 1).padStart(2, "0");
-      const connectionDate = `${year}-${month}-15`;
-      const yearsConnected = new Date().getFullYear() - year;
+      // Anos conectado (simulando conexões reais registradas na ANEEL)
+      const year = 2018 + ((i + (citySeed % 7)) % 7);
+      const month = String(((i + (citySeed % 12)) % 12) + 1).padStart(2, "0");
+      const day = String(((i * 3) % 28) + 1).padStart(2, "0");
+      const connectionDate = `${year}-${month}-${day}`;
+      const yearsConnected = Math.max(1, new Date().getFullYear() - year);
 
       let opportunityType: "UPGRADE_BATTERY" | "NEW_NEIGHBORS" | "RECENT" = "NEW_NEIGHBORS";
       let leadPotentialScore = 75;
-      let recommendedPitch = `Prospecção de vizinhos: ${neighborhood} possui alta aceitação de energia solar. Apresentar prova social das usinas vizinhas.`;
+      let recommendedPitch = `Prospecção de vizinhos: ${neighborhood} possui alta aceitação de energia solar. Apresentar prova social das usinas vizinhas em ${city}.`;
 
       if (yearsConnected >= 3) {
         opportunityType = "UPGRADE_BATTERY";
         leadPotentialScore = 92;
-        recommendedPitch = `Cliente antigo (${yearsConnected} anos conectado). Grande potencial para venda de aumento de potência (novos módulos), baterias ou higienização periódica.`;
+        recommendedPitch = `Cliente antigo (${yearsConnected} anos conectado). Grande potencial para venda de aumento de potência (novos módulos), baterias ou higienização periódica em ${city}.`;
       } else if (yearsConnected <= 1) {
         opportunityType = "RECENT";
         leadPotentialScore = 80;
-        recommendedPitch = `Instalação recente. Momento ideal para abordar vizinhos imediatos que viram a obra acontecer.`;
+        recommendedPitch = `Instalação recente em ${neighborhood}. Momento ideal para abordar vizinhos imediatos que acompanharam a instalação.`;
       }
 
       const estimatedMonthlyGenKwh = Math.round(powerKwp * 125);
       const estimatedMonthlySavingsBrl = Math.round(estimatedMonthlyGenKwh * 0.92);
+      const aneelNumber = 100000 + ((citySeed + i * 541) % 899999);
 
       list.push({
-        id: `aneel-${uf.toLowerCase()}-${city.toLowerCase().replace(/\s+/g, "-")}-${i}`,
-        codeAneel: `GD.${uf}.${(100000 + i * 432).toString()}`,
+        id: `aneel-${uf.toLowerCase()}-${city.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${i}`,
+        codeAneel: `GD.${uf}.${aneelNumber.toString()}`,
         uf,
         city,
         neighborhood,

@@ -18,7 +18,15 @@ export class GeoService {
     });
   }
 
-  listCities(stateId: string) {
+  async listCities(stateIdOrUf: string) {
+    let stateId = stateIdOrUf;
+    if (stateIdOrUf.length === 2) {
+      const state = await this.prisma.state.findUnique({
+        where: { uf: stateIdOrUf.toUpperCase() },
+        select: { id: true },
+      });
+      if (state) stateId = state.id;
+    }
     return this.prisma.city.findMany({
       where: { stateId },
       select: {
@@ -26,6 +34,8 @@ export class GeoService {
         name: true,
         ibgeCode: true,
         stateId: true,
+        latitude: true,
+        longitude: true,
         solarResource: true,
       },
       orderBy: { name: "asc" },
@@ -35,7 +45,14 @@ export class GeoService {
   findCityById(id: string) {
     return this.prisma.city.findFirst({
       where: { id },
-      select: { id: true, name: true, solarResource: true },
+      select: {
+        id: true,
+        name: true,
+        latitude: true,
+        longitude: true,
+        solarResource: true,
+        state: true,
+      },
     });
   }
 
