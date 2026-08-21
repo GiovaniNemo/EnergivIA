@@ -4,13 +4,6 @@ import React from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface RadarFiltersProps {
   uf: string;
@@ -71,18 +64,17 @@ export function RadarFilters({
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
         {/* Estado */}
         <div>
-          <Select value={uf} onValueChange={setUf}>
-            <SelectTrigger className="bg-neutral-950 border-neutral-800 text-white h-9 text-xs">
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
-            <SelectContent className="bg-neutral-950 border-neutral-800 text-white">
-              {BRAZIL_STATES.map((s) => (
-                <SelectItem key={s.uf} value={s.uf} className="text-xs">
-                  {s.uf} - {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <select
+            value={uf}
+            onChange={(e) => setUf(e.target.value)}
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-md text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500"
+          >
+            {BRAZIL_STATES.map((s) => (
+              <option key={s.uf} value={s.uf}>
+                {s.uf} - {s.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Cidade */}
@@ -107,51 +99,31 @@ export function RadarFilters({
 
         {/* Classe */}
         <div>
-          <Select value={classType} onValueChange={setClassType}>
-            <SelectTrigger className="bg-neutral-950 border-neutral-800 text-white h-9 text-xs">
-              <SelectValue placeholder="Classe" />
-            </SelectTrigger>
-            <SelectContent className="bg-neutral-950 border-neutral-800 text-white">
-              <SelectItem value="ALL" className="text-xs">
-                Todas as Classes
-              </SelectItem>
-              <SelectItem value="RESIDENTIAL" className="text-xs">
-                Residencial
-              </SelectItem>
-              <SelectItem value="COMMERCIAL" className="text-xs">
-                Comercial
-              </SelectItem>
-              <SelectItem value="INDUSTRIAL" className="text-xs">
-                Industrial
-              </SelectItem>
-              <SelectItem value="RURAL" className="text-xs">
-                Rural
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <select
+            value={classType}
+            onChange={(e) => setClassType(e.target.value)}
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-md text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500"
+          >
+            <option value="ALL">Todas as Classes</option>
+            <option value="RESIDENTIAL">Residencial</option>
+            <option value="COMMERCIAL">Comercial</option>
+            <option value="INDUSTRIAL">Industrial</option>
+            <option value="RURAL">Rural</option>
+          </select>
         </div>
 
         {/* Tipo de Oportunidade */}
         <div>
-          <Select value={opportunityType} onValueChange={setOpportunityType}>
-            <SelectTrigger className="bg-neutral-950 border-neutral-800 text-white h-9 text-xs">
-              <SelectValue placeholder="Oportunidade" />
-            </SelectTrigger>
-            <SelectContent className="bg-neutral-950 border-neutral-800 text-white">
-              <SelectItem value="ALL" className="text-xs">
-                Todas as Oportunidades
-              </SelectItem>
-              <SelectItem value="UPGRADE_BATTERY" className="text-xs">
-                🔋 Retrofit / Baterias (&gt;3 anos)
-              </SelectItem>
-              <SelectItem value="NEW_NEIGHBORS" className="text-xs">
-                👥 Vizinhança Solar
-              </SelectItem>
-              <SelectItem value="RECENT" className="text-xs">
-                ⚡ Conexões Recentes
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <select
+            value={opportunityType}
+            onChange={(e) => setOpportunityType(e.target.value)}
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-md text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500"
+          >
+            <option value="ALL">Todas as Oportunidades</option>
+            <option value="UPGRADE_BATTERY">🔋 Retrofit / Baterias (&gt;3 anos)</option>
+            <option value="NEW_NEIGHBORS">👥 Vizinhança Solar</option>
+            <option value="RECENT">⚡ Conexões Recentes</option>
+          </select>
         </div>
 
         {/* Botão Buscar */}
