@@ -5,7 +5,7 @@ import { useTheme } from "@/components/providers/theme-provider";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, LogOut, Menu, UserRound, Sparkles, Timer } from "lucide-react";
+import { Moon, Sun, LogOut, Menu, UserRound, Sparkles, Timer, AlertTriangle } from "lucide-react";
 import { useSidebar } from "@/components/layout/sidebar-inset";
 import { OrganizationSwitcher } from "@/components/layout/organization-switcher";
 import { NotificationsBell } from "@/components/layout/notifications-bell";
@@ -174,16 +174,27 @@ export function Topbar() {
       </div>
 
       <div className="flex shrink-0 items-center gap-1 px-3 md:gap-2">
-        <Link
-          href="/gestao/meus-planos"
-          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-100 text-orange-800 text-xs font-semibold rounded-lg border border-orange-200 transition-colors hover:bg-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-900/50 dark:hover:bg-orange-900/60"
-          title="Teste grátis"
-        >
-          <Timer className="h-4 w-4" />
-          <span>
-            {trialDaysLeft} {trialDaysLeft === 1 ? "dia restante" : "dias restantes"}
-          </span>
-        </Link>
+        {trialDaysLeft === 0 ? (
+          <Link
+            href="/gestao/meus-planos"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 text-rose-700 text-xs font-bold rounded-lg border border-rose-200 shadow-sm transition-all hover:bg-rose-100 hover:scale-[1.02] dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800/60 dark:hover:bg-rose-900/60"
+            title="Seu tempo de testes acabou. Clique para escolher seu plano e continuar."
+          >
+            <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0 animate-pulse" />
+            <span>Tempo de testes acabou</span>
+          </Link>
+        ) : (
+          <Link
+            href="/gestao/meus-planos"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-100 text-orange-800 text-xs font-semibold rounded-lg border border-orange-200 transition-colors hover:bg-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-900/50 dark:hover:bg-orange-900/60"
+            title="Teste grátis"
+          >
+            <Timer className="h-4 w-4 text-orange-500" />
+            <span>
+              {trialDaysLeft} {trialDaysLeft === 1 ? "dia restante" : "dias restantes"}
+            </span>
+          </Link>
+        )}
         <button
           type="button"
           onClick={() => window.dispatchEvent(new CustomEvent("toggle-ai-chat"))}

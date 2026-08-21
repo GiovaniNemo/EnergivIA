@@ -226,6 +226,13 @@ function MeusPlanosContent() {
       : parseFloat(String(currentPlan.price) || "0")
     : 0;
 
+  const orgCreatedAt = currentOrganization?.createdAt
+    ? new Date(currentOrganization.createdAt)
+    : null;
+  const trialDaysLeft = orgCreatedAt
+    ? Math.max(0, 7 - Math.floor((Date.now() - orgCreatedAt.getTime()) / (1000 * 60 * 60 * 24)))
+    : 7;
+
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto min-h-screen bg-[var(--color-background)] animate-in fade-in duration-500">
       {/* Toast Notification */}
@@ -345,6 +352,28 @@ function MeusPlanosContent() {
             </div>
           </div>
         </div>
+      ) : trialDaysLeft === 0 ? (
+        <div className="mb-12 bg-gradient-to-r from-rose-950/40 via-[var(--color-card)] to-rose-950/20 border border-rose-500/40 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg shadow-rose-950/20">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-[var(--color-foreground)]">
+                  Seu tempo de testes acabou
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold uppercase tracking-wider">
+                  Expirado
+                </span>
+              </div>
+              <p className="text-sm text-[var(--color-muted-foreground)] mt-0.5">
+                O período gratuito de 7 dias da sua empresa encerrou. Escolha um dos planos abaixo
+                para continuar gerando orçamentos, dimensionamentos solares e propostas comerciais.
+              </p>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="mb-12 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -352,12 +381,17 @@ function MeusPlanosContent() {
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-[var(--color-foreground)]">
-                Você ainda não possui um plano ativo
-              </h3>
-              <p className="text-sm text-[var(--color-muted-foreground)]">
-                Escolha uma das opções abaixo para desbloquear propostas, CRM integrado e recursos
-                avançados.
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-[var(--color-foreground)]">
+                  Você está no período de teste gratuito
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold uppercase tracking-wider">
+                  {trialDaysLeft} {trialDaysLeft === 1 ? "dia restante" : "dias restantes"}
+                </span>
+              </div>
+              <p className="text-sm text-[var(--color-muted-foreground)] mt-0.5">
+                Aproveite para testar todos os recursos. Escolha um plano abaixo para garantir
+                acesso contínuo.
               </p>
             </div>
           </div>

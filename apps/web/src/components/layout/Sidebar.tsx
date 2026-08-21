@@ -73,7 +73,10 @@ export function Sidebar(): JSX.Element {
           if (item.label === "Meus Planos") {
             return {
               ...item,
-              badge: `${trialDaysLeft} ${trialDaysLeft === 1 ? "DIA" : "DIAS"}`,
+              badge:
+                trialDaysLeft === 0
+                  ? "EXPIRADO"
+                  : `${trialDaysLeft} ${trialDaysLeft === 1 ? "DIA" : "DIAS"}`,
             };
           }
           return item;
