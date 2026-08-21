@@ -24,9 +24,6 @@ import {
   Autocomplete,
   Chip,
   Alert,
-  List,
-  ListItem,
-  ListItemText,
   Avatar,
   Stack,
   Menu,
@@ -140,6 +137,7 @@ export default function DistributorInventoryPage(): JSX.Element {
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<DistributorProduct | null>(null);
   const [inlinePrice, setInlinePrice] = useState<{ id: string; value: string } | null>(null);
+  const [inlineStock, setInlineStock] = useState<{ id: string; value: string } | null>(null);
   const [importFeedback, setImportFeedback] = useState<{
     severity: "success" | "warning" | "error";
     message: string;
@@ -1014,51 +1012,6 @@ export default function DistributorInventoryPage(): JSX.Element {
           </form>
         </Dialog>
       )}
-
-      {}
-      <Dialog
-        open={bulkResult !== null}
-        onClose={() => setBulkResult(null)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Resultado da importação CSV</DialogTitle>
-        <DialogContent>
-          {bulkResult && (
-            <Box sx={{ pt: 1 }}>
-              <Alert severity="success" sx={{ mb: 2 }}>
-                Criados: <strong>{bulkResult.created}</strong> · Atualizados:{" "}
-                <strong>{bulkResult.updated}</strong>
-              </Alert>
-              {bulkResult.skipped.length > 0 && (
-                <>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Linhas ignoradas ({bulkResult.skipped.length})
-                  </Typography>
-                  <List dense>
-                    {bulkResult.skipped.slice(0, 10).map((s, i) => (
-                      <ListItem key={i}>
-                        <ListItemText primary={s.reason} secondary={`Linha ${s.index + 1}`} />
-                      </ListItem>
-                    ))}
-                    {bulkResult.skipped.length > 10 && (
-                      <ListItem>
-                        <ListItemText
-                          primary={`… e mais ${bulkResult.skipped.length - 10} linhas`}
-                          primaryTypographyProps={{ variant: "body2" }}
-                        />
-                      </ListItem>
-                    )}
-                  </List>
-                </>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBulkResult(null)}>Fechar</Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }
