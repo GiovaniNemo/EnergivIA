@@ -76,14 +76,21 @@ REGRAS DE LEITURA E PARSING CRÍTICAS:
    - Para CADA linha:
      * Identifique o mês/ano (ex: "AGO/26", "JUL/26", "JUN/26", "MAI/26", "ABR/26", "MAR/26", "FEV/26", "JAN/26", "DEZ/25", "NOV/25", "OUT/25", "SET/25", "AGO/25").
      * Identifique com máxima precisão o valor numérico na coluna de consumo faturado em kWh.
-   
-   - ATENÇÃO CRÍTICA À FORMATAÇÃO DA ENEL E DISTRIBUIDORAS:
-     * Na Enel e diversas distribuidoras, os números na tabela de consumo aparecem formatados com ponto de milhar e 3 casas decimais (ex: "1.198,000", "1.525,000", "1.099,000", "965,000", "967,000", "939,000", "703,000", "698,000", "793,000", "961,000", "699,000", "807,000", "794,000").
-     * "1.198,000" significa 1198 kWh. Retorne 1198.
-     * "1.525,000" significa 1525 kWh. Retorne 1525.
-     * "1.099,000" significa 1099 kWh. Retorne 1099.
-     * "965,000" significa 965 kWh. Retorne 965.
-     * "703,000" significa 703 kWh. Retorne 703.
+
+    - ATENÇÃO CRÍTICA À ENERGISA E DISTRIBUIDORAS COM TABELA [MÊS/ANO] [CONSUMO] [DIAS]:
+      * Na Energisa e outras distribuidoras, a tabela de histórico traz colunas de Consumo e Dias lado a lado (ex: "OUT/25 1.971 45", "SET/25 2.041 29", "JAN/25 984 31", "DEZ/24 60 31", "NOV/24 59 30", "OUT/24 165 30").
+      * O PRIMEIRO número após o mês é SEMPRE o CONSUMO FATURADO em kWh (ex: 1971, 2041, 984, 60, 59, 165).
+      * O SEGUNDO número é o NÚMERO DE DIAS do ciclo (ex: 45, 29, 31, 31, 30, 30).
+      * NUNCA troque o consumo pelo número de dias! Para "NOV/24 59 30", o consumo é 59 (não 30). Para "DEZ/24 60 31", o consumo é 60 (não 31).
+      * Meses com consumo baixo (ex: 59, 60, 139 kWh) são CONSUMOS REAIS e DEVEM ser extraídos obrigatoriamente.
+    
+    - ATENÇÃO CRÍTICA À FORMATAÇÃO DA ENEL E DISTRIBUIDORAS:
+      * Na Enel e diversas distribuidoras, os números na tabela de consumo aparecem formatados com ponto de milhar e 3 casas decimais (ex: "1.198,000", "1.525,000", "1.099,000", "965,000", "967,000", "939,000", "703,000", "698,000", "793,000", "961,000", "699,000", "807,000", "794,000").
+      * "1.198,000" significa 1198 kWh. Retorne 1198.
+      * "1.525,000" significa 1525 kWh. Retorne 1525.
+      * "1.099,000" significa 1099 kWh. Retorne 1099.
+      * "965,000" significa 965 kWh. Retorne 965.
+      * "703,000" significa 703 kWh. Retorne 703.
    
    - Extraia TODOS os 12 ou 13 meses visíveis na tabela sem omitir as linhas inferiores!
    - NUNCA confunda 'consumo_kwh' com:
