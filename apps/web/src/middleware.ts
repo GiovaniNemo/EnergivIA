@@ -55,8 +55,12 @@ export async function middleware(request: NextRequest) {
 
   const authResponse = await auth0.middleware(request);
 
-  // Se o usuário estiver na raiz e já autenticado, envia para o painel
-  if (pathname === "/") {
+  // Se o usuário estiver na raiz e já autenticado, envia para o painel (exceto se solicitar explicitamente ?landing=1 ou ?home=1)
+  if (
+    pathname === "/" &&
+    !request.nextUrl.searchParams.has("landing") &&
+    !request.nextUrl.searchParams.has("home")
+  ) {
     try {
       const session = await auth0.getSession(request);
       if (session) {

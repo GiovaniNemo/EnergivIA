@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { createOrganization, uploadOrganizationLogo } from "@/lib/organizations-api";
@@ -19,6 +20,7 @@ import {
 } from "@mui/material";
 import type { StepIconProps } from "@mui/material/StepIcon";
 import {
+  ArrowLeft,
   Building2,
   FileText,
   Zap,
@@ -32,6 +34,7 @@ import {
   Leaf,
   Megaphone,
   UserCheck,
+  LogOut,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 
@@ -370,14 +373,19 @@ export default function CreateOrganizationPage() {
       <div className="relative flex h-full w-full flex-1 flex-col lg:flex-row">
         <aside className="hidden h-full w-[420px] flex-col border-r border-white/10 bg-[linear-gradient(135deg,#08324F_0%,#0A4A63_45%,#0FD3B4_115%)] px-8 py-10 lg:flex">
           <div className="flex-1 flex flex-col justify-center">
-            <Image
-              src="/logo-dark.png"
-              alt="EnergivIA"
-              width={300}
-              height={62}
-              className="h-auto w-[300px]"
-              priority
-            />
+            <Link
+              href="/?landing=1"
+              className="inline-block transition-opacity hover:opacity-90 w-fit"
+            >
+              <Image
+                src="/logo-dark.png"
+                alt="EnergivIA"
+                width={300}
+                height={62}
+                className="h-auto w-[300px]"
+                priority
+              />
+            </Link>
             <h2 className="mt-6 text-[30px] font-semibold leading-[1.12] tracking-tight text-white">
               Você está a poucos passos de automatizar suas propostas
             </h2>
@@ -462,6 +470,25 @@ export default function CreateOrganizationPage() {
 
         <main className="flex h-full w-full items-start justify-center overflow-y-auto px-4 py-5 sm:px-6 lg:flex-1 lg:justify-center lg:px-12 lg:py-5">
           <div className="w-full max-w-md lg:max-w-[640px]">
+            {/* Barra superior de retorno para a Landing Page / Logout */}
+            <div className="mb-3 flex items-center justify-between px-2">
+              <Link
+                href="/?landing=1"
+                className="group inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-[#0A4A63] dark:text-sky-400 hover:bg-[#0A4A63]/10 dark:hover:bg-sky-950/40 transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+                <span>Voltar para o site inicial</span>
+              </Link>
+              <a
+                href="/auth/logout"
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-[var(--color-muted-foreground)] hover:text-red-500 transition-colors"
+                title="Sair da conta"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Sair</span>
+              </a>
+            </div>
+
             <div className="mb-6 text-center lg:hidden">
               <h2 className="text-2xl font-semibold tracking-tight">
                 Configure sua empresa em poucos passos
@@ -676,6 +703,16 @@ export default function CreateOrganizationPage() {
                           Entre em contato
                         </a>
                       </span>
+                    </p>
+
+                    <p className="text-center text-xs text-[var(--color-muted-foreground)]">
+                      <Link
+                        href="/?landing=1"
+                        className="inline-flex items-center gap-1 font-medium text-zinc-500 hover:text-[#0A4A63] dark:hover:text-sky-400 transition-colors"
+                      >
+                        <ArrowLeft className="h-3 w-3" />
+                        Voltar para a página principal da EnergivIA
+                      </Link>
                     </p>
                   </div>
                 </div>
