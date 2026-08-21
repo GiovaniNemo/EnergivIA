@@ -153,8 +153,19 @@ function extractCategory(productName: string, bannerSection: string = ""): strin
   return "other";
 }
 
-function extractSpecs(productName: string, category: string): Record<string, unknown> {
-  const specs: Record<string, unknown> = {};
+interface ProductSpecs {
+  power_w?: number;
+  nominal_power_w?: number;
+  max_power_w?: number;
+  voltage_v?: number;
+  phase?: string;
+  mppt_count?: number;
+  max_modules?: number;
+  type?: string;
+}
+
+function extractSpecs(productName: string, category: string): ProductSpecs {
+  const specs: ProductSpecs = {};
   const norm = productName.toUpperCase();
 
   if (category === "module") {
