@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import {
   Bot,
   X,
@@ -186,6 +187,9 @@ function ForwardBubble({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function AIAssistantWidget() {
+  const pathname = usePathname();
+  const normalizedPath = (pathname ?? "").replace(/\/$/, "") || "/";
+
   const [isOpen, setIsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -194,6 +198,11 @@ export function AIAssistantWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Não exibe o robô na tela de criação de organização / onboarding antes de entrar no painel
+  if (normalizedPath === "/create-organization") {
+    return null;
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
