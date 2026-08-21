@@ -15,9 +15,9 @@ import {
   AlertTriangle,
   ExternalLink,
   Calendar,
+  Zap,
   XCircle,
   Loader2,
-  TrendingUp,
 } from "lucide-react";
 
 interface Plan {
@@ -64,12 +64,7 @@ function parseFeatures(
     return ["Até 50 propostas/mês", "Suporte por email", "Acesso ao CRM básico"];
   }
   if (isPro) {
-    return [
-      "Propostas ilimitadas",
-      "Suporte WhatsApp prioritário",
-      "CRM Completo",
-      "Integração de pagamentos",
-    ];
+    return ["Propostas ilimitadas", "Suporte WhatsApp", "CRM Completo", "Integração de pagamentos"];
   }
 
   return ["Acesso total à plataforma", "Geração ilimitada", "Suporte dedicado"];
@@ -263,19 +258,17 @@ function MeusPlanosContent() {
 
       {/* Header */}
       <div className="mb-10 text-center max-w-3xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-xs font-semibold uppercase tracking-wider mb-3 border border-[var(--color-primary)]/20">
+          <Zap className="w-3.5 h-3.5" />
+          Gerenciamento de Assinatura
+        </div>
         <h1 className="text-3xl md:text-5xl font-extrabold text-[var(--color-foreground)] tracking-tight mb-3">
           Meus Planos & Assinaturas
         </h1>
-        <p className="text-base md:text-lg text-[var(--color-muted-foreground)] mb-3 font-medium">
+        <p className="text-base md:text-lg text-[var(--color-muted-foreground)]">
           Controle sua assinatura atual, faça upgrades para liberar mais propostas ou gerencie seus
           pagamentos de forma segura.
         </p>
-        <div className="inline-flex items-center gap-2 bg-gray-900/50 border border-gray-800 rounded-full px-5 py-2">
-          <span className="text-emerald-400">✨</span>
-          <span className="text-sm text-gray-300">
-            Escolha o plano ideal e leve sua gestão solar para o próximo nível.
-          </span>
-        </div>
       </div>
 
       {/* CURRENT SUBSCRIPTION BANNER */}
@@ -301,7 +294,7 @@ function MeusPlanosContent() {
                   {currentPlan.name}
                 </h2>
                 <span className="text-2xl font-bold text-emerald-400">
-                  R$ {currentPlanPrice.toFixed(2).replace(".", ",")}
+                  R$ {currentPlanPrice.toFixed(2)}
                   <span className="text-sm text-[var(--color-muted-foreground)] font-normal">
                     /mês
                   </span>
@@ -332,7 +325,7 @@ function MeusPlanosContent() {
               <button
                 onClick={handleOpenPortal}
                 disabled={portalLoading}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[var(--color-card)] hover:bg-[var(--color-muted)] text-[var(--color-foreground)] border border-[var(--color-border)] font-semibold text-sm transition shadow-sm disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[var(--color-card)] hover:bg-[var(--color-muted)] text-[var(--color-foreground)] border border-[var(--color-border)] font-semibold text-sm transition shadow-sm disabled:opacity-50"
               >
                 {portalLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -344,7 +337,7 @@ function MeusPlanosContent() {
 
               <button
                 onClick={() => setShowCancelModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-semibold text-sm transition cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-semibold text-sm transition"
               >
                 <XCircle className="w-4 h-4" />
                 Cancelar Plano
@@ -353,14 +346,16 @@ function MeusPlanosContent() {
           </div>
         </div>
       ) : (
-        <div className="mb-12 bg-gray-950/80 border border-gray-800 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="mb-12 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0">
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Você ainda não possui um plano ativo</h3>
-              <p className="text-sm text-gray-400">
+              <h3 className="text-lg font-bold text-[var(--color-foreground)]">
+                Você ainda não possui um plano ativo
+              </h3>
+              <p className="text-sm text-[var(--color-muted-foreground)]">
                 Escolha uma das opções abaixo para desbloquear propostas, CRM integrado e recursos
                 avançados.
               </p>
@@ -371,16 +366,18 @@ function MeusPlanosContent() {
 
       {/* PLANS GRID */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-[var(--color-foreground)] mb-8 flex items-center gap-2">
-          <Rocket className="w-6 h-6 text-emerald-400" />
+        <h2 className="text-2xl font-bold text-[var(--color-foreground)] mb-6 flex items-center gap-2">
+          <Rocket className="w-6 h-6 text-[var(--color-primary)]" />
           {subscription ? "Opções de Upgrade & Outros Planos" : "Planos Disponíveis"}
         </h2>
 
         {plans.length === 0 ? (
-          <div className="text-center py-16 bg-gray-950/80 rounded-2xl border border-gray-800 p-8 max-w-md mx-auto">
-            <Sparkles className="w-12 h-12 text-emerald-400 mx-auto mb-4 opacity-80" />
-            <h3 className="text-xl font-bold text-white mb-2">Nenhum plano disponível</h3>
-            <p className="text-sm text-gray-400">
+          <div className="text-center py-16 bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] p-8 max-w-md mx-auto">
+            <Sparkles className="w-12 h-12 text-[var(--color-primary)] mx-auto mb-4 opacity-80" />
+            <h3 className="text-xl font-bold text-[var(--color-foreground)] mb-2">
+              Nenhum plano disponível
+            </h3>
+            <p className="text-sm text-[var(--color-muted-foreground)]">
               Os planos cadastrados pelo administrador aparecerão aqui.
             </p>
           </div>
@@ -398,52 +395,50 @@ function MeusPlanosContent() {
               const priceNum =
                 typeof plan.price === "number" ? plan.price : parseFloat(String(plan.price) || "0");
               const isCurrentPlan = subscription?.planId === plan.id;
-              const isUpgrade = Boolean(subscription && priceNum > currentPlanPrice);
+              const isUpgrade = subscription && priceNum > currentPlanPrice;
               const isPro = plan.name.toLowerCase().includes("profissional");
               const isBasic = plan.name.toLowerCase().includes("básic");
-              const isHighlighted = isPro || (!isBasic && priceNum > 100);
+              const isHighlighted = isCurrentPlan ? true : isPro || (!isBasic && priceNum > 100);
               const feats = parseFeatures(plan.features, isBasic, isPro);
-
-              // Cores e Estilos idênticos ao modal de trava
-              const cardBorder = isCurrentPlan
-                ? "border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.25)] ring-2 ring-emerald-500/30"
-                : isHighlighted
-                  ? "border-yellow-500/50 shadow-[0_0_40px_rgba(234,179,8,0.15)]"
-                  : "border-gray-800";
-
-              const iconBg = isCurrentPlan
-                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                : isHighlighted
-                  ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                  : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
-
-              const priceColor = isHighlighted ? "text-yellow-400" : "text-emerald-400";
 
               return (
                 <div
                   key={plan.id}
-                  className={`relative bg-gray-950/80 backdrop-blur-sm rounded-3xl border ${cardBorder} flex flex-col pt-8 p-8 transition-transform hover:-translate-y-1 duration-300`}
+                  className={`relative bg-[var(--color-card)] rounded-3xl shadow-xl overflow-hidden border ${
+                    isCurrentPlan
+                      ? "border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.15)] ring-2 ring-emerald-500/30"
+                      : isHighlighted
+                        ? "border-yellow-500/50 shadow-[0_0_30px_rgba(234,179,8,0.1)]"
+                        : "border-[var(--color-border)]"
+                  } hover:shadow-2xl transition-all duration-300 flex flex-col hover:-translate-y-1`}
                 >
-                  {/* Floating Badges */}
+                  {/* Status Badges */}
                   {isCurrentPlan ? (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase shadow-[0_0_15px_rgba(16,185,129,0.5)] flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5" /> SEU PLANO ATUAL
+                    <div className="absolute top-0 right-0 bg-emerald-500 text-white text-xs font-extrabold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider flex items-center gap-1 shadow-md">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      Seu Plano Atual
                     </div>
                   ) : isUpgrade ? (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-400 to-amber-500 text-yellow-950 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase shadow-[0_0_15px_rgba(250,204,21,0.5)] flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" /> DISPONÍVEL P/ UPGRADE
+                    <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950 text-xs font-extrabold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider flex items-center gap-1 shadow-md">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Disponível p/ Upgrade
                     </div>
                   ) : isHighlighted ? (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-950 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase shadow-[0_0_15px_rgba(250,204,21,0.5)] flex items-center gap-1.5">
-                      <span>⭐️</span> MAIS ESCOLHIDO
+                    <div className="absolute top-0 right-0 bg-[var(--color-primary)] text-white text-xs font-extrabold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider">
+                      Recomendado
                     </div>
                   ) : null}
 
-                  {/* Header Row: Left = Icon + Title + Subtitle / Right = Price */}
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="flex items-center gap-4">
+                  <div className="p-8 border-b border-[var(--color-border)] bg-[var(--color-muted)]/20">
+                    <div className="flex items-center gap-3 mb-2">
                       <div
-                        className={`w-12 h-12 rounded-xl flex items-center justify-center border ${iconBg}`}
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center border ${
+                          isCurrentPlan
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                            : isHighlighted
+                              ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/30"
+                              : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)] border-[var(--color-border)]"
+                        }`}
                       >
                         {isPro || isHighlighted ? (
                           <Gem className="w-6 h-6" />
@@ -452,82 +447,78 @@ function MeusPlanosContent() {
                         )}
                       </div>
                       <div>
-                        <h3 className="text-2xl font-bold text-white leading-tight">{plan.name}</h3>
-                        <p className="text-sm text-gray-400 mt-1">
-                          {isHighlighted
-                            ? "Mais recursos. Mais controle."
-                            : "Tudo que você precisa."}
+                        <h3 className="text-2xl font-bold text-[var(--color-foreground)]">
+                          {plan.name}
+                        </h3>
+                        <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
+                          {isPro ? "Para equipes e alto volume" : "Ideal para começar"}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="flex flex-col items-end">
-                        <div className="flex items-baseline gap-1">
-                          <span className={`text-3xl font-extrabold tracking-tight ${priceColor}`}>
-                            R$ {priceNum.toFixed(2).replace(".", ",")}
-                          </span>
-                        </div>
-                        <span className="text-gray-500 text-sm font-medium">/mês</span>
-                      </div>
+
+                    <div className="flex items-baseline gap-1 mt-6">
+                      <span className="text-4xl font-extrabold text-[var(--color-foreground)]">
+                        R$ {priceNum.toFixed(2)}
+                      </span>
+                      <span className="text-[var(--color-muted-foreground)] font-medium">/mês</span>
                     </div>
                   </div>
 
-                  {/* Divider */}
-                  <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent my-6" />
-
-                  {/* Features List */}
-                  <div className="flex-grow">
+                  <div className="p-8 flex-grow flex flex-col justify-between">
                     <ul className="space-y-4 mb-8">
-                      {feats.map((feat: string, idx: number) => (
-                        <li key={idx} className="flex items-start gap-3 text-[15px] text-gray-300">
+                      {feats.map((feat, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-start gap-3 text-sm text-[var(--color-foreground)]"
+                        >
                           <CheckCircle2
-                            className={`w-5 h-5 shrink-0 ${
-                              isHighlighted ? "text-yellow-500" : "text-emerald-500"
+                            className={`w-5 h-5 shrink-0 mt-0.5 ${
+                              isCurrentPlan
+                                ? "text-emerald-400"
+                                : isHighlighted
+                                  ? "text-yellow-400"
+                                  : "text-emerald-500"
                             }`}
                           />
-                          <span className="leading-tight mt-0.5">{feat.trim()}</span>
+                          <span className="leading-tight">{feat}</span>
                         </li>
                       ))}
                     </ul>
-                  </div>
 
-                  {/* Highlight Quote Box */}
-                  {isHighlighted && (
-                    <div className="bg-yellow-500/5 border border-yellow-500/10 rounded-xl p-4 mb-6 flex items-start gap-3">
-                      <TrendingUp className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                      <p className="text-sm text-yellow-200/80 leading-relaxed">
-                        Tenha uma gestão completa do seu negócio e escale seus resultados com
-                        eficiência.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Action Button & Payment Wrapper */}
-                  <div className="mt-auto">
-                    {isCurrentPlan ? (
-                      <div className="w-full py-3.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold text-center text-sm flex items-center justify-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Plano Atual em Uso
-                      </div>
-                    ) : (
-                      <div
-                        className={`[&_button]:w-full [&_button]:py-3.5 [&_button]:rounded-xl [&_button]:text-base [&_button]:font-bold [&_button]:shadow-lg [&_button]:transition-all [&_button:hover]:scale-[1.02] cursor-pointer ${
-                          isHighlighted
-                            ? "[&_button]:bg-gradient-to-r [&_button]:from-yellow-400 [&_button]:to-amber-500 [&_button]:text-yellow-950 [&_button:hover]:shadow-yellow-500/25"
-                            : "[&_button]:bg-emerald-500 [&_button]:text-white [&_button:hover]:bg-emerald-400 [&_button:hover]:shadow-emerald-500/25"
-                        }`}
-                      >
+                    <div className="mt-auto pt-4 border-t border-[var(--color-border)]">
+                      {isCurrentPlan ? (
+                        <div className="w-full py-3.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold text-center text-sm flex items-center justify-center gap-2">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Plano Atual em Uso
+                        </div>
+                      ) : isUpgrade ? (
                         <PaymentWrapper
                           planId={plan.id}
                           planName={plan.name}
                           buttonText={
-                            isUpgrade
+                            plan.name.toLowerCase().startsWith("plano")
                               ? `Fazer Upgrade para ${plan.name}`
-                              : `Assinar Plano ${plan.name}`
+                              : `Fazer Upgrade para Plano ${plan.name}`
                           }
+                          className="w-full bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-slate-950 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-yellow-500/20 hover:scale-[1.02]"
                         />
-                      </div>
-                    )}
+                      ) : (
+                        <PaymentWrapper
+                          planId={plan.id}
+                          planName={plan.name}
+                          buttonText={
+                            subscription
+                              ? plan.name.toLowerCase().startsWith("plano")
+                                ? `Trocar para ${plan.name}`
+                                : `Trocar para Plano ${plan.name}`
+                              : plan.name.toLowerCase().startsWith("plano")
+                                ? `Assinar ${plan.name}`
+                                : `Assinar Plano ${plan.name}`
+                          }
+                          className="w-full bg-[var(--color-primary)] text-white py-3.5 rounded-xl font-bold hover:opacity-90 transition-all shadow-md hover:scale-[1.02]"
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -539,17 +530,20 @@ function MeusPlanosContent() {
       {/* CANCEL CONFIRMATION MODAL */}
       {showCancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-gray-950 border border-red-500/30 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6">
+          <div className="bg-[var(--color-card)] border border-red-500/30 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6">
             <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center mx-auto">
               <AlertTriangle className="w-7 h-7" />
             </div>
 
             <div className="text-center space-y-2">
-              <h3 className="text-2xl font-bold text-white">Cancelar Assinatura?</h3>
-              <p className="text-sm text-gray-400 leading-relaxed">
+              <h3 className="text-2xl font-bold text-[var(--color-foreground)]">
+                Cancelar Assinatura?
+              </h3>
+              <p className="text-sm text-[var(--color-muted-foreground)] leading-relaxed">
                 Você tem certeza que deseja cancelar sua assinatura do plano{" "}
-                <strong className="text-white">{currentPlan?.name}</strong>? Ao cancelar, sua conta
-                voltará para as limitações gratuitas ao término do período atual.
+                <strong className="text-[var(--color-foreground)]">{currentPlan?.name}</strong>? Ao
+                cancelar, sua conta voltará para as limitações gratuitas ao término do período
+                atual.
               </p>
             </div>
 
@@ -558,7 +552,7 @@ function MeusPlanosContent() {
                 type="button"
                 onClick={() => setShowCancelModal(false)}
                 disabled={cancelLoading}
-                className="flex-1 py-3 rounded-xl bg-gray-900 hover:bg-gray-800 text-white border border-gray-800 font-semibold text-sm transition cursor-pointer"
+                className="flex-1 py-3 rounded-xl bg-[var(--color-card)] hover:bg-[var(--color-muted)] text-[var(--color-foreground)] border border-[var(--color-border)] font-semibold text-sm transition"
               >
                 Voltar
               </button>
@@ -566,7 +560,7 @@ function MeusPlanosContent() {
                 type="button"
                 onClick={handleCancelSubscription}
                 disabled={cancelLoading}
-                className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 cursor-pointer"
+                className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-red-600/30"
               >
                 {cancelLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
