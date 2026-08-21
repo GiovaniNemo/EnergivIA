@@ -62,6 +62,11 @@ export class OrganizationsController {
     return this.organizations.removeWhatsappInboundPhone(id, phoneId, user.sub);
   }
 
+  @Get("global-metrics")
+  getGlobalMetrics() {
+    return this.organizations.getGlobalMetrics();
+  }
+
   @Get(":id")
   findOne(@Param("id") id: string, @CurrentUser() user: JwtPayload) {
     return this.organizations.findOne(id, user.sub);

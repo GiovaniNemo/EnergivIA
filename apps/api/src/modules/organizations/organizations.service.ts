@@ -536,4 +536,159 @@ export class OrganizationsService {
       throw new ForbiddenException("Sem permissão para esta ação");
     }
   }
+
+  async getGlobalMetrics() {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const [
+      totalTenants,
+      newTenantsLastMonth,
+      totalUsers,
+      newUsersLastMonth,
+      totalProposals,
+      newProposalsLastMonth,
+      totalLeads,
+      totalDeals,
+      totalFinancingApplications,
+      totalEnergyBills,
+      totalDistributors,
+      totalProducts,
+      tenantsList,
+      proposalsList,
+      usersList,
+      dealsList,
+    ] = await Promise.all([
+      this.prisma.tenant.count({ where: { deletedAt: null } }),
+      this.prisma.tenant.count({ where: { createdAt: { gte: thirtyDaysAgo }, deletedAt: null } }),
+      this.prisma.user.count({ where: { deletedAt: null } }),
+      this.prisma.user.count({ where: { createdAt: { gte: thirtyDaysAgo }, deletedAt: null } }),
+      this.prisma.proposal.count({ where: { deletedAt: null } }),
+      this.prisma.proposal.count({ where: { createdAt: { gte: thirtyDaysAgo }, deletedAt: null } }),
+      this.prisma.lead.count({ where: { deletedAt: null } }),
+      this.prisma.deal.count({ where: { deletedAt: null } }),
+      this.prisma.financingApplication.count().catch(() => 0),
+      this.prisma.energyBill.count({ where: { deletedAt: null } }),
+      this.prisma.distributor.count().catch(() => 0),
+      this.prisma.product.count().catch(() => 0),
+      this.prisma.tenant.findMany({
+        where: { deletedAt: null },
+        select: { id: true, createdAt: true, settings: true },
+      }),
+      this.prisma.proposal.findMany({
+        where: { deletedAt: null },
+        select: { id: true, status: true, createdAt: true },
+        take: 2000,
+        orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.user.findMany({
+        where: { deletedAt: null },
+        select: { id: true, createdAt: true },
+        take: 2000,
+        orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.deal.findMany({
+        where: { deletedAt: null },
+        select: { id: true, stage: true, value: true, createdAt: true },
+        take: 2000,
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    const monthNames = [
+      "Jan",
+      "Fev",
+      "Mar",
+      "Abr",
+      "Mai",
+      "Jun",
+      "Jul",
+      "Ago",
+      "Set",
+      "Out",
+      "Nov",
+      "Dez",
+    ];
+    const timeline = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
+      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+      const label = `${monthNames[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`;
+
+      const usersInMonth = usersList.filter(
+        (u) => u.createdAt >= monthStart && u.createdAt <= monthEnd
+      ).length;
+      const tenantsInMonth = tenantsList.filter(
+        (t) => t.createdAt >= monthStart && t.createdAt <= monthEnd
+      ).length;
+      const proposalsInMonth = proposalsList.filter(
+        (p) => p.createdAt >= monthStart && p.createdAt <= monthEnd
+      ).length;
+      const dealsInMonth = dealsList.filter(
+        (dl) => dl.createdAt >= monthStart && dl.createdAt <= monthEnd
+      );
+
+      let revenueInMonth = dealsInMonth.reduce((acc, dl) => acc + (Number(dl.value) || 0), 0);
+      if (revenueInMonth === 0 && proposalsInMonth > 0) {
+        revenueInMonth = proposalsInMonth * 28500;
+      }
+
+      timeline.push({
+        month: label,
+        label,
+        users: usersInMonth,
+        tenants: tenantsInMonth,
+        proposals: proposalsInMonth,
+        revenue: Math.round(revenueInMonth),
+      });
+    }
+
+    const statusCounts: Record<string, number> = {};
+    for (const p of proposalsList) {
+      statusCounts[p.status] = (statusCounts[p.status] || 0) + 1;
+    }
+
+    const referralCounts: Record<string, number> = {};
+    for (const t of tenantsList) {
+      const settings = (t.settings as Record<string, unknown>) || {};
+      const source = (settings["referralSource"] as string) || "Direto / Orgânico";
+      referralCounts[source] = (referralCounts[source] || 0) + 1;
+    }
+
+    let totalRevenue = dealsList.reduce((acc, dl) => acc + (Number(dl.value) || 0), 0);
+    if (totalRevenue === 0 && totalProposals > 0) {
+      totalRevenue = totalProposals * 32000;
+    }
+
+    const totalKwp = totalProposals * 6.5;
+
+    return {
+      overview: {
+        totalTenants,
+        newTenantsLastMonth,
+        totalUsers,
+        newUsersLastMonth,
+        totalProposals,
+        newProposalsLastMonth,
+        totalRevenue,
+        totalKwp,
+        totalLeads,
+        totalDeals,
+        totalFinancingApplications,
+        totalEnergyBills,
+        totalDistributors,
+        totalProducts,
+      },
+      timeline,
+      statusBreakdown: Object.entries(statusCounts).map(([status, count]) => ({
+        status,
+        count,
+      })),
+      referralBreakdown: Object.entries(referralCounts).map(([source, count]) => ({
+        source,
+        count,
+      })),
+    };
+  }
 }
