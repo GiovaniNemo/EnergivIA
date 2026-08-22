@@ -72,10 +72,15 @@ export async function runSeedAneel(prisma: PrismaClient, customPath?: string): P
   // Identifica o arquivo CSV
   const candidates = [
     customPath,
-    path.join(process.cwd(), "empreendimento-gd.csv.csv"),
-    path.join(process.cwd(), "empreendimento-gd.csv"),
-    path.join(__dirname, "..", "..", "..", "..", "empreendimento-gd.csv.csv"),
-    path.join(__dirname, "..", "..", "..", "..", "empreendimento-gd.csv"),
+    path.resolve(process.cwd(), "empreendimento-gd.csv.csv"),
+    path.resolve(process.cwd(), "empreendimento-gd.csv"),
+    path.resolve(process.cwd(), "..", "..", "empreendimento-gd.csv.csv"),
+    path.resolve(process.cwd(), "..", "..", "empreendimento-gd.csv"),
+    path.resolve(__dirname, "../../../../empreendimento-gd.csv.csv"),
+    path.resolve(__dirname, "../../../../empreendimento-gd.csv"),
+    path.resolve(__dirname, "../../../../../empreendimento-gd.csv.csv"),
+    "C:\\Users\\Giovani\\EnergivIA\\empreendimento-gd.csv.csv",
+    "C:\\Users\\Giovani\\EnergivIA\\empreendimento-gd.csv",
   ].filter(Boolean) as string[];
 
   let targetCsv: string | undefined;
@@ -87,7 +92,10 @@ export async function runSeedAneel(prisma: PrismaClient, customPath?: string): P
   }
 
   if (!targetCsv) {
-    console.error("Arquivo CSV da ANEEL não encontrado em nenhum dos locais esperados.");
+    console.error(
+      "Arquivo CSV da ANEEL não encontrado em nenhum dos locais esperados. Candidatos testados:",
+      candidates
+    );
     return;
   }
 
