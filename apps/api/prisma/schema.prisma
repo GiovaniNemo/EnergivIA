@@ -928,9 +928,43 @@ model City {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   state State @relation(fields: [stateId], references: [id], onDelete: Cascade)
+  aneelInstallations AneelInstallation[]
 
   @@index([stateId])
   @@map("geo_cities")
+}
+
+model AneelInstallation {
+  id                    String   @id @default(cuid())
+  codeAneel             String   @unique @map("code_aneel")
+  uf                    String   @db.VarChar(2)
+  cityName              String   @map("city_name")
+  cityId                String?  @map("city_id")
+  neighborhood          String?
+  zipCode               String?  @map("zip_code")
+  distributor           String
+  classType             String   @map("class_type") // RESIDENTIAL, COMMERCIAL, INDUSTRIAL, RURAL
+  subgroup              String?  // B1, B2, B3, A4...
+  powerKwp              Decimal  @map("power_kwp") @db.Decimal(10, 2)
+  modulesCount          Int      @default(0) @map("modules_count")
+  invertersCount        Int      @default(0) @map("inverters_count")
+  connectionDate        DateTime @map("connection_date")
+  modality              String?  // GERAÇÃO NA PRÓPRIA UC, AUTOCONSUMO REMOTO, COGERAÇÃO
+  sourceType            String   @default("SOLAR_PHOTOVOLTAIC") @map("source_type")
+  latitude              Decimal? @db.Decimal(10, 7)
+  longitude             Decimal? @db.Decimal(10, 7)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  city                  City?    @relation(fields: [cityId], references: [id], onDelete: SetNull)
+
+  @@index([uf])
+  @@index([cityId])
+  @@index([cityName])
+  @@index([neighborhood])
+  @@index([connectionDate])
+  @@index([classType])
+  @@map("aneel_installations")
 }
 
 enum FinancingProviderMode {

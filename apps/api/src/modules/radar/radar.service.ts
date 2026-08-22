@@ -129,14 +129,120 @@ export class RadarService {
       }
     }
 
-    // Gera lista estruturada de usinas baseada em padrões reais da ANEEL para a localidade
-    const rawList = this.generateRealisticAneelInstallations(
-      cityName,
+    let resolvedCityId: string | undefined = query.cityId;
+    if (!resolvedCityId && cityName && uf) {
+      const dbCity = await this.prisma.city.findFirst({
+        where: {
+          name: { equals: cityName, mode: "insensitive" },
+          state: { uf },
+        },
+        select: { id: true, latitude: true, longitude: true, name: true },
+      });
+      if (dbCity) {
+        resolvedCityId = dbCity.id;
+        cityName = dbCity.name;
+        if (dbCity.latitude && dbCity.longitude) {
+          centerLat = Number(dbCity.latitude);
+          centerLng = Number(dbCity.longitude);
+        }
+      }
+    }
+
+    // 2. Busca usinas reais no banco de dados
+    const whereAneel: Record<string, unknown> = {
       uf,
-      centerLat,
-      centerLng,
-      query.radiusKm || 12
-    );
+    };
+    if (resolvedCityId) {
+      whereAneel["cityId"] = resolvedCityId;
+    } else if (cityName) {
+      whereAneel["cityName"] = { contains: cityName, mode: "insensitive" };
+    }
+    if (query.neighborhood) {
+      whereAneel["neighborhood"] = { contains: query.neighborhood, mode: "insensitive" };
+    }
+    if (query.classType && query.classType !== "ALL") {
+      whereAneel["classType"] = query.classType;
+    }
+
+    const realPlants = await this.prisma.aneelInstallation.findMany({
+      where: whereAneel,
+      orderBy: { powerKwp: "desc" },
+      take: 200,
+    });
+
+    let rawList: SolarInstallationPoint[] = [];
+
+    if (realPlants.length > 0) {
+      rawList = realPlants.map((plant, index) => {
+        const powerKwp = Number(plant.powerKwp);
+        const connectionDateStr = plant.connectionDate.toISOString().split("T")[0] || "2022-01-01";
+        const connectionYear = plant.connectionDate.getFullYear();
+        const yearsConnected = Math.max(1, new Date().getFullYear() - connectionYear);
+
+        let opportunityType: "UPGRADE_BATTERY" | "NEW_NEIGHBORS" | "RECENT" = "NEW_NEIGHBORS";
+        let leadPotentialScore = 75;
+        const nName = plant.neighborhood || "Centro";
+        let recommendedPitch = `Prospecção de vizinhos: usina de ${powerKwp} kWp conectada em ${nName}, ${cityName}.`;
+
+        if (yearsConnected >= 3) {
+          opportunityType = "UPGRADE_BATTERY";
+          leadPotentialScore = 92;
+          recommendedPitch = `Cliente antigo (${yearsConnected} anos conectado). Grande potencial para venda de aumento de potência (novos módulos), baterias ou higienização periódica.`;
+        } else if (yearsConnected <= 1) {
+          opportunityType = "RECENT";
+          leadPotentialScore = 80;
+          recommendedPitch = `Instalação recente. Momento ideal para abordar vizinhos imediatos que acompanharam a instalação.`;
+        }
+
+        // Se a usina tem coordenadas próprias usa-as, caso contrário posiciona ao redor da cidade
+        let lat = plant.latitude ? Number(plant.latitude) : centerLat;
+        let lng = plant.longitude ? Number(plant.longitude) : centerLng;
+
+        if (!plant.latitude || !plant.longitude) {
+          const angle = (index * 137.5 * Math.PI) / 180;
+          const dist = (Math.sqrt(index + 1) / Math.sqrt(realPlants.length)) * 0.04;
+          lat = centerLat + dist * Math.sin(angle);
+          lng = centerLng + dist * Math.cos(angle);
+        }
+
+        const estimatedMonthlyGenKwh = Math.round(powerKwp * 125);
+        const estimatedMonthlySavingsBrl = Math.round(estimatedMonthlyGenKwh * 0.92);
+
+        return {
+          id: plant.id,
+          codeAneel: plant.codeAneel,
+          uf: plant.uf,
+          city: plant.cityName,
+          neighborhood: plant.neighborhood || "Centro",
+          addressMasked: `Instalação Solar, nº *** - ${plant.neighborhood || "Bairro"}`,
+          distributor: plant.distributor,
+          classType:
+            (plant.classType as "RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL" | "RURAL") ||
+            "RESIDENTIAL",
+          powerKwp,
+          modulesCount: plant.modulesCount || Math.round((powerKwp * 1000) / 575),
+          invertersCount: plant.invertersCount || (powerKwp > 30 ? 2 : 1),
+          connectionDate: connectionDateStr,
+          yearsConnected,
+          opportunityType,
+          estimatedMonthlyGenKwh,
+          estimatedMonthlySavingsBrl,
+          latitude: Math.round(lat * 1000000) / 1000000,
+          longitude: Math.round(lng * 1000000) / 1000000,
+          leadPotentialScore,
+          recommendedPitch,
+        };
+      });
+    } else {
+      // Fallback para gerador estruturado se a base do município ainda não foi populada
+      rawList = this.generateRealisticAneelInstallations(
+        cityName,
+        uf,
+        centerLat,
+        centerLng,
+        query.radiusKm || 12
+      );
+    }
 
     // Aplica filtros em memória
     let filtered = rawList.filter((item) => {
