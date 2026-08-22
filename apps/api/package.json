@@ -20,6 +20,7 @@
     "db:seed:geo:irradiation": "ts-node prisma/scripts/geo/seed-irradiation.ts",
     "db:ingest:geo": "ts-node prisma/scripts/geo/ingest-geo.ts",
     "db:seed:geo": "ts-node prisma/scripts/geo/ingest-geo.ts",
+    "db:ingest:aneel": "ts-node prisma/scripts/geo/seed-aneel.ts",
     "whatsapp:cloud-setup": "bash scripts/whatsapp-cloud-setup.sh"
   },
   "dependencies": {
