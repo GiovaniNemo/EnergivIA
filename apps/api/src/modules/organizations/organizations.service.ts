@@ -650,10 +650,36 @@ export class OrganizationsService {
     }
 
     const referralCounts: Record<string, number> = {};
+    const referralMonthly: Record<string, Record<string, number>> = {};
+    const referralEntries: Array<{
+      tenantId: string;
+      source: string;
+      referredBy?: string;
+      createdAt: Date;
+      month: string;
+    }> = [];
+
     for (const t of tenantsList) {
       const settings = (t.settings as Record<string, unknown>) || {};
       const source = (settings["referralSource"] as string) || "Direto / Orgânico";
+      const referredBy = (settings["referredBy"] as string) || undefined;
       referralCounts[source] = (referralCounts[source] || 0) + 1;
+
+      const tDate = new Date(t.createdAt);
+      const mLabel = `${monthNames[tDate.getMonth()]}/${String(tDate.getFullYear()).slice(2)}`;
+
+      if (!referralMonthly[mLabel]) {
+        referralMonthly[mLabel] = {};
+      }
+      referralMonthly[mLabel][source] = (referralMonthly[mLabel][source] || 0) + 1;
+
+      referralEntries.push({
+        tenantId: t.id,
+        source,
+        referredBy,
+        createdAt: t.createdAt,
+        month: mLabel,
+      });
     }
 
     let totalRevenue = dealsList.reduce((acc, dl) => acc + (Number(dl.value) || 0), 0);
@@ -689,6 +715,8 @@ export class OrganizationsService {
         source,
         count,
       })),
+      referralMonthly,
+      referralEntries,
     };
   }
 }

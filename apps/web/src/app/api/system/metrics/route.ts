@@ -83,5 +83,49 @@ export async function GET() {
       { source: "Distribuidor Solar", count: 2 },
       { source: "Outros", count: 1 },
     ],
+    referralMonthly: {
+      "Jun/26": {
+        "Indicação de Amigo ou Integrador": 3,
+        Instagram: 2,
+        "Google / Pesquisa na Web": 1,
+      },
+      "Mai/26": {
+        "Indicação de Amigo ou Integrador": 2,
+        Instagram: 1,
+        "Google / Pesquisa na Web": 1,
+        "Distribuidor Solar": 1,
+      },
+      "Abr/26": {
+        "Indicação de Amigo ou Integrador": 2,
+        Instagram: 1,
+        "Distribuidor Solar": 1,
+        Outros: 1,
+      },
+      "Mar/26": {
+        "Indicação de Amigo ou Integrador": 1,
+        "Google / Pesquisa na Web": 1,
+      },
+    },
+    referralEntries: [
+      {
+        tenantId: "demo-1",
+        source: "Indicação de Amigo ou Integrador",
+        referredBy: "Solar Tech Engenharia",
+        createdAt: "2026-06-12T10:30:00.000Z",
+        month: "Jun/26",
+      },
+      {
+        tenantId: "demo-2",
+        source: "Instagram",
+        createdAt: "2026-06-08T14:15:00.000Z",
+        month: "Jun/26",
+      },
+      {
+        tenantId: "demo-3",
+        source: "Google / Pesquisa na Web",
+        createdAt: "2026-05-20T09:00:00.000Z",
+        month: "Mai/26",
+      },
+    ],
   });
 }

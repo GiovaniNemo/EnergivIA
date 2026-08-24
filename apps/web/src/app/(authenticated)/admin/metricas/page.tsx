@@ -75,11 +75,21 @@ interface ReferralItem {
   count: number;
 }
 
+interface ReferralEntry {
+  tenantId: string;
+  source: string;
+  referredBy?: string;
+  createdAt: string;
+  month: string;
+}
+
 interface MetricsData {
   overview: OverviewMetrics;
   timeline: TimelinePoint[];
   statusBreakdown: StatusItem[];
   referralBreakdown: ReferralItem[];
+  referralMonthly?: Record<string, Record<string, number>>;
+  referralEntries?: ReferralEntry[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -100,13 +110,24 @@ const STATUS_LABELS: Record<string, string> = {
   EXPIRED: "Expirada",
 };
 
-const REFERRAL_COLORS = ["#0ea5e9", "#10b981", "#8b5cf6", "#f59e0b", "#ec4899", "#64748b"];
+const REFERRAL_COLORS = [
+  "#0ea5e9",
+  "#10b981",
+  "#8b5cf6",
+  "#f59e0b",
+  "#ec4899",
+  "#64748b",
+  "#14b8a6",
+  "#6366f1",
+];
 
 export default function AdminMetricasPage() {
   const [data, setData] = useState<MetricsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [selectedReferralMonth, setSelectedReferralMonth] = useState<string>("ALL");
+  const [showReferralDetails, setShowReferralDetails] = useState<boolean>(false);
 
   const fetchMetrics = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
@@ -183,12 +204,45 @@ export default function AdminMetricasPage() {
     color: STATUS_COLORS[item.status] || item.color || "#0ea5e9",
   }));
 
-  const referralData = (data?.referralBreakdown ?? []).map((item, idx) => ({
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    if (data?.referralMonthly) {
+      Object.keys(data.referralMonthly).forEach((m) => months.add(m));
+    }
+    if (data?.timeline) {
+      data.timeline.forEach((t) => months.add(t.month));
+    }
+    return Array.from(months);
+  }, [data]);
+
+  const activeReferralList = useMemo(() => {
+    if (!data) return [];
+    if (selectedReferralMonth === "ALL") {
+      return data.referralBreakdown ?? [];
+    }
+    const monthMap = data.referralMonthly?.[selectedReferralMonth] || {};
+    return Object.entries(monthMap).map(([source, count]) => ({
+      source,
+      count,
+    }));
+  }, [data, selectedReferralMonth]);
+
+  const filteredReferralEntries = useMemo(() => {
+    if (!data?.referralEntries) return [];
+    if (selectedReferralMonth === "ALL") {
+      return data.referralEntries;
+    }
+    return data.referralEntries.filter((e) => e.month === selectedReferralMonth);
+  }, [data, selectedReferralMonth]);
+
+  const referralData = activeReferralList.map((item, idx) => ({
     source: item.source.length > 25 ? `${item.source.slice(0, 23)}...` : item.source,
     fullName: item.source,
     count: item.count,
     fill: REFERRAL_COLORS[idx % REFERRAL_COLORS.length],
   }));
+
+  const totalReferralsInSelectedPeriod = activeReferralList.reduce((acc, i) => acc + i.count, 0);
 
   const conversionRate =
     overview.totalLeads > 0
@@ -629,7 +683,7 @@ export default function AdminMetricasPage() {
 
         {/* Chart 4: Referral / Acquisition Sources */}
         <div className="lg:col-span-2 p-6 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-bold text-[var(--color-foreground)] flex items-center gap-2">
                 <Share2 className="h-5 w-5 text-sky-500" />
@@ -639,53 +693,148 @@ export default function AdminMetricasPage() {
                 Como os integradores solares conheceram a EnergivIA
               </p>
             </div>
-            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-md bg-sky-500/10 text-sky-500">
-              Canais
-            </span>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Filtro Mensal */}
+              <div className="flex items-center gap-1.5 bg-[var(--color-background)] px-2.5 py-1 rounded-xl border border-[var(--color-border)] text-xs">
+                <span className="text-[var(--color-muted-foreground)] font-medium">Mês:</span>
+                <select
+                  value={selectedReferralMonth}
+                  onChange={(e) => setSelectedReferralMonth(e.target.value)}
+                  className="bg-transparent font-semibold text-[var(--color-foreground)] focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">Todo o Período</option>
+                  {availableMonths.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Botão de Respostas Detalhadas */}
+              {filteredReferralEntries.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowReferralDetails(!showReferralDetails)}
+                  className={`text-xs px-2.5 py-1 rounded-xl font-medium border transition-colors cursor-pointer ${
+                    showReferralDetails
+                      ? "bg-sky-500/10 text-sky-500 border-sky-500/30"
+                      : "bg-[var(--color-background)] text-[var(--color-muted-foreground)] border-[var(--color-border)] hover:text-[var(--color-foreground)]"
+                  }`}
+                >
+                  {showReferralDetails ? "Ver Gráfico" : "Ver Respostas"}
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="h-[280px] w-full pt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                layout="vertical"
-                data={referralData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" />
-                <XAxis
-                  type="number"
-                  tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
-                />
-                <YAxis
-                  dataKey="source"
-                  type="category"
-                  width={140}
-                  tick={{ fill: "var(--color-foreground)", fontSize: 11 }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "rgba(20, 30, 40, 0.95)",
-                    borderColor: "rgba(255,255,255,0.1)",
-                    borderRadius: "12px",
-                    color: "#fff",
-                    fontSize: "12px",
-                  }}
-                  formatter={(
-                    value: unknown,
-                    _: unknown,
-                    item: { payload?: { fullName?: string } }
-                  ) => [
-                    `${String(value)} empresas (${item?.payload?.fullName ?? ""})`,
-                    "Cadastros",
-                  ]}
-                />
-                <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={18}>
-                  {referralData.map((entry, index) => (
-                    <Cell key={`bar-cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          {!showReferralDetails ? (
+            referralData.length > 0 ? (
+              <div className="h-[280px] w-full pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    layout="vertical"
+                    data={referralData}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" />
+                    <XAxis
+                      type="number"
+                      tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
+                    />
+                    <YAxis
+                      dataKey="source"
+                      type="category"
+                      width={140}
+                      tick={{ fill: "var(--color-foreground)", fontSize: 11 }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "rgba(20, 30, 40, 0.95)",
+                        borderColor: "rgba(255,255,255,0.1)",
+                        borderRadius: "12px",
+                        color: "#fff",
+                        fontSize: "12px",
+                      }}
+                      formatter={(
+                        value: unknown,
+                        _: unknown,
+                        item: { payload?: { fullName?: string } }
+                      ) => [
+                        `${String(value)} empresas (${item?.payload?.fullName ?? ""})`,
+                        "Cadastros",
+                      ]}
+                    />
+                    <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={18}>
+                      {referralData.map((entry, index) => (
+                        <Cell key={`bar-cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-[200px] flex flex-col items-center justify-center text-center p-6 text-sm text-[var(--color-muted-foreground)]">
+                <p>
+                  Nenhum cadastro com origem registrada para o mês selecionado (
+                  {selectedReferralMonth}).
+                </p>
+              </div>
+            )
+          ) : (
+            /* Lista detalhada das respostas */
+            <div className="pt-2">
+              <div className="max-h-[260px] overflow-y-auto space-y-2 pr-1">
+                {filteredReferralEntries.map((entry, i) => (
+                  <div
+                    key={`${entry.tenantId}-${i}`}
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-sky-500 shrink-0" />
+                      <div>
+                        <span className="font-semibold text-[var(--color-foreground)]">
+                          {entry.source}
+                        </span>
+                        {entry.referredBy && (
+                          <span className="text-[var(--color-muted-foreground)] ml-2">
+                            (Indicado por:{" "}
+                            <strong className="text-[var(--color-foreground)]">
+                              {entry.referredBy}
+                            </strong>
+                            )
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-500">
+                        {entry.month}
+                      </span>
+                      <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                        {new Date(entry.createdAt).toLocaleDateString("pt-BR")}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)] text-xs text-[var(--color-muted-foreground)]">
+            <span>
+              Período selecionado:{" "}
+              <strong className="text-[var(--color-foreground)]">
+                {selectedReferralMonth === "ALL" ? "Todos os meses" : selectedReferralMonth}
+              </strong>
+            </span>
+            <span>
+              Total de Cadastros:{" "}
+              <strong className="text-[var(--color-foreground)]">
+                {totalReferralsInSelectedPeriod}
+              </strong>
+            </span>
           </div>
         </div>
       </div>
