@@ -21,6 +21,11 @@ export interface SolarInstallationPoint {
   opportunityType: "UPGRADE_BATTERY" | "NEW_NEIGHBORS" | "RECENT";
   estimatedMonthlyGenKwh: number;
   estimatedMonthlySavingsBrl: number;
+  holderName?: string;
+  documentNumber?: string;
+  consumerType?: string;
+  substation?: string;
+  modality?: string;
   latitude: number;
   longitude: number;
   leadPotentialScore: number; // 0 - 100
@@ -235,6 +240,11 @@ export class RadarService {
           opportunityType,
           estimatedMonthlyGenKwh,
           estimatedMonthlySavingsBrl,
+          holderName: plant.holderName || (plant.classType === "RESIDENTIAL" ? "Pessoa Física (Residencial)" : "Titular Comercial"),
+          documentNumber: plant.documentNumber,
+          consumerType: plant.consumerType || (plant.classType === "RESIDENTIAL" ? "PF" : "PJ"),
+          substation: plant.substation,
+          modality: plant.modality || "Geração na própria UC",
           latitude: Math.round(lat * 1000000) / 1000000,
           longitude: Math.round(lng * 1000000) / 1000000,
           leadPotentialScore,

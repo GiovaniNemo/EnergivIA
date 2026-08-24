@@ -19,6 +19,11 @@ export interface InstallationPoint {
   opportunityType: "UPGRADE_BATTERY" | "NEW_NEIGHBORS" | "RECENT";
   estimatedMonthlyGenKwh: number;
   estimatedMonthlySavingsBrl: number;
+  holderName?: string;
+  documentNumber?: string;
+  consumerType?: string;
+  substation?: string;
+  modality?: string;
   latitude: number;
   longitude: number;
   leadPotentialScore: number;
@@ -453,45 +458,76 @@ export function RadarMapView({
       {selectedInstallation && (
         <div className="absolute bottom-4 left-4 right-4 md:right-auto md:w-96 z-10 bg-neutral-950/95 backdrop-blur-xl p-4 rounded-2xl border border-amber-500/30 shadow-2xl space-y-3 pointer-events-auto animate-in fade-in slide-in-from-bottom-3 duration-200">
           <div className="flex justify-between items-start">
-            <div>
+            <div className="space-y-0.5">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Score Prospecção: {selectedInstallation.leadPotentialScore}%</span>
               </div>
-              <h4 className="text-base font-bold text-white mt-0.5">
-                {selectedInstallation.neighborhood}, {selectedInstallation.city}
+              <h4 className="text-sm font-bold text-white leading-tight">
+                {selectedInstallation.holderName && selectedInstallation.holderName !== "***"
+                  ? selectedInstallation.holderName
+                  : `${selectedInstallation.neighborhood}, ${selectedInstallation.city}`}
               </h4>
+              {selectedInstallation.documentNumber && selectedInstallation.documentNumber !== "***" && (
+                <p className="text-[11px] font-mono text-neutral-400">
+                  CNPJ/CPF: {selectedInstallation.documentNumber}
+                </p>
+              )}
             </div>
-            <span className="bg-amber-500/10 text-amber-400 font-mono font-bold px-2.5 py-1 rounded-lg text-sm border border-amber-500/20">
+            <span className="bg-amber-500/10 text-amber-400 font-mono font-bold px-2.5 py-1 rounded-lg text-sm border border-amber-500/20 whitespace-nowrap">
               {selectedInstallation.powerKwp} kWp
             </span>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-xs bg-neutral-900/80 p-2.5 rounded-xl border border-neutral-800">
             <div>
-              <span className="text-neutral-400">Conexão ANEEL:</span>
+              <span className="text-neutral-400">Concessionária:</span>
+              <p className="font-semibold text-white truncate" title={selectedInstallation.distributor}>
+                {selectedInstallation.distributor || "Local"}
+              </p>
+            </div>
+            <div>
+              <span className="text-neutral-400">Conectado há:</span>
               <p className="font-semibold text-white">
-                {selectedInstallation.yearsConnected} anos atrás
+                {selectedInstallation.yearsConnected} anos ({selectedInstallation.connectionDate.split("-")[0]})
               </p>
             </div>
             <div>
-              <span className="text-neutral-400">Geração Estimada:</span>
-              <p className="font-semibold text-emerald-400">
-                ~{selectedInstallation.estimatedMonthlyGenKwh} kWh/mês
-              </p>
-            </div>
-            <div>
-              <span className="text-neutral-400">Módulos:</span>
+              <span className="text-neutral-400">Módulos Estimados:</span>
               <p className="font-semibold text-white">
                 ~{selectedInstallation.modulesCount} placas
               </p>
             </div>
             <div>
-              <span className="text-neutral-400">Economia Gerada:</span>
+              <span className="text-neutral-400">Geração / Economia:</span>
               <p className="font-semibold text-emerald-400">
                 R$ {selectedInstallation.estimatedMonthlySavingsBrl}/mês
               </p>
             </div>
+          </div>
+
+          {/* Links de Prospecção Rápida */}
+          <div className="flex gap-2 text-xs">
+            {selectedInstallation.holderName && selectedInstallation.holderName !== "***" && (
+              <a
+                href={`https://www.google.com/search?q=${encodeURIComponent(`${selectedInstallation.holderName} ${selectedInstallation.city}`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 text-center py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-neutral-300 hover:text-white transition-colors"
+              >
+                🔍 Buscar Empresa
+              </a>
+            )}
+            {selectedInstallation.documentNumber && selectedInstallation.documentNumber.length >= 14 && (
+              <a
+                href={`https://cnpj.biz/${selectedInstallation.documentNumber.replace(/\D/g, "")}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 text-center py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-neutral-300 hover:text-white transition-colors"
+              >
+                🏢 Ver Sócios/CNPJ
+              </a>
+            )}
           </div>
 
           <div className="bg-amber-500/5 border border-amber-500/15 p-2.5 rounded-xl text-xs text-amber-200/90 leading-relaxed">

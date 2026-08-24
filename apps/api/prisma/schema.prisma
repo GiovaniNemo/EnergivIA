@@ -951,6 +951,10 @@ model AneelInstallation {
   connectionDate        DateTime @map("connection_date")
   modality              String?  // GERAÇÃO NA PRÓPRIA UC, AUTOCONSUMO REMOTO, COGERAÇÃO
   sourceType            String   @default("SOLAR_PHOTOVOLTAIC") @map("source_type")
+  holderName            String?  @map("holder_name") // Razão Social / Nome da Empresa Titular
+  documentNumber        String?  @map("document_number") // CNPJ da Empresa
+  consumerType          String?  @map("consumer_type") // PJ ou PF
+  substation            String?  @map("substation") // Subestação de conexão
   latitude              Decimal? @db.Decimal(10, 7)
   longitude             Decimal? @db.Decimal(10, 7)
   createdAt             DateTime @default(now()) @map("created_at")

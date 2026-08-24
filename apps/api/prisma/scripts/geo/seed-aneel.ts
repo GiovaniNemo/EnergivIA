@@ -142,6 +142,10 @@ export async function runSeedAneel(prisma: PrismaClient, customPath?: string): P
     const zipCode = getVal("CodCEP", 15);
     const neighborhood = getVal("NomBairro", 7) || undefined;
     const modality = getVal("DscModalidadeHabilitado", 21) || undefined;
+    const holderName = getVal("NomTitularEmpreendimento", 30) || undefined;
+    const documentNumber = getVal("NumCPFCNPJ", 17) || undefined;
+    const consumerType = getVal("SigTipoConsumidor", 16) || undefined;
+    const substation = getVal("NomSubEstacao", 27) || undefined;
 
     const powerStr = getVal("MdaPotenciaInstaladaKW", 26).replace(",", ".");
     const powerKwp = parseFloat(powerStr) || 4.5;
@@ -182,6 +186,10 @@ export async function runSeedAneel(prisma: PrismaClient, customPath?: string): P
       invertersCount: powerKwp > 30 ? 2 : 1,
       connectionDate,
       modality,
+      holderName,
+      documentNumber,
+      consumerType,
+      substation,
       latitude: cityInfo?.lat,
       longitude: cityInfo?.lng,
     });

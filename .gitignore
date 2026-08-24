@@ -64,3 +64,6 @@ apps/mobile/android/app/build
 # Puppeteer / Chrome local downloads
 apps/api/chrome/
 .cache/
+
+empreendimento-geracao-distribuida.csv
+

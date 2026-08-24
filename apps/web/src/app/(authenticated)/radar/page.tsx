@@ -154,6 +154,7 @@ export default function RadarPage() {
             <table className="w-full text-left text-xs">
               <thead className="bg-neutral-950/80 text-neutral-400 border-b border-neutral-800 font-semibold uppercase tracking-wider">
                 <tr>
+                  <th className="p-3.5">Titular / Empresa</th>
                   <th className="p-3.5">Código ANEEL</th>
                   <th className="p-3.5">Bairro / Cidade</th>
                   <th className="p-3.5">Classe</th>
@@ -166,6 +167,18 @@ export default function RadarPage() {
               <tbody className="divide-y divide-neutral-800/60 text-neutral-200">
                 {installations.map((item) => (
                   <tr key={item.id} className="hover:bg-neutral-800/40 transition-colors">
+                    <td className="p-3.5">
+                      <div className="font-semibold text-white">
+                        {item.holderName && item.holderName !== "***"
+                          ? item.holderName
+                          : "Pessoa Física (Residencial)"}
+                      </div>
+                      {item.documentNumber && item.documentNumber !== "***" && (
+                        <div className="text-[11px] font-mono text-neutral-400">
+                          {item.documentNumber}
+                        </div>
+                      )}
+                    </td>
                     <td className="p-3.5 font-mono text-amber-400 font-semibold">
                       {item.codeAneel}
                     </td>
