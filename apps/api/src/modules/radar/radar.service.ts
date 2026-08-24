@@ -34,6 +34,7 @@ export interface SolarInstallationPoint {
 
 export interface RadarStats {
   totalInstallations: number;
+  totalCityInstallations?: number;
   totalPowerMwp: number;
   averagePowerKwp: number;
   upgradePotentialCount: number;
@@ -169,10 +170,15 @@ export class RadarService {
       whereAneel["classType"] = query.classType;
     }
 
+    // Contagem total de usinas existentes nesta cidade/UF na base ANEEL
+    const totalCountInCity = await this.prisma.aneelInstallation.count({
+      where: whereAneel,
+    });
+
     const realPlants = await this.prisma.aneelInstallation.findMany({
       where: whereAneel,
       orderBy: { powerKwp: "desc" },
-      take: 1000,
+      take: 2000,
     });
 
     let rawList: SolarInstallationPoint[] = [];
@@ -199,23 +205,33 @@ export class RadarService {
           recommendedPitch = `Instalação recente. Momento ideal para abordar vizinhos imediatos que acompanharam a instalação.`;
         }
 
-        // Se a usina tem coordenadas próprias usa-as, caso contrário espalha uniformemente por toda a malha da cidade
-        let lat = plant.latitude ? Number(plant.latitude) : centerLat;
-        let lng = plant.longitude ? Number(plant.longitude) : centerLng;
+        // Se a usina possui coordenadas próprias exatas (diferentes do ponto central padrão municipal), usa-as.
+        // Caso contrário, gera uma dispersão geográfica realista por toda a malha de bairros da cidade.
+        let lat = Number(plant.latitude || centerLat);
+        let lng = Number(plant.longitude || centerLng);
 
-        if (!plant.latitude || !plant.longitude) {
-          // Dispersão proporcional ao tamanho real de uma metrópole (abrange até 15-20km de raio)
-          const seed = (plant.codeAneel.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) * 9301 + 49297) % 233280;
-          const seed2 = (seed * 9301 + 49297) % 233280;
-          const randomFactor1 = seed / 233280;
-          const randomFactor2 = seed2 / 233280;
+        // Se todas as usinas herdaram a coordenada estática idêntica do centro municipal
+        const isDefaultCenter =
+          Math.abs(lat - centerLat) < 0.0001 && Math.abs(lng - centerLng) < 0.0001;
 
-          const angle = randomFactor1 * 2 * Math.PI;
-          // Distribuição de raio com densidade natural da cidade
-          const radiusDeg = Math.sqrt(randomFactor2) * 0.12; // ~13 km de amplitude urbana
+        if (!plant.latitude || !plant.longitude || isDefaultCenter) {
+          // Gerador pseudo-aleatório determinístico baseado no código ANEEL e ID da usina
+          const keyStr = `${plant.codeAneel || plant.id || ""}-${plant.neighborhood || ""}-${index}`;
+          let hash = 0;
+          for (let k = 0; k < keyStr.length; k++) {
+            hash = (hash << 5) - hash + keyStr.charCodeAt(k);
+            hash |= 0;
+          }
+          const absHash = Math.abs(hash);
+          const seed1 = (absHash % 10000) / 10000;
+          const seed2 = ((Math.floor(absHash / 10000) * 9301 + 49297) % 233280) / 233280;
+
+          // Espalha ao longo de vias, bairros e anéis da cidade (raio de até ~14km em grandes metrópoles, proporcional)
+          const angle = seed1 * 2 * Math.PI;
+          const radiusDeg = Math.sqrt(seed2) * 0.12; // ~13.5 km de distribuição realista
 
           lat = centerLat + radiusDeg * Math.cos(angle);
-          lng = centerLng + (radiusDeg * 1.1) * Math.sin(angle);
+          lng = centerLng + radiusDeg * 1.1 * Math.sin(angle);
         }
 
         const estimatedMonthlyGenKwh = Math.round(powerKwp * 125);
@@ -240,7 +256,11 @@ export class RadarService {
           opportunityType,
           estimatedMonthlyGenKwh,
           estimatedMonthlySavingsBrl,
-          holderName: plant.holderName || (plant.classType === "RESIDENTIAL" ? "Pessoa Física (Residencial)" : "Titular Comercial"),
+          holderName:
+            plant.holderName ||
+            (plant.classType === "RESIDENTIAL"
+              ? "Pessoa Física (Residencial)"
+              : "Titular Comercial"),
           documentNumber: plant.documentNumber,
           consumerType: plant.consumerType || (plant.classType === "RESIDENTIAL" ? "PF" : "PJ"),
           substation: plant.substation,
@@ -289,7 +309,7 @@ export class RadarService {
       return true;
     });
 
-    const stats = this.calculateStats(filtered);
+    const stats = this.calculateStats(filtered, totalCountInCity || filtered.length);
 
     return {
       installations: filtered,
@@ -339,10 +359,11 @@ export class RadarService {
     };
   }
 
-  private calculateStats(items: SolarInstallationPoint[]): RadarStats {
+  private calculateStats(items: SolarInstallationPoint[], totalCityCount?: number): RadarStats {
     if (items.length === 0) {
       return {
         totalInstallations: 0,
+        totalCityInstallations: totalCityCount || 0,
         totalPowerMwp: 0,
         averagePowerKwp: 0,
         upgradePotentialCount: 0,
@@ -380,6 +401,7 @@ export class RadarService {
 
     return {
       totalInstallations: items.length,
+      totalCityInstallations: totalCityCount || items.length,
       totalPowerMwp: Math.round((totalPower / 1000) * 100) / 100,
       averagePowerKwp: Math.round((totalPower / items.length) * 10) / 10,
       upgradePotentialCount: upgradeCount,

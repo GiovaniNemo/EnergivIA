@@ -6,6 +6,7 @@ import { Zap, Activity, BatteryCharging, SunMedium } from "lucide-react";
 interface RadarStatsHeaderProps {
   stats: {
     totalInstallations: number;
+    totalCityInstallations?: number;
     totalPowerMwp: number;
     averagePowerKwp: number;
     upgradePotentialCount: number;
@@ -43,8 +44,16 @@ export function RadarStatsHeader({ stats, loading }: RadarStatsHeaderProps) {
           </div>
         </div>
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-2xl font-black text-white">{stats.totalInstallations}</span>
-          <span className="text-xs text-neutral-400">conexões</span>
+          <span className="text-2xl font-black text-white">
+            {stats.totalCityInstallations && stats.totalCityInstallations > stats.totalInstallations
+              ? `${stats.totalCityInstallations.toLocaleString("pt-BR")}`
+              : stats.totalInstallations.toLocaleString("pt-BR")}
+          </span>
+          <span className="text-xs text-neutral-400">
+            {stats.totalCityInstallations && stats.totalCityInstallations > stats.totalInstallations
+              ? `usinas cadastradas (${stats.totalInstallations} no mapa)`
+              : "conexões no mapa"}
+          </span>
         </div>
         <div className="mt-1 flex items-center gap-1.5 text-[11px] text-neutral-500">
           <span>{stats.residentialPercent}% residenciais</span>

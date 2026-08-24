@@ -231,11 +231,11 @@ export function RadarMapView({
     if (typeof L["markerClusterGroup"] === "function") {
       clusterGroupRef.current = L["markerClusterGroup"]({
         chunkedLoading: true,
-        maxClusterRadius: 60, // Agrupa melhor para evitar sobreposição
-        spiderfyOnMaxZoom: false, // Desativa a teia/aranha para manter os pontos nas ruas reais
+        maxClusterRadius: 50, // Agrupa melhor para evitar sobreposição
+        spiderfyOnMaxZoom: true, // Expande em teia se houver usinas muito próximas no mesmo quarteirão/lote
         showCoverageOnHover: true,
         zoomToBoundsOnClick: true,
-        disableClusteringAtZoom: 17, // No zoom máximo (nível de casa/telhado), mostra cada pin individualmente
+        disableClusteringAtZoom: 16, // A partir do nível de rua/bairro, mostra os pins individuais
         iconCreateFunction: (cluster: { getChildCount: () => number }) => {
           const count = cluster.getChildCount();
           const isLarge = count >= 50;
@@ -468,11 +468,12 @@ export function RadarMapView({
                   ? selectedInstallation.holderName
                   : `${selectedInstallation.neighborhood}, ${selectedInstallation.city}`}
               </h4>
-              {selectedInstallation.documentNumber && selectedInstallation.documentNumber !== "***" && (
-                <p className="text-[11px] font-mono text-neutral-400">
-                  CNPJ/CPF: {selectedInstallation.documentNumber}
-                </p>
-              )}
+              {selectedInstallation.documentNumber &&
+                selectedInstallation.documentNumber !== "***" && (
+                  <p className="text-[11px] font-mono text-neutral-400">
+                    CNPJ/CPF: {selectedInstallation.documentNumber}
+                  </p>
+                )}
             </div>
             <span className="bg-amber-500/10 text-amber-400 font-mono font-bold px-2.5 py-1 rounded-lg text-sm border border-amber-500/20 whitespace-nowrap">
               {selectedInstallation.powerKwp} kWp
@@ -482,14 +483,18 @@ export function RadarMapView({
           <div className="grid grid-cols-2 gap-2 text-xs bg-neutral-900/80 p-2.5 rounded-xl border border-neutral-800">
             <div>
               <span className="text-neutral-400">Concessionária:</span>
-              <p className="font-semibold text-white truncate" title={selectedInstallation.distributor}>
+              <p
+                className="font-semibold text-white truncate"
+                title={selectedInstallation.distributor}
+              >
                 {selectedInstallation.distributor || "Local"}
               </p>
             </div>
             <div>
               <span className="text-neutral-400">Conectado há:</span>
               <p className="font-semibold text-white">
-                {selectedInstallation.yearsConnected} anos ({selectedInstallation.connectionDate.split("-")[0]})
+                {selectedInstallation.yearsConnected} anos (
+                {selectedInstallation.connectionDate.split("-")[0]})
               </p>
             </div>
             <div>
@@ -518,16 +523,17 @@ export function RadarMapView({
                 🔍 Buscar Empresa
               </a>
             )}
-            {selectedInstallation.documentNumber && selectedInstallation.documentNumber.length >= 14 && (
-              <a
-                href={`https://cnpj.biz/${selectedInstallation.documentNumber.replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 text-center py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-neutral-300 hover:text-white transition-colors"
-              >
-                🏢 Ver Sócios/CNPJ
-              </a>
-            )}
+            {selectedInstallation.documentNumber &&
+              selectedInstallation.documentNumber.length >= 14 && (
+                <a
+                  href={`https://cnpj.biz/${selectedInstallation.documentNumber.replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 text-center py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-neutral-300 hover:text-white transition-colors"
+                >
+                  🏢 Ver Sócios/CNPJ
+                </a>
+              )}
           </div>
 
           <div className="bg-amber-500/5 border border-amber-500/15 p-2.5 rounded-xl text-xs text-amber-200/90 leading-relaxed">
