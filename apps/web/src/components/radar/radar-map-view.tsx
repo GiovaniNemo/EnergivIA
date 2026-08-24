@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Sparkles, UserPlus, Layers, Satellite, Moon, Map as MapIcon, Zap, ShieldCheck } from "lucide-react";
+import { Sparkles, UserPlus, Satellite, Moon, Map as MapIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface InstallationPoint {
@@ -34,6 +34,19 @@ interface RadarMapViewProps {
 
 type MapLayerType = "dark" | "satellite" | "streets";
 
+interface LeafletClusterGroup {
+  clearLayers: () => void;
+  addLayers: (layers: unknown[]) => void;
+  addTo: (map: unknown) => unknown;
+}
+
+interface LeafletMapInstance {
+  setView: (center: [number, number], zoom: number) => unknown;
+  remove: () => void;
+  removeLayer: (layer: unknown) => void;
+  fitBounds: (bounds: [number, number][], opts?: Record<string, unknown>) => void;
+}
+
 // Configuração das camadas de alta qualidade
 const TILE_LAYERS: Record<MapLayerType, { url: string; attribution?: string; maxZoom: number }> = {
   dark: {
@@ -57,9 +70,9 @@ export function RadarMapView({
   onOpenConvertModal,
 }: RadarMapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const tileLayerRef = useRef<any>(null);
-  const clusterGroupRef = useRef<any>(null);
+  const mapInstanceRef = useRef<LeafletMapInstance | null>(null);
+  const tileLayerRef = useRef<unknown>(null);
+  const clusterGroupRef = useRef<LeafletClusterGroup | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [activeLayer, setActiveLayer] = useState<MapLayerType>("dark");
 
@@ -87,7 +100,8 @@ export function RadarMapView({
       const clusterDefaultCss = document.createElement("link");
       clusterDefaultCss.id = "markercluster-default-css";
       clusterDefaultCss.rel = "stylesheet";
-      clusterDefaultCss.href = "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css";
+      clusterDefaultCss.href =
+        "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css";
       document.head.appendChild(clusterDefaultCss);
     }
 
@@ -134,15 +148,18 @@ export function RadarMapView({
 
     // 4. Carrega scripts sequencialmente (Leaflet -> MarkerCluster)
     const loadScripts = () => {
-      const win = window as any;
+      const win = window as unknown as {
+        L?: Record<string, unknown> & { markerClusterGroup?: unknown };
+      };
       if (!win.L) {
         const scriptLeaflet = document.createElement("script");
         scriptLeaflet.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
         scriptLeaflet.async = true;
         scriptLeaflet.onload = () => {
-          if (!win.L.markerClusterGroup) {
+          if (!win.L?.markerClusterGroup) {
             const scriptCluster = document.createElement("script");
-            scriptCluster.src = "https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js";
+            scriptCluster.src =
+              "https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js";
             scriptCluster.async = true;
             scriptCluster.onload = () => setMapLoaded(true);
             document.body.appendChild(scriptCluster);
@@ -153,7 +170,8 @@ export function RadarMapView({
         document.body.appendChild(scriptLeaflet);
       } else if (!win.L.markerClusterGroup) {
         const scriptCluster = document.createElement("script");
-        scriptCluster.src = "https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js";
+        scriptCluster.src =
+          "https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js";
         scriptCluster.async = true;
         scriptCluster.onload = () => setMapLoaded(true);
         document.body.appendChild(scriptCluster);
@@ -169,44 +187,56 @@ export function RadarMapView({
   useEffect(() => {
     if (!mapLoaded || !mapContainerRef.current || mapInstanceRef.current) return;
 
-    const win = window as any;
-    const L = win.L;
-    if (!L) return;
+    const win = window as unknown as { L?: Record<string, unknown> };
+    const L = win.L as Record<string, (...args: unknown[]) => unknown> | undefined;
+    if (!L || typeof L["map"] !== "function") return;
 
     const initialLat = installations[0]?.latitude ?? -23.55052;
     const initialLng = installations[0]?.longitude ?? -46.633308;
 
-    const map = L.map(mapContainerRef.current, {
+    const map = L["map"](mapContainerRef.current, {
       zoomControl: false,
       attributionControl: false,
       preferCanvas: true, // Renderização ultra-rápida via Canvas
-    });
+    }) as LeafletMapInstance;
     map.setView([initialLat, initialLng], 13);
 
     // Controle de Zoom na direita
-    L.control.zoom({ position: "bottomright" }).addTo(map);
+    if (typeof L["control"] === "object" || typeof L["control"] === "function") {
+      const ctrl = (
+        L["control"] as {
+          zoom: (opts: Record<string, unknown>) => { addTo: (m: unknown) => unknown };
+        }
+      ).zoom({
+        position: "bottomright",
+      });
+      ctrl.addTo(map);
+    }
 
     // Camada inicial
-    tileLayerRef.current = L.tileLayer(TILE_LAYERS[activeLayer].url, {
+    tileLayerRef.current = (
+      L["tileLayer"] as (url: string, opts: Record<string, unknown>) => unknown
+    )(TILE_LAYERS[activeLayer].url, {
       maxZoom: TILE_LAYERS[activeLayer].maxZoom,
       subdomains: "abcd",
-    }).addTo(map);
+    });
+    (tileLayerRef.current as { addTo: (m: unknown) => unknown }).addTo(map);
 
     // MarkerClusterGroup com visual e zoom suave
-    if (L.markerClusterGroup) {
-      clusterGroupRef.current = L.markerClusterGroup({
+    if (typeof L["markerClusterGroup"] === "function") {
+      clusterGroupRef.current = L["markerClusterGroup"]({
         chunkedLoading: true, // Não trava o browser ao carregar 50.000 pontos
         maxClusterRadius: 45,
         spiderfyOnMaxZoom: true,
         showCoverageOnHover: false,
         zoomToBoundsOnClick: true,
-        iconCreateFunction: (cluster: any) => {
+        iconCreateFunction: (cluster: { getChildCount: () => number }) => {
           const count = cluster.getChildCount();
           const isLarge = count >= 50;
           const size = isLarge ? 46 : 38;
           const innerSize = isLarge ? 38 : 30;
 
-          return L.divIcon({
+          return (L["divIcon"] as (opts: Record<string, unknown>) => unknown)({
             html: `
               <div class="custom-cluster-marker ${isLarge ? "custom-cluster-large" : ""}" style="width: ${size}px; height: ${size}px;">
                 <div class="custom-cluster-marker-inner" style="width: ${innerSize}px; height: ${innerSize}px;">
@@ -215,15 +245,17 @@ export function RadarMapView({
               </div>
             `,
             className: "marker-cluster-custom",
-            iconSize: L.point(size, size),
+            iconSize: (L["point"] as (x: number, y: number) => unknown)(size, size),
           });
         },
-      });
-    } else {
-      clusterGroupRef.current = L.layerGroup();
+      }) as LeafletClusterGroup;
+    } else if (typeof L["layerGroup"] === "function") {
+      clusterGroupRef.current = L["layerGroup"]() as LeafletClusterGroup;
     }
 
-    clusterGroupRef.current.addTo(map);
+    if (clusterGroupRef.current) {
+      clusterGroupRef.current.addTo(map);
+    }
     mapInstanceRef.current = map;
 
     return () => {
@@ -237,22 +269,25 @@ export function RadarMapView({
     setActiveLayer(layer);
     if (!mapInstanceRef.current || !tileLayerRef.current) return;
 
-    const win = window as any;
+    const win = window as unknown as { L?: Record<string, (...args: unknown[]) => unknown> };
     const L = win.L;
     if (!L) return;
 
     mapInstanceRef.current.removeLayer(tileLayerRef.current);
-    tileLayerRef.current = L.tileLayer(TILE_LAYERS[layer].url, {
+    tileLayerRef.current = (
+      L["tileLayer"] as (url: string, opts: Record<string, unknown>) => unknown
+    )(TILE_LAYERS[layer].url, {
       maxZoom: TILE_LAYERS[layer].maxZoom,
       subdomains: "abcd",
-    }).addTo(mapInstanceRef.current);
+    });
+    (tileLayerRef.current as { addTo: (m: unknown) => unknown }).addTo(mapInstanceRef.current);
   };
 
   // Renderiza e atualiza os marcadores de forma performática
   useEffect(() => {
     if (!mapInstanceRef.current || !clusterGroupRef.current) return;
 
-    const win = window as any;
+    const win = window as unknown as { L?: Record<string, (...args: unknown[]) => unknown> };
     const L = win.L;
     if (!L) return;
 
@@ -260,7 +295,7 @@ export function RadarMapView({
 
     if (installations.length === 0) return;
 
-    const markers: any[] = [];
+    const markers: unknown[] = [];
     const bounds: [number, number][] = [];
 
     installations.forEach((item) => {
@@ -300,14 +335,22 @@ export function RadarMapView({
         </div>
       `;
 
-      const customIcon = L.divIcon({
+      const customIcon = (L["divIcon"] as (opts: Record<string, unknown>) => unknown)({
         className: "custom-solar-pin",
         html: iconHtml,
         iconSize: [size, size],
         iconAnchor: [size / 2, size / 2],
       });
 
-      const marker = L.marker([item.latitude, item.longitude], { icon: customIcon });
+      const marker = (
+        L["marker"] as (
+          coords: [number, number],
+          opts: Record<string, unknown>
+        ) => {
+          on: (event: string, fn: () => void) => void;
+          bindTooltip: (text: string, opts: Record<string, unknown>) => void;
+        }
+      )([item.latitude, item.longitude], { icon: customIcon });
 
       marker.on("click", () => {
         onSelectInstallation(item);
