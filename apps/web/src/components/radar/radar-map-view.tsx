@@ -311,11 +311,12 @@ export function RadarMapView({
       const isCommercial = item.classType === "COMMERCIAL" || item.classType === "INDUSTRIAL";
       const isSelected = selectedInstallation?.id === item.id;
 
-      const bgColor = isUpgrade
-        ? "#a855f7" // Roxo Retrofit
-        : isCommercial
-          ? "#3b82f6" // Azul Comercial
-          : "#f59e0b"; // Âmbar Residencial
+      // Cor intuitiva e condizente com a classe real da usina
+      const bgColor = isCommercial
+        ? "#3b82f6" // Azul Comercial / Industrial
+        : isUpgrade
+          ? "#a855f7" // Roxo Alvo Retrofit (> 3 anos)
+          : "#f59e0b"; // Âmbar Residencial Padrão
 
       const size = isSelected ? 34 : 26;
 

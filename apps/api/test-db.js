@@ -25,36 +25,33 @@ async function main() {
   try {
     await prisma.$connect();
     console.log("Conectado com sucesso ao banco Postgres!");
-    const count = await prisma.aneelInstallation.count();
-    console.log("Total de usinas cadastradas no banco:", count);
-
-    const spCount = await prisma.aneelInstallation.count({
-      where: { uf: "SP", cityName: { contains: "São Paulo", mode: "insensitive" } },
-    });
-    console.log("Total usinas em São Paulo (SP):", spCount);
-
-    const sample = await prisma.aneelInstallation.findMany({
-      where: { uf: "SP", cityName: { contains: "São Paulo", mode: "insensitive" } },
-      take: 5,
-      select: {
-        id: true,
-        codeAneel: true,
-        cityName: true,
-        uf: true,
-        neighborhood: true,
-        latitude: true,
-        longitude: true,
-        powerKwp: true,
+    const under50 = await prisma.aneelInstallation.count({
+      where: {
+        uf: "SP",
+        cityName: { contains: "São Paulo", mode: "insensitive" },
+        powerKwp: { lte: 50 },
       },
     });
-    console.log("Amostra de Usinas em SP:", sample);
-    const distinctCoords = await prisma.aneelInstallation.groupBy({
-      by: ["latitude", "longitude"],
-      where: { uf: "SP", cityName: { contains: "São Paulo", mode: "insensitive" } },
-      _count: { id: true },
-      take: 10,
+    const over50 = await prisma.aneelInstallation.count({
+      where: {
+        uf: "SP",
+        cityName: { contains: "São Paulo", mode: "insensitive" },
+        powerKwp: { gt: 50 },
+      },
     });
-    console.log("Distinct coords in SP:", distinctCoords);
+    console.log("Usinas em SP <= 50 kWp (Residenciais/Peq. Comércio):", under50);
+    console.log("Usinas em SP > 50 kWp (Grandes usinas comerciais/industriais):", over50);
+
+    const sampleRes = await prisma.aneelInstallation.findMany({
+      where: {
+        uf: "SP",
+        cityName: { contains: "São Paulo", mode: "insensitive" },
+        classType: "RESIDENTIAL",
+      },
+      take: 5,
+      select: { codeAneel: true, powerKwp: true, classType: true, connectionDate: true },
+    });
+    console.log("Amostra de Usinas Residenciais:", sampleRes);
   } catch (err) {
     console.error("Erro na conexão:", err.message);
   } finally {

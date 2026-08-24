@@ -169,6 +169,12 @@ export class RadarService {
     if (query.classType && query.classType !== "ALL") {
       whereAneel["classType"] = query.classType;
     }
+    if (query.minKwp || query.maxKwp) {
+      const powerFilter: Record<string, number> = {};
+      if (query.minKwp) powerFilter["gte"] = query.minKwp;
+      if (query.maxKwp) powerFilter["lte"] = query.maxKwp;
+      whereAneel["powerKwp"] = powerFilter;
+    }
 
     // Contagem total de usinas existentes nesta cidade/UF na base ANEEL
     const totalCountInCity = await this.prisma.aneelInstallation.count({
@@ -177,7 +183,7 @@ export class RadarService {
 
     const realPlants = await this.prisma.aneelInstallation.findMany({
       where: whereAneel,
-      orderBy: { powerKwp: "desc" },
+      orderBy: [{ connectionDate: "desc" }, { powerKwp: "desc" }],
       take: 2000,
     });
 
