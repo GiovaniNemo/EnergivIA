@@ -72,15 +72,15 @@ export async function runSeedAneel(prisma: PrismaClient, customPath?: string): P
   // Identifica o arquivo CSV
   const candidates = [
     customPath,
+    path.resolve(process.cwd(), "empreendimento-geracao-distribuida.csv"),
     path.resolve(process.cwd(), "empreendimento-gd.csv.csv"),
     path.resolve(process.cwd(), "empreendimento-gd.csv"),
+    path.resolve(process.cwd(), "..", "..", "empreendimento-geracao-distribuida.csv"),
     path.resolve(process.cwd(), "..", "..", "empreendimento-gd.csv.csv"),
     path.resolve(process.cwd(), "..", "..", "empreendimento-gd.csv"),
+    path.resolve(__dirname, "../../../../empreendimento-geracao-distribuida.csv"),
     path.resolve(__dirname, "../../../../empreendimento-gd.csv.csv"),
     path.resolve(__dirname, "../../../../empreendimento-gd.csv"),
-    path.resolve(__dirname, "../../../../../empreendimento-gd.csv.csv"),
-    "C:\\Users\\Giovani\\EnergivIA\\empreendimento-gd.csv.csv",
-    "C:\\Users\\Giovani\\EnergivIA\\empreendimento-gd.csv",
   ].filter(Boolean) as string[];
 
   let targetCsv: string | undefined;

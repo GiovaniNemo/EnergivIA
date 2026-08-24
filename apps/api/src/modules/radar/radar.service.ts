@@ -167,7 +167,7 @@ export class RadarService {
     const realPlants = await this.prisma.aneelInstallation.findMany({
       where: whereAneel,
       orderBy: { powerKwp: "desc" },
-      take: 200,
+      take: 1000,
     });
 
     let rawList: SolarInstallationPoint[] = [];
@@ -194,13 +194,13 @@ export class RadarService {
           recommendedPitch = `Instalação recente. Momento ideal para abordar vizinhos imediatos que acompanharam a instalação.`;
         }
 
-        // Se a usina tem coordenadas próprias usa-as, caso contrário posiciona ao redor da cidade
+        // Se a usina tem coordenadas próprias usa-as, caso contrário distribui em padrão de malha urbana realista
         let lat = plant.latitude ? Number(plant.latitude) : centerLat;
         let lng = plant.longitude ? Number(plant.longitude) : centerLng;
 
         if (!plant.latitude || !plant.longitude) {
           const angle = (index * 137.5 * Math.PI) / 180;
-          const dist = (Math.sqrt(index + 1) / Math.sqrt(realPlants.length)) * 0.04;
+          const dist = (Math.sqrt(index + 1) / Math.sqrt(realPlants.length)) * 0.05;
           lat = centerLat + dist * Math.sin(angle);
           lng = centerLng + dist * Math.cos(angle);
         }
