@@ -83,6 +83,20 @@ interface ReferralEntry {
   month: string;
 }
 
+interface MonthlyMetricData {
+  month: string;
+  label: string;
+  tenantsCount: number;
+  usersCount: number;
+  proposalsCount: number;
+  dealsCount: number;
+  revenue: number;
+  kwp: number;
+  statusBreakdown: Record<string, number>;
+  referralBreakdown: Record<string, number>;
+  referralEntries: ReferralEntry[];
+}
+
 interface MetricsData {
   overview: OverviewMetrics;
   timeline: TimelinePoint[];
@@ -90,6 +104,7 @@ interface MetricsData {
   referralBreakdown: ReferralItem[];
   referralMonthly?: Record<string, Record<string, number>>;
   referralEntries?: ReferralEntry[];
+  monthlyMetrics?: Record<string, MonthlyMetricData>;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -126,7 +141,7 @@ export default function AdminMetricasPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>("");
-  const [selectedReferralMonth, setSelectedReferralMonth] = useState<string>("ALL");
+  const [selectedGlobalMonth, setSelectedGlobalMonth] = useState<string>("ALL");
   const [showReferralDetails, setShowReferralDetails] = useState<boolean>(false);
 
   const fetchMetrics = useCallback(async (isManual = false) => {
@@ -158,6 +173,9 @@ export default function AdminMetricasPage() {
 
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
+    if (data?.monthlyMetrics) {
+      Object.keys(data.monthlyMetrics).forEach((m) => months.add(m));
+    }
     if (data?.referralMonthly) {
       Object.keys(data.referralMonthly).forEach((m) => months.add(m));
     }
@@ -167,25 +185,50 @@ export default function AdminMetricasPage() {
     return Array.from(months);
   }, [data]);
 
+  const selectedMonthData = useMemo(() => {
+    if (!data?.monthlyMetrics || selectedGlobalMonth === "ALL") return null;
+    return data.monthlyMetrics[selectedGlobalMonth] ?? null;
+  }, [data, selectedGlobalMonth]);
+
   const activeReferralList = useMemo(() => {
     if (!data) return [];
-    if (selectedReferralMonth === "ALL") {
+    if (selectedGlobalMonth === "ALL") {
       return data.referralBreakdown ?? [];
     }
-    const monthMap = data.referralMonthly?.[selectedReferralMonth] || {};
+    const monthMap =
+      selectedMonthData?.referralBreakdown || data.referralMonthly?.[selectedGlobalMonth] || {};
     return Object.entries(monthMap).map(([source, count]) => ({
       source,
       count,
     }));
-  }, [data, selectedReferralMonth]);
+  }, [data, selectedGlobalMonth, selectedMonthData]);
 
   const filteredReferralEntries = useMemo(() => {
     if (!data?.referralEntries) return [];
-    if (selectedReferralMonth === "ALL") {
+    if (selectedGlobalMonth === "ALL") {
       return data.referralEntries;
     }
-    return data.referralEntries.filter((e) => e.month === selectedReferralMonth);
-  }, [data, selectedReferralMonth]);
+    if (selectedMonthData?.referralEntries) {
+      return selectedMonthData.referralEntries;
+    }
+    return data.referralEntries.filter((e) => e.month === selectedGlobalMonth);
+  }, [data, selectedGlobalMonth, selectedMonthData]);
+
+  const effectiveStatusList = useMemo(() => {
+    if (!data) return [];
+    if (selectedGlobalMonth === "ALL") {
+      return data.statusBreakdown ?? [];
+    }
+    if (selectedMonthData?.statusBreakdown) {
+      return Object.entries(selectedMonthData.statusBreakdown).map(([status, count]) => ({
+        status,
+        label: STATUS_LABELS[status] || status,
+        count,
+        color: STATUS_COLORS[status] || "#0ea5e9",
+      }));
+    }
+    return data.statusBreakdown ?? [];
+  }, [data, selectedGlobalMonth, selectedMonthData]);
 
   const formatCurrency = (val: number) => {
     if (val >= 1_000_000) {
@@ -229,7 +272,16 @@ export default function AdminMetricasPage() {
 
   const timeline = data?.timeline ?? [];
 
-  const statusPieData = (data?.statusBreakdown ?? []).map((item) => ({
+  const displayTenants = selectedMonthData ? selectedMonthData.tenantsCount : overview.totalTenants;
+  const displayUsers = selectedMonthData ? selectedMonthData.usersCount : overview.totalUsers;
+  const displayProposals = selectedMonthData
+    ? selectedMonthData.proposalsCount
+    : overview.totalProposals;
+  const displayRevenue = selectedMonthData ? selectedMonthData.revenue : overview.totalRevenue;
+  const displayKwp = selectedMonthData ? selectedMonthData.kwp : overview.totalKwp;
+  const displayDeals = selectedMonthData ? selectedMonthData.dealsCount : overview.totalDeals;
+
+  const statusPieData = effectiveStatusList.map((item) => ({
     name: STATUS_LABELS[item.status] || item.label || item.status,
     value: item.count,
     color: STATUS_COLORS[item.status] || item.color || "#0ea5e9",
@@ -252,7 +304,7 @@ export default function AdminMetricasPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)] animate-in fade-in duration-300 space-y-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border)] pb-6">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[var(--color-border)] pb-6">
         <div>
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 dark:bg-emerald-500/20">
@@ -263,14 +315,36 @@ export default function AdminMetricasPage() {
                 Plataforma: Métricas Globais
               </h1>
               <p className="text-sm text-[var(--color-muted-foreground)] mt-0.5">
-                Visão em tempo real do uso da plataforma EnergivIA por todos os locatários (tenants)
+                Visão de uso e desempenho da plataforma EnergivIA{" "}
+                {selectedGlobalMonth === "ALL"
+                  ? "(Consolidado Histórico)"
+                  : `em ${selectedGlobalMonth}`}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Live Indicator & Actions */}
-        <div className="flex items-center gap-3">
+        {/* Global Month Filter & Actions */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Seletor Global de Mês */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm">
+            <span className="text-xs font-semibold text-[var(--color-muted-foreground)] whitespace-nowrap">
+              Filtrar por Mês:
+            </span>
+            <select
+              value={selectedGlobalMonth}
+              onChange={(e) => setSelectedGlobalMonth(e.target.value)}
+              className="bg-transparent font-bold text-xs text-[var(--color-foreground)] focus:outline-none cursor-pointer pr-1"
+            >
+              <option value="ALL">Todo o Histórico (Geral)</option>
+              {availableMonths.map((m) => (
+                <option key={m} value={m}>
+                  Mês de {m}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -301,7 +375,9 @@ export default function AdminMetricasPage() {
         <div className="p-5 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm hover:border-[var(--color-primary)]/40 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--color-muted-foreground)]">
-              Organizações (Tenants)
+              {selectedGlobalMonth === "ALL"
+                ? "Organizações (Total)"
+                : `Novas Empresas em ${selectedGlobalMonth}`}
             </span>
             <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
               <Building2 className="h-4 w-4" />
@@ -309,14 +385,16 @@ export default function AdminMetricasPage() {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-[var(--color-foreground)]">
-              {formatNumber(overview.totalTenants)}
+              {formatNumber(displayTenants)}
             </span>
-            <span className="text-xs font-medium text-emerald-500 flex items-center">
-              <ArrowUpRight className="h-3 w-3" /> +{overview.newTenantsLastMonth} mês
-            </span>
+            {selectedGlobalMonth === "ALL" && (
+              <span className="text-xs font-medium text-emerald-500 flex items-center">
+                <ArrowUpRight className="h-3 w-3" /> +{overview.newTenantsLastMonth} mês
+              </span>
+            )}
           </div>
           <p className="mt-1 text-[11px] text-[var(--color-muted-foreground)]">
-            Empresas integradoras ativas
+            Empresas integradoras cadastradas
           </p>
         </div>
 
@@ -324,7 +402,9 @@ export default function AdminMetricasPage() {
         <div className="p-5 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm hover:border-[var(--color-primary)]/40 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--color-muted-foreground)]">
-              Usuários Cadastrados
+              {selectedGlobalMonth === "ALL"
+                ? "Usuários (Total)"
+                : `Novos Usuários em ${selectedGlobalMonth}`}
             </span>
             <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
               <Users className="h-4 w-4" />
@@ -332,11 +412,13 @@ export default function AdminMetricasPage() {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-[var(--color-foreground)]">
-              {formatNumber(overview.totalUsers)}
+              {formatNumber(displayUsers)}
             </span>
-            <span className="text-xs font-medium text-emerald-500 flex items-center">
-              <ArrowUpRight className="h-3 w-3" /> +{overview.newUsersLastMonth} mês
-            </span>
+            {selectedGlobalMonth === "ALL" && (
+              <span className="text-xs font-medium text-emerald-500 flex items-center">
+                <ArrowUpRight className="h-3 w-3" /> +{overview.newUsersLastMonth} mês
+              </span>
+            )}
           </div>
           <p className="mt-1 text-[11px] text-[var(--color-muted-foreground)]">
             Vendedores e gestores solares
@@ -347,7 +429,9 @@ export default function AdminMetricasPage() {
         <div className="p-5 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm hover:border-[var(--color-primary)]/40 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--color-muted-foreground)]">
-              Propostas Geradas
+              {selectedGlobalMonth === "ALL"
+                ? "Propostas Geradas (Total)"
+                : `Propostas em ${selectedGlobalMonth}`}
             </span>
             <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
               <FileText className="h-4 w-4" />
@@ -355,11 +439,13 @@ export default function AdminMetricasPage() {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-[var(--color-foreground)]">
-              {formatNumber(overview.totalProposals)}
+              {formatNumber(displayProposals)}
             </span>
-            <span className="text-xs font-medium text-emerald-500 flex items-center">
-              <ArrowUpRight className="h-3 w-3" /> +{overview.newProposalsLastMonth} mês
-            </span>
+            {selectedGlobalMonth === "ALL" && (
+              <span className="text-xs font-medium text-emerald-500 flex items-center">
+                <ArrowUpRight className="h-3 w-3" /> +{overview.newProposalsLastMonth} mês
+              </span>
+            )}
           </div>
           <p className="mt-1 text-[11px] text-[var(--color-muted-foreground)]">
             Links públicos & PDFs emitidos
@@ -370,7 +456,9 @@ export default function AdminMetricasPage() {
         <div className="p-5 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm hover:border-[var(--color-primary)]/40 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--color-muted-foreground)]">
-              Volume Estimado (R$)
+              {selectedGlobalMonth === "ALL"
+                ? "Volume Estimado (Total)"
+                : `Volume em ${selectedGlobalMonth}`}
             </span>
             <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
               <Banknote className="h-4 w-4" />
@@ -378,14 +466,11 @@ export default function AdminMetricasPage() {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-[var(--color-foreground)]">
-              {formatCurrency(overview.totalRevenue)}
-            </span>
-            <span className="text-xs font-medium text-emerald-500 flex items-center">
-              <ArrowUpRight className="h-3 w-3" /> +18%
+              {formatCurrency(displayRevenue)}
             </span>
           </div>
           <p className="mt-1 text-[11px] text-[var(--color-muted-foreground)]">
-            Valor negociado em propostas
+            Valor estimado em propostas
           </p>
         </div>
 
@@ -393,7 +478,9 @@ export default function AdminMetricasPage() {
         <div className="p-5 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm hover:border-[var(--color-primary)]/40 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--color-muted-foreground)]">
-              Potência Total Dimensionada
+              {selectedGlobalMonth === "ALL"
+                ? "Potência Dimensionada"
+                : `Potência em ${selectedGlobalMonth}`}
             </span>
             <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-500">
               <Zap className="h-4 w-4" />
@@ -401,9 +488,9 @@ export default function AdminMetricasPage() {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-[var(--color-foreground)]">
-              {overview.totalKwp > 1000
-                ? `${(overview.totalKwp / 1000).toFixed(2)} MWp`
-                : `${overview.totalKwp.toFixed(1)} kWp`}
+              {displayKwp > 1000
+                ? `${(displayKwp / 1000).toFixed(2)} MWp`
+                : `${displayKwp.toFixed(1)} kWp`}
             </span>
           </div>
           <p className="mt-1 text-[11px] text-[var(--color-muted-foreground)]">
@@ -411,11 +498,13 @@ export default function AdminMetricasPage() {
           </p>
         </div>
 
-        {/* Card 6: Leads */}
+        {/* Card 6: Deals / Negociações */}
         <div className="p-5 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm hover:border-[var(--color-primary)]/40 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--color-muted-foreground)]">
-              Leads no Pipeline
+              {selectedGlobalMonth === "ALL"
+                ? "Negócios / Deals"
+                : `Negócios em ${selectedGlobalMonth}`}
             </span>
             <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500">
               <TrendingUp className="h-4 w-4" />
@@ -423,11 +512,11 @@ export default function AdminMetricasPage() {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-[var(--color-foreground)]">
-              {formatNumber(overview.totalLeads)}
+              {formatNumber(displayDeals)}
             </span>
           </div>
           <p className="mt-1 text-[11px] text-[var(--color-muted-foreground)]">
-            Oportunidades em negociação
+            Propostas em estágio de negociação
           </p>
         </div>
 
@@ -699,11 +788,11 @@ export default function AdminMetricasPage() {
               <div className="flex items-center gap-1.5 bg-[var(--color-background)] px-2.5 py-1 rounded-xl border border-[var(--color-border)] text-xs">
                 <span className="text-[var(--color-muted-foreground)] font-medium">Mês:</span>
                 <select
-                  value={selectedReferralMonth}
-                  onChange={(e) => setSelectedReferralMonth(e.target.value)}
+                  value={selectedGlobalMonth}
+                  onChange={(e) => setSelectedGlobalMonth(e.target.value)}
                   className="bg-transparent font-semibold text-[var(--color-foreground)] focus:outline-none cursor-pointer"
                 >
-                  <option value="ALL">Todo o Período</option>
+                  <option value="ALL">Todo o Histórico</option>
                   {availableMonths.map((m) => (
                     <option key={m} value={m}>
                       {m}
@@ -778,7 +867,7 @@ export default function AdminMetricasPage() {
               <div className="h-[200px] flex flex-col items-center justify-center text-center p-6 text-sm text-[var(--color-muted-foreground)]">
                 <p>
                   Nenhum cadastro com origem registrada para o mês selecionado (
-                  {selectedReferralMonth}).
+                  {selectedGlobalMonth}).
                 </p>
               </div>
             )
@@ -826,7 +915,7 @@ export default function AdminMetricasPage() {
             <span>
               Período selecionado:{" "}
               <strong className="text-[var(--color-foreground)]">
-                {selectedReferralMonth === "ALL" ? "Todos os meses" : selectedReferralMonth}
+                {selectedGlobalMonth === "ALL" ? "Todos os meses" : selectedGlobalMonth}
               </strong>
             </span>
             <span>

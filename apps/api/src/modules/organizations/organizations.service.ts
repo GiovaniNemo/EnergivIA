@@ -609,38 +609,112 @@ export class OrganizationsService {
       "Nov",
       "Dez",
     ];
-    const timeline = [];
-    for (let i = 5; i >= 0; i--) {
+
+    // Build complete monthly breakdown for the last 12 months (or available data)
+    const monthlyMetrics: Record<
+      string,
+      {
+        month: string;
+        label: string;
+        tenantsCount: number;
+        usersCount: number;
+        proposalsCount: number;
+        dealsCount: number;
+        revenue: number;
+        kwp: number;
+        statusBreakdown: Record<string, number>;
+        referralBreakdown: Record<string, number>;
+        referralEntries: Array<{
+          tenantId: string;
+          source: string;
+          referredBy?: string;
+          createdAt: Date;
+          month: string;
+        }>;
+      }
+    > = {};
+
+    for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
       const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
       const label = `${monthNames[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`;
 
-      const usersInMonth = usersList.filter(
+      const usersInM = usersList.filter(
         (u) => u.createdAt >= monthStart && u.createdAt <= monthEnd
-      ).length;
-      const tenantsInMonth = tenantsList.filter(
+      );
+      const tenantsInM = tenantsList.filter(
         (t) => t.createdAt >= monthStart && t.createdAt <= monthEnd
-      ).length;
-      const proposalsInMonth = proposalsList.filter(
+      );
+      const proposalsInM = proposalsList.filter(
         (p) => p.createdAt >= monthStart && p.createdAt <= monthEnd
-      ).length;
-      const dealsInMonth = dealsList.filter(
+      );
+      const dealsInM = dealsList.filter(
         (dl) => dl.createdAt >= monthStart && dl.createdAt <= monthEnd
       );
 
-      let revenueInMonth = dealsInMonth.reduce((acc, dl) => acc + (Number(dl.value) || 0), 0);
-      if (revenueInMonth === 0 && proposalsInMonth > 0) {
-        revenueInMonth = proposalsInMonth * 28500;
+      let rev = dealsInM.reduce((acc, dl) => acc + (Number(dl.value) || 0), 0);
+      if (rev === 0 && proposalsInM.length > 0) {
+        rev = proposalsInM.length * 28500;
       }
+
+      const mStatusCounts: Record<string, number> = {};
+      for (const p of proposalsInM) {
+        mStatusCounts[p.status] = (mStatusCounts[p.status] || 0) + 1;
+      }
+
+      const mReferralCounts: Record<string, number> = {};
+      const mReferralEntries: Array<{
+        tenantId: string;
+        source: string;
+        referredBy?: string;
+        createdAt: Date;
+        month: string;
+      }> = [];
+
+      for (const t of tenantsInM) {
+        const settings = (t.settings as Record<string, unknown>) || {};
+        const source = (settings["referralSource"] as string) || "Direto / Orgânico";
+        const referredBy = (settings["referredBy"] as string) || undefined;
+        mReferralCounts[source] = (mReferralCounts[source] || 0) + 1;
+
+        mReferralEntries.push({
+          tenantId: t.id,
+          source,
+          referredBy,
+          createdAt: t.createdAt,
+          month: label,
+        });
+      }
+
+      monthlyMetrics[label] = {
+        month: label,
+        label,
+        tenantsCount: tenantsInM.length,
+        usersCount: usersInM.length,
+        proposalsCount: proposalsInM.length,
+        dealsCount: dealsInM.length,
+        revenue: Math.round(rev),
+        kwp: Number((proposalsInM.length * 6.5).toFixed(1)),
+        statusBreakdown: mStatusCounts,
+        referralBreakdown: mReferralCounts,
+        referralEntries: mReferralEntries,
+      };
+    }
+
+    const timeline = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = `${monthNames[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`;
+      const mData = monthlyMetrics[label];
 
       timeline.push({
         month: label,
         label,
-        users: usersInMonth,
-        tenants: tenantsInMonth,
-        proposals: proposalsInMonth,
-        revenue: Math.round(revenueInMonth),
+        users: mData?.usersCount ?? 0,
+        tenants: mData?.tenantsCount ?? 0,
+        proposals: mData?.proposalsCount ?? 0,
+        revenue: mData?.revenue ?? 0,
       });
     }
 
@@ -717,6 +791,7 @@ export class OrganizationsService {
       })),
       referralMonthly,
       referralEntries,
+      monthlyMetrics,
     };
   }
 }
