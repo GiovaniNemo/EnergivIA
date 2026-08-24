@@ -52,22 +52,29 @@ interface LeafletMapInstance {
   fitBounds: (bounds: [number, number][], opts?: Record<string, unknown>) => void;
 }
 
-// Configuração das camadas de alta estabilidade e sem limitação de IP (CartoDB e Esri)
-const TILE_LAYERS: Record<MapLayerType, { url: string; subdomains: string; maxZoom: number }> = {
+// Configuração das camadas com suporte a zoom máximo sem erro de 'Map data not yet available'
+const TILE_LAYERS: Record<
+  MapLayerType,
+  { url: string; subdomains: string; maxZoom: number; maxNativeZoom?: number }
+> = {
   dark: {
     url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
     subdomains: "abcd",
-    maxZoom: 20,
+    maxZoom: 22,
+    maxNativeZoom: 19,
   },
   satellite: {
-    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    subdomains: "abc",
-    maxZoom: 19,
+    // Google Satellite HD (Ultra-nítido para telhados e painéis solares em todo o Brasil)
+    url: "https://mt{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}",
+    subdomains: "0123",
+    maxZoom: 22,
+    maxNativeZoom: 20,
   },
   streets: {
     url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png",
     subdomains: "abcd",
-    maxZoom: 20,
+    maxZoom: 22,
+    maxNativeZoom: 19,
   },
 };
 
@@ -227,6 +234,7 @@ export function RadarMapView({
       L["tileLayer"] as (url: string, opts: Record<string, unknown>) => unknown
     )(initialConfig.url, {
       maxZoom: initialConfig.maxZoom,
+      maxNativeZoom: initialConfig.maxNativeZoom,
       subdomains: initialConfig.subdomains,
       keepBuffer: 8,
     });
@@ -290,6 +298,7 @@ export function RadarMapView({
       L["tileLayer"] as (url: string, opts: Record<string, unknown>) => unknown
     )(cfg.url, {
       maxZoom: cfg.maxZoom,
+      maxNativeZoom: cfg.maxNativeZoom,
       subdomains: cfg.subdomains,
       keepBuffer: 8,
     });
