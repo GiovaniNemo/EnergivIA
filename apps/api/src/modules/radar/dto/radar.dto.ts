@@ -65,8 +65,9 @@ export class ConvertRadarLeadDto {
   @IsString()
   name!: string;
 
+  @IsOptional()
   @IsString()
-  whatsapp!: string;
+  whatsapp?: string;
 
   @IsOptional()
   @IsString()

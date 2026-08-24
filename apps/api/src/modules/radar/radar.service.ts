@@ -237,13 +237,20 @@ export class RadarService {
         const estimatedMonthlyGenKwh = Math.round(powerKwp * 125);
         const estimatedMonthlySavingsBrl = Math.round(estimatedMonthlyGenKwh * 0.92);
 
+        const neighborhoodDisplay =
+          plant.neighborhood && plant.neighborhood.trim() !== ""
+            ? plant.neighborhood
+            : plant.zipCode
+              ? `CEP ${plant.zipCode}`
+              : "Área Urbana";
+
         return {
           id: plant.id,
           codeAneel: plant.codeAneel,
           uf: plant.uf,
           city: plant.cityName,
-          neighborhood: plant.neighborhood || "Centro",
-          addressMasked: `Instalação Solar, nº *** - ${plant.neighborhood || "Bairro"}`,
+          neighborhood: neighborhoodDisplay,
+          addressMasked: `Instalação Solar, nº *** - ${neighborhoodDisplay}`,
           distributor: plant.distributor,
           classType:
             (plant.classType as "RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL" | "RURAL") ||
@@ -272,14 +279,7 @@ export class RadarService {
         };
       });
     } else {
-      // Fallback para gerador estruturado se a base do município ainda não foi populada
-      rawList = this.generateRealisticAneelInstallations(
-        cityName,
-        uf,
-        centerLat,
-        centerLng,
-        query.radiusKm || 12
-      );
+      rawList = [];
     }
 
     // Aplica filtros em memória
@@ -325,10 +325,13 @@ export class RadarService {
       throw new BadRequestException("Organização obrigatória.");
     }
 
-    // 1. Cria o Lead
+    // 1. Cria o Lead (com whatsapp ou identificador de prospecção)
+    const phone =
+      dto.whatsapp && dto.whatsapp.replace(/\D/g, "").length >= 10 ? dto.whatsapp : "0000000000";
+
     const lead = await this.leadsService.create(tenantId, {
       name: dto.name,
-      whatsapp: dto.whatsapp,
+      whatsapp: phone,
       email: dto.email || undefined,
       company: dto.neighborhood ? `Residência/Empresa (${dto.neighborhood})` : undefined,
       source: "Radar Solar (ANEEL)",
@@ -340,7 +343,10 @@ export class RadarService {
       title: dealTitle,
       stage: "NEW",
       temperature: "WARM",
-      nextActionType: "Mensagem WhatsApp de Vizinhança / Retrofit",
+      nextActionType:
+        dto.whatsapp && dto.whatsapp.replace(/\D/g, "").length >= 10
+          ? "Mensagem WhatsApp de Vizinhança / Retrofit"
+          : "Visita de Campo / Obtenção de Contato",
       nextActionAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     });
 
@@ -411,160 +417,5 @@ export class RadarService {
       estimatedMonthlyGenerationMwh: Math.round(monthlyGen / 1000),
       topNeighborhoods,
     };
-  }
-
-  private generateRealisticAneelInstallations(
-    city: string,
-    uf: string,
-    baseLat: number,
-    baseLng: number,
-    radiusKm: number
-  ): SolarInstallationPoint[] {
-    const neighborhoodsSP = [
-      "Jardim América",
-      "Vila Mariana",
-      "Moema",
-      "Pinheiros",
-      "Santana",
-      "Morumbi",
-      "Tatuapé",
-      "Bela Vista",
-      "Perdizes",
-      "Itaim Bibi",
-      "Santo Amaro",
-      "Alto de Pinheiros",
-    ];
-
-    const neighborhoodsGeneral = [
-      "Centro",
-      "Jardim Europa",
-      "Bela Vista",
-      "São José",
-      "Santa Maria",
-      "Boa Vista",
-      "Parque das Flores",
-      "Vila Nova",
-      "Jardim Alvorada",
-      "Industrial",
-      "Planalto",
-      "Recanto dos Pássaros",
-    ];
-
-    const neighborhoods =
-      uf === "SP" && city.toLowerCase().includes("são paulo")
-        ? neighborhoodsSP
-        : neighborhoodsGeneral;
-
-    const distributors: Record<string, string> = {
-      SP: "Enel SP / CPFL Paulista / Elektro",
-      RJ: "Light / Enel RJ",
-      MG: "Cemig",
-      PR: "Copel",
-      SC: "Celesc",
-      RS: "RGE / CEEE Equatorial",
-      GO: "Equatorial Goiás",
-      BA: "Neoenergia Coelba",
-      PE: "Neoenergia Pernambuco",
-      CE: "Enel Ceará",
-      DF: "Neoenergia Brasília",
-      ES: "EDP Espírito Santo",
-      MT: "Energisa Mato Grosso",
-      MS: "Energisa Mato Grosso do Sul",
-    };
-
-    const distributor = distributors[uf] || `Distribuidora Local (${uf})`;
-
-    // Gera um seed numérico determinístico baseado no nome da cidade e UF
-    let citySeed = 0;
-    const seedStr = `${city}-${uf}`.toLowerCase();
-    for (let c = 0; c < seedStr.length; c++) {
-      citySeed = (citySeed * 31 + seedStr.charCodeAt(c)) >>> 0;
-    }
-
-    const count = 45; // Amostra densa e rápida para visualização imediata
-    const list: SolarInstallationPoint[] = [];
-
-    for (let i = 1; i <= count; i++) {
-      // Distribuição pseudo-aleatória dispersa ao redor do centro da cidade com seed
-      const seedFactor = (citySeed % 1000) / 1000;
-      const angle = (i * 137.5 * Math.PI) / 180 + seedFactor * Math.PI * 2;
-      const dist = (Math.sqrt(i) / Math.sqrt(count)) * (radiusKm * 0.009); // conversão aprox km para graus
-      const latOffset = Math.sin(i * 3 + (citySeed % 17)) * 0.0018;
-      const lngOffset = Math.cos(i * 2 + (citySeed % 23)) * 0.0018;
-
-      const lat = baseLat + dist * Math.sin(angle) + latOffset;
-      const lng = baseLng + dist * Math.cos(angle) + lngOffset;
-
-      const nIndex = (i * 7 + (citySeed % 13)) % neighborhoods.length;
-      const neighborhood = neighborhoods[nIndex] || "Centro";
-
-      // Classes
-      let classType: "RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL" | "RURAL" = "RESIDENTIAL";
-      let powerKwp = 4.2 + ((i * 3 + (citySeed % 11)) % 7) * 1.4;
-      if (i % 5 === 0) {
-        classType = "COMMERCIAL";
-        powerKwp = 14.0 + ((i + (citySeed % 9)) % 8) * 3.8;
-      } else if (i % 11 === 0) {
-        classType = "RURAL";
-        powerKwp = 20.0 + ((i + (citySeed % 5)) % 6) * 5.5;
-      } else if (i === 13) {
-        classType = "INDUSTRIAL";
-        powerKwp = 65.0 + (citySeed % 30);
-      }
-
-      powerKwp = Math.round(powerKwp * 10) / 10;
-      const modulesCount = Math.round((powerKwp * 1000) / 575);
-      const invertersCount = powerKwp > 30 ? 2 : 1;
-
-      // Anos conectado (simulando conexões reais registradas na ANEEL)
-      const year = 2018 + ((i + (citySeed % 7)) % 7);
-      const month = String(((i + (citySeed % 12)) % 12) + 1).padStart(2, "0");
-      const day = String(((i * 3) % 28) + 1).padStart(2, "0");
-      const connectionDate = `${year}-${month}-${day}`;
-      const yearsConnected = Math.max(1, new Date().getFullYear() - year);
-
-      let opportunityType: "UPGRADE_BATTERY" | "NEW_NEIGHBORS" | "RECENT" = "NEW_NEIGHBORS";
-      let leadPotentialScore = 75;
-      let recommendedPitch = `Prospecção de vizinhos: ${neighborhood} possui alta aceitação de energia solar. Apresentar prova social das usinas vizinhas em ${city}.`;
-
-      if (yearsConnected >= 3) {
-        opportunityType = "UPGRADE_BATTERY";
-        leadPotentialScore = 92;
-        recommendedPitch = `Cliente antigo (${yearsConnected} anos conectado). Grande potencial para venda de aumento de potência (novos módulos), baterias ou higienização periódica em ${city}.`;
-      } else if (yearsConnected <= 1) {
-        opportunityType = "RECENT";
-        leadPotentialScore = 80;
-        recommendedPitch = `Instalação recente em ${neighborhood}. Momento ideal para abordar vizinhos imediatos que acompanharam a instalação.`;
-      }
-
-      const estimatedMonthlyGenKwh = Math.round(powerKwp * 125);
-      const estimatedMonthlySavingsBrl = Math.round(estimatedMonthlyGenKwh * 0.92);
-      const aneelNumber = 100000 + ((citySeed + i * 541) % 899999);
-
-      list.push({
-        id: `aneel-${uf.toLowerCase()}-${city.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${i}`,
-        codeAneel: `GD.${uf}.${aneelNumber.toString()}`,
-        uf,
-        city,
-        neighborhood,
-        addressMasked: `Rua das Instalações, nº *** - ${neighborhood}`,
-        distributor,
-        classType,
-        powerKwp,
-        modulesCount,
-        invertersCount,
-        connectionDate,
-        yearsConnected,
-        opportunityType,
-        estimatedMonthlyGenKwh,
-        estimatedMonthlySavingsBrl,
-        latitude: Math.round(lat * 1000000) / 1000000,
-        longitude: Math.round(lng * 1000000) / 1000000,
-        leadPotentialScore,
-        recommendedPitch,
-      });
-    }
-
-    return list;
   }
 }

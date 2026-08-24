@@ -53,7 +53,7 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!whatsapp.trim()) return;
+    if (!name.trim()) return;
 
     setLoading(true);
     try {
@@ -61,7 +61,7 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
         {
           installationId: installation.codeAneel || installation.id,
           name: name.trim(),
-          whatsapp: whatsapp.trim(),
+          whatsapp: whatsapp.trim() || undefined,
           neighborhood: installation.neighborhood,
           city: installation.city,
           uf: installation.uf,
@@ -107,7 +107,7 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
             <CheckCircle2 className="w-14 h-14 text-emerald-500 animate-bounce" />
             <h4 className="text-lg font-bold text-white">Lead & Oportunidade Criados!</h4>
             <p className="text-sm text-neutral-400">
-              O lead foi inserido no seu pipeline comercial com o histórico da usina.
+              O lead foi inserido no seu pipeline comercial com os dados da usina.
             </p>
           </div>
         ) : (
@@ -146,17 +146,25 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs text-neutral-300 flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-neutral-400" />
-                WhatsApp do Lead
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-neutral-300 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-neutral-400" />
+                  WhatsApp do Lead
+                </Label>
+                <span className="text-[10px] text-neutral-400 font-normal">
+                  (Opcional - caso já tenha o contato)
+                </span>
+              </div>
               <Input
                 value={whatsapp}
                 onChange={(e) => setWhatsapp(e.target.value)}
-                placeholder="Ex: 11999998888"
-                required
+                placeholder="Ex: 11999998888 (opcional)"
                 className="bg-neutral-900 border-neutral-800 text-white placeholder-neutral-500 focus:border-amber-500"
               />
+              <p className="text-[11px] text-neutral-400 leading-tight">
+                💡 Caso ainda não tenha o telefone, deixe em branco para salvar como alvo de visita
+                ou prospecção no campo.
+              </p>
             </div>
 
             <div className="space-y-1.5">
@@ -184,7 +192,7 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
               </Button>
               <Button
                 type="submit"
-                disabled={loading || !whatsapp.trim()}
+                disabled={loading || !name.trim()}
                 className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-semibold shadow-lg shadow-amber-500/20"
               >
                 {loading ? "Criando Oportunidade..." : "Salvar no Pipeline"}
