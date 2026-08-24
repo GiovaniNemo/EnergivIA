@@ -156,6 +156,37 @@ export default function AdminMetricasPage() {
     fetchMetrics();
   }, [fetchMetrics]);
 
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    if (data?.referralMonthly) {
+      Object.keys(data.referralMonthly).forEach((m) => months.add(m));
+    }
+    if (data?.timeline) {
+      data.timeline.forEach((t) => months.add(t.month));
+    }
+    return Array.from(months);
+  }, [data]);
+
+  const activeReferralList = useMemo(() => {
+    if (!data) return [];
+    if (selectedReferralMonth === "ALL") {
+      return data.referralBreakdown ?? [];
+    }
+    const monthMap = data.referralMonthly?.[selectedReferralMonth] || {};
+    return Object.entries(monthMap).map(([source, count]) => ({
+      source,
+      count,
+    }));
+  }, [data, selectedReferralMonth]);
+
+  const filteredReferralEntries = useMemo(() => {
+    if (!data?.referralEntries) return [];
+    if (selectedReferralMonth === "ALL") {
+      return data.referralEntries;
+    }
+    return data.referralEntries.filter((e) => e.month === selectedReferralMonth);
+  }, [data, selectedReferralMonth]);
+
   const formatCurrency = (val: number) => {
     if (val >= 1_000_000) {
       return `R$ ${(val / 1_000_000).toFixed(1)}M`;
@@ -203,37 +234,6 @@ export default function AdminMetricasPage() {
     value: item.count,
     color: STATUS_COLORS[item.status] || item.color || "#0ea5e9",
   }));
-
-  const availableMonths = useMemo(() => {
-    const months = new Set<string>();
-    if (data?.referralMonthly) {
-      Object.keys(data.referralMonthly).forEach((m) => months.add(m));
-    }
-    if (data?.timeline) {
-      data.timeline.forEach((t) => months.add(t.month));
-    }
-    return Array.from(months);
-  }, [data]);
-
-  const activeReferralList = useMemo(() => {
-    if (!data) return [];
-    if (selectedReferralMonth === "ALL") {
-      return data.referralBreakdown ?? [];
-    }
-    const monthMap = data.referralMonthly?.[selectedReferralMonth] || {};
-    return Object.entries(monthMap).map(([source, count]) => ({
-      source,
-      count,
-    }));
-  }, [data, selectedReferralMonth]);
-
-  const filteredReferralEntries = useMemo(() => {
-    if (!data?.referralEntries) return [];
-    if (selectedReferralMonth === "ALL") {
-      return data.referralEntries;
-    }
-    return data.referralEntries.filter((e) => e.month === selectedReferralMonth);
-  }, [data, selectedReferralMonth]);
 
   const referralData = activeReferralList.map((item, idx) => ({
     source: item.source.length > 25 ? `${item.source.slice(0, 23)}...` : item.source,
