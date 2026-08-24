@@ -159,7 +159,10 @@ export class RadarService {
       uf,
     };
     if (resolvedCityId) {
-      whereAneel["cityId"] = resolvedCityId;
+      whereAneel["OR"] = [
+        { cityId: resolvedCityId },
+        { cityName: { contains: cityName, mode: "insensitive" } },
+      ];
     } else if (cityName) {
       whereAneel["cityName"] = { contains: cityName, mode: "insensitive" };
     }
@@ -220,50 +223,30 @@ export class RadarService {
           Math.abs(lat - centerLat) < 0.0001 && Math.abs(lng - centerLng) < 0.0001;
 
         if (!plant.latitude || !plant.longitude || isDefaultCenter) {
-          // Se temos o CEP da usina (ex: 04111, 02417, 04716, 87000...)
-          // No Brasil, os 5 primeiros dígitos do CEP determinam a Região, Sub-região, Setor e Sub-setor da rua/bairro
-          const cleanZip = plant.zipCode ? plant.zipCode.replace(/\D/g, "") : "";
+          // Escala precisa de raio municipal: cidades menores têm mancha urbana compacta (~1 a 2.5km), metrópoles têm ~8 a 12km
+          const keyStr = `${plant.codeAneel}-${plant.id || ""}-${index}`;
 
-          if (cleanZip.length >= 5) {
-            const zipNum = parseInt(cleanZip.substring(0, 5), 10);
-
-            // Fator determinístico para o quarteirão/trecho da rua dentro do CEP
-            const blockHash =
-              (plant.codeAneel.split("").reduce((a, c) => a + c.charCodeAt(0), 0) * 1103515245 +
-                12345) &
-              0x7fffffff;
-            const subOffsetAngle = ((blockHash % 360) * Math.PI) / 180;
-            const subOffsetRadius = ((blockHash % 100) / 100) * 0.004; // dispersão local de rua/quarteirão (~350m)
-
-            // Mapeamento angular e radial pelo setor do CEP
-            // Os dígitos do CEP cobrem os quadrantes geográficos Norte, Sul, Leste, Oeste e Centro da cidade
-            const cepSector = (zipNum % 1000) / 1000;
-            const cepSectorAngle = cepSector * 2 * Math.PI;
-            const cepDistance = 0.02 + ((zipNum % 83) / 83) * 0.08; // raio real do setor (~2km a 9km do marco zero)
-
-            lat =
-              centerLat +
-              cepDistance * Math.cos(cepSectorAngle) +
-              subOffsetRadius * Math.cos(subOffsetAngle);
-            lng =
-              centerLng +
-              cepDistance * 1.1 * Math.sin(cepSectorAngle) +
-              subOffsetRadius * 1.1 * Math.sin(subOffsetAngle);
-          } else {
-            // Geocodificação determinística por Bairro / Hash do Empreendimento
-            const keyStr = `${plant.neighborhood || cityName}-${plant.codeAneel}-${index}`;
-            let hash = 0;
-            for (let k = 0; k < keyStr.length; k++) {
-              hash = (hash << 5) - hash + keyStr.charCodeAt(k);
-              hash |= 0;
-            }
-            const absHash = Math.abs(hash);
-            const angle = ((absHash % 10000) / 10000) * 2 * Math.PI;
-            const radius = Math.sqrt(((absHash / 10000) % 10000) / 10000) * 0.06; // raio urbano (~6km)
-
-            lat = centerLat + radius * Math.cos(angle);
-            lng = centerLng + radius * 1.1 * Math.sin(angle);
+          let hash = 0;
+          for (let k = 0; k < keyStr.length; k++) {
+            hash = (hash << 5) - hash + keyStr.charCodeAt(k);
+            hash |= 0;
           }
+          const absHash = Math.abs(hash);
+
+          // Ângulo e distribuição radial em espiral áurea dentro do perímetro urbano da cidade
+          const angle = (index * 137.5077 * Math.PI) / 180 + ((absHash % 100) / 100) * 0.4;
+
+          // Raio ajustado com densidade urbana central: 80% das usinas ficam no perímetro urbano central (~300m a 1.8km)
+          const isRural = plant.classType === "RURAL";
+          const maxRadiusDeg = isRural ? 0.035 : totalCountInCity > 2000 ? 0.05 : 0.015; // ~1.3km para cidades normais / ~4km para metrópoles
+          const normalizedRadius =
+            Math.sqrt((index + 1) / Math.max(1, realPlants.length)) * maxRadiusDeg;
+
+          // Micro-dispersão de quadra / telhado
+          const blockOffset = ((absHash % 50) / 50) * 0.0015;
+
+          lat = centerLat + (normalizedRadius + blockOffset) * Math.cos(angle);
+          lng = centerLng + (normalizedRadius + blockOffset) * 1.08 * Math.sin(angle);
         }
 
         const estimatedMonthlyGenKwh = Math.round(powerKwp * 125);
