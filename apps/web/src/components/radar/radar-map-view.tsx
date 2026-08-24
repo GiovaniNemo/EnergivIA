@@ -52,19 +52,22 @@ interface LeafletMapInstance {
   fitBounds: (bounds: [number, number][], opts?: Record<string, unknown>) => void;
 }
 
-// Configuração das camadas de alta qualidade
-const TILE_LAYERS: Record<MapLayerType, { url: string; attribution?: string; maxZoom: number }> = {
+// Configuração das camadas de alta estabilidade e sem limitação de IP (CartoDB e Esri)
+const TILE_LAYERS: Record<MapLayerType, { url: string; subdomains: string; maxZoom: number }> = {
   dark: {
     url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    maxZoom: 19,
+    subdomains: "abcd",
+    maxZoom: 20,
   },
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    subdomains: "abc",
     maxZoom: 19,
   },
   streets: {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    maxZoom: 19,
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png",
+    subdomains: "abcd",
+    maxZoom: 20,
   },
 };
 
@@ -219,11 +222,13 @@ export function RadarMapView({
     }
 
     // Camada inicial
+    const initialConfig = TILE_LAYERS[activeLayer];
     tileLayerRef.current = (
       L["tileLayer"] as (url: string, opts: Record<string, unknown>) => unknown
-    )(TILE_LAYERS[activeLayer].url, {
-      maxZoom: TILE_LAYERS[activeLayer].maxZoom,
-      subdomains: "abcd",
+    )(initialConfig.url, {
+      maxZoom: initialConfig.maxZoom,
+      subdomains: initialConfig.subdomains,
+      keepBuffer: 8,
     });
     (tileLayerRef.current as { addTo: (m: unknown) => unknown }).addTo(map);
 
@@ -279,12 +284,14 @@ export function RadarMapView({
     const L = win.L;
     if (!L) return;
 
+    const cfg = TILE_LAYERS[layer];
     mapInstanceRef.current.removeLayer(tileLayerRef.current);
     tileLayerRef.current = (
       L["tileLayer"] as (url: string, opts: Record<string, unknown>) => unknown
-    )(TILE_LAYERS[layer].url, {
-      maxZoom: TILE_LAYERS[layer].maxZoom,
-      subdomains: "abcd",
+    )(cfg.url, {
+      maxZoom: cfg.maxZoom,
+      subdomains: cfg.subdomains,
+      keepBuffer: 8,
     });
     (tileLayerRef.current as { addTo: (m: unknown) => unknown }).addTo(mapInstanceRef.current);
   };
