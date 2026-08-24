@@ -13,7 +13,8 @@ import * as path from "node:path";
 import * as readline from "node:readline";
 import { PrismaClient } from "@prisma/client";
 
-const BATCH_SIZE = 2500;
+const BATCH_SIZE = 5000;
+const TOTAL_ESTIMATED_ROWS = 4677562;
 
 interface AneelInsertRow {
   codeAneel: string;
@@ -100,14 +101,15 @@ export async function runSeedAneel(prisma: PrismaClient, customPath?: string): P
   }
 
   console.log(`Lendo arquivo: ${targetCsv}`);
-  const fileStream = fs.createReadStream(targetCsv, { encoding: "utf8" });
+  const fileStream = fs.createReadStream(targetCsv, { encoding: "latin1" });
   const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
 
   let isHeader = true;
-  let headerIndexes: Record<string, number> = {};
+  const headerIndexes: Record<string, number> = {};
   let batch: AneelInsertRow[] = [];
-  let totalInserted = 0;
+  let totalProcessed = 0;
   let linesRead = 0;
+  const startTime = Date.now();
 
   for await (const line of rl) {
     linesRead++;
@@ -187,10 +189,12 @@ export async function runSeedAneel(prisma: PrismaClient, customPath?: string): P
     if (batch.length >= BATCH_SIZE) {
       await prisma.aneelInstallation.createMany({
         data: batch,
-        skipDuplicates: true,
+        skipDuplicates: true, // Garante que nunca duplicará o que já existe
       });
-      totalInserted += batch.length;
-      console.log(`[ANEEL Ingest] Linhas lidas: ${linesRead} | Usinas inseridas: ${totalInserted}`);
+      totalProcessed += batch.length;
+      const pct = ((linesRead / TOTAL_ESTIMATED_ROWS) * 100).toFixed(2);
+      const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(0);
+      console.log(`[ANEEL Ingest] Progresso: ${pct}% | Linhas: ${linesRead}/${TOTAL_ESTIMATED_ROWS} | Tempo: ${elapsedSec}s`);
       batch = [];
     }
   }
@@ -200,11 +204,11 @@ export async function runSeedAneel(prisma: PrismaClient, customPath?: string): P
       data: batch,
       skipDuplicates: true,
     });
-    totalInserted += batch.length;
+    totalProcessed += batch.length;
   }
 
   console.log(
-    `[ANEEL Ingest] Sucesso absoluto! Total de usinas inseridas no banco: ${totalInserted}`
+    `[ANEEL Ingest] Sucesso absoluto! Ingestão finalizada. Linhas totais processadas: ${linesRead}`
   );
 }
 

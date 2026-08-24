@@ -194,15 +194,23 @@ export class RadarService {
           recommendedPitch = `Instalação recente. Momento ideal para abordar vizinhos imediatos que acompanharam a instalação.`;
         }
 
-        // Se a usina tem coordenadas próprias usa-as, caso contrário distribui em padrão de malha urbana realista
+        // Se a usina tem coordenadas próprias usa-as, caso contrário espalha uniformemente por toda a malha da cidade
         let lat = plant.latitude ? Number(plant.latitude) : centerLat;
         let lng = plant.longitude ? Number(plant.longitude) : centerLng;
 
         if (!plant.latitude || !plant.longitude) {
-          const angle = (index * 137.5 * Math.PI) / 180;
-          const dist = (Math.sqrt(index + 1) / Math.sqrt(realPlants.length)) * 0.05;
-          lat = centerLat + dist * Math.sin(angle);
-          lng = centerLng + dist * Math.cos(angle);
+          // Dispersão proporcional ao tamanho real de uma metrópole (abrange até 15-20km de raio)
+          const seed = (plant.codeAneel.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) * 9301 + 49297) % 233280;
+          const seed2 = (seed * 9301 + 49297) % 233280;
+          const randomFactor1 = seed / 233280;
+          const randomFactor2 = seed2 / 233280;
+
+          const angle = randomFactor1 * 2 * Math.PI;
+          // Distribuição de raio com densidade natural da cidade
+          const radiusDeg = Math.sqrt(randomFactor2) * 0.12; // ~13 km de amplitude urbana
+
+          lat = centerLat + radiusDeg * Math.cos(angle);
+          lng = centerLng + (radiusDeg * 1.1) * Math.sin(angle);
         }
 
         const estimatedMonthlyGenKwh = Math.round(powerKwp * 125);

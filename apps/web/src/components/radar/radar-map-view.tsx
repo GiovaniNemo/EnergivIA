@@ -222,14 +222,15 @@ export function RadarMapView({
     });
     (tileLayerRef.current as { addTo: (m: unknown) => unknown }).addTo(map);
 
-    // MarkerClusterGroup com visual e zoom suave
+    // MarkerClusterGroup com visual limpo e expansão inteligente por zoom
     if (typeof L["markerClusterGroup"] === "function") {
       clusterGroupRef.current = L["markerClusterGroup"]({
-        chunkedLoading: true, // Não trava o browser ao carregar 50.000 pontos
-        maxClusterRadius: 45,
-        spiderfyOnMaxZoom: true,
-        showCoverageOnHover: false,
+        chunkedLoading: true,
+        maxClusterRadius: 60, // Agrupa melhor para evitar sobreposição
+        spiderfyOnMaxZoom: false, // Desativa a teia/aranha para manter os pontos nas ruas reais
+        showCoverageOnHover: true,
         zoomToBoundsOnClick: true,
+        disableClusteringAtZoom: 17, // No zoom máximo (nível de casa/telhado), mostra cada pin individualmente
         iconCreateFunction: (cluster: { getChildCount: () => number }) => {
           const count = cluster.getChildCount();
           const isLarge = count >= 50;
