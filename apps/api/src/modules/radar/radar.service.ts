@@ -45,6 +45,12 @@ export interface RadarStats {
   topNeighborhoods: Array<{ name: string; count: number; totalKwp: number }>;
 }
 
+// Cache em memória para resolução instantânea de CEPs e Logradouros
+const postalGeoCache = new Map<
+  string,
+  { lat: number; lng: number; neighborhood?: string; street?: string }
+>();
+
 @Injectable()
 export class RadarService {
   constructor(
@@ -52,6 +58,72 @@ export class RadarService {
     private readonly leadsService: LeadsService,
     private readonly dealsService: DealsService
   ) {}
+
+  /**
+   * Resolve geocodificação exata via BrasilAPI / DNE para o CEP ou bairro
+   */
+  private async resolvePostalCoordinates(
+    rawZip: string | null | undefined,
+    uf: string,
+    _cityName?: string
+  ): Promise<{ lat: number; lng: number; neighborhood?: string; street?: string } | null> {
+    if (!rawZip) return null;
+    const cleanZip = rawZip.replace(/\D/g, "");
+    if (cleanZip.length < 5) return null;
+
+    // Normaliza para formato de 8 dígitos preenchendo zeros finais se estiver mascarado
+    const normalizedZip = cleanZip.padEnd(8, "0").slice(0, 8);
+    const cacheKey = `${uf}-${normalizedZip}`;
+
+    if (postalGeoCache.has(cacheKey)) {
+      return postalGeoCache.get(cacheKey)!;
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1200); // 1.2s timeout rápido para manter a UI veloz
+
+      const response = await fetch(`https://brasilapi.com.br/api/cep/v2/${normalizedZip}`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = (await response.json()) as {
+          neighborhood?: string;
+          street?: string;
+          location?: {
+            coordinates?: {
+              latitude?: string | number;
+              longitude?: string | number;
+            };
+          };
+        };
+
+        const rawLat = data?.location?.coordinates?.latitude;
+        const rawLng = data?.location?.coordinates?.longitude;
+
+        if (rawLat && rawLng) {
+          const lat = typeof rawLat === "number" ? rawLat : parseFloat(rawLat);
+          const lng = typeof rawLng === "number" ? rawLng : parseFloat(rawLng);
+          if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+            const result = {
+              lat,
+              lng,
+              neighborhood: data.neighborhood || undefined,
+              street: data.street || undefined,
+            };
+            postalGeoCache.set(cacheKey, result);
+            return result;
+          }
+        }
+      }
+    } catch {
+      // Falha graciosa de rede ou timeout
+    }
+
+    return null;
+  }
 
   /**
    * Retorna usinas e pontos de calor solar com base nos filtros
@@ -193,6 +265,18 @@ export class RadarService {
     let rawList: SolarInstallationPoint[] = [];
 
     if (realPlants.length > 0) {
+      // Coleta CEPs únicos relevantes para resolução rápida em batch (limitado para ultra-performance)
+      const uniqueZips = Array.from(
+        new Set(
+          realPlants
+            .map((p) => p.zipCode)
+            .filter((z): z is string => Boolean(z && z.replace(/\D/g, "").length >= 5))
+        )
+      ).slice(0, 30);
+
+      // Resolve em paralelo com cache
+      await Promise.all(uniqueZips.map((zip) => this.resolvePostalCoordinates(zip, uf, cityName)));
+
       rawList = realPlants.map((plant, index) => {
         const powerKwp = Number(plant.powerKwp);
         const connectionDateStr = plant.connectionDate.toISOString().split("T")[0] || "2022-01-01";
@@ -214,7 +298,7 @@ export class RadarService {
           recommendedPitch = `Instalação recente. Momento ideal para abordar vizinhos imediatos que acompanharam a instalação.`;
         }
 
-        // 1. Geocodificação de Alta Precisão por CEP e Bairro Real
+        // 1. Geocodificação de Alta Precisão por CEP Real
         let lat = Number(plant.latitude || centerLat);
         let lng = Number(plant.longitude || centerLng);
 
@@ -222,7 +306,25 @@ export class RadarService {
         const isDefaultCenter =
           Math.abs(lat - centerLat) < 0.0001 && Math.abs(lng - centerLng) < 0.0001;
 
-        if (!plant.latitude || !plant.longitude || isDefaultCenter) {
+        const cleanZip = plant.zipCode ? plant.zipCode.replace(/\D/g, "") : "";
+        const normalizedZip = cleanZip ? cleanZip.padEnd(8, "0").slice(0, 8) : "";
+        const postalHit = normalizedZip ? postalGeoCache.get(`${uf}-${normalizedZip}`) : null;
+
+        if (postalHit) {
+          // Deslocamento no trecho da rua / quadra baseado no código ANEEL da usina
+          const keyStr = `${plant.codeAneel}-${plant.id || ""}`;
+          let hash = 0;
+          for (let k = 0; k < keyStr.length; k++) {
+            hash = (hash << 5) - hash + keyStr.charCodeAt(k);
+            hash |= 0;
+          }
+          const absHash = Math.abs(hash);
+          const blockAngle = ((absHash % 360) * Math.PI) / 180;
+          const blockRadius = ((absHash % 100) / 100) * 0.0018; // ~150 metros no quarteirão exato
+
+          lat = postalHit.lat + blockRadius * Math.cos(blockAngle);
+          lng = postalHit.lng + blockRadius * 1.08 * Math.sin(blockAngle);
+        } else if (!plant.latitude || !plant.longitude || isDefaultCenter) {
           // Escala precisa de raio municipal: cidades menores têm mancha urbana compacta (~1 a 2.5km), metrópoles têm ~8 a 12km
           const keyStr = `${plant.codeAneel}-${plant.id || ""}-${index}`;
 
@@ -253,11 +355,16 @@ export class RadarService {
         const estimatedMonthlySavingsBrl = Math.round(estimatedMonthlyGenKwh * 0.92);
 
         const neighborhoodDisplay =
-          plant.neighborhood && plant.neighborhood.trim() !== ""
+          postalHit?.neighborhood ||
+          (plant.neighborhood && plant.neighborhood.trim() !== ""
             ? plant.neighborhood
             : plant.zipCode
               ? `CEP ${plant.zipCode}`
-              : "Área Urbana";
+              : "Área Urbana");
+
+        const streetDisplay = postalHit?.street
+          ? `${postalHit.street}, nº ***`
+          : `Instalação Solar, nº *** - ${neighborhoodDisplay}`;
 
         return {
           id: plant.id,
@@ -265,7 +372,7 @@ export class RadarService {
           uf: plant.uf,
           city: plant.cityName,
           neighborhood: neighborhoodDisplay,
-          addressMasked: `Instalação Solar, nº *** - ${neighborhoodDisplay}`,
+          addressMasked: streetDisplay,
           distributor: plant.distributor,
           classType:
             (plant.classType as "RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL" | "RURAL") ||

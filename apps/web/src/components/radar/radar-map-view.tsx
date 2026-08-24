@@ -485,6 +485,9 @@ export function RadarMapView({
                   ? selectedInstallation.holderName
                   : `${selectedInstallation.neighborhood}, ${selectedInstallation.city}`}
               </h4>
+              <p className="text-[11px] text-amber-400/90 font-medium">
+                📍 {selectedInstallation.addressMasked}
+              </p>
               {selectedInstallation.documentNumber &&
                 selectedInstallation.documentNumber !== "***" && (
                   <p className="text-[11px] font-mono text-neutral-400">
