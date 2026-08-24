@@ -19,11 +19,11 @@ export interface InstallationPoint {
   opportunityType: "UPGRADE_BATTERY" | "NEW_NEIGHBORS" | "RECENT";
   estimatedMonthlyGenKwh: number;
   estimatedMonthlySavingsBrl: number;
-  holderName?: string;
-  documentNumber?: string;
-  consumerType?: string;
-  substation?: string;
-  modality?: string;
+  holderName?: string | null;
+  documentNumber?: string | null;
+  consumerType?: string | null;
+  substation?: string | null;
+  modality?: string | null;
   latitude: number;
   longitude: number;
   leadPotentialScore: number;
