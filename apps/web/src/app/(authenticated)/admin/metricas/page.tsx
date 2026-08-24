@@ -334,11 +334,13 @@ export default function AdminMetricasPage() {
             <select
               value={selectedGlobalMonth}
               onChange={(e) => setSelectedGlobalMonth(e.target.value)}
-              className="bg-transparent font-bold text-xs text-[var(--color-foreground)] focus:outline-none cursor-pointer pr-1"
+              className="bg-transparent font-bold text-xs text-[var(--color-foreground)] focus:outline-none cursor-pointer pr-1 [&>option]:bg-[var(--color-card,#18181b)] [&>option]:text-[var(--color-foreground,#fafafa)]"
             >
-              <option value="ALL">Todo o Histórico (Geral)</option>
+              <option value="ALL" className="bg-[#1e293b] text-white">
+                Todo o Histórico (Geral)
+              </option>
               {availableMonths.map((m) => (
-                <option key={m} value={m}>
+                <option key={m} value={m} className="bg-[#1e293b] text-white">
                   Mês de {m}
                 </option>
               ))}
@@ -601,12 +603,15 @@ export default function AdminMetricasPage() {
                 <YAxis tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "rgba(20, 30, 40, 0.95)",
-                    borderColor: "rgba(255,255,255,0.1)",
+                    backgroundColor: "#0f172a",
+                    borderColor: "#334155",
                     borderRadius: "12px",
-                    color: "#fff",
+                    color: "#f8fafc",
                     fontSize: "12px",
+                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5)",
                   }}
+                  itemStyle={{ color: "#f8fafc" }}
+                  labelStyle={{ color: "#f8fafc", fontWeight: "bold" }}
                 />
                 <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} />
                 <Area
@@ -669,12 +674,15 @@ export default function AdminMetricasPage() {
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "rgba(20, 30, 40, 0.95)",
-                    borderColor: "rgba(255,255,255,0.1)",
+                    backgroundColor: "#0f172a",
+                    borderColor: "#334155",
                     borderRadius: "12px",
-                    color: "#fff",
+                    color: "#f8fafc",
                     fontSize: "12px",
+                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5)",
                   }}
+                  itemStyle={{ color: "#f8fafc" }}
+                  labelStyle={{ color: "#f8fafc", fontWeight: "bold" }}
                   formatter={(value: unknown, name: string) => {
                     if (name === "Faturamento Estimado")
                       return [formatCurrency(Number(value)), name];
@@ -741,12 +749,15 @@ export default function AdminMetricasPage() {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "rgba(20, 30, 40, 0.95)",
-                    borderColor: "rgba(255,255,255,0.1)",
+                    backgroundColor: "#0f172a",
+                    borderColor: "#334155",
                     borderRadius: "12px",
-                    color: "#fff",
+                    color: "#f8fafc",
                     fontSize: "12px",
+                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5)",
                   }}
+                  itemStyle={{ color: "#f8fafc" }}
+                  labelStyle={{ color: "#f8fafc", fontWeight: "bold" }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -790,11 +801,13 @@ export default function AdminMetricasPage() {
                 <select
                   value={selectedGlobalMonth}
                   onChange={(e) => setSelectedGlobalMonth(e.target.value)}
-                  className="bg-transparent font-semibold text-[var(--color-foreground)] focus:outline-none cursor-pointer"
+                  className="bg-transparent font-semibold text-[var(--color-foreground)] focus:outline-none cursor-pointer [&>option]:bg-[var(--color-card,#18181b)] [&>option]:text-[var(--color-foreground,#fafafa)]"
                 >
-                  <option value="ALL">Todo o Histórico</option>
+                  <option value="ALL" className="bg-[#1e293b] text-white">
+                    Todo o Histórico
+                  </option>
                   {availableMonths.map((m) => (
-                    <option key={m} value={m}>
+                    <option key={m} value={m} className="bg-[#1e293b] text-white">
                       {m}
                     </option>
                   ))}
@@ -840,12 +853,15 @@ export default function AdminMetricasPage() {
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "rgba(20, 30, 40, 0.95)",
-                        borderColor: "rgba(255,255,255,0.1)",
+                        backgroundColor: "#0f172a",
+                        borderColor: "#334155",
                         borderRadius: "12px",
-                        color: "#fff",
+                        color: "#f8fafc",
                         fontSize: "12px",
+                        boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5)",
                       }}
+                      itemStyle={{ color: "#38bdf8" }}
+                      labelStyle={{ color: "#f8fafc", fontWeight: "bold" }}
                       formatter={(
                         value: unknown,
                         _: unknown,
