@@ -143,56 +143,6 @@ export function ProposalInternalHeader({
               cliente vê só o link público.
             </p>
           </div>
-
-          {/* Seleção do Layout no Topo (coluna esquerda) */}
-          <div className="max-w-xl rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-sm space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <label
-                htmlFor="top-proposal-layout-select"
-                className="text-xs font-semibold text-[var(--color-foreground)] flex items-center gap-1.5"
-              >
-                <LayoutTemplate className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                Layout da proposta
-              </label>
-              {templateSaving && (
-                <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Salvando...
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <Select
-                  id="top-proposal-layout-select"
-                  value={selectedTemplateId}
-                  onChange={(e) => onTemplateChange(e.target.value as string)}
-                  disabled={templateSaving}
-                >
-                  <option value="">Selecione um template publicado</option>
-                  {templates.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} (v{t.version})
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              {previewLayoutHref ? (
-                <a
-                  href={previewLayoutHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Pré-visualizar layout"
-                  className={cn(outlineSmLinkClass, "shrink-0 px-2.5")}
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Ver</span>
-                </a>
-              ) : null}
-            </div>
-            {templateError ? (
-              <p className="text-xs text-red-600 dark:text-red-400">{templateError}</p>
-            ) : null}
-          </div>
         </div>
 
         <div className="flex w-full flex-col gap-3 lg:max-w-md lg:shrink-0">
@@ -279,6 +229,56 @@ export function ProposalInternalHeader({
             </a>
           ) : null}
           {pdfError ? <p className="text-sm text-red-600 dark:text-red-400">{pdfError}</p> : null}
+
+          {/* Seleção do Layout no Topo (coluna direita, abaixo dos botões) */}
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-sm space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <label
+                htmlFor="top-proposal-layout-select"
+                className="text-xs font-semibold text-[var(--color-foreground)] flex items-center gap-1.5"
+              >
+                <LayoutTemplate className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                Layout da proposta
+              </label>
+              {templateSaving && (
+                <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Salvando...
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <Select
+                  id="top-proposal-layout-select"
+                  value={selectedTemplateId}
+                  onChange={(e) => onTemplateChange(e.target.value as string)}
+                  disabled={templateSaving}
+                >
+                  <option value="">Selecione um template publicado</option>
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} (v{t.version})
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              {previewLayoutHref ? (
+                <a
+                  href={previewLayoutHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Pré-visualizar layout"
+                  className={cn(outlineSmLinkClass, "shrink-0 px-2.5")}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Ver</span>
+                </a>
+              ) : null}
+            </div>
+            {templateError ? (
+              <p className="text-xs text-red-600 dark:text-red-400">{templateError}</p>
+            ) : null}
+          </div>
         </div>
       </div>
     </header>
