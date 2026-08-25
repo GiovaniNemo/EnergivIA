@@ -2606,9 +2606,9 @@ export const ProposalEconomicsModal = forwardRef<
                               href={proposalKitResult.modules.datasheet_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="mt-1 inline-flex items-center gap-1 text-[11px] text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:underline"
+                              className="mt-1 inline-flex items-center gap-1 text-[13px] text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:underline"
                             >
-                              📄 Baixar Datasheet
+                              Baixar Datasheet
                             </a>
                           ) : null}
                         </div>
@@ -2643,9 +2643,9 @@ export const ProposalEconomicsModal = forwardRef<
                               href={proposalKitResult.inverter.datasheet_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="mt-1 inline-flex items-center gap-1 text-[11px] text-violet-600 hover:text-violet-700 dark:text-violet-400 hover:underline"
+                              className="mt-1 inline-flex items-center gap-1 text-[13px] text-violet-600 hover:text-violet-700 dark:text-violet-400 hover:underline"
                             >
-                              📄 Baixar Datasheet
+                              Baixar Datasheet
                             </a>
                           ) : null}
                         </div>
