@@ -93,7 +93,7 @@ export default function AdminSistemaPage() {
   const [savingBranding, setSavingBranding] = useState(false);
 
   useEffect(() => {
-    fetch("/api/system/branding", { cache: "no-store" })
+    fetch("/api/proxy/system-settings/branding", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data?.brandLogoUrl) setBrandLogoUrl(data.brandLogoUrl);
@@ -1652,7 +1652,7 @@ export default function AdminSistemaPage() {
                 onClick={async () => {
                   setSavingBranding(true);
                   try {
-                    const res = await fetch("/api/system/branding", {
+                    const res = await fetch("/api/proxy/system-settings/branding", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ brandLogoUrl, whatsappLogoUrl }),

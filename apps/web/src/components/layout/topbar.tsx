@@ -139,7 +139,7 @@ export function Topbar() {
   const [customWaLogoUrl, setCustomWaLogoUrl] = useState<string>("");
 
   useEffect(() => {
-    fetch("/api/system/branding", { cache: "no-store" })
+    fetch("/api/proxy/system-settings/branding", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         setCustomWaLogoUrl(data?.whatsappLogoUrl || "");

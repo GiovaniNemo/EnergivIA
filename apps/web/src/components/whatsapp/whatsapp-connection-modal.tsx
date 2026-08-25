@@ -133,7 +133,7 @@ export function WhatsappConnectionModal({ open, onOpenChange }: WhatsappConnecti
 
   useEffect(() => {
     if (!open) return;
-    fetch("/api/system/branding", { cache: "no-store" })
+    fetch("/api/proxy/system-settings/branding", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         setCustomWaLogoUrl(data?.whatsappLogoUrl || "");

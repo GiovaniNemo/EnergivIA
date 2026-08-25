@@ -27,7 +27,7 @@ export function BrandLogo({
   const [customLogoUrl, setCustomLogoUrl] = useState<string>("");
 
   useEffect(() => {
-    fetch("/api/system/branding", { cache: "no-store" })
+    fetch("/api/proxy/system-settings/branding", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         setCustomLogoUrl(data?.brandLogoUrl || "");

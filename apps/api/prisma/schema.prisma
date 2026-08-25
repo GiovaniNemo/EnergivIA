@@ -1353,3 +1353,11 @@ model Subscription {
   @@index([status])
   @@map("subscriptions")
 }
+
+model SystemSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+
+  @@map("system_settings")
+}

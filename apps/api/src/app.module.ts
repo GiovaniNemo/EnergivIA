@@ -38,6 +38,7 @@ import { StripeModule } from "./modules/stripe/stripe.module";
 import { PlansModule } from "./modules/plans/plans.module";
 import { WhatsappCoreModule } from "./modules/whatsapp/whatsapp-core.module";
 import { RadarModule } from "./modules/radar/radar.module";
+import { SystemSettingsModule } from "./modules/system-settings/system-settings.module";
 
 @Module({
   controllers: [HealthController],
@@ -88,6 +89,7 @@ import { RadarModule } from "./modules/radar/radar.module";
     PlansModule,
     WhatsappCoreModule,
     RadarModule,
+    SystemSettingsModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
