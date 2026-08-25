@@ -25,27 +25,20 @@ async function main() {
   try {
     await prisma.$connect();
     console.log("Conectado com sucesso ao banco Postgres!");
-    const city = await prisma.city.findFirst({
-      where: { name: { contains: "Ourizona", mode: "insensitive" } },
-      include: { state: true },
-    });
-    console.log("Cidade Ourizona no banco:", city);
-
-    const aneelOurizona = await prisma.aneelInstallation.findMany({
-      where: { cityName: { contains: "Ourizona", mode: "insensitive" } },
-      take: 5,
+    const products = await prisma.product.findMany({
+      where: {
+        OR: [
+          { name: { contains: "SINE TOPCON", mode: "insensitive" } },
+          { name: { contains: "SAJ", mode: "insensitive" } },
+        ],
+      },
       select: {
-        codeAneel: true,
-        cityName: true,
-        uf: true,
-        powerKwp: true,
-        zipCode: true,
-        neighborhood: true,
-        latitude: true,
-        longitude: true,
+        id: true,
+        name: true,
+        datasheetUrl: true,
       },
     });
-    console.log("Usinas em Ourizona:", aneelOurizona);
+    console.log("Produtos encontrados:", JSON.stringify(products, null, 2));
   } catch (err) {
     console.error("Erro na conexão:", err.message);
   } finally {

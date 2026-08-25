@@ -52,6 +52,7 @@ export default function NewProductPage(): JSX.Element {
       brand_id: "",
       category_id: "",
       image_url: "",
+      datasheet_url: "",
       active: true,
       specs: {},
     },
@@ -99,6 +100,7 @@ export default function NewProductPage(): JSX.Element {
       brand_id: parsed.data.brand_id,
       category_id: parsed.data.category_id,
       image_url: parsed.data.image_url,
+      datasheet_url: parsed.data.datasheet_url,
       active: parsed.data.active,
       specs,
     });

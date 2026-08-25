@@ -60,6 +60,7 @@ export default function EditProductPage(): JSX.Element {
       brand_id: "",
       category_id: "",
       image_url: "",
+      datasheet_url: "",
       active: true,
       specs: {},
     },
@@ -72,6 +73,7 @@ export default function EditProductPage(): JSX.Element {
         brand_id: product.brandId,
         category_id: product.categoryId,
         image_url: product.imageUrl ?? "",
+        datasheet_url: product.datasheetUrl ?? "",
         active: product.active,
         specs: (product.specs as Record<string, unknown>) ?? {},
       });
@@ -114,6 +116,7 @@ export default function EditProductPage(): JSX.Element {
       brand_id: parsed.data.brand_id,
       category_id: parsed.data.category_id,
       image_url: parsed.data.image_url,
+      datasheet_url: parsed.data.datasheet_url,
       active: parsed.data.active,
       specs: parsed.data.specs ?? {},
     });
