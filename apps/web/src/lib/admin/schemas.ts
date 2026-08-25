@@ -61,6 +61,7 @@ export const specsModuleSchema = z.object({
 
 export const specsInverterSchema = z.object({
   type: z.literal("string"),
+  nominal_power_w: positiveNumber,
   max_dc_voltage: positiveNumber,
   mppt_count: z.coerce.number().int().positive(),
   max_strings_per_mppt: z.coerce.number().int().positive(),
