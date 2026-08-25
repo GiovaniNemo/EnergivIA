@@ -93,7 +93,7 @@ export default function AdminSistemaPage() {
   const [savingBranding, setSavingBranding] = useState(false);
 
   useEffect(() => {
-    fetch("/api/system/branding")
+    fetch("/api/system/branding", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data?.brandLogoUrl) setBrandLogoUrl(data.brandLogoUrl);
