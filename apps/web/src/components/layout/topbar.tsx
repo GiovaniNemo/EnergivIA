@@ -142,9 +142,7 @@ export function Topbar() {
     fetch("/api/system/branding", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        if (data?.whatsappLogoUrl) {
-          setCustomWaLogoUrl(data.whatsappLogoUrl);
-        }
+        setCustomWaLogoUrl(data?.whatsappLogoUrl || "");
       })
       .catch(() => {});
   }, []);

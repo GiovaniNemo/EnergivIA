@@ -30,9 +30,7 @@ export function BrandLogo({
     fetch("/api/system/branding", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        if (data?.brandLogoUrl) {
-          setCustomLogoUrl(data.brandLogoUrl);
-        }
+        setCustomLogoUrl(data?.brandLogoUrl || "");
       })
       .catch(() => {});
   }, []);

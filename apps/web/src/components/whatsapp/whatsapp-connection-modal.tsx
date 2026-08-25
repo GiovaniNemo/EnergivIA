@@ -136,9 +136,7 @@ export function WhatsappConnectionModal({ open, onOpenChange }: WhatsappConnecti
     fetch("/api/system/branding", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        if (data?.whatsappLogoUrl) {
-          setCustomWaLogoUrl(data.whatsappLogoUrl);
-        }
+        setCustomWaLogoUrl(data?.whatsappLogoUrl || "");
       })
       .catch(() => {});
   }, [open]);
