@@ -136,6 +136,18 @@ export function Topbar() {
   const collapsed = !open && !isMobile;
   const searchHandleRef = useRef<GlobalSearchHandle | null>(null);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [customWaLogoUrl, setCustomWaLogoUrl] = useState<string>("");
+
+  useEffect(() => {
+    fetch("/api/system/branding")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.whatsappLogoUrl) {
+          setCustomWaLogoUrl(data.whatsappLogoUrl);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const createdAt = currentOrganization?.createdAt ? new Date(currentOrganization.createdAt) : null;
   const trialDaysLeft = createdAt
@@ -221,7 +233,15 @@ export function Topbar() {
           className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 px-3 py-1.5 text-xs font-bold text-white hover:from-emerald-600 hover:to-green-700 shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95"
           title="Conhecer IA no WhatsApp"
         >
-          <WhatsappIcon className="h-4 w-4 shrink-0 text-white" />
+          {customWaLogoUrl ? (
+            <img
+              src={customWaLogoUrl}
+              alt="WhatsApp"
+              className="h-4 w-4 shrink-0 object-contain rounded-sm"
+            />
+          ) : (
+            <WhatsappIcon className="h-4 w-4 shrink-0 text-white" />
+          )}
           IA no WhatsApp 💬
         </button>
         <NotificationsBell />

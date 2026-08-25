@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useState, useEffect } from "react";
 import { useTheme } from "@/components/providers/theme-provider";
 import { cn } from "@energivia/utils";
 
@@ -23,6 +24,19 @@ export function BrandLogo({
   const isDark = resolvedTheme === "dark";
   const iconSrc = isDark ? "/favicon-dark.png" : "/favicon-light.png";
 
+  const [customLogoUrl, setCustomLogoUrl] = useState<string>("");
+
+  useEffect(() => {
+    fetch("/api/system/branding")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.brandLogoUrl) {
+          setCustomLogoUrl(data.brandLogoUrl);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const config = {
     sm: {
       iconClass: "h-7 w-7",
@@ -40,6 +54,36 @@ export function BrandLogo({
       taglineClass: "text-[12px]",
     },
   }[size];
+
+  if (customLogoUrl) {
+    if (collapsed) {
+      return (
+        <div
+          className={cn(
+            "flex items-center justify-center transition-transform duration-200 hover:scale-105",
+            className
+          )}
+          title="EnergivIA"
+        >
+          <img src={customLogoUrl} alt="Logo" className="h-8 w-8 object-contain shrink-0" />
+        </div>
+      );
+    }
+    return (
+      <div
+        className={cn(
+          "flex items-center select-none transition-opacity hover:opacity-95",
+          className
+        )}
+      >
+        <img
+          src={customLogoUrl}
+          alt="Logo"
+          className="h-10 max-w-[160px] object-contain shrink-0"
+        />
+      </div>
+    );
+  }
 
   if (collapsed) {
     return (

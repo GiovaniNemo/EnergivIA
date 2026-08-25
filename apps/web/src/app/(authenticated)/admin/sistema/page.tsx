@@ -28,8 +28,11 @@ import {
   UserCheck,
   Plus,
   Layers,
+  Palette,
 } from "lucide-react";
 import { SystemAnnouncement } from "@/components/layout/sidebar-notice";
+import { uploadOrganizationLogo } from "@/lib/organizations-api";
+import { ImageDropzone } from "@/components/ui/image-dropzone";
 
 export interface ReferralSourceOption {
   id: string;
@@ -79,10 +82,25 @@ interface FeatureFlags {
 
 export default function AdminSistemaPage() {
   const [activeTab, setActiveTab] = useState<
-    "health" | "announcements" | "flags" | "tools" | "referrals"
+    "health" | "announcements" | "flags" | "tools" | "referrals" | "branding"
   >("health");
   const [refreshingHealth, setRefreshingHealth] = useState(false);
   const [healthData, setHealthData] = useState<HealthData | null>(null);
+
+  // Branding state
+  const [brandLogoUrl, setBrandLogoUrl] = useState("");
+  const [whatsappLogoUrl, setWhatsappLogoUrl] = useState("");
+  const [savingBranding, setSavingBranding] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/system/branding")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.brandLogoUrl) setBrandLogoUrl(data.brandLogoUrl);
+        if (data?.whatsappLogoUrl) setWhatsappLogoUrl(data.whatsappLogoUrl);
+      })
+      .catch(() => {});
+  }, []);
 
   // Announcement State
   const [announcement, setAnnouncement] = useState<SystemAnnouncement>({
@@ -505,6 +523,18 @@ export default function AdminSistemaPage() {
             <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 font-bold">
               {referralSources.filter((s) => s.active).length} ativas
             </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("branding")}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              activeTab === "branding"
+                ? "bg-[var(--color-primary)] text-white shadow-md shadow-emerald-500/10"
+                : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-card)] hover:text-[var(--color-foreground)]"
+            }`}
+          >
+            <Palette className="h-4 w-4" />
+            Identidade Visual
           </button>
         </div>
       </div>
@@ -1548,6 +1578,112 @@ export default function AdminSistemaPage() {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "branding" && (
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm space-y-6">
+            <div>
+              <h3 className="text-lg font-bold text-[var(--color-foreground)]">
+                Identidade Visual da Plataforma
+              </h3>
+              <p className="text-sm text-[var(--color-muted-foreground)] mt-1">
+                Personalize o logotipo geral da plataforma e a logo do WhatsApp exibida no topo.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-[var(--color-foreground)]">
+                    Logo da Empresa (Marca Geral)
+                  </h4>
+                  <p className="text-xs text-[var(--color-muted-foreground)] mt-1">
+                    Substitui o logotipo padrão "EnergivIA" no menu superior e menu lateral.
+                  </p>
+                </div>
+                <ImageDropzone
+                  label="Carregar Logo da Marca"
+                  value={brandLogoUrl}
+                  onSelectFile={async (file) => {
+                    try {
+                      const url = await uploadOrganizationLogo(file);
+                      setBrandLogoUrl(url);
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : "Erro ao enviar imagem");
+                    }
+                  }}
+                  onClear={() => setBrandLogoUrl("")}
+                  accept="image/jpeg,image/png,image/webp"
+                  helperText="Formatos aceitos: JPG, PNG, WEBP."
+                />
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-[var(--color-foreground)]">
+                    Símbolo do WhatsApp (IA no WhatsApp)
+                  </h4>
+                  <p className="text-xs text-[var(--color-muted-foreground)] mt-1">
+                    Modifica o ícone verde de WhatsApp exibido no botão superior direito do sistema.
+                  </p>
+                </div>
+                <ImageDropzone
+                  label="Carregar Ícone do WhatsApp"
+                  value={whatsappLogoUrl}
+                  onSelectFile={async (file) => {
+                    try {
+                      const url = await uploadOrganizationLogo(file);
+                      setWhatsappLogoUrl(url);
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : "Erro ao enviar imagem");
+                    }
+                  }}
+                  onClear={() => setWhatsappLogoUrl("")}
+                  accept="image/jpeg,image/png,image/webp"
+                  helperText="Formatos aceitos: JPG, PNG, WEBP."
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-6 border-t border-[var(--color-border)]">
+              <button
+                onClick={async () => {
+                  setSavingBranding(true);
+                  try {
+                    const res = await fetch("/api/system/branding", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ brandLogoUrl, whatsappLogoUrl }),
+                    });
+                    if (res.ok) {
+                      alert("Identidade visual salva com sucesso!");
+                      window.location.reload();
+                    } else {
+                      alert("Ocorreu um erro ao salvar as configurações.");
+                    }
+                  } catch {
+                    alert("Falha ao se conectar com o servidor.");
+                  } finally {
+                    setSavingBranding(false);
+                  }
+                }}
+                disabled={savingBranding}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-semibold text-sm transition shadow-sm disabled:opacity-50 cursor-pointer"
+              >
+                {savingBranding ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Salvar Identidade Visual
+                  </>
+                )}
+              </button>
             </div>
           </div>
         )}

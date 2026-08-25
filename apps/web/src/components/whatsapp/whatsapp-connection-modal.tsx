@@ -129,12 +129,34 @@ export function WhatsappConnectionModal({ open, onOpenChange }: WhatsappConnecti
     }
   };
 
+  const [customWaLogoUrl, setCustomWaLogoUrl] = useState<string>("");
+
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/system/branding")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.whatsappLogoUrl) {
+          setCustomWaLogoUrl(data.whatsappLogoUrl);
+        }
+      })
+      .catch(() => {});
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md overflow-y-auto max-h-[90vh] rounded-2xl p-6 scrollbar-thin">
         <DialogHeader className="space-y-2">
           <DialogTitle className="flex items-center gap-2 text-xl font-bold text-emerald-600 dark:text-emerald-400">
-            <MessageSquare className="h-5.5 w-5.5" />
+            {customWaLogoUrl ? (
+              <img
+                src={customWaLogoUrl}
+                alt="WhatsApp"
+                className="h-5.5 w-5.5 shrink-0 object-contain rounded-sm"
+              />
+            ) : (
+              <MessageSquare className="h-5.5 w-5.5" />
+            )}
             IA no WhatsApp
           </DialogTitle>
           <DialogDescription className="text-sm text-[var(--color-muted-foreground)]">
