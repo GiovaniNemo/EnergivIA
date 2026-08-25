@@ -25,12 +25,27 @@ async function main() {
   try {
     await prisma.$connect();
     console.log("Conectado com sucesso ao banco Postgres!");
-    const sampleZips = await prisma.aneelInstallation.findMany({
-      where: { uf: "SP", cityName: { contains: "São Paulo", mode: "insensitive" } },
-      take: 10,
-      select: { codeAneel: true, zipCode: true, neighborhood: true, cityName: true, uf: true },
+    const city = await prisma.city.findFirst({
+      where: { name: { contains: "Ourizona", mode: "insensitive" } },
+      include: { state: true },
     });
-    console.log("Sample SP Zips & Bairros:", sampleZips);
+    console.log("Cidade Ourizona no banco:", city);
+
+    const aneelOurizona = await prisma.aneelInstallation.findMany({
+      where: { cityName: { contains: "Ourizona", mode: "insensitive" } },
+      take: 5,
+      select: {
+        codeAneel: true,
+        cityName: true,
+        uf: true,
+        powerKwp: true,
+        zipCode: true,
+        neighborhood: true,
+        latitude: true,
+        longitude: true,
+      },
+    });
+    console.log("Usinas em Ourizona:", aneelOurizona);
   } catch (err) {
     console.error("Erro na conexão:", err.message);
   } finally {

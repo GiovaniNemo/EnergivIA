@@ -504,10 +504,10 @@ export class WhatsappBotService {
       const salesMsg =
         `Olá! ☀️ O assistente de inteligência artificial da *EnergivIA* é um recurso exclusivo para integradores parceiros credenciados.\n\n` +
         `Para vincular este WhatsApp à sua conta:\n` +
-        `1️⃣ Acesse *https://energivia.com.br/configuracoes/organizacao*\n` +
-        `2️⃣ Clique em *"Conectar WhatsApp"* e envie o código gerado aqui.\n\n` +
+        `1️⃣ Acesse a plataforma: *https://www.energivia.com.br*\n` +
+        `2️⃣ Clique no botão *"IA no WhatsApp"* no topo da tela e envie o código gerado aqui.\n\n` +
         `Se você ainda não possui um plano ativo, conheça nossos recursos e comece a gerar propostas solares em segundos:\n` +
-        `👉 *https://energivia.com.br*`;
+        `👉 *https://www.energivia.com.br*`;
 
       await this.whatsappCloud.sendTextMessage({
         phoneNumberId,
@@ -523,7 +523,7 @@ export class WhatsappBotService {
       const expiredMsg =
         `Olá! Identificamos que o período de acesso da sua organização na EnergivIA precisa ser renovado. ☀️\n\n` +
         `Para continuar utilizando o assistente de IA, dimensionamentos e propostas comerciais automáticas pelo WhatsApp, escolha o seu plano em:\n` +
-        `👉 *https://energivia.com.br/gestao/meus-planos*`;
+        `👉 *https://www.energivia.com.br/gestao/meus-planos*`;
 
       await this.whatsappCloud.sendTextMessage({
         phoneNumberId,

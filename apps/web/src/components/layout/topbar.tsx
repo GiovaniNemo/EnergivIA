@@ -14,6 +14,7 @@ import { GlobalSearch, type GlobalSearchHandle } from "@/components/layout/globa
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { cn } from "@energivia/utils";
 import Link from "next/link";
+import { WhatsappConnectionModal } from "@/components/whatsapp/whatsapp-connection-modal";
 
 function userInitials(name?: string | null, email?: string | null): string {
   const clean = typeof name === "string" ? name.trim() : "";
@@ -119,6 +120,7 @@ export function Topbar() {
   const isMobile = useIsMobile();
   const collapsed = !open && !isMobile;
   const searchHandleRef = useRef<GlobalSearchHandle | null>(null);
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
 
   const createdAt = currentOrganization?.createdAt ? new Date(currentOrganization.createdAt) : null;
   const trialDaysLeft = createdAt
@@ -197,12 +199,12 @@ export function Topbar() {
         )}
         <button
           type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent("toggle-ai-chat"))}
-          className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-gradient-to-br from-violet-50 to-blue-50 px-2.5 py-1.5 text-xs font-semibold text-violet-600 transition-colors hover:from-violet-100 hover:to-blue-100 dark:border-violet-800 dark:from-violet-950/40 dark:to-blue-950/40 dark:text-violet-400"
-          title="Abrir assistente IA"
+          onClick={() => setWhatsappModalOpen(true)}
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 px-3 py-1.5 text-xs font-bold text-white hover:from-emerald-600 hover:to-green-700 shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95"
+          title="Conhecer IA no WhatsApp"
         >
-          <Sparkles className="h-3.5 w-3.5" />
-          IA
+          <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-200" />
+          IA no WhatsApp 💬
         </button>
         <NotificationsBell />
         <Button
@@ -221,6 +223,8 @@ export function Topbar() {
         )}
         <UserMenu />
       </div>
+
+      <WhatsappConnectionModal open={whatsappModalOpen} onOpenChange={setWhatsappModalOpen} />
     </header>
   );
 }
