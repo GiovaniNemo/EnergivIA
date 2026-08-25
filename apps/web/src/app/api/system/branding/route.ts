@@ -48,19 +48,19 @@ export async function POST(req: NextRequest) {
     // Update memory config immediately
     memoryConfig = config;
 
-    // Try writing to file system
-    try {
-      const configPath = getConfigPath();
-      fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
-    } catch (fsError) {
-      console.warn("Could not persist branding config to file system, kept in memory:", fsError);
-    }
+    // Write to file system and let any error bubble up to catch block for debugging
+    const configPath = getConfigPath();
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
 
     return NextResponse.json({ success: true, config });
   } catch (error) {
     console.error("Error in branding POST route:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to process branding settings" },
+      {
+        success: false,
+        error: "Failed to process branding settings",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }

@@ -1661,7 +1661,11 @@ export default function AdminSistemaPage() {
                       alert("Identidade visual salva com sucesso!");
                       window.location.reload();
                     } else {
-                      alert("Ocorreu um erro ao salvar as configurações.");
+                      const data = await res.json().catch(() => ({}));
+                      alert(
+                        "Ocorreu um erro ao salvar as configurações: " +
+                          (data.details || "Erro desconhecido")
+                      );
                     }
                   } catch {
                     alert("Falha ao se conectar com o servidor.");
