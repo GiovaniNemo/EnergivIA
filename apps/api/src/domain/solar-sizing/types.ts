@@ -12,6 +12,7 @@ export interface ProductWithSpecs<T = unknown> {
   brandName: string;
   price: number;
   specs: T;
+  datasheetUrl?: string | null;
 }
 
 export interface StringConfiguration {

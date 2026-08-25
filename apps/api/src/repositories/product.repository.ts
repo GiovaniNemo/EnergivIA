@@ -185,6 +185,7 @@ export class ProductRepository {
         name: p.name,
         brandName: p.brand.name,
         specs: p.specs as unknown as ModuleSpec,
+        datasheetUrl: p.datasheetUrl,
       })),
       source
     );
@@ -214,6 +215,7 @@ export class ProductRepository {
         name: p.name,
         brandName: p.brand.name,
         specs: p.specs as unknown as StringInverterSpec,
+        datasheetUrl: p.datasheetUrl,
       })),
       source
     );
@@ -243,6 +245,7 @@ export class ProductRepository {
         name: p.name,
         brandName: p.brand.name,
         specs: p.specs as unknown as MicroInverterSpec,
+        datasheetUrl: p.datasheetUrl,
       })),
       source
     );

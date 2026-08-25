@@ -204,6 +204,7 @@ export class KitGenerationService {
               category === "module"
                 ? "Nenhum inversor desta origem fecha o dimensionamento com este módulo."
                 : "Este inversor não fecha o dimensionamento com os módulos desta origem.",
+            datasheet_url: candidate.datasheetUrl,
           };
         }
         return this.toCompatibleAlternative(candidate, built, category);
@@ -319,7 +320,13 @@ export class KitGenerationService {
   }
 
   private toCompatibleAlternative(
-    candidate: { id: string; name: string; brandName: string; price: number },
+    candidate: {
+      id: string;
+      name: string;
+      brandName: string;
+      price: number;
+      datasheetUrl?: string | null;
+    },
     built: BuiltKit,
     category: KitSwapCategory
   ): KitAlternativeOption {
@@ -337,6 +344,7 @@ export class KitGenerationService {
       kit_total: kitItemsTotal(built.kitItems),
       system_power_kw: built.systemPowerKw,
       string_summary: stringSummary,
+      datasheet_url: candidate.datasheetUrl,
     };
   }
 
@@ -422,6 +430,7 @@ export class KitGenerationService {
       brand_name: sizingResult.module.brandName,
       quantity: sizingResult.module_quantity,
       unit_price: sizingResult.module.price,
+      datasheet_url: sizingResult.module.datasheetUrl,
     });
 
     const inverterQuantity = isStringSizingResult(sizingResult)
@@ -433,6 +442,7 @@ export class KitGenerationService {
       brand_name: sizingResult.inverter.brandName,
       quantity: inverterQuantity,
       unit_price: sizingResult.inverter.price,
+      datasheet_url: sizingResult.inverter.datasheetUrl,
     });
 
     const stringCount = isStringSizingResult(sizingResult)

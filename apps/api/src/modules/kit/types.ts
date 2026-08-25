@@ -23,6 +23,7 @@ export interface KitAlternativeOption {
   kit_total?: number;
   system_power_kw?: number;
   string_summary?: string;
+  datasheet_url?: string | null;
 }
 
 export interface KitCrossSourceAlternative extends KitAlternativeOption {
@@ -43,6 +44,7 @@ export interface KitItemLine {
   brand_name: string;
   quantity: number;
   unit_price: number;
+  datasheet_url?: string | null;
 }
 
 export interface KitSourceOption {
@@ -79,6 +81,7 @@ export interface GenerateKitResult {
     brand_name: string;
     quantity: number;
     unit_price: number;
+    datasheet_url?: string | null;
   };
   inverter: {
     product_id: string;
@@ -86,6 +89,7 @@ export interface GenerateKitResult {
     brand_name: string;
     quantity: number;
     unit_price: number;
+    datasheet_url?: string | null;
   };
   string_configuration?: StringConfigurationOutput;
   kit_items: KitItemLine[];

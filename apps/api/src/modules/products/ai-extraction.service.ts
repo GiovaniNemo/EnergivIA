@@ -49,7 +49,7 @@ export class AiExtractionService {
     }
 
     const model = this.genAI.getGenerativeModel({
-      model: "gemini-3.6-flash",
+      model: "gemini-2.5-flash",
       generationConfig: {
         temperature: 0,
         responseMimeType: "application/json",
@@ -109,47 +109,58 @@ export class AiExtractionService {
                 // Especificações do Inversor
                 nominal_power_w: {
                   type: SchemaType.NUMBER,
-                  description: "Potência Nominal CA em Watts (W)",
+                  description:
+                    "Potência Nominal CA em Watts (W). Geralmente listada como 'Nominal AC Power', 'Potência de saída nominal', 'Rated output power'.",
                 },
                 max_dc_power: {
                   type: SchemaType.NUMBER,
-                  description: "Potência Máxima CC Recomendada em Watts (W)",
+                  description:
+                    "Potência Máxima CC Recomendada em Watts (W). Geralmente listada como 'Max. PV Power', 'Potência máxima do gerador', 'Max. recommended PV power'.",
                 },
                 max_dc_voltage: {
                   type: SchemaType.NUMBER,
-                  description: "Tensão Máxima de Entrada CC (V)",
+                  description:
+                    "Tensão Máxima de Entrada CC (V). Geralmente descrita como 'Max. input voltage', 'Tensão máxima de entrada'.",
                 },
                 mppt_voltage_min: {
                   type: SchemaType.NUMBER,
-                  description: "Tensão Mínima de MPPT (V)",
+                  description:
+                    "Tensão Mínima de MPPT (V). Geralmente é o valor mínimo da faixa de tensão MPPT (MPPT range) ou tensão de partida (startup voltage).",
                 },
                 mppt_voltage_max: {
                   type: SchemaType.NUMBER,
-                  description: "Tensão Máxima de MPPT (V)",
+                  description:
+                    "Tensão Máxima de MPPT (V). Geralmente é o valor máximo da faixa de tensão MPPT (MPPT range). Por exemplo, em 180V-1000V, o máximo é 1000.",
                 },
                 max_input_current: {
                   type: SchemaType.NUMBER,
-                  description: "Corrente Máxima de Entrada CC por MPPT (A)",
+                  description:
+                    "Corrente Máxima de Entrada CC por MPPT (A). Geralmente descrita como 'Max. input current per MPPT', 'Corrente máxima de entrada', 'Max. input current (A/B)'. Extraia apenas o número (ex: se for 32A/32A, retorne 32).",
                 },
                 max_short_circuit_current_a: {
                   type: SchemaType.NUMBER,
-                  description: "Corrente Máxima de Curto-Circuito (A)",
+                  description:
+                    "Corrente Máxima de Curto-Circuito por MPPT (A). Geralmente descrita como 'Max. short-circuit current', 'Isc do inversor'. Extraia apenas o número.",
                 },
                 mppt_count: {
                   type: SchemaType.NUMBER,
-                  description: "Número de MPPTs (rastreadores)",
+                  description:
+                    "Número de MPPTs (rastreadores/trackers). Procure por 'Number of MPPTs', 'MPPT trackers', 'Número de MPPT'.",
                 },
                 max_strings_per_mppt: {
                   type: SchemaType.NUMBER,
-                  description: "Strings por MPPT",
+                  description:
+                    "Número máximo de strings (entradas/inputs/conexões) por MPPT. Geralmente está no datasheet como 'Number of inputs per MPPT', 'Entradas por MPPT', 'Strings por MPPT'. Se disser '1/1' ou '1/2', retorne a maior quantidade de entradas por MPPT (ex: 2 ou 1).",
                 },
                 recommended_dc_ac_ratio_min: {
                   type: SchemaType.NUMBER,
-                  description: "Ratio DC/AC mín. recomendado",
+                  description:
+                    "Ratio/Relação DC/AC mínima recomendada (normalmente entre 1.0 e 1.2). Se não encontrada, deixe omitida.",
                 },
                 recommended_dc_ac_ratio_max: {
                   type: SchemaType.NUMBER,
-                  description: "Ratio DC/AC máx. recomendado",
+                  description:
+                    "Ratio/Relação DC/AC máxima recomendada (normalmente entre 1.3 e 1.6). Se não encontrada, deixe omitida.",
                 },
                 phase: {
                   type: SchemaType.STRING,

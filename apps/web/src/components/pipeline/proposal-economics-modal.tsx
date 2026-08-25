@@ -2601,6 +2601,16 @@ export const ProposalEconomicsModal = forwardRef<
                             {proposalKitResult.modules.brand_name}{" "}
                             {proposalKitResult.modules.product_name}
                           </p>
+                          {proposalKitResult.modules.datasheet_url ? (
+                            <a
+                              href={proposalKitResult.modules.datasheet_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-1 inline-flex items-center gap-1 text-[11px] text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:underline"
+                            >
+                              📄 Baixar Datasheet
+                            </a>
+                          ) : null}
                         </div>
                         <Button
                           type="button"
@@ -2628,6 +2638,16 @@ export const ProposalEconomicsModal = forwardRef<
                             {proposalKitResult.inverter.brand_name}{" "}
                             {proposalKitResult.inverter.product_name}
                           </p>
+                          {proposalKitResult.inverter.datasheet_url ? (
+                            <a
+                              href={proposalKitResult.inverter.datasheet_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-1 inline-flex items-center gap-1 text-[11px] text-violet-600 hover:text-violet-700 dark:text-violet-400 hover:underline"
+                            >
+                              📄 Baixar Datasheet
+                            </a>
+                          ) : null}
                         </div>
                         <Button
                           type="button"
