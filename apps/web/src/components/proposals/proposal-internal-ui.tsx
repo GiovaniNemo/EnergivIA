@@ -119,31 +119,33 @@ export function ProposalInternalHeader({
       </Link>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
-        <div className="min-w-0 space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--color-foreground)] sm:text-3xl">
-            {title}
-          </h1>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/30 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-foreground)]">
-              {statusLabel}
-            </span>
-            <span className="text-xs text-[var(--color-muted-foreground)]">
-              Válida até{" "}
-              <span className="font-medium text-[var(--color-foreground)]">{validUntilLabel}</span>
-            </span>
-            <span className="rounded-md bg-[var(--color-muted)]/40 px-2 py-0.5 text-[11px] font-medium text-[var(--color-muted-foreground)]">
-              {financingLabel}
-            </span>
+        <div className="min-w-0 flex-1 space-y-3">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--color-foreground)] sm:text-3xl">
+              {title}
+            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/30 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-foreground)]">
+                {statusLabel}
+              </span>
+              <span className="text-xs text-[var(--color-muted-foreground)]">
+                Válida até{" "}
+                <span className="font-medium text-[var(--color-foreground)]">
+                  {validUntilLabel}
+                </span>
+              </span>
+              <span className="rounded-md bg-[var(--color-muted)]/40 px-2 py-0.5 text-[11px] font-medium text-[var(--color-muted-foreground)]">
+                {financingLabel}
+              </span>
+            </div>
+            <p className="max-w-xl text-xs leading-relaxed text-[var(--color-muted-foreground)]">
+              Cockpit de decisão: à esquerda o que vende; à direita o que protege sua margem. O
+              cliente vê só o link público.
+            </p>
           </div>
-          <p className="max-w-xl text-xs leading-relaxed text-[var(--color-muted-foreground)]">
-            Cockpit de decisão: à esquerda o que vende; à direita o que protege sua margem. O
-            cliente vê só o link público.
-          </p>
-        </div>
 
-        <div className="flex w-full flex-col gap-3 lg:max-w-md lg:shrink-0">
-          {/* Seleção do Layout no Topo */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-sm space-y-2">
+          {/* Seleção do Layout no Topo (coluna esquerda) */}
+          <div className="max-w-xl rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-sm space-y-2">
             <div className="flex items-center justify-between gap-2">
               <label
                 htmlFor="top-proposal-layout-select"
@@ -191,7 +193,9 @@ export function ProposalInternalHeader({
               <p className="text-xs text-red-600 dark:text-red-400">{templateError}</p>
             ) : null}
           </div>
+        </div>
 
+        <div className="flex w-full flex-col gap-3 lg:max-w-md lg:shrink-0">
           <div className="flex gap-2">
             <Button
               type="button"
