@@ -9,6 +9,7 @@ import {
   Copy,
   ExternalLink,
   FileText,
+  LayoutTemplate,
   Lightbulb,
   LineChart,
   Loader2,
@@ -73,6 +74,12 @@ export type ProposalInternalHeaderProps = {
   showSentPdfLink: boolean;
   sentPdfUrl: string | null;
   financingLabel: string;
+  selectedTemplateId: string;
+  onTemplateChange: (id: string) => void;
+  templates: Array<{ id: string; name: string; version: number }>;
+  templateSaving: boolean;
+  previewLayoutHref: string | null;
+  templateError?: string | null;
 };
 
 export function ProposalInternalHeader({
@@ -94,6 +101,12 @@ export function ProposalInternalHeader({
   showSentPdfLink,
   sentPdfUrl,
   financingLabel,
+  selectedTemplateId,
+  onTemplateChange,
+  templates,
+  templateSaving,
+  previewLayoutHref,
+  templateError,
 }: ProposalInternalHeaderProps): JSX.Element {
   return (
     <header className="space-y-5 border-b border-[var(--color-border)] pb-8">
@@ -129,6 +142,56 @@ export function ProposalInternalHeader({
         </div>
 
         <div className="flex w-full flex-col gap-3 lg:max-w-md lg:shrink-0">
+          {/* Seleção do Layout no Topo */}
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-sm space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <label
+                htmlFor="top-proposal-layout-select"
+                className="text-xs font-semibold text-[var(--color-foreground)] flex items-center gap-1.5"
+              >
+                <LayoutTemplate className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                Layout da proposta
+              </label>
+              {templateSaving && (
+                <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Salvando...
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <Select
+                  id="top-proposal-layout-select"
+                  value={selectedTemplateId}
+                  onChange={(e) => onTemplateChange(e.target.value as string)}
+                  disabled={templateSaving}
+                >
+                  <option value="">Selecione um template publicado</option>
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} (v{t.version})
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              {previewLayoutHref ? (
+                <a
+                  href={previewLayoutHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Pré-visualizar layout"
+                  className={cn(outlineSmLinkClass, "shrink-0 px-2.5")}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Ver</span>
+                </a>
+              ) : null}
+            </div>
+            {templateError ? (
+              <p className="text-xs text-red-600 dark:text-red-400">{templateError}</p>
+            ) : null}
+          </div>
+
           <div className="flex gap-2">
             <Button
               type="button"

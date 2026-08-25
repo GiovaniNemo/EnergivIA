@@ -45,7 +45,6 @@ import {
   ProposalConversionHint,
   ProposalEquipmentSummaryCard,
   ProposalInternalHeader,
-  ProposalLayoutSection,
   ProposalSalesHeroCard,
   ProposalScenarioActions,
 } from "@/components/proposals/proposal-internal-ui";
@@ -282,6 +281,9 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
   async function handleSendToClient(): Promise<void> {
     if (!currentOrganizationId || !proposal) return;
     try {
+      if (selectedTemplateId && selectedTemplateId !== proposal.proposalTemplate?.id) {
+        await setProposalTemplate(currentOrganizationId, proposal.id, selectedTemplateId || null);
+      }
       if (
         proposal.deal.stage !== "NEGOTIATION" &&
         proposal.deal.stage !== "WON" &&
@@ -437,18 +439,24 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
     }
   }
 
-  async function saveTemplateBinding(): Promise<void> {
+  async function saveTemplateBinding(targetTemplateId?: string): Promise<void> {
     if (!currentOrganizationId || !proposal) return;
+    const templateIdToSave = targetTemplateId !== undefined ? targetTemplateId : selectedTemplateId;
     setTemplateError(null);
     setTemplateSaving(true);
     try {
-      await setProposalTemplate(currentOrganizationId, proposal.id, selectedTemplateId || null);
+      await setProposalTemplate(currentOrganizationId, proposal.id, templateIdToSave || null);
       await reload();
     } catch (e) {
       setTemplateError(e instanceof Error ? e.message : "Não foi possível aplicar o layout.");
     } finally {
       setTemplateSaving(false);
     }
+  }
+
+  async function handleTemplateChange(templateId: string): Promise<void> {
+    setSelectedTemplateId(templateId);
+    await saveTemplateBinding(templateId);
   }
 
   if (orgLoading) {
@@ -545,6 +553,12 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
         showSentPdfLink={Boolean(proposal.pdfUrl)}
         sentPdfUrl={proposal.pdfUrl}
         financingLabel={financingLabel}
+        selectedTemplateId={selectedTemplateId}
+        onTemplateChange={(id) => void handleTemplateChange(id)}
+        templates={templates.map((t) => ({ id: t.id, name: t.name, version: t.version }))}
+        templateSaving={templateSaving}
+        previewLayoutHref={previewLayoutHref}
+        templateError={templateError}
       />
 
       <section
@@ -827,16 +841,6 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
           </ProposalCollapsibleProducts>
         </>
       ) : null}
-
-      <ProposalLayoutSection
-        selectedTemplateId={selectedTemplateId}
-        onTemplateChange={setSelectedTemplateId}
-        templates={templates.map((t) => ({ id: t.id, name: t.name, version: t.version }))}
-        previewHref={previewLayoutHref}
-        templateSaving={templateSaving}
-        onApply={() => void saveTemplateBinding()}
-        error={templateError}
-      />
 
       <ProposalCollapsibleTechnical>
         {sizing ? (
