@@ -4,6 +4,7 @@ import { Box } from "@mui/material";
 import { NumberSpecField } from "./NumberSpecField";
 
 const fields: Array<{ name: string; label: string; integer?: boolean }> = [
+  { name: "nominal_power_w", label: "Potência Nominal CA (W)", integer: true },
   { name: "max_dc_voltage", label: "Tensão DC máx. (V)" },
   { name: "mppt_count", label: "Nº de MPPTs", integer: true },
   { name: "max_strings_per_mppt", label: "Strings por MPPT", integer: true },

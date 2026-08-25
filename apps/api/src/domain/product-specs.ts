@@ -12,6 +12,7 @@ export interface ModuleSpec {
 
 export interface StringInverterSpec {
   type: "string";
+  nominal_power_w?: number;
   max_dc_voltage: number;
   mppt_count: number;
   max_strings_per_mppt: number;
