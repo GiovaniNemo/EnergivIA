@@ -210,6 +210,12 @@ export class OrganizationsService {
             logoUrl: true,
             settings: true,
             createdAt: true,
+            subscription: {
+              select: {
+                status: true,
+                planId: true,
+              },
+            },
           },
         },
       },
@@ -232,6 +238,7 @@ export class OrganizationsService {
         templateTone: readOptionalSetting(organization.settings, "templateTone"),
         role: m.role,
         membershipId: m.id,
+        subscription: organization.subscription,
       };
     });
   }

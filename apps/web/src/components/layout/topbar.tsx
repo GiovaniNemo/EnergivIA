@@ -5,7 +5,7 @@ import { useTheme } from "@/components/providers/theme-provider";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, LogOut, Menu, UserRound, Sparkles, Timer, AlertTriangle } from "lucide-react";
+import { Moon, Sun, LogOut, Menu, UserRound, Timer, AlertTriangle } from "lucide-react";
 import { useSidebar } from "@/components/layout/sidebar-inset";
 import { OrganizationSwitcher } from "@/components/layout/organization-switcher";
 import { NotificationsBell } from "@/components/layout/notifications-bell";
@@ -112,6 +112,21 @@ function UserMenu(): JSX.Element {
   );
 }
 
+function WhatsappIcon(props: React.SVGProps<SVGSVGElement>): JSX.Element {
+  return (
+    <svg
+      fill="currentColor"
+      viewBox="0 0 24 24"
+      className={props.className}
+      width="1em"
+      height="1em"
+      {...props}
+    >
+      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.725-1.457L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.86.002-2.637-1.03-5.114-2.905-6.99C16.55 1.879 14.07 .847 11.433.847 6.003.847 1.58 5.267 1.577 10.697c0 1.694.441 3.354 1.278 4.818L1.876 21.034l5.912-1.547-1.14-.633z" />
+    </svg>
+  );
+}
+
 export function Topbar() {
   const { resolvedTheme, setTheme } = useTheme();
   const { user } = useUser();
@@ -126,6 +141,8 @@ export function Topbar() {
   const trialDaysLeft = createdAt
     ? Math.max(0, 7 - Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)))
     : 7;
+
+  const hasActiveSub = currentOrganization?.subscription?.status === "active";
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -156,7 +173,7 @@ export function Topbar() {
         </Link>
       </div>
 
-      {}
+      {/* Page context / actions */}
       <div className="flex min-w-0 flex-1 items-center gap-2 px-4">
         {isMobile ? (
           <Button
@@ -176,34 +193,35 @@ export function Topbar() {
       </div>
 
       <div className="flex shrink-0 items-center gap-1 px-3 md:gap-2">
-        {trialDaysLeft === 0 ? (
-          <Link
-            href="/gestao/meus-planos"
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 text-rose-700 text-xs font-bold rounded-lg border border-rose-200 shadow-sm transition-all hover:bg-rose-100 hover:scale-[1.02] dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800/60 dark:hover:bg-rose-900/60"
-            title="Seu tempo de testes acabou. Clique para escolher seu plano e continuar."
-          >
-            <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0 animate-pulse" />
-            <span>Tempo de testes acabou</span>
-          </Link>
-        ) : (
-          <Link
-            href="/gestao/meus-planos"
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-100 text-orange-800 text-xs font-semibold rounded-lg border border-orange-200 transition-colors hover:bg-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-900/50 dark:hover:bg-orange-900/60"
-            title="Teste grátis"
-          >
-            <Timer className="h-4 w-4 text-orange-500" />
-            <span>
-              {trialDaysLeft} {trialDaysLeft === 1 ? "dia restante" : "dias restantes"}
-            </span>
-          </Link>
-        )}
+        {!hasActiveSub &&
+          (trialDaysLeft === 0 ? (
+            <Link
+              href="/gestao/meus-planos"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 text-rose-700 text-xs font-bold rounded-lg border border-rose-200 shadow-sm transition-all hover:bg-rose-100 hover:scale-[1.02] dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800/60 dark:hover:bg-rose-900/60"
+              title="Seu tempo de testes acabou. Clique para escolher seu plano e continuar."
+            >
+              <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0 animate-pulse" />
+              <span>Tempo de testes acabou</span>
+            </Link>
+          ) : (
+            <Link
+              href="/gestao/meus-planos"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-100 text-orange-800 text-xs font-semibold rounded-lg border border-orange-200 transition-colors hover:bg-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-900/50 dark:hover:bg-orange-900/60"
+              title="Teste grátis"
+            >
+              <Timer className="h-4 w-4 text-orange-500" />
+              <span>
+                {trialDaysLeft} {trialDaysLeft === 1 ? "dia restante" : "dias restantes"}
+              </span>
+            </Link>
+          ))}
         <button
           type="button"
           onClick={() => setWhatsappModalOpen(true)}
           className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 px-3 py-1.5 text-xs font-bold text-white hover:from-emerald-600 hover:to-green-700 shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95"
           title="Conhecer IA no WhatsApp"
         >
-          <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-200" />
+          <WhatsappIcon className="h-4 w-4 shrink-0 text-white" />
           IA no WhatsApp 💬
         </button>
         <NotificationsBell />

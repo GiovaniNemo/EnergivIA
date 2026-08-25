@@ -71,10 +71,12 @@ export function Sidebar(): JSX.Element {
           return true;
         }).map((item) => {
           if (item.label === "Meus Planos") {
+            const hasActiveSub = currentOrganization?.subscription?.status === "active";
             return {
               ...item,
-              badge:
-                trialDaysLeft === 0
+              badge: hasActiveSub
+                ? undefined
+                : trialDaysLeft === 0
                   ? "EXPIRADO"
                   : `${trialDaysLeft} ${trialDaysLeft === 1 ? "DIA" : "DIAS"}`,
             };
@@ -83,7 +85,7 @@ export function Sidebar(): JSX.Element {
         }),
       }))
       .filter((section) => section.items.length > 0);
-  }, [userRole, surface]);
+  }, [userRole, surface, currentOrganization, trialDaysLeft]);
 
   const activeMenuPath = useMemo(() => {
     const currentPath = (pathname ?? "").replace(/\/$/, "");

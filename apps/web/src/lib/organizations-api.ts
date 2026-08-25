@@ -23,6 +23,10 @@ export interface Organization {
   createdAt: string;
   role?: string;
   membershipId?: string;
+  subscription?: {
+    status: string;
+    planId: string;
+  } | null;
 }
 
 export interface MeResponse {
