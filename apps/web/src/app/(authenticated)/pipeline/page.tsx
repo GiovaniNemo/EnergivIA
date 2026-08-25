@@ -253,6 +253,101 @@ export default function PipelinePage(): JSX.Element {
   const [activeView, setActiveView] = useState<"kanban" | "tabela" | "prioridades">("kanban");
   const [detailDealId, setDetailDealId] = useState<string | null>(null);
 
+  const [addFilterMenuAnchor, setAddFilterMenuAnchor] = useState<HTMLElement | null>(null);
+  const [assigneeFilterMenuAnchor, setAssigneeFilterMenuAnchor] = useState<HTMLElement | null>(
+    null
+  );
+  const [valueFilterMenuAnchor, setValueFilterMenuAnchor] = useState<HTMLElement | null>(null);
+  const [sortByMenuAnchor, setSortByMenuAnchor] = useState<HTMLElement | null>(null);
+  const [groupByMenuAnchor, setGroupByMenuAnchor] = useState<HTMLElement | null>(null);
+
+  const [filterAssignee, setFilterAssignee] = useState<string | null>(null);
+  const [filterMinValue, setFilterMinValue] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<
+    "urgency" | "value-desc" | "value-asc" | "client-name" | "recent"
+  >("urgency");
+  const [groupBy, setGroupBy] = useState<"stage" | "assignee">("stage");
+
+  const filteredDeals = useMemo(() => {
+    return deals.filter((deal) => {
+      // General filters
+      if (activeFilter === "overdue") {
+        if (deal.stage === "fechado" || !isOverdue(deal.nextStepDate)) return false;
+      } else if (activeFilter === "noProposal") {
+        if (deal.stage === "fechado" || deal.hasProposal) return false;
+      }
+
+      // Custom filters
+      if (filterAssignee) {
+        if (filterAssignee === "unassigned") {
+          if (deal.assigneeUserId !== null) return false;
+        } else {
+          if (deal.assigneeUserId !== filterAssignee) return false;
+        }
+      }
+      if (filterMinValue !== null) {
+        if (deal.value < filterMinValue) return false;
+      }
+
+      return true;
+    });
+  }, [deals, activeFilter, filterAssignee, filterMinValue]);
+
+  const assigneeValues = useMemo(() => {
+    const map = {} as Record<string, number>;
+    for (const deal of deals) {
+      const key = deal.assigneeUserId ?? "unassigned";
+      map[key] = (map[key] ?? 0) + deal.value;
+    }
+    return map;
+  }, [deals]);
+
+  const kanbanItems = useMemo(() => {
+    const items = filteredDeals.map((d) => {
+      if (groupBy === "assignee") {
+        return {
+          ...d,
+          stage: (d.assigneeUserId ?? "unassigned") as unknown as DealStage,
+        };
+      }
+      return d;
+    });
+
+    const buckets = new Map<string, typeof items>();
+    for (const item of items) {
+      const lane = item.stage === "fechado" ? `fechado:${item.status ?? "lost"}` : item.stage;
+      const bucket = buckets.get(lane) ?? [];
+      bucket.push(item);
+      buckets.set(lane, bucket);
+    }
+
+    const result: typeof items = [];
+    const sortFn = (a: Deal, b: Deal) => {
+      switch (sortBy) {
+        case "urgency":
+          return urgencyScore(b) - urgencyScore(a);
+        case "value-desc":
+          return b.value - a.value;
+        case "value-asc":
+          return a.value - b.value;
+        case "client-name":
+          return a.clientName.localeCompare(b.clientName, "pt-BR");
+        case "recent":
+          return b.recentAt.getTime() - a.recentAt.getTime();
+        default:
+          return 0;
+      }
+    };
+
+    for (const laneItems of buckets.values()) {
+      const sorted = [...laneItems].sort(sortFn);
+      for (let i = 0; i < sorted.length; i++) {
+        result.push({ ...sorted[i]!, order: i });
+      }
+    }
+    return result;
+  }, [filteredDeals, sortBy, groupBy]);
+
   useEffect(() => {
     const dealParam = initialDealParamRef.current;
     if (!dealParam || deals.length === 0) return;
@@ -456,19 +551,25 @@ export default function PipelinePage(): JSX.Element {
 
   async function commitDnDDrop(params: {
     item: Deal;
-    fromStage: DealStage;
-    toStage: DealStage;
+    fromStage: unknown;
+    toStage: unknown;
     fromStatus?: ClosedDealStatus;
     toStatus?: ClosedDealStatus;
     fromOrder: number;
     newOrder: number;
   }): Promise<void> {
     const { item, fromStage, toStage, fromStatus, toStatus, newOrder } = params;
-    await updateDealStageOrderMock(item.id, toStage, newOrder);
-    if (toStage === "fechado" && toStatus) {
+    if (groupBy === "assignee") {
+      const targetUserId = toStage === "unassigned" ? null : (toStage as string);
+      await assignDeal(item, targetUserId);
+      return;
+    }
+    const toStageTyped = toStage as DealStage;
+    await updateDealStageOrderMock(item.id, toStageTyped, newOrder);
+    if (toStageTyped === "fechado" && toStatus) {
       setCloseModalDeal(item);
       setCloseModalStatus(toStatus);
-      setCloseModalFromStage(fromStage);
+      setCloseModalFromStage(fromStage as DealStage);
       setCloseModalFromStatus(fromStatus);
       setCloseModalOpen(true);
       return;
@@ -477,7 +578,7 @@ export default function PipelinePage(): JSX.Element {
     if (fromStage !== toStage) {
       try {
         await patchDeal(currentOrganizationId, item.dealId, {
-          stage: mapUiStageToApi(toStage),
+          stage: mapUiStageToApi(toStageTyped),
           lostReason: null,
         });
       } catch {
@@ -865,7 +966,6 @@ export default function PipelinePage(): JSX.Element {
         </div>
       </header>
 
-      {}
       {error ? (
         <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
           {error}
@@ -912,24 +1012,233 @@ export default function PipelinePage(): JSX.Element {
           ))}
           <button
             type="button"
+            onClick={(e) => setAddFilterMenuAnchor(e.currentTarget)}
             className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-[var(--color-border)] bg-[var(--color-muted)] px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)] hover:border-[var(--color-foreground)]/30"
           >
             + Adicionar filtro
           </button>
+
+          <Menu
+            anchorEl={addFilterMenuAnchor}
+            open={Boolean(addFilterMenuAnchor)}
+            onClose={() => setAddFilterMenuAnchor(null)}
+          >
+            <MenuItem
+              onClick={() => {
+                setAssigneeFilterMenuAnchor(addFilterMenuAnchor);
+                setAddFilterMenuAnchor(null);
+              }}
+            >
+              Responsável...
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setValueFilterMenuAnchor(addFilterMenuAnchor);
+                setAddFilterMenuAnchor(null);
+              }}
+            >
+              Valor mínimo...
+            </MenuItem>
+          </Menu>
+
+          <Menu
+            anchorEl={assigneeFilterMenuAnchor}
+            open={Boolean(assigneeFilterMenuAnchor)}
+            onClose={() => setAssigneeFilterMenuAnchor(null)}
+          >
+            <MenuItem
+              onClick={() => {
+                setFilterAssignee(null);
+                setAssigneeFilterMenuAnchor(null);
+              }}
+            >
+              <em>Todos</em>
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setFilterAssignee("unassigned");
+                setAssigneeFilterMenuAnchor(null);
+              }}
+            >
+              Sem responsável
+            </MenuItem>
+            {assignees.map((a) => (
+              <MenuItem
+                key={a.userId}
+                onClick={() => {
+                  setFilterAssignee(a.userId);
+                  setAssigneeFilterMenuAnchor(null);
+                }}
+              >
+                {a.name}
+              </MenuItem>
+            ))}
+          </Menu>
+
+          <Menu
+            anchorEl={valueFilterMenuAnchor}
+            open={Boolean(valueFilterMenuAnchor)}
+            onClose={() => setValueFilterMenuAnchor(null)}
+          >
+            <MenuItem
+              onClick={() => {
+                setFilterMinValue(null);
+                setValueFilterMenuAnchor(null);
+              }}
+            >
+              <em>Qualquer valor</em>
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setFilterMinValue(10000);
+                setValueFilterMenuAnchor(null);
+              }}
+            >
+              Mais que R$ 10.000
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setFilterMinValue(50000);
+                setValueFilterMenuAnchor(null);
+              }}
+            >
+              Mais que R$ 50.000
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setFilterMinValue(100000);
+                setValueFilterMenuAnchor(null);
+              }}
+            >
+              Mais que R$ 100.000
+            </MenuItem>
+          </Menu>
+
+          {filterAssignee && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+              Responsável:{" "}
+              {filterAssignee === "unassigned"
+                ? "Sem responsável"
+                : assignees.find((a) => a.userId === filterAssignee)?.name}
+              <button
+                type="button"
+                onClick={() => setFilterAssignee(null)}
+                className="ml-1 font-bold text-emerald-500 hover:text-emerald-700"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          {filterMinValue !== null && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+              Valor &gt; {formatCurrency(filterMinValue)}
+              <button
+                type="button"
+                onClick={() => setFilterMinValue(null)}
+                className="ml-1 font-bold text-emerald-500 hover:text-emerald-700"
+              >
+                ×
+              </button>
+            </span>
+          )}
+
           <div className="ml-auto flex items-center gap-3">
             <button
               type="button"
+              onClick={(e) => setSortByMenuAnchor(e.currentTarget)}
               className="text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
             >
-              Ordenar: urgência ▾
+              Ordenar:{" "}
+              {sortBy === "urgency"
+                ? "urgência"
+                : sortBy === "value-desc"
+                  ? "valor (maior)"
+                  : sortBy === "value-asc"
+                    ? "valor (menor)"
+                    : sortBy === "client-name"
+                      ? "nome"
+                      : "recente"}{" "}
+              ▾
             </button>
-            {activeView === "kanban" && (
-              <button
-                type="button"
-                className="text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+            <Menu
+              anchorEl={sortByMenuAnchor}
+              open={Boolean(sortByMenuAnchor)}
+              onClose={() => setSortByMenuAnchor(null)}
+            >
+              <MenuItem
+                onClick={() => {
+                  setSortBy("urgency");
+                  setSortByMenuAnchor(null);
+                }}
               >
-                Agrupar: estágio ▾
-              </button>
+                Urgência
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setSortBy("value-desc");
+                  setSortByMenuAnchor(null);
+                }}
+              >
+                Valor (Maior primeiro)
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setSortBy("value-asc");
+                  setSortByMenuAnchor(null);
+                }}
+              >
+                Valor (Menor primeiro)
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setSortBy("client-name");
+                  setSortByMenuAnchor(null);
+                }}
+              >
+                Nome do Cliente
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setSortBy("recent");
+                  setSortByMenuAnchor(null);
+                }}
+              >
+                Mais recente
+              </MenuItem>
+            </Menu>
+
+            {activeView === "kanban" && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => setGroupByMenuAnchor(e.currentTarget)}
+                  className="text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                >
+                  Agrupar: {groupBy === "stage" ? "estágio" : "responsável"} ▾
+                </button>
+                <Menu
+                  anchorEl={groupByMenuAnchor}
+                  open={Boolean(groupByMenuAnchor)}
+                  onClose={() => setGroupByMenuAnchor(null)}
+                >
+                  <MenuItem
+                    onClick={() => {
+                      setGroupBy("stage");
+                      setGroupByMenuAnchor(null);
+                    }}
+                  >
+                    Estágio
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      setGroupBy("assignee");
+                      setGroupByMenuAnchor(null);
+                    }}
+                  >
+                    Responsável
+                  </MenuItem>
+                </Menu>
+              </>
             )}
             {activeView === "tabela" && (
               <button
@@ -1072,13 +1381,13 @@ export default function PipelinePage(): JSX.Element {
 
       {}
       {activeView === "tabela" && (
-        <PipelineTableView deals={deals} onOpenDeal={(deal) => setDetailDealId(deal.id)} />
+        <PipelineTableView deals={filteredDeals} onOpenDeal={(deal) => setDetailDealId(deal.id)} />
       )}
 
       {}
       {activeView === "prioridades" && (
         <PipelinePrioridadesView
-          deals={deals}
+          deals={filteredDeals}
           onOpenProposal={(deal) => {
             void openStudyForDeal(deal);
           }}
@@ -1097,7 +1406,7 @@ export default function PipelinePage(): JSX.Element {
           {}
           <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-3">
             <span className="text-sm font-semibold text-[var(--color-foreground)]">
-              Funil por estágio
+              {groupBy === "assignee" ? "Funil por responsável" : "Funil por estágio"}
             </span>
             <span className="hidden text-xs text-[var(--color-muted-foreground)] sm:block">
               · arraste cards para avançar · clique para abrir detalhes
@@ -1131,13 +1440,38 @@ export default function PipelinePage(): JSX.Element {
           </div>
           <div className="p-3">
             <KanbanBoard
-              stages={STAGE_ORDER}
-              items={deals}
+              stages={
+                groupBy === "assignee"
+                  ? (["unassigned", ...assignees.map((a) => a.userId)] as unknown as DealStage[])
+                  : STAGE_ORDER
+              }
+              items={kanbanItems as unknown as Deal[]}
               onItemsChange={replaceDeals}
               onDropCommit={commitDnDDrop}
               closedCollapsed={!fechadoExpanded}
               onExpandClosed={() => setFechadoExpanded(true)}
               renderColumnHeader={(stage, count) => {
+                if (groupBy === "assignee") {
+                  const assignee = assignees.find((a) => a.userId === stage);
+                  const name = assignee ? assignee.name : "Sem responsável";
+                  const total = assigneeValues[stage] ?? 0;
+                  return (
+                    <div className="flex items-center justify-between pb-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-semibold text-[var(--color-foreground)] text-ellipsis overflow-hidden whitespace-nowrap max-w-[120px]">
+                          {name}
+                        </span>
+                        <span className="min-w-[20px] rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-1.5 text-center text-[11px] font-semibold text-[var(--color-muted-foreground)]">
+                          {count}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-semibold text-[var(--color-muted-foreground)]">
+                        {formatCurrency(total)}
+                      </span>
+                    </div>
+                  );
+                }
+
                 const stageTotal = stageValues[stage] ?? 0;
                 if (stage === "fechado") {
                   return (
@@ -1196,7 +1530,9 @@ export default function PipelinePage(): JSX.Element {
                     Arraste ou crie aqui
                   </p>
                   <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-                    Nenhuma negociação neste estágio.
+                    {groupBy === "assignee"
+                      ? "Nenhuma negociação para este responsável."
+                      : "Nenhuma negociação neste estágio."}
                   </p>
                   <button
                     type="button"
