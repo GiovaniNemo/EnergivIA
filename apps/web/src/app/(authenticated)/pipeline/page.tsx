@@ -1036,28 +1036,37 @@ export default function PipelinePage(): JSX.Element {
             onClose={() => setAddFilterMenuAnchor(null)}
             slotProps={{
               paper: {
-                className:
-                  "mt-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-1 text-[var(--color-foreground)] shadow-xl",
+                style: {
+                  backgroundColor: "#18181b",
+                  backgroundImage: "none",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: "0.75rem",
+                  color: "#f4f4f5",
+                  boxShadow:
+                    "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)",
+                  padding: "4px",
+                  minWidth: "180px",
+                },
               },
             }}
           >
             <MenuItem
-              className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+              className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
               onClick={() => {
                 setAssigneeFilterMenuAnchor(addFilterMenuAnchor);
                 setAddFilterMenuAnchor(null);
               }}
             >
-              Responsável...
+              Filtrar por Responsável
             </MenuItem>
             <MenuItem
-              className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+              className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
               onClick={() => {
                 setValueFilterMenuAnchor(addFilterMenuAnchor);
                 setAddFilterMenuAnchor(null);
               }}
             >
-              Valor mínimo...
+              Filtrar por Valor mínimo
             </MenuItem>
           </Menu>
 
@@ -1067,13 +1076,23 @@ export default function PipelinePage(): JSX.Element {
             onClose={() => setAssigneeFilterMenuAnchor(null)}
             slotProps={{
               paper: {
-                className:
-                  "mt-1 max-h-72 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-1 text-[var(--color-foreground)] shadow-xl",
+                style: {
+                  backgroundColor: "#18181b",
+                  backgroundImage: "none",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: "0.75rem",
+                  color: "#f4f4f5",
+                  boxShadow:
+                    "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)",
+                  padding: "4px",
+                  maxHeight: "288px",
+                  minWidth: "200px",
+                },
               },
             }}
           >
             <MenuItem
-              className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+              className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
               onClick={() => {
                 setFilterAssignee(null);
                 setAssigneeFilterMenuAnchor(null);
@@ -1082,7 +1101,7 @@ export default function PipelinePage(): JSX.Element {
               <em>Todos os responsáveis</em>
             </MenuItem>
             <MenuItem
-              className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+              className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
               onClick={() => {
                 setFilterAssignee("unassigned");
                 setAssigneeFilterMenuAnchor(null);
@@ -1093,7 +1112,7 @@ export default function PipelinePage(): JSX.Element {
             {assignees.map((a) => (
               <MenuItem
                 key={a.userId}
-                className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                 onClick={() => {
                   setFilterAssignee(a.userId);
                   setAssigneeFilterMenuAnchor(null);
@@ -1110,13 +1129,22 @@ export default function PipelinePage(): JSX.Element {
             onClose={() => setValueFilterMenuAnchor(null)}
             slotProps={{
               paper: {
-                className:
-                  "mt-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-1 text-[var(--color-foreground)] shadow-xl",
+                style: {
+                  backgroundColor: "#18181b",
+                  backgroundImage: "none",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: "0.75rem",
+                  color: "#f4f4f5",
+                  boxShadow:
+                    "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)",
+                  padding: "4px",
+                  minWidth: "180px",
+                },
               },
             }}
           >
             <MenuItem
-              className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+              className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
               onClick={() => {
                 setFilterMinValue(null);
                 setValueFilterMenuAnchor(null);
@@ -1125,7 +1153,7 @@ export default function PipelinePage(): JSX.Element {
               <em>Qualquer valor</em>
             </MenuItem>
             <MenuItem
-              className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+              className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
               onClick={() => {
                 setFilterMinValue(10000);
                 setValueFilterMenuAnchor(null);
@@ -1134,7 +1162,7 @@ export default function PipelinePage(): JSX.Element {
               Mais que R$ 10.000
             </MenuItem>
             <MenuItem
-              className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+              className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
               onClick={() => {
                 setFilterMinValue(50000);
                 setValueFilterMenuAnchor(null);
@@ -1143,7 +1171,7 @@ export default function PipelinePage(): JSX.Element {
               Mais que R$ 50.000
             </MenuItem>
             <MenuItem
-              className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+              className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
               onClick={() => {
                 setFilterMinValue(100000);
                 setValueFilterMenuAnchor(null);
@@ -1205,13 +1233,22 @@ export default function PipelinePage(): JSX.Element {
               onClose={() => setSortByMenuAnchor(null)}
               slotProps={{
                 paper: {
-                  className:
-                    "mt-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-1 text-[var(--color-foreground)] shadow-xl",
+                  style: {
+                    backgroundColor: "#18181b",
+                    backgroundImage: "none",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "0.75rem",
+                    color: "#f4f4f5",
+                    boxShadow:
+                      "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)",
+                    padding: "4px",
+                    minWidth: "180px",
+                  },
                 },
               }}
             >
               <MenuItem
-                className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                 onClick={() => {
                   setSortBy("urgency");
                   setSortByMenuAnchor(null);
@@ -1220,7 +1257,7 @@ export default function PipelinePage(): JSX.Element {
                 Urgência
               </MenuItem>
               <MenuItem
-                className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                 onClick={() => {
                   setSortBy("value-desc");
                   setSortByMenuAnchor(null);
@@ -1229,7 +1266,7 @@ export default function PipelinePage(): JSX.Element {
                 Valor (Maior primeiro)
               </MenuItem>
               <MenuItem
-                className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                 onClick={() => {
                   setSortBy("value-asc");
                   setSortByMenuAnchor(null);
@@ -1238,7 +1275,7 @@ export default function PipelinePage(): JSX.Element {
                 Valor (Menor primeiro)
               </MenuItem>
               <MenuItem
-                className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                 onClick={() => {
                   setSortBy("client-name");
                   setSortByMenuAnchor(null);
@@ -1247,7 +1284,7 @@ export default function PipelinePage(): JSX.Element {
                 Nome do Cliente
               </MenuItem>
               <MenuItem
-                className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                 onClick={() => {
                   setSortBy("recent");
                   setSortByMenuAnchor(null);
@@ -1272,13 +1309,22 @@ export default function PipelinePage(): JSX.Element {
                   onClose={() => setGroupByMenuAnchor(null)}
                   slotProps={{
                     paper: {
-                      className:
-                        "mt-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-1 text-[var(--color-foreground)] shadow-xl",
+                      style: {
+                        backgroundColor: "#18181b",
+                        backgroundImage: "none",
+                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                        borderRadius: "0.75rem",
+                        color: "#f4f4f5",
+                        boxShadow:
+                          "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)",
+                        padding: "4px",
+                        minWidth: "160px",
+                      },
                     },
                   }}
                 >
                   <MenuItem
-                    className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                    className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                     onClick={() => {
                       setGroupBy("stage");
                       setGroupByMenuAnchor(null);
@@ -1287,7 +1333,7 @@ export default function PipelinePage(): JSX.Element {
                     Estágio
                   </MenuItem>
                   <MenuItem
-                    className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                    className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                     onClick={() => {
                       setGroupBy("assignee");
                       setGroupByMenuAnchor(null);
@@ -1646,7 +1692,7 @@ export default function PipelinePage(): JSX.Element {
                 const valueQualifier = !deal.hasProposal
                   ? "/ proposta pendente"
                   : deal.proposalFollowUpStatus === "waiting"
-                    ? "/ aguardando resposta"
+                    ? "/ atrasado"
                     : deal.proposalFollowUpStatus === "viewed"
                       ? "/ visto pelo cliente"
                       : null;
@@ -1786,13 +1832,22 @@ export default function PipelinePage(): JSX.Element {
                         onClose={() => setActionsMenu(null)}
                         slotProps={{
                           paper: {
-                            className:
-                              "mt-1 min-w-[200px] rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-1 text-[var(--color-foreground)] shadow-xl",
+                            style: {
+                              backgroundColor: "#18181b",
+                              backgroundImage: "none",
+                              border: "1px solid rgba(255, 255, 255, 0.1)",
+                              borderRadius: "0.75rem",
+                              color: "#f4f4f5",
+                              boxShadow:
+                                "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)",
+                              padding: "4px",
+                              minWidth: "210px",
+                            },
                           },
                         }}
                       >
                         <MenuItem
-                          className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                          className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                           disabled={!deal.dealId}
                           onClick={(e) => {
                             setActionsMenu(null);
@@ -1802,7 +1857,7 @@ export default function PipelinePage(): JSX.Element {
                           Definir responsável
                         </MenuItem>
                         <MenuItem
-                          className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                          className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                           disabled={!deal.whatsapp}
                           onClick={() => {
                             openWhatsapp(deal);
@@ -1813,7 +1868,7 @@ export default function PipelinePage(): JSX.Element {
                           WhatsApp
                         </MenuItem>
                         <MenuItem
-                          className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                          className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                           onClick={() => {
                             router.push(`/clientes/${deal.leadId}`);
                             setActionsMenu(null);
@@ -1824,7 +1879,7 @@ export default function PipelinePage(): JSX.Element {
                         </MenuItem>
                         {deal.latestProposalId ? (
                           <MenuItem
-                            className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                            className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                             onClick={() => {
                               router.push(`/propostas/${deal.latestProposalId}`);
                               setActionsMenu(null);
@@ -1836,7 +1891,7 @@ export default function PipelinePage(): JSX.Element {
                         ) : null}
                         {nextStage && (
                           <MenuItem
-                            className="rounded-lg text-xs font-medium text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
+                            className="rounded-lg text-xs font-medium text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
                             disabled={updatingDealId === deal.id}
                             onClick={() => {
                               void moveDeal(deal.id, nextStage);
@@ -1846,9 +1901,9 @@ export default function PipelinePage(): JSX.Element {
                             Avançar para {STAGE_LABEL[nextStage]}
                           </MenuItem>
                         )}
-                        <div className="my-1 border-t border-[var(--color-border)]" />
+                        <div className="my-1 border-t border-zinc-800" />
                         <MenuItem
-                          className="rounded-lg text-xs font-medium hover:bg-emerald-500/10 hover:text-emerald-600"
+                          className="rounded-lg text-xs font-medium text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
                           disabled={updatingDealId === deal.id}
                           onClick={() => {
                             setActionsMenu(null);
@@ -1862,7 +1917,7 @@ export default function PipelinePage(): JSX.Element {
                           Marcar como Ganho
                         </MenuItem>
                         <MenuItem
-                          className="rounded-lg text-xs font-medium hover:bg-red-500/10 hover:text-red-600"
+                          className="rounded-lg text-xs font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300"
                           disabled={updatingDealId === deal.id}
                           onClick={() => {
                             setActionsMenu(null);
@@ -1876,7 +1931,7 @@ export default function PipelinePage(): JSX.Element {
                           Marcar como Perdido
                         </MenuItem>
                         <MenuItem
-                          className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                          className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                           disabled={updatingDealId === deal.id}
                           onClick={() => {
                             setActionsMenu(null);
@@ -1890,7 +1945,7 @@ export default function PipelinePage(): JSX.Element {
                           Marcar como Desqualificado
                         </MenuItem>
                         <MenuItem
-                          className="rounded-lg text-xs font-medium hover:bg-amber-500/10 hover:text-amber-600"
+                          className="rounded-lg text-xs font-medium text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
                           disabled={updatingDealId === deal.id}
                           onClick={() => {
                             setActionsMenu(null);
@@ -1904,7 +1959,7 @@ export default function PipelinePage(): JSX.Element {
                           Marcar como Adiado
                         </MenuItem>
                         <MenuItem
-                          className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                          className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                           disabled={updatingDealId === deal.id}
                           onClick={() => {
                             setActionsMenu(null);
@@ -1924,13 +1979,23 @@ export default function PipelinePage(): JSX.Element {
                         onClose={() => setAssigneeMenu(null)}
                         slotProps={{
                           paper: {
-                            className:
-                              "mt-1 max-h-72 min-w-[180px] rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-1 text-[var(--color-foreground)] shadow-xl",
+                            style: {
+                              backgroundColor: "#18181b",
+                              backgroundImage: "none",
+                              border: "1px solid rgba(255, 255, 255, 0.1)",
+                              borderRadius: "0.75rem",
+                              color: "#f4f4f5",
+                              boxShadow:
+                                "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)",
+                              padding: "4px",
+                              maxHeight: "288px",
+                              minWidth: "190px",
+                            },
                           },
                         }}
                       >
                         <MenuItem
-                          className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                          className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                           onClick={() => {
                             void assignDeal(deal, null);
                             setAssigneeMenu(null);
@@ -1942,7 +2007,7 @@ export default function PipelinePage(): JSX.Element {
                         {assignees.map((assignee) => (
                           <MenuItem
                             key={assignee.userId}
-                            className="rounded-lg text-xs font-medium hover:bg-[var(--color-muted)]"
+                            className="rounded-lg text-xs font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
                             selected={deal.assigneeUserId === assignee.userId}
                             onClick={() => {
                               void assignDeal(deal, assignee.userId);

@@ -20,11 +20,11 @@ const STAGE_OPTIONS: { value: DealDetailStageOption; label: string }[] = [
   { value: "contato", label: "Contato" },
   { value: "proposta", label: "Proposta" },
   { value: "negociacao", label: "Negociação" },
-  { value: "fechado:won", label: "Fechado — Ganho" },
-  { value: "fechado:lost", label: "Fechado — Perdido" },
-  { value: "fechado:disqualified", label: "Fechado — Desqualificado" },
-  { value: "fechado:postponed", label: "Fechado — Adiado" },
-  { value: "fechado:cancelled", label: "Fechado — Cancelado" },
+  { value: "fechado:won", label: "Ganho" },
+  { value: "fechado:lost", label: "Perdido" },
+  { value: "fechado:disqualified", label: "Desqualificado" },
+  { value: "fechado:postponed", label: "Adiado" },
+  { value: "fechado:cancelled", label: "Cancelado" },
 ];
 
 const ACTION_TYPES = [
