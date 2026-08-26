@@ -31,8 +31,16 @@ export class EmailService {
     return trimmed.length > 0 ? trimmed : undefined;
   }
 
+  private getResolvedHost(): string {
+    const rawHost = this.cleanEnv("SMTP_HOST");
+    if (!rawHost || rawHost.toLowerCase() === "smtppro.zoho.com") {
+      return "smtp.zoho.com";
+    }
+    return rawHost;
+  }
+
   private createSmtpTransporter(port: number, secure: boolean): Transporter | null {
-    const host = this.cleanEnv("SMTP_HOST") ?? "smtp.zoho.com";
+    const host = this.getResolvedHost();
     const user = this.cleanEnv("SMTP_USER");
     const pass = this.cleanEnv("SMTP_PASS");
 
@@ -215,7 +223,7 @@ export class EmailService {
   }
 
   async runDiagnostics(toEmail: string) {
-    const host = this.cleanEnv("SMTP_HOST") ?? "smtp.zoho.com";
+    const host = this.getResolvedHost();
     const user = this.cleanEnv("SMTP_USER");
     const pass = this.cleanEnv("SMTP_PASS");
     const rawPort = this.cleanEnv("SMTP_PORT");
