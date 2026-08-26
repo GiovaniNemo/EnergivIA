@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
+import { Resend } from "resend";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { buildOrganizationInviteTemplate } from "./templates/organization-invite.template";
 import { buildWelcomeTemplate } from "./templates/welcome.template";
@@ -79,7 +80,7 @@ export class EmailService {
   }
 
   /**
-   * Generic method to send emails via Zoho SMTP (with port fallback) or AWS SES
+   * Generic method to send emails via Resend HTTPS API, Zoho SMTP, or AWS SES
    */
   async sendEmail(options: SendEmailOptions): Promise<boolean> {
     const defaultFrom =
@@ -88,10 +89,47 @@ export class EmailService {
       "EnergivIA <noreply@energivia.com.br>";
     const from = options.from || defaultFrom;
 
+    // 1. Try Resend (HTTPS Port 443 - 100% cloud-compatible and unblockable)
+    const resendKey = this.cleanEnv("RESEND_API_KEY");
+    if (resendKey) {
+      try {
+        const resend = new Resend(resendKey);
+        const toAddresses = Array.isArray(options.to) ? options.to : [options.to];
+        const res = await resend.emails.send(
+          options.html
+            ? {
+                from,
+                to: toAddresses,
+                subject: options.subject,
+                html: options.html,
+                ...(options.text ? { text: options.text } : {}),
+              }
+            : {
+                from,
+                to: toAddresses,
+                subject: options.subject,
+                text: options.text || "",
+              }
+        );
+        if (res.error) {
+          this.logger.error(`Failed to send email via Resend API: ${res.error.message}`);
+        } else {
+          this.logger.log(
+            `Email successfully sent via Resend API to ${options.to}: ${res.data?.id}`
+          );
+          return true;
+        }
+      } catch (err: unknown) {
+        this.logger.error(
+          `Error sending email via Resend API: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }
+
     const user = this.cleanEnv("SMTP_USER");
     const pass = this.cleanEnv("SMTP_PASS");
 
-    // 1. Try Primary SMTP
+    // 2. Try Zoho SMTP (Local dev or unblocked servers)
     if (user && pass) {
       const rawPort = this.cleanEnv("SMTP_PORT");
       const primaryPort = rawPort ? Number(rawPort) : 465;
@@ -229,7 +267,11 @@ export class EmailService {
     const rawPort = this.cleanEnv("SMTP_PORT");
     const port = rawPort ? Number(rawPort) : 465;
 
+    const resendKey = this.cleanEnv("RESEND_API_KEY");
+
     const diagnostics = {
+      hasResendApiKey: Boolean(resendKey),
+      resendKeyPrefix: resendKey ? `${resendKey.slice(0, 5)}...` : undefined,
       smtpHost: host,
       smtpPort: port,
       smtpUser: user ? `${user.slice(0, 3)}***@${user.split("@")[1] ?? ""}` : "MISSING",
@@ -242,8 +284,9 @@ export class EmailService {
       error: null as string | null,
     };
 
-    if (!user || !pass) {
-      diagnostics.error = "SMTP_USER or SMTP_PASS not found in environment variables";
+    if (!user && !pass && !resendKey) {
+      diagnostics.error =
+        "Neither RESEND_API_KEY nor SMTP_USER/PASS found in environment variables";
       return diagnostics;
     }
 
