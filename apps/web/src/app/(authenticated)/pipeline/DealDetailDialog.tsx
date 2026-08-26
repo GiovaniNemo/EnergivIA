@@ -13,12 +13,18 @@ import { Select } from "@/components/ui/select";
 import { patchDeal, type DealStage as ApiDealStage } from "@/lib/leads-api";
 import type { Deal, DealStage } from "@/lib/pipeline-deal";
 
-const STAGE_OPTIONS: { value: DealStage; label: string }[] = [
+export type DealDetailStageOption = DealStage | `fechado:${ClosedDealStatus}`;
+
+const STAGE_OPTIONS: { value: DealDetailStageOption; label: string }[] = [
   { value: "novo", label: "Novo" },
   { value: "contato", label: "Contato" },
   { value: "proposta", label: "Proposta" },
   { value: "negociacao", label: "Negociação" },
-  { value: "fechado", label: "Fechado (ganho)" },
+  { value: "fechado:won", label: "Fechado — Ganho" },
+  { value: "fechado:lost", label: "Fechado — Perdido" },
+  { value: "fechado:disqualified", label: "Fechado — Desqualificado" },
+  { value: "fechado:postponed", label: "Fechado — Adiado" },
+  { value: "fechado:cancelled", label: "Fechado — Cancelado" },
 ];
 
 const ACTION_TYPES = [
@@ -37,8 +43,12 @@ const TEMPERATURE_OPTIONS = [
   { value: "HOT", label: "Quente" },
 ] as const;
 
-function uiToApiStage(stage: DealStage): ApiDealStage {
-  switch (stage) {
+function uiToApiStage(stageOption: DealDetailStageOption): ApiDealStage {
+  if (stageOption.startsWith("fechado:")) {
+    const sub = stageOption.replace("fechado:", "") as ClosedDealStatus;
+    return sub === "won" ? "WON" : "LOST";
+  }
+  switch (stageOption) {
     case "novo":
       return "NEW";
     case "contato":
@@ -119,7 +129,7 @@ export function DealDetailDialog({
 }: DealDetailDialogProps): JSX.Element | null {
   const [title, setTitle] = useState("");
   const [dealValue, setDealValue] = useState<number | null>(null);
-  const [stage, setStage] = useState<DealStage>("novo");
+  const [stageOption, setStageOption] = useState<DealDetailStageOption>("novo");
   const [assigneeUserId, setAssigneeUserId] = useState<string>("");
   const [nextActionAt, setNextActionAt] = useState<string>("");
   const [nextActionType, setNextActionType] = useState<string>("");
@@ -131,7 +141,11 @@ export function DealDetailDialog({
     if (!open || !deal) return;
     setTitle(deal.dealName ?? `Sistema solar — ${deal.clientName}`);
     setDealValue(deal.value ?? null);
-    setStage(deal.stage);
+    if (deal.stage === "fechado") {
+      setStageOption(`fechado:${deal.status ?? "lost"}` as DealDetailStageOption);
+    } else {
+      setStageOption(deal.stage);
+    }
     setAssigneeUserId(deal.assigneeUserId ?? "");
     setNextActionAt(toLocalInputValue(deal.nextStepDate));
     setNextActionType("WhatsApp");
@@ -142,9 +156,10 @@ export function DealDetailDialog({
 
   const overdueLabel = useMemo(() => {
     if (!deal) return null;
+    if (deal.stage === "fechado" && deal.status !== "postponed") return null;
     const text = formatRelativeUrgency(deal.nextStepDate);
     if (!text) return null;
-    const overdue = isOverdue(deal.nextStepDate);
+    const overdue = deal.stage === "fechado" ? false : isOverdue(deal.nextStepDate);
     return { text, overdue };
   }, [deal]);
 
@@ -161,12 +176,27 @@ export function DealDetailDialog({
       const numericValue = dealValue ?? 0;
       const trimmedTitle = title.trim();
       const nextActionIso = nextActionAt ? new Date(nextActionAt).toISOString() : null;
+      const targetStage: DealStage = stageOption.startsWith("fechado:")
+        ? "fechado"
+        : (stageOption as DealStage);
+      const targetStatus: ClosedDealStatus | undefined = stageOption.startsWith("fechado:")
+        ? (stageOption.replace("fechado:", "") as ClosedDealStatus)
+        : undefined;
+
+      const lostReason =
+        targetStatus === "disqualified"
+          ? "NOT_INTERESTED"
+          : targetStatus === "lost" || targetStatus === "cancelled"
+            ? "PRICE"
+            : null;
+
       await patchDeal(organizationId, deal.dealId, {
         title: trimmedTitle || undefined,
         value: numericValue,
-        stage: uiToApiStage(stage),
+        stage: uiToApiStage(stageOption),
+        lostReason,
         assignedUserId: assigneeUserId || null,
-        nextActionAt: nextActionIso,
+        nextActionAt: targetStatus === "postponed" ? nextActionIso : nextActionIso,
         nextActionType: nextActionType.trim() || null,
         temperature: temperature || null,
       });
@@ -174,7 +204,8 @@ export function DealDetailDialog({
       onSaved?.({
         dealName: trimmedTitle || undefined,
         value: numericValue,
-        stage,
+        stage: targetStage,
+        status: targetStatus,
         assigneeUserId: assigneeUserId || null,
         assigneeName: selectedAssignee?.name ?? null,
         nextStepDate: nextActionIso ? new Date(nextActionIso) : null,
@@ -206,7 +237,7 @@ export function DealDetailDialog({
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">
               <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
-              {STAGE_OPTIONS.find((s) => s.value === stage)?.label ?? "—"}
+              {STAGE_OPTIONS.find((s) => s.value === stageOption)?.label ?? "—"}
             </span>
             {overdueLabel ? (
               <span
@@ -265,8 +296,8 @@ export function DealDetailDialog({
                     <Label htmlFor="deal-stage">Estágio</Label>
                     <Select
                       id="deal-stage"
-                      value={stage}
-                      onChange={(e) => setStage(e.target.value as DealStage)}
+                      value={stageOption}
+                      onChange={(e) => setStageOption(e.target.value as DealDetailStageOption)}
                       disabled={submitting}
                     >
                       {STAGE_OPTIONS.map((opt) => (

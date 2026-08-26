@@ -1559,9 +1559,12 @@ export default function PipelinePage(): JSX.Element {
                 </div>
               )}
               renderItem={(deal) => {
-                const overdue = isOverdue(deal.nextStepDate);
+                const isClosed = deal.stage === "fechado";
+                const isPostponed = isClosed && deal.status === "postponed";
+                // Negócios fechados finalizados (ganho, perdido, desqualificado, cancelado) não devem indicar vencimento/atraso
+                const overdue = !isClosed ? isOverdue(deal.nextStepDate) : false;
                 const stalledDays = daysSince(deal.recentAt);
-                const isStale = !overdue && stalledDays >= STALLED_DAYS_THRESHOLD;
+                const isStale = !isClosed && !overdue && stalledDays >= STALLED_DAYS_THRESHOLD;
                 const nextStage = getAdvanceStage(deal.stage);
                 const nextBestAction = resolveNextBestAction(deal);
 
@@ -1569,8 +1572,14 @@ export default function PipelinePage(): JSX.Element {
                   ? `vence ${formatNextActionCompact(deal.nextStepDate).toLowerCase()}`
                   : isStale
                     ? `parado ${stalledDays}d`
-                    : null;
-                const urgencyClass = overdue ? "text-red-600" : "text-amber-600";
+                    : isPostponed && deal.nextStepDate
+                      ? `retorno ${formatNextActionCompact(deal.nextStepDate).toLowerCase()}`
+                      : null;
+                const urgencyClass = overdue
+                  ? "text-red-600"
+                  : isPostponed
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-amber-600";
 
                 const valueQualifier = !deal.hasProposal
                   ? "/ proposta pendente"
@@ -1753,15 +1762,81 @@ export default function PipelinePage(): JSX.Element {
                             Abrir proposta
                           </MenuItem>
                         ) : null}
+                        {nextStage && (
+                          <MenuItem
+                            disabled={updatingDealId === deal.id}
+                            onClick={() => {
+                              void moveDeal(deal.id, nextStage);
+                              setActionsMenu(null);
+                            }}
+                          >
+                            Avançar para {STAGE_LABEL[nextStage]}
+                          </MenuItem>
+                        )}
                         <MenuItem
-                          disabled={!nextStage || updatingDealId === deal.id}
+                          disabled={updatingDealId === deal.id}
                           onClick={() => {
-                            if (!nextStage) return;
-                            void moveDeal(deal.id, nextStage);
                             setActionsMenu(null);
+                            setCloseModalDeal(deal);
+                            setCloseModalStatus("won");
+                            setCloseModalFromStage(deal.stage);
+                            setCloseModalFromStatus(deal.status);
+                            setCloseModalOpen(true);
                           }}
                         >
-                          Avançar estágio
+                          Marcar como Ganho
+                        </MenuItem>
+                        <MenuItem
+                          disabled={updatingDealId === deal.id}
+                          onClick={() => {
+                            setActionsMenu(null);
+                            setCloseModalDeal(deal);
+                            setCloseModalStatus("lost");
+                            setCloseModalFromStage(deal.stage);
+                            setCloseModalFromStatus(deal.status);
+                            setCloseModalOpen(true);
+                          }}
+                        >
+                          Marcar como Perdido
+                        </MenuItem>
+                        <MenuItem
+                          disabled={updatingDealId === deal.id}
+                          onClick={() => {
+                            setActionsMenu(null);
+                            setCloseModalDeal(deal);
+                            setCloseModalStatus("disqualified");
+                            setCloseModalFromStage(deal.stage);
+                            setCloseModalFromStatus(deal.status);
+                            setCloseModalOpen(true);
+                          }}
+                        >
+                          Marcar como Desqualificado
+                        </MenuItem>
+                        <MenuItem
+                          disabled={updatingDealId === deal.id}
+                          onClick={() => {
+                            setActionsMenu(null);
+                            setCloseModalDeal(deal);
+                            setCloseModalStatus("postponed");
+                            setCloseModalFromStage(deal.stage);
+                            setCloseModalFromStatus(deal.status);
+                            setCloseModalOpen(true);
+                          }}
+                        >
+                          Marcar como Adiado
+                        </MenuItem>
+                        <MenuItem
+                          disabled={updatingDealId === deal.id}
+                          onClick={() => {
+                            setActionsMenu(null);
+                            setCloseModalDeal(deal);
+                            setCloseModalStatus("cancelled");
+                            setCloseModalFromStage(deal.stage);
+                            setCloseModalFromStatus(deal.status);
+                            setCloseModalOpen(true);
+                          }}
+                        >
+                          Marcar como Cancelado
                         </MenuItem>
                       </Menu>
                       <Menu
