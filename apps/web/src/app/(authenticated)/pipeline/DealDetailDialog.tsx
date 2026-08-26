@@ -337,9 +337,20 @@ export function DealDetailDialog({
 
             {}
             <section className="space-y-3 py-5 first:pt-4">
-              <h4 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                Próxima ação
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                  Próxima ação (Opcional)
+                </h4>
+                {nextActionAt && (
+                  <button
+                    type="button"
+                    onClick={() => setNextActionAt("")}
+                    className="text-[11px] font-medium text-red-600 hover:underline dark:text-red-400"
+                  >
+                    Remover agendamento
+                  </button>
+                )}
+              </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="deal-next-at">Data e hora</Label>
