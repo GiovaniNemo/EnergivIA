@@ -260,6 +260,23 @@ export async function removeMember(organizationId: string, memberId: string): Pr
   if (!res.ok) throw new Error("Falha ao remover membro.");
 }
 
+export async function resendInvite(
+  organizationId: string,
+  memberId: string
+): Promise<{ success: boolean; message: string }> {
+  const res = await apiProxy(
+    "POST",
+    `/organizations/${organizationId}/members/${memberId}/resend`,
+    undefined,
+    organizationId
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? "Falha ao reenviar convite.");
+  }
+  return res.json();
+}
+
 export interface WhatsappInboundPhoneRow {
   id: string;
   phoneDigits: string;

@@ -435,7 +435,30 @@ export class OrganizationsService {
       if (existing.status === InvitationStatus.ACCEPTED) {
         throw new ConflictException("Usuário já é membro desta organização");
       }
-      throw new ConflictException("Já existe um convite pendente para este e-mail");
+      // Se o convite estava pendente, reenvia o e-mail
+      const organization = await this.prisma.tenant.findUnique({
+        where: { id: organizationId },
+        select: { id: true, name: true },
+      });
+      const inviter = await this.prisma.user.findUnique({
+        where: { id: inviterId },
+        select: { name: true, email: true },
+      });
+      if (organization) {
+        this.emailService
+          .sendOrganizationInviteEmail({
+            toEmail: normalizedEmail,
+            organizationName: organization.name,
+            inviterName: inviter?.name ?? inviter?.email ?? "Equipe Energivia",
+          })
+          .catch((err) => {
+            this.logger.error(
+              `Failed to send invite email to ${normalizedEmail}: ${err?.message}`,
+              err?.stack
+            );
+          });
+      }
+      return existing;
     }
 
     const user = await this.prisma.user.findFirst({
@@ -478,6 +501,42 @@ export class OrganizationsService {
     }
 
     return member;
+  }
+
+  async resendInvite(organizationId: string, memberId: string, userId: string) {
+    await this.requireRole(organizationId, userId, [OrgRole.OWNER, OrgRole.ADMIN]);
+    const member = await this.prisma.organizationMember.findFirst({
+      where: { id: memberId, organizationId },
+      include: { user: true },
+    });
+    if (!member) throw new NotFoundException("Membro não encontrado");
+    const targetEmail = (member.user?.email ?? member.email)?.trim().toLowerCase();
+    if (!targetEmail) throw new BadRequestException("E-mail do membro não encontrado");
+
+    const organization = await this.prisma.tenant.findUnique({
+      where: { id: organizationId },
+      select: { id: true, name: true },
+    });
+    const inviter = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+    if (organization) {
+      this.emailService
+        .sendOrganizationInviteEmail({
+          toEmail: targetEmail,
+          organizationName: organization.name,
+          inviterName: inviter?.name ?? inviter?.email ?? "Equipe Energivia",
+        })
+        .catch((err) => {
+          this.logger.error(
+            `Failed to resend invite email to ${targetEmail}: ${err?.message}`,
+            err?.stack
+          );
+        });
+    }
+
+    return { success: true, message: `Convite reenviado para ${targetEmail}` };
   }
 
   async updateMember(

@@ -7,6 +7,7 @@ import {
   inviteMember,
   updateMemberRole,
   removeMember,
+  resendInvite,
   type Member,
 } from "@/lib/organizations-api";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,8 @@ export default function TeamPage() {
   const [inviteRole, setInviteRole] = useState<string>("VIEWER");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const load = async () => {
     if (!currentOrganizationId) return;
@@ -77,11 +80,28 @@ export default function TeamPage() {
       setInviteOpen(false);
       setInviteEmail("");
       setInviteRole("VIEWER");
+      setToastMessage("Convite enviado com sucesso!");
+      setTimeout(() => setToastMessage(null), 4000);
       await load();
     } catch (err) {
       setInviteError(err instanceof Error ? err.message : "Falha ao convidar");
     } finally {
       setInviteLoading(false);
+    }
+  };
+
+  const handleResend = async (memberId: string, email: string) => {
+    if (!currentOrganizationId) return;
+    setResendingId(memberId);
+    try {
+      const res = await resendInvite(currentOrganizationId, memberId);
+      setToastMessage(res.message || `Convite reenviado para ${email}!`);
+      setTimeout(() => setToastMessage(null), 4000);
+    } catch (err) {
+      setToastMessage(err instanceof Error ? err.message : "Falha ao reenviar");
+      setTimeout(() => setToastMessage(null), 4000);
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -112,6 +132,12 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6">
+      {toastMessage && (
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+          {toastMessage}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Equipe</h1>
@@ -178,16 +204,28 @@ export default function TeamPage() {
                         {m.joinedAt ? new Date(m.joinedAt).toLocaleDateString("pt-BR") : "—"}
                       </td>
                       <td className="py-3 text-right">
-                        {m.role !== "OWNER" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-[var(--color-destructive)]"
-                            onClick={() => handleRemove(m.id)}
-                          >
-                            Remover
-                          </Button>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {m.role !== "OWNER" && m.email && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={resendingId === m.id}
+                              onClick={() => handleResend(m.id, m.email!)}
+                            >
+                              {resendingId === m.id ? "Reenviando…" : "Reenviar e-mail"}
+                            </Button>
+                          )}
+                          {m.role !== "OWNER" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-[var(--color-destructive)]"
+                              onClick={() => handleRemove(m.id)}
+                            >
+                              Remover
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -91,6 +91,15 @@ export class OrganizationsController {
     return this.organizations.invite(id, user.sub, dto);
   }
 
+  @Post(":id/members/:memberId/resend")
+  resendInvite(
+    @Param("id") id: string,
+    @Param("memberId") memberId: string,
+    @CurrentUser() user: JwtPayload
+  ) {
+    return this.organizations.resendInvite(id, memberId, user.sub);
+  }
+
   @Patch(":id/members/:memberId")
   updateMember(
     @Param("id") id: string,
