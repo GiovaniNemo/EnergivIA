@@ -36,56 +36,96 @@ export function buildOrganizationInviteTemplate(input: OrganizationInviteTemplat
   const html = `
 <!doctype html>
 <html lang="pt-BR">
-  <body style="margin:0; padding:0; background-color:#f3f5f9;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f3f5f9; padding:24px 0;">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Convite para a organização ${organizationName}</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#0b0f19; font-family:'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0b0f19; padding:32px 10px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:600px; max-width:600px; background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+          <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:600px; max-width:600px; background:#111827; border:1px solid #1f2937; border-radius:16px; overflow:hidden; box-shadow:0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+            
+            <!-- Header com Logo Oficial -->
             <tr>
-              <td style="background:#0f172a; padding:20px 24px; font-family:Arial, sans-serif;">
-                <div style="color:#ffffff; font-size:20px; font-weight:700;">Energivia</div>
-                <div style="color:#cbd5e1; margin-top:4px; font-size:13px;">Convite de organização</div>
+              <td style="background:linear-gradient(135deg, #064e3b 0%, #047857 50%, #10b981 100%); padding:28px 30px; text-align:left;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td>
+                      <div style="font-size:24px; font-weight:800; color:#ffffff; letter-spacing:-0.5px;">
+                        Energiv<span style="color:#a7f3d0;">IA</span>
+                      </div>
+                      <div style="color:#ecfdf5; font-size:13px; font-weight:500; margin-top:4px;">
+                        Convite para fazer parte da equipe 👥
+                      </div>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
+
+            <!-- Corpo Principal -->
             <tr>
-              <td style="padding:24px; font-family:Arial, sans-serif; color:#0f172a;">
-                <p style="margin:0 0 16px; font-size:15px;">Olá!</p>
-                <p style="margin:0 0 16px; font-size:15px; line-height:1.6;">
+              <td style="padding:32px 30px; color:#f3f4f6;">
+                <h1 style="margin:0 0 16px; font-size:20px; font-weight:700; color:#ffffff;">
+                  Olá! 👋
+                </h1>
+                
+                <p style="margin:0 0 20px; font-size:15px; line-height:1.6; color:#d1d5db;">
                   <strong>${inviterName}</strong> convidou você para participar da organização
-                  <strong>${organizationName}</strong> no Energivia.
-                </p>
-                <p style="margin:0 0 20px; font-size:15px; line-height:1.6;">
-                  Para aceitar o convite, entre com sua conta usando o botão abaixo.
+                  <strong style="color:#34d399;">${organizationName}</strong> na plataforma <strong>EnergivIA</strong>.
                 </p>
 
-                <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 20px;">
+                <!-- Destaque do Convite -->
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 24px; background:#1f2937; border-radius:12px; padding:18px; border:1px solid #374151;">
                   <tr>
-                    <td style="border-radius:8px; background:#2563eb;">
-                      <a href="${safeLoginUrl}" style="display:inline-block; padding:12px 20px; font-size:14px; font-weight:700; color:#ffffff; text-decoration:none; font-family:Arial, sans-serif;">
-                        Entrar no Energivia
+                    <td>
+                      <div style="font-size:13px; font-weight:600; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                        Organização
+                      </div>
+                      <div style="font-size:17px; font-weight:700; color:#ffffff; margin-bottom:12px;">
+                        ${organizationName}
+                      </div>
+                      <div style="font-size:13px; color:#9ca3af; line-height:1.5;">
+                        Ao aceitar o convite, você terá acesso aos projetos, propostas, dimensionamentos e funil de vendas compartilhado da sua equipe.
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Botão de Ação -->
+                <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto 24px; text-align:center;">
+                  <tr>
+                    <td style="border-radius:10px; background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                      <a href="${safeLoginUrl}" style="display:inline-block; padding:14px 28px; font-size:15px; font-weight:700; color:#ffffff; text-decoration:none; border-radius:10px;">
+                        Aceitar Convite e Entrar ➔
                       </a>
                     </td>
                   </tr>
                 </table>
 
-                <p style="margin:0 0 8px; color:#6b7280; font-size:13px;">
-                  Se o botão não funcionar, copie e cole este link no navegador:
+                <p style="margin:0 0 8px; color:#9ca3af; font-size:13px; text-align:center;">
+                  Se o botão não abrir, copie e cole o link no seu navegador:
                 </p>
-                <p style="margin:0 0 16px; font-size:13px;">
-                  <a href="${safeLoginUrl}" style="color:#2563eb; word-break:break-all;">${safeLoginUrl}</a>
+                <p style="margin:0 0 24px; font-size:13px; text-align:center;">
+                  <a href="${safeLoginUrl}" style="color:#34d399; word-break:break-all;">${safeLoginUrl}</a>
                 </p>
 
-                <p style="margin:0; color:#6b7280; font-size:13px; line-height:1.6;">
-                  Se você ainda não tiver conta, faça o cadastro com este mesmo e-mail.
-                  O convite será vinculado automaticamente após o login.
+                <p style="margin:0; font-size:13px; line-height:1.6; color:#9ca3af;">
+                  💡 <em>Se você ainda não tiver conta, basta fazer o cadastro com este mesmo endereço de e-mail. O convite será vinculado automaticamente à sua conta assim que você entrar.</em>
                 </p>
               </td>
             </tr>
+
+            <!-- Footer -->
             <tr>
-              <td style="padding:16px 24px; background:#f8fafc; border-top:1px solid #e5e7eb; font-family:Arial, sans-serif; color:#64748b; font-size:12px;">
-                Este é um e-mail transacional do Energivia.
+              <td style="padding:20px 30px; background:#0b0f19; border-top:1px solid #1f2937; text-align:center; color:#6b7280; font-size:12px;">
+                <p style="margin:0 0 4px;"><strong>EnergivIA</strong> • Tecnologia para o Futuro da Energia Solar</p>
+                <p style="margin:0;">Este é um e-mail transacional oficial do EnergivIA.</p>
               </td>
             </tr>
+
           </table>
         </td>
       </tr>
