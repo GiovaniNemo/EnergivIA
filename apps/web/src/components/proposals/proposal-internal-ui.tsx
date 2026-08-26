@@ -30,7 +30,8 @@ const outlineDefaultLinkClass =
 export const MARGIN_RECOMMENDED_PCT = 20;
 export const MARGIN_CRITICAL_PCT = 10;
 
-export function formatBRL(n: number): string {
+export function formatBRL(n: number | null | undefined): string {
+  if (n == null || typeof n !== "number" || Number.isNaN(n)) return "R$ 0,00";
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 

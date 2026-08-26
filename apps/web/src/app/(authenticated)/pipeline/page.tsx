@@ -69,7 +69,8 @@ function isOverdue(date: Date | null): boolean {
   return date.getTime() < Date.now();
 }
 
-function formatCurrency(value: number): string {
+function formatCurrency(value: number | null | undefined): string {
+  if (value == null || typeof value !== "number" || Number.isNaN(value)) return "R$ 0,00";
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 

@@ -159,7 +159,8 @@ function hoursSince(date: Date): number {
   return Math.max(0, Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60)));
 }
 
-function formatCurrency(value: number): string {
+function formatCurrency(value: number | null | undefined): string {
+  if (value == null || typeof value !== "number" || Number.isNaN(value)) return "R$ 0,00";
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 

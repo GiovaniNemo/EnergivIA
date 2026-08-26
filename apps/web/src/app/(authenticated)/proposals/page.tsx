@@ -51,7 +51,8 @@ function proposalStatusBadgeClass(status: string): string {
 const linkBtnBase =
   "inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
 
-function formatBrl(n: number): string {
+function formatBrl(n: number | null | undefined): string {
+  if (n == null || typeof n !== "number" || Number.isNaN(n)) return "R$ 0,00";
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
