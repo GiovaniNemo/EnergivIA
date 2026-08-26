@@ -144,7 +144,7 @@ export default function HomePage(): JSX.Element {
                 <div className="mt-5 flex flex-col items-center justify-center gap-2 text-sm text-slate-600 sm:flex-row sm:gap-8">
                   <p className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-emerald-500" />
-                    Sem cartão de crédito
+                    Cancele quando quiser
                   </p>
                   <p className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-emerald-500" />
