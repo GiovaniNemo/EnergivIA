@@ -9,6 +9,7 @@ import { Auth0JwtStrategy } from "./strategies/auth0-jwt.strategy";
 import { UsersModule } from "../users/users.module";
 import { OrganizationsModule } from "../organizations/organizations.module";
 import { PrismaModule } from "../../prisma/prisma.module";
+import { EmailModule } from "../../common/email/email.module";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
 
 @Module({
@@ -16,6 +17,7 @@ import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
     UsersModule,
     OrganizationsModule,
     PrismaModule,
+    EmailModule,
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

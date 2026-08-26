@@ -43,14 +43,14 @@ async function fetchAuth0UserInfo(
   bearerToken: string
 ): Promise<Auth0UserInfoProfile | null> {
   try {
-  // 🧼 Limpa qualquer "https://" ou "http://" da variável antes de usar
-  const cleanDomain = auth0Domain.replace(/^https?:\/\//, "");
+    // 🧼 Limpa qualquer "https://" ou "http://" da variável antes de usar
+    const cleanDomain = auth0Domain.replace(/^https?:\/\//, "");
 
-  const res = await fetch(`https://${cleanDomain}/userinfo`, {
-    headers: { Authorization: `Bearer ${bearerToken}` },
-    signal: AbortSignal.timeout(10_000),
-  });
-  // ... resto do seu código
+    const res = await fetch(`https://${cleanDomain}/userinfo`, {
+      headers: { Authorization: `Bearer ${bearerToken}` },
+      signal: AbortSignal.timeout(10_000),
+    });
+    // ... resto do seu código
     if (!res.ok) return null;
     const body = (await res.json()) as {
       email?: string;
@@ -74,6 +74,8 @@ async function fetchAuth0UserInfo(
   }
 }
 
+import { EmailService } from "../../../common/email/email.service";
+
 @Injectable()
 export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
   private readonly userInfoCache = new Map<
@@ -85,7 +87,8 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
 
   constructor(
     private readonly config: ConfigService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService
   ) {
     const auth0Domain = config.get<string>("AUTH0_DOMAIN");
     const cleanDomain = auth0Domain ? auth0Domain.replace(/^https?:\/\//, "") : "";
@@ -181,11 +184,14 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
     const auth0Domain = this.config.get<string>("AUTH0_DOMAIN");
     const auth0Audience = this.config.get<string>("AUTH0_AUDIENCE");
     const auth0ClientId = this.config.get<string>("AUTH0_CLIENT_ID");
-    
+
     if (auth0Audience || auth0ClientId) {
       const aud = payload.aud;
-      const isValidAud = (auth0Audience && (aud === auth0Audience || (Array.isArray(aud) && aud.includes(auth0Audience)))) ||
-                         (auth0ClientId && (aud === auth0ClientId || (Array.isArray(aud) && aud.includes(auth0ClientId))));
+      const isValidAud =
+        (auth0Audience &&
+          (aud === auth0Audience || (Array.isArray(aud) && aud.includes(auth0Audience)))) ||
+        (auth0ClientId &&
+          (aud === auth0ClientId || (Array.isArray(aud) && aud.includes(auth0ClientId))));
       if (!isValidAud) {
         throw new UnauthorizedException("Audiência do token inválida.");
       }
@@ -251,6 +257,15 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
           },
         },
       });
+
+      if (normalizedEmail && !normalizedEmail.endsWith("@auth0.user")) {
+        this.emailService
+          .sendWelcomeEmail({
+            toEmail: normalizedEmail,
+            userName: rawName,
+          })
+          .catch(() => undefined);
+      }
     } else {
       const shouldUpdateFallbackEmail =
         !!normalizedEmail &&

@@ -4,6 +4,7 @@ import * as nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { buildOrganizationInviteTemplate } from "./templates/organization-invite.template";
+import { buildWelcomeTemplate } from "./templates/welcome.template";
 
 export interface SendEmailOptions {
   to: string | string[];
@@ -134,6 +135,23 @@ export class EmailService {
     const { subject, text, html } = buildOrganizationInviteTemplate({
       inviterName: input.inviterName,
       organizationName: input.organizationName,
+      loginUrl,
+    });
+
+    await this.sendEmail({
+      to: input.toEmail,
+      subject,
+      text,
+      html,
+    });
+  }
+
+  async sendWelcomeEmail(input: { toEmail: string; userName?: string }) {
+    const appBaseUrl = this.config.get<string>("APP_BASE_URL") ?? "https://energivia.com.br";
+    const loginUrl = `${appBaseUrl.replace(/\/$/, "")}/login`;
+
+    const { subject, text, html } = buildWelcomeTemplate({
+      userName: input.userName,
       loginUrl,
     });
 
