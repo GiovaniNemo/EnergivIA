@@ -52,6 +52,29 @@ export default function TeamPage() {
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Live Email Diagnostics State
+  const [diagOpen, setDiagOpen] = useState(false);
+  const [diagEmail, setDiagEmail] = useState("sgiovanimendes@gmail.com");
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagResult, setDiagResult] = useState<Record<string, unknown> | null>(null);
+
+  const runEmailDiagnosis = async () => {
+    setDiagLoading(true);
+    setDiagResult(null);
+    try {
+      const res = await fetch(
+        `/api/proxy/health/test-email?to=${encodeURIComponent(diagEmail.trim())}`,
+        { cache: "no-store" }
+      );
+      const data = await res.json();
+      setDiagResult(data);
+    } catch (err: unknown) {
+      setDiagResult({ error: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setDiagLoading(false);
+    }
+  };
+
   const load = async () => {
     if (!currentOrganizationId) return;
     setLoading(true);
@@ -143,8 +166,51 @@ export default function TeamPage() {
           <h1 className="text-3xl font-bold tracking-tight">Equipe</h1>
           <p className="text-[var(--color-muted-foreground)]">Membros da organização e convites.</p>
         </div>
-        <Button onClick={() => setInviteOpen(true)}>Convidar membro</Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setDiagOpen((prev) => !prev)}
+            className="border-dashed"
+          >
+            🛠️ Testar Servidor de E-mail
+          </Button>
+          <Button onClick={() => setInviteOpen(true)}>Convidar membro</Button>
+        </div>
       </div>
+
+      {diagOpen && (
+        <Card className="border-cyan-500/30 bg-cyan-950/20">
+          <CardHeader>
+            <CardTitle className="text-cyan-400">Diagnóstico ao Vivo do Servidor SMTP</CardTitle>
+            <CardDescription>
+              Dispare um teste direto do servidor de backend para inspecionar as variáveis e
+              conectividade com o Zoho.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                type="email"
+                placeholder="email@exemplo.com"
+                value={diagEmail}
+                onChange={(e) => setDiagEmail(e.target.value)}
+                className="max-w-md"
+              />
+              <Button onClick={runEmailDiagnosis} disabled={diagLoading || !diagEmail.trim()}>
+                {diagLoading ? "Testando no Servidor..." : "Disparar Teste do Servidor"}
+              </Button>
+            </div>
+
+            {diagResult && (
+              <div className="rounded-lg bg-black/60 p-4 font-mono text-xs text-emerald-400">
+                <pre className="overflow-x-auto whitespace-pre-wrap">
+                  {JSON.stringify(diagResult, null, 2)}
+                </pre>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

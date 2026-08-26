@@ -42,7 +42,8 @@ export async function DELETE(
 
 async function proxy(request: NextRequest, params: { path: string[] }, method: string) {
   const path = params.path?.join("/") ?? "";
-  const isPublic = path.startsWith("public/") || params.path?.[0] === "public";
+  const isPublic =
+    path.startsWith("public/") || params.path?.[0] === "public" || path.startsWith("health");
 
   let accessToken = "";
 
