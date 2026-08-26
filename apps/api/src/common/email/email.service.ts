@@ -226,7 +226,7 @@ export class EmailService {
     organizationName: string;
     inviterName: string;
   }) {
-    const appBaseUrl = this.cleanEnv("APP_BASE_URL") ?? "https://energivia.com.br";
+    const appBaseUrl = this.cleanEnv("APP_BASE_URL") ?? "https://www.energivia.com.br";
     const loginUrl = `${appBaseUrl.replace(/\/$/, "")}/login`;
 
     const { subject, text, html } = buildOrganizationInviteTemplate({
@@ -244,7 +244,7 @@ export class EmailService {
   }
 
   async sendWelcomeEmail(input: { toEmail: string; userName?: string }) {
-    const appBaseUrl = this.cleanEnv("APP_BASE_URL") ?? "https://energivia.com.br";
+    const appBaseUrl = this.cleanEnv("APP_BASE_URL") ?? "https://www.energivia.com.br";
     const loginUrl = `${appBaseUrl.replace(/\/$/, "")}/login`;
 
     const { subject, text, html } = buildWelcomeTemplate({
