@@ -19,10 +19,12 @@ export class EmailService {
   private smtpTransporter: Transporter | null = null;
 
   constructor(private readonly config: ConfigService) {
-    this.initSmtpTransporter();
+    this.getSmtpTransporter();
   }
 
-  private initSmtpTransporter() {
+  private getSmtpTransporter(): Transporter | null {
+    if (this.smtpTransporter) return this.smtpTransporter;
+
     const host = this.config.get<string>("SMTP_HOST");
     const port = Number(this.config.get<string>("SMTP_PORT") ?? 465);
     const user = this.config.get<string>("SMTP_USER");
@@ -38,9 +40,14 @@ export class EmailService {
           user,
           pass,
         },
+        connectionTimeout: 8000,
+        greetingTimeout: 8000,
+        socketTimeout: 12000,
       });
-      this.logger.log(`SMTP transporter initialized with host: ${host} (User: ${user})`);
+      this.logger.log(`SMTP transporter initialized with host: ${host}:${port} (User: ${user})`);
     }
+
+    return this.smtpTransporter;
   }
 
   /**
@@ -53,10 +60,12 @@ export class EmailService {
       "EnergivIA <noreply@energivia.com.br>";
     const from = options.from || defaultFrom;
 
+    const transporter = this.getSmtpTransporter();
+
     // 1. Try Zoho SMTP if configured
-    if (this.smtpTransporter) {
+    if (transporter) {
       try {
-        await this.smtpTransporter.sendMail({
+        await transporter.sendMail({
           from,
           to: options.to,
           subject: options.subject,

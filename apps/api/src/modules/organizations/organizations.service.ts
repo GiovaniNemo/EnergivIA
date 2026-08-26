@@ -123,9 +123,12 @@ function buildTemplateSettings(dto: {
 }
 
 import { WhatsappPairingService } from "../whatsapp/whatsapp-pairing.service";
+import { Logger } from "@nestjs/common";
 
 @Injectable()
 export class OrganizationsService {
+  private readonly logger = new Logger(OrganizationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
@@ -460,11 +463,18 @@ export class OrganizationsService {
       select: { name: true, email: true },
     });
     if (organization) {
-      await this.emailService.sendOrganizationInviteEmail({
-        toEmail: normalizedEmail,
-        organizationName: organization.name,
-        inviterName: inviter?.name ?? inviter?.email ?? "Equipe Energivia",
-      });
+      this.emailService
+        .sendOrganizationInviteEmail({
+          toEmail: normalizedEmail,
+          organizationName: organization.name,
+          inviterName: inviter?.name ?? inviter?.email ?? "Equipe Energivia",
+        })
+        .catch((err) => {
+          this.logger.error(
+            `Failed to send invite email to ${normalizedEmail}: ${err?.message}`,
+            err?.stack
+          );
+        });
     }
 
     return member;
