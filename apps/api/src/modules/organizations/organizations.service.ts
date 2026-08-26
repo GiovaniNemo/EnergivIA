@@ -444,20 +444,22 @@ export class OrganizationsService {
         where: { id: inviterId },
         select: { name: true, email: true },
       });
-      if (organization) {
-        this.emailService
-          .sendOrganizationInviteEmail({
-            toEmail: normalizedEmail,
-            organizationName: organization.name,
-            inviterName: inviter?.name ?? inviter?.email ?? "Equipe Energivia",
-          })
-          .catch((err) => {
-            this.logger.error(
-              `Failed to send invite email to ${normalizedEmail}: ${err?.message}`,
-              err?.stack
-            );
-          });
-      }
+      const orgName = organization?.name ?? "EnergivIA";
+      const invName = inviter?.name ?? inviter?.email ?? "Equipe EnergivIA";
+
+      this.logger.log(`Re-dispatching invite to ${normalizedEmail} for ${orgName}`);
+      this.emailService
+        .sendOrganizationInviteEmail({
+          toEmail: normalizedEmail,
+          organizationName: orgName,
+          inviterName: invName,
+        })
+        .catch((err) => {
+          this.logger.error(
+            `Failed to send invite email to ${normalizedEmail}: ${err?.message}`,
+            err?.stack
+          );
+        });
       return existing;
     }
 
@@ -485,20 +487,22 @@ export class OrganizationsService {
       where: { id: inviterId },
       select: { name: true, email: true },
     });
-    if (organization) {
-      this.emailService
-        .sendOrganizationInviteEmail({
-          toEmail: normalizedEmail,
-          organizationName: organization.name,
-          inviterName: inviter?.name ?? inviter?.email ?? "Equipe Energivia",
-        })
-        .catch((err) => {
-          this.logger.error(
-            `Failed to send invite email to ${normalizedEmail}: ${err?.message}`,
-            err?.stack
-          );
-        });
-    }
+    const orgName = organization?.name ?? "EnergivIA";
+    const invName = inviter?.name ?? inviter?.email ?? "Equipe EnergivIA";
+
+    this.logger.log(`Dispatching invite to ${normalizedEmail} for ${orgName}`);
+    this.emailService
+      .sendOrganizationInviteEmail({
+        toEmail: normalizedEmail,
+        organizationName: orgName,
+        inviterName: invName,
+      })
+      .catch((err) => {
+        this.logger.error(
+          `Failed to send invite email to ${normalizedEmail}: ${err?.message}`,
+          err?.stack
+        );
+      });
 
     return member;
   }
@@ -521,20 +525,22 @@ export class OrganizationsService {
       where: { id: userId },
       select: { name: true, email: true },
     });
-    if (organization) {
-      this.emailService
-        .sendOrganizationInviteEmail({
-          toEmail: targetEmail,
-          organizationName: organization.name,
-          inviterName: inviter?.name ?? inviter?.email ?? "Equipe Energivia",
-        })
-        .catch((err) => {
-          this.logger.error(
-            `Failed to resend invite email to ${targetEmail}: ${err?.message}`,
-            err?.stack
-          );
-        });
-    }
+    const orgName = organization?.name ?? "EnergivIA";
+    const invName = inviter?.name ?? inviter?.email ?? "Equipe EnergivIA";
+
+    this.logger.log(`Resending invite to ${targetEmail} for ${orgName}`);
+    this.emailService
+      .sendOrganizationInviteEmail({
+        toEmail: targetEmail,
+        organizationName: orgName,
+        inviterName: invName,
+      })
+      .catch((err) => {
+        this.logger.error(
+          `Failed to resend invite email to ${targetEmail}: ${err?.message}`,
+          err?.stack
+        );
+      });
 
     return { success: true, message: `Convite reenviado para ${targetEmail}` };
   }
