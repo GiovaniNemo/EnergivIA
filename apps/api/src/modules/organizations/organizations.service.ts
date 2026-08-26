@@ -451,22 +451,20 @@ export class OrganizationsService {
       },
     });
 
-    if (!user) {
-      const organization = await this.prisma.tenant.findUnique({
-        where: { id: organizationId },
-        select: { id: true, name: true },
+    const organization = await this.prisma.tenant.findUnique({
+      where: { id: organizationId },
+      select: { id: true, name: true },
+    });
+    const inviter = await this.prisma.user.findUnique({
+      where: { id: inviterId },
+      select: { name: true, email: true },
+    });
+    if (organization) {
+      await this.emailService.sendOrganizationInviteEmail({
+        toEmail: normalizedEmail,
+        organizationName: organization.name,
+        inviterName: inviter?.name ?? inviter?.email ?? "Equipe Energivia",
       });
-      const inviter = await this.prisma.user.findUnique({
-        where: { id: inviterId },
-        select: { name: true, email: true },
-      });
-      if (organization) {
-        await this.emailService.sendOrganizationInviteEmail({
-          toEmail: normalizedEmail,
-          organizationName: organization.name,
-          inviterName: inviter?.name ?? inviter?.email ?? "Equipe Energivia",
-        });
-      }
     }
 
     return member;
