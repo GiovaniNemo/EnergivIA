@@ -1,6 +1,7 @@
-import { Controller, Get, HttpException, HttpStatus, Logger } from "@nestjs/common";
+import { Controller, Get, HttpException, HttpStatus, Logger, Query } from "@nestjs/common";
 import { Public } from "./common/decorators/public.decorator";
 import { PrismaService } from "./prisma/prisma.service";
+import { EmailService } from "./common/email/email.service";
 
 class SentryTestError extends Error {
   constructor() {
@@ -22,7 +23,16 @@ export class HealthController {
   private readonly logger = new Logger(HealthController.name);
   private readonly startedAt = Date.now();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService
+  ) {}
+
+  @Get("test-email")
+  async testEmail(@Query("to") to?: string) {
+    const recipient = to?.trim() || "sgiovanimendes@gmail.com";
+    return this.emailService.runDiagnostics(recipient);
+  }
 
   @Get()
   async check(): Promise<HealthResponse> {

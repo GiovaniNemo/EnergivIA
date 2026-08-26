@@ -39,6 +39,7 @@ import { PlansModule } from "./modules/plans/plans.module";
 import { WhatsappCoreModule } from "./modules/whatsapp/whatsapp-core.module";
 import { RadarModule } from "./modules/radar/radar.module";
 import { SystemSettingsModule } from "./modules/system-settings/system-settings.module";
+import { EmailModule } from "./common/email/email.module";
 
 @Module({
   controllers: [HealthController],
@@ -59,6 +60,7 @@ import { SystemSettingsModule } from "./modules/system-settings/system-settings.
       { name: "long", ttl: 3_600_000, limit: 1000 },
     ]),
     PrismaModule,
+    EmailModule,
     AuthModule,
     OrganizationsModule,
     TenantsModule,
