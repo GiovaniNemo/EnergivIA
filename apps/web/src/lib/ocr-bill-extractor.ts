@@ -25,6 +25,7 @@ export interface BillDeterministicData {
 
 export function parseBrazilianKwh(raw: unknown): number {
   if (typeof raw === "number") {
+    if (!Number.isFinite(raw) || raw <= 0) return 0;
     if (raw > 0 && raw < 10 && raw % 1 !== 0) {
       return Math.round(raw * 1000);
     }
@@ -32,21 +33,48 @@ export function parseBrazilianKwh(raw: unknown): number {
   }
   const s = String(raw || "").trim();
   if (!s) return 0;
+
+  // Caso 1: Formato Enel / CPFL / Equatorial com ponto de milhar e decimais (ex: "1.198,000" ou "1.525,50")
   if (s.includes(".") && s.includes(",")) {
     const clean = s.replace(/\./g, "").replace(",", ".");
-    return Math.round(parseFloat(clean));
+    const parsed = parseFloat(clean);
+    return Number.isFinite(parsed) ? Math.round(parsed) : 0;
   }
+
+  // Caso 2: Formato Enel com 3 casas decimais usando vírgula (ex: "1198,000", "965,000", "703,000")
+  if (/^\d+,\d{3}$/.test(s)) {
+    const parsed = parseFloat(s.replace(",", "."));
+    return Number.isFinite(parsed) ? Math.round(parsed) : 0;
+  }
+
+  // Caso 3: Ponto de milhar estrito sem vírgula (ex: "1.971", "2.041", "1.198")
   if (/^\d{1,3}\.\d{3}$/.test(s)) {
-    return parseInt(s.replace(".", ""), 10);
+    const val = parseInt(s.replace(".", ""), 10);
+    return Number.isFinite(val) ? val : 0;
   }
+
+  // Caso 4: Decimal com vírgula comum (ex: "350,5", "476,00")
   if (/^\d+,\d+$/.test(s)) {
-    return Math.round(parseFloat(s.replace(",", ".")));
+    const parsed = parseFloat(s.replace(",", "."));
+    return Number.isFinite(parsed) ? Math.round(parsed) : 0;
   }
-  const num = parseFloat(s.replace(/[^0-9.]/g, ""));
-  if (num > 0 && num < 10 && num % 1 !== 0) {
-    return Math.round(num * 1000);
+
+  // Caso 5: String numérica direta com ponto
+  const cleanStr = s.replace(/[^0-9.,]/g, "");
+  if (cleanStr.includes(",")) {
+    const parsed = parseFloat(cleanStr.replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(parsed) ? Math.round(parsed) : 0;
   }
-  return isNaN(num) ? 0 : Math.round(num);
+
+  const num = parseFloat(cleanStr);
+  if (Number.isFinite(num)) {
+    if (num > 0 && num < 10 && num % 1 !== 0) {
+      return Math.round(num * 1000);
+    }
+    return Math.round(num);
+  }
+
+  return 0;
 }
 
 const BRAZILIAN_PROVIDERS: Array<{ name: string; pattern: RegExp }> = [
@@ -212,35 +240,35 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
     }
   }
 
-  if (historyCandidates.length < 3) {
-    const monthRowRegex =
-      /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|0[1-9]|1[0-2])[\s\/\-_]*(20\d{2}|\d{2})?\b[^\d\n]*(\d{1,3}(?:\.\d{3})*(?:,\d{1,3})?|\d{1,5})/i;
+  // Formato 1: Padrão Energisa / CPFL / Cemig / Enel com Mês, Consumo (com ponto de milhar/decimais) e Dias
+  // Ex: "OUT/25 1.971 45", "SET/25 2.041,00 29", "AGO/26 1.198,000 30", "JUL/25 965,000", "DEZ/24 60 31"
+  const distributorRowRegex =
+    /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|0[1-9]|1[0-2])[\s\/\-_]*(20\d{2}|\d{2})?\b[^\d\n]*(\d{1,3}(?:\.\d{3})*(?:,\d{1,3})?|\d{1,6}(?:,\d{1,3})?)(?:\s+(\d{1,3}))?/i;
 
-    for (const line of lines) {
-      const m = line.match(monthRowRegex);
-      if (m && m[1]) {
-        let monStr = m[1].toUpperCase();
-        const monthMap: Record<string, string> = {
-          "01": "JAN",
-          "02": "FEV",
-          "03": "MAR",
-          "04": "ABR",
-          "05": "MAI",
-          "06": "JUN",
-          "07": "JUL",
-          "08": "AGO",
-          "09": "SET",
-          "10": "OUT",
-          "11": "NOV",
-          "12": "DEZ",
-        };
-        if (monthMap[monStr]) monStr = monthMap[monStr]!;
-        const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
-        const label = yr ? `${monStr}/${yr}` : monStr;
-        const kwh = parseBrazilianKwh(m[3]);
-        if (kwh > 0 && kwh < 500000) {
-          historyCandidates.push({ mes_ano: label, consumo_kwh: kwh });
-        }
+  for (const line of lines) {
+    const m = line.match(distributorRowRegex);
+    if (m && m[1]) {
+      let monStr = m[1].toUpperCase();
+      const monthMap: Record<string, string> = {
+        "01": "JAN",
+        "02": "FEV",
+        "03": "MAR",
+        "04": "ABR",
+        "05": "MAI",
+        "06": "JUN",
+        "07": "JUL",
+        "08": "AGO",
+        "09": "SET",
+        "10": "OUT",
+        "11": "NOV",
+        "12": "DEZ",
+      };
+      if (monthMap[monStr]) monStr = monthMap[monStr]!;
+      const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
+      const label = yr ? `${monStr}/${yr}` : monStr;
+      const kwh = parseBrazilianKwh(m[3]);
+      if (kwh > 0 && kwh < 500000) {
+        historyCandidates.push({ mes_ano: label, consumo_kwh: kwh });
       }
     }
   }
