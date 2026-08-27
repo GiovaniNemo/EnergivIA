@@ -11,6 +11,7 @@ import { assertLeadInTenant } from "../../common/assert-lead-in-tenant";
 import { softDeleteWhere as soft } from "../../prisma/soft-delete";
 import pdfParse from "pdf-parse";
 import { createWorker } from "tesseract.js";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const BILL_CONTENT_TYPES = [
   "image/jpeg",
@@ -152,6 +153,7 @@ export class EnergyBillsService {
   private readonly region: string;
   private readonly bucketName: string;
   private readonly s3: S3Client;
+  private readonly genAI: GoogleGenerativeAI | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -161,6 +163,14 @@ export class EnergyBillsService {
     this.bucketName =
       this.config.get<string>("S3_BUCKET_NAME") ?? this.config.get<string>("AWS_S3_BUCKET") ?? "";
     this.s3 = createS3ClientForPresign(this.region || undefined);
+
+    const geminiKey =
+      this.config.get<string>("GOOGLE_GEMINI_API_KEY") ||
+      this.config.get<string>("GEMINI_API_KEY") ||
+      "";
+    if (geminiKey) {
+      this.genAI = new GoogleGenerativeAI(geminiKey);
+    }
   }
 
   private parseBillText(text: string): {
@@ -616,7 +626,7 @@ export class EnergyBillsService {
       let extractedData: Record<string, unknown> | null = null;
       const ext = extname(fileName).toLowerCase();
 
-      // --- CAMADA 1: OCR DETERMINÍSTICO PRIMEIRO (Tesseract / PDF Text Layer) ---
+      // --- CAMADA 1: OCR / EXTRAÇÃO DE TEXTO DO PDF OU IMAGEM ---
       let rawText = "";
       let arrayBuffer: ArrayBuffer | null = null;
 
@@ -644,48 +654,41 @@ export class EnergyBillsService {
         }
       }
 
-      let extractionEngine: "OCR" | "AI_FALLBACK" = "AI_FALLBACK";
-      let fallbackReason: string | undefined;
+      let extractionEngine: "AI" | "VISION_AI" | "OCR" = "AI";
 
-      if (rawText && rawText.trim().length > 30) {
-        const deterministic = this.parseBillTextDeterministic(rawText);
-        if (deterministic.isComplete && deterministic.consumptionHistoryLabeled.length >= 3) {
-          extractedData = this.processExtractedResultWithMath(
-            deterministic as unknown as Record<string, unknown>
-          );
-          extractionEngine = "OCR";
-          this.logger.log(
-            `Energy bill extracted via OCR determinístico 100% (Economia total de tokens IA) billId=${billId}`
-          );
-        } else {
-          fallbackReason = deterministic.fallbackReason;
+      // --- CAMADA 2: IA INTERPRETA O TEXTO EXTRAÍDO PELO OCR/PDF ---
+      if (rawText && rawText.trim().length >= 30) {
+        if (openAiApiKey) {
+          extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey);
+          if (extractedData) {
+            extractionEngine = "AI";
+            this.logger.log(`Fatura de energia extraída via OpenAI a partir do texto OCR/PDF billId=${billId}`);
+          }
+        } else if (this.genAI) {
+          extractedData = await this.extractDataWithGemini(rawText);
+          if (extractedData) {
+            extractionEngine = "AI";
+            this.logger.log(`Fatura de energia extraída via Gemini a partir do texto OCR/PDF billId=${billId}`);
+          }
         }
-      } else {
-        fallbackReason =
-          "Texto insuficiente extraído da camada do documento (<30 caracteres). Acionando visão computacional/IA.";
       }
 
-      // --- CAMADA 2: IA COMO FALLBACK (Apenas se OCR não cobriu tudo e houver chave) ---
-      if (!extractedData && openAiApiKey) {
-        this.logger.log(
-          `OCR precisou de complemento da IA. Acionando fallback billId=${billId}. Motivo: ${fallbackReason}`
-        );
-        extractionEngine = "AI_FALLBACK";
-        if (ext === ".txt" || (ext === ".pdf" && rawText && rawText.trim().length >= 30)) {
-          extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey);
-        } else if ([".jpg", ".jpeg", ".png", ".webp"].includes(ext)) {
+      // --- CAMADA 3: VISÃO COMPUTACIONAL SE NÃO HOUVE TEXTO LEGÍVEL NO OCR ---
+      if (!extractedData && [".jpg", ".jpeg", ".png", ".webp", ".pdf"].includes(ext)) {
+        if (openAiApiKey) {
           const buf = arrayBuffer
             ? Buffer.from(arrayBuffer)
             : Buffer.from(await response.arrayBuffer());
           const base64Image = buf.toString("base64");
           const mimeType = ext === ".png" ? "image/png" : "image/jpeg";
           extractedData = await this.extractVisionWithOpenAI(base64Image, mimeType, openAiApiKey);
-        } else if (rawText) {
-          extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey);
+          if (extractedData) {
+            extractionEngine = "VISION_AI";
+          }
         }
       }
 
-      // --- CAMADA 3: FALLBACK REGEX DETERMINÍSTICO LOCAL ---
+      // --- CAMADA 4: FALLBACK DETERMINÍSTICO LOCAL (SE NENHUMA IA ESTIVER DISPONÍVEL) ---
       if (!extractedData && rawText) {
         const localParsed = this.parseBillTextDeterministic(rawText);
         extractedData = this.processExtractedResultWithMath(
@@ -696,16 +699,9 @@ export class EnergyBillsService {
 
       if (extractedData) {
         extractedData["extractionEngine"] = extractionEngine;
-        if (fallbackReason) {
-          extractedData["fallbackReason"] = fallbackReason;
-        }
         if (extractedData["rawData"] && typeof extractedData["rawData"] === "object") {
           (extractedData["rawData"] as Record<string, unknown>)["extractionEngine"] =
             extractionEngine;
-          if (fallbackReason) {
-            (extractedData["rawData"] as Record<string, unknown>)["fallbackReason"] =
-              fallbackReason;
-          }
         }
       }
 
@@ -724,6 +720,7 @@ export class EnergyBillsService {
         extractedData: null,
         extractionError: `Erro na extração: ${errorMsg}`,
       });
+    }
     }
   }
 
@@ -929,6 +926,29 @@ export class EnergyBillsService {
       const parsed = JSON.parse(content) as Record<string, unknown>;
       return this.processExtractedResultWithMath(parsed);
     } catch {
+      return null;
+    }
+  }
+
+  private async extractDataWithGemini(text: string): Promise<Record<string, unknown> | null> {
+    if (!this.genAI) return null;
+    try {
+      const model = this.genAI.getGenerativeModel({
+        model: "gemini-1.5-flash",
+        generationConfig: {
+          responseMimeType: "application/json",
+        },
+      });
+      const result = await model.generateContent([
+        BILL_EXTRACTION_SYSTEM_PROMPT,
+        `Extraia com máxima precisão todos os dados e TODOS os meses do histórico de consumo do seguinte texto de fatura de energia:\n\n${text}`,
+      ]);
+      const respText = result.response.text();
+      const clean = respText.replace(/```json/g, "").replace(/```/g, "").trim();
+      const parsed = JSON.parse(clean) as Record<string, unknown>;
+      return this.processExtractedResultWithMath(parsed);
+    } catch (err) {
+      this.logger.error("Erro extraindo fatura com Gemini:", err);
       return null;
     }
   }

@@ -1025,15 +1025,16 @@ export class WhatsappBotService {
       }
 
       if (text && text.trim().length > 30) {
-        const deterministic = this.parseBillTextDeterministic(text);
-        if (deterministic.isComplete && deterministic.data.historico_consumo.length >= 3) {
-          this.logger.log(
-            "Fatura WhatsApp extraída 100% via OCR Determinístico sem consumo de tokens de IA."
-          );
-          return processExtractedBillData(deterministic.data, text);
+        // Envia o texto extraído pelo OCR/PDF diretamente para a IA interpretar com precisão
+        const aiParsed = await this.parseBillTextWithAI(text);
+        if (aiParsed) {
+          this.logger.log("Fatura WhatsApp interpretada com sucesso pela IA a partir do texto OCR/PDF.");
+          return aiParsed;
         }
-        // Fallback para IA usando o texto lido pelo OCR
-        return this.parseBillTextWithAI(text);
+
+        // Fallback determinístico offline se a IA falhar
+        const deterministic = this.parseBillTextDeterministic(text);
+        return processExtractedBillData(deterministic.data, text);
       }
     } catch (e) {
       this.logger.error("Erro extraindo PDF da fatura:", e);
@@ -1049,25 +1050,23 @@ export class WhatsappBotService {
       const media = await this.whatsappCloud.downloadWhatsappMedia(mediaId);
       if (!media || !media.buffer) return null;
 
-      // 1. Tenta OCR Tesseract na imagem primeiro
+      // 1. Executa OCR Tesseract para extrair todo o texto da imagem
       const ocrText = await this.runOcrOnBuffer(media.buffer);
       if (ocrText && ocrText.trim().length > 30) {
-        const deterministic = this.parseBillTextDeterministic(ocrText);
-        if (deterministic.isComplete && deterministic.data.historico_consumo.length >= 3) {
-          this.logger.log(
-            "Imagem de fatura WhatsApp extraída 100% via Tesseract OCR determinístico."
-          );
-          return processExtractedBillData(deterministic.data, ocrText);
+        // Envia o texto extraído pelo OCR diretamente para a IA interpretar com precisão
+        const aiParsed = await this.parseBillTextWithAI(ocrText);
+        if (aiParsed) {
+          this.logger.log("Imagem de fatura WhatsApp interpretada com sucesso pela IA a partir do OCR.");
+          return aiParsed;
         }
+
+        const deterministic = this.parseBillTextDeterministic(ocrText);
+        return processExtractedBillData(deterministic.data, ocrText);
       }
 
-      // 2. Se OCR não foi 100%, aciona IA como fallback
+      // 2. Se OCR não conseguiu ler texto legível (foto borrada), aciona Visão Computacional
       const openAiKey = this.config.get<string>("OPENAI_API_KEY");
       if (openAiKey) {
-        if (ocrText && ocrText.trim().length > 30) {
-          const fromTextAI = await this.parseBillTextWithAI(ocrText);
-          if (fromTextAI) return fromTextAI;
-        }
         return this.extractImageWithOpenAI(
           media.buffer,
           media.mimeType || mimeType || "image/jpeg",
@@ -1076,10 +1075,6 @@ export class WhatsappBotService {
       }
 
       if (this.genAI) {
-        if (ocrText && ocrText.trim().length > 30) {
-          const fromTextGemini = await this.parseBillTextWithAI(ocrText);
-          if (fromTextGemini) return fromTextGemini;
-        }
         const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent([
           BILL_EXTRACTION_SYSTEM_PROMPT,

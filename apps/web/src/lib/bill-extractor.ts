@@ -110,113 +110,71 @@ export async function extractEnergyBillFromText(
   rawText: string,
   apiKey?: string
 ): Promise<BillExtractionResult> {
-  // 1. Tenta OCR/Parsing determinístico local primeiro
-  const deterministic = extractDataFromTextDeterministic(rawText);
-  if (deterministic.isComplete && deterministic.historico_consumo.length >= 3) {
-    const res = processExtractedBillData(
-      {
-        distribuidora: deterministic.distribuidora,
-        cidade: deterministic.cidade,
-        uf: deterministic.uf,
-        tipo_conexao: deterministic.tipo_conexao,
-        nome_cliente: deterministic.nome_cliente,
-        codigo_instalacao_ou_uc: deterministic.codigo_instalacao_ou_uc,
-        mes_referencia_atual: deterministic.mes_referencia_atual,
-        consumo_mes_atual_kwh: deterministic.consumo_mes_atual_kwh,
-        valor_total_fatura_reais: deterministic.valor_total_fatura_reais,
-        historico_consumo: deterministic.historico_consumo,
-      },
-      rawText
-    );
-    res.extractionEngine = "OCR";
-    return res;
-  }
-
-  // 2. Fallback para IA se o OCR determinístico não cobriu todos os dados críticos
   const key = apiKey || process.env["OPENAI_API_KEY"];
-  if (!key) {
-    // Se não tiver chave da OpenAI, retorna o melhor resultado determinístico obtido pelo OCR
-    const res = processExtractedBillData(
-      {
-        distribuidora: deterministic.distribuidora,
-        cidade: deterministic.cidade,
-        uf: deterministic.uf,
-        tipo_conexao: deterministic.tipo_conexao,
-        nome_cliente: deterministic.nome_cliente,
-        codigo_instalacao_ou_uc: deterministic.codigo_instalacao_ou_uc,
-        mes_referencia_atual: deterministic.mes_referencia_atual,
-        consumo_mes_atual_kwh: deterministic.consumo_mes_atual_kwh,
-        valor_total_fatura_reais: deterministic.valor_total_fatura_reais,
-        historico_consumo: deterministic.historico_consumo,
-      },
-      rawText
-    );
-    res.extractionEngine = "OCR";
-    return res;
+
+  // 1. Envia o texto extraído para a IA interpretar com precisão máxima
+  if (key) {
+    try {
+      const openai = new OpenAI({ apiKey: key });
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: BILL_EXTRACTION_SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: `Extraia com máxima precisão todos os dados e TODOS os meses do histórico de consumo do seguinte texto de fatura de energia:\n\n${rawText}`,
+          },
+        ],
+      });
+
+      const content = response.choices?.[0]?.message?.content || "{}";
+      const parsedJson = JSON.parse(content) as ExtractedBillData;
+      const result = processExtractedBillData(parsedJson, rawText);
+      result.extractionEngine = "AI_FALLBACK";
+      return result;
+    } catch (e) {
+      console.error("[extractEnergyBillFromText] Erro na OpenAI, usando fallback determinístico:", e);
+    }
   }
 
-  const openai = new OpenAI({ apiKey: key });
-
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    temperature: 0,
-    response_format: { type: "json_object" },
-    messages: [
-      { role: "system", content: BILL_EXTRACTION_SYSTEM_PROMPT },
-      {
-        role: "user",
-        content: `Extraia com máxima precisão todos os dados e TODOS os meses do histórico de consumo do seguinte texto de fatura de energia:\n\n${rawText}`,
-      },
-    ],
-  });
-
-  const content = response.choices?.[0]?.message?.content || "{}";
-  let parsedJson: ExtractedBillData;
-  try {
-    parsedJson = JSON.parse(content);
-  } catch {
-    parsedJson = { historico_consumo: [] };
-  }
-
-  const result = processExtractedBillData(parsedJson, rawText);
-  result.extractionEngine = "AI_FALLBACK";
-  return result;
+  // 2. Fallback determinístico offline (apenas se OpenAI não estiver configurada ou falhar)
+  const deterministic = extractDataFromTextDeterministic(rawText);
+  const res = processExtractedBillData(
+    {
+      distribuidora: deterministic.distribuidora,
+      cidade: deterministic.cidade,
+      uf: deterministic.uf,
+      tipo_conexao: deterministic.tipo_conexao,
+      nome_cliente: deterministic.nome_cliente,
+      codigo_instalacao_ou_uc: deterministic.codigo_instalacao_ou_uc,
+      mes_referencia_atual: deterministic.mes_referencia_atual,
+      consumo_mes_atual_kwh: deterministic.consumo_mes_atual_kwh,
+      valor_total_fatura_reais: deterministic.valor_total_fatura_reais,
+      historico_consumo: deterministic.historico_consumo,
+    },
+    rawText
+  );
+  res.extractionEngine = "OCR";
+  return res;
 }
 
 export async function extractEnergyBillFromImage(
   base64DataUrl: string,
   apiKey?: string
 ): Promise<BillExtractionResult> {
-  // 1. Executa OCR Tesseract na imagem primeiro
+  // 1. Executa OCR Tesseract para extrair texto da imagem primeiro (economiza tokens de imagem)
   try {
     const ocrText = await runOcrOnImage(base64DataUrl);
     if (ocrText && ocrText.trim().length > 30) {
-      const deterministic = extractDataFromTextDeterministic(ocrText);
-      if (deterministic.isComplete && deterministic.historico_consumo.length >= 3) {
-        const res = processExtractedBillData(
-          {
-            distribuidora: deterministic.distribuidora,
-            cidade: deterministic.cidade,
-            uf: deterministic.uf,
-            tipo_conexao: deterministic.tipo_conexao,
-            nome_cliente: deterministic.nome_cliente,
-            codigo_instalacao_ou_uc: deterministic.codigo_instalacao_ou_uc,
-            mes_referencia_atual: deterministic.mes_referencia_atual,
-            consumo_mes_atual_kwh: deterministic.consumo_mes_atual_kwh,
-            valor_total_fatura_reais: deterministic.valor_total_fatura_reais,
-            historico_consumo: deterministic.historico_consumo,
-          },
-          ocrText
-        );
-        res.extractionEngine = "OCR";
-        return res;
-      }
+      return await extractEnergyBillFromText(ocrText, apiKey);
     }
   } catch (ocrErr) {
     console.error("[Tesseract OCR Error on Image]", ocrErr);
   }
 
-  // 2. Fallback para GPT-4o Vision se OCR local não extraiu 100%
+  // 2. Fallback para GPT-4o Vision se OCR local não extraiu texto suficiente
   const key = apiKey || process.env["OPENAI_API_KEY"];
   if (!key) {
     throw new Error("OPENAI_API_KEY não configurada.");
