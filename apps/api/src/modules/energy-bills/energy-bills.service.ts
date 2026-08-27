@@ -488,91 +488,45 @@ export class EnergyBillsService {
     // 6. Histórico de Consumo
     const historyCandidates: Array<{ month: string; consumptionKwh: number }> = [];
 
-    // Formato Copel / Tabela Compacta:
-    // Na Copel, o formato costuma ser uma tabela onde vêm os meses (ex: "JUL26", "JUN26", "MAI26", ...) seguidos de seus consumos.
-    const historySectionMatch = t.match(
-      /(?:HIST[OÓ]RICO\s+DE\s+CONSUMO|CONSUMO\s+FATURADO|EVOLU[CÇ][AÃ]O\s+DO\s+CONSUMO)[\s\S]{1,2500}?(?=(?:INFORMA[CÇ][OÕ]ES|AVISO|TRIBUTOS|TOTAL|$))/i
-    );
-    const historyText = historySectionMatch ? historySectionMatch[0] : t;
+    // Tenta capturar cada linha do histórico contendo MÊS/ANO e CONSUMO faturado
+    // Ex: "JUN26 189 31", "MAI26 263 30", "ABR26 378 31", "MAR26 355 29", "FEV26 100 22"
+    // Ex: "06/2026 189", "JUN/26 189", "JUN/2026 189"
+    const rowRegex =
+      /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|0[1-9]|1[0-2])[\s\/\-_]*(20\d{2}|\d{2})?\b[^\d\n\r]{0,25}(\d{1,3}(?:\.\d{3})*(?:,\d{1,3})?|\d{1,5}(?:,\d{1,3})?)(?:\s+(\d{1,3}))?/i;
 
-    // 1. Tenta linhas com Mês e Consumo na mesma linha: ex: "JUN26 189 31", "MAI26 263 30", "ABR26 378 31", "MAR26 355 29", "FEV26 100 22"
-    const copelRowRegex =
-      /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[\s\/\-_]*(20\d{2}|\d{2})?\b[^\d\n]*(\d{1,5}(?:[.,]\d{1,3})?)(?:\s+(\d{1,3}))?/gi;
+    const monthMap: Record<string, string> = {
+      "01": "JAN",
+      "02": "FEV",
+      "03": "MAR",
+      "04": "ABR",
+      "05": "MAI",
+      "06": "JUN",
+      "07": "JUL",
+      "08": "AGO",
+      "09": "SET",
+      "10": "OUT",
+      "11": "NOV",
+      "12": "DEZ",
+    };
 
-    for (const match of historyText.matchAll(copelRowRegex)) {
-      const monStr = match[1]?.toUpperCase();
-      if (!monStr) continue;
-      const yr = match[2] ? (match[2].length === 2 ? `20${match[2]}` : match[2]) : "";
-      const label = yr ? `${monStr}/${yr}` : monStr;
-      const val1 = parseBrazilianKwh(match[3]);
-      if (val1 > 0 && val1 < 50000) {
-        historyCandidates.push({ month: label, consumptionKwh: val1 });
-      }
-    }
-
-    // 2. Tabela Copel em blocos (quando os meses e valores vêm em colunas no PDF):
-    // Só associa meses a números se a contagem de números de consumo for menor ou igual à quantidade de meses válidos,
-    // e apenas se os números estiverem dentro do range típico de consumo (< 5000 kWh).
-    if (historyCandidates.length < 3 && historySectionMatch) {
-      const sec = historySectionMatch[0];
-      const monthTokens = [
-        ...sec.matchAll(
-          /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[\s\/\-_]*(20\d{2}|\d{2})?\b/gi
-        ),
-      ];
-
-      // Busca números de 2 a 5 dígitos na seção de histórico
-      const numMatches = [...sec.matchAll(/\b(\d{2,5})\b/g)]
-        .map((m) => parseInt(m[1]!, 10))
-        .filter((n) => !isNaN(n) && n > 0 && n !== 2024 && n !== 2025 && n !== 2026 && n !== 2027);
-
-      // Na Copel há consumos (geralmente >= 50 ou números com histograma) e dias (20..31).
-      // Separamos os consumos dos dias:
-      const consumptionsOnly = numMatches.filter((n) => n >= 40 && n < 10000);
-
-      if (consumptionsOnly.length >= 1 && monthTokens.length >= consumptionsOnly.length) {
-        for (let i = 0; i < consumptionsOnly.length; i++) {
-          const m = monthTokens[i];
-          const kwh = consumptionsOnly[i];
-          if (!m || !kwh) continue;
-          const monStr = m[1]?.toUpperCase() || "MES";
-          const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
-          const label = yr ? `${monStr}/${yr}` : monStr;
+    for (const line of lines) {
+      const m = line.match(rowRegex);
+      if (m && m[1]) {
+        let monStr = m[1].toUpperCase();
+        if (monthMap[monStr]) monStr = monthMap[monStr]!;
+        const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
+        const label = yr ? `${monStr}/${yr}` : monStr;
+        const kwh = parseBrazilianKwh(m[3]);
+        // Ignora anos como 2024, 2025, 2026 e valores irreais
+        if (
+          kwh > 0 &&
+          kwh < 50000 &&
+          kwh !== 2024 &&
+          kwh !== 2025 &&
+          kwh !== 2026 &&
+          kwh !== 2027
+        ) {
           historyCandidates.push({ month: label, consumptionKwh: kwh });
-        }
-      }
-    }
-
-    // Formato 1: Padrão Energisa / CPFL / Cemig / Enel (se não encontrou via formato Copel)
-    if (historyCandidates.length < 3) {
-      const distributorRowRegex =
-        /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|0[1-9]|1[0-2])[\s\/\-_]*(20\d{2}|\d{2})?\b[^\d\n]*(\d{1,3}(?:\.\d{3})*(?:,\d{1,3})?|\d{1,6}(?:,\d{1,3})?)(?:\s+(\d{1,3}))?/i;
-
-      for (const line of lines) {
-        const m = line.match(distributorRowRegex);
-        if (m && m[1]) {
-          let monStr = m[1].toUpperCase();
-          const monthMap: Record<string, string> = {
-            "01": "JAN",
-            "02": "FEV",
-            "03": "MAR",
-            "04": "ABR",
-            "05": "MAI",
-            "06": "JUN",
-            "07": "JUL",
-            "08": "AGO",
-            "09": "SET",
-            "10": "OUT",
-            "11": "NOV",
-            "12": "DEZ",
-          };
-          if (monthMap[monStr]) monStr = monthMap[monStr]!;
-          const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
-          const label = yr ? `${monStr}/${yr}` : monStr;
-          const kwh = parseBrazilianKwh(m[3]);
-          if (kwh > 0 && kwh < 50000) {
-            historyCandidates.push({ month: label, consumptionKwh: kwh });
-          }
         }
       }
     }
