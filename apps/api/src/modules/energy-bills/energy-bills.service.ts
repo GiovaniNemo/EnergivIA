@@ -401,6 +401,7 @@ export class EnergyBillsService {
       tipo_conexao = "Monofásico";
     }
 
+    // 5. Cidade / UF
     const ufList = [
       "AC",
       "AL",
@@ -433,68 +434,55 @@ export class EnergyBillsService {
     let cidade: string | undefined;
     let uf: string | undefined;
 
-    // 1. Procura primeiro Cidade/UF próximo a CEP ou endereço da unidade consumidora
-    // Ex: "87000-000 MARINGÁ - PR", "MARINGA / PR CEP: 87013-000", "Maringá, PR", "Maringá - PR", "MUNICIPIO: MARINGA - PR"
+    // 1. Procura primeiro Cidade/UF no bloco de Unidade Consumidora / Endereço / CEP
     const cepCityUfMatch = t.match(
-      /(?:(?:MUNIC[IÍ]PIO|CIDADE|LOCAL|ENDERE[CÇ]O)[\s:=]+([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})|\d{5}[-\s]?\d{3}[\s,.-]+([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})|([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})[\s,.-]+(?:CEP|\d{5}))/i
+      /(?:(?:MUNIC[IÍ]PIO|CIDADE|LOCAL(?:IDADE)?|ENDERE[CÇ]O|UNIDADE\s+CONSUMIDORA)[\s:=]+([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})|\d{5}[-\s]?\d{3}[\s,.-]+([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})|([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})[\s,.-]+(?:CEP|\d{5}))/i
     );
     if (cepCityUfMatch) {
-      const candCity = (cepCityUfMatch[1] || cepCityUfMatch[3] || cepCityUfMatch[5] || "").trim();
-      const candUf = (
-        cepCityUfMatch[2] ||
-        cepCityUfMatch[4] ||
-        cepCityUfMatch[6] ||
-        ""
-      ).toUpperCase();
+      const candCity = (cepCityUfMatch[1] || cepCityUfMatch[2] || cepCityUfMatch[3] || "").trim();
+      const candUf = (cepCityUfMatch[2] || cepCityUfMatch[4] || "").toUpperCase();
       if (ufList.includes(candUf) && candCity.length >= 3) {
         cidade = candCity;
         uf = candUf;
       }
     }
 
-    // 2. Se não encontrou por CEP, procura em linhas de endereço (evitando a linha de sede/CNPJ da Copel "Curitiba - PR")
-    if (!cidade || !uf) {
-      const cityMatches = [...t.matchAll(/([A-ZÁ-Ú\s]{3,30})\s*[-/]\s*([A-Z]{2})\b/gi)];
-      for (const cm of cityMatches) {
-        const candUf = cm[2]?.toUpperCase() || "";
-        const candCity = (cm[1] || "").trim();
-        if (!ufList.includes(candUf)) continue;
-        const low = candCity.toLowerCase();
-        // Ignora termos de cabeçalho / emissão / sede administrativa da Copel se houver outra cidade
-        if (
-          low.includes("emissao") ||
-          low.includes("vencimento") ||
-          low.includes("distribuicao") ||
-          low.includes("distribuidora") ||
-          low.includes("biazetto") ||
-          low.includes("sede")
-        ) {
-          continue;
-        }
-        // Se a fatura é da Copel e a ocorrência é Curitiba (sede), guarda apenas se for a única menção
-        if (distribuidora === "COPEL" && low.includes("curitiba")) {
-          const nonCuritiba = cityMatches.find(
-            (m) =>
-              m[1] &&
-              !m[1].toLowerCase().includes("curitiba") &&
-              !m[1].toLowerCase().includes("distribuicao") &&
-              ufList.includes(m[2]?.toUpperCase() || "")
-          );
-          if (nonCuritiba && nonCuritiba[1] && nonCuritiba[2]) {
-            cidade = nonCuritiba[1].trim();
-            uf = nonCuritiba[2].toUpperCase();
-            break;
-          }
-          if (!cidade) {
-            cidade = candCity;
-            uf = candUf;
-          }
-          continue;
-        }
-        cidade = candCity;
-        uf = candUf;
-        break;
+    // 2. Se não encontrou ou capturou Curitiba da Copel, faz busca em todas as ocorrências de CIDADE - UF
+    const cityMatches = [...t.matchAll(/([A-ZÁ-Ú\s]{3,30})\s*[-/]\s*([A-Z]{2})\b/gi)];
+    const validMatches: Array<{ city: string; uf: string }> = [];
+
+    for (const cm of cityMatches) {
+      const candUf = cm[2]?.toUpperCase() || "";
+      const candCity = (cm[1] || "").trim();
+      if (!ufList.includes(candUf)) continue;
+      const low = candCity.toLowerCase();
+      if (
+        low.includes("emissao") ||
+        low.includes("vencimento") ||
+        low.includes("distribuicao") ||
+        low.includes("distribuidora") ||
+        low.includes("biazetto") ||
+        low.includes("sede") ||
+        low.includes("protocolo") ||
+        low.includes("cnpj")
+      ) {
+        continue;
       }
+      validMatches.push({ city: candCity, uf: candUf });
+    }
+
+    if (distribuidora === "COPEL") {
+      const nonCuritiba = validMatches.find((m) => !m.city.toLowerCase().includes("curitiba"));
+      if (nonCuritiba) {
+        cidade = nonCuritiba.city;
+        uf = nonCuritiba.uf;
+      } else if (!cidade && validMatches.length > 0) {
+        cidade = validMatches[0]?.city;
+        uf = validMatches[0]?.uf;
+      }
+    } else if (validMatches.length > 0 && !cidade) {
+      cidade = validMatches[0]?.city;
+      uf = validMatches[0]?.uf;
     }
 
     // 6. Histórico de Consumo
