@@ -309,11 +309,18 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
     consumo_mes_atual_kwh = normalizedHistory[0]?.consumo_kwh;
   }
 
-  const hasConsumption =
-    (consumo_mes_atual_kwh && consumo_mes_atual_kwh > 0) || normalizedHistory.length > 0;
-  const isComplete = Boolean(
-    hasConsumption && normalizedHistory.length >= 3 && cidade && uf && distribuidora
-  );
+  const missingFields: string[] = [];
+  if (!distribuidora) missingFields.push("Distribuidora");
+  if (!cidade) missingFields.push("Cidade");
+  if (!uf) missingFields.push("UF");
+  if (!(consumo_mes_atual_kwh && consumo_mes_atual_kwh > 0) && normalizedHistory.length === 0)
+    missingFields.push("Consumo do Mês");
+  if (normalizedHistory.length < 6)
+    missingFields.push(
+      `Histórico parcial (${normalizedHistory.length} meses encontrados pelo OCR, acionando IA para conferência de todos os meses)`
+    );
+
+  const isComplete = missingFields.length === 0;
 
   return {
     distribuidora,

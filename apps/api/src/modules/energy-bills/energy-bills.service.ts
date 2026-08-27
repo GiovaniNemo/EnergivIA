@@ -561,9 +561,10 @@ export class EnergyBillsService {
     if (!cidade) missingFields.push("Cidade");
     if (!uf) missingFields.push("UF");
     if (!consumptionKwh && normalizedHistory.length === 0) missingFields.push("Consumo do Mês");
-    if (normalizedHistory.length < 3)
+    // Se encontrou menos de 6 meses no histórico do OCR puro, acionamos a IA para garantir que nenhum mês foi omitido
+    if (normalizedHistory.length < 6)
       missingFields.push(
-        `Histórico incompleto (${normalizedHistory.length} meses encontrados, mínimo 3)`
+        `Histórico parcial (${normalizedHistory.length} meses encontrados pelo OCR, acionando IA para conferência de todos os meses)`
       );
 
     const isComplete = missingFields.length === 0;
