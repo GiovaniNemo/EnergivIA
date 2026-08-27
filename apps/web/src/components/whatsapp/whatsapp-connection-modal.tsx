@@ -150,10 +150,10 @@ export function WhatsappConnectionModal({ open, onOpenChange }: WhatsappConnecti
               <img
                 src={customWaLogoUrl}
                 alt="WhatsApp"
-                className="h-5.5 w-5.5 shrink-0 object-contain rounded-sm"
+                className="h-6 w-6 max-h-6 max-w-6 shrink-0 object-contain rounded-sm"
               />
             ) : (
-              <MessageSquare className="h-5.5 w-5.5" />
+              <MessageSquare className="h-5 w-5" />
             )}
             IA no WhatsApp
           </DialogTitle>
