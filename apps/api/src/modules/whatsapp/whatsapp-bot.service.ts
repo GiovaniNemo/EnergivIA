@@ -812,6 +812,7 @@ export class WhatsappBotService {
       tipo_conexao = "Monofásico";
     }
 
+    // 5. Cidade / UF
     const ufList = [
       "AC",
       "AL",
@@ -846,11 +847,16 @@ export class WhatsappBotService {
 
     // 1. Procura primeiro Cidade/UF próximo a CEP ou endereço da unidade consumidora
     const cepCityUfMatch = t.match(
-      /(?:\d{5}[-\s]?\d{3}[\s,.-]+([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})|([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})[\s,.-]+(?:CEP|\d{5}))/i
+      /(?:(?:MUNIC[IÍ]PIO|CIDADE|LOCAL|ENDERE[CÇ]O)[\s:=]+([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})|\d{5}[-\s]?\d{3}[\s,.-]+([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})|([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})[\s,.-]+(?:CEP|\d{5}))/i
     );
     if (cepCityUfMatch) {
-      const candCity = (cepCityUfMatch[1] || cepCityUfMatch[3] || "").trim();
-      const candUf = (cepCityUfMatch[2] || cepCityUfMatch[4] || "").toUpperCase();
+      const candCity = (cepCityUfMatch[1] || cepCityUfMatch[3] || cepCityUfMatch[5] || "").trim();
+      const candUf = (
+        cepCityUfMatch[2] ||
+        cepCityUfMatch[4] ||
+        cepCityUfMatch[6] ||
+        ""
+      ).toUpperCase();
       if (ufList.includes(candUf) && candCity.length >= 3) {
         cidade = candCity;
         uf = candUf;
@@ -869,11 +875,25 @@ export class WhatsappBotService {
           low.includes("emissao") ||
           low.includes("vencimento") ||
           low.includes("distribuicao") ||
-          low.includes("distribuidora")
+          low.includes("distribuidora") ||
+          low.includes("biazetto") ||
+          low.includes("sede")
         ) {
           continue;
         }
-        if (distribuidora === "COPEL" && low.includes("curitiba") && cityMatches.length > 1) {
+        if (distribuidora === "COPEL" && low.includes("curitiba")) {
+          const nonCuritiba = cityMatches.find(
+            (m) =>
+              m[1] &&
+              !m[1].toLowerCase().includes("curitiba") &&
+              !m[1].toLowerCase().includes("distribuicao") &&
+              ufList.includes(m[2]?.toUpperCase() || "")
+          );
+          if (nonCuritiba && nonCuritiba[1] && nonCuritiba[2]) {
+            cidade = nonCuritiba[1].trim();
+            uf = nonCuritiba[2].toUpperCase();
+            break;
+          }
           if (!cidade) {
             cidade = candCity;
             uf = candUf;
@@ -888,9 +908,9 @@ export class WhatsappBotService {
 
     const historyCandidates: ExtractedBillHistoryItem[] = [];
 
-    // Formato Copel / Tabela Compacta:
+    // Formato Copel / Tabela Compacta (ex: "JUL26 201 31" ou "JUL/26 201 31" ou "JUL/2026 201"):
     const historySectionMatch = t.match(
-      /(?:HIST[OÓ]RICO\s+DE\s+CONSUMO|CONSUMO\s+FATURADO)[\s\S]{1,1500}?(?=(?:INFORMA[CÇ][OÕ]ES|AVISO|TRIBUTOS|TOTAL|$))/i
+      /(?:HIST[OÓ]RICO\s+DE\s+CONSUMO|CONSUMO\s+FATURADO|EVOLU[CÇ][AÃ]O\s+DO\s+CONSUMO)[\s\S]{1,1500}?(?=(?:INFORMA[CÇ][OÕ]ES|AVISO|TRIBUTOS|TOTAL|$))/i
     );
     const historyText = historySectionMatch ? historySectionMatch[0] : t;
 
@@ -903,40 +923,41 @@ export class WhatsappBotService {
       const yr = match[2] ? (match[2].length === 2 ? `20${match[2]}` : match[2]) : "";
       const label = yr ? `${monStr}/${yr}` : monStr;
       const kwh = parseBrazilianKwh(match[3]);
-      if (kwh > 0 && kwh < 500000) {
+      if (kwh > 0 && kwh < 50000) {
         historyCandidates.push({ mes_ano: label, consumo_kwh: kwh });
       }
     }
 
-    // Formato 1: Padrão Energisa / CPFL / Cemig / Enel com Mês, Consumo (com ponto de milhar/decimais) e Dias
-    // Ex: "OUT/25 1.971 45", "SET/25 2.041,00 29", "AGO/26 1.198,000 30", "JUL/25 965,000", "DEZ/24 60 31"
-    const distributorRowRegex =
-      /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|0[1-9]|1[0-2])[\s\/\-_]*(20\d{2}|\d{2})?\b[^\d\n]*(\d{1,3}(?:\.\d{3})*(?:,\d{1,3})?|\d{1,6}(?:,\d{1,3})?)(?:\s+(\d{1,3}))?/i;
+    // Formato 1: Padrão Energisa / CPFL / Cemig / Enel (se não encontrou via formato Copel)
+    if (historyCandidates.length < 3) {
+      const distributorRowRegex =
+        /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|0[1-9]|1[0-2])[\s\/\-_]*(20\d{2}|\d{2})?\b[^\d\n]*(\d{1,3}(?:\.\d{3})*(?:,\d{1,3})?|\d{1,6}(?:,\d{1,3})?)(?:\s+(\d{1,3}))?/i;
 
-    for (const line of lines) {
-      const m = line.match(distributorRowRegex);
-      if (m && m[1]) {
-        let monStr = m[1].toUpperCase();
-        const monthMap: Record<string, string> = {
-          "01": "JAN",
-          "02": "FEV",
-          "03": "MAR",
-          "04": "ABR",
-          "05": "MAI",
-          "06": "JUN",
-          "07": "JUL",
-          "08": "AGO",
-          "09": "SET",
-          "10": "OUT",
-          "11": "NOV",
-          "12": "DEZ",
-        };
-        if (monthMap[monStr]) monStr = monthMap[monStr]!;
-        const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
-        const label = yr ? `${monStr}/${yr}` : monStr;
-        const kwh = parseBrazilianKwh(m[3]);
-        if (kwh > 0 && kwh < 500000) {
-          historyCandidates.push({ mes_ano: label, consumo_kwh: kwh });
+      for (const line of lines) {
+        const m = line.match(distributorRowRegex);
+        if (m && m[1]) {
+          let monStr = m[1].toUpperCase();
+          const monthMap: Record<string, string> = {
+            "01": "JAN",
+            "02": "FEV",
+            "03": "MAR",
+            "04": "ABR",
+            "05": "MAI",
+            "06": "JUN",
+            "07": "JUL",
+            "08": "AGO",
+            "09": "SET",
+            "10": "OUT",
+            "11": "NOV",
+            "12": "DEZ",
+          };
+          if (monthMap[monStr]) monStr = monthMap[monStr]!;
+          const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
+          const label = yr ? `${monStr}/${yr}` : monStr;
+          const kwh = parseBrazilianKwh(m[3]);
+          if (kwh > 0 && kwh < 50000) {
+            historyCandidates.push({ mes_ano: label, consumo_kwh: kwh });
+          }
         }
       }
     }

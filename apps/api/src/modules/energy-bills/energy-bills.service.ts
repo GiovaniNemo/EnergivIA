@@ -434,13 +434,18 @@ export class EnergyBillsService {
     let uf: string | undefined;
 
     // 1. Procura primeiro Cidade/UF próximo a CEP ou endereço da unidade consumidora
-    // Ex: "87000-000 MARINGÁ - PR", "MARINGA / PR CEP: 87013-000", "Maringá, PR", "Maringá - PR"
+    // Ex: "87000-000 MARINGÁ - PR", "MARINGA / PR CEP: 87013-000", "Maringá, PR", "Maringá - PR", "MUNICIPIO: MARINGA - PR"
     const cepCityUfMatch = t.match(
-      /(?:\d{5}[-\s]?\d{3}[\s,.-]+([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})|([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})[\s,.-]+(?:CEP|\d{5}))/i
+      /(?:(?:MUNIC[IÍ]PIO|CIDADE|LOCAL|ENDERE[CÇ]O)[\s:=]+([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})|\d{5}[-\s]?\d{3}[\s,.-]+([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})|([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})[\s,.-]+(?:CEP|\d{5}))/i
     );
     if (cepCityUfMatch) {
-      const candCity = (cepCityUfMatch[1] || cepCityUfMatch[3] || "").trim();
-      const candUf = (cepCityUfMatch[2] || cepCityUfMatch[4] || "").toUpperCase();
+      const candCity = (cepCityUfMatch[1] || cepCityUfMatch[3] || cepCityUfMatch[5] || "").trim();
+      const candUf = (
+        cepCityUfMatch[2] ||
+        cepCityUfMatch[4] ||
+        cepCityUfMatch[6] ||
+        ""
+      ).toUpperCase();
       if (ufList.includes(candUf) && candCity.length >= 3) {
         cidade = candCity;
         uf = candUf;
@@ -460,12 +465,26 @@ export class EnergyBillsService {
           low.includes("emissao") ||
           low.includes("vencimento") ||
           low.includes("distribuicao") ||
-          low.includes("distribuidora")
+          low.includes("distribuidora") ||
+          low.includes("biazetto") ||
+          low.includes("sede")
         ) {
           continue;
         }
-        // Se a fatura é da Copel e a primeira ocorrência é Curitiba (sede), guarda como fallback mas continua buscando a cidade real do cliente
-        if (distribuidora === "COPEL" && low.includes("curitiba") && cityMatches.length > 1) {
+        // Se a fatura é da Copel e a ocorrência é Curitiba (sede), guarda apenas se for a única menção
+        if (distribuidora === "COPEL" && low.includes("curitiba")) {
+          const nonCuritiba = cityMatches.find(
+            (m) =>
+              m[1] &&
+              !m[1].toLowerCase().includes("curitiba") &&
+              !m[1].toLowerCase().includes("distribuicao") &&
+              ufList.includes(m[2]?.toUpperCase() || "")
+          );
+          if (nonCuritiba && nonCuritiba[1] && nonCuritiba[2]) {
+            cidade = nonCuritiba[1].trim();
+            uf = nonCuritiba[2].toUpperCase();
+            break;
+          }
           if (!cidade) {
             cidade = candCity;
             uf = candUf;
@@ -481,9 +500,9 @@ export class EnergyBillsService {
     // 6. Histórico de Consumo
     const historyCandidates: Array<{ month: string; consumptionKwh: number }> = [];
 
-    // Formato Copel / Tabela Compacta (ex: "JUL26 201 31"):
+    // Formato Copel / Tabela Compacta (ex: "JUL26 201 31" ou "JUL/26 201 31" ou "JUL/2026 201"):
     const historySectionMatch = t.match(
-      /(?:HIST[OÓ]RICO\s+DE\s+CONSUMO|CONSUMO\s+FATURADO)[\s\S]{1,1500}?(?=(?:INFORMA[CÇ][OÕ]ES|AVISO|TRIBUTOS|TOTAL|$))/i
+      /(?:HIST[OÓ]RICO\s+DE\s+CONSUMO|CONSUMO\s+FATURADO|EVOLU[CÇ][AÃ]O\s+DO\s+CONSUMO)[\s\S]{1,1500}?(?=(?:INFORMA[CÇ][OÕ]ES|AVISO|TRIBUTOS|TOTAL|$))/i
     );
     const historyText = historySectionMatch ? historySectionMatch[0] : t;
 
@@ -496,7 +515,7 @@ export class EnergyBillsService {
       const yr = match[2] ? (match[2].length === 2 ? `20${match[2]}` : match[2]) : "";
       const label = yr ? `${monStr}/${yr}` : monStr;
       const kwh = parseBrazilianKwh(match[3]);
-      if (kwh > 0 && kwh < 500000) {
+      if (kwh > 0 && kwh < 50000) {
         historyCandidates.push({ month: label, consumptionKwh: kwh });
       }
     }
@@ -528,36 +547,8 @@ export class EnergyBillsService {
           const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
           const label = yr ? `${monStr}/${yr}` : monStr;
           const kwh = parseBrazilianKwh(m[3]);
-          if (kwh > 0 && kwh < 500000) {
+          if (kwh > 0 && kwh < 50000) {
             historyCandidates.push({ month: label, consumptionKwh: kwh });
-          }
-        }
-      }
-    }
-
-    // Formato 2: Meses em linha e consumos abaixo
-    if (historyCandidates.length < 3) {
-      const months = [
-        ...historyText.matchAll(
-          /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[\s\/\-_]*(20\d{2}|\d{2})?\b/gi
-        ),
-      ];
-      if (months.length >= 3) {
-        const nums = [...historyText.matchAll(/\b(\d{1,5})\b/g)]
-          .map((m) => parseInt(m[1]!, 10))
-          .filter((n) => n >= 50 && n < 50000);
-
-        if (nums.length >= 3) {
-          for (let i = 0; i < Math.min(months.length, nums.length, 13); i++) {
-            const m = months[i];
-            const num = nums[i];
-            if (!m || !num) continue;
-            const mon = m[1]?.toUpperCase() || "MES";
-            const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
-            historyCandidates.push({
-              month: yr ? `${mon}/${yr}` : mon,
-              consumptionKwh: num,
-            });
           }
         }
       }
