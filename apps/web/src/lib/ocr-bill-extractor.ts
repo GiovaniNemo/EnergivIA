@@ -282,6 +282,7 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
   const matches = [...historyText.matchAll(rowRegex)];
 
   for (const m of matches) {
+    if (!m[1]) continue;
     let monStr = m[1].toUpperCase();
 
     // Ignora números isolados (ex: "05") sem ano que não sejam claramente meses
@@ -305,7 +306,7 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
       let consumption = 0;
       // Heurística: Consumo geralmente é maior que dias (máx 35). Pega o primeiro valor coerente.
       const possibleConsumptions = validNumbers.filter((n) => n > 35);
-      if (possibleConsumptions.length > 0) {
+      if (possibleConsumptions.length > 0 && typeof possibleConsumptions[0] === "number") {
         consumption = possibleConsumptions[0];
       } else {
         consumption = Math.max(...validNumbers);

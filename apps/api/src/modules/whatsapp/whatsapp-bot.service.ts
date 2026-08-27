@@ -923,6 +923,7 @@ export class WhatsappBotService {
     const matches = [...historyText.matchAll(rowRegex)];
 
     for (const m of matches) {
+      if (!m[1]) continue;
       let monStr = m[1].toUpperCase();
 
       if (m[1].match(/^\d{2}$/) && !m[2]) {
@@ -945,7 +946,7 @@ export class WhatsappBotService {
       if (validNumbers.length > 0) {
         let consumption = 0;
         const possibleConsumptions = validNumbers.filter((n) => n > 35);
-        if (possibleConsumptions.length > 0) {
+        if (possibleConsumptions.length > 0 && typeof possibleConsumptions[0] === "number") {
           consumption = possibleConsumptions[0];
         } else {
           consumption = Math.max(...validNumbers);
