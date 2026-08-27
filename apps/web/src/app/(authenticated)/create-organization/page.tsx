@@ -35,6 +35,8 @@ import {
   Megaphone,
   UserCheck,
   LogOut,
+  Loader2,
+  MapPin,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 
@@ -212,6 +214,11 @@ export default function CreateOrganizationPage() {
   const { setCurrentOrganizationId, refetch, loading: ctxLoading } = useOrganization();
   const [name, setName] = useState("");
   const [cnpj, setCnpj] = useState("");
+  const [cep, setCep] = useState("");
+  const [cityState, setCityState] = useState("");
+  const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
+  const [isSearchingCep, setIsSearchingCep] = useState(false);
+  const [cnpjLookupSuccess, setCnpjLookupSuccess] = useState(false);
   const [logoUrl, setLogoUrl] = useState("");
   const [referralSources, setReferralSources] =
     useState<ReferralSourceOption[]>(DEFAULT_REFERRAL_SOURCES);
@@ -227,8 +234,10 @@ export default function CreateOrganizationPage() {
   const [error, setError] = useState<string | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
 
-  const nameRef = useRef<HTMLInputElement | null>(null);
+  const cnpjRef = useRef<HTMLInputElement | null>(null);
   const segmentRef = useRef<HTMLButtonElement | null>(null);
+  const lastSearchedCnpj = useRef<string>("");
+  const lastSearchedCep = useRef<string>("");
 
   useEffect(() => {
     fetch("/api/system/referral-sources")
@@ -261,7 +270,7 @@ export default function CreateOrganizationPage() {
 
   useEffect(() => {
     if (step === 1) {
-      nameRef.current?.focus();
+      cnpjRef.current?.focus();
       return;
     }
     segmentRef.current?.focus();
@@ -274,6 +283,68 @@ export default function CreateOrganizationPage() {
       .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
       .replace(/\.(\d{3})(\d)/, ".$1/$2")
       .replace(/(\d{4})(\d)/, "$1-$2");
+  };
+
+  const formatCep = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 8);
+    return digits.replace(/^(\d{5})(\d)/, "$1-$2");
+  };
+
+  const handleCnpjChange = async (rawValue: string) => {
+    const formatted = formatCnpj(rawValue);
+    setCnpj(formatted);
+    const clean = rawValue.replace(/\D/g, "");
+
+    if (clean.length === 14 && clean !== lastSearchedCnpj.current) {
+      lastSearchedCnpj.current = clean;
+      setIsSearchingCnpj(true);
+      setCnpjLookupSuccess(false);
+      try {
+        const res = await fetch(`https://minhareceita.org/${clean}`);
+        if (res.ok) {
+          const data = await res.json();
+          const companyName = data.nome_fantasia || data.razao_social || "";
+          if (companyName) {
+            setName(companyName);
+          }
+          if (data.cep) {
+            setCep(formatCep(data.cep));
+          }
+          if (data.municipio && data.uf) {
+            setCityState(`${data.municipio} - ${data.uf}`);
+          }
+          setCnpjLookupSuccess(true);
+        }
+      } catch {
+        // Falha silenciosa para permitir preenchimento manual
+      } finally {
+        setIsSearchingCnpj(false);
+      }
+    }
+  };
+
+  const handleCepChange = async (rawValue: string) => {
+    const formatted = formatCep(rawValue);
+    setCep(formatted);
+    const clean = rawValue.replace(/\D/g, "");
+
+    if (clean.length === 8 && clean !== lastSearchedCep.current) {
+      lastSearchedCep.current = clean;
+      setIsSearchingCep(true);
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.erro && data.localidade && data.uf) {
+            setCityState(`${data.localidade} - ${data.uf}`);
+          }
+        }
+      } catch {
+        // Falha silenciosa para permitir preenchimento manual
+      } finally {
+        setIsSearchingCep(false);
+      }
+    }
   };
 
   const selectedSourceOption = referralSources.find((s) => s.id === selectedReferralSource);
@@ -291,6 +362,7 @@ export default function CreateOrganizationPage() {
         name: name.trim(),
         logoUrl: logoUrl || undefined,
         cnpj: cnpj.trim() || undefined,
+        templateRegion: cityState.trim() || undefined,
         referralSource: (selectedSourceOption?.label ?? selectedReferralSource.trim()) || undefined,
         referredBy: referredBy.trim() || undefined,
         ...(skipTemplateStep
@@ -315,12 +387,12 @@ export default function CreateOrganizationPage() {
   };
 
   const goNext = () => {
-    if (!name.trim()) {
-      setError("Informe o nome da empresa.");
-      return;
-    }
     if (cnpj.replace(/\D/g, "").length !== 14) {
       setError("Informe um CNPJ válido com 14 dígitos.");
+      return;
+    }
+    if (!name.trim()) {
+      setError("Informe o nome da empresa.");
       return;
     }
     if (!selectedReferralSource) {
@@ -449,55 +521,36 @@ export default function CreateOrganizationPage() {
               <div className="flex items-center">
                 {["RK", "MT", "EK", "RT"].map((letter, idx) => (
                   <span
-                    key={`${letter}-${idx}`}
-                    className={`relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-sky-200/28 bg-sky-900/30 text-[10px] font-semibold text-white shadow-[0_4px_12px_rgba(8,50,79,0.25)] ${
-                      idx > 0 ? "-ml-1.5" : ""
-                    }`}
+                    key={letter}
+                    className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-[11px] font-semibold text-white backdrop-blur-sm"
+                    style={{ marginLeft: idx === 0 ? 0 : -8 }}
                   >
-                    <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.24),transparent_58%)]" />
-                    <span className="relative z-10">{letter}</span>
+                    {letter}
                   </span>
                 ))}
               </div>
-              <div className="leading-tight">
-                <p className="text-xs font-medium text-white/90">
-                  +500 integradores solares já usam a EnergivIA para fechar mais projetos
-                </p>
+              <div>
+                <p className="text-xs font-semibold text-white">+120 empresas ativas</p>
+                <p className="text-[11px] text-white/80">criando propostas solares todo dia</p>
               </div>
             </div>
           </div>
         </aside>
 
-        <main className="flex h-full w-full items-start justify-center overflow-y-auto px-4 py-5 sm:px-6 lg:flex-1 lg:justify-center lg:px-12 lg:py-5">
-          <div className="w-full max-w-md lg:max-w-[640px]">
-            {/* Barra superior de retorno para a Landing Page / Logout */}
-            <div className="mb-3 flex items-center justify-between px-2">
+        <main className="relative flex flex-1 flex-col overflow-y-auto bg-[var(--color-background)]">
+          <div className="w-full border-b border-[var(--color-border)] bg-[var(--color-card)]/50 px-6 py-3">
+            <div className="mx-auto flex max-w-[620px] items-center justify-end">
               <Link
-                href="/?landing=1"
-                className="group inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-[#0A4A63] dark:text-sky-400 hover:bg-[#0A4A63]/10 dark:hover:bg-sky-950/40 transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-                <span>Voltar para o site inicial</span>
-              </Link>
-              <a
-                href="/auth/logout"
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-[var(--color-muted-foreground)] hover:text-red-500 transition-colors"
-                title="Sair da conta"
+                href="/logout"
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
               >
                 <LogOut className="h-3.5 w-3.5" />
-                <span>Sair</span>
-              </a>
+                Sair
+              </Link>
             </div>
+          </div>
 
-            <div className="mb-6 text-center lg:hidden">
-              <h2 className="text-2xl font-semibold tracking-tight">
-                Configure sua empresa em poucos passos
-              </h2>
-              <p className="mt-2 text-sm font-medium text-[var(--color-muted-foreground)]">
-                Você pode pular a segunda etapa e concluir agora.
-              </p>
-            </div>
-
+          <div className="mx-auto flex w-full max-w-[620px] flex-1 flex-col justify-start px-4 py-4 sm:px-6 sm:py-6">
             <div className="mb-5 px-2">
               <Stepper alternativeLabel activeStep={step - 1} connector={<OnboardingConnector />}>
                 {steps.map((label) => (
@@ -530,11 +583,13 @@ export default function CreateOrganizationPage() {
 
             <div className="space-y-1.5 px-2 pb-3 text-center">
               <h1 className="text-[23px] font-bold tracking-tight text-[#0A4A63] lg:text-[24px]">
-                Deixe suas propostas prontas para fechar mais vendas
+                {step === 1
+                  ? "Configure o perfil da sua empresa"
+                  : "Personalize suas propostas inteligentes"}
               </h1>
               <p className="mx-auto max-w-[560px] text-[13px] font-medium leading-relaxed text-[var(--color-muted-foreground)]">
                 {step === 1
-                  ? "Leva menos de 1 minuto. Depois disso, já criamos seus primeiros templates automaticamente."
+                  ? "Informe seu CNPJ para personalizarmos suas propostas comerciais em poucos segundos."
                   : "Agora vamos personalizar suas propostas para o seu tipo de cliente."}
               </p>
             </div>
@@ -553,7 +608,33 @@ export default function CreateOrganizationPage() {
                 >
                   <div className="space-y-2.5 pt-1.5">
                     <Input
-                      ref={nameRef}
+                      ref={cnpjRef}
+                      label="CNPJ *"
+                      value={cnpj}
+                      onChange={(e) => void handleCnpjChange(e.target.value)}
+                      placeholder="00.000.000/0000-00"
+                      className="w-full font-mono text-sm"
+                      required
+                      startAdornment={
+                        <FileText className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                      }
+                      endAdornment={
+                        isSearchingCnpj ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-[#1f7f9b]" />
+                        ) : cnpj.replace(/\D/g, "").length === 14 ? (
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        ) : null
+                      }
+                      helperText={
+                        isSearchingCnpj
+                          ? "Buscando dados na Receita Federal..."
+                          : cnpjLookupSuccess
+                            ? "Dados da empresa localizados e preenchidos automaticamente!"
+                            : undefined
+                      }
+                    />
+
+                    <Input
                       label="Nome da empresa *"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
@@ -567,24 +648,42 @@ export default function CreateOrganizationPage() {
                         name.trim() ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : null
                       }
                     />
-                    <Input
-                      label="CNPJ *"
-                      value={cnpj}
-                      onChange={(e) => setCnpj(formatCnpj(e.target.value))}
-                      placeholder="00.000.000/0000-00"
-                      className="w-full font-mono text-sm"
-                      required
-                      startAdornment={
-                        <FileText className="h-4 w-4 text-[var(--color-muted-foreground)]" />
-                      }
-                      endAdornment={
-                        cnpj.replace(/\D/g, "").length === 14 ? (
-                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                        ) : null
-                      }
-                    />
 
-                    {/* Menu Suspenso Obrigatório: De onde conheceu a EnergivIA */}
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                      <Input
+                        label="CEP da empresa"
+                        value={cep}
+                        onChange={(e) => void handleCepChange(e.target.value)}
+                        placeholder="00000-000"
+                        className="w-full font-mono text-sm"
+                        startAdornment={
+                          <MapPin className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                        }
+                        endAdornment={
+                          isSearchingCep ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-[#1f7f9b]" />
+                          ) : cep.replace(/\D/g, "").length === 8 ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                          ) : null
+                        }
+                      />
+                      <Input
+                        label="Cidade e UF"
+                        value={cityState}
+                        onChange={(e) => setCityState(e.target.value)}
+                        placeholder="Ex: Londrina - PR"
+                        className="w-full"
+                        startAdornment={
+                          <Building className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                        }
+                        endAdornment={
+                          cityState.trim() ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                          ) : null
+                        }
+                      />
+                    </div>
+
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-[var(--color-foreground)] flex items-center justify-between">
                         <span>Como conheceu a EnergivIA? *</span>
@@ -618,7 +717,6 @@ export default function CreateOrganizationPage() {
                       </div>
                     </div>
 
-                    {/* Detalhes / Quem recomendou (caso a opção exija) */}
                     {selectedSourceOption?.requiresDetails ? (
                       <div className="animate-in fade-in slide-in-from-top-1 duration-200">
                         <Input
