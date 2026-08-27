@@ -541,19 +541,19 @@ export default function CreateOrganizationPage() {
 
         <main className="relative flex flex-1 flex-col overflow-y-auto bg-[var(--color-background)]">
           <div className="w-full border-b border-[var(--color-border)] bg-[var(--color-card)]/50 px-6 py-3">
-            <div className="mx-auto flex max-w-[620px] items-center justify-end">
-              <Link
-                href="/logout"
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+            <div className="mx-auto flex max-w-[760px] items-center justify-end">
+              <a
+                href="/auth/logout"
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-red-500"
               >
                 <LogOut className="h-3.5 w-3.5" />
                 Sair
-              </Link>
+              </a>
             </div>
           </div>
 
-          <div className="mx-auto flex w-full max-w-[620px] flex-1 flex-col justify-start px-4 py-4 sm:px-6 sm:py-6">
-            <div className="mb-5 px-2">
+          <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col justify-start px-4 py-6 sm:px-8 sm:py-8">
+            <div className="mb-6 px-2">
               <Stepper alternativeLabel activeStep={step - 1} connector={<OnboardingConnector />}>
                 {steps.map((label) => (
                   <Step key={label}>
@@ -583,13 +583,13 @@ export default function CreateOrganizationPage() {
               </Stepper>
             </div>
 
-            <div className="space-y-1.5 px-2 pb-3 text-center">
-              <h1 className="text-[23px] font-bold tracking-tight text-[#0A4A63] lg:text-[24px]">
+            <div className="space-y-2 px-2 pb-4 text-center">
+              <h1 className="text-[25px] font-bold tracking-tight text-[#0A4A63] lg:text-[27px]">
                 {step === 1
                   ? "Configure o perfil da sua empresa"
                   : "Personalize suas propostas inteligentes"}
               </h1>
-              <p className="mx-auto max-w-[560px] text-[13px] font-medium leading-relaxed text-[var(--color-muted-foreground)]">
+              <p className="mx-auto max-w-[620px] text-[14px] font-medium leading-relaxed text-[var(--color-muted-foreground)]">
                 {step === 1
                   ? "Informe seu CNPJ para personalizarmos suas propostas comerciais em poucos segundos."
                   : "Agora vamos personalizar suas propostas para o seu tipo de cliente."}
@@ -608,7 +608,7 @@ export default function CreateOrganizationPage() {
                   }`}
                   aria-hidden={step !== 1}
                 >
-                  <div className="space-y-2.5 pt-1.5">
+                  <div className="space-y-3.5 pt-1.5">
                     <Input
                       ref={cnpjRef}
                       label="CNPJ *"
