@@ -103,13 +103,51 @@ Retorne EXCLUSIVAMENTE um objeto JSON válido no seguinte formato:
   ]
 }`;
 
+import { extractDataFromTextDeterministic, runOcrOnImage } from "./ocr-bill-extractor";
+
 export async function extractEnergyBillFromText(
   rawText: string,
   apiKey?: string
 ): Promise<BillExtractionResult> {
+  // 1. Tenta OCR/Parsing determinístico local primeiro
+  const deterministic = extractDataFromTextDeterministic(rawText);
+  if (deterministic.isComplete && deterministic.historico_consumo.length >= 3) {
+    return processExtractedBillData(
+      {
+        distribuidora: deterministic.distribuidora,
+        cidade: deterministic.cidade,
+        uf: deterministic.uf,
+        tipo_conexao: deterministic.tipo_conexao,
+        nome_cliente: deterministic.nome_cliente,
+        codigo_instalacao_ou_uc: deterministic.codigo_instalacao_ou_uc,
+        mes_referencia_atual: deterministic.mes_referencia_atual,
+        consumo_mes_atual_kwh: deterministic.consumo_mes_atual_kwh,
+        valor_total_fatura_reais: deterministic.valor_total_fatura_reais,
+        historico_consumo: deterministic.historico_consumo,
+      },
+      rawText
+    );
+  }
+
+  // 2. Fallback para IA se o OCR determinístico não cobriu todos os dados críticos
   const key = apiKey || process.env["OPENAI_API_KEY"];
   if (!key) {
-    throw new Error("OPENAI_API_KEY não configurada.");
+    // Se não tiver chave da OpenAI, retorna o melhor resultado determinístico obtido pelo OCR
+    return processExtractedBillData(
+      {
+        distribuidora: deterministic.distribuidora,
+        cidade: deterministic.cidade,
+        uf: deterministic.uf,
+        tipo_conexao: deterministic.tipo_conexao,
+        nome_cliente: deterministic.nome_cliente,
+        codigo_instalacao_ou_uc: deterministic.codigo_instalacao_ou_uc,
+        mes_referencia_atual: deterministic.mes_referencia_atual,
+        consumo_mes_atual_kwh: deterministic.consumo_mes_atual_kwh,
+        valor_total_fatura_reais: deterministic.valor_total_fatura_reais,
+        historico_consumo: deterministic.historico_consumo,
+      },
+      rawText
+    );
   }
 
   const openai = new OpenAI({ apiKey: key });
@@ -142,6 +180,34 @@ export async function extractEnergyBillFromImage(
   base64DataUrl: string,
   apiKey?: string
 ): Promise<BillExtractionResult> {
+  // 1. Executa OCR Tesseract na imagem primeiro
+  try {
+    const ocrText = await runOcrOnImage(base64DataUrl);
+    if (ocrText && ocrText.trim().length > 30) {
+      const deterministic = extractDataFromTextDeterministic(ocrText);
+      if (deterministic.isComplete && deterministic.historico_consumo.length >= 3) {
+        return processExtractedBillData(
+          {
+            distribuidora: deterministic.distribuidora,
+            cidade: deterministic.cidade,
+            uf: deterministic.uf,
+            tipo_conexao: deterministic.tipo_conexao,
+            nome_cliente: deterministic.nome_cliente,
+            codigo_instalacao_ou_uc: deterministic.codigo_instalacao_ou_uc,
+            mes_referencia_atual: deterministic.mes_referencia_atual,
+            consumo_mes_atual_kwh: deterministic.consumo_mes_atual_kwh,
+            valor_total_fatura_reais: deterministic.valor_total_fatura_reais,
+            historico_consumo: deterministic.historico_consumo,
+          },
+          ocrText
+        );
+      }
+    }
+  } catch (ocrErr) {
+    console.error("[Tesseract OCR Error on Image]", ocrErr);
+  }
+
+  // 2. Fallback para GPT-4o Vision se OCR local não extraiu 100%
   const key = apiKey || process.env["OPENAI_API_KEY"];
   if (!key) {
     throw new Error("OPENAI_API_KEY não configurada.");
@@ -197,9 +263,18 @@ export async function extractEnergyBillFromPdfBuffer(
     console.error("Erro ao rodar pdfParse:", e);
   }
 
+  // Se o PDF for escaneado (sem texto) tenta OCR com Tesseract
   if (!pdfText || pdfText.trim().length < 30) {
+    try {
+      pdfText = await runOcrOnImage(buffer);
+    } catch (e) {
+      console.error("Erro ao rodar Tesseract no PDF Buffer:", e);
+    }
+  }
+
+  if (!pdfText || pdfText.trim().length < 20) {
     throw new Error(
-      "O PDF não possui camada de texto legível (pode ser um PDF escaneado/imagem). Por favor, envie uma foto nítida em JPG ou PNG."
+      "O PDF não possui camada de texto legível nem foi possível realizar o OCR. Por favor, envie uma foto nítida em JPG ou PNG."
     );
   }
 

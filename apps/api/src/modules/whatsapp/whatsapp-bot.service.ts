@@ -6,6 +6,7 @@ import { WhatsappCloudService } from "./whatsapp-cloud.service";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { computeProjectCostSection } from "@energivia/proposal-economia";
 import pdfParse from "pdf-parse";
+import { createWorker } from "tesseract.js";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -681,6 +682,212 @@ export class WhatsappBotService {
     }
   }
 
+  private async runOcrOnBuffer(buffer: Buffer): Promise<string> {
+    try {
+      const worker = await createWorker();
+      await worker.loadLanguage("por");
+      await worker.initialize("por");
+      const {
+        data: { text },
+      } = await worker.recognize(buffer);
+      await worker.terminate();
+      return text || "";
+    } catch (err) {
+      this.logger.error("Erro no OCR Tesseract WhatsApp:", err);
+      return "";
+    }
+  }
+
+  private parseBillTextDeterministic(text: string): {
+    data: ExtractedBillData;
+    isComplete: boolean;
+  } {
+    const t = (text || "").replace(/[\u00A0\r]/g, " ");
+    const lines = t
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    let distribuidora: string | undefined;
+    const providers = [
+      { name: "COPEL", pattern: /\b(copel|copel\s+distribui[cç][aã]o)\b/i },
+      { name: "ENEL", pattern: /\b(enel|eletropaulo|ampla|coelce)\b/i },
+      { name: "CPFL", pattern: /\b(cpfl|paulista|piratininga|santa\s+cruz)\b/i },
+      { name: "CEMIG", pattern: /\b(cemig|companhia\s+energ[eé]tica\s+de\s+minas)\b/i },
+      { name: "EQUATORIAL", pattern: /\b(equatorial|ceal|cepisa|celpa|cemar)\b/i },
+      { name: "ENERGISA", pattern: /\b(energisa)\b/i },
+      { name: "NEOENERGIA", pattern: /\b(neoenergia|coelba|celpe|cosern|elektro)\b/i },
+      { name: "LIGHT", pattern: /\b(light\s+servi[cç]os)\b/i },
+      { name: "EDP", pattern: /\b(edp|bandeirante|escelsa)\b/i },
+      { name: "RGE", pattern: /\b(rge|rio\s+grande\s+energia)\b/i },
+      { name: "CELESC", pattern: /\b(celesc)\b/i },
+    ];
+    for (const p of providers) {
+      if (p.pattern.test(t)) {
+        distribuidora = p.name;
+        break;
+      }
+    }
+
+    let consumptionKwh: number | undefined;
+    const kwhPatterns = [
+      /(?:consumo\s+(?:ativo|faturado|medido|do\s+m[eê]s)?|total\s+consumo)[\s:=]*(\d{1,6}(?:[.,]\d{1,3})?)\s*(?:kwh|kw-h)/i,
+      /(\d{1,6}(?:[.,]\d{1,3})?)\s*(?:kwh|kw-h)\s*(?:\/m[eê]s)?/i,
+    ];
+    for (const p of kwhPatterns) {
+      const m = t.match(p);
+      if (m && m[1]) {
+        const val = parseBrazilianKwh(m[1]);
+        if (val > 0 && val < 500000) {
+          consumptionKwh = val;
+          break;
+        }
+      }
+    }
+
+    let totalAmount: number | undefined;
+    const brlPatterns = [
+      /(?:total\s+a\s+pagar|valor\s+total|total\s+fatura|valor\s+a\s+pagar|total\s+da\s+fatura)[\s:=]*r\$\s*(\d{1,3}(?:[.\s]\d{3})*(?:,\d{2})?)/i,
+      /r\$\s*(\d{1,3}(?:[.\s]\d{3})*(?:,\d{2}))/i,
+    ];
+    for (const p of brlPatterns) {
+      const m = t.match(p);
+      if (m && m[1]) {
+        const clean = m[1].replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+        const n = parseFloat(clean);
+        if (Number.isFinite(n) && n > 0) {
+          totalAmount = Number(n.toFixed(2));
+          break;
+        }
+      }
+    }
+
+    let referenceMonth: string | undefined;
+    const refMatch = t.match(
+      /(?:compet[eê]ncia|refer[eê]ncia|m[eê]s\/ano)[\s:=]*([0-1]?\d\s*\/\s*(?:20)?\d{2})/i
+    );
+    if (refMatch && refMatch[1]) {
+      referenceMonth = refMatch[1].replace(/\s+/g, "");
+    } else {
+      const mmMatch = t.match(/\b(0[1-9]|1[0-2])[\/-](20\d{2}|\d{2})\b/);
+      if (mmMatch) {
+        referenceMonth = `${mmMatch[1]}/${mmMatch[2]}`;
+      }
+    }
+
+    let tipo_conexao: string | undefined;
+    if (/trif[aá]sico/i.test(t)) {
+      tipo_conexao = "Trifásico";
+    } else if (/bif[aá]sico/i.test(t)) {
+      tipo_conexao = "Bifásico";
+    } else if (/monof[aá]sico/i.test(t)) {
+      tipo_conexao = "Monofásico";
+    }
+
+    const ufList = [
+      "AC",
+      "AL",
+      "AP",
+      "AM",
+      "BA",
+      "CE",
+      "DF",
+      "ES",
+      "GO",
+      "MA",
+      "MT",
+      "MS",
+      "MG",
+      "PA",
+      "PB",
+      "PR",
+      "PE",
+      "PI",
+      "RJ",
+      "RN",
+      "RS",
+      "RO",
+      "RR",
+      "SC",
+      "SP",
+      "SE",
+      "TO",
+    ];
+    let cidade: string | undefined;
+    let uf: string | undefined;
+    const cityUfMatch = t.match(/([A-ZÁ-Ú\s]{3,30})\s*[-/]\s*([A-Z]{2})\b/i);
+    if (cityUfMatch && cityUfMatch[1] && cityUfMatch[2]) {
+      const possibleUf = cityUfMatch[2].toUpperCase();
+      if (ufList.includes(possibleUf)) {
+        const cand = cityUfMatch[1].trim();
+        if (!cand.toLowerCase().includes("emissao") && !cand.toLowerCase().includes("vencimento")) {
+          cidade = cand;
+          uf = possibleUf;
+        }
+      }
+    }
+
+    const historyCandidates: ExtractedBillHistoryItem[] = [];
+    const monthRowRegex =
+      /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[\s\/\-_]*(\d{2,4})?\b[^\d\n]*(\d{1,3}(?:\.\d{3})*(?:,\d{1,3})?|\d{1,6})/i;
+
+    for (const line of lines) {
+      const m = line.match(monthRowRegex);
+      if (m && m[1]) {
+        const monStr = m[1].toUpperCase().substring(0, 3);
+        const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
+        const label = yr ? `${monStr}/${yr}` : monStr;
+        const kwh = parseBrazilianKwh(m[3]);
+        if (kwh > 0 && kwh < 500000) {
+          historyCandidates.push({ mes_ano: label, consumo_kwh: kwh });
+        }
+      }
+    }
+
+    const validHistory: ExtractedBillHistoryItem[] = [];
+    const highCount = historyCandidates.filter((c) => c.consumo_kwh >= 50).length;
+    for (let idx = 0; idx < historyCandidates.length; idx++) {
+      const item = historyCandidates[idx];
+      if (!item) continue;
+      if (
+        highCount >= 2 &&
+        idx >= highCount &&
+        item.consumo_kwh <= 35 &&
+        [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35].includes(item.consumo_kwh)
+      ) {
+        continue;
+      }
+      validHistory.push(item);
+    }
+    const normalizedHistory = validHistory.length > 12 ? validHistory.slice(0, 12) : validHistory;
+
+    if (!consumptionKwh && normalizedHistory.length > 0) {
+      consumptionKwh = normalizedHistory[0]?.consumo_kwh;
+    }
+
+    const isComplete = Boolean(
+      (consumptionKwh || normalizedHistory.length > 0) &&
+      normalizedHistory.length >= 3 &&
+      cidade &&
+      uf &&
+      distribuidora
+    );
+
+    return {
+      data: {
+        distribuidora,
+        cidade,
+        uf,
+        tipo_conexao,
+        mes_referencia_atual: referenceMonth,
+        consumo_mes_atual_kwh: consumptionKwh,
+        valor_total_fatura_reais: totalAmount,
+        historico_consumo: normalizedHistory,
+      },
+      isComplete,
+    };
+  }
+
   private async extractFromMediaDocument(
     mediaId: string,
     mimeType?: string
@@ -689,12 +896,31 @@ export class WhatsappBotService {
       const media = await this.whatsappCloud.downloadWhatsappMedia(mediaId);
       if (!media || !media.buffer) return null;
 
+      let text = "";
       if (media.mimeType.includes("pdf") || mimeType?.includes("pdf")) {
-        const parsed = await pdfParse(media.buffer);
-        const text = parsed.text;
-        if (text && text.trim().length > 30) {
-          return this.parseBillTextWithAI(text);
+        try {
+          const parsed = await pdfParse(media.buffer);
+          text = parsed.text || "";
+        } catch {
+          // ignora erro pdfParse
         }
+        if (!text || text.trim().length < 30) {
+          text = await this.runOcrOnBuffer(media.buffer);
+        }
+      } else {
+        text = await this.runOcrOnBuffer(media.buffer);
+      }
+
+      if (text && text.trim().length > 30) {
+        const deterministic = this.parseBillTextDeterministic(text);
+        if (deterministic.isComplete && deterministic.data.historico_consumo.length >= 3) {
+          this.logger.log(
+            "Fatura WhatsApp extraída 100% via OCR Determinístico sem consumo de tokens de IA."
+          );
+          return processExtractedBillData(deterministic.data, text);
+        }
+        // Fallback para IA usando o texto lido pelo OCR
+        return this.parseBillTextWithAI(text);
       }
     } catch (e) {
       this.logger.error("Erro extraindo PDF da fatura:", e);
@@ -710,8 +936,25 @@ export class WhatsappBotService {
       const media = await this.whatsappCloud.downloadWhatsappMedia(mediaId);
       if (!media || !media.buffer) return null;
 
+      // 1. Tenta OCR Tesseract na imagem primeiro
+      const ocrText = await this.runOcrOnBuffer(media.buffer);
+      if (ocrText && ocrText.trim().length > 30) {
+        const deterministic = this.parseBillTextDeterministic(ocrText);
+        if (deterministic.isComplete && deterministic.data.historico_consumo.length >= 3) {
+          this.logger.log(
+            "Imagem de fatura WhatsApp extraída 100% via Tesseract OCR determinístico."
+          );
+          return processExtractedBillData(deterministic.data, ocrText);
+        }
+      }
+
+      // 2. Se OCR não foi 100%, aciona IA como fallback
       const openAiKey = this.config.get<string>("OPENAI_API_KEY");
       if (openAiKey) {
+        if (ocrText && ocrText.trim().length > 30) {
+          const fromTextAI = await this.parseBillTextWithAI(ocrText);
+          if (fromTextAI) return fromTextAI;
+        }
         return this.extractImageWithOpenAI(
           media.buffer,
           media.mimeType || mimeType || "image/jpeg",
@@ -720,6 +963,10 @@ export class WhatsappBotService {
       }
 
       if (this.genAI) {
+        if (ocrText && ocrText.trim().length > 30) {
+          const fromTextGemini = await this.parseBillTextWithAI(ocrText);
+          if (fromTextGemini) return fromTextGemini;
+        }
         const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent([
           BILL_EXTRACTION_SYSTEM_PROMPT,

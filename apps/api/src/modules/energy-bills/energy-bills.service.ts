@@ -10,6 +10,7 @@ import { randomUUID } from "node:crypto";
 import { assertLeadInTenant } from "../../common/assert-lead-in-tenant";
 import { softDeleteWhere as soft } from "../../prisma/soft-delete";
 import pdfParse from "pdf-parse";
+import { createWorker } from "tesseract.js";
 
 const BILL_CONTENT_TYPES = [
   "image/jpeg",
@@ -259,6 +260,219 @@ export class EnergyBillsService {
     return bill;
   }
 
+  private async runOcrOnBuffer(buffer: Buffer): Promise<string> {
+    try {
+      const worker = await createWorker("por");
+      const {
+        data: { text },
+      } = await worker.recognize(buffer);
+      await worker.terminate();
+      return text || "";
+    } catch (err) {
+      this.logger.error("Erro no OCR Tesseract:", err);
+      return "";
+    }
+  }
+
+  private parseBillTextDeterministic(text: string): {
+    distribuidora?: string;
+    cidade?: string;
+    uf?: string;
+    tipo_conexao?: string;
+    mes_referencia_atual?: string;
+    consumptionKwh?: number;
+    totalAmount?: number;
+    consumptionHistoryLabeled: Array<{ month: string; consumptionKwh: number }>;
+    isComplete: boolean;
+    rawData?: Record<string, unknown>;
+  } {
+    const t = (text || "").replace(/[\u00A0\r]/g, " ");
+    const lines = t
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    let distribuidora: string | undefined;
+    const providers = [
+      { name: "COPEL", pattern: /\b(copel|copel\s+distribui[cç][aã]o)\b/i },
+      { name: "ENEL", pattern: /\b(enel|eletropaulo|ampla|coelce)\b/i },
+      { name: "CPFL", pattern: /\b(cpfl|paulista|piratininga|santa\s+cruz)\b/i },
+      { name: "CEMIG", pattern: /\b(cemig|companhia\s+energ[eé]tica\s+de\s+minas)\b/i },
+      { name: "EQUATORIAL", pattern: /\b(equatorial|ceal|cepisa|celpa|cemar)\b/i },
+      { name: "ENERGISA", pattern: /\b(energisa)\b/i },
+      { name: "NEOENERGIA", pattern: /\b(neoenergia|coelba|celpe|cosern|elektro)\b/i },
+      { name: "LIGHT", pattern: /\b(light\s+servi[cç]os)\b/i },
+      { name: "EDP", pattern: /\b(edp|bandeirante|escelsa)\b/i },
+      { name: "RGE", pattern: /\b(rge|rio\s+grande\s+energia)\b/i },
+      { name: "CELESC", pattern: /\b(celesc)\b/i },
+    ];
+    for (const p of providers) {
+      if (p.pattern.test(t)) {
+        distribuidora = p.name;
+        break;
+      }
+    }
+
+    let consumptionKwh: number | undefined;
+    const kwhPatterns = [
+      /(?:consumo\s+(?:ativo|faturado|medido|do\s+m[eê]s)?|total\s+consumo)[\s:=]*(\d{1,6}(?:[.,]\d{1,3})?)\s*(?:kwh|kw-h)/i,
+      /(\d{1,6}(?:[.,]\d{1,3})?)\s*(?:kwh|kw-h)\s*(?:\/m[eê]s)?/i,
+    ];
+    for (const p of kwhPatterns) {
+      const m = t.match(p);
+      if (m && m[1]) {
+        const val = parseBrazilianKwh(m[1]);
+        if (val > 0 && val < 500000) {
+          consumptionKwh = val;
+          break;
+        }
+      }
+    }
+
+    let totalAmount: number | undefined;
+    const brlPatterns = [
+      /(?:total\s+a\s+pagar|valor\s+total|total\s+fatura|valor\s+a\s+pagar|total\s+da\s+fatura)[\s:=]*r\$\s*(\d{1,3}(?:[.\s]\d{3})*(?:,\d{2})?)/i,
+      /r\$\s*(\d{1,3}(?:[.\s]\d{3})*(?:,\d{2}))/i,
+    ];
+    for (const p of brlPatterns) {
+      const m = t.match(p);
+      if (m && m[1]) {
+        const clean = m[1].replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+        const n = parseFloat(clean);
+        if (Number.isFinite(n) && n > 0) {
+          totalAmount = Number(n.toFixed(2));
+          break;
+        }
+      }
+    }
+
+    let referenceMonth: string | undefined;
+    const refMatch = t.match(
+      /(?:compet[eê]ncia|refer[eê]ncia|m[eê]s\/ano)[\s:=]*([0-1]?\d\s*\/\s*(?:20)?\d{2})/i
+    );
+    if (refMatch && refMatch[1]) {
+      referenceMonth = refMatch[1].replace(/\s+/g, "");
+    } else {
+      const mmMatch = t.match(/\b(0[1-9]|1[0-2])[\/-](20\d{2}|\d{2})\b/);
+      if (mmMatch) {
+        referenceMonth = `${mmMatch[1]}/${mmMatch[2]}`;
+      }
+    }
+
+    let tipo_conexao: string | undefined;
+    if (/trif[aá]sico/i.test(t)) {
+      tipo_conexao = "Trifásico";
+    } else if (/bif[aá]sico/i.test(t)) {
+      tipo_conexao = "Bifásico";
+    } else if (/monof[aá]sico/i.test(t)) {
+      tipo_conexao = "Monofásico";
+    }
+
+    const ufList = [
+      "AC",
+      "AL",
+      "AP",
+      "AM",
+      "BA",
+      "CE",
+      "DF",
+      "ES",
+      "GO",
+      "MA",
+      "MT",
+      "MS",
+      "MG",
+      "PA",
+      "PB",
+      "PR",
+      "PE",
+      "PI",
+      "RJ",
+      "RN",
+      "RS",
+      "RO",
+      "RR",
+      "SC",
+      "SP",
+      "SE",
+      "TO",
+    ];
+    let cidade: string | undefined;
+    let uf: string | undefined;
+    const cityUfMatch = t.match(/([A-ZÁ-Ú\s]{3,30})\s*[-/]\s*([A-Z]{2})\b/i);
+    if (cityUfMatch && cityUfMatch[1] && cityUfMatch[2]) {
+      const possibleUf = cityUfMatch[2].toUpperCase();
+      if (ufList.includes(possibleUf)) {
+        const cand = cityUfMatch[1].trim();
+        if (!cand.toLowerCase().includes("emissao") && !cand.toLowerCase().includes("vencimento")) {
+          cidade = cand;
+          uf = possibleUf;
+        }
+      }
+    }
+
+    const historyCandidates: Array<{ month: string; consumptionKwh: number }> = [];
+    const monthRowRegex =
+      /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[\s\/\-_]*(\d{2,4})?\b[^\d\n]*(\d{1,3}(?:\.\d{3})*(?:,\d{1,3})?|\d{1,6})/i;
+
+    for (const line of lines) {
+      const m = line.match(monthRowRegex);
+      if (m && m[1]) {
+        const monStr = m[1].toUpperCase().substring(0, 3);
+        const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
+        const label = yr ? `${monStr}/${yr}` : monStr;
+        const kwh = parseBrazilianKwh(m[3]);
+        if (kwh > 0 && kwh < 500000) {
+          historyCandidates.push({ month: label, consumptionKwh: kwh });
+        }
+      }
+    }
+
+    const validHistory: Array<{ month: string; consumptionKwh: number }> = [];
+    const highCount = historyCandidates.filter((c) => c.consumptionKwh >= 50).length;
+    for (let idx = 0; idx < historyCandidates.length; idx++) {
+      const item = historyCandidates[idx];
+      if (!item) continue;
+      if (
+        highCount >= 2 &&
+        idx >= highCount &&
+        item.consumptionKwh <= 35 &&
+        [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35].includes(
+          item.consumptionKwh
+        )
+      ) {
+        continue;
+      }
+      validHistory.push(item);
+    }
+    const normalizedHistory = validHistory.length > 12 ? validHistory.slice(0, 12) : validHistory;
+
+    if (!consumptionKwh && normalizedHistory.length > 0) {
+      consumptionKwh = normalizedHistory[0]?.consumptionKwh;
+    }
+
+    const isComplete = Boolean(
+      (consumptionKwh || normalizedHistory.length > 0) &&
+      normalizedHistory.length >= 3 &&
+      cidade &&
+      uf &&
+      distribuidora
+    );
+
+    return {
+      distribuidora,
+      cidade,
+      uf,
+      tipo_conexao,
+      mes_referencia_atual: referenceMonth,
+      consumptionKwh,
+      totalAmount,
+      consumptionHistoryLabeled: normalizedHistory,
+      isComplete,
+      rawData: { text: t },
+    };
+  }
+
   private async runBillExtractionJob(
     billId: string,
     fileUrl: string,
@@ -272,7 +486,6 @@ export class EnergyBillsService {
     });
 
     try {
-      // 1. Baixa o conteúdo do arquivo
       const response = await fetch(fileUrl);
       if (!response.ok) {
         throw new Error(`Falha ao baixar arquivo do S3 (Status: ${response.status})`);
@@ -280,54 +493,74 @@ export class EnergyBillsService {
 
       const openAiApiKey = this.config.get<string>("OPENAI_API_KEY");
       let extractedData: Record<string, unknown> | null = null;
+      const ext = extname(fileName).toLowerCase();
 
-      // 2. Se houver OPENAI_API_KEY configurada, tenta extração via OpenAI
-      if (openAiApiKey) {
-        const ext = extname(fileName).toLowerCase();
+      // --- CAMADA 1: OCR DETERMINÍSTICO PRIMEIRO (Tesseract / PDF Text Layer) ---
+      let rawText = "";
+      let arrayBuffer: ArrayBuffer | null = null;
 
-        if (ext === ".txt") {
-          const fileText = await response.text();
-          extractedData = await this.extractDataWithOpenAI(fileText, openAiApiKey);
+      if (ext === ".txt") {
+        rawText = await response.text();
+      } else if (ext === ".pdf") {
+        try {
+          arrayBuffer = await response.arrayBuffer();
+          const pdfBuffer = Buffer.from(arrayBuffer);
+          const pdfData = await pdfParse(pdfBuffer);
+          rawText = pdfData.text || "";
+          if (!rawText || rawText.trim().length < 30) {
+            rawText = await this.runOcrOnBuffer(pdfBuffer);
+          }
+        } catch (pdfErr) {
+          this.logger.warn(`Erro leitura PDF com pdfParse: ${String(pdfErr)}`);
+        }
+      } else if ([".jpg", ".jpeg", ".png", ".webp"].includes(ext)) {
+        try {
+          arrayBuffer = await response.arrayBuffer();
+          const imgBuffer = Buffer.from(arrayBuffer);
+          rawText = await this.runOcrOnBuffer(imgBuffer);
+        } catch (ocrErr) {
+          this.logger.warn(`Erro no OCR da imagem: ${String(ocrErr)}`);
+        }
+      }
+
+      if (rawText && rawText.trim().length > 30) {
+        const deterministic = this.parseBillTextDeterministic(rawText);
+        if (deterministic.isComplete && deterministic.consumptionHistoryLabeled.length >= 3) {
+          extractedData = this.processExtractedResultWithMath(
+            deterministic as unknown as Record<string, unknown>
+          );
+          this.logger.log(
+            `Energy bill extracted via OCR determinístico 100% (Economia total de tokens IA) billId=${billId}`
+          );
+        }
+      }
+
+      // --- CAMADA 2: IA COMO FALLBACK (Apenas se OCR não cobriu tudo e houver chave) ---
+      if (!extractedData && openAiApiKey) {
+        this.logger.log(`OCR precisou de complemento da IA. Acionando fallback billId=${billId}`);
+        if (ext === ".txt" || (ext === ".pdf" && rawText && rawText.trim().length >= 30)) {
+          extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey);
         } else if ([".jpg", ".jpeg", ".png", ".webp"].includes(ext)) {
-          const buffer = await response.arrayBuffer();
-          const base64Image = Buffer.from(buffer).toString("base64");
+          const buf = arrayBuffer
+            ? Buffer.from(arrayBuffer)
+            : Buffer.from(await response.arrayBuffer());
+          const base64Image = buf.toString("base64");
           const mimeType = ext === ".png" ? "image/png" : "image/jpeg";
           extractedData = await this.extractVisionWithOpenAI(base64Image, mimeType, openAiApiKey);
-        } else if (ext === ".pdf") {
-          try {
-            const arrayBuf = await response.arrayBuffer();
-            const pdfBuffer = Buffer.from(arrayBuf);
-            const pdfData = await pdfParse(pdfBuffer);
-            const pdfText = pdfData.text || "";
-            extractedData = await this.extractDataWithOpenAI(pdfText, openAiApiKey);
-          } catch (pdfErr) {
-            this.logger.error(`Erro ao ler PDF com pdfParse: ${String(pdfErr)}`);
-          }
-        } else {
-          const text = await response.text();
-          extractedData = await this.extractDataWithOpenAI(text, openAiApiKey);
+        } else if (rawText) {
+          extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey);
         }
       }
 
-      // 3. Fallback: Se a OpenAI não retornar dados ou a chave não estiver configurada, roda regex local
-      if (!extractedData) {
-        try {
-          const ext = extname(fileName).toLowerCase();
-          let fallbackText = "";
-          if (ext === ".pdf") {
-            const arrayBuf = await response.arrayBuffer();
-            const pdfData = await pdfParse(Buffer.from(arrayBuf));
-            fallbackText = pdfData.text || "";
-          } else {
-            fallbackText = await response.text();
-          }
-          extractedData = this.parseBillText(fallbackText);
-        } catch {
-          extractedData = null;
-        }
+      // --- CAMADA 3: FALLBACK REGEX DETERMINÍSTICO LOCAL ---
+      if (!extractedData && rawText) {
+        const localParsed = this.parseBillTextDeterministic(rawText);
+        extractedData = this.processExtractedResultWithMath(
+          localParsed as unknown as Record<string, unknown>
+        );
       }
 
-      // 4. Salva o resultado
+      // Salva o resultado
       await this.setExtractionResult(billId, {
         extractedData: extractedData ?? {},
         extractionError: undefined,
