@@ -1764,6 +1764,24 @@ export const ProposalEconomicsModal = forwardRef<
                               );
                             })()}
                           </dl>
+                          {(() => {
+                            const extData = billAttachment.extractedData as
+                              | Record<string, unknown>
+                              | undefined;
+                            const rawData = extData?.rawData as Record<string, unknown> | undefined;
+                            const fallbackReason =
+                              (extData?.fallbackReason as string) ||
+                              (rawData?.fallbackReason as string);
+                            if (!fallbackReason) return null;
+                            return (
+                              <div className="rounded-lg border border-purple-500/20 bg-purple-500/10 p-2.5 text-[0.7rem] text-purple-900 dark:text-purple-200">
+                                <span className="font-semibold">
+                                  ℹ️ Motivo do acionamento da IA:
+                                </span>{" "}
+                                {fallbackReason}
+                              </div>
+                            );
+                          })()}
                           {getBillExtractionUiNotes(billAttachment.extractedData?.rawData).map(
                             (note, i) => (
                               <p

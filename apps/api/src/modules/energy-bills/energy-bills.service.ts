@@ -449,17 +449,17 @@ export class EnergyBillsService {
     }
     const normalizedHistory = validHistory.length > 12 ? validHistory.slice(0, 12) : validHistory;
 
-    if (!consumptionKwh && normalizedHistory.length > 0) {
-      consumptionKwh = normalizedHistory[0]?.consumptionKwh;
-    }
+    const missingFields: string[] = [];
+    if (!distribuidora) missingFields.push("Distribuidora");
+    if (!cidade) missingFields.push("Cidade");
+    if (!uf) missingFields.push("UF");
+    if (!consumptionKwh && normalizedHistory.length === 0) missingFields.push("Consumo do Mês");
+    if (normalizedHistory.length < 3)
+      missingFields.push(
+        `Histórico incompleto (${normalizedHistory.length} meses encontrados, mínimo 3)`
+      );
 
-    const isComplete = Boolean(
-      (consumptionKwh || normalizedHistory.length > 0) &&
-      normalizedHistory.length >= 3 &&
-      cidade &&
-      uf &&
-      distribuidora
-    );
+    const isComplete = missingFields.length === 0;
 
     return {
       distribuidora,
@@ -471,6 +471,10 @@ export class EnergyBillsService {
       totalAmount,
       consumptionHistoryLabeled: normalizedHistory,
       isComplete,
+      missingFields,
+      fallbackReason: isComplete
+        ? undefined
+        : `OCR determinístico acionou a IA porque faltou: ${missingFields.join(", ")}`,
       rawData: { text: t },
     };
   }
@@ -526,6 +530,7 @@ export class EnergyBillsService {
       }
 
       let extractionEngine: "OCR" | "AI_FALLBACK" = "AI_FALLBACK";
+      let fallbackReason: string | undefined;
 
       if (rawText && rawText.trim().length > 30) {
         const deterministic = this.parseBillTextDeterministic(rawText);
@@ -537,12 +542,19 @@ export class EnergyBillsService {
           this.logger.log(
             `Energy bill extracted via OCR determinístico 100% (Economia total de tokens IA) billId=${billId}`
           );
+        } else {
+          fallbackReason = deterministic.fallbackReason;
         }
+      } else {
+        fallbackReason =
+          "Texto insuficiente extraído da camada do documento (<30 caracteres). Acionando visão computacional/IA.";
       }
 
       // --- CAMADA 2: IA COMO FALLBACK (Apenas se OCR não cobriu tudo e houver chave) ---
       if (!extractedData && openAiApiKey) {
-        this.logger.log(`OCR precisou de complemento da IA. Acionando fallback billId=${billId}`);
+        this.logger.log(
+          `OCR precisou de complemento da IA. Acionando fallback billId=${billId}. Motivo: ${fallbackReason}`
+        );
         extractionEngine = "AI_FALLBACK";
         if (ext === ".txt" || (ext === ".pdf" && rawText && rawText.trim().length >= 30)) {
           extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey);
@@ -569,9 +581,16 @@ export class EnergyBillsService {
 
       if (extractedData) {
         extractedData["extractionEngine"] = extractionEngine;
+        if (fallbackReason) {
+          extractedData["fallbackReason"] = fallbackReason;
+        }
         if (extractedData["rawData"] && typeof extractedData["rawData"] === "object") {
           (extractedData["rawData"] as Record<string, unknown>)["extractionEngine"] =
             extractionEngine;
+          if (fallbackReason) {
+            (extractedData["rawData"] as Record<string, unknown>)["fallbackReason"] =
+              fallbackReason;
+          }
         }
       }
 
