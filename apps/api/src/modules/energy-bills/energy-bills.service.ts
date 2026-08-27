@@ -721,7 +721,6 @@ export class EnergyBillsService {
         extractionError: `Erro na extração: ${errorMsg}`,
       });
     }
-    }
   }
 
   private processExtractedResultWithMath(parsed: Record<string, unknown>): Record<string, unknown> {
