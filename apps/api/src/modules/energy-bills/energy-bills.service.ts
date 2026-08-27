@@ -484,22 +484,6 @@ export class EnergyBillsService {
     // 6. Histórico de Consumo
     const historyCandidates: Array<{ month: string; consumptionKwh: number }> = [];
 
-    // Limita a busca exclusivamente ao bloco "HISTÓRICO DE CONSUMO" para não capturar linhas de faturamento do mês atual ou leituras
-    const historySectionMatch = t.match(
-      /(?:HIST[OÓ]RICO\s+DE\s+CONSUMO|CONSUMO\s+FATURADO|EVOLU[CÇ][AÃ]O\s+DO\s+CONSUMO)[\s\S]{1,1800}?(?=(?:REAVISO|AVISO|INFORMA[CÇ][OÕ]ES|TRIBUTOS|TOTAL|$))/i
-    );
-    const historyText = historySectionMatch ? historySectionMatch[0] : t;
-    const historyLines = historyText
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-
-    // Tenta capturar cada linha do histórico contendo MÊS/ANO e CONSUMO faturado
-    // Ex: "JUN26 189 31", "MAI26 263 30", "ABR26 378 31", "MAR26 355 29", "FEV26 100 22"
-    // Ex: "06/2026 189", "JUN/26 189", "JUN/2026 189"
-    const rowRegex =
-      /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|0[1-9]|1[0-2])[\s\/\-_]*(20\d{2}|\d{2})?\b[^\d\n\r]{0,25}(\d{1,3}(?:\.\d{3})*(?:,\d{1,3})?|\d{1,5}(?:,\d{1,3})?)(?:\s+(\d{1,3}))?/i;
-
     const monthMap: Record<string, string> = {
       "01": "JAN",
       "02": "FEV",
@@ -515,25 +499,47 @@ export class EnergyBillsService {
       "12": "DEZ",
     };
 
-    for (const line of historyLines) {
-      const m = line.match(rowRegex);
-      if (m && m[1]) {
-        let monStr = m[1].toUpperCase();
-        if (monthMap[monStr]) monStr = monthMap[monStr]!;
-        const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
-        const label = yr ? `${monStr}/${yr}` : monStr;
-        const kwh = parseBrazilianKwh(m[3]);
-        // Ignora anos como 2024, 2025, 2026 e valores irreais
-        if (
-          kwh > 0 &&
-          kwh < 50000 &&
-          kwh !== 2024 &&
-          kwh !== 2025 &&
-          kwh !== 2026 &&
-          kwh !== 2027
-        ) {
-          historyCandidates.push({ month: label, consumptionKwh: kwh });
+    let historyText = t;
+    const historySectionMatch = t.match(
+      /(?:HIST[OÓ]RICO\s+DE\s+CONSUMO|CONSUMO\s+FATURADO|EVOLU[CÇ][AÃ]O\s+DO\s+CONSUMO|HIST[OÓ]RICO)[\s\S]{1,2000}/i
+    );
+    if (historySectionMatch) {
+      historyText = historySectionMatch[0];
+    }
+
+    const rowRegex =
+      /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|0[1-9]|1[0-2])[\s\/\-_]*(20\d{2}|\d{2})?\b(?=([^\n\r]{0,60}))/gi;
+    const matches = [...historyText.matchAll(rowRegex)];
+
+    for (const m of matches) {
+      let monStr = m[1].toUpperCase();
+
+      if (m[1].match(/^\d{2}$/) && !m[2]) {
+        continue;
+      }
+
+      if (monthMap[monStr]) monStr = monthMap[monStr]!;
+      const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
+      const label = yr ? `${monStr}/${yr}` : monStr;
+
+      const restOfLine = m[3] || "";
+      const numberMatches = [...restOfLine.matchAll(/\b(\d{1,5}(?:[.,]\d{1,3})?)\b/g)];
+
+      const validNumbers = numberMatches
+        .map((nm) => parseBrazilianKwh(nm[1]))
+        .filter(
+          (n) => n > 0 && n < 50000 && ![2022, 2023, 2024, 2025, 2026, 2027, 2028].includes(n)
+        );
+
+      if (validNumbers.length > 0) {
+        let consumption = 0;
+        const possibleConsumptions = validNumbers.filter((n) => n > 35);
+        if (possibleConsumptions.length > 0) {
+          consumption = possibleConsumptions[0];
+        } else {
+          consumption = Math.max(...validNumbers);
         }
+        historyCandidates.push({ month: label, consumptionKwh: consumption });
       }
     }
 

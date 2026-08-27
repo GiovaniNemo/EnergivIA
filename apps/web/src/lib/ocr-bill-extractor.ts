@@ -252,18 +252,6 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
   // 6. Histórico de Consumo
   const historyCandidates: BillHistoryMonth[] = [];
 
-  const historySectionMatch = t.match(
-    /(?:HIST[OÓ]RICO\s+DE\s+CONSUMO|CONSUMO\s+FATURADO|EVOLU[CÇ][AÃ]O\s+DO\s+CONSUMO)[\s\S]{1,1800}?(?=(?:REAVISO|AVISO|INFORMA[CÇ][OÕ]ES|TRIBUTOS|TOTAL|$))/i
-  );
-  const historyText = historySectionMatch ? historySectionMatch[0] : t;
-  const historyLines = historyText
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  const rowRegex =
-    /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|0[1-9]|1[0-2])[\s\/\-_]*(20\d{2}|\d{2})?\b[^\d\n\r]{0,25}(\d{1,3}(?:\.\d{3})*(?:,\d{1,3})?|\d{1,5}(?:,\d{1,3})?)(?:\s+(\d{1,3}))?/i;
-
   const monthMap: Record<string, string> = {
     "01": "JAN",
     "02": "FEV",
@@ -279,17 +267,50 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
     "12": "DEZ",
   };
 
-  for (const line of historyLines) {
-    const m = line.match(rowRegex);
-    if (m && m[1]) {
-      let monStr = m[1].toUpperCase();
-      if (monthMap[monStr]) monStr = monthMap[monStr]!;
-      const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
-      const label = yr ? `${monStr}/${yr}` : monStr;
-      const kwh = parseBrazilianKwh(m[3]);
-      if (kwh > 0 && kwh < 50000 && kwh !== 2024 && kwh !== 2025 && kwh !== 2026 && kwh !== 2027) {
-        historyCandidates.push({ mes_ano: label, consumo_kwh: kwh });
+  let historyText = t;
+  // Captura um bloco de texto logo após o cabeçalho do histórico, sem truncar por "TOTAL"
+  const historySectionMatch = t.match(
+    /(?:HIST[OÓ]RICO\s+DE\s+CONSUMO|CONSUMO\s+FATURADO|EVOLU[CÇ][AÃ]O\s+DO\s+CONSUMO|HIST[OÓ]RICO)[\s\S]{1,2000}/i
+  );
+  if (historySectionMatch) {
+    historyText = historySectionMatch[0];
+  }
+
+  // Regex global para encontrar meses e, usando lookahead, capturar até 60 caracteres seguintes na mesma linha
+  const rowRegex =
+    /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|0[1-9]|1[0-2])[\s\/\-_]*(20\d{2}|\d{2})?\b(?=([^\n\r]{0,60}))/gi;
+  const matches = [...historyText.matchAll(rowRegex)];
+
+  for (const m of matches) {
+    let monStr = m[1].toUpperCase();
+
+    // Ignora números isolados (ex: "05") sem ano que não sejam claramente meses
+    if (m[1].match(/^\d{2}$/) && !m[2]) {
+      continue;
+    }
+
+    if (monthMap[monStr]) monStr = monthMap[monStr]!;
+    const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
+    const label = yr ? `${monStr}/${yr}` : monStr;
+
+    const restOfLine = m[3] || "";
+    // Extrai todos os possíveis valores numéricos após o mês
+    const numberMatches = [...restOfLine.matchAll(/\b(\d{1,5}(?:[.,]\d{1,3})?)\b/g)];
+
+    const validNumbers = numberMatches
+      .map((nm) => parseBrazilianKwh(nm[1]))
+      .filter((n) => n > 0 && n < 50000 && ![2022, 2023, 2024, 2025, 2026, 2027, 2028].includes(n));
+
+    if (validNumbers.length > 0) {
+      let consumption = 0;
+      // Heurística: Consumo geralmente é maior que dias (máx 35). Pega o primeiro valor coerente.
+      const possibleConsumptions = validNumbers.filter((n) => n > 35);
+      if (possibleConsumptions.length > 0) {
+        consumption = possibleConsumptions[0];
+      } else {
+        consumption = Math.max(...validNumbers);
       }
+      historyCandidates.push({ mes_ano: label, consumo_kwh: consumption });
     }
   }
 
