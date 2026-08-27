@@ -263,9 +263,9 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
   );
   const historyText = historySectionMatch ? historySectionMatch[0] : t;
 
-  // 1. Tenta linhas com Mês e Consumo na mesma linha: ex: "JUL/26 333", "JUL26 333 31", "JUL/2026 333"
+  // 1. Tenta linhas com Mês e Consumo na mesma linha: ex: "JUN26 189 31", "MAI26 263 30", "ABR26 378 31", "MAR26 355 29", "FEV26 100 22"
   const copelRowRegex =
-    /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[\s\/\-_]*(20\d{2}|\d{2})?\b\s+(\d{1,5}(?:[.,]\d{1,3})?)(?:\s+(\d{1,3}))?/gi;
+    /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[\s\/\-_]*(20\d{2}|\d{2})?\b[^\d\n]*(\d{1,5}(?:[.,]\d{1,3})?)(?:\s+(\d{1,3}))?/gi;
 
   for (const match of historyText.matchAll(copelRowRegex)) {
     const monStr = match[1]?.toUpperCase();
@@ -278,26 +278,25 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
     }
   }
 
-  // 2. Tabela Copel em blocos: se no PDF os meses estão listados e depois os consumos em bloco separado
-  if (historyCandidates.length < 3) {
+  // 2. Tabela Copel em blocos (quando os meses e valores vêm em colunas no PDF):
+  if (historyCandidates.length < 3 && historySectionMatch) {
+    const sec = historySectionMatch[0];
     const monthTokens = [
-      ...historyText.matchAll(
+      ...sec.matchAll(
         /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[\s\/\-_]*(20\d{2}|\d{2})?\b/gi
       ),
     ];
-    const allNumbers = [...historyText.matchAll(/\b(\d{1,5}(?:[.,]\d{1,3})?)\b/g)]
-      .map((m) => parseBrazilianKwh(m[1]))
-      .filter((n) => n > 0 && n < 50000);
 
-    const nonYearNumbers = allNumbers.filter(
-      (n) => n !== 2024 && n !== 2025 && n !== 2026 && n !== 2027
-    );
+    const numMatches = [...sec.matchAll(/\b(\d{2,5})\b/g)]
+      .map((m) => parseInt(m[1]!, 10))
+      .filter((n) => !isNaN(n) && n > 0 && n !== 2024 && n !== 2025 && n !== 2026 && n !== 2027);
 
-    const realConsumptions = nonYearNumbers.filter((n) => n >= 50);
-    if (monthTokens.length >= 3 && realConsumptions.length >= 3) {
-      for (let i = 0; i < Math.min(monthTokens.length, realConsumptions.length, 12); i++) {
+    const consumptionsOnly = numMatches.filter((n) => n >= 40 && n < 10000);
+
+    if (consumptionsOnly.length >= 1 && monthTokens.length >= consumptionsOnly.length) {
+      for (let i = 0; i < consumptionsOnly.length; i++) {
         const m = monthTokens[i];
-        const kwh = realConsumptions[i];
+        const kwh = consumptionsOnly[i];
         if (!m || !kwh) continue;
         const monStr = m[1]?.toUpperCase() || "MES";
         const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
