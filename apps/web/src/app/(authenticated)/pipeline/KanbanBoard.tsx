@@ -300,63 +300,65 @@ export function KanbanBoard<T extends KanbanItemBase>({
       onDragEnd={(e) => void handleDragEnd(e)}
       onDragCancel={handleDragCancel}
     >
-      <div
-        className={`grid min-w-[1200px] gap-3 overflow-x-auto pb-1 ${closedCollapsed ? "grid-cols-[1fr_1fr_1fr_1fr_52px]" : "grid-cols-5"}`}
-      >
-        {stages.map((stage) => {
-          const stageItems = grouped.get(stage) ?? [];
-          if (stage === "fechado") {
-            const rows: Record<ClosedDealStatus, string[]> = {
-              won: [],
-              lost: [],
-              disqualified: [],
-              postponed: [],
-              cancelled: [],
-            };
-            for (const item of stageItems) {
-              rows[getClosedStatus(item)].push(item.id);
-            }
-            return (
-              <ClosedColumnWithRows
-                key={stage}
-                header={renderColumnHeader(stage, stageItems.length, overStage === stage)}
-                rows={rows}
-                overClosedStatus={overClosedStatus}
-                renderEmptyRow={renderEmptyClosedRow}
-                columnCollapsed={closedCollapsed}
-                onExpand={onExpandClosed}
-                renderRowItem={(id) => {
-                  const item = stageItems.find((i) => i.id === id);
-                  if (!item) return null;
-                  return (
-                    <KanbanCard key={item.id} id={item.id}>
-                      {renderItem(item, false)}
-                    </KanbanCard>
-                  );
-                }}
-              />
-            );
-          }
-          return (
-            <KanbanColumn
-              key={stage}
-              stage={stage}
-              itemIds={stageItems.map((i) => i.id)}
-              isOver={overStage === stage}
-              header={renderColumnHeader(stage, stageItems.length, overStage === stage)}
-            >
-              <div className="space-y-2">
-                {stageItems.length === 0
-                  ? renderEmptyColumn(stage)
-                  : stageItems.map((item) => (
+      <div className="w-full overflow-x-auto pb-2">
+        <div
+          className={`grid min-w-[1050px] lg:min-w-[1150px] gap-3 pb-1 ${closedCollapsed ? "grid-cols-[1fr_1fr_1fr_1fr_52px]" : "grid-cols-5"}`}
+        >
+          {stages.map((stage) => {
+            const stageItems = grouped.get(stage) ?? [];
+            if (stage === "fechado") {
+              const rows: Record<ClosedDealStatus, string[]> = {
+                won: [],
+                lost: [],
+                disqualified: [],
+                postponed: [],
+                cancelled: [],
+              };
+              for (const item of stageItems) {
+                rows[getClosedStatus(item)].push(item.id);
+              }
+              return (
+                <ClosedColumnWithRows
+                  key={stage}
+                  header={renderColumnHeader(stage, stageItems.length, overStage === stage)}
+                  rows={rows}
+                  overClosedStatus={overClosedStatus}
+                  renderEmptyRow={renderEmptyClosedRow}
+                  columnCollapsed={closedCollapsed}
+                  onExpand={onExpandClosed}
+                  renderRowItem={(id) => {
+                    const item = stageItems.find((i) => i.id === id);
+                    if (!item) return null;
+                    return (
                       <KanbanCard key={item.id} id={item.id}>
                         {renderItem(item, false)}
                       </KanbanCard>
-                    ))}
-              </div>
-            </KanbanColumn>
-          );
-        })}
+                    );
+                  }}
+                />
+              );
+            }
+            return (
+              <KanbanColumn
+                key={stage}
+                stage={stage}
+                itemIds={stageItems.map((i) => i.id)}
+                isOver={overStage === stage}
+                header={renderColumnHeader(stage, stageItems.length, overStage === stage)}
+              >
+                <div className="space-y-2">
+                  {stageItems.length === 0
+                    ? renderEmptyColumn(stage)
+                    : stageItems.map((item) => (
+                        <KanbanCard key={item.id} id={item.id}>
+                          {renderItem(item, false)}
+                        </KanbanCard>
+                      ))}
+                </div>
+              </KanbanColumn>
+            );
+          })}
+        </div>
       </div>
       <DragOverlay dropAnimation={null}>
         {activeItem ? <div className="w-[280px]">{renderItem(activeItem, true)}</div> : null}

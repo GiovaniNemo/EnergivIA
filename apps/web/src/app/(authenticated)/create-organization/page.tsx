@@ -441,10 +441,10 @@ export default function CreateOrganizationPage() {
   }
 
   return (
-    <section className="relative flex h-screen flex-col overflow-hidden bg-[var(--color-background)]">
-      <div className="relative flex h-full w-full flex-1 flex-col lg:flex-row">
-        <aside className="hidden h-full w-[420px] flex-col border-r border-white/10 bg-[linear-gradient(135deg,#08324F_0%,#0A4A63_45%,#0FD3B4_115%)] px-8 py-10 lg:flex">
-          <div className="flex-1 flex flex-col justify-center">
+    <section className="relative flex min-h-screen flex-col bg-[var(--color-background)]">
+      <div className="relative flex min-h-screen w-full flex-1 flex-col lg:flex-row">
+        <aside className="hidden w-[380px] shrink-0 flex-col justify-between border-r border-white/10 bg-[linear-gradient(135deg,#08324F_0%,#0A4A63_45%,#0FD3B4_115%)] px-7 py-8 lg:flex xl:w-[420px] xl:px-8 xl:py-10">
+          <div className="flex flex-1 flex-col justify-center space-y-6">
             <Link
               href="/?landing=1"
               className="inline-block transition-opacity hover:opacity-90 w-fit"
@@ -452,77 +452,79 @@ export default function CreateOrganizationPage() {
               <Image
                 src="/logo-dark.png"
                 alt="EnergivIA"
-                width={300}
-                height={62}
-                className="h-auto w-[300px]"
+                width={260}
+                height={54}
+                className="h-auto w-[220px] xl:w-[260px]"
                 priority
               />
             </Link>
-            <h2 className="mt-6 text-[30px] font-semibold leading-[1.12] tracking-tight text-white">
-              Você está a poucos passos de automatizar suas propostas
-            </h2>
-            <p className="mt-3 max-w-[330px] text-[15px] italic font-normal leading-relaxed text-white/90">
-              Comece com o básico e personalize templates de proposta para acelerar suas
-              negociações.
-            </p>
+            <div>
+              <h2 className="text-[24px] font-semibold leading-[1.2] tracking-tight text-white xl:text-[28px]">
+                Você está a poucos passos de automatizar suas propostas
+              </h2>
+              <p className="mt-2.5 max-w-[340px] text-[13px] italic font-normal leading-relaxed text-white/90 xl:text-[14px]">
+                Comece com o básico e personalize templates de proposta para acelerar suas
+                negociações.
+              </p>
+            </div>
 
-            <ul className="mt-8 space-y-5">
-              <li className="flex items-center gap-4 rounded-xl bg-white/12 px-3 py-2">
-                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-white/12">
+            <ul className="space-y-3.5 xl:space-y-4">
+              <li className="flex items-center gap-3.5 rounded-xl bg-white/12 px-3 py-2">
+                <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-white/12">
                   <span className="pointer-events-none absolute inset-0 bg-white/10" />
-                  <Zap className="relative z-10 h-4 w-4 text-white" />
+                  <Zap className="relative z-10 h-3.5 w-3.5 text-white" />
                 </span>
-                <p className="text-sm font-medium text-white/90">
+                <p className="text-xs font-medium text-white/90 xl:text-sm">
                   Gere propostas completas a partir da conta de luz.
                 </p>
               </li>
-              <li className="flex items-center gap-4 rounded-xl bg-white/12 px-3 py-2">
-                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-white/12">
+              <li className="flex items-center gap-3.5 rounded-xl bg-white/12 px-3 py-2">
+                <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-white/12">
                   <span className="pointer-events-none absolute inset-0 bg-white/10" />
-                  <Sparkles className="relative z-10 h-4 w-4 text-white" />
+                  <Sparkles className="relative z-10 h-3.5 w-3.5 text-white" />
                 </span>
-                <p className="text-sm font-medium text-white/90">
+                <p className="text-xs font-medium text-white/90 xl:text-sm">
                   Templates prontos para fechar mais vendas.
                 </p>
               </li>
-              <li className="flex items-center gap-4 rounded-xl bg-white/12 px-3 py-2">
-                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-white/12">
+              <li className="flex items-center gap-3.5 rounded-xl bg-white/12 px-3 py-2">
+                <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-white/12">
                   <span className="pointer-events-none absolute inset-0 bg-white/10" />
-                  <ShieldCheck className="relative z-10 h-4 w-4 text-white" />
+                  <ShieldCheck className="relative z-10 h-3.5 w-3.5 text-white" />
                 </span>
-                <p className="text-sm font-medium text-white/90">
+                <p className="text-xs font-medium text-white/90 xl:text-sm">
                   Simulação automática de ROI e payback.
                 </p>
               </li>
-              <li className="flex items-center gap-4 rounded-xl bg-white/12 px-3 py-2">
-                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-white/12">
+              <li className="flex items-center gap-3.5 rounded-xl bg-white/12 px-3 py-2">
+                <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-white/12">
                   <span className="pointer-events-none absolute inset-0 bg-white/10" />
-                  <CreditCard className="relative z-10 h-4 w-4 text-white" />
+                  <CreditCard className="relative z-10 h-3.5 w-3.5 text-white" />
                 </span>
-                <p className="text-sm font-medium text-white/90">
+                <p className="text-xs font-medium text-white/90 xl:text-sm">
                   Financiamento facilitado com poucos cliques.
                 </p>
               </li>
-              <li className="flex items-center gap-4 rounded-xl bg-white/12 px-3 py-2">
-                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-white/12">
+              <li className="flex items-center gap-3.5 rounded-xl bg-white/12 px-3 py-2">
+                <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-white/12">
                   <span className="pointer-events-none absolute inset-0 bg-white/10" />
-                  <FaWhatsapp className="relative z-10 h-4 w-4 text-white" />
+                  <FaWhatsapp className="relative z-10 h-3.5 w-3.5 text-white" />
                 </span>
-                <p className="text-sm font-medium text-white/90">
+                <p className="text-xs font-medium text-white/90 xl:text-sm">
                   Gerencie suas propostas e leads direto pelo WhatsApp com IA.
                 </p>
               </li>
             </ul>
           </div>
 
-          <div className="relative mt-auto overflow-hidden rounded-2xl border border-white/15 bg-white/12 px-4 py-3">
+          <div className="relative mt-6 overflow-hidden rounded-2xl border border-white/15 bg-white/12 px-4 py-3">
             <span className="pointer-events-none absolute inset-0 bg-white/10" />
             <div className="relative z-10 flex items-center gap-3">
               <div className="flex items-center">
                 {["RK", "MT", "EK", "RT"].map((letter, idx) => (
                   <span
                     key={letter}
-                    className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-[11px] font-semibold text-white backdrop-blur-sm"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-[10px] font-semibold text-white backdrop-blur-sm xl:h-8 xl:w-8 xl:text-[11px]"
                     style={{ marginLeft: idx === 0 ? 0 : -8 }}
                   >
                     {letter}

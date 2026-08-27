@@ -401,11 +401,11 @@ export function RadarMapView({
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
       {/* Alternador de Camadas (Satélite / Dark / Ruas) */}
-      <div className="absolute top-4 right-4 z-10 flex items-center bg-neutral-950/90 backdrop-blur-md p-1 rounded-xl border border-neutral-800 shadow-2xl pointer-events-auto">
+      <div className="absolute top-3 right-3 z-10 flex items-center bg-neutral-950/90 backdrop-blur-md p-1 rounded-xl border border-neutral-800 shadow-2xl pointer-events-auto">
         <button
           type="button"
           onClick={() => handleSwitchLayer("dark")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+          className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all ${
             activeLayer === "dark"
               ? "bg-amber-500 text-neutral-950 shadow-md"
               : "text-neutral-400 hover:text-white"
@@ -413,13 +413,13 @@ export function RadarMapView({
           title="Modo Noturno / Análise EnergivIA"
         >
           <Moon className="w-3.5 h-3.5" />
-          <span>Analítico</span>
+          <span className="hidden sm:inline">Analítico</span>
         </button>
 
         <button
           type="button"
           onClick={() => handleSwitchLayer("satellite")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+          className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all ${
             activeLayer === "satellite"
               ? "bg-amber-500 text-neutral-950 shadow-md"
               : "text-neutral-400 hover:text-white"
@@ -427,13 +427,13 @@ export function RadarMapView({
           title="Satélite Alta Resolução (Identificação de Telhados)"
         >
           <Satellite className="w-3.5 h-3.5" />
-          <span>Satélite HD</span>
+          <span className="hidden sm:inline">Satélite HD</span>
         </button>
 
         <button
           type="button"
           onClick={() => handleSwitchLayer("streets")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+          className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all ${
             activeLayer === "streets"
               ? "bg-amber-500 text-neutral-950 shadow-md"
               : "text-neutral-400 hover:text-white"
@@ -441,12 +441,12 @@ export function RadarMapView({
           title="Ruas e Bairros"
         >
           <MapIcon className="w-3.5 h-3.5" />
-          <span>Ruas</span>
+          <span className="hidden sm:inline">Ruas</span>
         </button>
       </div>
 
       {/* Legenda de Identificação Inteligente */}
-      <div className="absolute top-4 left-4 z-10 bg-neutral-950/90 backdrop-blur-md px-4 py-3 rounded-2xl border border-neutral-800/90 shadow-2xl text-xs space-y-2 pointer-events-auto max-w-[260px]">
+      <div className="absolute top-3 left-3 z-10 hidden sm:block bg-neutral-950/90 backdrop-blur-md px-3.5 py-2.5 rounded-2xl border border-neutral-800/90 shadow-2xl text-xs space-y-2 pointer-events-auto max-w-[260px]">
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-bold text-neutral-300 uppercase tracking-wider">
             Identificação de Usinas
