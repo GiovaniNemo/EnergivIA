@@ -286,6 +286,8 @@ export class EnergyBillsService {
     totalAmount?: number;
     consumptionHistoryLabeled: Array<{ month: string; consumptionKwh: number }>;
     isComplete: boolean;
+    missingFields?: string[];
+    fallbackReason?: string;
     rawData?: Record<string, unknown>;
   } {
     const t = (text || "").replace(/[\u00A0\r]/g, " ");
