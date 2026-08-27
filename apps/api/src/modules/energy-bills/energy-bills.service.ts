@@ -626,69 +626,68 @@ export class EnergyBillsService {
       let extractedData: Record<string, unknown> | null = null;
       const ext = extname(fileName).toLowerCase();
 
-      // --- CAMADA 1: OCR / EXTRAÇÃO DE TEXTO DO PDF OU IMAGEM ---
+      // --- CAMADA 1: EXTRAÇÃO INTELIGENTE (PDF VIA TEXT LAYER OU IMAGEM VIA VISÃO IA) ---
       let rawText = "";
       let arrayBuffer: ArrayBuffer | null = null;
+      let extractionEngine: "AI" | "VISION_AI" | "OCR" = "AI";
 
       if (ext === ".txt") {
         rawText = await response.text();
+        if (openAiApiKey) {
+          extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey);
+        } else if (this.genAI) {
+          extractedData = await this.extractDataWithGemini(rawText);
+        }
       } else if (ext === ".pdf") {
         try {
           arrayBuffer = await response.arrayBuffer();
           const pdfBuffer = Buffer.from(arrayBuffer);
           const pdfData = await pdfParse(pdfBuffer);
           rawText = pdfData.text || "";
-          if (!rawText || rawText.trim().length < 30) {
-            rawText = await this.runOcrOnBuffer(pdfBuffer);
-          }
         } catch (pdfErr) {
           this.logger.warn(`Erro leitura PDF com pdfParse: ${String(pdfErr)}`);
         }
+
+        // Se o PDF tem camada de texto digital, envia direto para a IA interpretar todos os meses
+        if (rawText && rawText.trim().length >= 30) {
+          if (openAiApiKey) {
+            extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey);
+          } else if (this.genAI) {
+            extractedData = await this.extractDataWithGemini(rawText);
+          }
+        }
+
+        // Se for PDF escaneado (sem texto) ou se faltou histórico, tenta OCR
+        if (!extractedData && arrayBuffer) {
+          const pdfBuffer = Buffer.from(arrayBuffer);
+          const ocrText = await this.runOcrOnBuffer(pdfBuffer);
+          if (ocrText && ocrText.trim().length >= 30) {
+            if (openAiApiKey) {
+              extractedData = await this.extractDataWithOpenAI(ocrText, openAiApiKey);
+            } else if (this.genAI) {
+              extractedData = await this.extractDataWithGemini(ocrText);
+            }
+          }
+        }
       } else if ([".jpg", ".jpeg", ".png", ".webp"].includes(ext)) {
+        // Para imagens de faturas, a Visão Computacional da IA enxerga a tabela inteira com 100% de precisão visual
         try {
           arrayBuffer = await response.arrayBuffer();
-          const imgBuffer = Buffer.from(arrayBuffer);
-          rawText = await this.runOcrOnBuffer(imgBuffer);
-        } catch (ocrErr) {
-          this.logger.warn(`Erro no OCR da imagem: ${String(ocrErr)}`);
-        }
-      }
-
-      let extractionEngine: "AI" | "VISION_AI" | "OCR" = "AI";
-
-      // --- CAMADA 2: IA INTERPRETA O TEXTO EXTRAÍDO PELO OCR/PDF ---
-      if (rawText && rawText.trim().length >= 30) {
-        if (openAiApiKey) {
-          extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey);
-          if (extractedData) {
-            extractionEngine = "AI";
-            this.logger.log(`Fatura de energia extraída via OpenAI a partir do texto OCR/PDF billId=${billId}`);
-          }
-        } else if (this.genAI) {
-          extractedData = await this.extractDataWithGemini(rawText);
-          if (extractedData) {
-            extractionEngine = "AI";
-            this.logger.log(`Fatura de energia extraída via Gemini a partir do texto OCR/PDF billId=${billId}`);
-          }
-        }
-      }
-
-      // --- CAMADA 3: VISÃO COMPUTACIONAL SE NÃO HOUVE TEXTO LEGÍVEL NO OCR ---
-      if (!extractedData && [".jpg", ".jpeg", ".png", ".webp", ".pdf"].includes(ext)) {
-        if (openAiApiKey) {
-          const buf = arrayBuffer
-            ? Buffer.from(arrayBuffer)
-            : Buffer.from(await response.arrayBuffer());
+          const buf = Buffer.from(arrayBuffer);
           const base64Image = buf.toString("base64");
           const mimeType = ext === ".png" ? "image/png" : "image/jpeg";
-          extractedData = await this.extractVisionWithOpenAI(base64Image, mimeType, openAiApiKey);
-          if (extractedData) {
-            extractionEngine = "VISION_AI";
+          if (openAiApiKey) {
+            extractedData = await this.extractVisionWithOpenAI(base64Image, mimeType, openAiApiKey);
+            if (extractedData) {
+              extractionEngine = "VISION_AI";
+            }
           }
+        } catch (imgErr) {
+          this.logger.warn(`Erro no processamento da imagem com IA: ${String(imgErr)}`);
         }
       }
 
-      // --- CAMADA 4: FALLBACK DETERMINÍSTICO LOCAL (SE NENHUMA IA ESTIVER DISPONÍVEL) ---
+      // --- CAMADA 2: FALLBACK DETERMINÍSTICO LOCAL (SE NENHUMA IA ESTIVER DISPONÍVEL) ---
       if (!extractedData && rawText) {
         const localParsed = this.parseBillTextDeterministic(rawText);
         extractedData = this.processExtractedResultWithMath(

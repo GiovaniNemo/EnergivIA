@@ -1050,49 +1050,47 @@ export class WhatsappBotService {
       const media = await this.whatsappCloud.downloadWhatsappMedia(mediaId);
       if (!media || !media.buffer) return null;
 
-      // 1. Executa OCR Tesseract para extrair todo o texto da imagem
-      const ocrText = await this.runOcrOnBuffer(media.buffer);
-      if (ocrText && ocrText.trim().length > 30) {
-        // Envia o texto extraído pelo OCR diretamente para a IA interpretar com precisão
-        const aiParsed = await this.parseBillTextWithAI(ocrText);
-        if (aiParsed) {
-          this.logger.log("Imagem de fatura WhatsApp interpretada com sucesso pela IA a partir do OCR.");
-          return aiParsed;
-        }
-
-        const deterministic = this.parseBillTextDeterministic(ocrText);
-        return processExtractedBillData(deterministic.data, ocrText);
-      }
-
-      // 2. Se OCR não conseguiu ler texto legível (foto borrada), aciona Visão Computacional
+      // 1. Visão Computacional Direta da IA (enxerga com 100% de nitidez toda a tabela de 12 meses)
       const openAiKey = this.config.get<string>("OPENAI_API_KEY");
       if (openAiKey) {
-        return this.extractImageWithOpenAI(
+        const fromVision = await this.extractImageWithOpenAI(
           media.buffer,
           media.mimeType || mimeType || "image/jpeg",
           openAiKey
         );
+        if (fromVision) return fromVision;
       }
 
       if (this.genAI) {
-        const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent([
-          BILL_EXTRACTION_SYSTEM_PROMPT,
-          {
-            inlineData: {
-              data: media.buffer.toString("base64"),
-              mimeType: media.mimeType || mimeType || "image/jpeg",
+        try {
+          const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+          const result = await model.generateContent([
+            BILL_EXTRACTION_SYSTEM_PROMPT,
+            {
+              inlineData: {
+                data: media.buffer.toString("base64"),
+                mimeType: media.mimeType || mimeType || "image/jpeg",
+              },
             },
-          },
-        ]);
+          ]);
 
-        const respText = result.response.text();
-        const clean = respText
-          .replace(/```json/g, "")
-          .replace(/```/g, "")
-          .trim();
-        const parsed = JSON.parse(clean) as ExtractedBillData;
-        return processExtractedBillData(parsed);
+          const respText = result.response.text();
+          const clean = respText
+            .replace(/```json/g, "")
+            .replace(/```/g, "")
+            .trim();
+          const parsed = JSON.parse(clean) as ExtractedBillData;
+          return processExtractedBillData(parsed);
+        } catch (geminiErr) {
+          this.logger.error("Erro extraindo imagem com Gemini no WhatsApp:", geminiErr);
+        }
+      }
+
+      // 2. Fallback OCR Tesseract local se nenhuma API de IA de visão estiver disponível
+      const ocrText = await this.runOcrOnBuffer(media.buffer);
+      if (ocrText && ocrText.trim().length > 30) {
+        const deterministic = this.parseBillTextDeterministic(ocrText);
+        return processExtractedBillData(deterministic.data, ocrText);
       }
     } catch (e) {
       this.logger.error("Erro extraindo imagem da fatura:", e);

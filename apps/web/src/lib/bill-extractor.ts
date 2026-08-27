@@ -164,19 +164,17 @@ export async function extractEnergyBillFromImage(
   base64DataUrl: string,
   apiKey?: string
 ): Promise<BillExtractionResult> {
-  // 1. Executa OCR Tesseract para extrair texto da imagem primeiro (economiza tokens de imagem)
-  try {
-    const ocrText = await runOcrOnImage(base64DataUrl);
-    if (ocrText && ocrText.trim().length > 30) {
-      return await extractEnergyBillFromText(ocrText, apiKey);
-    }
-  } catch (ocrErr) {
-    console.error("[Tesseract OCR Error on Image]", ocrErr);
-  }
-
-  // 2. Fallback para GPT-4o Vision se OCR local não extraiu texto suficiente
   const key = apiKey || process.env["OPENAI_API_KEY"];
   if (!key) {
+    // Fallback offline com OCR local
+    try {
+      const ocrText = await runOcrOnImage(base64DataUrl);
+      if (ocrText && ocrText.trim().length > 30) {
+        return extractEnergyBillFromText(ocrText);
+      }
+    } catch (ocrErr) {
+      console.error("[Tesseract OCR Error on Image]", ocrErr);
+    }
     throw new Error("OPENAI_API_KEY não configurada.");
   }
 
