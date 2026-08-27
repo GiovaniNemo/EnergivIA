@@ -481,7 +481,7 @@ export class EnergyBillsService {
     // 6. Histórico de Consumo
     const historyCandidates: Array<{ month: string; consumptionKwh: number }> = [];
 
-    // Formato Copel / Tabela Compacta:
+    // Formato Copel / Tabela Compacta (ex: "JUL26 201 31"):
     const historySectionMatch = t.match(
       /(?:HIST[OÓ]RICO\s+DE\s+CONSUMO|CONSUMO\s+FATURADO)[\s\S]{1,1500}?(?=(?:INFORMA[CÇ][OÕ]ES|AVISO|TRIBUTOS|TOTAL|$))/i
     );
@@ -501,39 +501,41 @@ export class EnergyBillsService {
       }
     }
 
-    // Formato 1: Padrão Energisa / CPFL / Cemig / Enel com Mês, Consumo (com ponto de milhar/decimais) e Dias
-    // Ex: "OUT/25 1.971 45", "SET/25 2.041,00 29", "AGO/26 1.198,000 30", "JUL/25 965,000", "DEZ/24 60 31"
-    const distributorRowRegex =
-      /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|0[1-9]|1[0-2])[\s\/\-_]*(20\d{2}|\d{2})?\b[^\d\n]*(\d{1,3}(?:\.\d{3})*(?:,\d{1,3})?|\d{1,6}(?:,\d{1,3})?)(?:\s+(\d{1,3}))?/i;
+    // Formato 1: Padrão Energisa / CPFL / Cemig / Enel (se não encontrou via formato Copel)
+    if (historyCandidates.length < 3) {
+      const distributorRowRegex =
+        /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|0[1-9]|1[0-2])[\s\/\-_]*(20\d{2}|\d{2})?\b[^\d\n]*(\d{1,3}(?:\.\d{3})*(?:,\d{1,3})?|\d{1,6}(?:,\d{1,3})?)(?:\s+(\d{1,3}))?/i;
 
-    for (const line of lines) {
-      const m = line.match(distributorRowRegex);
-      if (m && m[1]) {
-        let monStr = m[1].toUpperCase();
-        const monthMap: Record<string, string> = {
-          "01": "JAN",
-          "02": "FEV",
-          "03": "MAR",
-          "04": "ABR",
-          "05": "MAI",
-          "06": "JUN",
-          "07": "JUL",
-          "08": "AGO",
-          "09": "SET",
-          "10": "OUT",
-          "11": "NOV",
-          "12": "DEZ",
-        };
-        if (monthMap[monStr]) monStr = monthMap[monStr]!;
-        const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
-        const label = yr ? `${monStr}/${yr}` : monStr;
-        const kwh = parseBrazilianKwh(m[3]);
-        if (kwh > 0 && kwh < 500000) {
-          historyCandidates.push({ month: label, consumptionKwh: kwh });
+      for (const line of lines) {
+        const m = line.match(distributorRowRegex);
+        if (m && m[1]) {
+          let monStr = m[1].toUpperCase();
+          const monthMap: Record<string, string> = {
+            "01": "JAN",
+            "02": "FEV",
+            "03": "MAR",
+            "04": "ABR",
+            "05": "MAI",
+            "06": "JUN",
+            "07": "JUL",
+            "08": "AGO",
+            "09": "SET",
+            "10": "OUT",
+            "11": "NOV",
+            "12": "DEZ",
+          };
+          if (monthMap[monStr]) monStr = monthMap[monStr]!;
+          const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
+          const label = yr ? `${monStr}/${yr}` : monStr;
+          const kwh = parseBrazilianKwh(m[3]);
+          if (kwh > 0 && kwh < 500000) {
+            historyCandidates.push({ month: label, consumptionKwh: kwh });
+          }
         }
       }
     }
 
+    // Formato 2: Meses em linha e consumos abaixo
     if (historyCandidates.length < 3) {
       const months = [
         ...historyText.matchAll(
