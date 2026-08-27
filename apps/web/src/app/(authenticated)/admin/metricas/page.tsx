@@ -17,6 +17,7 @@ import {
   Award,
   ArrowUpRight,
   Share2,
+  MapPin,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -70,6 +71,11 @@ interface StatusItem {
   color?: string;
 }
 
+interface StateItem {
+  state: string;
+  count: number;
+}
+
 interface ReferralItem {
   source: string;
   count: number;
@@ -94,6 +100,7 @@ interface MonthlyMetricData {
   kwp: number;
   statusBreakdown: Record<string, number>;
   referralBreakdown: Record<string, number>;
+  stateBreakdown?: Record<string, number>;
   referralEntries: ReferralEntry[];
 }
 
@@ -104,6 +111,8 @@ interface MetricsData {
   referralBreakdown: ReferralItem[];
   referralMonthly?: Record<string, Record<string, number>>;
   referralEntries?: ReferralEntry[];
+  stateBreakdown?: StateItem[];
+  stateMonthly?: Record<string, Record<string, number>>;
   monthlyMetrics?: Record<string, MonthlyMetricData>;
 }
 
@@ -135,6 +144,49 @@ const REFERRAL_COLORS = [
   "#14b8a6",
   "#6366f1",
 ];
+
+const STATE_COLORS = [
+  "#10b981", // Emerald
+  "#0ea5e9", // Sky
+  "#8b5cf6", // Purple
+  "#f59e0b", // Amber
+  "#06b6d4", // Cyan
+  "#6366f1", // Indigo
+  "#ec4899", // Pink
+  "#14b8a6", // Teal
+  "#f97316", // Orange
+  "#64748b", // Slate
+];
+
+const BRAZIL_STATE_NAMES: Record<string, string> = {
+  AC: "Acre",
+  AL: "Alagoas",
+  AP: "Amapá",
+  AM: "Amazonas",
+  BA: "Bahia",
+  CE: "Ceará",
+  DF: "Distrito Federal",
+  ES: "Espírito Santo",
+  GO: "Goiás",
+  MA: "Maranhão",
+  MT: "Mato Grosso",
+  MS: "Mato Grosso do Sul",
+  MG: "Minas Gerais",
+  PA: "Pará",
+  PB: "Paraíba",
+  PR: "Paraná",
+  PE: "Pernambuco",
+  PI: "Piauí",
+  RJ: "Rio de Janeiro",
+  RN: "Rio Grande do Norte",
+  RS: "Rio Grande do Sul",
+  RO: "Rondônia",
+  RR: "Roraima",
+  SC: "Santa Catarina",
+  SP: "São Paulo",
+  SE: "Sergipe",
+  TO: "Tocantins",
+};
 
 export default function AdminMetricasPage() {
   const [data, setData] = useState<MetricsData | null>(null);
@@ -212,6 +264,21 @@ export default function AdminMetricasPage() {
       return selectedMonthData.referralEntries;
     }
     return data.referralEntries.filter((e) => e.month === selectedGlobalMonth);
+  }, [data, selectedGlobalMonth, selectedMonthData]);
+
+  const activeStateList = useMemo(() => {
+    if (!data) return [];
+    if (selectedGlobalMonth === "ALL") {
+      return data.stateBreakdown ?? [];
+    }
+    const monthMap =
+      selectedMonthData?.stateBreakdown || data.stateMonthly?.[selectedGlobalMonth] || {};
+    return Object.entries(monthMap)
+      .map(([state, count]) => ({
+        state,
+        count,
+      }))
+      .sort((a, b) => b.count - a.count);
   }, [data, selectedGlobalMonth, selectedMonthData]);
 
   const effectiveStatusList = useMemo(() => {
@@ -944,7 +1011,185 @@ export default function AdminMetricasPage() {
         </div>
       </div>
 
-      {/* Row 3: Platform Conversion Funnel & Ecosystem Summary */}
+      {/* Row 3: Geographic Distribution by State (UF) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Chart 5: Integradores por Estado (UF) */}
+        <div className="lg:col-span-2 p-6 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-[var(--color-foreground)] flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-emerald-500" />
+                Distribuição de Integradores por Estado (UF)
+              </h2>
+              <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
+                Onde estão localizadas as empresas parceiras e integradores cadastrados via CEP
+              </p>
+            </div>
+
+            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-500 self-start sm:self-auto">
+              {activeStateList.length}{" "}
+              {activeStateList.length === 1 ? "Estado com registro" : "Estados com registros"}
+            </span>
+          </div>
+
+          {activeStateList.length > 0 ? (
+            <div className="space-y-4 pt-2">
+              <div className="h-[260px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={activeStateList.slice(0, 8).map((item, idx) => ({
+                      state: item.state,
+                      stateName: BRAZIL_STATE_NAMES[item.state] || item.state,
+                      count: item.count,
+                      fill: STATE_COLORS[idx % STATE_COLORS.length],
+                    }))}
+                    margin={{ top: 10, right: 15, left: -15, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" />
+                    <XAxis
+                      dataKey="state"
+                      tick={{ fill: "var(--color-foreground)", fontSize: 11, fontWeight: "bold" }}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#0f172a",
+                        borderColor: "#334155",
+                        borderRadius: "12px",
+                        color: "#f8fafc",
+                        fontSize: "12px",
+                        boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5)",
+                      }}
+                      itemStyle={{ color: "#10b981" }}
+                      labelStyle={{ color: "#f8fafc", fontWeight: "bold" }}
+                      formatter={(
+                        value: unknown,
+                        _: unknown,
+                        item: { payload?: { stateName?: string; state?: string } }
+                      ) => [
+                        `${String(value)} ${Number(value) === 1 ? "empresa" : "empresas"} (${item?.payload?.stateName ?? item?.payload?.state ?? ""})`,
+                        "Integradores",
+                      ]}
+                    />
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={32}>
+                      {activeStateList.slice(0, 8).map((_, index) => (
+                        <Cell
+                          key={`state-cell-${index}`}
+                          fill={STATE_COLORS[index % STATE_COLORS.length]}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Badges dos Estados */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-[var(--color-border)]">
+                {activeStateList.slice(0, 8).map((st, i) => {
+                  const totalInPeriod = activeStateList.reduce((a, b) => a + b.count, 0);
+                  const pct =
+                    totalInPeriod > 0 ? ((st.count / totalInPeriod) * 100).toFixed(0) : "0";
+                  return (
+                    <div
+                      key={st.state}
+                      className="p-2 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] flex items-center justify-between text-xs"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          className="h-2 w-2 rounded-full shrink-0"
+                          style={{ backgroundColor: STATE_COLORS[i % STATE_COLORS.length] }}
+                        />
+                        <span
+                          className="font-bold text-[var(--color-foreground)] truncate"
+                          title={BRAZIL_STATE_NAMES[st.state] || st.state}
+                        >
+                          {st.state}{" "}
+                          <span className="font-normal text-[10px] text-[var(--color-muted-foreground)]">
+                            ({BRAZIL_STATE_NAMES[st.state] || st.state})
+                          </span>
+                        </span>
+                      </div>
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400 shrink-0 ml-1">
+                        {st.count} ({pct}%)
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="h-[200px] flex flex-col items-center justify-center text-center p-6 text-sm text-[var(--color-muted-foreground)]">
+              <p>Nenhuma informação geográfica registrada para o período selecionado.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Resumo de Destaques & Concentração Geográfica */}
+        <div className="lg:col-span-1 p-6 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm space-y-4 flex flex-col justify-between">
+          <div>
+            <h2 className="text-base font-bold text-[var(--color-foreground)] flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-indigo-500" />
+              Liderança Regional
+            </h2>
+            <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
+              Polos com maior concentração solar
+            </p>
+          </div>
+
+          <div className="space-y-3 text-xs pt-1">
+            <div className="p-3.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-1">
+              <span className="text-[var(--color-muted-foreground)] text-[11px]">
+                Estado com Mais Integradores
+              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-[var(--color-foreground)]">
+                  {activeStateList[0]
+                    ? `${activeStateList[0].state} - ${BRAZIL_STATE_NAMES[activeStateList[0].state] || activeStateList[0].state}`
+                    : "Aguardando dados"}
+                </span>
+                {activeStateList[0] && (
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 font-bold text-xs">
+                    {activeStateList[0].count} empresas
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-1">
+              <span className="text-[var(--color-muted-foreground)] text-[11px]">
+                Origem dos Cadastros
+              </span>
+              <p className="text-[var(--color-foreground)] font-medium">
+                Puxado automaticamente via CEP no cadastro inicial da integradora.
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-1">
+              <span className="text-[var(--color-muted-foreground)] text-[11px]">
+                Capilaridade Nacional
+              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-[var(--color-foreground)] font-bold">
+                  {activeStateList.length} de 27 estados (UF)
+                </span>
+                <span className="font-semibold text-sky-500 text-xs">
+                  {((activeStateList.length / 27) * 100).toFixed(0)}% do Brasil
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-[var(--color-border)] text-[11px] text-[var(--color-muted-foreground)] flex items-center justify-between">
+            <span>Atualização em tempo real</span>
+            <span className="text-emerald-500 font-medium">CEP / ViaCEP Ativo</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 4: Platform Conversion Funnel & Ecosystem Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sales Conversion Funnel */}
         <div className="lg:col-span-2 p-6 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm space-y-4">
@@ -1042,8 +1287,10 @@ export default function AdminMetricasPage() {
             </div>
 
             <div className="p-3 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] flex items-center justify-between">
-              <span className="text-[var(--color-muted-foreground)]">Motor de IA:</span>
-              <span className="font-bold text-emerald-500">GPT-4o & Gemini 2.0</span>
+              <span className="text-[var(--color-muted-foreground)]">
+                Processamento de Faturas:
+              </span>
+              <span className="font-bold text-emerald-500">OCR Híbrido Local</span>
             </div>
           </div>
         </div>

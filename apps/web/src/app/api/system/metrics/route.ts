@@ -76,6 +76,20 @@ export async function GET() {
       { status: "VIEWED", label: "Visualizada pelo Cliente", count: 54, color: "#8b5cf6" },
       { status: "ACCEPTED", label: "Aceita / Fechada", count: 24, color: "#10b981" },
     ],
+    stateBreakdown: [
+      { state: "PR", count: 7 },
+      { state: "SP", count: 4 },
+      { state: "MG", count: 3 },
+      { state: "SC", count: 2 },
+      { state: "RS", count: 1 },
+      { state: "GO", count: 1 },
+    ],
+    stateMonthly: {
+      "Jun/26": { PR: 3, SP: 2, MG: 1 },
+      "Mai/26": { PR: 2, SP: 1, SC: 1 },
+      "Abr/26": { PR: 1, MG: 1, RS: 1 },
+      "Mar/26": { PR: 1, GO: 1 },
+    },
     referralBreakdown: [
       { source: "Indicação de Amigo ou Integrador", count: 8 },
       { source: "Instagram", count: 4 },

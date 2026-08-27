@@ -690,6 +690,71 @@ export class OrganizationsService {
       "Dez",
     ];
 
+    const BRAZILIAN_UFS = new Set([
+      "AC",
+      "AL",
+      "AP",
+      "AM",
+      "BA",
+      "CE",
+      "DF",
+      "ES",
+      "GO",
+      "MA",
+      "MT",
+      "MS",
+      "MG",
+      "PA",
+      "PB",
+      "PR",
+      "PE",
+      "PI",
+      "RJ",
+      "RN",
+      "RS",
+      "RO",
+      "RR",
+      "SC",
+      "SP",
+      "SE",
+      "TO",
+    ]);
+
+    const extractStateFromRegion = (rawRegion?: string | null): string => {
+      if (!rawRegion || typeof rawRegion !== "string") return "Não informado";
+      const trimmed = rawRegion.trim().toUpperCase();
+      // Ex: "Londrina - PR" or "PR" or "São Paulo/SP" or "Curitiba - PR - Brasil"
+      const match = trimmed.match(/\b([A-Z]{2})\b/);
+      if (match && BRAZILIAN_UFS.has(match[1])) {
+        return match[1];
+      }
+      // Se não encontrou sigla de 2 letras válida, verifica se digitou o nome do estado
+      const stateNames: Record<string, string> = {
+        PARANA: "PR",
+        PARANÁ: "PR",
+        "SAO PAULO": "SP",
+        "SÃO PAULO": "SP",
+        "MINAS GERAIS": "MG",
+        "SANTA CATARINA": "SC",
+        "RIO GRANDE DO SUL": "RS",
+        "RIO DE JANEIRO": "RJ",
+        BAHIA: "BA",
+        GOIAS: "GO",
+        GOIÁS: "GO",
+        "MATO GROSSO": "MT",
+        "MATO GROSSO DO SUL": "MS",
+        CEARA: "CE",
+        CEARÁ: "CE",
+        PERNAMBUCO: "PE",
+        "ESPIRITO SANTO": "ES",
+        "ESPÍRITO SANTO": "ES",
+      };
+      for (const [sName, uf] of Object.entries(stateNames)) {
+        if (trimmed.includes(sName)) return uf;
+      }
+      return "Outros";
+    };
+
     // Build complete monthly breakdown for the last 12 months (or available data)
     const monthlyMetrics: Record<
       string,
@@ -704,6 +769,7 @@ export class OrganizationsService {
         kwp: number;
         statusBreakdown: Record<string, number>;
         referralBreakdown: Record<string, number>;
+        stateBreakdown: Record<string, number>;
         referralEntries: Array<{
           tenantId: string;
           source: string;
@@ -744,6 +810,7 @@ export class OrganizationsService {
       }
 
       const mReferralCounts: Record<string, number> = {};
+      const mStateCounts: Record<string, number> = {};
       const mReferralEntries: Array<{
         tenantId: string;
         source: string;
@@ -756,7 +823,12 @@ export class OrganizationsService {
         const settings = (t.settings as Record<string, unknown>) || {};
         const source = (settings["referralSource"] as string) || "Direto / Orgânico";
         const referredBy = (settings["referredBy"] as string) || undefined;
+        const region =
+          (settings["templateRegion"] as string) || (settings["cityState"] as string) || "";
+        const state = extractStateFromRegion(region);
+
         mReferralCounts[source] = (mReferralCounts[source] || 0) + 1;
+        mStateCounts[state] = (mStateCounts[state] || 0) + 1;
 
         mReferralEntries.push({
           tenantId: t.id,
@@ -778,6 +850,7 @@ export class OrganizationsService {
         kwp: Number((proposalsInM.length * 6.5).toFixed(1)),
         statusBreakdown: mStatusCounts,
         referralBreakdown: mReferralCounts,
+        stateBreakdown: mStateCounts,
         referralEntries: mReferralEntries,
       };
     }
@@ -805,6 +878,8 @@ export class OrganizationsService {
 
     const referralCounts: Record<string, number> = {};
     const referralMonthly: Record<string, Record<string, number>> = {};
+    const stateCounts: Record<string, number> = {};
+    const stateMonthly: Record<string, Record<string, number>> = {};
     const referralEntries: Array<{
       tenantId: string;
       source: string;
@@ -817,7 +892,12 @@ export class OrganizationsService {
       const settings = (t.settings as Record<string, unknown>) || {};
       const source = (settings["referralSource"] as string) || "Direto / Orgânico";
       const referredBy = (settings["referredBy"] as string) || undefined;
+      const region =
+        (settings["templateRegion"] as string) || (settings["cityState"] as string) || "";
+      const state = extractStateFromRegion(region);
+
       referralCounts[source] = (referralCounts[source] || 0) + 1;
+      stateCounts[state] = (stateCounts[state] || 0) + 1;
 
       const tDate = new Date(t.createdAt);
       const mLabel = `${monthNames[tDate.getMonth()]}/${String(tDate.getFullYear()).slice(2)}`;
@@ -826,6 +906,11 @@ export class OrganizationsService {
         referralMonthly[mLabel] = {};
       }
       referralMonthly[mLabel][source] = (referralMonthly[mLabel][source] || 0) + 1;
+
+      if (!stateMonthly[mLabel]) {
+        stateMonthly[mLabel] = {};
+      }
+      stateMonthly[mLabel][state] = (stateMonthly[mLabel][state] || 0) + 1;
 
       referralEntries.push({
         tenantId: t.id,
@@ -842,6 +927,11 @@ export class OrganizationsService {
     }
 
     const totalKwp = totalProposals * 6.5;
+
+    // Convert stateCounts into sorted array
+    const sortedStates = Object.entries(stateCounts)
+      .map(([state, count]) => ({ state, count }))
+      .sort((a, b) => b.count - a.count);
 
     return {
       overview: {
@@ -869,6 +959,8 @@ export class OrganizationsService {
         source,
         count,
       })),
+      stateBreakdown: sortedStates,
+      stateMonthly,
       referralMonthly,
       referralEntries,
       monthlyMetrics,
