@@ -41,7 +41,7 @@ function getStatusBadgeClass(status: string): string {
 }
 
 export default function TeamPage() {
-  const { currentOrganizationId } = useOrganization();
+  const { currentOrganizationId, currentOrganization, user } = useOrganization();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -52,7 +52,10 @@ export default function TeamPage() {
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Live Email Diagnostics State
+  const role = currentOrganization?.role || user?.role || "";
+  const isAdmin = ["OWNER", "ADMIN", "SUPERADMIN"].includes(role.toUpperCase());
+
+  // Live Email Diagnostics State (Apenas para ADMINs)
   const [diagOpen, setDiagOpen] = useState(false);
   const [diagEmail, setDiagEmail] = useState("sgiovanimendes@gmail.com");
   const [diagLoading, setDiagLoading] = useState(false);
@@ -167,18 +170,20 @@ export default function TeamPage() {
           <p className="text-[var(--color-muted-foreground)]">Membros da organização e convites.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setDiagOpen((prev) => !prev)}
-            className="border-dashed"
-          >
-            🛠️ Testar Servidor de E-mail
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              onClick={() => setDiagOpen((prev) => !prev)}
+              className="border-dashed"
+            >
+              🛠️ Testar Servidor de E-mail
+            </Button>
+          )}
           <Button onClick={() => setInviteOpen(true)}>Convidar membro</Button>
         </div>
       </div>
 
-      {diagOpen && (
+      {isAdmin && diagOpen && (
         <Card className="border-cyan-500/30 bg-cyan-950/20">
           <CardHeader>
             <CardTitle className="text-cyan-400">Diagnóstico ao Vivo do Servidor SMTP</CardTitle>

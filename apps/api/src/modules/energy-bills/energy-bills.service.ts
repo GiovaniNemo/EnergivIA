@@ -525,12 +525,15 @@ export class EnergyBillsService {
         }
       }
 
+      let extractionEngine: "OCR" | "AI_FALLBACK" = "AI_FALLBACK";
+
       if (rawText && rawText.trim().length > 30) {
         const deterministic = this.parseBillTextDeterministic(rawText);
         if (deterministic.isComplete && deterministic.consumptionHistoryLabeled.length >= 3) {
           extractedData = this.processExtractedResultWithMath(
             deterministic as unknown as Record<string, unknown>
           );
+          extractionEngine = "OCR";
           this.logger.log(
             `Energy bill extracted via OCR determinístico 100% (Economia total de tokens IA) billId=${billId}`
           );
@@ -540,6 +543,7 @@ export class EnergyBillsService {
       // --- CAMADA 2: IA COMO FALLBACK (Apenas se OCR não cobriu tudo e houver chave) ---
       if (!extractedData && openAiApiKey) {
         this.logger.log(`OCR precisou de complemento da IA. Acionando fallback billId=${billId}`);
+        extractionEngine = "AI_FALLBACK";
         if (ext === ".txt" || (ext === ".pdf" && rawText && rawText.trim().length >= 30)) {
           extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey);
         } else if ([".jpg", ".jpeg", ".png", ".webp"].includes(ext)) {
@@ -560,6 +564,15 @@ export class EnergyBillsService {
         extractedData = this.processExtractedResultWithMath(
           localParsed as unknown as Record<string, unknown>
         );
+        extractionEngine = "OCR";
+      }
+
+      if (extractedData) {
+        extractedData["extractionEngine"] = extractionEngine;
+        if (extractedData["rawData"] && typeof extractedData["rawData"] === "object") {
+          (extractedData["rawData"] as Record<string, unknown>)["extractionEngine"] =
+            extractionEngine;
+        }
       }
 
       // Salva o resultado

@@ -1630,11 +1630,40 @@ export const ProposalEconomicsModal = forwardRef<
                       </div>
                       {billAttachment.status === "ready" ? (
                         <div className="space-y-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-200">
-                          <div className="flex items-center gap-2 font-medium">
-                            <CheckCircle2 className="h-4 w-4 shrink-0" />
-                            <span className="truncate">
-                              Upload concluído: {billAttachment.displayName}
-                            </span>
+                          <div className="flex items-center justify-between gap-2 font-medium">
+                            <div className="flex items-center gap-2 truncate">
+                              <CheckCircle2 className="h-4 w-4 shrink-0" />
+                              <span className="truncate">
+                                Upload concluído: {billAttachment.displayName}
+                              </span>
+                            </div>
+                            {(() => {
+                              const extData = billAttachment.extractedData as
+                                | Record<string, unknown>
+                                | undefined;
+                              const rawData = extData?.rawData as
+                                | Record<string, unknown>
+                                | undefined;
+                              const isOcr =
+                                extData?.extractionEngine === "OCR" ||
+                                rawData?.extractionEngine === "OCR";
+                              return (
+                                <span
+                                  className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wider ${
+                                    isOcr
+                                      ? "bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30"
+                                      : "bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30"
+                                  }`}
+                                  title={
+                                    isOcr
+                                      ? "Extraído diretamente pelo motor de OCR sem consumo de tokens de IA"
+                                      : "Extraído com assistência da IA (Fallback)"
+                                  }
+                                >
+                                  {isOcr ? "⚡ OCR" : "🤖 IA"}
+                                </span>
+                              );
+                            })()}
                           </div>
                           <img
                             src={billAttachment.fileUrl}

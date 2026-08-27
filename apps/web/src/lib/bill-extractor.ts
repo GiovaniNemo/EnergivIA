@@ -31,6 +31,7 @@ export interface BillExtractionResult {
   monthCount: number;
   formattedSummary: string;
   rawText?: string;
+  extractionEngine?: "OCR" | "AI_FALLBACK";
 }
 
 const BILL_EXTRACTION_SYSTEM_PROMPT = `Você é um motor especialista em visão computacional forense e extração de dados estruturados de faturas de energia elétrica brasileiras (Enel, CPFL, Cemig, Copel, Equatorial, Energisa, Neoenergia, Light, EDP, RGE, Celesc, etc.).
@@ -112,7 +113,7 @@ export async function extractEnergyBillFromText(
   // 1. Tenta OCR/Parsing determinístico local primeiro
   const deterministic = extractDataFromTextDeterministic(rawText);
   if (deterministic.isComplete && deterministic.historico_consumo.length >= 3) {
-    return processExtractedBillData(
+    const res = processExtractedBillData(
       {
         distribuidora: deterministic.distribuidora,
         cidade: deterministic.cidade,
@@ -127,13 +128,15 @@ export async function extractEnergyBillFromText(
       },
       rawText
     );
+    res.extractionEngine = "OCR";
+    return res;
   }
 
   // 2. Fallback para IA se o OCR determinístico não cobriu todos os dados críticos
   const key = apiKey || process.env["OPENAI_API_KEY"];
   if (!key) {
     // Se não tiver chave da OpenAI, retorna o melhor resultado determinístico obtido pelo OCR
-    return processExtractedBillData(
+    const res = processExtractedBillData(
       {
         distribuidora: deterministic.distribuidora,
         cidade: deterministic.cidade,
@@ -148,6 +151,8 @@ export async function extractEnergyBillFromText(
       },
       rawText
     );
+    res.extractionEngine = "OCR";
+    return res;
   }
 
   const openai = new OpenAI({ apiKey: key });
@@ -173,7 +178,9 @@ export async function extractEnergyBillFromText(
     parsedJson = { historico_consumo: [] };
   }
 
-  return processExtractedBillData(parsedJson, rawText);
+  const result = processExtractedBillData(parsedJson, rawText);
+  result.extractionEngine = "AI_FALLBACK";
+  return result;
 }
 
 export async function extractEnergyBillFromImage(
@@ -186,7 +193,7 @@ export async function extractEnergyBillFromImage(
     if (ocrText && ocrText.trim().length > 30) {
       const deterministic = extractDataFromTextDeterministic(ocrText);
       if (deterministic.isComplete && deterministic.historico_consumo.length >= 3) {
-        return processExtractedBillData(
+        const res = processExtractedBillData(
           {
             distribuidora: deterministic.distribuidora,
             cidade: deterministic.cidade,
@@ -201,6 +208,8 @@ export async function extractEnergyBillFromImage(
           },
           ocrText
         );
+        res.extractionEngine = "OCR";
+        return res;
       }
     }
   } catch (ocrErr) {
@@ -248,7 +257,9 @@ export async function extractEnergyBillFromImage(
     parsedJson = { historico_consumo: [] };
   }
 
-  return processExtractedBillData(parsedJson);
+  const result = processExtractedBillData(parsedJson);
+  result.extractionEngine = "AI_FALLBACK";
+  return result;
 }
 
 export async function extractEnergyBillFromPdfBuffer(
