@@ -500,12 +500,14 @@ export class EnergyBillsService {
     // 6. Histórico de Consumo
     const historyCandidates: Array<{ month: string; consumptionKwh: number }> = [];
 
-    // Formato Copel / Tabela Compacta (ex: "JUL26 201 31" ou "JUL/26 201 31" ou "JUL/2026 201"):
+    // Formato Copel / Tabela Compacta:
+    // Na Copel, o formato costuma ser uma tabela onde vêm os meses (ex: "JUL26", "JUN26", "MAI26", ...) seguidos de seus consumos.
     const historySectionMatch = t.match(
-      /(?:HIST[OÓ]RICO\s+DE\s+CONSUMO|CONSUMO\s+FATURADO|EVOLU[CÇ][AÃ]O\s+DO\s+CONSUMO)[\s\S]{1,1500}?(?=(?:INFORMA[CÇ][OÕ]ES|AVISO|TRIBUTOS|TOTAL|$))/i
+      /(?:HIST[OÓ]RICO\s+DE\s+CONSUMO|CONSUMO\s+FATURADO|EVOLU[CÇ][AÃ]O\s+DO\s+CONSUMO)[\s\S]{1,2500}?(?=(?:INFORMA[CÇ][OÕ]ES|AVISO|TRIBUTOS|TOTAL|$))/i
     );
     const historyText = historySectionMatch ? historySectionMatch[0] : t;
 
+    // 1. Tenta linhas com Mês e Consumo na mesma linha: ex: "JUL/26 333", "JUL26 333 31", "JUL/2026 333"
     const copelRowRegex =
       /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[\s\/\-_]*(20\d{2}|\d{2})?\b\s+(\d{1,5}(?:[.,]\d{1,3})?)(?:\s+(\d{1,3}))?/gi;
 
@@ -514,9 +516,41 @@ export class EnergyBillsService {
       if (!monStr) continue;
       const yr = match[2] ? (match[2].length === 2 ? `20${match[2]}` : match[2]) : "";
       const label = yr ? `${monStr}/${yr}` : monStr;
-      const kwh = parseBrazilianKwh(match[3]);
-      if (kwh > 0 && kwh < 50000) {
-        historyCandidates.push({ month: label, consumptionKwh: kwh });
+      const val1 = parseBrazilianKwh(match[3]);
+      if (val1 > 0 && val1 < 50000) {
+        historyCandidates.push({ month: label, consumptionKwh: val1 });
+      }
+    }
+
+    // 2. Tabela Copel em blocos: se no PDF os meses estão listados e depois os consumos em bloco separado
+    if (historyCandidates.length < 3) {
+      const monthTokens = [
+        ...historyText.matchAll(
+          /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[\s\/\-_]*(20\d{2}|\d{2})?\b/gi
+        ),
+      ];
+      // Captura todos os números dentro da seção de histórico
+      const allNumbers = [...historyText.matchAll(/\b(\d{1,5}(?:[.,]\d{1,3})?)\b/g)]
+        .map((m) => parseBrazilianKwh(m[1]))
+        .filter((n) => n > 0 && n < 50000);
+
+      // Filtra números que são anos (2024, 2025, 2026)
+      const nonYearNumbers = allNumbers.filter(
+        (n) => n !== 2024 && n !== 2025 && n !== 2026 && n !== 2027
+      );
+
+      // Se temos meses e números correspondentes (consumos reais >= 50 kWh)
+      const realConsumptions = nonYearNumbers.filter((n) => n >= 50);
+      if (monthTokens.length >= 3 && realConsumptions.length >= 3) {
+        for (let i = 0; i < Math.min(monthTokens.length, realConsumptions.length, 12); i++) {
+          const m = monthTokens[i];
+          const kwh = realConsumptions[i];
+          if (!m || !kwh) continue;
+          const monStr = m[1]?.toUpperCase() || "MES";
+          const yr = m[2] ? (m[2].length === 2 ? `20${m[2]}` : m[2]) : "";
+          const label = yr ? `${monStr}/${yr}` : monStr;
+          historyCandidates.push({ month: label, consumptionKwh: kwh });
+        }
       }
     }
 
