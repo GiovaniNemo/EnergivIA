@@ -126,10 +126,6 @@ const UF_LIST = [
  */
 export function extractDataFromTextDeterministic(text: string): BillDeterministicData {
   const t = (text || "").replace(/[\u00A0\r]/g, " ");
-  const lines = t
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
 
   let distribuidora: string | undefined;
   for (const prov of BRAZILIAN_PROVIDERS) {
@@ -256,6 +252,15 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
   // 6. Histórico de Consumo
   const historyCandidates: BillHistoryMonth[] = [];
 
+  const historySectionMatch = t.match(
+    /(?:HIST[OÓ]RICO\s+DE\s+CONSUMO|CONSUMO\s+FATURADO|EVOLU[CÇ][AÃ]O\s+DO\s+CONSUMO)[\s\S]{1,1800}?(?=(?:REAVISO|AVISO|INFORMA[CÇ][OÕ]ES|TRIBUTOS|TOTAL|$))/i
+  );
+  const historyText = historySectionMatch ? historySectionMatch[0] : t;
+  const historyLines = historyText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
   const rowRegex =
     /\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|0[1-9]|1[0-2])[\s\/\-_]*(20\d{2}|\d{2})?\b[^\d\n\r]{0,25}(\d{1,3}(?:\.\d{3})*(?:,\d{1,3})?|\d{1,5}(?:,\d{1,3})?)(?:\s+(\d{1,3}))?/i;
 
@@ -274,7 +279,7 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
     "12": "DEZ",
   };
 
-  for (const line of lines) {
+  for (const line of historyLines) {
     const m = line.match(rowRegex);
     if (m && m[1]) {
       let monStr = m[1].toUpperCase();

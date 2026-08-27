@@ -320,10 +320,6 @@ export class EnergyBillsService {
     rawData?: Record<string, unknown>;
   } {
     const t = (text || "").replace(/[\u00A0\r]/g, " ");
-    const lines = t
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
 
     let distribuidora: string | undefined;
     const providers = [
@@ -488,6 +484,16 @@ export class EnergyBillsService {
     // 6. Histórico de Consumo
     const historyCandidates: Array<{ month: string; consumptionKwh: number }> = [];
 
+    // Limita a busca exclusivamente ao bloco "HISTÓRICO DE CONSUMO" para não capturar linhas de faturamento do mês atual ou leituras
+    const historySectionMatch = t.match(
+      /(?:HIST[OÓ]RICO\s+DE\s+CONSUMO|CONSUMO\s+FATURADO|EVOLU[CÇ][AÃ]O\s+DO\s+CONSUMO)[\s\S]{1,1800}?(?=(?:REAVISO|AVISO|INFORMA[CÇ][OÕ]ES|TRIBUTOS|TOTAL|$))/i
+    );
+    const historyText = historySectionMatch ? historySectionMatch[0] : t;
+    const historyLines = historyText
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
     // Tenta capturar cada linha do histórico contendo MÊS/ANO e CONSUMO faturado
     // Ex: "JUN26 189 31", "MAI26 263 30", "ABR26 378 31", "MAR26 355 29", "FEV26 100 22"
     // Ex: "06/2026 189", "JUN/26 189", "JUN/2026 189"
@@ -509,7 +515,7 @@ export class EnergyBillsService {
       "12": "DEZ",
     };
 
-    for (const line of lines) {
+    for (const line of historyLines) {
       const m = line.match(rowRegex);
       if (m && m[1]) {
         let monStr = m[1].toUpperCase();
