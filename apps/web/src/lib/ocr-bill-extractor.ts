@@ -261,8 +261,10 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
  * Executa OCR Tesseract em um buffer de imagem ou URL base64
  */
 export async function runOcrOnImage(imageSource: Buffer | string): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let worker: any = null;
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     worker = await (createWorker as any)();
     if (typeof worker.loadLanguage === "function") {
       await worker.loadLanguage("por");

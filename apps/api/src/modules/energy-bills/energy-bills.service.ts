@@ -262,7 +262,9 @@ export class EnergyBillsService {
 
   private async runOcrOnBuffer(buffer: Buffer): Promise<string> {
     try {
-      const worker = await createWorker("por");
+      const worker = await createWorker();
+      await worker.loadLanguage("por");
+      await worker.initialize("por");
       const {
         data: { text },
       } = await worker.recognize(buffer);
