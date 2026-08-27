@@ -843,15 +843,46 @@ export class WhatsappBotService {
     ];
     let cidade: string | undefined;
     let uf: string | undefined;
-    const cityUfMatch = t.match(/([A-ZÁ-Ú\s]{3,30})\s*[-/]\s*([A-Z]{2})\b/i);
-    if (cityUfMatch && cityUfMatch[1] && cityUfMatch[2]) {
-      const possibleUf = cityUfMatch[2].toUpperCase();
-      if (ufList.includes(possibleUf)) {
-        const cand = cityUfMatch[1].trim();
-        if (!cand.toLowerCase().includes("emissao") && !cand.toLowerCase().includes("vencimento")) {
-          cidade = cand;
-          uf = possibleUf;
+
+    // 1. Procura primeiro Cidade/UF próximo a CEP ou endereço da unidade consumidora
+    const cepCityUfMatch = t.match(
+      /(?:\d{5}[-\s]?\d{3}[\s,.-]+([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})|([A-ZÁ-Ú\s]{3,35})\s*[-/]\s*([A-Z]{2})[\s,.-]+(?:CEP|\d{5}))/i
+    );
+    if (cepCityUfMatch) {
+      const candCity = (cepCityUfMatch[1] || cepCityUfMatch[3] || "").trim();
+      const candUf = (cepCityUfMatch[2] || cepCityUfMatch[4] || "").toUpperCase();
+      if (ufList.includes(candUf) && candCity.length >= 3) {
+        cidade = candCity;
+        uf = candUf;
+      }
+    }
+
+    // 2. Se não encontrou por CEP, procura em linhas de endereço (evitando a linha de sede/CNPJ da Copel "Curitiba - PR")
+    if (!cidade || !uf) {
+      const cityMatches = [...t.matchAll(/([A-ZÁ-Ú\s]{3,30})\s*[-/]\s*([A-Z]{2})\b/gi)];
+      for (const cm of cityMatches) {
+        const candUf = cm[2]?.toUpperCase() || "";
+        const candCity = (cm[1] || "").trim();
+        if (!ufList.includes(candUf)) continue;
+        const low = candCity.toLowerCase();
+        if (
+          low.includes("emissao") ||
+          low.includes("vencimento") ||
+          low.includes("distribuicao") ||
+          low.includes("distribuidora")
+        ) {
+          continue;
         }
+        if (distribuidora === "COPEL" && low.includes("curitiba") && cityMatches.length > 1) {
+          if (!cidade) {
+            cidade = candCity;
+            uf = candUf;
+          }
+          continue;
+        }
+        cidade = candCity;
+        uf = candUf;
+        break;
       }
     }
 
