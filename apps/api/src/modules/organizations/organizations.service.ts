@@ -725,8 +725,9 @@ export class OrganizationsService {
       const trimmed = rawRegion.trim().toUpperCase();
       // Ex: "Londrina - PR" or "PR" or "São Paulo/SP" or "Curitiba - PR - Brasil"
       const match = trimmed.match(/\b([A-Z]{2})\b/);
-      if (match && BRAZILIAN_UFS.has(match[1])) {
-        return match[1];
+      const ufCandidate = match?.[1];
+      if (ufCandidate && BRAZILIAN_UFS.has(ufCandidate)) {
+        return ufCandidate;
       }
       // Se não encontrou sigla de 2 letras válida, verifica se digitou o nome do estado
       const stateNames: Record<string, string> = {
