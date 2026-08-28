@@ -16,8 +16,86 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MapPin, Loader2, Search, CheckCircle2, Plus, Building2 } from "lucide-react";
+import { MapPin, Loader2, Search, CheckCircle2, Plus, Building2, Sparkles } from "lucide-react";
 import Link from "next/link";
+
+interface CnpjApiResponse {
+  razao_social?: string;
+  nome_fantasia?: string;
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  municipio?: string;
+  uf?: string;
+}
+
+function titleCase(str?: string): string {
+  if (!str) return "";
+  return str
+    .toLowerCase()
+    .split(" ")
+    .map((word) => {
+      if (
+        ["de", "da", "do", "das", "dos", "e", "em", "para", "ltda", "sa", "me", "epp"].includes(
+          word
+        )
+      ) {
+        return word === "ltda" || word === "sa" || word === "me" || word === "epp"
+          ? word.toUpperCase()
+          : word;
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
+
+async function fetchCnpjDetails(cleanCnpj: string): Promise<CnpjApiResponse> {
+  if (cleanCnpj.length !== 14) {
+    throw new Error("CNPJ deve conter 14 dígitos.");
+  }
+
+  // 1. Try BrasilAPI first
+  try {
+    const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`);
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        razao_social: data.razao_social || "",
+        nome_fantasia: data.nome_fantasia || "",
+        cep: data.cep || "",
+        logradouro: data.logradouro || "",
+        numero: data.numero || "",
+        complemento: data.complemento || "",
+        bairro: data.bairro || "",
+        municipio: data.municipio || "",
+        uf: data.uf || "",
+      };
+    }
+  } catch {}
+
+  // 2. Fallback to Minha Receita
+  try {
+    const res = await fetch(`https://minhareceita.org/${cleanCnpj}`);
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        razao_social: data.razao_social || "",
+        nome_fantasia: data.nome_fantasia || "",
+        cep: data.cep || "",
+        logradouro: data.logradouro || "",
+        numero: data.numero || "",
+        complemento: data.complemento || "",
+        bairro: data.bairro || "",
+        municipio: data.municipio || "",
+        uf: data.uf || "",
+      };
+    }
+  } catch {}
+
+  throw new Error("CNPJ não encontrado ou serviço temporariamente indisponível.");
+}
 
 function OrganizationSettingsContent() {
   const {
@@ -44,12 +122,15 @@ function OrganizationSettingsContent() {
   const [state, setState] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
   const [isSearchingCep, setIsSearchingCep] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
+  const [cnpjAutofillInfo, setCnpjAutofillInfo] = useState<string | null>(null);
 
+  const lastSearchedCnpj = useRef<string>("");
   const lastSearchedCep = useRef<string>("");
   const numberInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,12 +148,14 @@ function OrganizationSettingsContent() {
   const [newOrgState, setNewOrgState] = useState("");
 
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
+  const [isNewOrgSearchingCnpj, setIsNewOrgSearchingCnpj] = useState(false);
   const [isNewOrgSearchingCep, setIsNewOrgSearchingCep] = useState(false);
   const [isUploadingNewOrgLogo, setIsUploadingNewOrgLogo] = useState(false);
   const [createModalError, setCreateModalError] = useState<string | null>(null);
   const [createModalLogoError, setCreateModalLogoError] = useState<string | null>(null);
   const [createdSuccessMessage, setCreatedSuccessMessage] = useState<string | null>(null);
 
+  const newOrgLastSearchedCnpj = useRef<string>("");
   const newOrgLastSearchedCep = useRef<string>("");
   const newOrgNumberInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,7 +163,6 @@ function OrganizationSettingsContent() {
   useEffect(() => {
     if (searchParams.get("action") === "new") {
       setIsCreateModalOpen(true);
-      // Clean query params from URL without reload
       router.replace("/configuracoes/organizacao");
     }
   }, [searchParams, router]);
@@ -100,6 +182,7 @@ function OrganizationSettingsContent() {
       setState(currentOrganization.state ?? "");
       setSaved(false);
       setError(null);
+      setCnpjAutofillInfo(null);
     }
   }, [currentOrganization]);
 
@@ -118,6 +201,79 @@ function OrganizationSettingsContent() {
       return `${digits.slice(0, 5)}-${digits.slice(5)}`;
     }
     return digits;
+  };
+
+  const handleFetchCnpj = async (cleanCnpj: string, isModal = false) => {
+    if (cleanCnpj.length !== 14) return;
+    if (isModal) {
+      setIsNewOrgSearchingCnpj(true);
+      setCreateModalError(null);
+    } else {
+      setIsSearchingCnpj(true);
+      setError(null);
+      setCnpjAutofillInfo(null);
+    }
+
+    try {
+      const data = await fetchCnpjDetails(cleanCnpj);
+      const companyName = data.nome_fantasia || data.razao_social || "";
+      const formattedCep = formatCep(data.cep || "");
+
+      if (isModal) {
+        if (companyName && !newOrgName) {
+          setNewOrgName(titleCase(companyName));
+        } else if (companyName) {
+          setNewOrgName((prev) => prev || titleCase(companyName));
+        }
+        if (formattedCep) setNewOrgCep(formattedCep);
+        if (data.logradouro) setNewOrgStreet(titleCase(data.logradouro));
+        if (data.numero) setNewOrgNumber(data.numero);
+        if (data.complemento) setNewOrgComplement(titleCase(data.complemento));
+        if (data.bairro) setNewOrgNeighborhood(titleCase(data.bairro));
+        if (data.municipio) setNewOrgCity(titleCase(data.municipio));
+        if (data.uf) setNewOrgState(data.uf.toUpperCase());
+        setTimeout(() => newOrgNumberInputRef.current?.focus(), 100);
+      } else {
+        if (companyName && (!name || name === "Organização")) {
+          setName(titleCase(companyName));
+        }
+        if (formattedCep) setCep(formattedCep);
+        if (data.logradouro) setStreet(titleCase(data.logradouro));
+        if (data.numero) setNumber(data.numero);
+        if (data.complemento) setComplement(titleCase(data.complemento));
+        if (data.bairro) setNeighborhood(titleCase(data.bairro));
+        if (data.municipio) setCity(titleCase(data.municipio));
+        if (data.uf) setState(data.uf.toUpperCase());
+        setCnpjAutofillInfo("Dados da empresa e endereço preenchidos via CNPJ!");
+        setTimeout(() => numberInputRef.current?.focus(), 100);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao consultar CNPJ.";
+      if (isModal) setCreateModalError(msg);
+      else setError(msg);
+    } finally {
+      if (isModal) setIsNewOrgSearchingCnpj(false);
+      else setIsSearchingCnpj(false);
+    }
+  };
+
+  const handleCnpjChange = (rawValue: string, isModal = false) => {
+    const formatted = formatCnpj(rawValue);
+    const clean = rawValue.replace(/\D/g, "");
+
+    if (isModal) {
+      setNewOrgCnpj(formatted);
+      if (clean.length === 14 && clean !== newOrgLastSearchedCnpj.current) {
+        newOrgLastSearchedCnpj.current = clean;
+        handleFetchCnpj(clean, true);
+      }
+    } else {
+      setCnpj(formatted);
+      if (clean.length === 14 && clean !== lastSearchedCnpj.current) {
+        lastSearchedCnpj.current = clean;
+        handleFetchCnpj(clean, false);
+      }
+    }
   };
 
   const fetchViaCep = async (cleanCep: string, isModal = false) => {
@@ -158,7 +314,7 @@ function OrganizationSettingsContent() {
           }
         }
       } else {
-        const msg = "Erro ao buscar CEP no ViaCEP.";
+        const msg = "Erro ao buscar CEP.";
         if (isModal) setCreateModalError(msg);
         else setError(msg);
       }
@@ -259,6 +415,7 @@ function OrganizationSettingsContent() {
     setNewOrgState("");
     setCreateModalError(null);
     setCreateModalLogoError(null);
+    newOrgLastSearchedCnpj.current = "";
     newOrgLastSearchedCep.current = "";
   };
 
@@ -389,7 +546,8 @@ function OrganizationSettingsContent() {
           <CardHeader>
             <CardTitle>Identificação da empresa</CardTitle>
             <CardDescription>
-              Estes dados identificam sua empresa e aparecem nas propostas geradas.
+              Estes dados identificam sua empresa nas propostas. Digite o CNPJ para preenchimento
+              automático.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -404,11 +562,32 @@ function OrganizationSettingsContent() {
               <Input
                 label="CNPJ"
                 value={cnpj}
-                onChange={(e) => setCnpj(formatCnpj(e.target.value))}
+                onChange={(e) => handleCnpjChange(e.target.value, false)}
                 placeholder="00.000.000/0000-00"
                 className="font-mono"
+                endAdornment={
+                  isSearchingCnpj ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary)]" />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleFetchCnpj(cnpj.replace(/\D/g, ""), false)}
+                      title="Consultar dados da empresa pelo CNPJ"
+                      className="p-1 text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)]"
+                    >
+                      <Search className="h-4 w-4" />
+                    </button>
+                  )
+                }
               />
             </div>
+
+            {cnpjAutofillInfo && (
+              <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-primary)]">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>{cnpjAutofillInfo}</span>
+              </div>
+            )}
 
             <ImageDropzone
               label="Logo da empresa (opcional)"
@@ -433,7 +612,7 @@ function OrganizationSettingsContent() {
                 Localização e Endereço
               </CardTitle>
               <CardDescription>
-                Informe o CEP para preencher o endereço da sua sede automaticamente via ViaCEP.
+                Endereço e sede da sua empresa para exibição em contratos e propostas comerciais.
               </CardDescription>
             </div>
           </CardHeader>
@@ -574,27 +753,41 @@ function OrganizationSettingsContent() {
               Cadastrar Nova Empresa
             </DialogTitle>
             <DialogDescription>
-              Adicione uma nova organização para gerenciar múltiplos negócios, propostas e clientes
-              de forma independente.
+              Informe o CNPJ para preencher os dados da nova organização automaticamente ou informe
+              manualmente abaixo.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateOrganizationSubmit} className="space-y-4 py-2">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
+                label="CNPJ (preenchimento automático)"
+                value={newOrgCnpj}
+                onChange={(e) => handleCnpjChange(e.target.value, true)}
+                placeholder="00.000.000/0000-00"
+                className="font-mono"
+                autoFocus
+                endAdornment={
+                  isNewOrgSearchingCnpj ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary)]" />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleFetchCnpj(newOrgCnpj.replace(/\D/g, ""), true)}
+                      title="Consultar CNPJ"
+                      className="p-1 text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)]"
+                    >
+                      <Search className="h-4 w-4" />
+                    </button>
+                  )
+                }
+              />
+              <Input
                 label="Nome da organização *"
                 value={newOrgName}
                 onChange={(e) => setNewOrgName(e.target.value)}
                 placeholder="Ex: Minha Nova Empresa Solar"
                 required
-                autoFocus
-              />
-              <Input
-                label="CNPJ (opcional)"
-                value={newOrgCnpj}
-                onChange={(e) => setNewOrgCnpj(formatCnpj(e.target.value))}
-                placeholder="00.000.000/0000-00"
-                className="font-mono"
               />
             </div>
 
