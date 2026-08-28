@@ -27,10 +27,10 @@ export class SystemSettingsService {
     const brandLogoLightUrl = await this.getSetting("brandLogoLightUrl");
     const whatsappLogoUrl = await this.getSetting("whatsappLogoUrl");
     return {
-      brandLogoUrl,
-      brandLogoDarkUrl: brandLogoDarkUrl || brandLogoUrl,
-      brandLogoLightUrl: brandLogoLightUrl || brandLogoUrl,
-      whatsappLogoUrl,
+      brandLogoUrl: brandLogoUrl || "",
+      brandLogoDarkUrl: brandLogoDarkUrl || "",
+      brandLogoLightUrl: brandLogoLightUrl || "",
+      whatsappLogoUrl: whatsappLogoUrl || "",
     };
   }
 

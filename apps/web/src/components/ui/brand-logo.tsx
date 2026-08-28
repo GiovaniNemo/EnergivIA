@@ -32,11 +32,8 @@ export function BrandLogo({
     fetch("/api/proxy/system-settings/branding", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        if (data?.brandLogoDarkUrl) setCustomLogoDarkUrl(data.brandLogoDarkUrl);
-        if (data?.brandLogoLightUrl) setCustomLogoLightUrl(data.brandLogoLightUrl);
-        if (!data?.brandLogoDarkUrl && data?.brandLogoUrl) setCustomLogoDarkUrl(data.brandLogoUrl);
-        if (!data?.brandLogoLightUrl && data?.brandLogoUrl)
-          setCustomLogoLightUrl(data.brandLogoUrl);
+        setCustomLogoDarkUrl(data?.brandLogoDarkUrl || "");
+        setCustomLogoLightUrl(data?.brandLogoLightUrl || "");
       })
       .catch(() => {});
   }, []);
