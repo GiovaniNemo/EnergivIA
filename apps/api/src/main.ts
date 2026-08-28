@@ -1,3 +1,4 @@
+import type { IncomingMessage } from "node:http";
 import "./instrument";
 // Force Railway deploy
 import { NestFactory } from "@nestjs/core";
@@ -56,7 +57,7 @@ async function bootstrap() {
   app.use(
     json({
       limit: "50mb",
-      verify: (req: Record<string, unknown> & { rawBody?: Buffer }, _res, buf: Buffer) => {
+      verify: (req: IncomingMessage & { rawBody?: Buffer }, _res, buf: Buffer) => {
         req.rawBody = buf;
       },
     })
@@ -65,7 +66,7 @@ async function bootstrap() {
     urlencoded({
       extended: true,
       limit: "50mb",
-      verify: (req: Record<string, unknown> & { rawBody?: Buffer }, _res, buf: Buffer) => {
+      verify: (req: IncomingMessage & { rawBody?: Buffer }, _res, buf: Buffer) => {
         req.rawBody = buf;
       },
     })
