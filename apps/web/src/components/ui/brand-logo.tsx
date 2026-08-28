@@ -23,7 +23,6 @@ export function BrandLogo({
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const iconSrc = isDark ? "/favicon-dark.png" : "/favicon-light.png";
-  const fullLogoSrc = isDark ? "/logo-dark.png" : "/logo.png";
 
   const [customLogoUrl, setCustomLogoUrl] = useState<string>("");
 
@@ -38,16 +37,19 @@ export function BrandLogo({
 
   const config = {
     sm: {
-      iconClass: "h-8 w-8",
-      fullLogoClass: "h-8 md:h-9 w-auto max-w-[160px]",
+      iconClass: "h-7 w-7",
+      titleClass: "text-[1.2rem]",
+      taglineClass: "text-[9px]",
     },
     md: {
       iconClass: "h-9 w-9 md:h-10 md:w-10",
-      fullLogoClass: "h-9 md:h-11 w-auto max-w-[210px]",
+      titleClass: "text-[1.45rem]",
+      taglineClass: "text-[10.5px]",
     },
     lg: {
-      iconClass: "h-14 w-14",
-      fullLogoClass: "h-12 md:h-14 w-auto max-w-[260px]",
+      iconClass: "h-12 w-12",
+      titleClass: "text-[1.8rem]",
+      taglineClass: "text-[12px]",
     },
   }[size];
 
@@ -106,19 +108,47 @@ export function BrandLogo({
   return (
     <div
       className={cn(
-        "flex items-center justify-center select-none transition-opacity hover:opacity-95 py-0.5",
+        "flex items-center gap-3 select-none transition-opacity hover:opacity-95",
         className
       )}
     >
       <Image
-        src={fullLogoSrc}
-        alt="EnergivIA - o seu parceiro via I.A."
-        width={480}
-        height={130}
-        className={cn("shrink-0 object-contain", config.fullLogoClass)}
+        src={iconSrc}
+        alt="EnergivIA"
+        width={160}
+        height={160}
+        className={cn("shrink-0 object-contain drop-shadow-sm", config.iconClass)}
         priority={priority}
         unoptimized
       />
+      <div className="flex flex-col justify-center min-w-0 font-[family-name:var(--font-montserrat),sans-serif]">
+        <div className="flex items-baseline leading-none">
+          <span
+            className={cn(
+              "font-extrabold tracking-tight text-[#1e3a8a] dark:text-white",
+              config.titleClass
+            )}
+          >
+            Energiv
+          </span>
+          <span
+            className={cn(
+              "font-extrabold tracking-tight bg-gradient-to-r from-[#14b8a6] via-[#10b981] to-[#84cc16] dark:from-[#2dd4bf] dark:via-[#10b981] dark:to-[#a3e635] bg-clip-text text-transparent ml-0.5",
+              config.titleClass
+            )}
+          >
+            IA
+          </span>
+        </div>
+        <span
+          className={cn(
+            "font-semibold tracking-wide text-slate-500 dark:text-slate-300 leading-tight mt-1 whitespace-nowrap",
+            config.taglineClass
+          )}
+        >
+          o seu parceiro via I.A.
+        </span>
+      </div>
     </div>
   );
 }
