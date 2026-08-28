@@ -1609,17 +1609,20 @@ export default function AdminSistemaPage() {
                 </div>
                 <ImageDropzone
                   label="Carregar Logo Escuro"
-                  value={brandLogoDarkUrl || brandLogoUrl}
+                  value={brandLogoDarkUrl}
                   onSelectFile={async (file) => {
                     try {
                       const url = await uploadOrganizationLogo(file);
                       setBrandLogoDarkUrl(url);
-                      if (!brandLogoUrl) setBrandLogoUrl(url);
+                      setBrandLogoUrl(url);
                     } catch (err) {
                       alert(err instanceof Error ? err.message : "Erro ao enviar imagem");
                     }
                   }}
-                  onClear={() => setBrandLogoDarkUrl("")}
+                  onClear={() => {
+                    setBrandLogoDarkUrl("");
+                    setBrandLogoUrl("");
+                  }}
                   accept="image/jpeg,image/png,image/webp"
                   helperText="Formatos aceitos: JPG, PNG, WEBP."
                 />
@@ -1636,16 +1639,19 @@ export default function AdminSistemaPage() {
                 </div>
                 <ImageDropzone
                   label="Carregar Logo Claro"
-                  value={brandLogoLightUrl || brandLogoUrl}
+                  value={brandLogoLightUrl}
                   onSelectFile={async (file) => {
                     try {
                       const url = await uploadOrganizationLogo(file);
                       setBrandLogoLightUrl(url);
+                      if (!brandLogoDarkUrl) setBrandLogoUrl(url);
                     } catch (err) {
                       alert(err instanceof Error ? err.message : "Erro ao enviar imagem");
                     }
                   }}
-                  onClear={() => setBrandLogoLightUrl("")}
+                  onClear={() => {
+                    setBrandLogoLightUrl("");
+                  }}
                   accept="image/jpeg,image/png,image/webp"
                   helperText="Formatos aceitos: JPG, PNG, WEBP."
                 />
