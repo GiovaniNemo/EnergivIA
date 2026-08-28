@@ -67,12 +67,20 @@ export function OrganizationSwitcher() {
           ))}
           <div className="my-1 border-t border-[var(--color-border)]" />
           <Link
+            href="/create-organization"
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-primary)] font-medium hover:bg-[var(--color-accent)] hover:text-[var(--color-primary)]"
+            onClick={() => setOpen(false)}
+          >
+            <Plus className="h-4 w-4" />
+            Adicionar nova empresa
+          </Link>
+          <Link
             href="/configuracoes/organizacao"
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-accent-foreground)]"
             onClick={() => setOpen(false)}
           >
-            <Plus className="h-4 w-4" />
-            Configurações da organização
+            <Building2 className="h-4 w-4" />
+            Dados da organização atual
           </Link>
         </div>
       )}

@@ -229,6 +229,13 @@ export class OrganizationsService {
       return {
         ...organization,
         cnpj: extractCnpj(organization.settings),
+        cep: readOptionalSetting(organization.settings, "cep"),
+        street: readOptionalSetting(organization.settings, "street"),
+        number: readOptionalSetting(organization.settings, "number"),
+        complement: readOptionalSetting(organization.settings, "complement"),
+        neighborhood: readOptionalSetting(organization.settings, "neighborhood"),
+        city: readOptionalSetting(organization.settings, "city"),
+        state: readOptionalSetting(organization.settings, "state"),
         templateBusinessSegment: readOptionalSetting(
           organization.settings,
           "templateBusinessSegment"
@@ -262,6 +269,13 @@ export class OrganizationsService {
     return {
       ...org,
       cnpj: extractCnpj(org.settings),
+      cep: readOptionalSetting(org.settings, "cep"),
+      street: readOptionalSetting(org.settings, "street"),
+      number: readOptionalSetting(org.settings, "number"),
+      complement: readOptionalSetting(org.settings, "complement"),
+      neighborhood: readOptionalSetting(org.settings, "neighborhood"),
+      city: readOptionalSetting(org.settings, "city"),
+      state: readOptionalSetting(org.settings, "state"),
       templateBusinessSegment: readOptionalSetting(org.settings, "templateBusinessSegment"),
       templateRegion: readOptionalSetting(org.settings, "templateRegion"),
       templateValueProposition: readOptionalSetting(org.settings, "templateValueProposition"),
@@ -350,6 +364,13 @@ export class OrganizationsService {
     const nextSettings: Prisma.InputJsonObject = {
       ...(currentSettings as Prisma.InputJsonObject),
       ...(dto.cnpj !== undefined && { cnpj: cleanCnpj(dto.cnpj) ?? null }),
+      ...(dto.cep !== undefined && { cep: dto.cep.trim() || null }),
+      ...(dto.street !== undefined && { street: dto.street.trim() || null }),
+      ...(dto.number !== undefined && { number: dto.number.trim() || null }),
+      ...(dto.complement !== undefined && { complement: dto.complement.trim() || null }),
+      ...(dto.neighborhood !== undefined && { neighborhood: dto.neighborhood.trim() || null }),
+      ...(dto.city !== undefined && { city: dto.city.trim() || null }),
+      ...(dto.state !== undefined && { state: dto.state.trim() || null }),
       ...(dto.templateBusinessSegment !== undefined && {
         templateBusinessSegment: dto.templateBusinessSegment.trim() || null,
       }),
@@ -370,6 +391,13 @@ export class OrganizationsService {
         ...(dto.name != null && { name: dto.name }),
         ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl }),
         ...((dto.cnpj !== undefined ||
+          dto.cep !== undefined ||
+          dto.street !== undefined ||
+          dto.number !== undefined ||
+          dto.complement !== undefined ||
+          dto.neighborhood !== undefined ||
+          dto.city !== undefined ||
+          dto.state !== undefined ||
           dto.templateBusinessSegment !== undefined ||
           dto.templateRegion !== undefined ||
           dto.templateValueProposition !== undefined ||
@@ -379,6 +407,13 @@ export class OrganizationsService {
     return {
       ...org,
       cnpj: extractCnpj(org.settings),
+      cep: readOptionalSetting(org.settings, "cep"),
+      street: readOptionalSetting(org.settings, "street"),
+      number: readOptionalSetting(org.settings, "number"),
+      complement: readOptionalSetting(org.settings, "complement"),
+      neighborhood: readOptionalSetting(org.settings, "neighborhood"),
+      city: readOptionalSetting(org.settings, "city"),
+      state: readOptionalSetting(org.settings, "state"),
       templateBusinessSegment: readOptionalSetting(org.settings, "templateBusinessSegment"),
       templateRegion: readOptionalSetting(org.settings, "templateRegion"),
       templateValueProposition: readOptionalSetting(org.settings, "templateValueProposition"),

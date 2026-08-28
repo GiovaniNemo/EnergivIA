@@ -38,4 +38,39 @@ export class UpdateOrganizationDto {
   @IsString()
   @MaxLength(80)
   templateTone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  cep?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  street?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  number?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  complement?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  neighborhood?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  state?: string;
 }

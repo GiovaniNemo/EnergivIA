@@ -20,6 +20,13 @@ export interface Organization {
   name: string;
   logoUrl?: string | null;
   cnpj?: string | null;
+  cep?: string | null;
+  street?: string | null;
+  number?: string | null;
+  complement?: string | null;
+  neighborhood?: string | null;
+  city?: string | null;
+  state?: string | null;
   createdAt: string;
   role?: string;
   membershipId?: string;
@@ -195,6 +202,13 @@ export async function updateOrganization(
     name?: string;
     logoUrl?: string;
     cnpj?: string;
+    cep?: string;
+    street?: string;
+    number?: string;
+    complement?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
     templateBusinessSegment?: string;
     templateRegion?: string;
     templateValueProposition?: string;
