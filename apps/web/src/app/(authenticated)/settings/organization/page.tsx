@@ -172,7 +172,7 @@ export default function OrganizationSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Organização</h1>
         <p className="text-[var(--color-muted-foreground)]">
@@ -235,29 +235,27 @@ export default function OrganizationSettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="relative">
-                <Input
-                  label="CEP"
-                  value={cep}
-                  onChange={(e) => handleCepChange(e.target.value)}
-                  placeholder="00000-000"
-                  className="font-mono pr-10"
-                />
-                <div className="absolute right-3 top-[34px] flex items-center">
-                  {isSearchingCep ? (
+              <Input
+                label="CEP"
+                value={cep}
+                onChange={(e) => handleCepChange(e.target.value)}
+                placeholder="00000-000"
+                className="font-mono"
+                endAdornment={
+                  isSearchingCep ? (
                     <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary)]" />
                   ) : (
                     <button
                       type="button"
                       onClick={() => fetchViaCep(cep.replace(/\D/g, ""))}
                       title="Buscar CEP"
-                      className="text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                      className="text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition-colors p-1"
                     >
                       <Search className="h-4 w-4" />
                     </button>
-                  )}
-                </div>
-              </div>
+                  )
+                }
+              />
 
               <div className="sm:col-span-2">
                 <Input
