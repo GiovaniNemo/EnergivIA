@@ -295,6 +295,38 @@ export default function AdminPlanosPage() {
     }
   };
 
+  const handleDeletePlan = async (plan: Plan) => {
+    const hasSubscribers = (plan._count?.subscriptions || 0) > 0;
+    const confirmMsg = hasSubscribers
+      ? `Atenção: O plano "${plan.name}" possui ${plan._count?.subscriptions} assinaturas vinculadas. Ele será desativado/arquivado para manter a integridade dos contratos. Deseja continuar?`
+      : `Deseja realmente excluir o plano "${plan.name}"?`;
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const res = await fetch(`/api/proxy/plans/${plan.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Erro ao excluir o plano");
+      }
+
+      const result = await res.json().catch(() => ({}));
+      showToast(result.message || `Plano "${plan.name}" excluído com sucesso!`);
+      if (editingPlan?.id === plan.id) {
+        setIsPlanModalOpen(false);
+        setEditingPlan(null);
+      }
+      fetchData();
+    } catch (err: unknown) {
+      console.error(err);
+      const msg = err instanceof Error ? err.message : "Erro ao excluir o plano";
+      showToast(msg, "error");
+    }
+  };
+
   // --- COUPON HANDLERS ---
 
   const handleOpenCreateCoupon = () => {
@@ -712,11 +744,20 @@ export default function AdminPlanosPage() {
                                 onClick={() => handleTogglePlanActive(plan)}
                                 className={`px-3 py-1.5 rounded-xl font-bold text-xs transition border ${
                                   plan.active !== false
-                                    ? "bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/20"
+                                    ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border-amber-500/20"
                                     : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/20"
                                 }`}
+                                title={plan.active !== false ? "Desativar Plano" : "Ativar Plano"}
                               >
                                 {plan.active !== false ? "Desativar" : "Ativar"}
+                              </button>
+
+                              <button
+                                onClick={() => handleDeletePlan(plan)}
+                                className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-600 hover:text-white text-rose-400 transition border border-rose-500/20 shadow-sm"
+                                title="Excluir Plano"
+                              >
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </td>
@@ -1086,6 +1127,17 @@ export default function AdminPlanosPage() {
               </div>
 
               <div className="flex gap-3 pt-2">
+                {editingPlan && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePlan(editingPlan)}
+                    className="px-4 py-3 rounded-xl bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 font-bold text-sm transition flex items-center gap-2"
+                    title="Excluir este plano"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Excluir</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setIsPlanModalOpen(false)}

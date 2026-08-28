@@ -174,6 +174,41 @@ export class PlansService {
     });
   }
 
+  async delete(id: string) {
+    const existing = await this.prisma.plan.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { subscriptions: true },
+        },
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException("Plano não encontrado");
+    }
+
+    if (existing._count.subscriptions > 0) {
+      await this.prisma.plan.update({
+        where: { id },
+        data: { active: false },
+      });
+      return {
+        message: "O plano possui assinaturas vinculadas e foi desativado/arquivado.",
+        action: "deactivated" as const,
+      };
+    }
+
+    await this.prisma.plan.delete({
+      where: { id },
+    });
+
+    return {
+      message: "Plano excluído com sucesso.",
+      action: "deleted" as const,
+    };
+  }
+
   async deactivate(id: string) {
     return this.toggleActive(id, false);
   }

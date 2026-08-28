@@ -34,6 +34,6 @@ export class PlansController {
 
   @Delete(":id")
   async remove(@Param("id") id: string) {
-    return this.plansService.deactivate(id);
+    return this.plansService.delete(id);
   }
 }
