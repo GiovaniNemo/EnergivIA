@@ -25,20 +25,26 @@ export function SpecsPreviewCard({ categoryName }: SpecsPreviewCardProps): JSX.E
 
   if (categoryName === "module") {
     const power = specs["power_w"];
+    const warranty = specs["warranty_years"];
     const voc = specs["voc"];
     const imp = specs["imp"];
     if (power != null) lines.push(`${power}W`);
+    if (warranty != null) lines.push(`Garantia: ${warranty} anos`);
     if (voc != null) lines.push(`Voc: ${voc}V`);
     if (imp != null) lines.push(`Imp: ${imp}A`);
   } else if (categoryName === "inverter") {
     const maxDc = specs["max_dc_power"];
+    const warranty = specs["warranty_years"];
     const mppt = specs["mppt_count"];
     if (maxDc != null) lines.push(`Potência DC máx: ${maxDc}W`);
+    if (warranty != null) lines.push(`Garantia: ${warranty} anos`);
     if (mppt != null) lines.push(`${mppt} MPPTs`);
   } else if (categoryName === "microinverter") {
     const ch = specs["channels"];
+    const warranty = specs["warranty_years"];
     const maxP = specs["max_module_power"];
     if (ch != null) lines.push(`${ch} canais`);
+    if (warranty != null) lines.push(`Garantia: ${warranty} anos`);
     if (maxP != null) lines.push(`Módulo máx: ${maxP}W`);
   } else if (categoryName === "structure_kit") {
     const roof = specs["roof_type"];

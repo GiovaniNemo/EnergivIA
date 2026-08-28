@@ -19,6 +19,11 @@ import { ProposalsService } from "./proposals.service";
 export class ProposalOperationsController {
   constructor(private readonly proposalsService: ProposalsService) {}
 
+  @Post("generate-ai-section")
+  generateAiSection(@Body() body: { prompt: string; contextText?: string }) {
+    return this.proposalsService.generateAiSection(body.prompt, body.contextText);
+  }
+
   @Get()
   list(@TenantId() tenantId: string) {
     return this.proposalsService.list(tenantId);

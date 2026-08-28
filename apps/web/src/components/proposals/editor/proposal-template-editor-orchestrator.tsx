@@ -370,10 +370,16 @@ export function ProposalTemplateEditor({
       variant:
         draft?.variant ??
         (type === "cover" ? "full-image" : (getSectionVariantOptions(type)[0]?.value ?? "default")),
-      title: SECTION_TYPE_LABELS[type],
+      title:
+        (typeof draft?.fieldsPatch?.["title"] === "string" && draft.fieldsPatch["title"].trim()) ||
+        (typeof draft?.fieldsPatch?.["sectionTitle"] === "string" &&
+          draft.fieldsPatch["sectionTitle"].trim()) ||
+        SECTION_TYPE_LABELS[type],
       hidden: false,
       content:
-        draft?.content ?? "<p>Use os campos específicos da seção para configurar este bloco.</p>",
+        draft?.content ??
+        ((typeof draft?.fieldsPatch?.["text"] === "string" && draft.fieldsPatch["text"].trim()) ||
+          "<p>Use os campos específicos da seção para configurar este bloco.</p>"),
       fields: { ...SECTION_DEFAULT_FIELDS[type], ...(draft?.fieldsPatch ?? {}) },
     };
     const next = {

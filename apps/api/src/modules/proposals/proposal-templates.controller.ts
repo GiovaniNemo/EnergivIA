@@ -2,13 +2,22 @@ import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/co
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
 import { TenantId } from "../../common/decorators/tenant-id.decorator";
 import { ProposalTemplatesService } from "./proposal-templates.service";
+import { ProposalsService } from "./proposals.service";
 import { CreateProposalTemplateDto } from "./dto/create-proposal-template.dto";
 import { UpdateProposalTemplateDto } from "./dto/update-proposal-template.dto";
 
 @Controller("proposal-templates")
 @UseGuards(UnifiedAuthGuard)
 export class ProposalTemplatesController {
-  constructor(private readonly templatesService: ProposalTemplatesService) {}
+  constructor(
+    private readonly templatesService: ProposalTemplatesService,
+    private readonly proposalsService: ProposalsService
+  ) {}
+
+  @Post("generate-ai-section")
+  generateAiSection(@Body() body: { prompt: string; contextText?: string }) {
+    return this.proposalsService.generateAiSection(body.prompt, body.contextText);
+  }
 
   @Get()
   list(@TenantId() tenantId: string) {

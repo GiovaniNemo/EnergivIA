@@ -29,7 +29,7 @@ export interface ProposalEquipmentItem {
   datasheetUrl?: string | null;
 }
 
-export const PROPOSAL_EQUIPMENT_SPEC_SLOTS = 3;
+export const PROPOSAL_EQUIPMENT_SPEC_SLOTS = 4;
 
 const CATEGORY_LABELS: Record<string, string> = {
   module: "Módulo",
@@ -105,6 +105,7 @@ export function createEmptyProposalEquipmentItem(): ProposalEquipmentItem {
       emptyProposalEquipmentSpec(),
       emptyProposalEquipmentSpec(),
       emptyProposalEquipmentSpec(),
+      emptyProposalEquipmentSpec(),
     ],
   };
 }
@@ -157,29 +158,82 @@ export function buildEquipmentDisplaySpecs(
   const qSpec = quantitySpec(quantity);
   let a = emptyProposalEquipmentSpec();
   let b = emptyProposalEquipmentSpec();
+  let c = emptyProposalEquipmentSpec();
 
   if (cat === "module") {
     const power = num(specs, "power_w");
     const eff = num(specs, "efficiency");
     const voc = num(specs, "voc");
+    const warranty =
+      num(specs, "warranty_years") ?? str(specs, "warranty") ?? str(specs, "warranty_description");
     if (power != null) a = { label: "Potência", value: `${power} Wp`, icon: "zap" };
-    if (eff != null) b = { label: "Eficiência", value: `${eff}%`, icon: "percent" };
-    else if (voc != null) b = { label: "Voc", value: `${voc} V`, icon: "plug" };
+    if (warranty != null) {
+      b = {
+        label: "Garantia",
+        value:
+          typeof warranty === "number" || /^\d+$/.test(String(warranty))
+            ? `${warranty} anos`
+            : String(warranty),
+        icon: "shield",
+      };
+    } else {
+      b = { label: "Garantia", value: "25 anos", icon: "shield" };
+    }
+    if (eff != null) c = { label: "Eficiência", value: `${eff}%`, icon: "percent" };
+    else if (voc != null) c = { label: "Voc", value: `${voc} V`, icon: "plug" };
   } else if (cat === "inverter") {
-    const maxDc = num(specs, "max_dc_power");
+    const maxDc = num(specs, "max_dc_power") ?? num(specs, "nominal_power_w");
     const mppt = num(specs, "mppt_count");
-    if (maxDc != null) a = { label: "Potência DC máx.", value: `${maxDc} W`, icon: "zap" };
-    if (mppt != null) b = { label: "MPPTs", value: String(mppt), icon: "layers" };
+    const warranty =
+      num(specs, "warranty_years") ?? str(specs, "warranty") ?? str(specs, "warranty_description");
+    if (maxDc != null) {
+      a = {
+        label: "Potência máx.",
+        value:
+          maxDc >= 1000
+            ? `${(maxDc / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} kW`
+            : `${maxDc} W`,
+        icon: "zap",
+      };
+    }
+    if (warranty != null) {
+      b = {
+        label: "Garantia",
+        value:
+          typeof warranty === "number" || /^\d+$/.test(String(warranty))
+            ? `${warranty} anos`
+            : String(warranty),
+        icon: "shield",
+      };
+    } else {
+      b = { label: "Garantia", value: "10 anos", icon: "shield" };
+    }
+    if (mppt != null) c = { label: "MPPTs", value: `${mppt} trackers`, icon: "layers" };
   } else if (cat === "microinverter") {
     const ch = num(specs, "channels");
     const maxP = num(specs, "max_module_power");
-    if (ch != null) a = { label: "Canais", value: String(ch), icon: "layers" };
-    if (maxP != null) b = { label: "Módulo máx.", value: `${maxP} W`, icon: "zap" };
+    const warranty =
+      num(specs, "warranty_years") ?? str(specs, "warranty") ?? str(specs, "warranty_description");
+    if (maxP != null) a = { label: "Módulo máx.", value: `${maxP} W`, icon: "zap" };
+    if (warranty != null) {
+      b = {
+        label: "Garantia",
+        value:
+          typeof warranty === "number" || /^\d+$/.test(String(warranty))
+            ? `${warranty} anos`
+            : String(warranty),
+        icon: "shield",
+      };
+    } else {
+      b = { label: "Garantia", value: "12 anos", icon: "shield" };
+    }
+    if (ch != null) c = { label: "Canais", value: `${ch} módulos`, icon: "layers" };
   } else if (cat === "structure_kit") {
     const roof = str(specs, "roof_type");
     const maxM = num(specs, "max_modules");
     if (roof) a = { label: "Telhado", value: roof, icon: "home" };
     if (maxM != null) b = { label: "Até módulos", value: String(maxM), icon: "layout-grid" };
+    c = { label: "Garantia", value: "10 anos", icon: "shield" };
   } else if (cat === "dc_cable") {
     const sec = num(specs, "section_mm2");
     const v = num(specs, "max_voltage");
@@ -188,10 +242,10 @@ export function buildEquipmentDisplaySpecs(
   } else if (cat === "connector") {
     const t = str(specs, "type");
     if (t) a = { label: "Tipo", value: t.toUpperCase(), icon: "plug" };
-    b = { label: "Categoria", value: "Conector", icon: "circle-dot" };
+    b = { label: "Garantia", value: "5 anos", icon: "shield" };
   }
 
-  const out = [a, b, qSpec];
+  const out = [a, b, qSpec, c].filter((s) => s.label.trim() !== "");
   while (out.length < PROPOSAL_EQUIPMENT_SPEC_SLOTS) {
     out.push(emptyProposalEquipmentSpec());
   }
@@ -290,6 +344,7 @@ export function inferSpecsFromProductDetails(
   const qSpec = quantitySpec(quantity);
   let a = emptyProposalEquipmentSpec();
   let b = emptyProposalEquipmentSpec();
+  let c = emptyProposalEquipmentSpec();
 
   if (cat === "module") {
     const match = productName.match(/(\d+)\s*W(?:p)?\b/i);
@@ -298,6 +353,7 @@ export function inferSpecsFromProductDetails(
       a = { label: "Potência", value: `${powerW} Wp`, icon: "zap" };
     }
     b = { label: "Garantia", value: "25 anos", icon: "shield" };
+    c = { label: "Eficiência", value: "Alta eficiência", icon: "percent" };
   } else if (cat === "inverter" || cat === "microinverter") {
     const matchKw = productName.match(/(\d+(?:[.,]\d+)?)\s*KW\b/i);
     const matchW = productName.match(/(\d{3,5})\s*W\b/i);
@@ -307,10 +363,15 @@ export function inferSpecsFromProductDetails(
     } else if (matchW) {
       a = { label: "Potência", value: `${matchW[1]} W`, icon: "zap" };
     }
-    b = { label: "Garantia", value: "15 anos", icon: "shield" };
+    b = {
+      label: "Garantia",
+      value: cat === "microinverter" ? "12 anos" : "10 anos",
+      icon: "shield",
+    };
+    c = { label: "Monitoramento", value: "Wi-Fi integrado", icon: "activity" };
   }
 
-  const out = [a, b, qSpec];
+  const out = [a, b, qSpec, c].filter((s) => s.label.trim() !== "");
   while (out.length < PROPOSAL_EQUIPMENT_SPEC_SLOTS) {
     out.push(emptyProposalEquipmentSpec());
   }
@@ -525,6 +586,7 @@ export const DEMO_PROPOSAL_EQUIPMENT_ITEMS: ProposalEquipmentItem[] = [
       { label: "Potência", value: "620 Wp", icon: "zap" },
       { label: "Garantia", value: "25 anos", icon: "shield" },
       { label: "Quantidade", value: "9 unidades", icon: "hash" },
+      { label: "Eficiência", value: "21.8%", icon: "percent" },
     ],
   },
   {
@@ -536,8 +598,9 @@ export const DEMO_PROPOSAL_EQUIPMENT_ITEMS: ProposalEquipmentItem[] = [
     subtitle: "String 5 kW",
     specs: [
       { label: "Potência", value: "5.000 W", icon: "zap" },
-      { label: "Garantia", value: "15 anos", icon: "shield" },
+      { label: "Garantia", value: "10 anos", icon: "shield" },
       { label: "Quantidade", value: "1 unidade", icon: "hash" },
+      { label: "MPPTs", value: "2 trackers", icon: "layers" },
     ],
   },
 ];

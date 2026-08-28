@@ -14,6 +14,7 @@ import {
   SECTION_VARIANTS,
   VARIANT_LABELS,
 } from "./section-fields";
+import { generateAiProposalSection } from "@/lib/proposal-templates-api";
 import { Cover } from "@/components/sections/Cover/Cover";
 
 const SECTION_META: Record<SectionType, { desc: string; vars: number }> = {
@@ -868,12 +869,81 @@ export function AddSectionModal({
 }: AddSectionModalProps) {
   const [libraryView, setLibraryView] = useState<LibraryView>("all");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<"all" | "popular" | "new">("all");
   const [selectedType, setSelectedType] = useState<SectionType | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState<Set<SectionType>>(new Set());
-  const [activeFilter, setActiveFilter] = useState<"all" | "popular" | "new">("all");
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isAiMode, setIsAiMode] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiResult, setAiResult] = useState<{ title: string; text: string } | null>(null);
+  const [editableTitle, setEditableTitle] = useState("");
+  const [editableText, setEditableText] = useState("");
+  const [previewTab, setPreviewTab] = useState<"preview" | "code">("preview");
+
+  const AI_SUGGESTIONS = useMemo(
+    () => [
+      {
+        label: "🛡️ Garantias e Pós-Venda",
+        prompt:
+          "Crie uma seção detalhando a segurança de contar com 25 anos de garantia nos módulos solares, 10 anos nos inversores e suporte técnico especializado da nossa empresa.",
+      },
+      {
+        label: "⭐ Por que Escolher Nossa Empresa",
+        prompt:
+          "Apresente os diferenciais da nossa integradora solar: equipe própria de engenharia, centenas de projetos instalados, homologação ágil e pós-venda dedicado.",
+      },
+      {
+        label: "⚡ Alta Tecnologia & Eficiência",
+        prompt:
+          "Explique como módulos solares de alta potência e inversores inteligentes com aplicativo de monitoramento 24h garantem a máxima geração de energia.",
+      },
+      {
+        label: "💰 Economia e Retorno Financeiro",
+        prompt:
+          "Demonstre como a energia solar protege o cliente contra a inflação e reajustes nas tarifas da concessionária, trazendo economia imediata e valorização imobiliária.",
+      },
+      {
+        label: "🔧 Etapas do Projeto Solar",
+        prompt:
+          "Apresente as etapas do projeto solar desde a visita técnica, aprovação do projeto na concessionária, instalação limpa até a troca do relógio e ativação do sistema.",
+      },
+    ],
+    []
+  );
+
+  async function handleGenerateAi(promptToUse?: string) {
+    const prompt = (promptToUse ?? aiPrompt).trim();
+    if (!prompt) {
+      setAiError("Por favor, digite uma descrição para a seção que deseja criar.");
+      return;
+    }
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const res = await generateAiProposalSection(prompt);
+      setAiResult(res);
+      setEditableTitle(res.title || "Nova Seção");
+      setEditableText(res.text || "");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao gerar seção com IA.";
+      setAiError(msg);
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  function handleInsertAiSection() {
+    if (!editableTitle.trim() && !editableText.trim()) return;
+    onAdd("custom", "default", {
+      title: editableTitle.trim() || "Nova Seção Personalizada",
+      sectionTitle: editableTitle.trim() || "Nova Seção Personalizada",
+      text: editableText,
+    });
+    onClose();
+  }
   const openRef = useRef(open);
   openRef.current = open;
 
@@ -982,7 +1052,7 @@ export function AddSectionModal({
         style={{ height: "min(760px, calc(100vh - 80px))" }}
         onClick={(e) => e.stopPropagation()}
       >
-        { }
+        {}
         <div className="flex shrink-0 items-center gap-4 border-b border-[var(--color-border)] px-6 py-4">
           <div>
             <h2 className="text-[17px] font-bold text-[var(--color-foreground)]">
@@ -995,7 +1065,7 @@ export function AddSectionModal({
             )}
           </div>
 
-          { }
+          {}
           <div className="relative ml-auto max-w-[420px] flex-1">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted-foreground)]">
               <IconSearch />
@@ -1022,381 +1092,602 @@ export function AddSectionModal({
           </button>
         </div>
 
-        { }
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          { }
-          <aside className="w-[248px] shrink-0 overflow-y-auto border-r border-[var(--color-border)] bg-[var(--color-background)] p-3">
-            { }
-            <div className="mb-4">
-              <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-[var(--color-muted-foreground)]">
-                Biblioteca
-              </p>
-              {(
-                [
-                  {
-                    view: "all" as const,
-                    label: "Todas as seções",
-                    icon: <IconGrid />,
-                    count: SECTION_TYPES.length,
-                  },
-                  {
-                    view: "recent" as const,
-                    label: "Recentes",
-                    icon: <IconClock />,
-                    count: recentTypes.length,
-                  },
-                  {
-                    view: "favorites" as const,
-                    label: "Favoritas",
-                    icon: <IconStar />,
-                    count: favorites.size,
-                  },
-                ] as const
-              ).map(({ view, label, icon, count }) => (
+        {isAiMode ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+            {/* Left Column: Prompt & Presets */}
+            <div className="flex w-full flex-col border-b border-[var(--color-border)] bg-[var(--color-background)] p-6 lg:w-[460px] lg:border-b-0 lg:border-r overflow-y-auto">
+              <div className="mb-4 flex items-center justify-between">
                 <button
-                  key={view}
                   type="button"
-                  onClick={() => {
-                    setLibraryView(view);
-                    setActiveCategory(null);
-                  }}
-                  className={`mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition ${libraryView === view && !activeCategory
-                    ? "bg-emerald-50 font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
-                    : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
-                    }`}
+                  onClick={() => setIsAiMode(false)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition"
                 >
-                  <span className="shrink-0">{icon}</span>
-                  <span className="flex-1 text-left">{label}</span>
-                  <span className="text-[11px] text-[var(--color-muted-foreground)]">{count}</span>
+                  ← Voltar à biblioteca
                 </button>
-              ))}
-            </div>
-
-            { }
-            <div className="mb-4">
-              <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-[var(--color-muted-foreground)]">
-                Categorias
-              </p>
-              {SECTION_CATEGORY_ORDER.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => {
-                    setActiveCategory(cat);
-                    setLibraryView("all");
-                  }}
-                  className={`mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition ${activeCategory === cat
-                    ? "bg-emerald-50 font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
-                    : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
-                    }`}
-                >
-                  <span className="shrink-0">{CATEGORY_ICON[cat]}</span>
-                  <span className="flex-1 text-left">{cat}</span>
-                  <span className="text-[11px] text-[var(--color-muted-foreground)]">
-                    {categoryCounts[cat]}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            { }
-            <div className="mx-2 mb-4 border-t border-[var(--color-border)]" />
-
-            { }
-            <div className="mb-4">
-              <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-[var(--color-muted-foreground)]">
-                Pessoal
-              </p>
-              <button
-                type="button"
-                className="mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
-              >
-                <IconBookmark />
-                <span className="flex-1 text-left">Minhas seções</span>
-              </button>
-              <button
-                type="button"
-                className="mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
-              >
-                <IconUpload />
-                <span className="flex-1 text-left">Importar de outra proposta</span>
-              </button>
-            </div>
-
-            { }
-            <div className="mx-1 rounded-xl border border-violet-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-3 dark:border-violet-800 dark:from-indigo-950/30 dark:to-purple-950/30">
-              <p className="mb-1 flex items-center gap-1.5 text-[12px] font-bold text-violet-700 dark:text-violet-400">
-                <IconSparkle /> Gerar com IA
-              </p>
-              <p className="mb-2.5 text-[11px] leading-snug text-[var(--color-muted-foreground)]">
-                Descreva a seção que precisa e a IA cria a partir do contexto da proposta.
-              </p>
-              <button
-                type="button"
-                onClick={() => alert("A geração de seções com IA entrará em funcionamento na próxima atualização! Em breve você poderá criar análises e textos comerciais de forma automática.")}
-                className="w-full rounded-lg bg-gradient-to-r from-violet-600 to-indigo-500 py-2 text-[11px] font-semibold text-white hover:from-violet-700 hover:to-indigo-600"
-              >
-                + Nova seção com IA
-              </button>
-            </div>
-          </aside>
-
-          { }
-          <main className="flex-1 overflow-y-auto p-5">
-            { }
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <p className="mr-auto text-[14px] font-semibold text-[var(--color-foreground)]">
-                {activeCategory ??
-                  (libraryView === "favorites"
-                    ? "Favoritas"
-                    : libraryView === "recent"
-                      ? "Recentes"
-                      : "Todas as seções")}
-                <span className="ml-2 text-[13px] font-normal text-[var(--color-muted-foreground)]">
-                  {filteredTypes.length} seções
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 text-[11px] font-bold text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
+                  <IconSparkle /> Gemini AI
                 </span>
+              </div>
+
+              <h3 className="text-lg font-bold text-[var(--color-foreground)]">
+                Criar Seção com Inteligência Artificial
+              </h3>
+              <p className="mt-1 text-xs text-[var(--color-muted-foreground)] leading-relaxed">
+                Descreva o conteúdo que deseja gerar para a proposta ou escolha um dos modelos
+                rápidos abaixo.
               </p>
-              {(["all", "popular", "new"] as const).map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => setActiveFilter(f)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] transition ${activeFilter === f
-                    ? "border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-card)]"
-                    : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:border-[var(--color-foreground)]/30 hover:text-[var(--color-foreground)]"
-                    }`}
-                >
-                  {f === "all" ? "Todos" : f === "popular" ? "Mais usadas" : "Novas"}
-                </button>
-              ))}
-            </div>
 
-            {filteredTypes.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <p className="text-[14px] font-medium text-[var(--color-muted-foreground)]">
-                  Nenhuma seção encontrada
-                </p>
-                <p className="text-[12px] text-[var(--color-muted-foreground)]/60">
-                  Tente outro termo ou categoria
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(172px,1fr))] gap-3">
-                {filteredTypes.map((type) => {
-                  const inTemplate = existingTypes.has(type);
-                  const isFav = favorites.has(type);
-                  const isSelected = selectedType === type;
-                  const isNew = NEW_TYPES.includes(type);
-                  return (
-                    <div
-                      key={type}
-                      onClick={() => {
-                        setSelectedType(type);
-                        setSelectedVariant(null);
-                      }}
-                      className={`group cursor-pointer overflow-hidden rounded-xl border transition-all ${isSelected
-                        ? "border-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]"
-                        : "border-[var(--color-border)] hover:border-emerald-400 hover:shadow-md hover:-translate-y-0.5"
-                        } bg-[var(--color-card)]`}
-                    >
-                      { }
-                      <div className="relative aspect-[4/3] border-b border-[var(--color-border)] bg-[var(--color-background)] p-2">
-                        <SectionMockup kind={TYPE_MOCKUP[type]} />
-                        {inTemplate && (
-                          <span className="absolute right-2 top-2 rounded bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-                            No template
-                          </span>
-                        )}
-                        {!inTemplate && isNew && (
-                          <span className="absolute right-2 top-2 rounded bg-indigo-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-                            Novo
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={(e) => toggleFavorite(type, e)}
-                          className={`absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border-none bg-white/90 text-[var(--color-muted-foreground)] shadow backdrop-blur-sm transition ${isFav
-                            ? "opacity-100 text-amber-500"
-                            : "opacity-0 group-hover:opacity-100"
-                            }`}
-                        >
-                          <svg
-                            width="11"
-                            height="11"
-                            viewBox="0 0 24 24"
-                            fill={isFav ? "currentColor" : "none"}
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <polygon points="12 2 15 8.5 22 9.3 17 14 18.2 21 12 17.8 5.8 21 7 14 2 9.3 9 8.5 12 2" />
-                          </svg>
-                        </button>
-                      </div>
-                      { }
-                      <div className="px-3 py-2.5">
-                        <p className="text-[13px] font-semibold leading-tight text-[var(--color-foreground)]">
-                          {SECTION_TYPE_LABELS[type]}
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-[var(--color-muted-foreground)]">
-                          {SECTION_CATEGORY_BY_TYPE[type]}
-                          {(() => {
-                            const variantCount = (SECTION_VARIANTS[type] ?? []).length;
-                            return variantCount > 1 ? ` · ${variantCount} variantes` : "";
-                          })()}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </main>
+              <div className="mt-4 space-y-3">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                  Instrução / Prompt
+                </label>
+                <textarea
+                  rows={4}
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder="Ex: Crie uma seção de garantias e pós-venda destacando nossos 25 anos de garantia nos módulos solares, 10 anos nos inversores e suporte técnico prioritário..."
+                  className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)]/60 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                />
 
-          { }
-          <aside className="flex w-[340px] shrink-0 flex-col overflow-y-auto border-l border-[var(--color-border)]">
-            {selected && selectedMeta ? (
-              <>
-                { }
-                <div className="shrink-0 bg-[var(--color-background)] p-4">
-                  <ScaledSectionPreview
-                    type={selected}
-                    variant={selectedVariant ?? undefined}
-                    branding={branding}
-                  />
-                </div>
-
-                { }
-                <div className="flex-1 px-5 pb-5 pt-4">
-                  <span className="mb-2 inline-block rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
-                    {SECTION_CATEGORY_BY_TYPE[selected]}
+                <div className="flex flex-col gap-2 pt-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                    Sugestões rápidas
                   </span>
-                  <h3 className="mb-1 text-[17px] font-bold text-[var(--color-foreground)]">
-                    {SECTION_TYPE_LABELS[selected]}
-                  </h3>
-                  <p className="mb-4 text-[13px] leading-relaxed text-[var(--color-muted-foreground)]">
-                    {selectedMeta.desc}
-                  </p>
-
-                  { }
-                  <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-[var(--color-background)] p-3">
-                    {[
-                      { label: "Páginas", value: "1" },
-                      {
-                        label: "Variáveis",
-                        value: selectedMeta.vars > 0 ? `${selectedMeta.vars} dinâmicas` : "—",
-                      },
-                      { label: "Última atualização", value: "há 3 dias" },
-                      {
-                        label: "Usado em",
-                        value: `${((selected.length * 17 + 23) % 180) + 20} propostas`,
-                      },
-                    ].map(({ label, value }) => (
-                      <div key={label}>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                          {label}
-                        </p>
-                        <p className="mt-0.5 text-[12px] font-semibold text-[var(--color-foreground)]">
-                          {value}
-                        </p>
-                      </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {AI_SUGGESTIONS.map((item, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setAiPrompt(item.prompt);
+                          handleGenerateAi(item.prompt);
+                        }}
+                        className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-1.5 text-left text-xs font-medium text-[var(--color-foreground)] hover:border-violet-400 hover:bg-violet-50/50 dark:hover:bg-violet-950/30 transition"
+                      >
+                        {item.label}
+                      </button>
                     ))}
                   </div>
+                </div>
 
-                  { }
-                  {(() => {
-                    const variants = SECTION_VARIANTS[selected] ?? [];
-                    if (variants.length <= 1) return null;
-                    const activeVariant = selectedVariant ?? variants[0];
-                    return (
+                {aiError && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+                    {aiError}
+                  </div>
+                )}
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    disabled={aiLoading || !aiPrompt.trim()}
+                    onClick={() => handleGenerateAi()}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 py-3 text-sm font-bold text-white shadow-md hover:from-violet-700 hover:to-indigo-700 disabled:opacity-50 transition"
+                  >
+                    {aiLoading ? (
                       <>
-                        <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                          Variantes ({variants.length})
-                        </p>
-                        <div
-                          className={`grid gap-2 ${variants.length <= 2 ? "grid-cols-2" : "grid-cols-3"}`}
-                        >
-                          {variants.map((v) => (
-                            <button
-                              key={v}
-                              type="button"
-                              onClick={() => setSelectedVariant(v)}
-                              className={`flex cursor-pointer flex-col gap-1 rounded-lg border-2 p-1 transition ${v === activeVariant
-                                ? "border-emerald-500"
-                                : "border-[var(--color-border)] hover:border-[var(--color-foreground)]/30"
-                                }`}
-                            >
-                              <div className="aspect-video w-full overflow-hidden rounded">
-                                <ScaledSectionPreview
-                                  type={selected}
-                                  variant={v}
-                                  containerWidth={84}
-                                  aspectRatio={9 / 16}
-                                  branding={branding}
-                                />
-                              </div>
-                              <p className="truncate text-center text-[9px] font-medium text-[var(--color-muted-foreground)]">
-                                {VARIANT_LABELS[v] ?? v}
-                              </p>
-                            </button>
-                          ))}
-                        </div>
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v8H4z"
+                          />
+                        </svg>
+                        <span>Gerando conteúdo com IA...</span>
                       </>
-                    );
-                  })()}
+                    ) : (
+                      <>
+                        <IconSparkle /> Gerar Seção
+                      </>
+                    )}
+                  </button>
                 </div>
-              </>
-            ) : (
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-background)]">
-                  <IconGrid />
-                </div>
-                <p className="text-[13px] font-medium text-[var(--color-foreground)]">
-                  Selecione uma seção
-                </p>
-                <p className="text-[12px] leading-snug text-[var(--color-muted-foreground)]">
-                  Clique em qualquer card para ver o preview e as informações detalhadas.
-                </p>
               </div>
-            )}
-          </aside>
-        </div>
+            </div>
 
-        { }
-        <div className="flex shrink-0 items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-background)] px-5 py-3.5">
-          <div className="flex items-center gap-2 text-[12px] text-[var(--color-muted-foreground)]">
-            <span>Posição:</span>
-            <select className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-1.5 text-[12px] text-[var(--color-foreground)] focus:outline-none">
-              <option>Após última seção</option>
-              <option>No início</option>
-              <option>No final</option>
-            </select>
-          </div>
+            {/* Right Column: Live Result & Actions */}
+            <div className="flex flex-1 flex-col overflow-y-auto p-6 bg-[var(--color-card)]">
+              <div className="mb-4 flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+                <div>
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-[var(--color-foreground)]">
+                    Pré-visualização do Resultado
+                  </h4>
+                  <p className="text-xs text-[var(--color-muted-foreground)]">
+                    Você pode ajustar o título e o texto antes de adicionar à proposta.
+                  </p>
+                </div>
+                {aiResult && (
+                  <div className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] p-0.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewTab("preview")}
+                      className={`rounded px-2.5 py-1 font-medium transition ${previewTab === "preview" ? "bg-[var(--color-foreground)] text-[var(--color-card)]" : "text-[var(--color-muted-foreground)]"}`}
+                    >
+                      Visualização
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewTab("code")}
+                      className={`rounded px-2.5 py-1 font-medium transition ${previewTab === "code" ? "bg-[var(--color-foreground)] text-[var(--color-card)]" : "text-[var(--color-muted-foreground)]"}`}
+                    >
+                      Editar HTML
+                    </button>
+                  </div>
+                )}
+              </div>
 
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-4 py-2 text-[13px] font-medium text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              disabled={!selected}
-              className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-2 text-[13px] font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40"
-            >
-              <IconCopy /> Duplicar
-            </button>
-            <button
-              type="button"
-              disabled={!selected}
-              onClick={handleAdd}
-              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
-            >
-              <IconPlus /> Adicionar ao template
-            </button>
+              {!aiResult && !aiLoading && (
+                <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 mb-3">
+                    <IconSparkle />
+                  </div>
+                  <h5 className="text-sm font-bold text-[var(--color-foreground)]">
+                    Nenhum conteúdo gerado ainda
+                  </h5>
+                  <p className="mt-1 max-w-sm text-xs text-[var(--color-muted-foreground)]">
+                    Escolha uma das sugestões ao lado ou escreva o que deseja para a seção e clique
+                    em <strong>Gerar Seção</strong>.
+                  </p>
+                </div>
+              )}
+
+              {aiLoading && (
+                <div className="flex flex-1 flex-col items-center justify-center p-8 text-center animate-pulse">
+                  <div className="h-10 w-3/4 rounded-lg bg-slate-200 dark:bg-slate-700 mb-4" />
+                  <div className="h-4 w-full rounded bg-slate-200 dark:bg-slate-700 mb-2" />
+                  <div className="h-4 w-5/6 rounded bg-slate-200 dark:bg-slate-700 mb-2" />
+                  <div className="h-4 w-4/6 rounded bg-slate-200 dark:bg-slate-700 mb-2" />
+                  <p className="mt-4 text-xs font-semibold text-violet-600 dark:text-violet-400">
+                    O Gemini está redigindo os argumentos e formatando o HTML da seção...
+                  </p>
+                </div>
+              )}
+
+              {aiResult && !aiLoading && (
+                <div className="flex flex-1 flex-col space-y-4">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                      Título da Seção
+                    </label>
+                    <input
+                      type="text"
+                      value={editableTitle}
+                      onChange={(e) => setEditableTitle(e.target.value)}
+                      className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] px-3.5 py-2 text-base font-bold text-[var(--color-foreground)] focus:border-violet-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex-1">
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                      Conteúdo
+                    </label>
+                    {previewTab === "preview" ? (
+                      <div
+                        className="prose prose-sm dark:prose-invert max-w-none rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-5 min-h-[180px]"
+                        dangerouslySetInnerHTML={{ __html: editableText }}
+                      />
+                    ) : (
+                      <textarea
+                        rows={8}
+                        value={editableText}
+                        onChange={(e) => setEditableText(e.target.value)}
+                        className="w-full font-mono rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-xs text-[var(--color-foreground)] focus:border-violet-500 focus:outline-none"
+                      />
+                    )}
+                  </div>
+
+                  <div className="mt-auto flex items-center justify-between border-t border-[var(--color-border)] pt-4">
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateAi()}
+                      className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-muted)] transition"
+                    >
+                      Gerar outra versão
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleInsertAiSection}
+                      className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow hover:bg-emerald-700 transition"
+                    >
+                      <IconPlus /> Inserir esta seção no template
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="flex min-h-0 flex-1 overflow-hidden">
+              {}
+              <aside className="w-[248px] shrink-0 overflow-y-auto border-r border-[var(--color-border)] bg-[var(--color-background)] p-3">
+                {}
+                <div className="mb-4">
+                  <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-[var(--color-muted-foreground)]">
+                    Biblioteca
+                  </p>
+                  {(
+                    [
+                      {
+                        view: "all" as const,
+                        label: "Todas as seções",
+                        icon: <IconGrid />,
+                        count: SECTION_TYPES.length,
+                      },
+                      {
+                        view: "recent" as const,
+                        label: "Recentes",
+                        icon: <IconClock />,
+                        count: recentTypes.length,
+                      },
+                      {
+                        view: "favorites" as const,
+                        label: "Favoritas",
+                        icon: <IconStar />,
+                        count: favorites.size,
+                      },
+                    ] as const
+                  ).map(({ view, label, icon, count }) => (
+                    <button
+                      key={view}
+                      type="button"
+                      onClick={() => {
+                        setLibraryView(view);
+                        setActiveCategory(null);
+                      }}
+                      className={`mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition ${
+                        libraryView === view && !activeCategory
+                          ? "bg-emerald-50 font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                          : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
+                      }`}
+                    >
+                      <span className="shrink-0">{icon}</span>
+                      <span className="flex-1 text-left">{label}</span>
+                      <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                        {count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {}
+                <div className="mb-4">
+                  <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-[var(--color-muted-foreground)]">
+                    Categorias
+                  </p>
+                  {SECTION_CATEGORY_ORDER.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => {
+                        setActiveCategory(cat);
+                        setLibraryView("all");
+                      }}
+                      className={`mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition ${
+                        activeCategory === cat
+                          ? "bg-emerald-50 font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                          : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
+                      }`}
+                    >
+                      <span className="shrink-0">{CATEGORY_ICON[cat]}</span>
+                      <span className="flex-1 text-left">{cat}</span>
+                      <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                        {categoryCounts[cat]}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {}
+                <div className="mx-2 mb-4 border-t border-[var(--color-border)]" />
+
+                {}
+                <div className="mb-4">
+                  <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-[var(--color-muted-foreground)]">
+                    Pessoal
+                  </p>
+                  <button
+                    type="button"
+                    className="mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
+                  >
+                    <IconBookmark />
+                    <span className="flex-1 text-left">Minhas seções</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
+                  >
+                    <IconUpload />
+                    <span className="flex-1 text-left">Importar de outra proposta</span>
+                  </button>
+                </div>
+
+                {}
+                <div className="mx-1 rounded-xl border border-violet-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-3 dark:border-violet-800 dark:from-indigo-950/30 dark:to-purple-950/30">
+                  <p className="mb-1 flex items-center gap-1.5 text-[12px] font-bold text-violet-700 dark:text-violet-400">
+                    <IconSparkle /> Gerar com IA
+                  </p>
+                  <p className="mb-2.5 text-[11px] leading-snug text-[var(--color-muted-foreground)]">
+                    Descreva a seção que precisa e a IA cria a partir do contexto da proposta.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsAiMode(true)}
+                    className="w-full rounded-lg bg-gradient-to-r from-violet-600 to-indigo-500 py-2 text-[11px] font-semibold text-white hover:from-violet-700 hover:to-indigo-600"
+                  >
+                    + Nova seção com IA
+                  </button>
+                </div>
+              </aside>
+
+              {}
+              <main className="flex-1 overflow-y-auto p-5">
+                {}
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <p className="mr-auto text-[14px] font-semibold text-[var(--color-foreground)]">
+                    {activeCategory ??
+                      (libraryView === "favorites"
+                        ? "Favoritas"
+                        : libraryView === "recent"
+                          ? "Recentes"
+                          : "Todas as seções")}
+                    <span className="ml-2 text-[13px] font-normal text-[var(--color-muted-foreground)]">
+                      {filteredTypes.length} seções
+                    </span>
+                  </p>
+                  {(["all", "popular", "new"] as const).map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setActiveFilter(f)}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] transition ${
+                        activeFilter === f
+                          ? "border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-card)]"
+                          : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:border-[var(--color-foreground)]/30 hover:text-[var(--color-foreground)]"
+                      }`}
+                    >
+                      {f === "all" ? "Todos" : f === "popular" ? "Mais usadas" : "Novas"}
+                    </button>
+                  ))}
+                </div>
+
+                {filteredTypes.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <p className="text-[14px] font-medium text-[var(--color-muted-foreground)]">
+                      Nenhuma seção encontrada
+                    </p>
+                    <p className="text-[12px] text-[var(--color-muted-foreground)]/60">
+                      Tente outro termo ou categoria
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(172px,1fr))] gap-3">
+                    {filteredTypes.map((type) => {
+                      const inTemplate = existingTypes.has(type);
+                      const isFav = favorites.has(type);
+                      const isSelected = selectedType === type;
+                      const isNew = NEW_TYPES.includes(type);
+                      return (
+                        <div
+                          key={type}
+                          onClick={() => {
+                            setSelectedType(type);
+                            setSelectedVariant(null);
+                          }}
+                          className={`group cursor-pointer overflow-hidden rounded-xl border transition-all ${
+                            isSelected
+                              ? "border-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]"
+                              : "border-[var(--color-border)] hover:border-emerald-400 hover:shadow-md hover:-translate-y-0.5"
+                          } bg-[var(--color-card)]`}
+                        >
+                          {}
+                          <div className="relative aspect-[4/3] border-b border-[var(--color-border)] bg-[var(--color-background)] p-2">
+                            <SectionMockup kind={TYPE_MOCKUP[type]} />
+                            {inTemplate && (
+                              <span className="absolute right-2 top-2 rounded bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                                No template
+                              </span>
+                            )}
+                            {!inTemplate && isNew && (
+                              <span className="absolute right-2 top-2 rounded bg-indigo-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                                Novo
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => toggleFavorite(type, e)}
+                              className={`absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border-none bg-white/90 text-[var(--color-muted-foreground)] shadow backdrop-blur-sm transition ${
+                                isFav
+                                  ? "opacity-100 text-amber-500"
+                                  : "opacity-0 group-hover:opacity-100"
+                              }`}
+                            >
+                              <svg
+                                width="11"
+                                height="11"
+                                viewBox="0 0 24 24"
+                                fill={isFav ? "currentColor" : "none"}
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <polygon points="12 2 15 8.5 22 9.3 17 14 18.2 21 12 17.8 5.8 21 7 14 2 9.3 9 8.5 12 2" />
+                              </svg>
+                            </button>
+                          </div>
+                          {}
+                          <div className="px-3 py-2.5">
+                            <p className="text-[13px] font-semibold leading-tight text-[var(--color-foreground)]">
+                              {SECTION_TYPE_LABELS[type]}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-[var(--color-muted-foreground)]">
+                              {SECTION_CATEGORY_BY_TYPE[type]}
+                              {(() => {
+                                const variantCount = (SECTION_VARIANTS[type] ?? []).length;
+                                return variantCount > 1 ? ` · ${variantCount} variantes` : "";
+                              })()}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </main>
+
+              {}
+              <aside className="flex w-[340px] shrink-0 flex-col overflow-y-auto border-l border-[var(--color-border)]">
+                {selected && selectedMeta ? (
+                  <>
+                    {}
+                    <div className="shrink-0 bg-[var(--color-background)] p-4">
+                      <ScaledSectionPreview
+                        type={selected}
+                        variant={selectedVariant ?? undefined}
+                        branding={branding}
+                      />
+                    </div>
+
+                    {}
+                    <div className="flex-1 px-5 pb-5 pt-4">
+                      <span className="mb-2 inline-block rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                        {SECTION_CATEGORY_BY_TYPE[selected]}
+                      </span>
+                      <h3 className="mb-1 text-[17px] font-bold text-[var(--color-foreground)]">
+                        {SECTION_TYPE_LABELS[selected]}
+                      </h3>
+                      <p className="mb-4 text-[13px] leading-relaxed text-[var(--color-muted-foreground)]">
+                        {selectedMeta.desc}
+                      </p>
+
+                      {}
+                      <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-[var(--color-background)] p-3">
+                        {[
+                          { label: "Páginas", value: "1" },
+                          {
+                            label: "Variáveis",
+                            value: selectedMeta.vars > 0 ? `${selectedMeta.vars} dinâmicas` : "—",
+                          },
+                          { label: "Última atualização", value: "há 3 dias" },
+                          {
+                            label: "Usado em",
+                            value: `${((selected.length * 17 + 23) % 180) + 20} propostas`,
+                          },
+                        ].map(({ label, value }) => (
+                          <div key={label}>
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                              {label}
+                            </p>
+                            <p className="mt-0.5 text-[12px] font-semibold text-[var(--color-foreground)]">
+                              {value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {}
+                      {(() => {
+                        const variants = SECTION_VARIANTS[selected] ?? [];
+                        if (variants.length <= 1) return null;
+                        const activeVariant = selectedVariant ?? variants[0];
+                        return (
+                          <>
+                            <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                              Variantes ({variants.length})
+                            </p>
+                            <div
+                              className={`grid gap-2 ${variants.length <= 2 ? "grid-cols-2" : "grid-cols-3"}`}
+                            >
+                              {variants.map((v) => (
+                                <button
+                                  key={v}
+                                  type="button"
+                                  onClick={() => setSelectedVariant(v)}
+                                  className={`flex cursor-pointer flex-col gap-1 rounded-lg border-2 p-1 transition ${
+                                    v === activeVariant
+                                      ? "border-emerald-500"
+                                      : "border-[var(--color-border)] hover:border-[var(--color-foreground)]/30"
+                                  }`}
+                                >
+                                  <div className="aspect-video w-full overflow-hidden rounded">
+                                    <ScaledSectionPreview
+                                      type={selected}
+                                      variant={v}
+                                      containerWidth={84}
+                                      aspectRatio={9 / 16}
+                                      branding={branding}
+                                    />
+                                  </div>
+                                  <p className="truncate text-center text-[9px] font-medium text-[var(--color-muted-foreground)]">
+                                    {VARIANT_LABELS[v] ?? v}
+                                  </p>
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-background)]">
+                      <IconGrid />
+                    </div>
+                    <p className="text-[13px] font-medium text-[var(--color-foreground)]">
+                      Selecione uma seção
+                    </p>
+                    <p className="text-[12px] leading-snug text-[var(--color-muted-foreground)]">
+                      Clique em qualquer card para ver o preview e as informações detalhadas.
+                    </p>
+                  </div>
+                )}
+              </aside>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-background)] px-5 py-3.5">
+              <div className="flex items-center gap-2 text-[12px] text-[var(--color-muted-foreground)]">
+                <span>Posição:</span>
+                <select className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-1.5 text-[12px] text-[var(--color-foreground)] focus:outline-none">
+                  <option>Após última seção</option>
+                  <option>No início</option>
+                  <option>No final</option>
+                </select>
+              </div>
+
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded-lg px-4 py-2 text-[13px] font-medium text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={!selected}
+                  className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-2 text-[13px] font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40"
+                >
+                  <IconCopy /> Duplicar
+                </button>
+                <button
+                  type="button"
+                  disabled={!selected}
+                  onClick={handleAdd}
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
+                >
+                  <IconPlus /> Adicionar ao template
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -5,6 +5,12 @@ import { NumberSpecField } from "./NumberSpecField";
 
 const fields: Array<{ name: string; label: string; helperText?: string; integer?: boolean }> = [
   { name: "channels", label: "Canais", helperText: "Módulos por microinversor", integer: true },
+  {
+    name: "warranty_years",
+    label: "Garantia de fábrica (anos)",
+    helperText: "Garantia em anos (ex: 12, 15 ou 25)",
+    integer: true,
+  },
   { name: "max_input_voltage", label: "Tensão entrada máx. (V)" },
   { name: "max_input_current", label: "Corrente entrada máx. (A)" },
   { name: "max_module_power", label: "Potência módulo máx. (W)" },

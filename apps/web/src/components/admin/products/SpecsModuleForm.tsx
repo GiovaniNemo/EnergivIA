@@ -10,6 +10,12 @@ const fields: Array<{ name: string; label: string; helperText?: string; integer?
     helperText: "Potência nominal do módulo em watts",
     integer: true,
   },
+  {
+    name: "warranty_years",
+    label: "Garantia (anos)",
+    helperText: "Tempo de garantia de fábrica/desempenho em anos (ex: 25 ou 30)",
+    integer: true,
+  },
   { name: "voc", label: "Voc (V)", helperText: "Tensão de circuito aberto" },
   { name: "vmp", label: "Vmp (V)", helperText: "Tensão no ponto de máxima potência" },
   { name: "isc", label: "Isc (A)", helperText: "Corrente de curto-circuito" },

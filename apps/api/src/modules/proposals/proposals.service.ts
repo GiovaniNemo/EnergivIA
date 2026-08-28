@@ -686,36 +686,38 @@ export class ProposalsService {
   }
 
   async generateAiSection(prompt: string, contextText?: string) {
-    const apiKey = process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
+    const apiKey =
+      process.env["GOOGLE_GEMINI_API_KEY"] ??
+      process.env["GEMINI_API_KEY"] ??
+      process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!apiKey) {
       throw new BadRequestException("Serviço de IA não configurado (chave ausente).");
     }
 
     try {
-      const model = process.env["GEMINI_TEXT_MODEL"] ?? "gemini-2.5-flash";
+      const model = process.env["GEMINI_TEXT_MODEL"] ?? "gemini-1.5-flash";
       const genAI = new GoogleGenerativeAI(apiKey);
       const genModel = genAI.getGenerativeModel({
         model,
         generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
-        systemInstruction: `Você é um especialista em vendas e marketing de energia solar fotovoltaica. 
-Seu trabalho é gerar conteúdos persuasivos, claros e profissionais para seções de propostas comerciais.
-Você DEVE retornar um JSON válido com exatamente estas DUAS chaves:
+        systemInstruction: `Você é um redator sênior especialista em propostas comerciais de energia solar fotovoltaica. 
+Seu objetivo é gerar seções elegantes, convincentes e profissionais para propostas comerciais de integradores solares.
+Você DEVE retornar SEMPRE um JSON válido com exatamente estas DUAS chaves:
 {
-  "title": "Título sugerido para a seção",
-  "text": "O conteúdo da seção renderizado em HTML puro. Use estruturação limpa (p, strong, ul/li, u, br). Não use tags h1/h2 no texto, apenas parágrafos bem escritos e listas."
+  "title": "Título atrativo e profissional para a seção",
+  "text": "Conteúdo da seção em HTML limpo. Use tags de formatação semântica como <p>, <strong>, <ul>, <li>, <em>, <br>. NÃO use tags <h1>, <h2>, <html> ou <body> no texto. Mantenha os parágrafos objetivos, claros e focados em agregar valor e segurança ao cliente final."
 }
-O usuário descreverá a seção que deseja. Adapte o tom.`,
+Adapte a linguagem para um tom comercial confiável, moderno e persuasivo.`,
       });
 
-      const userInput = `Contexto da proposta: ${contextText ?? "Nenhum especifico."}
-O usuário solicitou uma seção com a seguinte instrução: ${prompt}`;
+      const userInput = `Contexto da proposta solar: ${contextText || "Proposta de energia solar fotovoltaica residencial/comercial"}
+Instrução do usuário para a seção desejada: ${prompt}`;
 
       const result = await genModel.generateContent(userInput);
       const text = result.response.text();
-      // O modelo já está forçado a JSON, apenas devolvemos parseado
       return JSON.parse(text);
     } catch (error: unknown) {
-      this.logger.error(`Erro ao chamar Gemini: ${String(error)}`);
+      this.logger.error(`Erro ao chamar Gemini para geração de seção: ${String(error)}`);
       throw new BadRequestException("Falha ao gerar seção com IA. Tente novamente mais tarde.");
     }
   }

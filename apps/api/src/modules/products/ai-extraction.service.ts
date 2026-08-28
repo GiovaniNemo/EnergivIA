@@ -8,7 +8,13 @@ export class AiExtractionService {
   private genAI: GoogleGenerativeAI;
 
   constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get<string>("GOOGLE_GEMINI_API_KEY") || "";
+    const apiKey =
+      this.configService.get<string>("GOOGLE_GEMINI_API_KEY") ||
+      this.configService.get<string>("GEMINI_API_KEY") ||
+      this.configService.get<string>("GOOGLE_GENERATIVE_AI_API_KEY") ||
+      process.env["GOOGLE_GEMINI_API_KEY"] ||
+      process.env["GEMINI_API_KEY"] ||
+      "";
     this.genAI = new GoogleGenerativeAI(apiKey);
   }
 
@@ -48,8 +54,9 @@ export class AiExtractionService {
       );
     }
 
+    const modelName = process.env["GEMINI_TEXT_MODEL"] ?? "gemini-1.5-flash";
     const model = this.genAI.getGenerativeModel({
-      model: "gemini-3.6-flash",
+      model: modelName,
       generationConfig: {
         temperature: 0,
         responseMimeType: "application/json",
@@ -71,6 +78,11 @@ export class AiExtractionService {
                 power_w: {
                   type: SchemaType.NUMBER,
                   description: "Potência Nominal Pmax em Watts (W)",
+                },
+                warranty_years: {
+                  type: SchemaType.NUMBER,
+                  description:
+                    "Tempo de garantia de fábrica do equipamento (módulo ou inversor) em anos (ex: 25, 30 para módulos; 5, 10, 15 para inversores). Extraia apenas o número de anos.",
                 },
                 voc: {
                   type: SchemaType.NUMBER,

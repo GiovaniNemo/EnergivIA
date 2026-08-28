@@ -26,21 +26,14 @@ export function mergePublicProposalVariables(
       merged["investimento_total"] = formatBRL(quotedSale);
     }
 
-    // Build kit items list for template variable
+    // Build kit items list for template variable (sem vazar preço de custo/distribuidor)
     if (integrator.kitItems && integrator.kitItems.length > 0) {
       const kitListLines = integrator.kitItems.map((item) => {
         const qty = item.quantity || 1;
         const brand = item.brandName ? ` (${item.brandName})` : "";
-        const priceStr =
-          typeof item.lineTotal === "number" && item.lineTotal > 0
-            ? ` — ${formatBRL(item.lineTotal)}`
-            : typeof item.unitPrice === "number" && item.unitPrice > 0
-              ? ` — ${formatBRL(item.unitPrice * qty)}`
-              : "";
-        return `${qty}x ${item.productName}${brand}${priceStr}`;
+        return `${qty}x ${item.productName}${brand}`;
       });
       merged["kit_itens_lista"] = kitListLines.join("\n");
-      merged["equipamentos_subtotal"] = formatBRL(integrator.equipmentSubtotalBrl);
 
       const moduleItem = integrator.kitItems.find((i) => {
         const c = (i.categoryName || "").toLowerCase();

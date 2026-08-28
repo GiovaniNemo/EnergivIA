@@ -49,6 +49,7 @@ export type CategoryName = (typeof categoryNames)[number];
 
 export const specsModuleSchema = z.object({
   power_w: positiveNumber,
+  warranty_years: positiveNumber.optional(),
   voc: positiveNumber,
   vmp: positiveNumber,
   isc: positiveNumber,
@@ -62,6 +63,7 @@ export const specsModuleSchema = z.object({
 export const specsInverterSchema = z.object({
   type: z.literal("string"),
   nominal_power_w: positiveNumber,
+  warranty_years: positiveNumber.optional(),
   max_dc_voltage: positiveNumber,
   mppt_count: z.coerce.number().int().positive(),
   max_strings_per_mppt: z.coerce.number().int().positive(),
@@ -76,6 +78,7 @@ export const specsInverterSchema = z.object({
 export const specsMicroInverterSchema = z.object({
   type: z.literal("micro"),
   channels: z.coerce.number().int().positive(),
+  warranty_years: positiveNumber.optional(),
   max_input_voltage: positiveNumber,
   max_input_current: positiveNumber,
   max_module_power: positiveNumber,

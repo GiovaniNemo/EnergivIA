@@ -3,8 +3,14 @@
 import { Box } from "@mui/material";
 import { NumberSpecField } from "./NumberSpecField";
 
-const fields: Array<{ name: string; label: string; integer?: boolean }> = [
+const fields: Array<{ name: string; label: string; helperText?: string; integer?: boolean }> = [
   { name: "nominal_power_w", label: "Potência Nominal CA (W)", integer: true },
+  {
+    name: "warranty_years",
+    label: "Garantia de fábrica (anos)",
+    helperText: "Garantia em anos (ex: 5, 10, 12 ou 15)",
+    integer: true,
+  },
   { name: "max_dc_voltage", label: "Tensão DC máx. (V)" },
   { name: "mppt_count", label: "Nº de MPPTs", integer: true },
   { name: "max_strings_per_mppt", label: "Strings por MPPT", integer: true },

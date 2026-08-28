@@ -205,3 +205,21 @@ export async function uploadProposalTemplateImage(
   if (normalizedFileUrl) return normalizedFileUrl;
   return toPublicAssetUrl(presigned.uploadUrl);
 }
+
+export async function generateAiProposalSection(
+  prompt: string,
+  contextText?: string,
+  organizationId?: string
+): Promise<{ title: string; text: string }> {
+  const res = await apiProxy(
+    "POST",
+    "/proposal-templates/generate-ai-section",
+    { prompt, contextText },
+    organizationId
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: "Falha ao gerar seção com IA" }));
+    throw new Error(err.message || "Falha ao gerar seção com IA");
+  }
+  return res.json();
+}
