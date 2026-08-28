@@ -944,6 +944,7 @@ export function AddSectionModal({
     });
     onClose();
   }
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const openRef = useRef(open);
   openRef.current = open;
 
