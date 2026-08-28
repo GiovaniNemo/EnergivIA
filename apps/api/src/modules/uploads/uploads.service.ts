@@ -7,7 +7,6 @@ import {
   ALLOWED_IMAGE_CONTENT_TYPES,
   buildS3ObjectKey,
   createS3ClientForPresign,
-  createS3GetUrl,
   presignedPutObjectUrlOptions,
 } from "../../common/s3/s3.util";
 import type { CreatePresignedUrlDto } from "./dto/create-presigned-url.dto";
@@ -39,13 +38,13 @@ export class UploadsService {
     const allowedByFolder =
       dto.folder === "financing_documents" || dto.folder === "datasheets"
         ? {
-          set: ALLOWED_DOCUMENT_CONTENT_TYPES,
-          message: "Tipo de arquivo não suportado. Permitidos: pdf, jpg, jpeg, png, webp.",
-        }
+            set: ALLOWED_DOCUMENT_CONTENT_TYPES,
+            message: "Tipo de arquivo não suportado. Permitidos: pdf, jpg, jpeg, png, webp.",
+          }
         : {
-          set: ALLOWED_IMAGE_CONTENT_TYPES,
-          message: "Tipo de arquivo não suportado. Permitidos: jpg, jpeg, png, webp.",
-        };
+            set: ALLOWED_IMAGE_CONTENT_TYPES,
+            message: "Tipo de arquivo não suportado. Permitidos: jpg, jpeg, png, webp.",
+          };
     if (!allowedByFolder.set.has(dto.contentType.toLowerCase())) {
       throw new BadRequestException(allowedByFolder.message);
     }

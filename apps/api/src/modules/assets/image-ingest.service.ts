@@ -3,7 +3,6 @@ import { ConfigService } from "@nestjs/config";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { createS3GetUrl } from "../../common/s3/s3.util";
 import { IngestImageDto } from "./dto/ingest-image.dto";
 
 @Injectable()
@@ -15,7 +14,8 @@ export class ImageIngestService {
 
   constructor(private readonly config: ConfigService) {
     this.region = this.config.get<string>("AWS_REGION") ?? "";
-    this.bucketName = this.config.get<string>("S3_BUCKET_NAME") ?? this.config.get<string>("AWS_S3_BUCKET") ?? "";
+    this.bucketName =
+      this.config.get<string>("S3_BUCKET_NAME") ?? this.config.get<string>("AWS_S3_BUCKET") ?? "";
     this.cdnBaseUrl = this.config.get<string>("S3_CDN_BASE_URL")?.replace(/\/$/, "");
     this.s3 = new S3Client({ region: this.region || undefined });
   }

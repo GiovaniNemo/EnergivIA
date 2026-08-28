@@ -529,6 +529,7 @@ function MeusPlanosContent() {
                         <PaymentWrapper
                           planId={plan.id}
                           planName={plan.name}
+                          planPrice={priceNum}
                           buttonText={
                             plan.name.toLowerCase().startsWith("plano")
                               ? `Fazer Upgrade para ${plan.name}`
@@ -540,6 +541,7 @@ function MeusPlanosContent() {
                         <PaymentWrapper
                           planId={plan.id}
                           planName={plan.name}
+                          planPrice={priceNum}
                           buttonText={
                             subscription
                               ? plan.name.toLowerCase().startsWith("plano")

@@ -15,13 +15,13 @@ const SOFT_REQUIRED: ReadonlyArray<{
   feature: string;
   fallback?: string;
 }> = [
-    { name: "JWT_SECRET", feature: "legacy email/password login" },
-    {
-      name: "WHATSAPP_APP_SECRET",
-      feature: "appsecret_proof no envio de mensagens (Graph API)",
-    },
-    { name: "AWS_S3_BUCKET", feature: "S3 uploads (proposta, financiamento, faturas)" },
-  ];
+  { name: "JWT_SECRET", feature: "legacy email/password login" },
+  {
+    name: "WHATSAPP_APP_SECRET",
+    feature: "appsecret_proof no envio de mensagens (Graph API)",
+  },
+  { name: "AWS_S3_BUCKET", feature: "S3 uploads (proposta, financiamento, faturas)" },
+];
 
 function hasEnv(key: string, fallback?: string): boolean {
   if (process.env[key]?.trim()) return true;
@@ -42,7 +42,7 @@ function assertProductionEnv(): void {
   if (missingSoft.length > 0) {
     console.warn(
       `[WARN] Env vars opcionais ausentes — features afetadas:\n` +
-      missingSoft.map((cfg) => `  - ${cfg.name}: ${cfg.feature}`).join("\n")
+        missingSoft.map((cfg) => `  - ${cfg.name}: ${cfg.feature}`).join("\n")
     );
   }
 }
@@ -53,8 +53,23 @@ async function bootstrap() {
     rawBody: true,
   });
 
-  app.use(json({ limit: "50mb" }));
-  app.use(urlencoded({ extended: true, limit: "50mb" }));
+  app.use(
+    json({
+      limit: "50mb",
+      verify: (req: Record<string, unknown> & { rawBody?: Buffer }, _res, buf: Buffer) => {
+        req.rawBody = buf;
+      },
+    })
+  );
+  app.use(
+    urlencoded({
+      extended: true,
+      limit: "50mb",
+      verify: (req: Record<string, unknown> & { rawBody?: Buffer }, _res, buf: Buffer) => {
+        req.rawBody = buf;
+      },
+    })
+  );
 
   app.use(
     helmet({
