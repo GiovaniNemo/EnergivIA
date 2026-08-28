@@ -41,19 +41,19 @@ export function BrandLogo({
 
   const config = {
     sm: {
-      iconClass: "h-7 w-7",
-      titleClass: "text-[1.2rem]",
-      taglineClass: "text-[8.5px]",
+      iconClass: "h-8 w-8",
+      titleClass: "text-[1.35rem]",
+      taglineClass: "text-[9.5px]",
     },
     md: {
-      iconClass: "h-9 w-9 md:h-10 md:w-10",
-      titleClass: "text-[1.45rem]",
-      taglineClass: "text-[10px]",
+      iconClass: "h-10 w-10 md:h-11 md:w-11",
+      titleClass: "text-[1.65rem] md:text-[1.8rem]",
+      taglineClass: "text-[11px] md:text-[11.5px]",
     },
     lg: {
-      iconClass: "h-12 w-12",
-      titleClass: "text-[1.75rem]",
-      taglineClass: "text-[12px]",
+      iconClass: "h-14 w-14",
+      titleClass: "text-[2.1rem]",
+      taglineClass: "text-[13px]",
     },
   }[size];
 
@@ -112,24 +112,24 @@ export function BrandLogo({
   return (
     <div
       className={cn(
-        "flex items-start gap-2.5 select-none transition-opacity hover:opacity-95",
+        "flex items-center gap-3 select-none transition-opacity hover:opacity-95",
         className
       )}
     >
       <Image
         src={iconSrc}
         alt="EnergivIA"
-        width={120}
-        height={120}
+        width={140}
+        height={140}
         className={cn("shrink-0 object-contain drop-shadow-sm", config.iconClass)}
         priority={priority}
         unoptimized
       />
-      <div className="flex flex-col justify-start min-w-0 font-[family-name:var(--font-montserrat),sans-serif] pt-0.5">
+      <div className="flex flex-col justify-center min-w-0 font-[family-name:var(--font-montserrat),sans-serif]">
         <div className="flex items-baseline leading-none">
           <span
             className={cn(
-              "font-bold tracking-tight text-[#1e3a8a] dark:text-white transition-colors duration-150",
+              "font-bold tracking-[-0.02em] text-[#1e3a8a] dark:text-white transition-colors duration-150",
               config.titleClass
             )}
           >
@@ -137,7 +137,7 @@ export function BrandLogo({
           </span>
           <span
             className={cn(
-              "font-bold tracking-tight bg-gradient-to-r from-[#14b8a6] via-[#10b981] to-[#84cc16] dark:from-[#2dd4bf] dark:via-[#10b981] dark:to-[#a3e635] bg-clip-text text-transparent ml-0.5",
+              "font-bold tracking-[-0.02em] bg-gradient-to-r from-[#14b8a6] via-[#10b981] to-[#84cc16] dark:from-[#2dd4bf] dark:via-[#10b981] dark:to-[#a3e635] bg-clip-text text-transparent ml-0.5",
               config.titleClass
             )}
           >
@@ -145,14 +145,16 @@ export function BrandLogo({
           </span>
         </div>
         {_showTagline ? (
-          <span
-            className={cn(
-              "text-right w-full font-medium tracking-normal text-slate-600 dark:text-slate-300 leading-tight mt-1 whitespace-nowrap transition-colors duration-150",
-              config.taglineClass
-            )}
-          >
-            o seu parceiro via I.A.
-          </span>
+          <div className="flex justify-end w-full">
+            <span
+              className={cn(
+                "text-right font-medium tracking-normal text-slate-600 dark:text-slate-300 leading-tight mt-1 whitespace-nowrap transition-colors duration-150 pr-0.5",
+                config.taglineClass
+              )}
+            >
+              o seu parceiro via I.A.
+            </span>
+          </div>
         ) : null}
       </div>
     </div>
