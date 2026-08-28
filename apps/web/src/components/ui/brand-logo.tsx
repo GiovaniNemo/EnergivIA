@@ -39,15 +39,15 @@ export function BrandLogo({
   const config = {
     sm: {
       iconClass: "h-7 w-7",
-      fullLogoClass: "h-8 w-auto max-w-[150px]",
+      fullLogoClass: "h-9 w-auto max-w-[180px]",
     },
     md: {
       iconClass: "h-9 w-9 md:h-10 md:w-10",
-      fullLogoClass: "h-10 md:h-11 w-auto max-w-[210px]",
+      fullLogoClass: "h-11 md:h-12 w-auto max-w-[250px]",
     },
     lg: {
       iconClass: "h-12 w-12",
-      fullLogoClass: "h-12 md:h-13 w-auto max-w-[260px]",
+      fullLogoClass: "h-14 w-auto max-w-[300px]",
     },
   }[size];
 
