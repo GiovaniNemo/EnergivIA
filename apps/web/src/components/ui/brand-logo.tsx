@@ -23,7 +23,6 @@ export function BrandLogo({
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const iconSrc = isDark ? "/favicon-dark.png" : "/favicon-light.png";
-  const fullLogoSrc = isDark ? "/logo-tema-escuro.png" : "/logo-tema-claro.png";
 
   const [customLogoDarkUrl, setCustomLogoDarkUrl] = useState<string>("");
   const [customLogoLightUrl, setCustomLogoLightUrl] = useState<string>("");
@@ -43,15 +42,18 @@ export function BrandLogo({
   const config = {
     sm: {
       iconClass: "h-7 w-7",
-      fullLogoClass: "h-9 w-auto max-w-[180px]",
+      titleClass: "text-[1.2rem]",
+      taglineClass: "text-[8.5px]",
     },
     md: {
       iconClass: "h-9 w-9 md:h-10 md:w-10",
-      fullLogoClass: "h-11 md:h-12 w-auto max-w-[250px]",
+      titleClass: "text-[1.45rem]",
+      taglineClass: "text-[10px]",
     },
     lg: {
       iconClass: "h-12 w-12",
-      fullLogoClass: "h-14 w-auto max-w-[300px]",
+      titleClass: "text-[1.75rem]",
+      taglineClass: "text-[12px]",
     },
   }[size];
 
@@ -79,7 +81,7 @@ export function BrandLogo({
         <img
           src={activeCustomLogo}
           alt="Logo"
-          className={cn("shrink-0 object-contain", config.fullLogoClass)}
+          className="h-10 md:h-11 max-w-[200px] object-contain shrink-0"
         />
       </div>
     );
@@ -97,8 +99,8 @@ export function BrandLogo({
         <Image
           src={iconSrc}
           alt="EnergivIA"
-          width={160}
-          height={160}
+          width={120}
+          height={120}
           className={cn("shrink-0 object-contain drop-shadow-sm", config.iconClass)}
           priority={priority}
           unoptimized
@@ -110,19 +112,49 @@ export function BrandLogo({
   return (
     <div
       className={cn(
-        "flex items-center justify-center select-none transition-opacity hover:opacity-95 py-0.5",
+        "flex items-start gap-2.5 select-none transition-opacity hover:opacity-95",
         className
       )}
     >
       <Image
-        src={fullLogoSrc}
-        alt="EnergivIA - o seu parceiro via I.A."
-        width={900}
-        height={250}
-        className={cn("shrink-0 object-contain", config.fullLogoClass)}
+        src={iconSrc}
+        alt="EnergivIA"
+        width={120}
+        height={120}
+        className={cn("shrink-0 object-contain drop-shadow-sm", config.iconClass)}
         priority={priority}
         unoptimized
       />
+      <div className="flex flex-col justify-start min-w-0 font-[family-name:var(--font-montserrat),sans-serif] pt-0.5">
+        <div className="flex items-baseline leading-none">
+          <span
+            className={cn(
+              "font-bold tracking-tight text-[#1e3a8a] dark:text-white transition-colors duration-150",
+              config.titleClass
+            )}
+          >
+            Energiv
+          </span>
+          <span
+            className={cn(
+              "font-bold tracking-tight bg-gradient-to-r from-[#14b8a6] via-[#10b981] to-[#84cc16] dark:from-[#2dd4bf] dark:via-[#10b981] dark:to-[#a3e635] bg-clip-text text-transparent ml-0.5",
+              config.titleClass
+            )}
+          >
+            IA
+          </span>
+        </div>
+        {_showTagline ? (
+          <span
+            className={cn(
+              "text-right w-full font-medium tracking-normal text-slate-600 dark:text-slate-300 leading-tight mt-1 whitespace-nowrap transition-colors duration-150",
+              config.taglineClass
+            )}
+          >
+            o seu parceiro via I.A.
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
