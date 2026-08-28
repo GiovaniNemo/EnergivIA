@@ -38,16 +38,16 @@ export function BrandLogo({
 
   const config = {
     sm: {
-      iconClass: "h-7 w-7",
-      fullLogoClass: "h-7 w-auto max-w-[140px]",
+      iconClass: "h-8 w-8",
+      fullLogoClass: "h-8 md:h-9 w-auto max-w-[160px]",
     },
     md: {
       iconClass: "h-9 w-9 md:h-10 md:w-10",
-      fullLogoClass: "h-9 md:h-10 w-auto max-w-[180px]",
+      fullLogoClass: "h-9 md:h-11 w-auto max-w-[210px]",
     },
     lg: {
-      iconClass: "h-12 w-12",
-      fullLogoClass: "h-12 w-auto max-w-[220px]",
+      iconClass: "h-14 w-14",
+      fullLogoClass: "h-12 md:h-14 w-auto max-w-[260px]",
     },
   }[size];
 
@@ -61,21 +61,21 @@ export function BrandLogo({
           )}
           title="EnergivIA"
         >
-          <img src={customLogoUrl} alt="Logo" className="h-8 w-8 object-contain shrink-0" />
+          <img src={customLogoUrl} alt="Logo" className="h-9 w-9 object-contain shrink-0" />
         </div>
       );
     }
     return (
       <div
         className={cn(
-          "flex items-center select-none transition-opacity hover:opacity-95",
+          "flex items-center justify-center select-none transition-opacity hover:opacity-95",
           className
         )}
       >
         <img
           src={customLogoUrl}
           alt="Logo"
-          className="h-10 max-w-[160px] object-contain shrink-0"
+          className="h-10 md:h-11 max-w-[200px] object-contain shrink-0"
         />
       </div>
     );
@@ -93,8 +93,8 @@ export function BrandLogo({
         <Image
           src={iconSrc}
           alt="EnergivIA"
-          width={120}
-          height={120}
+          width={160}
+          height={160}
           className={cn("shrink-0 object-contain drop-shadow-sm", config.iconClass)}
           priority={priority}
           unoptimized
@@ -105,13 +105,16 @@ export function BrandLogo({
 
   return (
     <div
-      className={cn("flex items-center select-none transition-opacity hover:opacity-95", className)}
+      className={cn(
+        "flex items-center justify-center select-none transition-opacity hover:opacity-95 py-0.5",
+        className
+      )}
     >
       <Image
         src={fullLogoSrc}
         alt="EnergivIA - o seu parceiro via I.A."
-        width={300}
-        height={80}
+        width={480}
+        height={130}
         className={cn("shrink-0 object-contain", config.fullLogoClass)}
         priority={priority}
         unoptimized
