@@ -33,6 +33,7 @@ import {
 import { SystemAnnouncement } from "@/components/layout/sidebar-notice";
 import { uploadOrganizationLogo } from "@/lib/organizations-api";
 import { ImageDropzone } from "@/components/ui/image-dropzone";
+import { AiTokenomicsTab } from "@/components/admin/AiTokenomicsTab";
 
 export interface ReferralSourceOption {
   id: string;
@@ -82,7 +83,7 @@ interface FeatureFlags {
 
 export default function AdminSistemaPage() {
   const [activeTab, setActiveTab] = useState<
-    "health" | "announcements" | "flags" | "tools" | "referrals" | "branding"
+    "health" | "ai_costs" | "announcements" | "flags" | "tools" | "referrals" | "branding"
   >("health");
   const [refreshingHealth, setRefreshingHealth] = useState(false);
   const [healthData, setHealthData] = useState<HealthData | null>(null);
@@ -471,6 +472,21 @@ export default function AdminSistemaPage() {
           >
             <Activity className="h-4 w-4" />
             Saúde & Infraestrutura
+          </button>
+
+          <button
+            onClick={() => setActiveTab("ai_costs")}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              activeTab === "ai_costs"
+                ? "bg-[var(--color-primary)] text-white shadow-md shadow-emerald-500/10"
+                : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-card)] hover:text-[var(--color-foreground)]"
+            }`}
+          >
+            <Sparkles className="h-4 w-4 text-purple-400" />
+            IA & Tokenomics
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 font-bold">
+              Custos
+            </span>
           </button>
 
           <button
@@ -1733,6 +1749,11 @@ export default function AdminSistemaPage() {
             </div>
           </div>
         )}
+
+        {/* ========================================================================= */}
+        {/* TAB 7: CUSTOS DE IA & TOKENOMICS */}
+        {/* ========================================================================= */}
+        {activeTab === "ai_costs" && <AiTokenomicsTab />}
       </div>
     </div>
   );

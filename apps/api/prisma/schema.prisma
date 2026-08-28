@@ -44,6 +44,7 @@ model Tenant {
   stockMovements        StockMovement[]
   freightRules          FreightRule[]
   subscription          Subscription?
+  aiUsageLogs           AiUsageLog[]
 
   @@index([slug])
   @@index([deletedAt])
@@ -154,6 +155,7 @@ model User {
   notifications     UserNotification[]
   assignedDeals     Deal[]               @relation("DealAssignedUser")
   stockMovements    StockMovement[]
+  aiUsageLogs       AiUsageLog[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -1360,4 +1362,41 @@ model SystemSetting {
   value String
 
   @@map("system_settings")
+}
+
+enum AiFeature {
+  OCR_BILL_TEXT
+  OCR_BILL_VISION
+  WHATSAPP_BOT
+  PROPOSAL_INSIGHT
+  AUDIO_TRANSCRIPTION
+  OTHER
+}
+
+model AiUsageLog {
+  id               String      @id @default(cuid())
+  organizationId   String?     @map("organization_id")
+  userId           String?     @map("user_id")
+  feature          AiFeature   @default(OTHER)
+  provider         String      @default("openai")
+  model            String
+  promptTokens     Int         @default(0) @map("prompt_tokens")
+  completionTokens Int         @default(0) @map("completion_tokens")
+  totalTokens      Int         @default(0) @map("total_tokens")
+  costUsd          Decimal     @default(0) @db.Decimal(10, 6) @map("cost_usd")
+  costBrl          Decimal     @default(0) @db.Decimal(10, 6) @map("cost_brl")
+  latencyMs        Int?        @map("latency_ms")
+  status           String      @default("SUCCESS")
+  errorMessage     String?     @map("error_message")
+  resourceId       String?     @map("resource_id")
+  metadata         Json?
+  createdAt        DateTime    @default(now()) @map("created_at")
+
+  organization     Tenant?     @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  user             User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([feature, createdAt])
+  @@index([createdAt])
+  @@map("ai_usage_logs")
 }

@@ -4,7 +4,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createS3ClientForPresign, presignedPutObjectUrlOptions } from "../../common/s3/s3.util";
 import { PrismaService } from "../../prisma/prisma.service";
-import { Prisma, UtilityProvider } from "@prisma/client";
+import { AiFeature, Prisma, UtilityProvider } from "@prisma/client";
 import { extname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { assertLeadInTenant } from "../../common/assert-lead-in-tenant";
@@ -12,6 +12,7 @@ import { softDeleteWhere as soft } from "../../prisma/soft-delete";
 import pdfParse from "pdf-parse";
 import { createWorker } from "tesseract.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { AiUsageService } from "../ai-usage/ai-usage.service";
 
 const BILL_CONTENT_TYPES = [
   "image/jpeg",
@@ -157,7 +158,8 @@ export class EnergyBillsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService
+    private readonly config: ConfigService,
+    private readonly aiUsage: AiUsageService
   ) {
     this.region = this.config.get<string>("AWS_REGION") ?? "";
     this.bucketName =
@@ -611,6 +613,12 @@ export class EnergyBillsService {
   ): Promise<void> {
     this.logger.log(`Energy bill extraction start billId=${billId} fileName=${fileName}`);
 
+    const existingBill = await this.prisma.energyBill.findUnique({
+      where: { id: billId },
+      select: { tenantId: true },
+    });
+    const tenantId = existingBill?.tenantId || null;
+
     await this.prisma.energyBill.update({
       where: { id: billId },
       data: { extractionStatus: "PROCESSING", extractionError: null },
@@ -634,9 +642,9 @@ export class EnergyBillsService {
       if (ext === ".txt") {
         rawText = await response.text();
         if (openAiApiKey) {
-          extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey);
+          extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey, tenantId, billId);
         } else if (this.genAI) {
-          extractedData = await this.extractDataWithGemini(rawText);
+          extractedData = await this.extractDataWithGemini(rawText, tenantId, billId);
         }
       } else if (ext === ".pdf") {
         try {
@@ -651,9 +659,14 @@ export class EnergyBillsService {
         // Se o PDF tem camada de texto digital, envia direto para a IA interpretar todos os meses
         if (rawText && rawText.trim().length >= 30) {
           if (openAiApiKey) {
-            extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey);
+            extractedData = await this.extractDataWithOpenAI(
+              rawText,
+              openAiApiKey,
+              tenantId,
+              billId
+            );
           } else if (this.genAI) {
-            extractedData = await this.extractDataWithGemini(rawText);
+            extractedData = await this.extractDataWithGemini(rawText, tenantId, billId);
           }
         }
 
@@ -663,9 +676,14 @@ export class EnergyBillsService {
           const ocrText = await this.runOcrOnBuffer(pdfBuffer);
           if (ocrText && ocrText.trim().length >= 30) {
             if (openAiApiKey) {
-              extractedData = await this.extractDataWithOpenAI(ocrText, openAiApiKey);
+              extractedData = await this.extractDataWithOpenAI(
+                ocrText,
+                openAiApiKey,
+                tenantId,
+                billId
+              );
             } else if (this.genAI) {
-              extractedData = await this.extractDataWithGemini(ocrText);
+              extractedData = await this.extractDataWithGemini(ocrText, tenantId, billId);
             }
           }
         }
@@ -677,7 +695,13 @@ export class EnergyBillsService {
           const base64Image = buf.toString("base64");
           const mimeType = ext === ".png" ? "image/png" : "image/jpeg";
           if (openAiApiKey) {
-            extractedData = await this.extractVisionWithOpenAI(base64Image, mimeType, openAiApiKey);
+            extractedData = await this.extractVisionWithOpenAI(
+              base64Image,
+              mimeType,
+              openAiApiKey,
+              tenantId,
+              billId
+            );
             if (extractedData) {
               extractionEngine = "VISION_AI";
             }
@@ -835,8 +859,12 @@ export class EnergyBillsService {
 
   private async extractDataWithOpenAI(
     text: string,
-    apiKey: string
+    apiKey: string,
+    organizationId?: string | null,
+    resourceId?: string
   ): Promise<Record<string, unknown> | null> {
+    const startTime = Date.now();
+    const model = "gpt-4o";
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -845,7 +873,7 @@ export class EnergyBillsService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          model,
           temperature: 0,
           response_format: { type: "json_object" },
           messages: [
@@ -861,15 +889,53 @@ export class EnergyBillsService {
         }),
       });
 
-      if (!response.ok) return null;
+      const latencyMs = Date.now() - startTime;
+      if (!response.ok) {
+        void this.aiUsage.logUsage({
+          organizationId,
+          feature: AiFeature.OCR_BILL_TEXT,
+          model,
+          latencyMs,
+          status: "ERROR",
+          errorMessage: `OpenAI HTTP ${response.status}`,
+          resourceId,
+        });
+        return null;
+      }
+
       const data = (await response.json()) as {
         choices?: Array<{ message?: { content?: string } }>;
+        usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
       };
+
+      if (data.usage) {
+        void this.aiUsage.logUsage({
+          organizationId,
+          feature: AiFeature.OCR_BILL_TEXT,
+          model,
+          promptTokens: data.usage.prompt_tokens || 0,
+          completionTokens: data.usage.completion_tokens || 0,
+          totalTokens: data.usage.total_tokens || 0,
+          latencyMs,
+          status: "SUCCESS",
+          resourceId,
+        });
+      }
+
       const content = data.choices?.[0]?.message?.content;
       if (!content) return null;
       const parsed = JSON.parse(content) as Record<string, unknown>;
       return this.processExtractedResultWithMath(parsed);
-    } catch {
+    } catch (err) {
+      void this.aiUsage.logUsage({
+        organizationId,
+        feature: AiFeature.OCR_BILL_TEXT,
+        model,
+        latencyMs: Date.now() - startTime,
+        status: "ERROR",
+        errorMessage: err instanceof Error ? err.message : String(err),
+        resourceId,
+      });
       return null;
     }
   }
@@ -877,8 +943,12 @@ export class EnergyBillsService {
   private async extractVisionWithOpenAI(
     base64Image: string,
     mimeType: string,
-    apiKey: string
+    apiKey: string,
+    organizationId?: string | null,
+    resourceId?: string
   ): Promise<Record<string, unknown> | null> {
+    const startTime = Date.now();
+    const model = "gpt-4o";
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -887,7 +957,7 @@ export class EnergyBillsService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          model,
           temperature: 0,
           response_format: { type: "json_object" },
           messages: [
@@ -915,24 +985,68 @@ export class EnergyBillsService {
         }),
       });
 
-      if (!response.ok) return null;
+      const latencyMs = Date.now() - startTime;
+      if (!response.ok) {
+        void this.aiUsage.logUsage({
+          organizationId,
+          feature: AiFeature.OCR_BILL_VISION,
+          model,
+          latencyMs,
+          status: "ERROR",
+          errorMessage: `OpenAI HTTP ${response.status}`,
+          resourceId,
+        });
+        return null;
+      }
+
       const data = (await response.json()) as {
         choices?: Array<{ message?: { content?: string } }>;
+        usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
       };
+
+      if (data.usage) {
+        void this.aiUsage.logUsage({
+          organizationId,
+          feature: AiFeature.OCR_BILL_VISION,
+          model,
+          promptTokens: data.usage.prompt_tokens || 0,
+          completionTokens: data.usage.completion_tokens || 0,
+          totalTokens: data.usage.total_tokens || 0,
+          latencyMs,
+          status: "SUCCESS",
+          resourceId,
+        });
+      }
+
       const content = data.choices?.[0]?.message?.content;
       if (!content) return null;
       const parsed = JSON.parse(content) as Record<string, unknown>;
       return this.processExtractedResultWithMath(parsed);
-    } catch {
+    } catch (err) {
+      void this.aiUsage.logUsage({
+        organizationId,
+        feature: AiFeature.OCR_BILL_VISION,
+        model,
+        latencyMs: Date.now() - startTime,
+        status: "ERROR",
+        errorMessage: err instanceof Error ? err.message : String(err),
+        resourceId,
+      });
       return null;
     }
   }
 
-  private async extractDataWithGemini(text: string): Promise<Record<string, unknown> | null> {
+  private async extractDataWithGemini(
+    text: string,
+    organizationId?: string | null,
+    resourceId?: string
+  ): Promise<Record<string, unknown> | null> {
     if (!this.genAI) return null;
+    const startTime = Date.now();
+    const modelName = "gemini-1.5-flash";
     try {
       const model = this.genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
+        model: modelName,
         generationConfig: {
           responseMimeType: "application/json",
         },
@@ -941,11 +1055,42 @@ export class EnergyBillsService {
         BILL_EXTRACTION_SYSTEM_PROMPT,
         `Extraia com máxima precisão todos os dados e TODOS os meses do histórico de consumo do seguinte texto de fatura de energia:\n\n${text}`,
       ]);
+      const latencyMs = Date.now() - startTime;
+      const usage = result.response.usageMetadata;
+
+      if (usage) {
+        void this.aiUsage.logUsage({
+          organizationId,
+          provider: "google",
+          feature: AiFeature.OCR_BILL_TEXT,
+          model: modelName,
+          promptTokens: usage.promptTokenCount || 0,
+          completionTokens: usage.candidatesTokenCount || 0,
+          totalTokens: usage.totalTokenCount || 0,
+          latencyMs,
+          status: "SUCCESS",
+          resourceId,
+        });
+      }
+
       const respText = result.response.text();
-      const clean = respText.replace(/```json/g, "").replace(/```/g, "").trim();
+      const clean = respText
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
       const parsed = JSON.parse(clean) as Record<string, unknown>;
       return this.processExtractedResultWithMath(parsed);
     } catch (err) {
+      void this.aiUsage.logUsage({
+        organizationId,
+        provider: "google",
+        feature: AiFeature.OCR_BILL_TEXT,
+        model: modelName,
+        latencyMs: Date.now() - startTime,
+        status: "ERROR",
+        errorMessage: err instanceof Error ? err.message : String(err),
+        resourceId,
+      });
       this.logger.error("Erro extraindo fatura com Gemini:", err);
       return null;
     }

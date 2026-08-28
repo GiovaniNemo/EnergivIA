@@ -9,6 +9,8 @@ import pdfParse from "pdf-parse";
 import { createWorker } from "tesseract.js";
 import fs from "node:fs";
 import path from "node:path";
+import { AiUsageService } from "../ai-usage/ai-usage.service";
+import { AiFeature } from "@prisma/client";
 
 export interface ExtractedBillHistoryItem {
   mes_ano: string;
@@ -377,7 +379,8 @@ export class WhatsappBotService {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly whatsappCloud: WhatsappCloudService,
-    private readonly whatsappPairing: WhatsappPairingService
+    private readonly whatsappPairing: WhatsappPairingService,
+    private readonly aiUsage: AiUsageService
   ) {
     const geminiKey =
       this.config.get<string>("GOOGLE_GEMINI_API_KEY") ||
@@ -1028,7 +1031,9 @@ export class WhatsappBotService {
         // Envia o texto extraído pelo OCR/PDF diretamente para a IA interpretar com precisão
         const aiParsed = await this.parseBillTextWithAI(text);
         if (aiParsed) {
-          this.logger.log("Fatura WhatsApp interpretada com sucesso pela IA a partir do texto OCR/PDF.");
+          this.logger.log(
+            "Fatura WhatsApp interpretada com sucesso pela IA a partir do texto OCR/PDF."
+          );
           return aiParsed;
         }
 
@@ -1098,11 +1103,16 @@ export class WhatsappBotService {
     return null;
   }
 
-  private async parseBillTextWithAI(pdfText: string): Promise<BillExtractionResult | null> {
+  private async parseBillTextWithAI(
+    pdfText: string,
+    organizationId?: string | null
+  ): Promise<BillExtractionResult | null> {
     if (!pdfText || pdfText.trim().length === 0) return null;
 
     const openAiKey = this.config.get<string>("OPENAI_API_KEY");
     if (openAiKey) {
+      const startTime = Date.now();
+      const model = "gpt-4o";
       try {
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
@@ -1111,7 +1121,7 @@ export class WhatsappBotService {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "gpt-4o",
+            model,
             temperature: 0,
             response_format: { type: "json_object" },
             messages: [
@@ -1124,15 +1134,40 @@ export class WhatsappBotService {
           }),
         });
 
+        const latencyMs = Date.now() - startTime;
         if (response.ok) {
           const json = (await response.json()) as {
             choices?: Array<{ message?: { content?: string } }>;
+            usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
           };
+
+          if (json.usage) {
+            void this.aiUsage.logUsage({
+              organizationId,
+              feature: AiFeature.WHATSAPP_BOT,
+              model,
+              promptTokens: json.usage.prompt_tokens || 0,
+              completionTokens: json.usage.completion_tokens || 0,
+              totalTokens: json.usage.total_tokens || 0,
+              latencyMs,
+              status: "SUCCESS",
+            });
+          }
+
           const content = json.choices?.[0]?.message?.content;
           if (content) {
             const parsed = JSON.parse(content) as ExtractedBillData;
             return processExtractedBillData(parsed, pdfText);
           }
+        } else {
+          void this.aiUsage.logUsage({
+            organizationId,
+            feature: AiFeature.WHATSAPP_BOT,
+            model,
+            latencyMs,
+            status: "ERROR",
+            errorMessage: `OpenAI HTTP ${response.status}`,
+          });
         }
       } catch (err) {
         this.logger.error("Erro extraindo texto com OpenAI:", err);
@@ -1140,11 +1175,29 @@ export class WhatsappBotService {
     }
 
     if (this.genAI) {
+      const startTime = Date.now();
+      const modelName = "gemini-1.5-flash";
       try {
-        const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = this.genAI.getGenerativeModel({ model: modelName });
         const result = await model.generateContent(
           `${BILL_EXTRACTION_SYSTEM_PROMPT}\n\nTexto da fatura:\n${pdfText}`
         );
+        const latencyMs = Date.now() - startTime;
+        const usage = result.response.usageMetadata;
+        if (usage) {
+          void this.aiUsage.logUsage({
+            organizationId,
+            provider: "google",
+            feature: AiFeature.WHATSAPP_BOT,
+            model: modelName,
+            promptTokens: usage.promptTokenCount || 0,
+            completionTokens: usage.candidatesTokenCount || 0,
+            totalTokens: usage.totalTokenCount || 0,
+            latencyMs,
+            status: "SUCCESS",
+          });
+        }
+
         const respText = result.response.text();
         const clean = respText
           .replace(/```json/g, "")
@@ -1163,8 +1216,11 @@ export class WhatsappBotService {
   private async extractImageWithOpenAI(
     buffer: Buffer,
     mimeType: string,
-    apiKey: string
+    apiKey: string,
+    organizationId?: string | null
   ): Promise<BillExtractionResult | null> {
+    const startTime = Date.now();
+    const model = "gpt-4o";
     try {
       const base64 = buffer.toString("base64");
       const dataUrl = `data:${mimeType};base64,${base64}`;
@@ -1176,7 +1232,7 @@ export class WhatsappBotService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          model,
           temperature: 0,
           response_format: { type: "json_object" },
           messages: [
@@ -1195,15 +1251,40 @@ export class WhatsappBotService {
         }),
       });
 
+      const latencyMs = Date.now() - startTime;
       if (response.ok) {
         const json = (await response.json()) as {
           choices?: Array<{ message?: { content?: string } }>;
+          usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
         };
+
+        if (json.usage) {
+          void this.aiUsage.logUsage({
+            organizationId,
+            feature: AiFeature.OCR_BILL_VISION,
+            model,
+            promptTokens: json.usage.prompt_tokens || 0,
+            completionTokens: json.usage.completion_tokens || 0,
+            totalTokens: json.usage.total_tokens || 0,
+            latencyMs,
+            status: "SUCCESS",
+          });
+        }
+
         const content = json.choices?.[0]?.message?.content;
         if (content) {
           const parsed = JSON.parse(content) as ExtractedBillData;
           return processExtractedBillData(parsed);
         }
+      } else {
+        void this.aiUsage.logUsage({
+          organizationId,
+          feature: AiFeature.OCR_BILL_VISION,
+          model,
+          latencyMs,
+          status: "ERROR",
+          errorMessage: `OpenAI HTTP ${response.status}`,
+        });
       }
     } catch (e) {
       this.logger.error("Erro extraindo imagem com OpenAI:", e);
