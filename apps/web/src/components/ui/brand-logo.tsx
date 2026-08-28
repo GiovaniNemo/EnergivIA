@@ -25,16 +25,23 @@ export function BrandLogo({
   const iconSrc = isDark ? "/favicon-dark.png" : "/favicon-light.png";
   const fullLogoSrc = isDark ? "/logo-tema-escuro.png" : "/logo-tema-claro.png";
 
-  const [customLogoUrl, setCustomLogoUrl] = useState<string>("");
+  const [customLogoDarkUrl, setCustomLogoDarkUrl] = useState<string>("");
+  const [customLogoLightUrl, setCustomLogoLightUrl] = useState<string>("");
 
   useEffect(() => {
     fetch("/api/proxy/system-settings/branding", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        setCustomLogoUrl(data?.brandLogoUrl || "");
+        if (data?.brandLogoDarkUrl) setCustomLogoDarkUrl(data.brandLogoDarkUrl);
+        if (data?.brandLogoLightUrl) setCustomLogoLightUrl(data.brandLogoLightUrl);
+        if (!data?.brandLogoDarkUrl && data?.brandLogoUrl) setCustomLogoDarkUrl(data.brandLogoUrl);
+        if (!data?.brandLogoLightUrl && data?.brandLogoUrl)
+          setCustomLogoLightUrl(data.brandLogoUrl);
       })
       .catch(() => {});
   }, []);
+
+  const activeCustomLogo = isDark ? customLogoDarkUrl : customLogoLightUrl;
 
   const config = {
     sm: {
@@ -51,7 +58,7 @@ export function BrandLogo({
     },
   }[size];
 
-  if (customLogoUrl) {
+  if (activeCustomLogo) {
     if (collapsed) {
       return (
         <div
@@ -61,7 +68,7 @@ export function BrandLogo({
           )}
           title="EnergivIA"
         >
-          <img src={customLogoUrl} alt="Logo" className="h-9 w-9 object-contain shrink-0" />
+          <img src={activeCustomLogo} alt="Logo" className="h-9 w-9 object-contain shrink-0" />
         </div>
       );
     }
@@ -73,9 +80,9 @@ export function BrandLogo({
         )}
       >
         <img
-          src={customLogoUrl}
+          src={activeCustomLogo}
           alt="Logo"
-          className="h-10 md:h-11 max-w-[200px] object-contain shrink-0"
+          className={cn("shrink-0 object-contain", config.fullLogoClass)}
         />
       </div>
     );

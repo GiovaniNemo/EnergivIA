@@ -23,13 +23,36 @@ export class SystemSettingsService {
 
   async getBranding() {
     const brandLogoUrl = await this.getSetting("brandLogoUrl");
+    const brandLogoDarkUrl = await this.getSetting("brandLogoDarkUrl");
+    const brandLogoLightUrl = await this.getSetting("brandLogoLightUrl");
     const whatsappLogoUrl = await this.getSetting("whatsappLogoUrl");
-    return { brandLogoUrl, whatsappLogoUrl };
+    return {
+      brandLogoUrl,
+      brandLogoDarkUrl: brandLogoDarkUrl || brandLogoUrl,
+      brandLogoLightUrl: brandLogoLightUrl || brandLogoUrl,
+      whatsappLogoUrl,
+    };
   }
 
-  async setBranding(brandLogoUrl: string, whatsappLogoUrl: string) {
+  async setBranding(
+    brandLogoUrl: string,
+    whatsappLogoUrl: string,
+    brandLogoDarkUrl?: string,
+    brandLogoLightUrl?: string
+  ) {
     await this.setSetting("brandLogoUrl", brandLogoUrl || "");
+    if (brandLogoDarkUrl !== undefined) {
+      await this.setSetting("brandLogoDarkUrl", brandLogoDarkUrl || "");
+    }
+    if (brandLogoLightUrl !== undefined) {
+      await this.setSetting("brandLogoLightUrl", brandLogoLightUrl || "");
+    }
     await this.setSetting("whatsappLogoUrl", whatsappLogoUrl || "");
-    return { brandLogoUrl, whatsappLogoUrl };
+    return {
+      brandLogoUrl,
+      brandLogoDarkUrl: brandLogoDarkUrl || brandLogoUrl,
+      brandLogoLightUrl: brandLogoLightUrl || brandLogoUrl,
+      whatsappLogoUrl,
+    };
   }
 }

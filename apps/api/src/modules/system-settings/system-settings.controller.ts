@@ -18,7 +18,20 @@ export class SystemSettingsController {
 
   @UseGuards(UnifiedAuthGuard)
   @Post("branding")
-  setBranding(@Body() body: { brandLogoUrl: string; whatsappLogoUrl: string }) {
-    return this.systemSettingsService.setBranding(body.brandLogoUrl, body.whatsappLogoUrl);
+  setBranding(
+    @Body()
+    body: {
+      brandLogoUrl: string;
+      whatsappLogoUrl: string;
+      brandLogoDarkUrl?: string;
+      brandLogoLightUrl?: string;
+    }
+  ) {
+    return this.systemSettingsService.setBranding(
+      body.brandLogoUrl,
+      body.whatsappLogoUrl,
+      body.brandLogoDarkUrl,
+      body.brandLogoLightUrl
+    );
   }
 }

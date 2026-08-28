@@ -89,6 +89,8 @@ export default function AdminSistemaPage() {
 
   // Branding state
   const [brandLogoUrl, setBrandLogoUrl] = useState("");
+  const [brandLogoDarkUrl, setBrandLogoDarkUrl] = useState("");
+  const [brandLogoLightUrl, setBrandLogoLightUrl] = useState("");
   const [whatsappLogoUrl, setWhatsappLogoUrl] = useState("");
   const [savingBranding, setSavingBranding] = useState(false);
 
@@ -97,6 +99,8 @@ export default function AdminSistemaPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data?.brandLogoUrl) setBrandLogoUrl(data.brandLogoUrl);
+        if (data?.brandLogoDarkUrl) setBrandLogoDarkUrl(data.brandLogoDarkUrl);
+        if (data?.brandLogoLightUrl) setBrandLogoLightUrl(data.brandLogoLightUrl);
         if (data?.whatsappLogoUrl) setWhatsappLogoUrl(data.whatsappLogoUrl);
       })
       .catch(() => {});
@@ -1593,28 +1597,55 @@ export default function AdminSistemaPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
               <div className="space-y-4">
                 <div>
                   <h4 className="text-sm font-semibold text-[var(--color-foreground)]">
-                    Logo da Empresa (Marca Geral)
+                    Logo Tema Escuro (Dark)
                   </h4>
                   <p className="text-xs text-[var(--color-muted-foreground)] mt-1">
-                    Substitui o logotipo padrão "EnergivIA" no menu superior e menu lateral.
+                    Exibido quando o usuário está no modo escuro do sistema.
                   </p>
                 </div>
                 <ImageDropzone
-                  label="Carregar Logo da Marca"
-                  value={brandLogoUrl}
+                  label="Carregar Logo Escuro"
+                  value={brandLogoDarkUrl || brandLogoUrl}
                   onSelectFile={async (file) => {
                     try {
                       const url = await uploadOrganizationLogo(file);
-                      setBrandLogoUrl(url);
+                      setBrandLogoDarkUrl(url);
+                      if (!brandLogoUrl) setBrandLogoUrl(url);
                     } catch (err) {
                       alert(err instanceof Error ? err.message : "Erro ao enviar imagem");
                     }
                   }}
-                  onClear={() => setBrandLogoUrl("")}
+                  onClear={() => setBrandLogoDarkUrl("")}
+                  accept="image/jpeg,image/png,image/webp"
+                  helperText="Formatos aceitos: JPG, PNG, WEBP."
+                />
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-[var(--color-foreground)]">
+                    Logo Tema Claro (Light)
+                  </h4>
+                  <p className="text-xs text-[var(--color-muted-foreground)] mt-1">
+                    Exibido quando o usuário está no modo claro do sistema.
+                  </p>
+                </div>
+                <ImageDropzone
+                  label="Carregar Logo Claro"
+                  value={brandLogoLightUrl || brandLogoUrl}
+                  onSelectFile={async (file) => {
+                    try {
+                      const url = await uploadOrganizationLogo(file);
+                      setBrandLogoLightUrl(url);
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : "Erro ao enviar imagem");
+                    }
+                  }}
+                  onClear={() => setBrandLogoLightUrl("")}
                   accept="image/jpeg,image/png,image/webp"
                   helperText="Formatos aceitos: JPG, PNG, WEBP."
                 />
@@ -1655,7 +1686,12 @@ export default function AdminSistemaPage() {
                     const res = await fetch("/api/proxy/system-settings/branding", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ brandLogoUrl, whatsappLogoUrl }),
+                      body: JSON.stringify({
+                        brandLogoUrl: brandLogoDarkUrl || brandLogoUrl,
+                        brandLogoDarkUrl,
+                        brandLogoLightUrl,
+                        whatsappLogoUrl,
+                      }),
                     });
                     if (res.ok) {
                       alert("Identidade visual salva com sucesso!");
