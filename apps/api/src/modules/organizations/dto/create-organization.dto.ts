@@ -20,6 +20,41 @@ export class CreateOrganizationDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(20)
+  cep?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  street?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  number?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  complement?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  neighborhood?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  state?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(120)
   templateBusinessSegment?: string;
 

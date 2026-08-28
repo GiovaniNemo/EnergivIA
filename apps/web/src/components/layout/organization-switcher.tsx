@@ -67,7 +67,7 @@ export function OrganizationSwitcher() {
           ))}
           <div className="my-1 border-t border-[var(--color-border)]" />
           <Link
-            href="/create-organization"
+            href="/configuracoes/organizacao?action=new"
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-primary)] font-medium hover:bg-[var(--color-accent)] hover:text-[var(--color-primary)]"
             onClick={() => setOpen(false)}
           >
