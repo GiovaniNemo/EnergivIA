@@ -207,42 +207,134 @@ ${textContent}`;
       "gemini-pro",
     ].filter(Boolean) as string[];
 
-    let lastError: unknown = null;
+    // 1. Tenta extrair usando a lista de modelos Gemini
+    if (this.genAI) {
+      for (const modelCandidate of candidateModels) {
+        try {
+          this.logger.log(`Tentando extrair datasheet com modelo Gemini: ${modelCandidate}`);
+          const model = this.genAI.getGenerativeModel({
+            model: modelCandidate,
+            generationConfig: {
+              temperature: 0,
+              responseMimeType: "application/json",
+              responseSchema:
+                modelCandidate.includes("1.5") || modelCandidate.includes("2.0")
+                  ? responseSchema
+                  : undefined,
+            },
+          });
 
-    for (const modelCandidate of candidateModels) {
-      try {
-        this.logger.log(`Tentando extrair datasheet com modelo Gemini: ${modelCandidate}`);
-        const model = this.genAI.getGenerativeModel({
-          model: modelCandidate,
-          generationConfig: {
-            temperature: 0,
-            responseMimeType: "application/json",
-            responseSchema: modelCandidate.includes("1.5") || modelCandidate.includes("2.0") ? responseSchema : undefined,
-          },
-        });
+          const result = await model.generateContent(prompt);
+          const text = result.response.text();
+          const cleaned = text
+            .replace(/```json/gi, "")
+            .replace(/```/g, "")
+            .trim();
+          const parsed = JSON.parse(cleaned);
 
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
-        const cleaned = text
-          .replace(/```json/gi, "")
-          .replace(/```/g, "")
-          .trim();
-        const parsed = JSON.parse(cleaned);
-
-        return {
-          detectedCategory: parsed.detectedCategory,
-          specs: parsed.specs || {},
-        };
-      } catch (err: unknown) {
-        lastError = err;
-        this.logger.warn(`Modelo ${modelCandidate} falhou ou não encontrado: ${err instanceof Error ? err.message : String(err)}`);
-        // Continue to next model in cascade
+          return {
+            detectedCategory: parsed.detectedCategory,
+            specs: parsed.specs || {},
+          };
+        } catch (err: unknown) {
+          lastError = err;
+          this.logger.warn(
+            `Modelo ${modelCandidate} falhou ou não encontrado: ${
+              err instanceof Error ? err.message : String(err)
+            }`
+          );
+          // Continue to next model in cascade
+        }
       }
     }
 
-    this.logger.error("Todos os modelos Gemini falharam na extração:", lastError);
+    // 2. Fallback para OpenAI (gpt-4o-mini / gpt-4o) caso Gemini falhe ou chave Google esteja inativa
+    const openAiApiKey =
+      this.configService.get<string>("OPENAI_API_KEY") ||
+      process.env["OPENAI_API_KEY"];
+
+    if (openAiApiKey) {
+      try {
+        this.logger.log("Acionando fallback OpenAI (gpt-4o-mini) para extração do datasheet...");
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${openAiApiKey}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            response_format: { type: "json_object" },
+            temperature: 0,
+            messages: [
+              {
+                role: "system",
+                content: `Você é um engenheiro sênior de sistemas fotovoltaicos. Analise o texto do datasheet e extraia as especificações técnicas em JSON com formato:
+{
+  "detectedCategory": "module" | "inverter" | "unknown",
+  "specs": {
+    "power_w": number,
+    "warranty_years": number,
+    "voc": number,
+    "vmp": number,
+    "isc": number,
+    "imp": number,
+    "max_system_voltage": number,
+    "efficiency": number,
+    "width_mm": number,
+    "height_mm": number,
+    "nominal_power_w": number,
+    "max_dc_power": number,
+    "max_dc_voltage": number,
+    "mppt_voltage_min": number,
+    "mppt_voltage_max": number,
+    "max_input_current": number,
+    "max_short_circuit_current_a": number,
+    "mppt_count": number,
+    "max_strings_per_mppt": number,
+    "phase": "monophasic" | "biphasic" | "triphasic",
+    "voltage_v": number
+  }
+}`,
+              },
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+          }),
+        });
+
+        if (response.ok) {
+          const data = (await response.json()) as {
+            choices?: Array<{ message?: { content?: string } }>;
+          };
+          const content = data.choices?.[0]?.message?.content;
+          if (content) {
+            const parsed = JSON.parse(content);
+            this.logger.log("Especificações extraídas com sucesso via OpenAI (gpt-4o-mini).");
+            return {
+              detectedCategory: parsed.detectedCategory || "unknown",
+              specs: parsed.specs || {},
+            };
+          }
+        } else {
+          const errText = await response.text();
+          this.logger.warn(`OpenAI retornou erro HTTP ${response.status}: ${errText}`);
+        }
+      } catch (openAiErr) {
+        this.logger.warn(
+          `Falha ao tentar extração com OpenAI: ${
+            openAiErr instanceof Error ? openAiErr.message : String(openAiErr)
+          }`
+        );
+      }
+    }
+
+    this.logger.error("Todos os provedores de IA (Gemini e OpenAI) falharam na extração:", lastError);
     const msg = lastError instanceof Error ? lastError.message : "Erro desconhecido";
     throw new BadRequestException(`Falha ao extrair especificações com a IA: ${msg}`);
   }
 }
+
 
