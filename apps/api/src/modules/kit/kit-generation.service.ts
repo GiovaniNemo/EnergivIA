@@ -312,11 +312,13 @@ export class KitGenerationService {
     if (category === "module") {
       return this.productRepo.findActiveModules(preferredBrand, source);
     }
-    const [stringInverters, microInverters] = await Promise.all([
+    const [stringInverters, microInverters, hybridInverters, offGridInverters] = await Promise.all([
       this.productRepo.findActiveStringInverters(source),
       this.productRepo.findActiveMicroInverters(source),
+      this.productRepo.findActiveHybridInverters(source),
+      this.productRepo.findActiveOffGridInverters(source),
     ]);
-    return [...stringInverters, ...microInverters];
+    return [...stringInverters, ...microInverters, ...hybridInverters, ...offGridInverters];
   }
 
   private toCompatibleAlternative(
@@ -354,18 +356,27 @@ export class KitGenerationService {
     roofType: string
   ): Promise<number> {
     const source: KitProductSource = { stockOwnerOrgId: orgId };
-    const [modules, stringInverters, microInverters, structureKits, dcCables, connector] =
-      await Promise.all([
-        this.productRepo.findActiveModules(input.preferred_brand, source),
-        this.productRepo.findActiveStringInverters(source),
-        this.productRepo.findActiveMicroInverters(source),
-        this.productRepo.findStructureKitsByRoofType(roofType, source),
-        this.productRepo.findDcCablesBySection(DC_CABLE_SECTION_MM2, source),
-        this.productRepo.findConnectorByType("mc4", source),
-      ]);
+    const [
+      modules,
+      stringInverters,
+      microInverters,
+      hybridInverters,
+      structureKits,
+      dcCables,
+      connector,
+    ] = await Promise.all([
+      this.productRepo.findActiveModules(input.preferred_brand, source),
+      this.productRepo.findActiveStringInverters(source),
+      this.productRepo.findActiveMicroInverters(source),
+      this.productRepo.findActiveHybridInverters(source),
+      this.productRepo.findStructureKitsByRoofType(roofType, source),
+      this.productRepo.findDcCablesBySection(DC_CABLE_SECTION_MM2, source),
+      this.productRepo.findConnectorByType("mc4", source),
+    ]);
     let covered = 0;
     if (modules.length > 0) covered++;
-    if (stringInverters.length > 0 || microInverters.length > 0) covered++;
+    if (stringInverters.length > 0 || microInverters.length > 0 || hybridInverters.length > 0)
+      covered++;
     if (structureKits.length > 0) covered++;
     if (dcCables.length > 0) covered++;
     if (connector) covered++;
@@ -377,28 +388,85 @@ export class KitGenerationService {
     roofType: string,
     source: KitProductSource
   ): Promise<BuiltKit | null> {
-    const [allModules, allStringInverters, allMicroInverters] = await Promise.all([
+    const [
+      allModules,
+      allStringInverters,
+      allMicroInverters,
+      allHybridInverters,
+      allOffGridInverters,
+    ] = await Promise.all([
       this.productRepo.findActiveModules(input.preferred_brand, source),
       this.productRepo.findActiveStringInverters(source),
       this.productRepo.findActiveMicroInverters(source),
+      this.productRepo.findActiveHybridInverters(source),
+      this.productRepo.findActiveOffGridInverters(source),
     ]);
     const modules = input.pinned_module_id
       ? allModules.filter((m) => m.id === input.pinned_module_id)
       : allModules;
-    let stringInverters = input.pinned_inverter_id
-      ? allStringInverters.filter((i) => i.id === input.pinned_inverter_id)
-      : allStringInverters;
-    let microInverters = input.pinned_inverter_id
-      ? allMicroInverters.filter((i) => i.id === input.pinned_inverter_id)
-      : allMicroInverters;
 
-    if (input.inverter_type === "string") {
+    // Convert hybrid and offgrid inverters to compatible string inverter specs for sizing engine
+    const adaptedHybridInverters = allHybridInverters.map((h) => ({
+      ...h,
+      specs: {
+        type: "string" as const,
+        nominal_power_w: h.specs.nominal_power_w,
+        max_dc_voltage: h.specs.max_dc_voltage,
+        mppt_count: h.specs.mppt_count || 2,
+        max_strings_per_mppt: h.specs.max_strings_per_mppt || 2,
+        mppt_voltage_min: h.specs.mppt_voltage_min || 120,
+        mppt_voltage_max: h.specs.mppt_voltage_max || 550,
+        max_input_current: h.specs.max_input_current || 16,
+        max_dc_power: h.specs.max_dc_power || h.specs.nominal_power_w * 1.3,
+        recommended_dc_ac_ratio_min: 1.0,
+        recommended_dc_ac_ratio_max: 1.5,
+      },
+    }));
+
+    const adaptedOffGridInverters = allOffGridInverters.map((o) => ({
+      ...o,
+      specs: {
+        type: "string" as const,
+        nominal_power_w: o.specs.nominal_power_w,
+        max_dc_voltage: o.specs.max_dc_voltage || 500,
+        mppt_count: 1,
+        max_strings_per_mppt: 1,
+        mppt_voltage_min: o.specs.mppt_voltage_min || 60,
+        mppt_voltage_max: o.specs.mppt_voltage_max || 450,
+        max_input_current: 18,
+        max_dc_power: o.specs.max_pv_power_w || o.specs.nominal_power_w * 1.3,
+        recommended_dc_ac_ratio_min: 1.0,
+        recommended_dc_ac_ratio_max: 1.5,
+      },
+    }));
+
+    let stringInverters = [...allStringInverters];
+    let microInverters = [...allMicroInverters];
+
+    if (input.pinned_inverter_id) {
+      stringInverters = stringInverters.filter((i) => i.id === input.pinned_inverter_id);
+      microInverters = microInverters.filter((i) => i.id === input.pinned_inverter_id);
+      const pinnedHybrid = adaptedHybridInverters.filter((i) => i.id === input.pinned_inverter_id);
+      if (pinnedHybrid.length > 0) {
+        stringInverters = pinnedHybrid;
+        microInverters = [];
+      }
+      const pinnedOffGrid = adaptedOffGridInverters.filter(
+        (i) => i.id === input.pinned_inverter_id
+      );
+      if (pinnedOffGrid.length > 0) {
+        stringInverters = pinnedOffGrid;
+        microInverters = [];
+      }
+    } else if (input.inverter_type === "string") {
       microInverters = [];
     } else if (input.inverter_type === "microinverter") {
       stringInverters = [];
-    } else if (input.inverter_type === "hybrid" || input.inverter_type === "off_grid") {
-      // Temporarily clear both since they are not fully supported yet
-      stringInverters = [];
+    } else if (input.inverter_type === "hybrid") {
+      stringInverters = adaptedHybridInverters;
+      microInverters = [];
+    } else if (input.inverter_type === "off_grid") {
+      stringInverters = adaptedOffGridInverters;
       microInverters = [];
     }
 
@@ -462,8 +530,12 @@ export class KitGenerationService {
     ]);
 
     let stringBox = null;
-    if (input.string_box_id) {
+    if (input.string_box_id && input.string_box_id !== "none") {
       stringBox = await this.productRepo.findStringBoxById(input.string_box_id, source);
+    } else if (input.string_box_id !== "none" && isStringSizingResult(sizingResult)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mpptCount = (sizingResult.inverter.specs as any)?.mppt_count || 1;
+      stringBox = await this.productRepo.findRecommendedStringBox(stringCount, mpptCount, source);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

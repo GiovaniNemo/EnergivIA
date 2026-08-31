@@ -2409,7 +2409,15 @@ export const ProposalEconomicsModal = forwardRef<
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="proposal-kit-string-box">String Box (Opcional)</Label>
+                      <Label htmlFor="proposal-kit-string-box">
+                        String Box (Opcional)
+                        {proposalKitResult?.string_configuration ? (
+                          <span className="ml-1 text-[0.7rem] font-normal text-emerald-600 dark:text-emerald-400">
+                            (Sugerido: {proposalKitResult.string_configuration.string_count}E/
+                            {Math.min(proposalKitResult.string_configuration.string_count, 2)}S)
+                          </span>
+                        ) : null}
+                      </Label>
                       <Select
                         id="proposal-kit-string-box"
                         className="h-11 w-full border-emerald-500/15"
@@ -2421,9 +2429,11 @@ export const ProposalEconomicsModal = forwardRef<
                           }))
                         }
                       >
-                        <option value="">(Sem String Box)</option>
+                        <option value="">(Automático / Recomendado)</option>
+                        <option value="none">(Sem String Box)</option>
                         {stringBoxOptions.map((sb) => (
                           <option key={sb.id} value={sb.id}>
+                            {sb.brandName ? `${sb.brandName} - ` : ""}
                             {sb.name}
                           </option>
                         ))}

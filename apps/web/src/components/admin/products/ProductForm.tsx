@@ -33,9 +33,14 @@ import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined
 import { SpecsModuleForm } from "./SpecsModuleForm";
 import { SpecsInverterForm } from "./SpecsInverterForm";
 import { SpecsMicroInverterForm } from "./SpecsMicroInverterForm";
+import { SpecsHybridInverterForm } from "./SpecsHybridInverterForm";
+import { SpecsOffGridInverterForm } from "./SpecsOffGridInverterForm";
+import { SpecsBatteryForm } from "./SpecsBatteryForm";
+import { SpecsBmsForm } from "./SpecsBmsForm";
 import { SpecsStructureForm } from "./SpecsStructureForm";
 import { SpecsCableForm } from "./SpecsCableForm";
 import { SpecsConnectorForm } from "./SpecsConnectorForm";
+import { SpecsStringBoxForm } from "./SpecsStringBoxForm";
 import { SpecsPreviewCard } from "./SpecsPreviewCard";
 import { ImageUpload } from "./ImageUpload";
 import { DatasheetUpload } from "./DatasheetUpload";
@@ -44,8 +49,12 @@ import type { CategoryName } from "@/lib/admin/schemas";
 
 const CATEGORY_LABELS: Record<string, string> = {
   module: "Módulo / Painel",
-  inverter: "Inversor",
+  inverter: "Inversor On-Grid (String)",
   microinverter: "Microinversor",
+  hybrid_inverter: "Inversor Híbrido",
+  off_grid_inverter: "Inversor Off-Grid",
+  battery: "Bateria",
+  bms: "BMS (Gerenciador de Bateria)",
   structure_kit: "Estrutura",
   dc_cable: "Cabo CC",
   connector: "Conector",
@@ -68,9 +77,14 @@ const categoryToSpecForm: Record<CategoryName, () => JSX.Element> = {
   module: SpecsModuleForm,
   inverter: SpecsInverterForm,
   microinverter: SpecsMicroInverterForm,
+  hybrid_inverter: SpecsHybridInverterForm,
+  off_grid_inverter: SpecsOffGridInverterForm,
+  battery: SpecsBatteryForm,
+  bms: SpecsBmsForm,
   structure_kit: SpecsStructureForm,
   dc_cable: SpecsCableForm,
   connector: SpecsConnectorForm,
+  string_box: SpecsStringBoxForm,
   profile: () => (
     <Box display="flex" flexDirection="column" gap={2}>
       <TextField

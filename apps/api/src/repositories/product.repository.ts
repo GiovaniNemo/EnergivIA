@@ -2,13 +2,35 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { SupplierProductRepository } from "./supplier-product.repository";
 import type { ProductWithSpecs } from "../domain/solar-sizing/types";
-import type { ModuleSpec, StringInverterSpec, MicroInverterSpec } from "../domain/product-specs";
-import { isModuleSpec, isMicroInverterSpec, isStringInverterSpec } from "../domain/product-specs";
+import type {
+  ModuleSpec,
+  StringInverterSpec,
+  MicroInverterSpec,
+  HybridInverterSpec,
+  OffGridInverterSpec,
+  BatterySpec,
+  BmsSpec,
+  StringBoxSpec,
+} from "../domain/product-specs";
+import {
+  isModuleSpec,
+  isMicroInverterSpec,
+  isStringInverterSpec,
+  isHybridInverterSpec,
+  isOffGridInverterSpec,
+  isBatterySpec,
+  isBmsSpec,
+  isStringBoxSpec,
+} from "../domain/product-specs";
 
 const CATEGORY_NAMES = {
   MODULE: "module",
   INVERTER: "inverter",
   MICROINVERTER: "microinverter",
+  HYBRID_INVERTER: "hybrid_inverter",
+  OFF_GRID_INVERTER: "off_grid_inverter",
+  BATTERY: "battery",
+  BMS: "bms",
   STRUCTURE_KIT: "structure_kit",
   DC_CABLE: "dc_cable",
   CONNECTOR: "connector",
@@ -249,6 +271,226 @@ export class ProductRepository {
       })),
       source
     );
+  }
+
+  async findActiveHybridInverters(
+    source: KitProductSource = {}
+  ): Promise<ProductWithSpecs<HybridInverterSpec>[]> {
+    const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
+      category: { name: CATEGORY_NAMES.HYBRID_INVERTER },
+      active: true,
+    };
+    const restrictIds = await this.restrictProductIds(source);
+    if (restrictIds) {
+      if (restrictIds.length === 0) return [];
+      where.id = { in: restrictIds };
+    }
+    const rows = await this.prisma.product.findMany({
+      where,
+      include: { brand: true },
+      orderBy: { name: "asc" },
+    });
+    const filtered = rows.filter((p) => isHybridInverterSpec(p.specs));
+    return this.attachPrices(
+      filtered.map((p) => ({
+        id: p.id,
+        name: p.name,
+        brandName: p.brand.name,
+        specs: p.specs as unknown as HybridInverterSpec,
+        datasheetUrl: p.datasheetUrl,
+      })),
+      source
+    );
+  }
+
+  async findActiveOffGridInverters(
+    source: KitProductSource = {}
+  ): Promise<ProductWithSpecs<OffGridInverterSpec>[]> {
+    const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
+      category: { name: CATEGORY_NAMES.OFF_GRID_INVERTER },
+      active: true,
+    };
+    const restrictIds = await this.restrictProductIds(source);
+    if (restrictIds) {
+      if (restrictIds.length === 0) return [];
+      where.id = { in: restrictIds };
+    }
+    const rows = await this.prisma.product.findMany({
+      where,
+      include: { brand: true },
+      orderBy: { name: "asc" },
+    });
+    const filtered = rows.filter((p) => isOffGridInverterSpec(p.specs));
+    return this.attachPrices(
+      filtered.map((p) => ({
+        id: p.id,
+        name: p.name,
+        brandName: p.brand.name,
+        specs: p.specs as unknown as OffGridInverterSpec,
+        datasheetUrl: p.datasheetUrl,
+      })),
+      source
+    );
+  }
+
+  async findActiveBatteries(source: KitProductSource = {}): Promise<
+    {
+      id: string;
+      name: string;
+      brandName: string;
+      specs: BatterySpec;
+      datasheetUrl?: string | null;
+      price: number;
+    }[]
+  > {
+    const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
+      category: { name: CATEGORY_NAMES.BATTERY },
+      active: true,
+    };
+    const restrictIds = await this.restrictProductIds(source);
+    if (restrictIds) {
+      if (restrictIds.length === 0) return [];
+      where.id = { in: restrictIds };
+    }
+    const rows = await this.prisma.product.findMany({
+      where,
+      include: { brand: true },
+      orderBy: { name: "asc" },
+    });
+    const filtered = rows.filter((p) => isBatterySpec(p.specs));
+    return this.attachPrices(
+      filtered.map((p) => ({
+        id: p.id,
+        name: p.name,
+        brandName: p.brand.name,
+        specs: p.specs as unknown as BatterySpec,
+        datasheetUrl: p.datasheetUrl,
+      })),
+      source
+    );
+  }
+
+  async findActiveBms(source: KitProductSource = {}): Promise<
+    {
+      id: string;
+      name: string;
+      brandName: string;
+      specs: BmsSpec;
+      datasheetUrl?: string | null;
+      price: number;
+    }[]
+  > {
+    const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
+      category: { name: CATEGORY_NAMES.BMS },
+      active: true,
+    };
+    const restrictIds = await this.restrictProductIds(source);
+    if (restrictIds) {
+      if (restrictIds.length === 0) return [];
+      where.id = { in: restrictIds };
+    }
+    const rows = await this.prisma.product.findMany({
+      where,
+      include: { brand: true },
+      orderBy: { name: "asc" },
+    });
+    const filtered = rows.filter((p) => isBmsSpec(p.specs));
+    return this.attachPrices(
+      filtered.map((p) => ({
+        id: p.id,
+        name: p.name,
+        brandName: p.brand.name,
+        specs: p.specs as unknown as BmsSpec,
+        datasheetUrl: p.datasheetUrl,
+      })),
+      source
+    );
+  }
+
+  async findActiveStringBoxes(source: KitProductSource = {}): Promise<
+    {
+      id: string;
+      name: string;
+      brandName: string;
+      specs: StringBoxSpec;
+      datasheetUrl?: string | null;
+      price: number;
+    }[]
+  > {
+    const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
+      category: { name: CATEGORY_NAMES.STRING_BOX },
+      active: true,
+    };
+    const restrictIds = await this.restrictProductIds(source);
+    if (restrictIds) {
+      if (restrictIds.length === 0) return [];
+      where.id = { in: restrictIds };
+    }
+    const rows = await this.prisma.product.findMany({
+      where,
+      include: { brand: true },
+      orderBy: { name: "asc" },
+    });
+    const filtered = rows.filter((p) => isStringBoxSpec(p.specs));
+    return this.attachPrices(
+      filtered.map((p) => ({
+        id: p.id,
+        name: p.name,
+        brandName: p.brand.name,
+        specs: p.specs as unknown as StringBoxSpec,
+        datasheetUrl: p.datasheetUrl,
+      })),
+      source
+    );
+  }
+
+  async findRecommendedStringBox(
+    stringCount: number,
+    mpptCount: number,
+    source: KitProductSource = {}
+  ): Promise<{
+    id: string;
+    name: string;
+    brandName: string;
+    price: number;
+    specs: StringBoxSpec;
+  } | null> {
+    const allBoxes = await this.findActiveStringBoxes(source);
+    if (allBoxes.length === 0) return null;
+
+    // Ideal input/output matches
+    // e.g. 1 string -> 1E/1S (inputs_count: 1, outputs_count: 1)
+    // 2 strings, 2 mppts -> 2E/2S (inputs: 2, outputs: 2)
+    // 2 strings, 1 mppt -> 2E/1S (inputs: 2, outputs: 1)
+    const expectedInputs = Math.max(1, stringCount);
+    const expectedOutputs = Math.min(expectedInputs, Math.max(1, mpptCount));
+
+    // Try exact match by spec fields
+    const exactMatch = allBoxes.find((b) => {
+      const inputs = b.specs.inputs_count;
+      const outputs = b.specs.outputs_count;
+      if (inputs === expectedInputs && (outputs === expectedOutputs || !outputs)) return true;
+      return false;
+    });
+    if (exactMatch) return exactMatch;
+
+    // Try text heuristic matching from name (e.g. "2E/2S", "1E/1S", "2E-2S", "1E-1S", "2E / 2S")
+    const searchToken = `${expectedInputs}E/${expectedOutputs}S`.toLowerCase();
+    const searchTokenDash = `${expectedInputs}e-${expectedOutputs}s`.toLowerCase();
+    const searchTokenSpace = `${expectedInputs}e / ${expectedOutputs}s`.toLowerCase();
+    const nameMatch = allBoxes.find((b) => {
+      const name = b.name.toLowerCase();
+      return (
+        name.includes(searchToken) ||
+        name.includes(searchTokenDash) ||
+        name.includes(searchTokenSpace) ||
+        name.includes(`${expectedInputs}e`)
+      );
+    });
+    if (nameMatch) return nameMatch;
+
+    // Otherwise return the first available box
+    return allBoxes[0] ?? null;
   }
 
   async findStructureKitsByRoofType(

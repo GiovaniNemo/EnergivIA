@@ -19,6 +19,28 @@ export class CategoriesService {
       }
     }
 
+    const standardSlugs = [
+      "module",
+      "inverter",
+      "microinverter",
+      "hybrid_inverter",
+      "off_grid_inverter",
+      "battery",
+      "bms",
+      "structure_kit",
+      "dc_cable",
+      "connector",
+      "profile",
+      "string_box",
+    ];
+
+    for (const slug of standardSlugs) {
+      const exists = await this.prisma.category.findUnique({ where: { name: slug } });
+      if (!exists) {
+        await this.prisma.category.create({ data: { name: slug } });
+      }
+    }
+
     return this.prisma.category.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
@@ -27,16 +49,18 @@ export class CategoriesService {
 
   async seed() {
     const cats = [
-      "Módulo",
-      "Inversor",
-      "Microinversor",
-      "Inversor Híbrido",
-      "Inversor Off-Grid",
-      "Bateria",
-      "Estrutura",
-      "Cabo",
-      "Conector",
-      "String Box",
+      "module",
+      "inverter",
+      "microinverter",
+      "hybrid_inverter",
+      "off_grid_inverter",
+      "battery",
+      "bms",
+      "structure_kit",
+      "dc_cable",
+      "connector",
+      "profile",
+      "string_box",
     ];
 
     for (const name of cats) {

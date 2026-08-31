@@ -39,6 +39,10 @@ export const categoryNames = [
   "module",
   "inverter",
   "microinverter",
+  "hybrid_inverter",
+  "off_grid_inverter",
+  "battery",
+  "bms",
   "structure_kit",
   "dc_cable",
   "connector",
@@ -85,6 +89,60 @@ export const specsMicroInverterSchema = z.object({
   min_module_power: positiveNumber,
 });
 
+export const specsHybridInverterSchema = z.object({
+  type: z.literal("hybrid").default("hybrid"),
+  nominal_power_w: positiveNumber,
+  warranty_years: positiveNumber.optional(),
+  max_dc_voltage: positiveNumber,
+  mppt_count: z.coerce.number().int().positive(),
+  max_strings_per_mppt: z.coerce.number().int().positive().optional(),
+  mppt_voltage_min: positiveNumber,
+  mppt_voltage_max: positiveNumber,
+  max_input_current: positiveNumber,
+  max_dc_power: positiveNumber,
+  battery_voltage_type: z.enum(["low_voltage", "high_voltage"]).optional(),
+  battery_nominal_voltage_v: positiveNumber.optional(),
+  max_charge_current_a: positiveNumber.optional(),
+  max_discharge_current_a: positiveNumber.optional(),
+  eps_nominal_power_w: positiveNumber.optional(),
+});
+
+export const specsOffGridInverterSchema = z.object({
+  type: z.literal("off_grid").default("off_grid"),
+  nominal_power_w: positiveNumber,
+  peak_power_w: positiveNumber.optional(),
+  battery_nominal_voltage_v: positiveNumber,
+  max_dc_voltage: positiveNumber.optional(),
+  mppt_voltage_min: positiveNumber.optional(),
+  mppt_voltage_max: positiveNumber.optional(),
+  max_pv_power_w: positiveNumber.optional(),
+  ac_output_voltage: positiveNumber.optional(),
+  waveform: z.enum(["pure_sine", "modified_sine"]).optional(),
+  warranty_years: positiveNumber.optional(),
+});
+
+export const specsBatterySchema = z.object({
+  capacity_kwh: positiveNumber,
+  capacity_ah: positiveNumber.optional(),
+  nominal_voltage_v: positiveNumber,
+  voltage_type: z.enum(["low_voltage", "high_voltage"]).optional(),
+  chemistry: z.enum(["lifepo4", "lead_carbon", "lithium_ion", "other"]).optional(),
+  dod_percent: percentNumber.optional(),
+  cycles: z.coerce.number().int().positive().optional(),
+  max_charge_current_a: positiveNumber.optional(),
+  max_discharge_current_a: positiveNumber.optional(),
+  warranty_years: positiveNumber.optional(),
+});
+
+export const specsBmsSchema = z.object({
+  nominal_voltage_v: positiveNumber.optional(),
+  max_voltage_v: positiveNumber.optional(),
+  max_current_a: positiveNumber.optional(),
+  communication_protocol: z.string().optional(),
+  supported_batteries_count: z.coerce.number().int().positive().optional(),
+  warranty_years: positiveNumber.optional(),
+});
+
 export const roofTypeOptions = [
   "ceramic",
   "metal",
@@ -117,14 +175,24 @@ export const specsProfileSchema = z.object({
 });
 
 export const specsStringBoxSchema = z.object({
-  // Sem specs específicas para a string box por enquanto, ou se tiver, adicionar.
-  type: z.string().optional(),
+  inputs_count: z.coerce.number().int().positive().optional(),
+  outputs_count: z.coerce.number().int().positive().optional(),
+  max_voltage_v: positiveNumber.optional(),
+  max_current_a: positiveNumber.optional(),
+  dps_included: z.boolean().optional(),
+  switch_included: z.boolean().optional(),
+  fuses_included: z.boolean().optional(),
+  warranty_years: positiveNumber.optional(),
 });
 
 const specsSchemaByCategory: Record<CategoryName, z.ZodType<Record<string, unknown>>> = {
   module: specsModuleSchema,
   inverter: specsInverterSchema,
   microinverter: specsMicroInverterSchema,
+  hybrid_inverter: specsHybridInverterSchema,
+  off_grid_inverter: specsOffGridInverterSchema,
+  battery: specsBatterySchema,
+  bms: specsBmsSchema,
   structure_kit: specsStructureSchema,
   dc_cable: specsDcCableSchema,
   connector: specsConnectorSchema,
@@ -154,6 +222,10 @@ export type BrandFormValues = z.infer<typeof brandSchema>;
 export type SpecsModule = z.infer<typeof specsModuleSchema>;
 export type SpecsInverter = z.infer<typeof specsInverterSchema>;
 export type SpecsMicroInverter = z.infer<typeof specsMicroInverterSchema>;
+export type SpecsHybridInverter = z.infer<typeof specsHybridInverterSchema>;
+export type SpecsOffGridInverter = z.infer<typeof specsOffGridInverterSchema>;
+export type SpecsBattery = z.infer<typeof specsBatterySchema>;
+export type SpecsBms = z.infer<typeof specsBmsSchema>;
 export type SpecsStructure = z.infer<typeof specsStructureSchema>;
 export type SpecsDcCable = z.infer<typeof specsDcCableSchema>;
 export type SpecsConnector = z.infer<typeof specsConnectorSchema>;

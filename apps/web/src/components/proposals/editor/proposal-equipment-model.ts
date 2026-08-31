@@ -35,6 +35,10 @@ const CATEGORY_LABELS: Record<string, string> = {
   module: "Módulo",
   inverter: "Inversor",
   microinverter: "Microinversor",
+  hybrid_inverter: "Inversor Híbrido",
+  off_grid_inverter: "Inversor Off-Grid",
+  battery: "Bateria",
+  bms: "BMS",
   structure_kit: "Estrutura",
   dc_cable: "Cabo CC",
   connector: "Conector",
@@ -51,12 +55,22 @@ export function equipmentCategoryLucideIcon(categoryName: string | undefined): s
       return "zap";
     case "microinverter":
       return "cpu";
+    case "hybrid_inverter":
+      return "battery-charging";
+    case "off_grid_inverter":
+      return "zap";
+    case "battery":
+      return "battery";
+    case "bms":
+      return "shield-check";
     case "structure_kit":
       return "construction";
     case "dc_cable":
       return "link-2";
     case "connector":
       return "plug";
+    case "string_box":
+      return "shield";
     default:
       return "package";
   }
@@ -64,6 +78,10 @@ export function equipmentCategoryLucideIcon(categoryName: string | undefined): s
 
 const CATEGORY_TITLE_PREFIXES: Array<[string, string]> = [
   ["microinverter", "Microinversor"],
+  ["hybrid_inverter", "Inversor Híbrido"],
+  ["off_grid_inverter", "Inversor Off-Grid"],
+  ["battery", "Bateria"],
+  ["bms", "BMS"],
   ["structure_kit", "Estrutura"],
   ["dc_cable", "Cabo CC"],
   ["module", "Módulo"],
@@ -209,6 +227,78 @@ export function buildEquipmentDisplaySpecs(
       b = { label: "Garantia", value: "10 anos", icon: "shield" };
     }
     if (mppt != null) c = { label: "MPPTs", value: `${mppt} trackers`, icon: "layers" };
+  } else if (cat === "hybrid_inverter") {
+    const p = num(specs, "nominal_power_w");
+    const eps = num(specs, "eps_nominal_power_w");
+    const warranty =
+      num(specs, "warranty_years") ?? str(specs, "warranty") ?? str(specs, "warranty_description");
+    if (p != null) {
+      a = {
+        label: "Potência Nominal",
+        value:
+          p >= 1000
+            ? `${(p / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} kW`
+            : `${p} W`,
+        icon: "zap",
+      };
+    }
+    if (warranty != null) {
+      b = {
+        label: "Garantia",
+        value: `${warranty} anos`,
+        icon: "shield",
+      };
+    } else {
+      b = { label: "Garantia", value: "10 anos", icon: "shield" };
+    }
+    if (eps != null) {
+      c = {
+        label: "Backup EPS",
+        value: `${(eps / 1000).toFixed(1)} kW`,
+        icon: "battery-charging",
+      };
+    } else {
+      c = { label: "Função", value: "Híbrido + Backup", icon: "battery-charging" };
+    }
+  } else if (cat === "off_grid_inverter") {
+    const p = num(specs, "nominal_power_w");
+    const vBat = num(specs, "battery_nominal_voltage_v");
+    const warranty = num(specs, "warranty_years") ?? 2;
+    if (p != null) a = { label: "Potência", value: `${p} W`, icon: "zap" };
+    b = { label: "Garantia", value: `${warranty} anos`, icon: "shield" };
+    if (vBat != null) c = { label: "Tensão Bateria", value: `${vBat} V`, icon: "battery" };
+  } else if (cat === "battery") {
+    const kwh = num(specs, "capacity_kwh");
+    const ah = num(specs, "capacity_ah");
+    const v = num(specs, "nominal_voltage_v");
+    const warranty = num(specs, "warranty_years") ?? 10;
+    if (kwh != null) a = { label: "Capacidade", value: `${kwh} kWh`, icon: "battery" };
+    else if (ah != null && v != null)
+      a = { label: "Capacidade", value: `${ah}Ah (${v}V)`, icon: "battery" };
+    b = { label: "Garantia", value: `${warranty} anos`, icon: "shield" };
+    const cycles = num(specs, "cycles");
+    if (cycles != null) c = { label: "Vida útil", value: `${cycles} ciclos`, icon: "refresh-cw" };
+    else c = { label: "Tecnologia", value: "LiFePO4 Lítio", icon: "zap" };
+  } else if (cat === "bms") {
+    const v = num(specs, "nominal_voltage_v") ?? num(specs, "max_voltage_v");
+    const i = num(specs, "max_current_a");
+    const warranty = num(specs, "warranty_years") ?? 5;
+    if (v != null) a = { label: "Tensão de Trab.", value: `${v} V`, icon: "zap" };
+    b = { label: "Garantia", value: `${warranty} anos`, icon: "shield" };
+    if (i != null) c = { label: "Corrente Máx.", value: `${i} A`, icon: "shield-check" };
+  } else if (cat === "string_box") {
+    const inputs = num(specs, "inputs_count");
+    const outputs = num(specs, "outputs_count");
+    const vMax = num(specs, "max_voltage_v");
+    const warranty = num(specs, "warranty_years") ?? 2;
+    if (inputs != null && outputs != null) {
+      a = { label: "Configuração", value: `${inputs}E / ${outputs}S`, icon: "shield" };
+    } else if (inputs != null) {
+      a = { label: "Entradas", value: `${inputs} strings`, icon: "shield" };
+    }
+    b = { label: "Garantia", value: `${warranty} anos`, icon: "shield" };
+    if (vMax != null) c = { label: "Tensão Máx.", value: `${vMax} V CC`, icon: "zap" };
+    else c = { label: "Proteção", value: "DPS + Chave CC", icon: "shield-check" };
   } else if (cat === "microinverter") {
     const ch = num(specs, "channels");
     const maxP = num(specs, "max_module_power");

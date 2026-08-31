@@ -33,7 +33,79 @@ export interface MicroInverterSpec {
   min_module_power: number;
 }
 
-export type InverterSpec = StringInverterSpec | MicroInverterSpec;
+export interface HybridInverterSpec {
+  type: "hybrid";
+  nominal_power_w: number;
+  max_dc_voltage: number;
+  mppt_count: number;
+  max_strings_per_mppt?: number;
+  mppt_voltage_min: number;
+  mppt_voltage_max: number;
+  max_input_current: number;
+  max_dc_power: number;
+  battery_voltage_type?: "low_voltage" | "high_voltage";
+  battery_nominal_voltage_v?: number;
+  battery_voltage_min?: number;
+  battery_voltage_max?: number;
+  max_charge_current_a?: number;
+  max_discharge_current_a?: number;
+  eps_nominal_power_w?: number;
+  eps_peak_power_w?: number;
+  warranty_years?: number;
+}
+
+export interface OffGridInverterSpec {
+  type: "off_grid";
+  nominal_power_w: number;
+  peak_power_w?: number;
+  battery_nominal_voltage_v: number;
+  max_dc_voltage?: number;
+  mppt_voltage_min?: number;
+  mppt_voltage_max?: number;
+  max_pv_power_w?: number;
+  ac_output_voltage?: number;
+  waveform?: "pure_sine" | "modified_sine";
+  warranty_years?: number;
+}
+
+export interface BatterySpec {
+  capacity_kwh: number;
+  capacity_ah?: number;
+  nominal_voltage_v: number;
+  voltage_type?: "low_voltage" | "high_voltage";
+  chemistry?: "lifepo4" | "lead_carbon" | "lithium_ion" | "other";
+  dod_percent?: number;
+  cycles?: number;
+  max_charge_current_a?: number;
+  max_discharge_current_a?: number;
+  warranty_years?: number;
+}
+
+export interface BmsSpec {
+  nominal_voltage_v?: number;
+  max_voltage_v?: number;
+  max_current_a?: number;
+  communication_protocol?: string;
+  supported_batteries_count?: number;
+  warranty_years?: number;
+}
+
+export interface StringBoxSpec {
+  inputs_count: number;
+  outputs_count: number;
+  max_voltage_v: number;
+  max_current_a?: number;
+  dps_included?: boolean;
+  switch_included?: boolean;
+  fuses_included?: boolean;
+  warranty_years?: number;
+}
+
+export type InverterSpec =
+  | StringInverterSpec
+  | MicroInverterSpec
+  | HybridInverterSpec
+  | OffGridInverterSpec;
 
 export interface StructureKitSpec {
   roof_type: string;
@@ -60,6 +132,11 @@ export type ProductSpecs =
   | ModuleSpec
   | StringInverterSpec
   | MicroInverterSpec
+  | HybridInverterSpec
+  | OffGridInverterSpec
+  | BatterySpec
+  | BmsSpec
+  | StringBoxSpec
   | StructureKitSpec
   | DcCableSpec
   | ConnectorSpec
@@ -97,6 +174,52 @@ export function isMicroInverterSpec(specs: unknown): specs is MicroInverterSpec 
   );
 }
 
+export function isHybridInverterSpec(specs: unknown): specs is HybridInverterSpec {
+  return (
+    typeof specs === "object" &&
+    specs !== null &&
+    "type" in specs &&
+    (specs as { type: string }).type === "hybrid" &&
+    "nominal_power_w" in specs
+  );
+}
+
+export function isOffGridInverterSpec(specs: unknown): specs is OffGridInverterSpec {
+  return (
+    typeof specs === "object" &&
+    specs !== null &&
+    "type" in specs &&
+    (specs as { type: string }).type === "off_grid" &&
+    "nominal_power_w" in specs
+  );
+}
+
+export function isBatterySpec(specs: unknown): specs is BatterySpec {
+  return (
+    typeof specs === "object" &&
+    specs !== null &&
+    "capacity_kwh" in specs &&
+    "nominal_voltage_v" in specs
+  );
+}
+
+export function isBmsSpec(specs: unknown): specs is BmsSpec {
+  return typeof specs === "object" && specs !== null;
+}
+
+export function isStringBoxSpec(specs: unknown): specs is StringBoxSpec {
+  return (
+    typeof specs === "object" &&
+    specs !== null &&
+    ("inputs_count" in specs || "outputs_count" in specs || "max_voltage_v" in specs)
+  );
+}
+
 export function isInverterSpec(specs: unknown): specs is InverterSpec {
-  return isStringInverterSpec(specs) || isMicroInverterSpec(specs);
+  return (
+    isStringInverterSpec(specs) ||
+    isMicroInverterSpec(specs) ||
+    isHybridInverterSpec(specs) ||
+    isOffGridInverterSpec(specs)
+  );
 }

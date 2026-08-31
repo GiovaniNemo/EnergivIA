@@ -31,8 +31,12 @@ import { FreightRulesEditor } from "@/components/freight/freight-rules-editor";
 
 const CATEGORY_LABELS: Record<string, string> = {
   module: "Módulo",
-  inverter: "Inversor",
+  inverter: "Inversor On-Grid",
   microinverter: "Microinversor",
+  hybrid_inverter: "Inversor Híbrido",
+  off_grid_inverter: "Inversor Off-Grid",
+  battery: "Bateria",
+  bms: "BMS",
   structure_kit: "Estrutura",
   dc_cable: "Cabo DC",
   connector: "Conector",

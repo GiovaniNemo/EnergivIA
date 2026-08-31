@@ -41,8 +41,12 @@ import {
 const CATEGORY_LABELS: Record<string, string> = {
   connector: "Conector",
   dc_cable: "Cabo CC",
-  inverter: "Inversor",
+  inverter: "Inversor On-Grid",
   microinverter: "Microinversor",
+  hybrid_inverter: "Inversor Híbrido",
+  off_grid_inverter: "Inversor Off-Grid",
+  battery: "Bateria",
+  bms: "BMS",
   module: "Módulo",
   structure_kit: "Estrutura",
   profile: "Perfil",
@@ -68,12 +72,21 @@ function getProductPowerBadge(product: Product): string | null {
   if (cat === "module" && specs["power_w"]) {
     return `${specs["power_w"]} Wp`;
   }
-  if (cat === "inverter" && specs["nominal_power_w"]) {
+  if (
+    (cat === "inverter" || cat === "hybrid_inverter" || cat === "off_grid_inverter") &&
+    specs["nominal_power_w"]
+  ) {
     const kw = Number(specs["nominal_power_w"]) / 1000;
     return `${kw} kW`;
   }
   if (cat === "microinverter" && specs["max_module_power"]) {
     return `${specs["max_module_power"]} W`;
+  }
+  if (cat === "battery" && specs["capacity_kwh"]) {
+    return `${specs["capacity_kwh"]} kWh`;
+  }
+  if (cat === "string_box" && (specs["inputs_count"] || specs["outputs_count"])) {
+    return `${specs["inputs_count"] ?? 1}E/${specs["outputs_count"] ?? 1}S`;
   }
   return null;
 }
