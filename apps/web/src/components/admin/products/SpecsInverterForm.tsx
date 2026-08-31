@@ -42,9 +42,6 @@ export function SpecsInverterForm(): JSX.Element {
               if (val === "mono_220") {
                 setValue("specs.grid_standard", "EU");
                 setValue("specs.output_voltage_v", "220V");
-              } else if (val === "biphasic_127_220") {
-                setValue("specs.grid_standard", "US");
-                setValue("specs.output_voltage_v", "127V/220V");
               } else if (val === "tri_220") {
                 setValue("specs.grid_standard", "TRI_220");
                 setValue("specs.output_voltage_v", "220V");
@@ -54,20 +51,14 @@ export function SpecsInverterForm(): JSX.Element {
               }
             }}
             label="Padrão de Rede / Tensão CA do Inversor"
-            helperText="Até 10kW selecione EU (Mono 220V) ou US (Bifásico 127/220V). Acima de 10kW selecione Trifásico."
+            helperText="Inversores On-Grid são Monofásicos 220V até 10kW. Acima de 10kW são Trifásicos 220V ou 380V."
             select
             fullWidth
             size="small"
           >
-            <MenuItem value="mono_220">
-              Monofásico 220V — Modelo EU (Fase-Neutro ou Fase-Fase 220V)
-            </MenuItem>
-            <MenuItem value="biphasic_127_220">
-              Bifásico 127V/220V — Modelo US (Split-Phase com Neutro Central)
-            </MenuItem>
+            <MenuItem value="mono_220">Monofásico 220V (Padrão On-Grid até 10kW)</MenuItem>
             <MenuItem value="tri_220">Trifásico 220V (Rede 127/220V)</MenuItem>
             <MenuItem value="tri_380">Trifásico 380V (Rede 220/380V)</MenuItem>
-            <MenuItem value="mono_127">Monofásico 127V</MenuItem>
           </TextField>
         )}
       />
