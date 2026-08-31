@@ -158,10 +158,6 @@ export function validateTemplateBeforeCriticalAction(document: ProposalDocumentJ
   }
   for (const section of document.sections) {
     if (!section.title.trim()) issues.push(`Seção sem título (${section.type}).`);
-    if (section.type === "cta") {
-      const url = String(section.fields["buttonUrl"] ?? section.fields["url"] ?? "").trim();
-      if (!url) issues.push("Seção CTA sem URL configurada.");
-    }
   }
   return issues;
 }
