@@ -4,7 +4,9 @@ import { useMemo, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Box, Button, Paper, Typography } from "@mui/material";
+import { Box, Button, Paper, Typography, Breadcrumbs, Link as MuiLink } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import AddIcon from "@mui/icons-material/Add";
 import { ProductForm } from "@/components/admin/products/ProductForm";
 import { buildProductSchema, categoryNames, type CategoryName } from "@/lib/admin/schemas";
 import { fetchBrands, fetchCategories, createProduct } from "@/lib/admin-api";
@@ -21,6 +23,7 @@ type FormValues = {
   brand_id: string;
   category_id: string;
   image_url?: string;
+  datasheet_url?: string;
   active: boolean;
   specs: Record<string, unknown>;
 };
@@ -73,12 +76,12 @@ export default function NewProductPage(): JSX.Element {
     mutationFn: createProduct,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
+      alert("Produto cadastrado com sucesso!");
       router.push("/admin/produtos");
     },
   });
 
   const onSubmit = (values: FormValues) => {
-    // Inject hidden defaults before validation to prevent impossible validation errors
     if (effectiveCategoryName && defaultSpecsByCategory[effectiveCategoryName]) {
       values.specs = { ...defaultSpecsByCategory[effectiveCategoryName], ...values.specs };
     }
@@ -108,26 +111,65 @@ export default function NewProductPage(): JSX.Element {
 
   return (
     <FormProvider {...methods}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Novo produto
-        </Typography>
-        <form onSubmit={methods.handleSubmit(onSubmit)}>
-          <ProductForm
-            categories={categories}
-            brands={brands}
-            categoryName={effectiveCategoryName}
-          />
-          <Box display="flex" gap={2} mt={3}>
-            <Button type="submit" variant="contained" disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Salvando..." : "Criar produto"}
+      <Box display="flex" flexDirection="column" gap={3}>
+        {/* Header with Navigation */}
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          flexWrap="wrap"
+          gap={2}
+        >
+          <Box>
+            <Breadcrumbs sx={{ mb: 0.5 }}>
+              <MuiLink
+                component="button"
+                variant="body2"
+                onClick={() => router.push("/admin/produtos")}
+                sx={{ color: "text.secondary", textDecoration: "none", cursor: "pointer" }}
+              >
+                Catálogo Global
+              </MuiLink>
+              <Typography variant="body2" color="text.primary" sx={{ fontWeight: 600 }}>
+                Novo Produto
+              </Typography>
+            </Breadcrumbs>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              Cadastrar Novo Produto
+            </Typography>
+          </Box>
+          <Box display="flex" gap={1.5}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={() => router.push("/admin/produtos")}
+              sx={{ textTransform: "none" }}
+            >
+              Voltar
             </Button>
-            <Button type="button" variant="outlined" onClick={() => router.push("/admin/produtos")}>
-              Cancelar
+            <Button
+              type="submit"
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={methods.handleSubmit(onSubmit)}
+              disabled={createMutation.isPending}
+              sx={{ textTransform: "none", fontWeight: 600, px: 3 }}
+            >
+              {createMutation.isPending ? "Salvando..." : "Criar Produto"}
             </Button>
           </Box>
-        </form>
-      </Paper>
+        </Box>
+
+        <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, bgcolor: "background.paper" }}>
+          <form onSubmit={methods.handleSubmit(onSubmit)}>
+            <ProductForm
+              categories={categories}
+              brands={brands}
+              categoryName={effectiveCategoryName}
+            />
+          </form>
+        </Paper>
+      </Box>
     </FormProvider>
   );
 }

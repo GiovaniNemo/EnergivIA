@@ -4,7 +4,17 @@ import { useMemo, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
-import { Box, Button, Paper, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Paper,
+  Typography,
+  Breadcrumbs,
+  Link as MuiLink,
+  CircularProgress,
+} from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import SaveIcon from "@mui/icons-material/Save";
 import { ProductForm } from "@/components/admin/products/ProductForm";
 import { buildProductSchema, categoryNames, type CategoryName } from "@/lib/admin/schemas";
 import { fetchBrands, fetchCategories, fetchProduct, updateProduct } from "@/lib/admin-api";
@@ -21,6 +31,7 @@ type FormValues = {
   brand_id: string;
   category_id: string;
   image_url?: string;
+  datasheet_url?: string;
   active: boolean;
   specs: Record<string, unknown>;
 };
@@ -91,11 +102,11 @@ export default function EditProductPage(): JSX.Element {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "product", id] });
+      alert("Produto atualizado com sucesso!");
     },
   });
 
   const onSubmit = (values: FormValues) => {
-    // Inject hidden defaults before validation to prevent impossible validation errors
     if (effectiveCategoryName && defaultSpecsByCategory[effectiveCategoryName]) {
       values.specs = { ...defaultSpecsByCategory[effectiveCategoryName], ...values.specs };
     }
@@ -123,31 +134,75 @@ export default function EditProductPage(): JSX.Element {
   };
 
   if (isLoading || !product) {
-    return <Typography>Carregando...</Typography>;
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
     <FormProvider {...methods}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Editar produto
-        </Typography>
-        <form onSubmit={methods.handleSubmit(onSubmit)}>
-          <ProductForm
-            categories={categories}
-            brands={brands}
-            categoryName={effectiveCategoryName}
-          />
-          <Box display="flex" gap={2} mt={3}>
-            <Button type="submit" variant="contained" disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? "Salvando..." : "Salvar"}
+      <Box display="flex" flexDirection="column" gap={3}>
+        {/* Header with Navigation */}
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          flexWrap="wrap"
+          gap={2}
+        >
+          <Box>
+            <Breadcrumbs sx={{ mb: 0.5 }}>
+              <MuiLink
+                component="button"
+                variant="body2"
+                onClick={() => router.push("/admin/produtos")}
+                sx={{ color: "text.secondary", textDecoration: "none", cursor: "pointer" }}
+              >
+                Catálogo Global
+              </MuiLink>
+              <Typography variant="body2" color="text.primary" sx={{ fontWeight: 600 }}>
+                {product.name}
+              </Typography>
+            </Breadcrumbs>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              Editar Produto
+            </Typography>
+          </Box>
+          <Box display="flex" gap={1.5}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={() => router.push("/admin/produtos")}
+              sx={{ textTransform: "none" }}
+            >
+              Voltar
             </Button>
-            <Button type="button" variant="outlined" onClick={() => router.push("/admin/produtos")}>
-              Cancelar
+            <Button
+              type="submit"
+              variant="contained"
+              startIcon={<SaveIcon />}
+              onClick={methods.handleSubmit(onSubmit)}
+              disabled={updateMutation.isPending}
+              sx={{ textTransform: "none", fontWeight: 600, px: 3 }}
+            >
+              {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </Box>
-        </form>
-      </Paper>
+        </Box>
+
+        <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, bgcolor: "background.paper" }}>
+          <form onSubmit={methods.handleSubmit(onSubmit)}>
+            <ProductForm
+              categories={categories}
+              brands={brands}
+              categoryName={effectiveCategoryName}
+              productId={id}
+            />
+          </form>
+        </Paper>
+      </Box>
     </FormProvider>
   );
 }
