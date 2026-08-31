@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { BadRequestException, Injectable, NotFoundException, Logger } from "@nestjs/common";
-import type { Prisma, ProposalTemplate } from "@prisma/client";
+import type { Prisma, ProposalStatus, ProposalTemplate } from "@prisma/client";
 import { isProposalIntegratorSnapshot } from "@energivia/shared-types";
+import { RespondPublicProposalDto } from "./dto/respond-public-proposal.dto";
 import {
   PROJECT_COST_ESSENTIAL_MARGIN_NAME,
   PROJECT_COST_ESSENTIAL_LABOR_NAME,
@@ -356,6 +357,64 @@ export class ProposalsService {
       );
       return null;
     }
+  }
+
+  async respondPublicById(idOrToken: string, dto: RespondPublicProposalDto) {
+    const proposal = await this.prisma.proposal.findFirst({
+      where: {
+        OR: [{ publicToken: idOrToken }, { id: idOrToken }],
+        ...soft,
+      },
+      include: {
+        deal: { include: { lead: true } },
+        tenant: { select: { id: true, name: true } },
+      },
+    });
+    if (!proposal) throw new NotFoundException("Proposta não encontrada.");
+
+    const now = new Date();
+    const newStatus: ProposalStatus =
+      dto.decision === "ACCEPT"
+        ? "ACCEPTED"
+        : dto.decision === "REJECT"
+          ? "REJECTED"
+          : proposal.status;
+
+    const updated = await this.prisma.proposal.update({
+      where: { id: proposal.id },
+      data: {
+        status: newStatus,
+        clientDecision: dto.decision,
+        clientDecisionAt: now,
+        clientDecisionComments: dto.comments?.trim() || null,
+        clientSignatureName: dto.signatureName?.trim() || null,
+        clientContactWhatsapp: dto.contactWhatsapp?.trim() || null,
+      },
+    });
+
+    if (dto.decision === "ACCEPT" && proposal.dealId) {
+      try {
+        await this.prisma.deal.update({
+          where: { id: proposal.dealId },
+          data: {
+            stage: "WON",
+            temperature: "HOT",
+            lastContactAt: now,
+          },
+        });
+      } catch (err) {
+        this.logger.warn(`Failed to advance deal stage on proposal accept: ${err}`);
+      }
+    }
+
+    await this.notificationsService.handlePublicProposalResponse(proposal.id, dto);
+
+    return {
+      success: true,
+      decision: dto.decision,
+      status: updated.status,
+      answeredAt: now,
+    };
   }
 
   async updatePdfUrl(tenantId: string, id: string, pdfUrl: string) {

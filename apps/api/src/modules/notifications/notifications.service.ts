@@ -5,6 +5,9 @@ import { defer, from, interval, merge, of, type Observable } from "rxjs";
 import { distinctUntilChanged, map, switchMap } from "rxjs/operators";
 import { LeadActivityLogService } from "../lead-activity-log/lead-activity-log.service";
 import { PrismaService } from "../../prisma/prisma.service";
+import { EmailService } from "../../common/email/email.service";
+import { WhatsappCloudService } from "../whatsapp/whatsapp-cloud.service";
+import type { RespondPublicProposalDto } from "../proposals/dto/respond-public-proposal.dto";
 
 const COMMERCIAL_ROLES: OrgRole[] = ["OWNER", "ADMIN", "SALES"];
 
@@ -36,7 +39,9 @@ export class NotificationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-    private readonly leadActivityLog: LeadActivityLogService
+    private readonly leadActivityLog: LeadActivityLogService,
+    private readonly emailService: EmailService,
+    private readonly whatsappCloud: WhatsappCloudService
   ) {}
 
   unreadCountSseStream(tenantId: string, userId: string): Observable<MessageEvent> {
@@ -76,12 +81,52 @@ export class NotificationsService {
     return rows.map((r) => r.userId).filter((id): id is string => Boolean(id));
   }
 
+  async listCommercialRecipientUsers(
+    tenantId: string
+  ): Promise<Array<{ id: string; email: string; name?: string }>> {
+    const rows = await this.prisma.organizationMember.findMany({
+      where: {
+        organizationId: tenantId,
+        status: "ACCEPTED",
+        userId: { not: null },
+        role: { in: COMMERCIAL_ROLES },
+      },
+      include: {
+        user: { select: { id: true, email: true, name: true } },
+      },
+    });
+    const result: Array<{ id: string; email: string; name?: string }> = [];
+    for (const row of rows) {
+      if (row.user && row.user.email) {
+        result.push({
+          id: row.user.id,
+          email: row.user.email,
+          name: row.user.name || undefined,
+        });
+      }
+    }
+    return result;
+  }
+
+  async listTenantNotificationPhones(tenantId: string): Promise<string[]> {
+    const phones = new Set<string>();
+    const inbound = await this.prisma.tenantWhatsappInboundPhone.findMany({
+      where: { organizationId: tenantId },
+      select: { phoneDigits: true },
+    });
+    for (const item of inbound) {
+      if (item.phoneDigits) phones.add(item.phoneDigits);
+    }
+    return Array.from(phones);
+  }
+
   async handlePublicProposalView(proposalId: string): Promise<void> {
     const result = await this.prisma.$transaction(async (tx) => {
       const p = await tx.proposal.findFirst({
         where: { id: proposalId, deletedAt: null },
         include: {
-          deal: true,
+          deal: { include: { lead: true } },
+          tenant: { select: { name: true } },
         },
       });
       if (!p) return null;
@@ -100,7 +145,8 @@ export class NotificationsService {
           status: p.status === "SENT" ? "VIEWED" : p.status,
         },
         include: {
-          deal: true,
+          deal: { include: { lead: true } },
+          tenant: { select: { name: true } },
         },
       });
       if (!updated.deal || updated.deal.deletedAt != null) return null;
@@ -112,13 +158,17 @@ export class NotificationsService {
 
     const { proposal: p, prevCount, now } = result;
     const tenantId = p.tenantId;
-    const leadId = p.deal?.leadId;
+    const lead = p.deal?.lead;
+    const leadId = lead?.id;
     if (!leadId) return;
 
     const userIds = await this.listCommercialRecipientUserIds(tenantId);
-    if (userIds.length === 0) return;
-
     const linkPath = `/propostas/${p.id}`;
+    const webBaseUrl =
+      this.config.get<string>("PUBLIC_WEB_APP_BASE_URL") ||
+      this.config.get<string>("APP_BASE_URL") ||
+      "https://www.energivia.com.br";
+    const fullProposalUrl = `${webBaseUrl.replace(/\/$/, "")}/propostas/${p.id}`;
 
     if (prevCount === 0) {
       try {
@@ -135,16 +185,41 @@ export class NotificationsService {
           `Failed to append lead activity for proposal view: ${e instanceof Error ? e.message : String(e)}`
         );
       }
-      await this.createManyIfNotExists(userIds, {
+
+      // 1. In-App Notification
+      if (userIds.length > 0) {
+        await this.createManyIfNotExists(userIds, {
+          tenantId,
+          type: "PROPOSAL_VIEWED",
+          title: "Cliente visualizou a proposta",
+          message: `${lead?.name || "O cliente"} abriu a proposta "${p.title}" agora.`,
+          linkPath,
+          proposalId: p.id,
+          leadId,
+          dealId: p.dealId,
+        });
+      }
+
+      // 2. Email Notification
+      this.sendProposalViewedEmail({
         tenantId,
-        type: "PROPOSAL_VIEWED",
-        title: "Cliente visualizou a proposta",
-        message: "O cliente abriu a proposta agora",
-        linkPath,
-        proposalId: p.id,
-        leadId,
-        dealId: p.dealId,
+        leadName: lead?.name || "Cliente",
+        proposalTitle: p.title,
+        proposalUrl: fullProposalUrl,
+      }).catch((err) => {
+        this.logger.warn(`Failed to send proposal viewed email: ${err}`);
       });
+
+      // 3. WhatsApp Notification
+      this.sendProposalViewedWhatsapp({
+        tenantId,
+        leadName: lead?.name || "Cliente",
+        proposalTitle: p.title,
+        fullProposalUrl,
+      }).catch((err) => {
+        this.logger.warn(`Failed to send proposal viewed whatsapp: ${err}`);
+      });
+
       return;
     }
 
@@ -152,22 +227,433 @@ export class NotificationsService {
     const canRevisit = !lastRev || now.getTime() - lastRev.getTime() >= REVISIT_COOLDOWN_MS;
     if (!canRevisit) return;
 
-    const created = await this.createManyIfNotExistsDaily(userIds, {
+    if (userIds.length > 0) {
+      const created = await this.createManyIfNotExistsDaily(userIds, {
+        tenantId,
+        type: "PROPOSAL_REVISITED",
+        title: "Cliente voltou à proposta",
+        message: `${lead?.name || "O cliente"} abriu a proposta novamente — sinal de alto interesse!`,
+        linkPath,
+        proposalId: p.id,
+        leadId,
+        dealId: p.dealId,
+      });
+
+      if (created > 0) {
+        await this.prisma.proposal.update({
+          where: { id: p.id },
+          data: { lastRevisitNotifiedAt: now },
+        });
+
+        // Email & WhatsApp de revisita
+        this.sendProposalViewedEmail({
+          tenantId,
+          leadName: lead?.name || "Cliente",
+          proposalTitle: p.title,
+          proposalUrl: fullProposalUrl,
+          isRevisit: true,
+        }).catch((err) => {
+          this.logger.warn(`Failed to send proposal revisited email: ${err}`);
+        });
+
+        this.sendProposalViewedWhatsapp({
+          tenantId,
+          leadName: lead?.name || "Cliente",
+          proposalTitle: p.title,
+          fullProposalUrl,
+          isRevisit: true,
+        }).catch((err) => {
+          this.logger.warn(`Failed to send proposal revisited whatsapp: ${err}`);
+        });
+      }
+    }
+  }
+
+  async handlePublicProposalResponse(
+    proposalId: string,
+    dto: RespondPublicProposalDto
+  ): Promise<void> {
+    const p = await this.prisma.proposal.findFirst({
+      where: { id: proposalId, deletedAt: null },
+      include: {
+        deal: { include: { lead: true } },
+        tenant: { select: { name: true } },
+      },
+    });
+    if (!p || !p.deal || !p.deal.lead) return;
+
+    const now = new Date();
+    const tenantId = p.tenantId;
+    const lead = p.deal.lead;
+    const leadId = lead.id;
+    const linkPath = `/propostas/${p.id}`;
+    const webBaseUrl =
+      this.config.get<string>("PUBLIC_WEB_APP_BASE_URL") ||
+      this.config.get<string>("APP_BASE_URL") ||
+      "https://www.energivia.com.br";
+    const fullProposalUrl = `${webBaseUrl.replace(/\/$/, "")}/propostas/${p.id}`;
+
+    let notifType: NotificationType;
+    let notifTitle: string;
+    let notifMessage: string;
+    let activityKind: "PROPOSAL_ACCEPTED" | "PROPOSAL_CHANGE_REQUESTED" | "PROPOSAL_REJECTED";
+    let activityLabel: string;
+
+    if (dto.decision === "ACCEPT") {
+      notifType = "PROPOSAL_ACCEPTED";
+      notifTitle = "🎉 Proposta aceita pelo cliente!";
+      notifMessage = `${lead.name} aceitou a proposta "${p.title}"! Assinatura: ${dto.signatureName || lead.name}.`;
+      activityKind = "PROPOSAL_ACCEPTED";
+      activityLabel = `Cliente ACEITOU a proposta (${p.title}) — Assinado por ${dto.signatureName || lead.name}`;
+    } else if (dto.decision === "REQUEST_CHANGES") {
+      notifType = "PROPOSAL_CHANGE_REQUESTED";
+      notifTitle = "✏️ Solicitação de alteração na proposta";
+      notifMessage = `${lead.name} solicitou ajustes na proposta "${p.title}": "${dto.comments || "Sem detalhes adicionais"}".`;
+      activityKind = "PROPOSAL_CHANGE_REQUESTED";
+      activityLabel = `Cliente solicitou ALTERAÇÕES na proposta (${p.title}): ${dto.comments || ""}`;
+    } else {
+      notifType = "PROPOSAL_REJECTED";
+      notifTitle = "❌ Proposta recusada pelo cliente";
+      notifMessage = `${lead.name} recusou a proposta "${p.title}"${dto.comments ? `: "${dto.comments}"` : "."}`;
+      activityKind = "PROPOSAL_REJECTED";
+      activityLabel = `Cliente RECUSOU a proposta (${p.title}): ${dto.comments || "Sem motivo informado"}`;
+    }
+
+    // 1. Gravar no log de atividades do lead
+    try {
+      await this.leadActivityLog.append({
+        tenantId,
+        leadId,
+        kind: activityKind,
+        label: activityLabel,
+        meta: {
+          proposalId: p.id,
+          decision: dto.decision,
+          comments: dto.comments,
+          signatureName: dto.signatureName,
+          contactWhatsapp: dto.contactWhatsapp,
+        },
+        occurredAt: now,
+      });
+    } catch (e) {
+      this.logger.warn(
+        `Failed to append lead activity for proposal response: ${e instanceof Error ? e.message : String(e)}`
+      );
+    }
+
+    // 2. In-App Notification
+    const userIds = await this.listCommercialRecipientUserIds(tenantId);
+    if (userIds.length > 0) {
+      for (const userId of userIds) {
+        await this.prisma.userNotification.create({
+          data: {
+            tenantId,
+            userId,
+            type: notifType,
+            title: notifTitle,
+            message: notifMessage,
+            linkPath,
+            proposalId: p.id,
+            leadId,
+            dealId: p.dealId,
+          },
+        });
+      }
+    }
+
+    // 3. Email Notification
+    this.sendProposalResponseEmail({
       tenantId,
-      type: "PROPOSAL_REVISITED",
-      title: "Cliente voltou à proposta",
-      message: "O cliente abriu a proposta novamente — sinal de interesse.",
-      linkPath,
-      proposalId: p.id,
-      leadId,
-      dealId: p.dealId,
+      leadName: lead.name,
+      proposalTitle: p.title,
+      decision: dto.decision,
+      comments: dto.comments,
+      signatureName: dto.signatureName,
+      contactWhatsapp: dto.contactWhatsapp || lead.whatsapp,
+      proposalUrl: fullProposalUrl,
+    }).catch((err) => {
+      this.logger.warn(`Failed to send proposal response email: ${err}`);
     });
 
-    if (created > 0) {
-      await this.prisma.proposal.update({
-        where: { id: p.id },
-        data: { lastRevisitNotifiedAt: now },
-      });
+    // 4. WhatsApp Notification
+    this.sendProposalResponseWhatsapp({
+      tenantId,
+      leadName: lead.name,
+      proposalTitle: p.title,
+      decision: dto.decision,
+      comments: dto.comments,
+      signatureName: dto.signatureName,
+      contactWhatsapp: dto.contactWhatsapp || lead.whatsapp,
+      fullProposalUrl,
+    }).catch((err) => {
+      this.logger.warn(`Failed to send proposal response whatsapp: ${err}`);
+    });
+  }
+
+  private async sendProposalViewedEmail(params: {
+    tenantId: string;
+    leadName: string;
+    proposalTitle: string;
+    proposalUrl: string;
+    isRevisit?: boolean;
+  }): Promise<void> {
+    const recipients = await this.listCommercialRecipientUsers(params.tenantId);
+    if (recipients.length === 0) return;
+
+    const emails = recipients.map((r) => r.email).filter(Boolean);
+    if (emails.length === 0) return;
+
+    const subject = params.isRevisit
+      ? `🔥 [EnergivIA] Cliente voltou à proposta: ${params.leadName}`
+      : `👀 [EnergivIA] Cliente abriu a proposta: ${params.leadName}`;
+
+    const title = params.isRevisit
+      ? "Cliente Revisitou a Proposta"
+      : "Proposta Aberta pelo Cliente";
+    const subtitle = params.isRevisit
+      ? `O cliente <strong>${params.leadName}</strong> está visualizando novamente a proposta <strong>"${params.proposalTitle}"</strong>.`
+      : `O cliente <strong>${params.leadName}</strong> acabou de abrir o link da proposta <strong>"${params.proposalTitle}"</strong>.`;
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; padding: 32px 16px; color: #f8fafc;">
+        <div style="max-width: 560px; margin: 0 auto; background-color: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: inline-block; padding: 8px 16px; background-color: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; border-radius: 9999px; color: #34d399; font-size: 13px; font-weight: 600;">
+              ${params.isRevisit ? "🔥 ALTO INTERESSE" : "👀 PROPOSTA VISUALIZADA"}
+            </div>
+            <h1 style="color: #ffffff; font-size: 22px; font-weight: 700; margin: 16px 0 8px 0;">${title}</h1>
+            <p style="color: #94a3b8; font-size: 15px; margin: 0; line-height: 1.5;">${subtitle}</p>
+          </div>
+
+          <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid #334155;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <tr>
+                <td style="color: #94a3b8; padding: 6px 0; width: 35%;">Cliente:</td>
+                <td style="color: #ffffff; font-weight: 600; padding: 6px 0;">${params.leadName}</td>
+              </tr>
+              <tr>
+                <td style="color: #94a3b8; padding: 6px 0;">Proposta:</td>
+                <td style="color: #ffffff; font-weight: 600; padding: 6px 0;">${params.proposalTitle}</td>
+              </tr>
+              <tr>
+                <td style="color: #94a3b8; padding: 6px 0;">Data/Hora:</td>
+                <td style="color: #ffffff; font-weight: 600; padding: 6px 0;">${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div style="text-align: center;">
+            <a href="${params.proposalUrl}" style="display: inline-block; background-color: #10b981; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px; padding: 12px 28px; border-radius: 10px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+              Acessar Proposta no EnergivIA →
+            </a>
+          </div>
+        </div>
+      </div>
+    `;
+
+    await this.emailService.sendEmail({
+      to: emails,
+      subject,
+      html,
+      text: `${title}\n\n${subtitle}\n\nCliente: ${params.leadName}\nProposta: ${params.proposalTitle}\nAcesse: ${params.proposalUrl}`,
+    });
+  }
+
+  private async sendProposalViewedWhatsapp(params: {
+    tenantId: string;
+    leadName: string;
+    proposalTitle: string;
+    fullProposalUrl: string;
+    isRevisit?: boolean;
+  }): Promise<void> {
+    const phones = await this.listTenantNotificationPhones(params.tenantId);
+    if (phones.length === 0) return;
+
+    const phoneNumberId =
+      this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID")?.trim() || "590740927450532";
+    const header = params.isRevisit
+      ? "🔥 *CLIENTE VOLTOU À PROPOSTA!*"
+      : "🔔 *PROPOSTA VISUALIZADA!*";
+    const bodyText = params.isRevisit
+      ? `O cliente *${params.leadName}* está visualizando a proposta novamente (alto sinal de interesse!).`
+      : `O cliente *${params.leadName}* acabou de abrir o link da proposta.`;
+
+    const message =
+      `${header}\n\n` +
+      `${bodyText}\n\n` +
+      `📄 *Proposta:* ${params.proposalTitle}\n` +
+      `👤 *Cliente:* ${params.leadName}\n` +
+      `⏰ *Horário:* ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}\n\n` +
+      `👉 *Acesse no EnergivIA:* ${params.fullProposalUrl}`;
+
+    for (const phone of phones) {
+      await this.whatsappCloud
+        .sendTextMessage({
+          phoneNumberId,
+          toWaId: phone,
+          body: message,
+        })
+        .catch((err) => {
+          this.logger.warn(`Failed to send WhatsApp viewed message to ${phone}: ${err}`);
+        });
+    }
+  }
+
+  private async sendProposalResponseEmail(params: {
+    tenantId: string;
+    leadName: string;
+    proposalTitle: string;
+    decision: "ACCEPT" | "REQUEST_CHANGES" | "REJECT";
+    comments?: string;
+    signatureName?: string;
+    contactWhatsapp?: string;
+    proposalUrl: string;
+  }): Promise<void> {
+    const recipients = await this.listCommercialRecipientUsers(params.tenantId);
+    if (recipients.length === 0) return;
+
+    const emails = recipients.map((r) => r.email).filter(Boolean);
+    if (emails.length === 0) return;
+
+    let badgeColor = "#10b981";
+    let badgeBg = "rgba(16, 185, 129, 0.15)";
+    let badgeText = "🎉 PROPOSTA ACEITA";
+    let subject = `🎉 [EnergivIA] Proposta ACEITA por ${params.leadName}!`;
+    let mainHeading = "Proposta Aceita pelo Cliente!";
+
+    if (params.decision === "REQUEST_CHANGES") {
+      badgeColor = "#f59e0b";
+      badgeBg = "rgba(245, 158, 11, 0.15)";
+      badgeText = "✏️ SOLICITAÇÃO DE ALTERAÇÃO";
+      subject = `✏️ [EnergivIA] Solicitação de alteração: ${params.leadName}`;
+      mainHeading = "Cliente Solicitou Alterações";
+    } else if (params.decision === "REJECT") {
+      badgeColor = "#ef4444";
+      badgeBg = "rgba(239, 68, 68, 0.15)";
+      badgeText = "⚠️ PROPOSTA RECUSADA";
+      subject = `⚠️ [EnergivIA] Proposta recusada por ${params.leadName}`;
+      mainHeading = "Proposta Recusada pelo Cliente";
+    }
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; padding: 32px 16px; color: #f8fafc;">
+        <div style="max-width: 560px; margin: 0 auto; background-color: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: inline-block; padding: 8px 16px; background-color: ${badgeBg}; border: 1px solid ${badgeColor}; border-radius: 9999px; color: ${badgeColor}; font-size: 13px; font-weight: 600;">
+              ${badgeText}
+            </div>
+            <h1 style="color: #ffffff; font-size: 22px; font-weight: 700; margin: 16px 0 8px 0;">${mainHeading}</h1>
+            <p style="color: #94a3b8; font-size: 15px; margin: 0; line-height: 1.5;">O cliente respondeu à proposta no link público.</p>
+          </div>
+
+          <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid #334155;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <tr>
+                <td style="color: #94a3b8; padding: 6px 0; width: 35%;">Cliente:</td>
+                <td style="color: #ffffff; font-weight: 600; padding: 6px 0;">${params.leadName}</td>
+              </tr>
+              <tr>
+                <td style="color: #94a3b8; padding: 6px 0;">Proposta:</td>
+                <td style="color: #ffffff; font-weight: 600; padding: 6px 0;">${params.proposalTitle}</td>
+              </tr>
+              ${
+                params.signatureName
+                  ? `<tr>
+                      <td style="color: #94a3b8; padding: 6px 0;">Assinatura:</td>
+                      <td style="color: #34d399; font-weight: 600; padding: 6px 0;">${params.signatureName}</td>
+                    </tr>`
+                  : ""
+              }
+              ${
+                params.contactWhatsapp
+                  ? `<tr>
+                      <td style="color: #94a3b8; padding: 6px 0;">WhatsApp/Contato:</td>
+                      <td style="color: #ffffff; font-weight: 600; padding: 6px 0;">${params.contactWhatsapp}</td>
+                    </tr>`
+                  : ""
+              }
+              ${
+                params.comments
+                  ? `<tr>
+                      <td style="color: #94a3b8; padding: 6px 0; vertical-align: top;">Observações:</td>
+                      <td style="color: #f1f5f9; padding: 6px 0; font-style: italic;">"${params.comments}"</td>
+                    </tr>`
+                  : ""
+              }
+              <tr>
+                <td style="color: #94a3b8; padding: 6px 0;">Data/Hora:</td>
+                <td style="color: #ffffff; font-weight: 600; padding: 6px 0;">${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div style="text-align: center;">
+            <a href="${params.proposalUrl}" style="display: inline-block; background-color: ${badgeColor}; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px; padding: 12px 28px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+              Ver Detalhes no EnergivIA →
+            </a>
+          </div>
+        </div>
+      </div>
+    `;
+
+    await this.emailService.sendEmail({
+      to: emails,
+      subject,
+      html,
+      text: `${mainHeading}\n\nCliente: ${params.leadName}\nProposta: ${params.proposalTitle}\nAssinatura: ${params.signatureName || "-"}\nObservações: ${params.comments || "-"}\nContato: ${params.contactWhatsapp || "-"}\n\nAcesse: ${params.proposalUrl}`,
+    });
+  }
+
+  private async sendProposalResponseWhatsapp(params: {
+    tenantId: string;
+    leadName: string;
+    proposalTitle: string;
+    decision: "ACCEPT" | "REQUEST_CHANGES" | "REJECT";
+    comments?: string;
+    signatureName?: string;
+    contactWhatsapp?: string;
+    fullProposalUrl: string;
+  }): Promise<void> {
+    const phones = await this.listTenantNotificationPhones(params.tenantId);
+    if (phones.length === 0) return;
+
+    const phoneNumberId =
+      this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID")?.trim() || "590740927450532";
+
+    let message = "";
+    if (params.decision === "ACCEPT") {
+      message =
+        `🎉 *PROPOSTA ACEITA PELO CLIENTE!* ☀️\n\n` +
+        `O cliente *${params.leadName}* acaba de aprovar a proposta *"${params.proposalTitle}"*!\n\n` +
+        `✍️ *Assinado por:* ${params.signatureName || params.leadName}\n` +
+        `📱 *Contato:* ${params.contactWhatsapp || "Não informado"}\n` +
+        `⏰ *Horário:* ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}\n\n` +
+        `🚀 Acesse o EnergivIA para dar andamento ao contrato:\n${params.fullProposalUrl}`;
+    } else if (params.decision === "REQUEST_CHANGES") {
+      message =
+        `✏️ *SOLICITAÇÃO DE ALTERAÇÃO NA PROPOSTA*\n\n` +
+        `O cliente *${params.leadName}* solicitou ajustes na proposta *"${params.proposalTitle}"*.\n\n` +
+        `📝 *Detalhes do Pedido:*\n"${params.comments || "Cliente solicitou revisão de itens/condições."}"\n\n` +
+        `📱 *Contato:* ${params.contactWhatsapp || "Não informado"}\n\n` +
+        `👉 Acesse o EnergivIA para entrar em contato:\n${params.fullProposalUrl}`;
+    } else {
+      message =
+        `⚠️ *PROPOSTA RECUSADA*\n\n` +
+        `O cliente *${params.leadName}* informou que recusou a proposta *"${params.proposalTitle}"*.\n\n` +
+        `💬 *Motivo informado:*\n"${params.comments || "Sem motivo informado."}"\n\n` +
+        `👉 Acesse o EnergivIA para registrar no CRM:\n${params.fullProposalUrl}`;
+    }
+
+    for (const phone of phones) {
+      await this.whatsappCloud
+        .sendTextMessage({
+          phoneNumberId,
+          toWaId: phone,
+          body: message,
+        })
+        .catch((err) => {
+          this.logger.warn(`Failed to send WhatsApp response message to ${phone}: ${err}`);
+        });
     }
   }
 

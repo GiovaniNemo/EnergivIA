@@ -76,3 +76,40 @@ export async function getPublicProposal(id: string): Promise<PublicProposalPaylo
   }
   return res.json() as Promise<PublicProposalPayload>;
 }
+
+export interface ProposalResponseInput {
+  decision: "ACCEPT" | "REQUEST_CHANGES" | "REJECT";
+  comments?: string;
+  signatureName?: string;
+  contactWhatsapp?: string;
+}
+
+export interface ProposalResponseResult {
+  success: boolean;
+  decision: "ACCEPT" | "REQUEST_CHANGES" | "REJECT";
+  status: string;
+  answeredAt: string;
+}
+
+export async function submitPublicProposalResponse(
+  proposalId: string,
+  input: ProposalResponseInput
+): Promise<ProposalResponseResult> {
+  const cleanId = encodeURIComponent(proposalId.trim());
+  const baseUrl =
+    typeof window !== "undefined"
+      ? `/api/proxy/public/proposals/${cleanId}/respond`
+      : `${(process.env["NEXT_PUBLIC_API_URL"] || "http://localhost:4000/api").replace(/\/$/, "")}/public/proposals/${cleanId}/respond`;
+
+  const res = await fetch(baseUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+    credentials: "omit",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `Erro HTTP ${res.status}`);
+  }
+  return res.json() as Promise<ProposalResponseResult>;
+}

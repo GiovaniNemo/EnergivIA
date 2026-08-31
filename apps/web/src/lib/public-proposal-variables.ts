@@ -14,6 +14,7 @@ export function mergePublicProposalVariables(
   const merged: Record<string, string | number> = { ...templateVariables };
 
   merged["nome_cliente"] = payload.deal?.lead?.name ?? "Cliente";
+  merged["proposta_id"] = payload.publicToken || payload.id;
 
   // Integrator snapshot: kit items and project costs
   const integrator = payload.renderedData?.integrator;

@@ -2820,6 +2820,11 @@ export function renderSectionContent(
       );
       const ctaEmphasis =
         legacyStyle === "secondary" || ctaVariant === "secondary" ? "secondary" : "primary";
+      const currentProposalId = String(
+        vars["proposta_id"] ?? vars["proposalId"] ?? vars["id"] ?? ""
+      ).trim();
+      const currentClientName = String(vars["nome_cliente"] ?? "").trim();
+
       return (
         <DecisionCTASection
           intro={
@@ -2833,6 +2838,8 @@ export function renderSectionContent(
           mode={renderMode}
           emphasis={ctaEmphasis}
           align={ctaAlign}
+          proposalId={currentProposalId || undefined}
+          clientName={currentClientName || undefined}
         />
       );
     }

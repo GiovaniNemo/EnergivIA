@@ -202,6 +202,9 @@ enum LeadActivityKind {
   PROPOSAL_CREATED
   PROPOSAL_SENT
   PROPOSAL_VIEWED
+  PROPOSAL_ACCEPTED
+  PROPOSAL_CHANGE_REQUESTED
+  PROPOSAL_REJECTED
   NOTE_ADDED
   CALL_LOGGED
 }
@@ -381,6 +384,11 @@ model Proposal {
   clientLastViewedAt    DateTime? @map("client_last_viewed_at")
   clientViewCount       Int       @default(0) @map("client_view_count")
   lastRevisitNotifiedAt DateTime? @map("last_revisit_notified_at")
+  clientDecision        String?   @map("client_decision")
+  clientDecisionAt      DateTime? @map("client_decision_at")
+  clientDecisionComments String?  @map("client_decision_comments")
+  clientSignatureName   String?   @map("client_signature_name")
+  clientContactWhatsapp String?   @map("client_contact_whatsapp")
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   deletedAt       DateTime?
@@ -402,6 +410,9 @@ model Proposal {
 enum NotificationType {
   PROPOSAL_VIEWED
   PROPOSAL_REVISITED
+  PROPOSAL_ACCEPTED
+  PROPOSAL_CHANGE_REQUESTED
+  PROPOSAL_REJECTED
   LEAD_NEEDS_ATTENTION
   LEAD_SCHEDULE_PENDING
   FOLLOWUP_REMINDER

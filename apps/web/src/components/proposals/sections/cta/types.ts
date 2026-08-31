@@ -29,4 +29,6 @@ export interface DecisionCTASectionProps {
   emphasis?: DecisionCTAEmphasis;
   align?: DecisionCTAAlign;
   className?: string;
+  proposalId?: string;
+  clientName?: string;
 }

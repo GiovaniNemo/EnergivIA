@@ -16,6 +16,8 @@ export function DecisionCTASection(props: DecisionCTASectionProps): JSX.Element 
     emphasis = "primary",
     align = "center",
     className,
+    proposalId,
+    clientName,
   } = props;
 
   const muted = withAlpha(theme.text, 0.72);
@@ -26,7 +28,14 @@ export function DecisionCTASection(props: DecisionCTASectionProps): JSX.Element 
     <>
       <CTAHeader subtitle={intro} mutedColor={muted} align={align} />
       {mode === "web" ? (
-        <CTAButtons proposalUrl={proposalUrl} actions={actions} theme={theme} align={align} />
+        <CTAButtons
+          proposalUrl={proposalUrl}
+          actions={actions}
+          theme={theme}
+          align={align}
+          proposalId={proposalId}
+          clientName={clientName}
+        />
       ) : (
         <PDFActionsFallback
           proposalUrl={proposalUrl}
