@@ -23,6 +23,8 @@ export class CreatePresignedUrlDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^(module|inverter|microinverter|structure_kit|dc_cable|connector)$/)
+  @Matches(
+    /^(module|inverter|microinverter|hybrid_inverter|off_grid_inverter|battery|bms|structure_kit|dc_cable|connector|profile|string_box)$/
+  )
   productCategory?: string;
 }

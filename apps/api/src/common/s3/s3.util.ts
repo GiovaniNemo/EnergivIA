@@ -40,9 +40,15 @@ const PRODUCT_CATEGORY_TO_FOLDER: Record<string, string> = {
   module: "modules",
   inverter: "inverters",
   microinverter: "inverters",
+  hybrid_inverter: "inverters",
+  off_grid_inverter: "inverters",
+  battery: "batteries",
+  bms: "accessories",
   structure_kit: "structures",
+  profile: "structures",
   dc_cable: "accessories",
   connector: "accessories",
+  string_box: "accessories",
 };
 
 function slugifyBaseName(fileName: string): string {
