@@ -10,6 +10,10 @@ export interface ModuleSpec {
   height_mm: number;
 }
 
+export type GridTopology = "mono_220" | "biphasic_127_220" | "tri_220" | "tri_380" | "mono_127";
+
+export type GridStandard = "EU" | "US" | "TRI_220" | "TRI_380";
+
 export interface StringInverterSpec {
   type: "string";
   nominal_power_w?: number;
@@ -22,6 +26,10 @@ export interface StringInverterSpec {
   max_dc_power: number;
   recommended_dc_ac_ratio_min: number;
   recommended_dc_ac_ratio_max: number;
+  grid_topology?: GridTopology;
+  grid_standard?: GridStandard;
+  output_voltage_v?: string | number;
+  warranty_years?: number;
 }
 
 export interface MicroInverterSpec {
@@ -31,6 +39,10 @@ export interface MicroInverterSpec {
   max_input_current: number;
   max_module_power: number;
   min_module_power: number;
+  grid_topology?: GridTopology;
+  grid_standard?: GridStandard;
+  output_voltage_v?: string | number;
+  warranty_years?: number;
 }
 
 export interface HybridInverterSpec {
@@ -43,6 +55,9 @@ export interface HybridInverterSpec {
   mppt_voltage_max: number;
   max_input_current: number;
   max_dc_power: number;
+  grid_topology?: GridTopology;
+  grid_standard?: GridStandard;
+  output_voltage_v?: string | number;
   battery_voltage_type?: "low_voltage" | "high_voltage";
   battery_nominal_voltage_v?: number;
   battery_voltage_min?: number;
@@ -64,6 +79,9 @@ export interface OffGridInverterSpec {
   mppt_voltage_max?: number;
   max_pv_power_w?: number;
   ac_output_voltage?: number;
+  grid_topology?: GridTopology;
+  grid_standard?: GridStandard;
+  output_voltage_v?: string | number;
   waveform?: "pure_sine" | "modified_sine";
   warranty_years?: number;
 }

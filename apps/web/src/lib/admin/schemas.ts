@@ -64,6 +64,16 @@ export const specsModuleSchema = z.object({
   height_mm: positiveNumber,
 });
 
+export const gridTopologyOptions = [
+  "mono_220",
+  "biphasic_127_220",
+  "tri_220",
+  "tri_380",
+  "mono_127",
+] as const;
+
+export const gridStandardOptions = ["EU", "US", "TRI_220", "TRI_380"] as const;
+
 export const specsInverterSchema = z.object({
   type: z.literal("string"),
   nominal_power_w: positiveNumber,
@@ -77,6 +87,9 @@ export const specsInverterSchema = z.object({
   max_dc_power: positiveNumber,
   recommended_dc_ac_ratio_min: positiveNumber,
   recommended_dc_ac_ratio_max: positiveNumber,
+  grid_topology: z.enum(gridTopologyOptions).optional(),
+  grid_standard: z.enum(gridStandardOptions).optional(),
+  output_voltage_v: z.string().optional(),
 });
 
 export const specsMicroInverterSchema = z.object({
@@ -87,6 +100,9 @@ export const specsMicroInverterSchema = z.object({
   max_input_current: positiveNumber,
   max_module_power: positiveNumber,
   min_module_power: positiveNumber,
+  grid_topology: z.enum(gridTopologyOptions).optional(),
+  grid_standard: z.enum(gridStandardOptions).optional(),
+  output_voltage_v: z.string().optional(),
 });
 
 export const specsHybridInverterSchema = z.object({
@@ -100,6 +116,9 @@ export const specsHybridInverterSchema = z.object({
   mppt_voltage_max: positiveNumber,
   max_input_current: positiveNumber,
   max_dc_power: positiveNumber,
+  grid_topology: z.enum(gridTopologyOptions).optional(),
+  grid_standard: z.enum(gridStandardOptions).optional(),
+  output_voltage_v: z.string().optional(),
   battery_voltage_type: z.enum(["low_voltage", "high_voltage"]).optional(),
   battery_nominal_voltage_v: positiveNumber.optional(),
   max_charge_current_a: positiveNumber.optional(),
@@ -117,6 +136,9 @@ export const specsOffGridInverterSchema = z.object({
   mppt_voltage_max: positiveNumber.optional(),
   max_pv_power_w: positiveNumber.optional(),
   ac_output_voltage: positiveNumber.optional(),
+  grid_topology: z.enum(gridTopologyOptions).optional(),
+  grid_standard: z.enum(gridStandardOptions).optional(),
+  output_voltage_v: z.string().optional(),
   waveform: z.enum(["pure_sine", "modified_sine"]).optional(),
   warranty_years: positiveNumber.optional(),
 });

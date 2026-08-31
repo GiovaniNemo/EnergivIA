@@ -77,10 +77,26 @@ function getProductPowerBadge(product: Product): string | null {
     specs["nominal_power_w"]
   ) {
     const kw = Number(specs["nominal_power_w"]) / 1000;
-    return `${kw} kW`;
+    const std =
+      specs["grid_standard"] ||
+      (specs["grid_topology"] === "mono_220"
+        ? "EU"
+        : specs["grid_topology"] === "biphasic_127_220"
+          ? "US"
+          : undefined);
+    const suffix = std ? ` · ${std}` : "";
+    return `${kw} kW${suffix}`;
   }
   if (cat === "microinverter" && specs["max_module_power"]) {
-    return `${specs["max_module_power"]} W`;
+    const std =
+      specs["grid_standard"] ||
+      (specs["grid_topology"] === "mono_220"
+        ? "EU"
+        : specs["grid_topology"] === "biphasic_127_220"
+          ? "US"
+          : undefined);
+    const suffix = std ? ` · ${std}` : "";
+    return `${specs["max_module_power"]} W${suffix}`;
   }
   if (cat === "battery" && specs["capacity_kwh"]) {
     return `${specs["capacity_kwh"]} kWh`;

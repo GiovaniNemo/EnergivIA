@@ -167,6 +167,19 @@ function str(specs: Record<string, unknown>, key: string): string | undefined {
   return s || undefined;
 }
 
+function formatGridTopology(specs: Record<string, unknown>): string | undefined {
+  const top = str(specs, "grid_topology");
+  const std = str(specs, "grid_standard");
+  const volt = str(specs, "output_voltage_v") ?? str(specs, "ac_output_voltage");
+  if (top === "mono_220" || std === "EU") return "Mono 220V (EU)";
+  if (top === "biphasic_127_220" || std === "US") return "Bifásico 127/220V (US)";
+  if (top === "tri_220" || std === "TRI_220") return "Trifásico 220V";
+  if (top === "tri_380" || std === "TRI_380") return "Trifásico 380V";
+  if (top === "mono_127") return "Mono 127V";
+  if (volt) return `${volt}`;
+  return undefined;
+}
+
 export function buildEquipmentDisplaySpecs(
   categoryName: string,
   specs: Record<string, unknown>,
@@ -177,6 +190,7 @@ export function buildEquipmentDisplaySpecs(
   let a = emptyProposalEquipmentSpec();
   let b = emptyProposalEquipmentSpec();
   let c = emptyProposalEquipmentSpec();
+  const gridLabel = formatGridTopology(specs);
 
   if (cat === "module") {
     const power = num(specs, "power_w");
@@ -214,7 +228,9 @@ export function buildEquipmentDisplaySpecs(
         icon: "zap",
       };
     }
-    if (warranty != null) {
+    if (gridLabel) {
+      b = { label: "Padrão CA", value: gridLabel, icon: "plug" };
+    } else if (warranty != null) {
       b = {
         label: "Garantia",
         value:
@@ -242,7 +258,9 @@ export function buildEquipmentDisplaySpecs(
         icon: "zap",
       };
     }
-    if (warranty != null) {
+    if (gridLabel) {
+      b = { label: "Padrão CA", value: gridLabel, icon: "plug" };
+    } else if (warranty != null) {
       b = {
         label: "Garantia",
         value: `${warranty} anos`,
@@ -265,7 +283,11 @@ export function buildEquipmentDisplaySpecs(
     const vBat = num(specs, "battery_nominal_voltage_v");
     const warranty = num(specs, "warranty_years") ?? 2;
     if (p != null) a = { label: "Potência", value: `${p} W`, icon: "zap" };
-    b = { label: "Garantia", value: `${warranty} anos`, icon: "shield" };
+    if (gridLabel) {
+      b = { label: "Saída CA", value: gridLabel, icon: "plug" };
+    } else {
+      b = { label: "Garantia", value: `${warranty} anos`, icon: "shield" };
+    }
     if (vBat != null) c = { label: "Tensão Bateria", value: `${vBat} V`, icon: "battery" };
   } else if (cat === "battery") {
     const kwh = num(specs, "capacity_kwh");
