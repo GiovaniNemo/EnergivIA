@@ -25,8 +25,6 @@ const NOTIFICATION_BY_STATUS: Record<
   PENDING: { type: "FINANCING_PENDENCY", title: "Pendência no financiamento" },
 };
 
-const REVISIT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-
 function startOfUtcDay(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
 }
@@ -131,7 +129,6 @@ export class NotificationsService {
       });
       if (!p) return null;
       if (!p.deal || p.deal.deletedAt != null) return null;
-      if (p.status !== "SENT" && p.status !== "VIEWED") return null;
 
       const prevCount = p.clientViewCount;
       const now = new Date();
@@ -142,7 +139,7 @@ export class NotificationsService {
           clientViewCount: { increment: 1 },
           clientFirstViewedAt: p.clientFirstViewedAt ?? now,
           clientLastViewedAt: now,
-          status: p.status === "SENT" ? "VIEWED" : p.status,
+          status: p.status === "SENT" || p.status === "DRAFT" ? "VIEWED" : p.status,
         },
         include: {
           deal: { include: { lead: true } },
@@ -170,14 +167,31 @@ export class NotificationsService {
       "https://www.energivia.com.br";
     const fullProposalUrl = `${webBaseUrl.replace(/\/$/, "")}/propostas/${p.id}`;
 
-    if (prevCount === 0) {
+    const isFirstView = prevCount === 0;
+    const lastRev = p.lastRevisitNotifiedAt;
+    const cooldownMs = 5 * 60 * 1000; // 5 minutos de cooldown para revisitas
+    const canNotifyRevisit =
+      !isFirstView && (!lastRev || now.getTime() - lastRev.getTime() >= cooldownMs);
+
+    if (isFirstView || canNotifyRevisit) {
+      const notifType: NotificationType = isFirstView ? "PROPOSAL_VIEWED" : "PROPOSAL_REVISITED";
+      const notifTitle = isFirstView
+        ? `👀 ${lead?.name || "Cliente"} está visualizando a proposta!`
+        : `🔥 ${lead?.name || "Cliente"} está visualizando a proposta novamente!`;
+      const notifMessage = isFirstView
+        ? `O cliente ${lead?.name || "Cliente"} acabou de abrir a proposta "${p.title}" neste momento.`
+        : `O cliente ${lead?.name || "Cliente"} abriu a proposta "${p.title}" neste momento (${p.clientViewCount}ª visualização). Sinal de alto interesse!`;
+
+      // 1. Grava no Log de Atividades
       try {
         await this.leadActivityLog.append({
           tenantId,
           leadId,
           kind: "PROPOSAL_VIEWED",
-          label: `Cliente visualizou a proposta (${p.title})`,
-          meta: { proposalId: p.id },
+          label: isFirstView
+            ? `Cliente visualizou a proposta (${p.title}) pela 1ª vez`
+            : `Cliente visualizou a proposta (${p.title}) novamente (${p.clientViewCount}ª vez)`,
+          meta: { proposalId: p.id, viewCount: p.clientViewCount },
           occurredAt: now,
         });
       } catch (e) {
@@ -186,86 +200,56 @@ export class NotificationsService {
         );
       }
 
-      // 1. In-App Notification
+      // 2. In-App Notification (cria diretamente para todos os usuários comerciais)
       if (userIds.length > 0) {
-        await this.createManyIfNotExists(userIds, {
-          tenantId,
-          type: "PROPOSAL_VIEWED",
-          title: "Cliente visualizou a proposta",
-          message: `${lead?.name || "O cliente"} abriu a proposta "${p.title}" agora.`,
-          linkPath,
-          proposalId: p.id,
-          leadId,
-          dealId: p.dealId,
+        for (const userId of userIds) {
+          await this.prisma.userNotification.create({
+            data: {
+              tenantId,
+              userId,
+              type: notifType,
+              title: notifTitle,
+              message: notifMessage,
+              linkPath,
+              proposalId: p.id,
+              leadId,
+              dealId: p.dealId,
+            },
+          });
+        }
+      }
+
+      // 3. Atualiza timestamp de revisita se aplicável
+      if (!isFirstView) {
+        await this.prisma.proposal.update({
+          where: { id: p.id },
+          data: { lastRevisitNotifiedAt: now },
         });
       }
 
-      // 2. Email Notification
+      // 4. Email Notification
       this.sendProposalViewedEmail({
         tenantId,
         leadName: lead?.name || "Cliente",
         proposalTitle: p.title,
         proposalUrl: fullProposalUrl,
+        isRevisit: !isFirstView,
+        viewCount: p.clientViewCount,
       }).catch((err) => {
         this.logger.warn(`Failed to send proposal viewed email: ${err}`);
       });
 
-      // 3. WhatsApp Notification
+      // 5. WhatsApp Notification
       this.sendProposalViewedWhatsapp({
         tenantId,
         leadName: lead?.name || "Cliente",
         proposalTitle: p.title,
         fullProposalUrl,
+        isRevisit: !isFirstView,
+        viewCount: p.clientViewCount,
       }).catch((err) => {
         this.logger.warn(`Failed to send proposal viewed whatsapp: ${err}`);
       });
-
-      return;
-    }
-
-    const lastRev = p.lastRevisitNotifiedAt;
-    const canRevisit = !lastRev || now.getTime() - lastRev.getTime() >= REVISIT_COOLDOWN_MS;
-    if (!canRevisit) return;
-
-    if (userIds.length > 0) {
-      const created = await this.createManyIfNotExistsDaily(userIds, {
-        tenantId,
-        type: "PROPOSAL_REVISITED",
-        title: "Cliente voltou à proposta",
-        message: `${lead?.name || "O cliente"} abriu a proposta novamente — sinal de alto interesse!`,
-        linkPath,
-        proposalId: p.id,
-        leadId,
-        dealId: p.dealId,
-      });
-
-      if (created > 0) {
-        await this.prisma.proposal.update({
-          where: { id: p.id },
-          data: { lastRevisitNotifiedAt: now },
-        });
-
-        // Email & WhatsApp de revisita
-        this.sendProposalViewedEmail({
-          tenantId,
-          leadName: lead?.name || "Cliente",
-          proposalTitle: p.title,
-          proposalUrl: fullProposalUrl,
-          isRevisit: true,
-        }).catch((err) => {
-          this.logger.warn(`Failed to send proposal revisited email: ${err}`);
-        });
-
-        this.sendProposalViewedWhatsapp({
-          tenantId,
-          leadName: lead?.name || "Cliente",
-          proposalTitle: p.title,
-          fullProposalUrl,
-          isRevisit: true,
-        }).catch((err) => {
-          this.logger.warn(`Failed to send proposal revisited whatsapp: ${err}`);
-        });
-      }
     }
   }
 
@@ -396,6 +380,7 @@ export class NotificationsService {
     proposalTitle: string;
     proposalUrl: string;
     isRevisit?: boolean;
+    viewCount?: number;
   }): Promise<void> {
     const recipients = await this.listCommercialRecipientUsers(params.tenantId);
     if (recipients.length === 0) return;
@@ -403,15 +388,16 @@ export class NotificationsService {
     const emails = recipients.map((r) => r.email).filter(Boolean);
     if (emails.length === 0) return;
 
+    const countText = params.viewCount && params.viewCount > 1 ? ` (${params.viewCount}ª vez)` : "";
     const subject = params.isRevisit
-      ? `🔥 [EnergivIA] Cliente voltou à proposta: ${params.leadName}`
-      : `👀 [EnergivIA] Cliente abriu a proposta: ${params.leadName}`;
+      ? `🔥 [EnergivIA] ${params.leadName} está visualizando a proposta novamente!`
+      : `👀 [EnergivIA] ${params.leadName} abriu a proposta agora!`;
 
     const title = params.isRevisit
-      ? "Cliente Revisitou a Proposta"
+      ? `Cliente Revisitou a Proposta${countText}`
       : "Proposta Aberta pelo Cliente";
     const subtitle = params.isRevisit
-      ? `O cliente <strong>${params.leadName}</strong> está visualizando novamente a proposta <strong>"${params.proposalTitle}"</strong>.`
+      ? `O cliente <strong>${params.leadName}</strong> está visualizando novamente a proposta <strong>"${params.proposalTitle}"</strong> neste momento (sinal de alto interesse!).`
       : `O cliente <strong>${params.leadName}</strong> acabou de abrir o link da proposta <strong>"${params.proposalTitle}"</strong>.`;
 
     const html = `
@@ -419,7 +405,7 @@ export class NotificationsService {
         <div style="max-width: 560px; margin: 0 auto; background-color: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
           <div style="text-align: center; margin-bottom: 24px;">
             <div style="display: inline-block; padding: 8px 16px; background-color: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; border-radius: 9999px; color: #34d399; font-size: 13px; font-weight: 600;">
-              ${params.isRevisit ? "🔥 ALTO INTERESSE" : "👀 PROPOSTA VISUALIZADA"}
+              ${params.isRevisit ? `🔥 REVISITA ATIVA${countText}` : "👀 PROPOSTA VISUALIZADA AGORA"}
             </div>
             <h1 style="color: #ffffff; font-size: 22px; font-weight: 700; margin: 16px 0 8px 0;">${title}</h1>
             <p style="color: #94a3b8; font-size: 15px; margin: 0; line-height: 1.5;">${subtitle}</p>
@@ -465,18 +451,20 @@ export class NotificationsService {
     proposalTitle: string;
     fullProposalUrl: string;
     isRevisit?: boolean;
+    viewCount?: number;
   }): Promise<void> {
     const phones = await this.listTenantNotificationPhones(params.tenantId);
     if (phones.length === 0) return;
 
     const phoneNumberId =
       this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID")?.trim() || "590740927450532";
+    const countText = params.viewCount && params.viewCount > 1 ? ` (${params.viewCount}ª vez)` : "";
     const header = params.isRevisit
-      ? "🔥 *CLIENTE VOLTOU À PROPOSTA!*"
-      : "🔔 *PROPOSTA VISUALIZADA!*";
+      ? `🔥 *CLIENTE ESTÁ VISUALIZANDO A PROPOSTA NOVAMENTE!*${countText}`
+      : "🔔 *CLIENTE ABRIU A PROPOSTA AGORA!* 👀";
     const bodyText = params.isRevisit
-      ? `O cliente *${params.leadName}* está visualizando a proposta novamente (alto sinal de interesse!).`
-      : `O cliente *${params.leadName}* acabou de abrir o link da proposta.`;
+      ? `O cliente *${params.leadName}* está visualizando a proposta *"${params.proposalTitle}"* neste momento (alto sinal de interesse!).`
+      : `O cliente *${params.leadName}* acabou de abrir o link da proposta *"${params.proposalTitle}"*.`;
 
     const message =
       `${header}\n\n` +
