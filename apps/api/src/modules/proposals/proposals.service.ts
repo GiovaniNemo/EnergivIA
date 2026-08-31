@@ -754,12 +754,28 @@ export class ProposalsService {
     }
 
     try {
-      const model = process.env["GEMINI_TEXT_MODEL"] ?? "gemini-1.5-flash";
+      const candidateModels = [
+        process.env["GEMINI_TEXT_MODEL"],
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-exp",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro-latest",
+        "gemini-1.5-pro",
+        "gemini-pro",
+      ].filter(Boolean) as string[];
+
       const genAI = new GoogleGenerativeAI(apiKey);
-      const genModel = genAI.getGenerativeModel({
-        model,
-        generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
-        systemInstruction: `Você é um redator sênior especialista em propostas comerciais de energia solar fotovoltaica. 
+      const userInput = `Contexto da proposta solar: ${contextText || "Proposta de energia solar fotovoltaica residencial/comercial"}
+Instrução do usuário para a seção desejada: ${prompt}`;
+
+      let lastError: unknown = null;
+      for (const modelCandidate of candidateModels) {
+        try {
+          const genModel = genAI.getGenerativeModel({
+            model: modelCandidate,
+            generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
+            systemInstruction: `Você é um redator sênior especialista em propostas comerciais de energia solar fotovoltaica. 
 Seu objetivo é gerar seções elegantes, convincentes e profissionais para propostas comerciais de integradores solares.
 Você DEVE retornar SEMPRE um JSON válido com exatamente estas DUAS chaves:
 {
@@ -767,17 +783,23 @@ Você DEVE retornar SEMPRE um JSON válido com exatamente estas DUAS chaves:
   "text": "Conteúdo da seção em HTML limpo. Use tags de formatação semântica como <p>, <strong>, <ul>, <li>, <em>, <br>. NÃO use tags <h1>, <h2>, <html> ou <body> no texto. Mantenha os parágrafos objetivos, claros e focados em agregar valor e segurança ao cliente final."
 }
 Adapte a linguagem para um tom comercial confiável, moderno e persuasivo.`,
-      });
+          });
 
-      const userInput = `Contexto da proposta solar: ${contextText || "Proposta de energia solar fotovoltaica residencial/comercial"}
-Instrução do usuário para a seção desejada: ${prompt}`;
+          const result = await genModel.generateContent(userInput);
+          const text = result.response.text();
+          const clean = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+          return JSON.parse(clean);
+        } catch (err: unknown) {
+          lastError = err;
+          this.logger.warn(`Modelo ${modelCandidate} falhou para proposta: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
 
-      const result = await genModel.generateContent(userInput);
-      const text = result.response.text();
-      return JSON.parse(text);
+      throw lastError || new Error("Nenhum modelo Gemini respondeu.");
     } catch (error: unknown) {
       this.logger.error(`Erro ao chamar Gemini para geração de seção: ${String(error)}`);
       throw new BadRequestException("Falha ao gerar seção com IA. Tente novamente mais tarde.");
     }
   }
 }
+

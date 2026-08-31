@@ -1043,57 +1043,73 @@ export class EnergyBillsService {
   ): Promise<Record<string, unknown> | null> {
     if (!this.genAI) return null;
     const startTime = Date.now();
-    const modelName = "gemini-1.5-flash";
-    try {
-      const model = this.genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: {
-          responseMimeType: "application/json",
-        },
-      });
-      const result = await model.generateContent([
-        BILL_EXTRACTION_SYSTEM_PROMPT,
-        `Extraia com máxima precisão todos os dados e TODOS os meses do histórico de consumo do seguinte texto de fatura de energia:\n\n${text}`,
-      ]);
-      const latencyMs = Date.now() - startTime;
-      const usage = result.response.usageMetadata;
+    const candidateModels = [
+      process.env["GEMINI_TEXT_MODEL"],
+      "gemini-2.0-flash",
+      "gemini-2.0-flash-exp",
+      "gemini-1.5-flash-latest",
+      "gemini-1.5-flash",
+      "gemini-1.5-pro-latest",
+      "gemini-1.5-pro",
+      "gemini-pro",
+    ].filter(Boolean) as string[];
 
-      if (usage) {
-        void this.aiUsage.logUsage({
-          organizationId,
-          provider: "google",
-          feature: AiFeature.OCR_BILL_TEXT,
+    let lastErr: unknown = null;
+    for (const modelName of candidateModels) {
+      try {
+        const model = this.genAI.getGenerativeModel({
           model: modelName,
-          promptTokens: usage.promptTokenCount || 0,
-          completionTokens: usage.candidatesTokenCount || 0,
-          totalTokens: usage.totalTokenCount || 0,
-          latencyMs,
-          status: "SUCCESS",
-          resourceId,
+          generationConfig: {
+            responseMimeType: "application/json",
+          },
         });
-      }
+        const result = await model.generateContent([
+          BILL_EXTRACTION_SYSTEM_PROMPT,
+          `Extraia com máxima precisão todos os dados e TODOS os meses do histórico de consumo do seguinte texto de fatura de energia:\n\n${text}`,
+        ]);
+        const latencyMs = Date.now() - startTime;
+        const usage = result.response.usageMetadata;
 
-      const respText = result.response.text();
-      const clean = respText
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
-      const parsed = JSON.parse(clean) as Record<string, unknown>;
-      return this.processExtractedResultWithMath(parsed);
-    } catch (err) {
-      void this.aiUsage.logUsage({
-        organizationId,
-        provider: "google",
-        feature: AiFeature.OCR_BILL_TEXT,
-        model: modelName,
-        latencyMs: Date.now() - startTime,
-        status: "ERROR",
-        errorMessage: err instanceof Error ? err.message : String(err),
-        resourceId,
-      });
-      this.logger.error("Erro extraindo fatura com Gemini:", err);
-      return null;
+        if (usage) {
+          void this.aiUsage.logUsage({
+            organizationId,
+            provider: "google",
+            feature: AiFeature.OCR_BILL_TEXT,
+            model: modelName,
+            promptTokens: usage.promptTokenCount || 0,
+            completionTokens: usage.candidatesTokenCount || 0,
+            totalTokens: usage.totalTokenCount || 0,
+            latencyMs,
+            status: "SUCCESS",
+            resourceId,
+          });
+        }
+
+        const respText = result.response.text();
+        const clean = respText
+          .replace(/```json/gi, "")
+          .replace(/```/g, "")
+          .trim();
+        const parsed = JSON.parse(clean) as Record<string, unknown>;
+        return this.processExtractedResultWithMath(parsed);
+      } catch (err) {
+        lastErr = err;
+        this.logger.warn(`Modelo ${modelName} falhou para fatura: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
+
+    void this.aiUsage.logUsage({
+      organizationId,
+      provider: "google",
+      feature: AiFeature.OCR_BILL_TEXT,
+      model: candidateModels[0] || "gemini-2.0-flash",
+      latencyMs: Date.now() - startTime,
+      status: "ERROR",
+      errorMessage: lastErr instanceof Error ? lastErr.message : String(lastErr),
+      resourceId,
+    });
+    this.logger.error("Erro extraindo fatura com Gemini (todos os modelos falharam):", lastErr);
+    return null;
   }
 
   async findByLead(tenantId: string, leadId: string) {
