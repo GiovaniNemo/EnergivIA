@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { GoogleGenerativeAI, Schema, SchemaType } from "@google/generative-ai";
 import pdfParse from "pdf-parse";
 
 @Injectable()
@@ -55,7 +55,7 @@ export class AiExtractionService {
       );
     }
 
-    const responseSchema = {
+    const responseSchema: Schema = {
       type: SchemaType.OBJECT,
       properties: {
         detectedCategory: {
