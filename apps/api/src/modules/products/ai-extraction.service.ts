@@ -207,6 +207,8 @@ ${textContent}`;
       "gemini-pro",
     ].filter(Boolean) as string[];
 
+    let lastError: unknown = null;
+
     // 1. Tenta extrair usando a lista de modelos Gemini
     if (this.genAI) {
       for (const modelCandidate of candidateModels) {
