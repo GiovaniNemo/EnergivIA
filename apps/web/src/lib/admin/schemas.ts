@@ -5,7 +5,20 @@ const positiveNumber = z.coerce
   .finite("Informe um número válido")
   .positive("Deve ser positivo");
 const percentNumber = positiveNumber.max(100, "Máximo 100%");
-const nonNegativeNumber = z.number().min(0, "Deve ser ≥ 0");
+const nonNegativeNumber = z.coerce
+  .number({ invalid_type_error: "Informe um número válido" })
+  .min(0, "Deve ser ≥ 0");
+
+const optionalNonNegativeNumber = z.coerce
+  .number({ invalid_type_error: "Informe um número válido" })
+  .min(0, "Deve ser ≥ 0")
+  .optional();
+
+const optionalPositiveInt = z.coerce
+  .number({ invalid_type_error: "Informe um número válido" })
+  .int("Deve ser um número inteiro")
+  .min(1, "Deve ser no mínimo 1")
+  .optional();
 
 export const brandSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -29,9 +42,9 @@ export const distributorProductSchema = z.object({
   product_id: z.string().min(1, "Selecione um produto"),
   distributor_sku: z.string().optional(),
   price: nonNegativeNumber,
-  stock_quantity: nonNegativeNumber.optional(),
-  lead_time_days: nonNegativeNumber.optional(),
-  minimum_order_quantity: z.number().int().min(1).optional(),
+  stock_quantity: optionalNonNegativeNumber,
+  lead_time_days: optionalNonNegativeNumber,
+  minimum_order_quantity: optionalPositiveInt,
 });
 export type DistributorProductFormValues = z.infer<typeof distributorProductSchema>;
 

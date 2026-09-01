@@ -114,8 +114,8 @@ function EmptyCell(): JSX.Element {
 const defaultFormValues: DistributorProductFormValues = {
   product_id: "",
   distributor_sku: "",
-  price: 0,
-  stock_quantity: 0,
+  price: undefined as unknown as number,
+  stock_quantity: undefined,
   lead_time_days: undefined,
   minimum_order_quantity: 1,
 };
@@ -218,9 +218,9 @@ export default function DistributorInventoryPage(): JSX.Element {
         product_id: values.product_id,
         distributor_sku: values.distributor_sku || undefined,
         price: values.price,
-        stock_quantity: values.stock_quantity,
+        stock_quantity: values.stock_quantity ?? 0,
         lead_time_days: values.lead_time_days,
-        minimum_order_quantity: values.minimum_order_quantity,
+        minimum_order_quantity: values.minimum_order_quantity ?? 1,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "distributors", id, "products"] });
@@ -798,6 +798,7 @@ export default function DistributorInventoryPage(): JSX.Element {
                     helperText={fieldState.error?.message}
                     fullWidth
                     size="small"
+                    value={field.value ?? ""}
                   />
                 )}
               />
@@ -814,8 +815,9 @@ export default function DistributorInventoryPage(): JSX.Element {
                     fullWidth
                     size="small"
                     inputProps={{ min: 0, step: 0.01 }}
-                    onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                    value={field.value}
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    onFocus={(e) => e.target.select()}
                   />
                 )}
               />
@@ -832,8 +834,9 @@ export default function DistributorInventoryPage(): JSX.Element {
                     fullWidth
                     size="small"
                     inputProps={{ min: 0 }}
-                    onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                    value={field.value}
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    onFocus={(e) => e.target.select()}
                   />
                 )}
               />
@@ -851,9 +854,8 @@ export default function DistributorInventoryPage(): JSX.Element {
                     size="small"
                     inputProps={{ min: 0 }}
                     value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
+                    onChange={(e) => field.onChange(e.target.value)}
+                    onFocus={(e) => e.target.select()}
                   />
                 )}
               />
@@ -870,8 +872,9 @@ export default function DistributorInventoryPage(): JSX.Element {
                     fullWidth
                     size="small"
                     inputProps={{ min: 1 }}
-                    onChange={(e) => field.onChange(Number(e.target.value) || 1)}
-                    value={field.value}
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    onFocus={(e) => e.target.select()}
                   />
                 )}
               />
@@ -929,6 +932,7 @@ export default function DistributorInventoryPage(): JSX.Element {
                       helperText={fieldState.error?.message}
                       fullWidth
                       size="small"
+                      value={field.value ?? ""}
                     />
                   )}
                 />
@@ -945,8 +949,9 @@ export default function DistributorInventoryPage(): JSX.Element {
                       fullWidth
                       size="small"
                       inputProps={{ min: 0, step: 0.01 }}
-                      onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                      value={field.value}
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      onFocus={(e) => e.target.select()}
                     />
                   )}
                 />
@@ -962,8 +967,9 @@ export default function DistributorInventoryPage(): JSX.Element {
                       fullWidth
                       size="small"
                       inputProps={{ min: 0 }}
-                      onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                      value={field.value}
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      onFocus={(e) => e.target.select()}
                     />
                   )}
                 />
@@ -979,9 +985,8 @@ export default function DistributorInventoryPage(): JSX.Element {
                       size="small"
                       inputProps={{ min: 0 }}
                       value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                      }
+                      onChange={(e) => field.onChange(e.target.value)}
+                      onFocus={(e) => e.target.select()}
                     />
                   )}
                 />
@@ -996,8 +1001,9 @@ export default function DistributorInventoryPage(): JSX.Element {
                       fullWidth
                       size="small"
                       inputProps={{ min: 1 }}
-                      onChange={(e) => field.onChange(Number(e.target.value) || 1)}
-                      value={field.value}
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      onFocus={(e) => e.target.select()}
                     />
                   )}
                 />
