@@ -300,6 +300,7 @@ export interface QueryDistributorProductsParams {
   page?: number;
   limit?: number;
   category_id?: string;
+  category?: string;
   search?: string;
 }
 
@@ -422,6 +423,7 @@ export async function fetchDistributorProducts(
   if (params.page != null) searchParams.set("page", String(params.page));
   if (params.limit != null) searchParams.set("limit", String(params.limit));
   if (params.category_id) searchParams.set("category_id", params.category_id);
+  if (params.category) searchParams.set("category", params.category);
   if (params.search) searchParams.set("search", params.search);
   const url = `${getApiUrl()}/distributors/${distributorId}/products?${searchParams.toString()}`;
   const res = await fetch(url);

@@ -81,7 +81,8 @@ import {
   type KitSwapCategory,
 } from "@/lib/kit-api";
 import { buildProposalIntegratorRenderedData } from "@/lib/proposal-integrator-snapshot";
-import { getStockFreightRules } from "@/lib/stock-api";
+import { getStockFreightRules, searchStockProducts } from "@/lib/stock-api";
+import { fetchDistributorProducts, fetchProducts } from "@/lib/admin-api";
 import { proposalStudyBridge } from "@/components/pipeline/proposal-study-bridge";
 import {
   getBillGdSimulationSummary,
@@ -447,15 +448,72 @@ export const ProposalEconomicsModal = forwardRef<
   >([]);
 
   useEffect(() => {
-    // Fetch string boxes once
-    fetch("/api/products?category=string_box")
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => {
-        if (Array.isArray(data)) setStringBoxOptions(data);
-        else if (data && Array.isArray(data.items)) setStringBoxOptions(data.items);
-      })
-      .catch((e) => console.error("Failed to load string boxes", e));
-  }, []);
+    let cancelled = false;
+    async function loadStringBoxes() {
+      try {
+        if (proposalKitDraft.source.kind === "supplier" && proposalKitDraft.source.id) {
+          const res = await fetchDistributorProducts(proposalKitDraft.source.id, {
+            category: "string_box",
+            limit: 100,
+          });
+          if (cancelled) return;
+          const options = (res.data || [])
+            .filter(
+              (item) => item.product?.category?.name === "string_box" || !item.product?.category
+            )
+            .map((item) => ({
+              id: item.product.id,
+              name: item.product.name,
+              brandName: item.product.brand?.name || "",
+              price: item.price,
+            }));
+          setStringBoxOptions(options);
+        } else if (proposalKitDraft.source.kind === "own" && currentOrganizationId) {
+          const stock = await searchStockProducts(currentOrganizationId, {
+            category: "string_box",
+          });
+          if (cancelled) return;
+          const options = stock.map((p) => ({
+            id: p.id,
+            name: p.name,
+            brandName: p.brand_name || "",
+            price: p.price ?? 0,
+          }));
+          setStringBoxOptions(options);
+        } else {
+          const res = await fetchProducts({ category: "string_box", pageSize: 100, active: true });
+          if (cancelled) return;
+          const options = (res.data || []).map((p) => ({
+            id: p.id,
+            name: p.name,
+            brandName: p.brand?.name || "",
+            price: 0,
+          }));
+          setStringBoxOptions(options);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          console.error("Failed to load string boxes", e);
+          setStringBoxOptions([]);
+        }
+      }
+    }
+    void loadStringBoxes();
+    return () => {
+      cancelled = true;
+    };
+  }, [proposalKitDraft.source, currentOrganizationId]);
+
+  useEffect(() => {
+    if (
+      proposalKitDraft.stringBoxId &&
+      proposalKitDraft.stringBoxId !== "none" &&
+      stringBoxOptions.length > 0 &&
+      !stringBoxOptions.some((sb) => sb.id === proposalKitDraft.stringBoxId)
+    ) {
+      setProposalKitDraft((d) => ({ ...d, stringBoxId: undefined }));
+    }
+  }, [stringBoxOptions, proposalKitDraft.stringBoxId]);
   const [kitSourceOptions, setKitSourceOptions] = useState<KitSourceOption[] | null>(null);
   const [kitSourceLoading, setKitSourceLoading] = useState(false);
   const autoSourceAppliedRef = useRef(false);

@@ -21,5 +21,9 @@ export class QueryDistributorProductsDto {
 
   @IsOptional()
   @IsString()
+  category?: string;
+
+  @IsOptional()
+  @IsString()
   search?: string;
 }

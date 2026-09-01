@@ -165,7 +165,11 @@ export class DistributorsService {
 
     const where: {
       distributorId: string;
-      product?: { name?: { contains: string; mode: "insensitive" }; categoryId?: string };
+      product?: {
+        name?: { contains: string; mode: "insensitive" };
+        categoryId?: string;
+        category?: { name: string };
+      };
     } = { distributorId };
     if (query.search?.trim()) {
       where.product = {
@@ -175,6 +179,9 @@ export class DistributorsService {
     }
     if (query.category_id) {
       where.product = { ...where.product, categoryId: query.category_id };
+    }
+    if (query.category) {
+      where.product = { ...where.product, category: { name: query.category } };
     }
 
     const [data, total] = await Promise.all([

@@ -226,11 +226,7 @@ export function isBmsSpec(specs: unknown): specs is BmsSpec {
 }
 
 export function isStringBoxSpec(specs: unknown): specs is StringBoxSpec {
-  return (
-    typeof specs === "object" &&
-    specs !== null &&
-    ("inputs_count" in specs || "outputs_count" in specs || "max_voltage_v" in specs)
-  );
+  return typeof specs === "object" && specs !== null;
 }
 
 export function isInverterSpec(specs: unknown): specs is InverterSpec {

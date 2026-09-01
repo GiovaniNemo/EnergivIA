@@ -68,6 +68,8 @@ function humanizeCategory(name: string | null | undefined): string {
       return "cabo CC";
     case "connector":
       return "conector";
+    case "string_box":
+      return "string box";
     default:
       return name;
   }
