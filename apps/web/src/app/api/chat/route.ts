@@ -240,6 +240,7 @@ async function calculateDistributorQuotes({
 
   if (parsedConsumption === 300) {
     const allText = messages
+      .filter((m: any) => m.role === "user")
       .map((m: any) =>
         typeof m.content === "string"
           ? m.content.toLowerCase()
@@ -584,6 +585,12 @@ async function calculateDistributorQuotes({
 
     let precoEst = 0;
     const estLines: string[] = [];
+    const cleanProdName = (n?: string | null) =>
+      (n || "")
+        .replace(/[\s\-_]+$/, "")
+        .replace(/\s+-\s*$/, "")
+        .trim();
+
     if (forcedIncludeStructure && selectedStructures.length > 0) {
       const counts = new Map();
       for (const est of selectedStructures) {
@@ -592,7 +599,7 @@ async function calculateDistributorQuotes({
         counts.set(name, (counts.get(name) || 0) + 1);
       }
       for (const [name, count] of counts.entries()) {
-        estLines.push(`- Estrutura: ${count}x ${name}`);
+        estLines.push(`• Estrutura: ${count}x ${cleanProdName(name)}`);
       }
     }
 
@@ -612,7 +619,7 @@ async function calculateDistributorQuotes({
       const invPrice = Number(inv.price) || 0;
       structuredItems.push({
         productId: inv.product?.id || inv.productId || inv.id || "",
-        productName: inv.product?.name || inv.descricao || "Inversor",
+        productName: cleanProdName(inv.product?.name || inv.descricao) || "Inversor",
         brandName: inv.product?.brand?.name || "",
         categoryName: "inverter",
         quantity: 1,
@@ -626,7 +633,7 @@ async function calculateDistributorQuotes({
       const modUnit = Number(mod.price) || 0;
       structuredItems.push({
         productId: mod.product?.id || mod.productId || mod.id || "",
-        productName: mod.product?.name || mod.descricao || "Módulo Fotovoltaico",
+        productName: cleanProdName(mod.product?.name || mod.descricao) || "Módulo Fotovoltaico",
         brandName: mod.product?.brand?.name || "",
         categoryName: "module",
         quantity: moduleQ,
@@ -650,7 +657,7 @@ async function calculateDistributorQuotes({
         const uPrice = Number(est.price) || 0;
         structuredItems.push({
           productId: est.product?.id || est.productId || est.id || "",
-          productName: est.product?.name || est.descricao || "Estrutura de Fixação",
+          productName: cleanProdName(est.product?.name || est.descricao) || "Estrutura de Fixação",
           brandName: est.product?.brand?.name || "",
           categoryName: "structure_kit",
           quantity: count,
@@ -665,7 +672,8 @@ async function calculateDistributorQuotes({
       const uPrice = Number(profileProd.price) || 0;
       structuredItems.push({
         productId: profileProd.product?.id || profileProd.productId || profileProd.id || "",
-        productName: profileProd.product?.name || profileProd.descricao || "Perfil / Trilho",
+        productName:
+          cleanProdName(profileProd.product?.name || profileProd.descricao) || "Perfil / Trilho",
         brandName: profileProd.product?.brand?.name || "",
         categoryName: "profile",
         quantity: profileQty,
@@ -679,7 +687,8 @@ async function calculateDistributorQuotes({
       const uPrice = Number(cabPreto.price) || 0;
       structuredItems.push({
         productId: cabPreto.product?.id || cabPreto.productId || cabPreto.id || "",
-        productName: cabPreto.product?.name || cabPreto.descricao || "Cabo Solar Preto",
+        productName:
+          cleanProdName(cabPreto.product?.name || cabPreto.descricao) || "Cabo Solar Preto",
         brandName: cabPreto.product?.brand?.name || "",
         categoryName: "dc_cable",
         quantity: 1,
@@ -693,7 +702,9 @@ async function calculateDistributorQuotes({
       const uPrice = Number(cabVermelho.price) || 0;
       structuredItems.push({
         productId: cabVermelho.product?.id || cabVermelho.productId || cabVermelho.id || "",
-        productName: cabVermelho.product?.name || cabVermelho.descricao || "Cabo Solar Vermelho",
+        productName:
+          cleanProdName(cabVermelho.product?.name || cabVermelho.descricao) ||
+          "Cabo Solar Vermelho",
         brandName: cabVermelho.product?.brand?.name || "",
         categoryName: "dc_cable",
         quantity: 1,
@@ -707,7 +718,7 @@ async function calculateDistributorQuotes({
       const uPrice = Number(con.price) || 0;
       structuredItems.push({
         productId: con.product?.id || con.productId || con.id || "",
-        productName: con.product?.name || con.descricao || "Conectores MC4",
+        productName: cleanProdName(con.product?.name || con.descricao) || "Conectores MC4",
         brandName: con.product?.brand?.name || "",
         categoryName: "connector",
         quantity: 2,
@@ -726,17 +737,19 @@ async function calculateDistributorQuotes({
       potencia_kwp: realKWp,
       itens_estruturados: structuredItems,
       kit_itens_salvos: [
-        `- Inversor: ${inv.product?.name || inv.descricao}`,
-        `- Módulos: ${moduleQ}x ${mod.product?.name || mod.descricao}`,
+        `• Inversor: ${cleanProdName(inv.product?.name || inv.descricao)}`,
+        `• Módulos: ${moduleQ}x ${cleanProdName(mod.product?.name || mod.descricao)}`,
         ...estLines,
         profileProd && profileQty > 0
-          ? `- Perfil: ${profileQty}x ${profileProd.product?.name || profileProd.descricao}`
+          ? `• Perfil: ${profileQty}x ${cleanProdName(profileProd.product?.name || profileProd.descricao)}`
           : null,
-        cabPreto ? `- Cabo Preto: ${cabPreto.product?.name || cabPreto.descricao}` : null,
+        cabPreto
+          ? `• Cabo Preto: ${cleanProdName(cabPreto.product?.name || cabPreto.descricao)}`
+          : null,
         cabVermelho
-          ? `- Cabo Vermelho: ${cabVermelho.product?.name || cabVermelho.descricao}`
+          ? `• Cabo Vermelho: ${cleanProdName(cabVermelho.product?.name || cabVermelho.descricao)}`
           : null,
-        con ? `- Conectores: 2x ${con.product?.name || con.descricao}` : null,
+        con ? `• Conectores: 2x ${cleanProdName(con.product?.name || con.descricao)}` : null,
       ].filter(Boolean),
       info_adicional: `Potência: ${realKWp.toFixed(2)} kWp | Geração Estimada: ${estGeneration.toFixed(1)} kWh/mês (em condições ideais)*\n*Obs: A estimativa de geração considera condições perfeitas de irradiação solar. A geração real pode variar conforme as caídas e inclinação do telhado, orientação solar (trajetória do sol / azimute) e eventuais sombreamentos.`,
     });
