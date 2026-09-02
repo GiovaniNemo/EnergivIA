@@ -99,6 +99,7 @@ async function calculateDistributorQuotes({
   roofType,
   cidade,
   estado,
+  gridVoltage,
 }: {
   baseURL: string;
   headers: any;
@@ -110,6 +111,7 @@ async function calculateDistributorQuotes({
   roofType?: string;
   cidade?: string;
   estado?: string;
+  gridVoltage?: string;
 }) {
   let mappedRoof: any = "metal";
   const roofFactor = 1.0;
@@ -380,6 +382,59 @@ async function calculateDistributorQuotes({
     for (const invObj of invs) {
       const specs = invObj.product?.specs;
       const name = (invObj.product?.name || invObj.descricao || "").toUpperCase();
+      const voltSpec = String(
+        specs?.output_voltage_v || specs?.ac_output_voltage || ""
+      ).toUpperCase();
+
+      if (gridVoltage) {
+        const g = gridVoltage.toLowerCase();
+        const isTri380 =
+          g.includes("380") ||
+          g === "4" ||
+          g.includes("tri 380") ||
+          g.includes("tri_380") ||
+          g.includes("trifasico 380") ||
+          g.includes("trifásico 380");
+        const isTri220 =
+          (g.includes("tri") && g.includes("220")) ||
+          g === "3" ||
+          g.includes("tri 220") ||
+          g.includes("tri_220") ||
+          g.includes("trifasico 220") ||
+          g.includes("trifásico 220");
+        const isMono220 =
+          g.includes("mono") || g === "1" || g.includes("monofasico") || g.includes("monofásico");
+        const isBi220 =
+          g.includes("bi") || g === "2" || g.includes("bifasico") || g.includes("bifásico");
+
+        if (isTri380) {
+          const isMatch380 =
+            name.includes("380V") ||
+            name.includes("380") ||
+            voltSpec.includes("380") ||
+            ((name.includes("TRIFASICO") || name.includes("TRIFÁSICO")) &&
+              !name.includes("220V") &&
+              !name.includes("-LV"));
+          if (!isMatch380) continue;
+        } else if (isTri220) {
+          const isMatch220 =
+            (name.includes("TRIFASICO") || name.includes("TRIFÁSICO")) &&
+            (name.includes("220V") ||
+              name.includes("220") ||
+              name.includes("-LV") ||
+              voltSpec.includes("220"));
+          if (!isMatch220) continue;
+        } else if (isMono220 || isBi220) {
+          if (
+            name.includes("380V") ||
+            name.includes("380") ||
+            name.includes("TRIFASICO") ||
+            name.includes("TRIFÁSICO")
+          ) {
+            continue;
+          }
+        }
+      }
 
       let testModuleQ = moduleQ;
       if ((name.includes("MONOF") || name.includes("MONO")) && testModuleQ < 4) {
@@ -400,7 +455,7 @@ async function calculateDistributorQuotes({
       }
 
       const ratio = testRealKWp / invKWp;
-      if (ratio < 0.5 || ratio > 1.45) continue;
+      if (ratio < 0.45 || ratio > 1.55) continue;
 
       validInvs.push({
         ...invObj,
@@ -898,6 +953,12 @@ export async function POST(req: Request) {
               .string()
               .optional()
               .describe("Sigla do estado (UF) para o motor calcular HSP"),
+            gridVoltage: z
+              .string()
+              .optional()
+              .describe(
+                "Padrão de entrada elétrico / Tensão (ex: 'Monofásico 220V', 'Bifásico 127V/220V', 'Trifásico 220V', 'Trifásico 380V', '1', '2', '3', '4')"
+              ),
           }),
           execute: async (args: any) => {
             try {
