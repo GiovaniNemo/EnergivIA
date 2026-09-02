@@ -322,6 +322,8 @@ export class EnergyBillsService {
     cidade?: string;
     uf?: string;
     tipo_conexao?: string;
+    nome_cliente?: string;
+    codigo_instalacao_ou_uc?: string;
     mes_referencia_atual?: string;
     consumptionKwh?: number;
     totalAmount?: number;
