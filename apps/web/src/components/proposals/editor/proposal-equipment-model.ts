@@ -469,10 +469,10 @@ export function inferSpecsFromProductDetails(
   } else if (cat === "inverter" || cat === "microinverter") {
     const matchKw = productName.match(/(\d+(?:[.,]\d+)?)\s*KW\b/i);
     const matchW = productName.match(/(\d{3,5})\s*W\b/i);
-    if (matchKw) {
+    if (matchKw && matchKw[1]) {
       const kwVal = matchKw[1].replace(",", ".");
       a = { label: "Potência", value: `${kwVal} kW`, icon: "zap" };
-    } else if (matchW) {
+    } else if (matchW && matchW[1]) {
       a = { label: "Potência", value: `${matchW[1]} W`, icon: "zap" };
     }
     b = {
@@ -567,12 +567,13 @@ export function buildEquipmentItemFromKitLine(
     if (
       lowerName.includes("modulo") ||
       lowerName.includes("módulo") ||
-      lowerName.includes("painel")
+      lowerName.includes("painel") ||
+      lowerName.includes("module")
     ) {
       cat = "module";
-    } else if (lowerName.includes("microinversor")) {
+    } else if (lowerName.includes("microinversor") || lowerName.includes("microinverter")) {
       cat = "microinverter";
-    } else if (lowerName.includes("inversor")) {
+    } else if (lowerName.includes("inversor") || lowerName.includes("inverter")) {
       cat = "inverter";
     } else if (lowerName.includes("estrutura")) {
       cat = "structure_kit";
@@ -643,27 +644,37 @@ export function buildProposalEquipmentItemsFromKit(
 ): ProposalEquipmentItem[] {
   if (!Array.isArray(kitItems) || kitItems.length === 0) return [];
 
+  const mapped = kitItems.map((line, idx) => buildEquipmentItemFromKitLine(line, idx));
+
+  // O card de equipamentos da proposta exibe exclusivamente módulo e inversor/microinversor
+  const allowedCategories = new Set([
+    "module",
+    "inverter",
+    "microinverter",
+    "hybrid_inverter",
+    "off_grid_inverter",
+  ]);
+
+  const filtered = mapped.filter((item) => {
+    const cat = (item.categoryName ?? "").toLowerCase();
+    return allowedCategories.has(cat);
+  });
+
   const categoryRank: Record<string, number> = {
     module: 1,
     inverter: 2,
     microinverter: 2,
-    battery: 3,
-    structure_kit: 4,
-    profile: 5,
-    string_box: 6,
-    dc_cable: 7,
-    connector: 8,
+    hybrid_inverter: 2,
+    off_grid_inverter: 2,
   };
 
-  const sorted = [...kitItems].sort((x, y) => {
+  return filtered.sort((x, y) => {
     const cx = (x.categoryName ?? "").toLowerCase();
     const cy = (y.categoryName ?? "").toLowerCase();
     const rx = categoryRank[cx] ?? 50;
     const ry = categoryRank[cy] ?? 50;
     return rx - ry;
   });
-
-  return sorted.map((line, idx) => buildEquipmentItemFromKitLine(line, idx));
 }
 
 export function resolveProposalEquipmentItemsForPreview(
