@@ -88,6 +88,126 @@ import { extractEnergyBillFromPdfBuffer, extractEnergyBillFromImage } from "@/li
 
 export const maxDuration = 60;
 
+function extractQuotedKitFromMessages(messages: any[]) {
+  if (!Array.isArray(messages)) return null;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.role !== "assistant" && m.role !== "system") continue;
+    const text = typeof m.content === "string" ? m.content : "";
+    if (
+      !text.includes("Itens do Kit") &&
+      !text.includes("• Inversor") &&
+      !text.includes("- Inversor") &&
+      !text.toLowerCase().includes("inversor:")
+    ) {
+      continue;
+    }
+
+    let kitPrice = 0;
+    const priceMatch = text.match(/R\$\s*([\d.,]+)/i);
+    if (priceMatch && priceMatch[1]) {
+      kitPrice = parseFloat(priceMatch[1].replace(/\./g, "").replace(",", "."));
+    }
+
+    let kwp = 0;
+    const kwpMatch =
+      text.match(/Pot[êe]ncia:\s*(\d+(?:[.,]\d+)?)\s*kWp/i) ||
+      text.match(/(\d+(?:[.,]\d+)?)\s*kWp/i);
+    if (kwpMatch && kwpMatch[1]) {
+      kwp = parseFloat(kwpMatch[1].replace(",", "."));
+    }
+
+    const lines = text.split("\n");
+    const items: any[] = [];
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (
+        !line.startsWith("•") &&
+        !line.startsWith("-") &&
+        !line.startsWith("*") &&
+        !line.toLowerCase().includes("inversor:") &&
+        !line.toLowerCase().includes("módulos:") &&
+        !line.toLowerCase().includes("estrutura:") &&
+        !line.toLowerCase().includes("perfil:")
+      ) {
+        continue;
+      }
+      const cleanLine = line.replace(/^[•\-\*]\s*/, "");
+      const colonIdx = cleanLine.indexOf(":");
+      if (colonIdx === -1) continue;
+      const itemType = cleanLine.substring(0, colonIdx).trim().toLowerCase();
+      const itemRest = cleanLine.substring(colonIdx + 1).trim();
+
+      let quantity = 1;
+      let productName = itemRest;
+      let categoryName = "equipment";
+      let brandName = "";
+
+      const qtyMatch = itemRest.match(/^(\d+)x\s*(.*)$/i);
+      if (qtyMatch && qtyMatch[1] && qtyMatch[2]) {
+        quantity = parseInt(qtyMatch[1], 10);
+        productName = qtyMatch[2].trim();
+      }
+
+      if (itemType.includes("inversor") || itemType.includes("micro")) {
+        categoryName = itemType.includes("micro") ? "microinverter" : "inverter";
+        if (productName.toUpperCase().includes("SAJ")) brandName = "SAJ";
+        else if (productName.toUpperCase().includes("DEYE")) brandName = "DEYE";
+        else if (productName.toUpperCase().includes("GROWATT")) brandName = "GROWATT";
+        else if (productName.toUpperCase().includes("SOLIS")) brandName = "SOLIS";
+        else if (productName.toUpperCase().includes("SUNGROW")) brandName = "SUNGROW";
+        else if (productName.toUpperCase().includes("HUAWEI")) brandName = "HUAWEI";
+        else if (productName.toUpperCase().includes("GOODWE")) brandName = "GOODWE";
+        else if (productName.toUpperCase().includes("WEG")) brandName = "WEG";
+        else if (productName.toUpperCase().includes("HOYMILES")) brandName = "HOYMILES";
+        else if (productName.toUpperCase().includes("APSYSTEMS")) brandName = "APSYSTEMS";
+      } else if (
+        itemType.includes("módulo") ||
+        itemType.includes("modulo") ||
+        itemType.includes("painel")
+      ) {
+        categoryName = "module";
+        if (productName.toUpperCase().includes("SINE ENERGY")) brandName = "SINE ENERGY";
+        else if (productName.toUpperCase().includes("JINKO")) brandName = "JINKO";
+        else if (productName.toUpperCase().includes("CANADIAN")) brandName = "CANADIAN SOLAR";
+        else if (productName.toUpperCase().includes("LONGI")) brandName = "LONGI";
+        else if (productName.toUpperCase().includes("TRINA")) brandName = "TRINA";
+        else if (productName.toUpperCase().includes("JA SOLAR")) brandName = "JA SOLAR";
+        else if (productName.toUpperCase().includes("OSDA")) brandName = "OSDA";
+        else if (productName.toUpperCase().includes("DAH")) brandName = "DAH SOLAR";
+        else if (productName.toUpperCase().includes("RISEN")) brandName = "RISEN";
+        else if (productName.toUpperCase().includes("ASTRONERGY")) brandName = "ASTRONERGY";
+      } else if (itemType.includes("estrutura")) {
+        categoryName = "structure_kit";
+      } else if (itemType.includes("perfil") || itemType.includes("trilho")) {
+        categoryName = "profile";
+      } else if (itemType.includes("cabo")) {
+        categoryName = "dc_cable";
+      } else if (itemType.includes("conector")) {
+        categoryName = "connector";
+      }
+
+      items.push({
+        productName,
+        brandName,
+        categoryName,
+        quantity,
+        unitPrice: 0,
+        lineTotal: 0,
+      });
+    }
+
+    if (items.length > 0) {
+      return {
+        kitItems: items,
+        valorKitTotal: kitPrice,
+        potenciaSistemaKw: kwp,
+      };
+    }
+  }
+  return null;
+}
+
 async function calculateDistributorQuotes({
   baseURL,
   headers,
@@ -1533,7 +1653,23 @@ export async function POST(req: Request) {
               let rawKitItems: any[] = args.kitItems ?? [];
               let chosenDistributorId = args.distributorId || undefined;
 
-              // If kit items are empty or equipmentSubtotalBrl <= 0, auto-resolve quotes from catalog
+              // Priority 1: Extract the exact quote that was calculated and sent in the chat
+              if (rawKitItems.length === 0 || equipmentSubtotalBrl <= 0 || systemKwp <= 0) {
+                const extracted = extractQuotedKitFromMessages(messages);
+                if (extracted) {
+                  if (rawKitItems.length === 0 && extracted.kitItems.length > 0) {
+                    rawKitItems = extracted.kitItems;
+                  }
+                  if (equipmentSubtotalBrl <= 0 && extracted.valorKitTotal > 0) {
+                    equipmentSubtotalBrl = extracted.valorKitTotal;
+                  }
+                  if (systemKwp <= 0 && extracted.potenciaSistemaKw > 0) {
+                    systemKwp = extracted.potenciaSistemaKw;
+                  }
+                }
+              }
+
+              // Priority 2: If kit items are still empty, auto-resolve quotes from catalog
               if (rawKitItems.length === 0 || equipmentSubtotalBrl <= 0 || systemKwp <= 0) {
                 try {
                   const calculatedQuotes = await calculateDistributorQuotes({
@@ -1541,7 +1677,7 @@ export async function POST(req: Request) {
                     headers,
                     messages,
                     monthlyConsumption: args.consumoMensalKwh,
-                    targetKWp: args.potenciaSistemaKw,
+                    targetKWp: args.potenciaSistemaKw || systemKwp,
                   });
 
                   if (calculatedQuotes.length > 0) {

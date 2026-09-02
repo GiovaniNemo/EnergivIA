@@ -34,6 +34,13 @@ export function mergePublicProposalVariables(
         const brand = item.brandName ? ` (${item.brandName})` : "";
         return `${qty}x ${item.productName}${brand}`;
       });
+
+      if (integrator.projectCostLines && integrator.projectCostLines.length > 0) {
+        integrator.projectCostLines.forEach((c) => {
+          kitListLines.push(`1x ${c.name} (Serviço Especializado)`);
+        });
+      }
+
       merged["kit_itens_lista"] = kitListLines.join("\n");
 
       const moduleItem = integrator.kitItems.find((i) => {
