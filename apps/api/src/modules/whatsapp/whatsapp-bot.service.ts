@@ -1802,6 +1802,12 @@ export class WhatsappBotService {
 
       let precoEst = 0;
       const estLines: string[] = [];
+      const cleanProdName = (n?: string | null) =>
+        (n || "")
+          .replace(/[\s\-_]+$/, "")
+          .replace(/\s+-\s*$/, "")
+          .trim();
+
       if (forcedIncludeStructure && selectedStructures.length > 0) {
         const counts = new Map<string, number>();
         for (const est of selectedStructures) {
@@ -1810,7 +1816,7 @@ export class WhatsappBotService {
           counts.set(name, (counts.get(name) || 0) + 1);
         }
         for (const [name, count] of counts.entries()) {
-          estLines.push(`- Estrutura: ${count}x ${name}`);
+          estLines.push(`• Estrutura: ${count}x ${cleanProdName(name)}`);
         }
       }
 
@@ -1838,7 +1844,7 @@ export class WhatsappBotService {
       }> = [];
 
       // 1. Inversor
-      const invProdName = inv.product?.name || "Inversor Solar";
+      const invProdName = cleanProdName(inv.product?.name) || "Inversor Solar";
       const invBrand = inv.product?.brand?.name || "";
       structuredItems.push({
         productId: inv.product?.id || inv.productId || inv.id || "",
@@ -1853,7 +1859,7 @@ export class WhatsappBotService {
       });
 
       // 2. Módulos
-      const modProdName = mod.product?.name || `Módulo Solar ${modPowerW}W`;
+      const modProdName = cleanProdName(mod.product?.name) || `Módulo Solar ${modPowerW}W`;
       const modBrand = mod.product?.brand?.name || "";
       structuredItems.push({
         productId: mod.product?.id || mod.productId || mod.id || "",
@@ -1883,7 +1889,7 @@ export class WhatsappBotService {
           const uPrice = Number(est.price) || 0;
           structuredItems.push({
             productId: est.product?.id || est.productId || est.id || "",
-            productName: est.product?.name || "Estrutura de Fixação",
+            productName: cleanProdName(est.product?.name) || "Estrutura de Fixação",
             brandName: est.product?.brand?.name || "",
             categoryName: "structure_kit",
             quantity: count,
@@ -1900,7 +1906,7 @@ export class WhatsappBotService {
         const uPrice = Number(profileProd.price) || 0;
         structuredItems.push({
           productId: profileProd.product?.id || profileProd.productId || profileProd.id || "",
-          productName: profileProd.product?.name || "Perfil / Trilho",
+          productName: cleanProdName(profileProd.product?.name) || "Perfil / Trilho",
           brandName: profileProd.product?.brand?.name || "",
           categoryName: "profile",
           quantity: profileQty,
@@ -1916,7 +1922,7 @@ export class WhatsappBotService {
         const uPrice = Number(cabPreto.price) || 0;
         structuredItems.push({
           productId: cabPreto.product?.id || cabPreto.productId || cabPreto.id || "",
-          productName: cabPreto.product?.name || "Cabo Solar 6mm Preto",
+          productName: cleanProdName(cabPreto.product?.name) || "Cabo Solar 6mm Preto",
           brandName: cabPreto.product?.brand?.name || "",
           categoryName: "dc_cable",
           quantity: 1,
@@ -1930,7 +1936,7 @@ export class WhatsappBotService {
         const uPrice = Number(cabVermelho.price) || 0;
         structuredItems.push({
           productId: cabVermelho.product?.id || cabVermelho.productId || cabVermelho.id || "",
-          productName: cabVermelho.product?.name || "Cabo Solar 6mm Vermelho",
+          productName: cleanProdName(cabVermelho.product?.name) || "Cabo Solar 6mm Vermelho",
           brandName: cabVermelho.product?.brand?.name || "",
           categoryName: "dc_cable",
           quantity: 1,
@@ -1946,7 +1952,7 @@ export class WhatsappBotService {
         const uPrice = Number(con.price) || 0;
         structuredItems.push({
           productId: con.product?.id || con.productId || con.id || "",
-          productName: con.product?.name || "Conectores MC4",
+          productName: cleanProdName(con.product?.name) || "Conectores MC4",
           brandName: con.product?.brand?.name || "",
           categoryName: "connector",
           quantity: 2,
@@ -1958,15 +1964,15 @@ export class WhatsappBotService {
       }
 
       const items = [
-        `- Inversor: ${inv.product?.name || "Inversor Solar"}`,
-        `- Módulos: ${moduleQ}x ${mod.product?.name || `Módulo Solar ${modPowerW}W`}`,
+        `• Inversor: ${cleanProdName(inv.product?.name) || "Inversor Solar"}`,
+        `• Módulos: ${moduleQ}x ${cleanProdName(mod.product?.name) || `Módulo Solar ${modPowerW}W`}`,
         ...estLines,
         profileProd && profileQty > 0
-          ? `- Perfil: ${profileQty}x ${profileProd.product?.name}`
+          ? `• Perfil: ${profileQty}x ${cleanProdName(profileProd.product?.name)}`
           : null,
-        cabPreto ? `- Cabo Preto: ${cabPreto.product?.name}` : null,
-        cabVermelho ? `- Cabo Vermelho: ${cabVermelho.product?.name}` : null,
-        con ? `- Conectores: 2x ${con.product?.name}` : null,
+        cabPreto ? `• Cabo Preto: ${cleanProdName(cabPreto.product?.name)}` : null,
+        cabVermelho ? `• Cabo Vermelho: ${cleanProdName(cabVermelho.product?.name)}` : null,
+        con ? `• Conectores: 2x ${cleanProdName(con.product?.name)}` : null,
       ].filter(Boolean) as string[];
 
       quotes.push({
@@ -2068,6 +2074,15 @@ export class WhatsappBotService {
 
         const content = typeof m.content === "string" ? m.content : "";
         const lowerC = content.toLowerCase().trim();
+
+        // 7. Nome e WhatsApp do Cliente (pode ser detectado pelas confirmações do assistente)
+        if (m.role === "assistant") {
+          const nameM1 = content.match(/registrar o cliente ([^.]+)\./i);
+          const nameM2 = content.match(/Cliente \*([^*]+)\* anotado/i);
+          if (nameM1?.[1]) clientName = nameM1[1].trim();
+          else if (nameM2?.[1]) clientName = nameM2[1].trim();
+          continue; // Não analisa mensagens do bot para evitar capturar exemplos de texto
+        }
 
         // 1. Extração de kWp
         const kwpM = content.match(/(\d+(?:[.,]\d+)?)\s*kwp/i);
@@ -2205,14 +2220,6 @@ export class WhatsappBotService {
           if (messages[i - 1]?.content?.includes("Qual a estrutura do telhado?")) {
             roofType = "Sem estrutura";
           }
-        }
-
-        // 7. Nome e WhatsApp do Cliente
-        if (m.role === "assistant") {
-          const nameM1 = content.match(/registrar o cliente ([^.]+)\./i);
-          const nameM2 = content.match(/Cliente \*([^*]+)\* anotado/i);
-          if (nameM1?.[1]) clientName = nameM1[1].trim();
-          else if (nameM2?.[1]) clientName = nameM2[1].trim();
         }
       }
 
