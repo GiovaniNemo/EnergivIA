@@ -357,6 +357,8 @@ export class EnergyBillsService {
     let consumptionKwh: number | undefined;
     const kwhPatterns = [
       /(?:consumo\s+(?:ativo|faturado|medido|do\s+m[eê]s)?|total\s+consumo)[\s:=]*(\d{1,6}(?:[.,]\d{1,3})?)\s*(?:kwh|kw-h)/i,
+      /(?:ENERGIA\s+ELET\s+CONSUMO|ENERGIA\s+CONSUMO)[\s\S]{0,40}?(?:kwh|kw-h)[\s:=]*(\d{1,6}(?:[.,]\d{1,3})?)/i,
+      /(?:consumo\s+kwh)[\s:=]*(\d{1,6}(?:[.,]\d{1,3})?)/i,
       /(\d{1,6}(?:[.,]\d{1,3})?)\s*(?:kwh|kw-h)\s*(?:\/m[eê]s)?/i,
     ];
     for (const p of kwhPatterns) {
@@ -389,7 +391,7 @@ export class EnergyBillsService {
 
     let referenceMonth: string | undefined;
     const refMatch = t.match(
-      /(?:compet[eê]ncia|refer[eê]ncia|m[eê]s\/ano)[\s:=]*([0-1]?\d\s*\/\s*(?:20)?\d{2})/i
+      /(?:compet[eê]ncia|refer[eê]ncia|ref:\s*m[eê]s\s*\/\s*ano|m[eê]s\/ano)[\s:=]*([0-1]?\d\s*[\/-]\s*(?:20)?\d{2})/i
     );
     if (refMatch && refMatch[1]) {
       referenceMonth = refMatch[1].replace(/\s+/g, "");
@@ -409,7 +411,31 @@ export class EnergyBillsService {
       tipo_conexao = "Monofásico";
     }
 
-    // 5. Cidade / UF
+    // 5. Nome do Cliente e UC
+    let nome_cliente: string | undefined;
+    const nameMatch = t.match(
+      /(?:Nome|Cliente|Titular)[\s:=]+([A-ZÁ-Ú\s]{4,60})(?=\s+(?:UNIDADE|ENDERE[CÇ]O|CPF|CNPJ|C[OÓ]DIGO|$))/i
+    );
+    if (nameMatch && nameMatch[1]) {
+      const n = nameMatch[1].trim();
+      if (
+        n.length >= 3 &&
+        !n.toLowerCase().includes("copel") &&
+        !n.toLowerCase().includes("energia")
+      ) {
+        nome_cliente = n;
+      }
+    }
+
+    let codigo_instalacao_ou_uc: string | undefined;
+    const ucMatch = t.match(
+      /(?:UNIDADE\s+CONSUMIDORA|INSTALA[CÇ][AÃ]O|C[OÓ]DIGO\s+DO\s+CLIENTE|CONTA\s+CONTRATO)[\s:=]*(\d{6,20})/i
+    );
+    if (ucMatch && ucMatch[1]) {
+      codigo_instalacao_ou_uc = ucMatch[1].trim();
+    }
+
+    // 6. Cidade / UF
     const ufList = [
       "AC",
       "AL",
@@ -580,11 +606,6 @@ export class EnergyBillsService {
     if (!cidade) missingFields.push("Cidade");
     if (!uf) missingFields.push("UF");
     if (!consumptionKwh && normalizedHistory.length === 0) missingFields.push("Consumo do Mês");
-    // Se encontrou menos de 6 meses no histórico do OCR puro, acionamos a IA para garantir que nenhum mês foi omitido
-    if (normalizedHistory.length < 6)
-      missingFields.push(
-        `Histórico parcial (${normalizedHistory.length} meses encontrados pelo OCR, acionando IA para conferência de todos os meses)`
-      );
 
     const isComplete = missingFields.length === 0;
 
@@ -593,6 +614,8 @@ export class EnergyBillsService {
       cidade,
       uf,
       tipo_conexao,
+      nome_cliente,
+      codigo_instalacao_ou_uc,
       mes_referencia_atual: referenceMonth,
       consumptionKwh,
       totalAmount,
@@ -656,9 +679,20 @@ export class EnergyBillsService {
           this.logger.warn(`Erro leitura PDF com pdfParse: ${String(pdfErr)}`);
         }
 
-        // Se o PDF tem camada de texto digital, envia direto para a IA interpretar todos os meses
+        // Se o PDF tem camada de texto digital, executa primeiro o parser determinístico de alta precisão
         if (rawText && rawText.trim().length >= 30) {
-          if (openAiApiKey) {
+          const localParsed = this.parseBillTextDeterministic(rawText);
+          if (
+            localParsed.isComplete ||
+            (localParsed.consumptionHistoryLabeled.length > 0 &&
+              (localParsed.consumptionKwh ||
+                localParsed.consumptionHistoryLabeled[0]?.consumptionKwh))
+          ) {
+            extractedData = this.processExtractedResultWithMath(
+              localParsed as unknown as Record<string, unknown>
+            );
+            extractionEngine = "OCR";
+          } else if (openAiApiKey) {
             extractedData = await this.extractDataWithOpenAI(
               rawText,
               openAiApiKey,
@@ -1094,7 +1128,9 @@ export class EnergyBillsService {
         return this.processExtractedResultWithMath(parsed);
       } catch (err) {
         lastErr = err;
-        this.logger.warn(`Modelo ${modelName} falhou para fatura: ${err instanceof Error ? err.message : String(err)}`);
+        this.logger.warn(
+          `Modelo ${modelName} falhou para fatura: ${err instanceof Error ? err.message : String(err)}`
+        );
       }
     }
 

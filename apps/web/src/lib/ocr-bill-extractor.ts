@@ -139,6 +139,8 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
   let consumo_mes_atual_kwh: number | undefined;
   const kwhPatterns = [
     /(?:consumo\s+(?:ativo|faturado|medido|do\s+m[eê]s)?|total\s+consumo)[\s:=]*(\d{1,6}(?:[.,]\d{1,3})?)\s*(?:kwh|kw-h)/i,
+    /(?:ENERGIA\s+ELET\s+CONSUMO|ENERGIA\s+CONSUMO)[\s\S]{0,40}?(?:kwh|kw-h)[\s:=]*(\d{1,6}(?:[.,]\d{1,3})?)/i,
+    /(?:consumo\s+kwh)[\s:=]*(\d{1,6}(?:[.,]\d{1,3})?)/i,
     /(\d{1,6}(?:[.,]\d{1,3})?)\s*(?:kwh|kw-h)\s*(?:\/m[eê]s)?/i,
   ];
   for (const p of kwhPatterns) {
@@ -173,7 +175,7 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
   // 3. Mês de Referência
   let mes_referencia_atual: string | undefined;
   const refMatch = t.match(
-    /(?:compet[eê]ncia|refer[eê]ncia|m[eê]s\/ano)[\s:=]*([0-1]?\d\s*\/\s*(?:20)?\d{2})/i
+    /(?:compet[eê]ncia|refer[eê]ncia|ref:\s*m[eê]s\s*\/\s*ano|m[eê]s\/ano)[\s:=]*([0-1]?\d\s*[\/-]\s*(?:20)?\d{2})/i
   );
   if (refMatch && refMatch[1]) {
     mes_referencia_atual = refMatch[1].replace(/\s+/g, "");
@@ -192,6 +194,30 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
     tipo_conexao = "Bifásico";
   } else if (/monof[aá]sico/i.test(t)) {
     tipo_conexao = "Monofásico";
+  }
+
+  // 5. Nome do Cliente e UC
+  let nome_cliente: string | undefined;
+  const nameMatch = t.match(
+    /(?:Nome|Cliente|Titular)[\s:=]+([A-ZÁ-Ú\s]{4,60})(?=\s+(?:UNIDADE|ENDERE[CÇ]O|CPF|CNPJ|C[OÓ]DIGO|$))/i
+  );
+  if (nameMatch && nameMatch[1]) {
+    const n = nameMatch[1].trim();
+    if (
+      n.length >= 3 &&
+      !n.toLowerCase().includes("copel") &&
+      !n.toLowerCase().includes("energia")
+    ) {
+      nome_cliente = n;
+    }
+  }
+
+  let codigo_instalacao_ou_uc: string | undefined;
+  const ucMatch = t.match(
+    /(?:UNIDADE\s+CONSUMIDORA|INSTALA[CÇ][AÃ]O|C[OÓ]DIGO\s+DO\s+CLIENTE|CONTA\s+CONTRATO)[\s:=]*(\d{6,20})/i
+  );
+  if (ucMatch && ucMatch[1]) {
+    codigo_instalacao_ou_uc = ucMatch[1].trim();
   }
 
   // 5. Cidade / UF
@@ -337,10 +363,6 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
   if (!uf) missingFields.push("UF");
   if (!(consumo_mes_atual_kwh && consumo_mes_atual_kwh > 0) && normalizedHistory.length === 0)
     missingFields.push("Consumo do Mês");
-  if (normalizedHistory.length < 6)
-    missingFields.push(
-      `Histórico parcial (${normalizedHistory.length} meses encontrados pelo OCR, acionando IA para conferência de todos os meses)`
-    );
 
   const isComplete = missingFields.length === 0;
 
@@ -349,8 +371,8 @@ export function extractDataFromTextDeterministic(text: string): BillDeterministi
     cidade,
     uf,
     tipo_conexao,
-    nome_cliente: undefined,
-    codigo_instalacao_ou_uc: undefined,
+    nome_cliente,
+    codigo_instalacao_ou_uc,
     mes_referencia_atual,
     consumo_mes_atual_kwh,
     valor_total_fatura_reais,

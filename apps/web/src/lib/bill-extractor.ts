@@ -112,7 +112,33 @@ export async function extractEnergyBillFromText(
 ): Promise<BillExtractionResult> {
   const key = apiKey || process.env["OPENAI_API_KEY"];
 
-  // 1. Envia o texto extraído para a IA interpretar com precisão máxima
+  // 1. Executa primeiro a extração determinística de alta precisão matemática
+  const deterministic = extractDataFromTextDeterministic(rawText);
+  if (
+    deterministic.isComplete ||
+    (deterministic.historico_consumo.length > 0 &&
+      (deterministic.consumo_mes_atual_kwh || deterministic.historico_consumo[0]?.consumo_kwh))
+  ) {
+    const res = processExtractedBillData(
+      {
+        distribuidora: deterministic.distribuidora,
+        cidade: deterministic.cidade,
+        uf: deterministic.uf,
+        tipo_conexao: deterministic.tipo_conexao,
+        nome_cliente: deterministic.nome_cliente,
+        codigo_instalacao_ou_uc: deterministic.codigo_instalacao_ou_uc,
+        mes_referencia_atual: deterministic.mes_referencia_atual,
+        consumo_mes_atual_kwh: deterministic.consumo_mes_atual_kwh,
+        valor_total_fatura_reais: deterministic.valor_total_fatura_reais,
+        historico_consumo: deterministic.historico_consumo,
+      },
+      rawText
+    );
+    res.extractionEngine = "OCR";
+    return res;
+  }
+
+  // 2. Se a extração determinística não encontrou histórico suficiente, usa IA
   if (key) {
     try {
       const openai = new OpenAI({ apiKey: key });
@@ -135,12 +161,14 @@ export async function extractEnergyBillFromText(
       result.extractionEngine = "AI_FALLBACK";
       return result;
     } catch (e) {
-      console.error("[extractEnergyBillFromText] Erro na OpenAI, usando fallback determinístico:", e);
+      console.error(
+        "[extractEnergyBillFromText] Erro na OpenAI, usando fallback determinístico:",
+        e
+      );
     }
   }
 
-  // 2. Fallback determinístico offline (apenas se OpenAI não estiver configurada ou falhar)
-  const deterministic = extractDataFromTextDeterministic(rawText);
+  // 3. Fallback determinístico offline
   const res = processExtractedBillData(
     {
       distribuidora: deterministic.distribuidora,
