@@ -484,24 +484,39 @@ async function calculateDistributorQuotes({
     const matchedEsts = ests.filter((p: any) => {
       const n = (p.product?.name || "").toLowerCase();
       const d = (p.descricao || "").toLowerCase();
-      const s = n + " " + d;
+      const s = normalizeString(n + " " + d);
 
-      if (mappedRoof === "fibrometal") return s.includes("fibrometal");
+      if (mappedRoof === "fibrometal") return s.includes("FIBROMETAL");
       if (mappedRoof === "fibromadeira") {
-        if (n.includes("fibromadeira") || n.includes("fibrocimento")) return true;
-        if (
-          (d.includes("fibromadeira") || d.includes("fibrocimento")) &&
-          !n.includes("metal") &&
-          !n.includes("ceramica") &&
-          !n.includes("colonial")
-        )
-          return true;
-        return false;
+        return (
+          (s.includes("FIBROMADEIRA") || s.includes("FIBROCIMENTO") || s.includes("FIBRO")) &&
+          !s.includes("FIBROMETAL")
+        );
       }
-      if (mappedRoof === "metal") return s.includes("metal") && !s.includes("fibrometal");
-      return s.includes(mappedRoof);
+      if (mappedRoof === "ceramic") {
+        return s.includes("CERAMIC") || s.includes("COLONIAL") || s.includes("TELHA");
+      }
+      if (mappedRoof === "metal") {
+        return (
+          (s.includes("METAL") ||
+            s.includes("TRILHO") ||
+            s.includes("ZINCO") ||
+            s.includes("TRAPEZOIDAL")) &&
+          !s.includes("FIBROMETAL")
+        );
+      }
+      if (mappedRoof === "ground") {
+        return s.includes("SOLO") || s.includes("GROUND");
+      }
+      if (mappedRoof === "laje") {
+        return s.includes("LAJE") || s.includes("TRIANGULO") || s.includes("TRIANGULAR");
+      }
+      return s.includes(normalizeString(mappedRoof));
     });
-    const parsedEsts = matchedEsts
+
+    const effectiveEsts = matchedEsts.length > 0 ? matchedEsts : ests;
+
+    const parsedEsts = effectiveEsts
       .map((p: any) => {
         const n = (p.product?.name || "").toUpperCase();
         const m = n.match(/(\d+)\s*(MOD|PAIN|PLAC)/);
@@ -534,8 +549,8 @@ async function calculateDistributorQuotes({
         selectedStructures.push(best);
         remaining -= best.cap;
       }
-    } else if (matchedEsts.length > 0) {
-      selectedStructures.push(matchedEsts[0]);
+    } else if (effectiveEsts.length > 0) {
+      selectedStructures.push(effectiveEsts[0]);
     }
 
     if (forcedIncludeStructure && selectedStructures.length === 0) {
