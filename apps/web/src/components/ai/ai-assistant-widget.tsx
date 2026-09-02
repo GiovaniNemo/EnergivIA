@@ -191,13 +191,55 @@ export function AIAssistantWidget() {
   const normalizedPath = (pathname ?? "").replace(/\/$/, "") || "/";
 
   const [isOpen, setIsOpen] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize do textarea para textos longos
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      const scrollH = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${Math.min(Math.max(scrollH, 44), 160)}px`;
+    }
+  }, [input]);
+
+  const handleStartKwhConsulting = () => {
+    setMessages([
+      {
+        id: Date.now().toString(),
+        role: "assistant",
+        content:
+          "Olá! Sou seu consultor especialista da EnergivIA. ☀️\n\nQual o consumo médio mensal em kWh/mês (ou envie a fatura em PDF/foto) e para qual cidade/estado será a instalação?",
+      },
+    ]);
+  };
+
+  const handleStartKwpConsulting = () => {
+    setMessages([
+      {
+        id: Date.now().toString(),
+        role: "assistant",
+        content:
+          "Olá! Vamos montar sua cotação. ☀️\n\nInforme a potência desejada em kWp (ex: 5 kWp, 15 kWp) ou a quantidade de placas (ex: 12 placas de 590W) e a cidade da instalação.",
+      },
+    ]);
+  };
+
+  const handleStartQuestionsConsulting = () => {
+    setMessages([
+      {
+        id: Date.now().toString(),
+        role: "assistant",
+        content:
+          "Olá! Sou consultor especialista em engenharia e regulação solar da EnergivIA. ☀️\n\nComo posso te ajudar hoje? (Dúvidas sobre inversores, padrão 220V/380V, compensação de créditos pela Lei 14.300 ou dimensionamento?)",
+      },
+    ]);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
@@ -417,7 +459,7 @@ export function AIAssistantWidget() {
     <div className="fixed flex flex-col items-end bottom-6 right-6 z-[9999]">
       {/* Chat Window */}
       {isOpen && (
-        <div className="flex flex-col bg-gray-950 border border-gray-800 shadow-[0_0_40px_rgba(16,185,129,0.15)] rounded-2xl w-[380px] h-[600px] max-h-[80vh] max-w-[calc(100vw-32px)] mb-4 overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
+        <div className="flex flex-col bg-gray-950 border border-gray-800 shadow-[0_0_40px_rgba(16,185,129,0.15)] rounded-2xl w-[390px] sm:w-[420px] h-[640px] max-h-[85vh] max-w-[calc(100vw-32px)] mb-4 overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
           {/* Header */}
           <div className="bg-gray-900 border-b border-gray-800 p-3.5 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
@@ -461,8 +503,9 @@ export function AIAssistantWidget() {
                 </div>
                 <div className="text-center space-y-1">
                   <h4 className="text-white font-medium text-sm">Assistente Solar EnergivIA</h4>
-                  <p className="text-xs text-gray-400 max-w-[260px] leading-relaxed">
-                    Envie uma fatura para extrair o consumo e orçar nos distribuidores em segundos.
+                  <p className="text-xs text-gray-400 max-w-[280px] leading-relaxed">
+                    Envie uma fatura para leitura automática ou consulte nosso especialista para
+                    dimensionar kits solares.
                   </p>
                 </div>
 
@@ -487,9 +530,7 @@ export function AIAssistantWidget() {
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setInput("Quero dimensionar um sistema para um consumo de 500 kWh/mês");
-                    }}
+                    onClick={handleStartKwhConsulting}
                     className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-gray-900/90 hover:bg-gray-800 border border-gray-800 hover:border-emerald-500/40 text-left transition-all group active:scale-[0.98]"
                   >
                     <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/20 shrink-0 transition-colors">
@@ -500,16 +541,32 @@ export function AIAssistantWidget() {
                         Dimensionar por consumo (kWh)
                       </p>
                       <p className="text-[10px] text-gray-400 truncate">
-                        Digitar consumo mensal estimado
+                        Consultor solicita kWh e localização
                       </p>
                     </div>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setInput("Como funciona a compensação de créditos de energia solar?");
-                    }}
+                    onClick={handleStartKwpConsulting}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-gray-900/90 hover:bg-gray-800 border border-gray-800 hover:border-emerald-500/40 text-left transition-all group active:scale-[0.98]"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/20 shrink-0 transition-colors">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-200 group-hover:text-emerald-300 transition-colors">
+                        Dimensionar por kWp ou Placas
+                      </p>
+                      <p className="text-[10px] text-gray-400 truncate">
+                        Cotar por potência alvo ou quantidade
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleStartQuestionsConsulting}
                     className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-gray-900/90 hover:bg-gray-800 border border-gray-800 hover:border-emerald-500/40 text-left transition-all group active:scale-[0.98]"
                   >
                     <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/20 shrink-0 transition-colors">
@@ -520,7 +577,7 @@ export function AIAssistantWidget() {
                         Dúvidas e regras solares
                       </p>
                       <p className="text-[10px] text-gray-400 truncate">
-                        Inversores, regras e tributação
+                        Inversores, rede 220V/380V e tributação
                       </p>
                     </div>
                   </button>
@@ -586,7 +643,7 @@ export function AIAssistantWidget() {
           </div>
 
           {/* Input Area */}
-          <div className="p-4 bg-gray-900 border-t border-gray-800 shrink-0">
+          <div className="p-3.5 bg-gray-900 border-t border-gray-800 shrink-0">
             {selectedImage && (
               <div className="mb-3 relative inline-block">
                 {selectedImage.startsWith("data:application/pdf") ? (
@@ -610,7 +667,7 @@ export function AIAssistantWidget() {
             )}
             <form
               onSubmit={handleSubmit}
-              className="flex items-end gap-2 bg-gray-950 border border-gray-800 rounded-xl p-1.5 focus-within:border-emerald-500/50 transition-colors"
+              className="flex items-end gap-2 bg-gray-950 border border-gray-800 rounded-xl p-2 focus-within:border-emerald-500/50 transition-colors shadow-inner"
             >
               <input
                 type="file"
@@ -622,17 +679,18 @@ export function AIAssistantWidget() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="p-2 text-gray-400 hover:text-emerald-400 transition-colors rounded-lg hover:bg-gray-900 shrink-0"
+                className="p-2 text-gray-400 hover:text-emerald-400 transition-colors rounded-lg hover:bg-gray-900 shrink-0 mb-0.5"
                 title="Anexar Fatura"
               >
                 <ImageIcon className="w-5 h-5" />
               </button>
 
               <textarea
+                ref={textareaRef}
                 value={input}
                 onChange={handleInputChange}
-                placeholder="Ex: Dimensione um sistema para..."
-                className="flex-1 max-h-32 min-h-[40px] bg-transparent text-sm text-white placeholder:text-gray-500 resize-none outline-none py-2.5 px-2"
+                placeholder="Digite sua mensagem ou pergunta..."
+                className="flex-1 max-h-40 min-h-[44px] bg-transparent text-sm text-white placeholder:text-gray-500 resize-none outline-none py-2 px-1.5 leading-relaxed overflow-y-auto scrollbar-thin"
                 rows={1}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
@@ -649,12 +707,12 @@ export function AIAssistantWidget() {
               <button
                 type="submit"
                 disabled={isLoading || (!input.trim() && !selectedImage)}
-                className="p-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                className="p-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 mb-0.5"
               >
                 <Send className="w-4 h-4" />
               </button>
             </form>
-            <p className="text-[10px] text-gray-500 text-center mt-3">
+            <p className="text-[10px] text-gray-500 text-center mt-2.5">
               A inteligência artificial pode cometer erros.
             </p>
           </div>
