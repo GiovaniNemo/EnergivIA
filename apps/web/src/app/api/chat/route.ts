@@ -100,6 +100,7 @@ async function calculateDistributorQuotes({
   cidade,
   estado,
   gridVoltage,
+  inverterType,
 }: {
   baseURL: string;
   headers: any;
@@ -112,6 +113,7 @@ async function calculateDistributorQuotes({
   cidade?: string;
   estado?: string;
   gridVoltage?: string;
+  inverterType?: string;
 }) {
   let mappedRoof: any = "metal";
   const roofFactor = 1.0;
@@ -228,6 +230,57 @@ async function calculateDistributorQuotes({
     }
   }
 
+  let userForcedGridVoltage = gridVoltage || "";
+  if (!userForcedGridVoltage) {
+    for (let i = allUserMsgs.length - 1; i >= 0; i--) {
+      const msg = allUserMsgs[i];
+      if (msg.includes("380") || msg.match(/\b4\b/)) {
+        userForcedGridVoltage = "Trifásico 380V";
+        break;
+      } else if ((msg.includes("tri") && msg.includes("220")) || msg.match(/\b3\b/)) {
+        userForcedGridVoltage = "Trifásico 220V";
+        break;
+      } else if (msg.includes("bi") || msg.match(/\b2\b/)) {
+        userForcedGridVoltage = "Bifásico 220V";
+        break;
+      } else if (msg.includes("mono") || msg.match(/\b1\b/)) {
+        userForcedGridVoltage = "Monofásico 220V";
+        break;
+      }
+    }
+  }
+  const finalGridVoltage = userForcedGridVoltage || gridVoltage;
+
+  let userForcedInverterType = (inverterType || "").toLowerCase();
+  if (!userForcedInverterType) {
+    for (let i = allUserMsgs.length - 1; i >= 0; i--) {
+      const msg = allUserMsgs[i];
+      if (
+        msg.includes("microinversor") ||
+        msg.includes("micro inversor") ||
+        msg.includes("micro")
+      ) {
+        userForcedInverterType = "micro";
+        break;
+      } else if (msg.includes("hibrid") || msg.includes("híbrid") || msg.includes("hybrid")) {
+        userForcedInverterType = "hybrid";
+        break;
+      } else if (msg.includes("off-grid") || msg.includes("off grid") || msg.includes("offgrid")) {
+        userForcedInverterType = "off_grid";
+        break;
+      } else if (
+        msg.includes("string") ||
+        msg.includes("tradicional") ||
+        msg.includes("on-grid") ||
+        msg.includes("ongrid")
+      ) {
+        userForcedInverterType = "string";
+        break;
+      }
+    }
+  }
+  if (!userForcedInverterType) userForcedInverterType = "string";
+
   const forcedIncludeStructure = mappedRoof !== "none";
   const safeLocation = location || "São Paulo, SP";
 
@@ -322,6 +375,16 @@ async function calculateDistributorQuotes({
   }
 
   let finalTargetKWp = parsedTargetKWp;
+  if (!finalTargetKWp) {
+    for (let i = allUserMsgs.length - 1; i >= 0; i--) {
+      const msg = allUserMsgs[i];
+      const kwpMatch = msg.match(/(\d+(?:[.,]\d+)?)\s*kwp/i);
+      if (kwpMatch) {
+        finalTargetKWp = parseFloat(kwpMatch[1].replace(",", "."));
+        break;
+      }
+    }
+  }
   if (!finalTargetKWp) {
     finalTargetKWp = consumoAjustado / (geracaoPorKwp * fatorFace);
   }
@@ -435,8 +498,8 @@ async function calculateDistributorQuotes({
         specs?.output_voltage_v || specs?.ac_output_voltage || ""
       ).toUpperCase();
 
-      if (gridVoltage) {
-        const g = gridVoltage.toLowerCase();
+      if (finalGridVoltage) {
+        const g = finalGridVoltage.toLowerCase();
         const isTri380 =
           g.includes("380") ||
           g === "4" ||
@@ -515,8 +578,48 @@ async function calculateDistributorQuotes({
 
     if (validInvs.length === 0) continue;
 
-    validInvs.sort((a, b) => Number(a.price) - Number(b.price));
-    const inv = validInvs[0];
+    const categorizedInvs = validInvs.map((invObj: any) => {
+      const name = (invObj.product?.name || invObj.descricao || "").toUpperCase();
+      const voltSpec = String(
+        invObj.product?.specs?.output_voltage_v || invObj.product?.specs?.ac_output_voltage || ""
+      ).toUpperCase();
+      const isMicro = name.includes("MICRO") || voltSpec.includes("MICRO");
+      const isHybrid =
+        name.includes("HIBRID") ||
+        name.includes("HÍBRID") ||
+        name.includes("HYBRID") ||
+        voltSpec.includes("HIBRID");
+      const isOffGrid =
+        name.includes("OFF-GRID") ||
+        name.includes("OFF GRID") ||
+        name.includes("OFFGRID") ||
+        voltSpec.includes("OFF");
+      const isString = !isMicro && !isHybrid && !isOffGrid;
+
+      return {
+        ...invObj,
+        _isMicro: isMicro,
+        _isHybrid: isHybrid,
+        _isOffGrid: isOffGrid,
+        _isString: isString,
+      };
+    });
+
+    let preferredInvs: any[] = [];
+    if (userForcedInverterType === "micro") {
+      preferredInvs = categorizedInvs.filter((i) => i._isMicro);
+    } else if (userForcedInverterType === "hybrid") {
+      preferredInvs = categorizedInvs.filter((i) => i._isHybrid);
+    } else if (userForcedInverterType === "off_grid") {
+      preferredInvs = categorizedInvs.filter((i) => i._isOffGrid);
+    } else {
+      // default: string
+      preferredInvs = categorizedInvs.filter((i) => i._isString);
+    }
+
+    const poolToUse = preferredInvs.length > 0 ? preferredInvs : categorizedInvs;
+    poolToUse.sort((a, b) => Number(a.price) - Number(b.price));
+    const inv = poolToUse[0];
     if (!inv) continue;
 
     moduleQ = inv._testModuleQ;
@@ -1034,6 +1137,12 @@ export async function POST(req: Request) {
               .optional()
               .describe(
                 "Padrão de entrada elétrico / Tensão (ex: 'Monofásico 220V', 'Bifásico 127V/220V', 'Trifásico 220V', 'Trifásico 380V', '1', '2', '3', '4')"
+              ),
+            inverterType: z
+              .string()
+              .optional()
+              .describe(
+                "Tipo de inversor: 'string' (padrão tradicional on-grid), 'micro' (microinversor), 'hybrid' (híbrido com baterias), 'off_grid' (isolado)"
               ),
           }),
           execute: async (args: any) => {

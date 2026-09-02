@@ -1439,6 +1439,7 @@ export class WhatsappBotService {
     estado,
     roofType,
     gridVoltage,
+    inverterType,
   }: {
     consumptionKwh?: number;
     targetKWp?: number;
@@ -1448,6 +1449,7 @@ export class WhatsappBotService {
     estado?: string;
     roofType?: string;
     gridVoltage?: string;
+    inverterType?: string;
   }) {
     let mappedRoof = "ceramic";
     const s = (roofType || "").toLowerCase().trim();
@@ -1740,8 +1742,48 @@ export class WhatsappBotService {
 
       if (validInvs.length === 0) continue;
 
-      validInvs.sort((a, b) => Number(a.price) - Number(b.price));
-      const inv = validInvs[0];
+      const categorizedInvs = validInvs.map((invObj: any) => {
+        const name = (invObj.product?.name || "").toUpperCase();
+        const voltSpec = String(
+          invObj.product?.specs?.output_voltage_v || invObj.product?.specs?.ac_output_voltage || ""
+        ).toUpperCase();
+        const isMicro = name.includes("MICRO") || voltSpec.includes("MICRO");
+        const isHybrid =
+          name.includes("HIBRID") ||
+          name.includes("HÍBRID") ||
+          name.includes("HYBRID") ||
+          voltSpec.includes("HIBRID");
+        const isOffGrid =
+          name.includes("OFF-GRID") ||
+          name.includes("OFF GRID") ||
+          name.includes("OFFGRID") ||
+          voltSpec.includes("OFF");
+        const isString = !isMicro && !isHybrid && !isOffGrid;
+
+        return {
+          ...invObj,
+          _isMicro: isMicro,
+          _isHybrid: isHybrid,
+          _isOffGrid: isOffGrid,
+          _isString: isString,
+        };
+      });
+
+      const userInvType = (inverterType || "string").toLowerCase();
+      let preferredInvs: any[] = [];
+      if (userInvType === "micro") {
+        preferredInvs = categorizedInvs.filter((i) => i._isMicro);
+      } else if (userInvType === "hybrid") {
+        preferredInvs = categorizedInvs.filter((i) => i._isHybrid);
+      } else if (userInvType === "off_grid") {
+        preferredInvs = categorizedInvs.filter((i) => i._isOffGrid);
+      } else {
+        preferredInvs = categorizedInvs.filter((i) => i._isString);
+      }
+
+      const poolToUse = preferredInvs.length > 0 ? preferredInvs : categorizedInvs;
+      poolToUse.sort((a, b) => Number(a.price) - Number(b.price));
+      const inv = poolToUse[0];
       if (!inv) continue;
 
       moduleQ = inv._testModuleQ;
