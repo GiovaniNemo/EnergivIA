@@ -328,7 +328,10 @@ async function calculateDistributorQuotes({
 
   const distRes = await fetch(`${baseURL}/distributors`, { headers });
   if (!distRes.ok) throw new Error("Falha ao buscar distribuidores na API real.");
-  const allDistributors = await distRes.json();
+  const allDistributorsRaw = await distRes.json();
+  const allDistributors = (Array.isArray(allDistributorsRaw) ? allDistributorsRaw : []).filter(
+    (d: any) => !normalizeString(d.name || "").includes("ALDO")
+  );
 
   const finalQuotes = [];
   for (const d of allDistributors) {
@@ -341,16 +344,61 @@ async function calculateDistributorQuotes({
 
     if (allProds.length === 0) continue;
 
-    const invs = allProds.filter(
-      (p: any) => p.price > 0 && JSON.stringify(p).toLowerCase().includes("inversor")
-    );
-    const mods = allProds.filter(
-      (p: any) =>
-        p.price > 0 &&
-        (JSON.stringify(p).toLowerCase().includes("módulo") ||
-          JSON.stringify(p).toLowerCase().includes("modulo") ||
-          JSON.stringify(p).toLowerCase().includes("painel"))
-    );
+    const isStructureOrAccessory = (p: any) => {
+      const s = normalizeString(
+        (p.product?.name || "") +
+          " " +
+          (p.descricao || "") +
+          " " +
+          (p.product?.category?.name || "")
+      );
+      return (
+        s.includes("ESTRUTURA") ||
+        s.includes("PERFIL") ||
+        s.includes("TRILHO") ||
+        s.includes("SUPORTE") ||
+        s.includes("FIXACAO") ||
+        s.includes("ACESSORIO") ||
+        s.includes("GRAMPO") ||
+        s.includes("GANCHO") ||
+        s.includes("PARAFUSO") ||
+        s.includes("TERMINAL")
+      );
+    };
+
+    const invs = allProds.filter((p: any) => {
+      if (p.price <= 0) return false;
+      const s = normalizeString(
+        (p.product?.name || "") +
+          " " +
+          (p.descricao || "") +
+          " " +
+          (p.product?.category?.name || "")
+      );
+      if (isStructureOrAccessory(p)) return false;
+      if (s.includes("CABO") || s.includes("CONECTOR")) return false;
+      return s.includes("INVERSOR") || s.includes("MICROINVERSOR") || s.includes("MICRO INVERSOR");
+    });
+
+    const mods = allProds.filter((p: any) => {
+      if (p.price <= 0) return false;
+      const s = normalizeString(
+        (p.product?.name || "") +
+          " " +
+          (p.descricao || "") +
+          " " +
+          (p.product?.category?.name || "")
+      );
+      if (isStructureOrAccessory(p)) return false;
+      if (s.includes("INVERSOR") || s.includes("CABO") || s.includes("CONECTOR")) return false;
+      return (
+        s.includes("MODULO") ||
+        s.includes("PAINEL") ||
+        s.includes("PLACA SOLAR") ||
+        s.includes("FOTOVOLTAICO")
+      );
+    });
+
     const cabs = allProds.filter(
       (p: any) => p.price > 0 && JSON.stringify(p).toLowerCase().includes("cabo")
     );

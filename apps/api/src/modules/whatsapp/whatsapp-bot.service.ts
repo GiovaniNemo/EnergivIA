@@ -1497,13 +1497,24 @@ export class WhatsappBotService {
       finalTargetKWp = 3.0; // fallback padrão seguro
     }
 
-    const distributors = await this.prisma.distributor.findMany({
+    const distributorsRaw = await this.prisma.distributor.findMany({
       include: {
         distributorProducts: {
           include: { product: { include: { brand: true, category: true } } },
         },
       },
     });
+
+    const normalizeStr = (str: string) =>
+      (str || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .trim();
+
+    const distributors = distributorsRaw.filter(
+      (d) => !normalizeStr(d.name || "").includes("ALDO")
+    );
 
     const quotes: Array<{
       distributorName: string;
@@ -1537,16 +1548,63 @@ export class WhatsappBotService {
         price: Number(dp.price) || 0,
       }));
 
-      const invs = allProds.filter(
-        (p: any) => p.price > 0 && JSON.stringify(p).toLowerCase().includes("inversor")
-      );
-      const mods = allProds.filter(
-        (p: any) =>
-          p.price > 0 &&
-          (JSON.stringify(p).toLowerCase().includes("módulo") ||
-            JSON.stringify(p).toLowerCase().includes("modulo") ||
-            JSON.stringify(p).toLowerCase().includes("painel"))
-      );
+      const isStructureOrAccessory = (p: any) => {
+        const s = normalizeStr(
+          (p.product?.name || "") +
+            " " +
+            (p.product?.description || "") +
+            " " +
+            (p.product?.category?.name || "")
+        );
+        return (
+          s.includes("ESTRUTURA") ||
+          s.includes("PERFIL") ||
+          s.includes("TRILHO") ||
+          s.includes("SUPORTE") ||
+          s.includes("FIXACAO") ||
+          s.includes("ACESSORIO") ||
+          s.includes("GRAMPO") ||
+          s.includes("GANCHO") ||
+          s.includes("PARAFUSO") ||
+          s.includes("TERMINAL")
+        );
+      };
+
+      const invs = allProds.filter((p: any) => {
+        if (p.price <= 0) return false;
+        const s = normalizeStr(
+          (p.product?.name || "") +
+            " " +
+            (p.product?.description || "") +
+            " " +
+            (p.product?.category?.name || "")
+        );
+        if (isStructureOrAccessory(p)) return false;
+        if (s.includes("CABO") || s.includes("CONECTOR")) return false;
+        return (
+          s.includes("INVERSOR") || s.includes("MICROINVERSOR") || s.includes("MICRO INVERSOR")
+        );
+      });
+
+      const mods = allProds.filter((p: any) => {
+        if (p.price <= 0) return false;
+        const s = normalizeStr(
+          (p.product?.name || "") +
+            " " +
+            (p.product?.description || "") +
+            " " +
+            (p.product?.category?.name || "")
+        );
+        if (isStructureOrAccessory(p)) return false;
+        if (s.includes("INVERSOR") || s.includes("CABO") || s.includes("CONECTOR")) return false;
+        return (
+          s.includes("MODULO") ||
+          s.includes("PAINEL") ||
+          s.includes("PLACA SOLAR") ||
+          s.includes("FOTOVOLTAICO")
+        );
+      });
+
       const cabs = allProds.filter(
         (p: any) => p.price > 0 && JSON.stringify(p).toLowerCase().includes("cabo")
       );
