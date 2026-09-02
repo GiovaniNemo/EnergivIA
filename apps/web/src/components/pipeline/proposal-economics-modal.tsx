@@ -897,13 +897,29 @@ export const ProposalEconomicsModal = forwardRef<
           return;
         }
       }
+      const extObj = (bill.extractedData || {}) as Record<string, unknown>;
       const rawDataObj =
-        bill.extractedData?.rawData && typeof bill.extractedData.rawData === "object"
-          ? (bill.extractedData.rawData as Record<string, unknown>)
+        extObj.rawData && typeof extObj.rawData === "object"
+          ? (extObj.rawData as Record<string, unknown>)
           : undefined;
-      const rawLoc = resolveBillLocationString(rawDataObj);
-      if (rawLoc) {
+
+      const directCid = String(
+        extObj.cidade || extObj.city || rawDataObj?.cidade || rawDataObj?.city || ""
+      ).trim();
+      const directUf = String(
+        extObj.uf || extObj.state || rawDataObj?.uf || rawDataObj?.state || ""
+      )
+        .trim()
+        .toUpperCase();
+      const rawLoc = resolveBillLocationString(rawDataObj) || resolveBillLocationString(extObj);
+
+      if (directCid && directUf) {
+        await applyGeoFromBillLocation(orgId, `${directCid}/${directUf}`, states);
+      } else if (rawLoc) {
         await applyGeoFromBillLocation(orgId, rawLoc, states);
+      } else if (directUf) {
+        const st = states.find((s) => s.uf.toUpperCase() === directUf);
+        if (st) setSelectedState(st);
       }
     },
     [applyGeoFromBillLocation, geoStates]

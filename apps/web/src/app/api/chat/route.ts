@@ -1093,7 +1093,7 @@ export async function POST(req: Request) {
                   : `baseado no consumo do mês atual da fatura`;
               const exactIntroInstruction =
                 exactAverageKwh > 0
-                  ? `[RESPOSTA OBRIGATÓRIA DA FATURA: Diga exatamente: "Legal, dados extraídos com precisão!\nConsumo médio de ${exactAverageKwh} kWh/mês em ${locationStr} (${baseMeses}).\n\nQual a estrutura do telhado?\n1 - Cerâmica (Colonial)\n2 - Fibrocimento\n3 - Metálico\n4 - Solo\n5 - Laje\n6 - Fibrometal\n7 - Sem estrutura"]`
+                  ? `[RESPOSTA OBRIGATÓRIA DA FATURA: Diga exatamente: "Legal, dados extraídos com precisão!\nConsumo médio de ${exactAverageKwh} kWh/mês em ${locationStr} (${baseMeses}).\n\nQual a estrutura do telhado?\n1 - Cerâmica (Colonial)\n2 - Fibrocimento\n3 - Metálico\n4 - Solo\n5 - Laje\n6 - Fibrometal\n7 - Sem estrutura\n0 - Voltar / Corrigir"]`
                   : "";
 
               return {
@@ -1125,7 +1125,7 @@ export async function POST(req: Request) {
                 : `baseado no consumo do mês atual da fatura`;
             const exactIntroInstruction =
               exactAverageKwh > 0
-                ? `[RESPOSTA OBRIGATÓRIA DA FATURA: Diga exatamente: "Legal, dados extraídos com precisão!\nConsumo médio de ${exactAverageKwh} kWh/mês em ${locationStr} (${baseMeses}).\n\nQual a estrutura do telhado?\n1 - Cerâmica (Colonial)\n2 - Fibrocimento\n3 - Metálico\n4 - Solo\n5 - Laje\n6 - Fibrometal\n7 - Sem estrutura"]`
+                ? `[RESPOSTA OBRIGATÓRIA DA FATURA: Diga exatamente: "Legal, dados extraídos com precisão!\nConsumo médio de ${exactAverageKwh} kWh/mês em ${locationStr} (${baseMeses}).\n\nQual a estrutura do telhado?\n1 - Cerâmica (Colonial)\n2 - Fibrocimento\n3 - Metálico\n4 - Solo\n5 - Laje\n6 - Fibrometal\n7 - Sem estrutura\n0 - Voltar / Corrigir"]`
                 : "";
 
             const textPart = [

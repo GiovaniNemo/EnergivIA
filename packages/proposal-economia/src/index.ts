@@ -170,6 +170,16 @@ export function parseBillLocation(raw: string): { cityName?: string; uf?: string
     if (cityName && uf.length === 2) return { cityName, uf };
   }
 
+  const slashParts = t.split(/\s*\/\s*/).map((p) => p.trim());
+  if (slashParts.length === 2) {
+    const a = slashParts[0]!.trim();
+    const b = slashParts[1]!.trim();
+    const aUf = /^[A-Za-z]{2}$/.test(a) ? a.toUpperCase() : null;
+    const bUf = /^[A-Za-z]{2}$/.test(b) ? b.toUpperCase() : null;
+    if (bUf) return { cityName: a, uf: bUf };
+    if (aUf) return { cityName: b, uf: aUf };
+  }
+
   const dashParts = t.split(/\s*-\s*/).map((p) => p.trim());
   if (dashParts.length === 2) {
     const a = dashParts[0]!.trim();
