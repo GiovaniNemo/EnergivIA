@@ -42,15 +42,15 @@ export function BrandLogo({
 
   const config = {
     sm: {
-      imgClass: "h-7 sm:h-8 w-auto",
+      imgClass: "h-8 max-h-9 w-auto max-w-[190px]",
       iconClass: "h-7 w-7",
     },
     md: {
-      imgClass: "h-8 sm:h-9 md:h-10 w-auto",
+      imgClass: "h-11 sm:h-12 w-full max-h-[48px] max-w-[250px]",
       iconClass: "h-8 w-8 sm:h-9 sm:w-9",
     },
     lg: {
-      imgClass: "h-11 sm:h-12 md:h-14 w-auto",
+      imgClass: "h-14 sm:h-16 w-full max-h-[60px] max-w-[320px]",
       iconClass: "h-11 w-11 md:h-14 md:w-14",
     },
   }[size];
@@ -88,7 +88,7 @@ export function BrandLogo({
   return (
     <div
       className={cn(
-        "flex items-center justify-center select-none transition-opacity hover:opacity-95",
+        "flex w-full h-full items-center justify-center select-none transition-opacity hover:opacity-95 px-1",
         className
       )}
     >
@@ -96,7 +96,7 @@ export function BrandLogo({
         <img
           src={activeCustomLogo}
           alt="EnergivIA"
-          className={cn("max-w-[220px] object-contain shrink-0", config.imgClass)}
+          className={cn("w-auto object-contain shrink-0", config.imgClass)}
         />
       ) : (
         <Image
@@ -104,7 +104,7 @@ export function BrandLogo({
           alt="EnergivIA"
           width={480}
           height={136}
-          className={cn("max-w-[220px] object-contain shrink-0", config.imgClass)}
+          className={cn("w-auto object-contain shrink-0", config.imgClass)}
           priority={priority}
           unoptimized
         />
