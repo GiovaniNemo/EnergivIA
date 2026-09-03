@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { useTheme } from "@/components/providers/theme-provider";
 import { cn } from "@energivia/utils";
 
 interface BrandLogoProps {
@@ -20,11 +19,6 @@ export function BrandLogo({
   showTagline: _showTagline = true,
   priority = true,
 }: BrandLogoProps): JSX.Element {
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
-  const defaultFullLogoSrc = isDark ? "/logo-dark.png" : "/logo-light.png";
-  const defaultIconSrc = isDark ? "/favicon-dark.png" : "/favicon-light.png";
-
   const [customLogoDarkUrl, setCustomLogoDarkUrl] = useState<string>("");
   const [customLogoLightUrl, setCustomLogoLightUrl] = useState<string>("");
 
@@ -38,20 +32,18 @@ export function BrandLogo({
       .catch(() => {});
   }, []);
 
-  const activeCustomLogo = isDark ? customLogoDarkUrl : customLogoLightUrl;
-
   const config = {
     sm: {
-      imgClass: "h-full max-h-[48px] w-full object-contain scale-110",
+      imgClass: "h-full max-h-[44px] w-full object-contain scale-105",
       iconClass: "h-8 w-8",
     },
     md: {
-      imgClass: "h-full max-h-[72px] w-full object-contain scale-125",
-      iconClass: "h-10 w-10 sm:h-12 sm:w-12 scale-110",
+      imgClass: "h-full max-h-[64px] w-full object-contain scale-[1.10]",
+      iconClass: "h-10 w-10 sm:h-12 sm:w-12 scale-105",
     },
     lg: {
-      imgClass: "h-full max-h-[96px] w-full object-contain scale-150",
-      iconClass: "h-12 w-12 md:h-16 md:w-16 scale-125",
+      imgClass: "h-full max-h-[80px] w-full object-contain scale-125",
+      iconClass: "h-12 w-12 md:h-16 md:w-16 scale-110",
     },
   }[size];
 
@@ -64,19 +56,42 @@ export function BrandLogo({
         )}
         title="EnergivIA - o seu parceiro via I.A."
       >
-        {activeCustomLogo ? (
+        {customLogoLightUrl ? (
           <img
-            src={activeCustomLogo}
+            src={customLogoLightUrl}
             alt="EnergivIA"
-            className={cn("object-contain shrink-0", config.iconClass)}
+            className={cn("object-contain shrink-0 dark:hidden block", config.iconClass)}
           />
         ) : (
           <Image
-            src={defaultIconSrc}
+            src="/favicon-light.png"
             alt="EnergivIA"
             width={120}
             height={120}
-            className={cn("shrink-0 object-contain drop-shadow-sm", config.iconClass)}
+            className={cn(
+              "shrink-0 object-contain drop-shadow-sm dark:hidden block",
+              config.iconClass
+            )}
+            priority={priority}
+            unoptimized
+          />
+        )}
+        {customLogoDarkUrl ? (
+          <img
+            src={customLogoDarkUrl}
+            alt="EnergivIA"
+            className={cn("object-contain shrink-0 hidden dark:block", config.iconClass)}
+          />
+        ) : (
+          <Image
+            src="/favicon-dark.png"
+            alt="EnergivIA"
+            width={120}
+            height={120}
+            className={cn(
+              "shrink-0 object-contain drop-shadow-sm hidden dark:block",
+              config.iconClass
+            )}
             priority={priority}
             unoptimized
           />
@@ -92,19 +107,36 @@ export function BrandLogo({
         className
       )}
     >
-      {activeCustomLogo ? (
+      {customLogoLightUrl ? (
         <img
-          src={activeCustomLogo}
+          src={customLogoLightUrl}
           alt="EnergivIA"
-          className={cn("w-auto object-contain shrink-0", config.imgClass)}
+          className={cn("w-auto object-contain shrink-0 dark:hidden block", config.imgClass)}
         />
       ) : (
         <Image
-          src={defaultFullLogoSrc}
+          src="/logo.png"
           alt="EnergivIA"
           width={480}
           height={136}
-          className={cn("w-auto object-contain shrink-0", config.imgClass)}
+          className={cn("w-auto object-contain shrink-0 dark:hidden block", config.imgClass)}
+          priority={priority}
+          unoptimized
+        />
+      )}
+      {customLogoDarkUrl ? (
+        <img
+          src={customLogoDarkUrl}
+          alt="EnergivIA"
+          className={cn("w-auto object-contain shrink-0 hidden dark:block", config.imgClass)}
+        />
+      ) : (
+        <Image
+          src="/logo-dark.png"
+          alt="EnergivIA"
+          width={480}
+          height={136}
+          className={cn("w-auto object-contain shrink-0 hidden dark:block", config.imgClass)}
           priority={priority}
           unoptimized
         />
