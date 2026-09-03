@@ -116,10 +116,6 @@ export function WelcomeIntroSplash({ onComplete }: WelcomeIntroSplashProps): JSX
         {/* PHASE 1: "Bem-vindo à EnergivIA" */}
         {step === 1 && (
           <div className="animate-intro-phrase flex flex-col items-center">
-            <div className="mb-5 inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 text-emerald-400 text-xs font-medium tracking-wide shadow-[0_0_20px_rgba(16,185,129,0.15)]">
-              <Sparkles className="w-3.5 h-3.5 animate-spin-slow" />
-              <span>EnergivIA Suite</span>
-            </div>
             <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-400 drop-shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
               Bem-vindo à{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-green-300 to-teal-200">
@@ -182,12 +178,6 @@ export function WelcomeIntroSplash({ onComplete }: WelcomeIntroSplashProps): JSX
             </div>
           </div>
         )}
-      </div>
-
-      {/* Bottom discreet status indicator */}
-      <div className="absolute bottom-8 z-10 flex items-center gap-2 text-[11px] text-slate-500 font-mono tracking-wider uppercase">
-        <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-        <span>EnergivIA Cloud OS</span>
       </div>
 
       <style jsx global>{`
