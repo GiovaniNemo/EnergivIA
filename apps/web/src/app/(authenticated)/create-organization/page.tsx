@@ -1038,8 +1038,8 @@ export default function CreateOrganizationPage() {
                       </Button>
                       <Button
                         type="button"
-                        className="w-full bg-[linear-gradient(90deg,#1b5e7c_0%,#1f7f9b_55%,#39d3bf_100%)] text-white shadow-[0_8px_18px_rgba(31,127,155,0.22)] hover:opacity-95"
-                        disabled={loading}
+                        className="w-full bg-[linear-gradient(90deg,#1b5e7c_0%,#1f7f9b_55%,#39d3bf_100%)] text-white shadow-[0_8px_18px_rgba(31,127,155,0.22)] hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                        disabled={loading || !termsAccepted}
                         onClick={() => void finalizeOnboarding(false)}
                       >
                         {loading ? (
