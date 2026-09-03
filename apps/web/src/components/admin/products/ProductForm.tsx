@@ -143,6 +143,7 @@ interface ProductFormProps {
   brands: { id: string; name: string }[];
   categoryName: CategoryName | null;
   productId?: string;
+  defaultTab?: number;
 }
 
 export function ProductForm({
@@ -150,8 +151,9 @@ export function ProductForm({
   brands,
   categoryName,
   productId,
+  defaultTab = 0,
 }: ProductFormProps): JSX.Element {
-  const [tabIndex, setTabIndex] = useState(0);
+  const [tabIndex, setTabIndex] = useState(defaultTab);
   const {
     control,
     setValue,

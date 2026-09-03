@@ -41,6 +41,8 @@ import UploadFileIcon from "@mui/icons-material/UploadFile";
 import SyncIcon from "@mui/icons-material/Sync";
 import SearchIcon from "@mui/icons-material/Search";
 import ViewColumnIcon from "@mui/icons-material/ViewColumn";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import { ProductSpecsDialog } from "@/components/admin/products/ProductSpecsDialog";
 import {
   fetchDistributor,
   fetchDistributorProducts,
@@ -136,6 +138,7 @@ export default function DistributorInventoryPage(): JSX.Element {
   const [modalOpen, setModalOpen] = useState(false);
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<DistributorProduct | null>(null);
+  const [specsProductId, setSpecsProductId] = useState<string | null>(null);
   const [inlinePrice, setInlinePrice] = useState<{ id: string; value: string } | null>(null);
   const [inlineStock, setInlineStock] = useState<{ id: string; value: string } | null>(null);
   const [importFeedback, setImportFeedback] = useState<{
@@ -559,18 +562,39 @@ export default function DistributorInventoryPage(): JSX.Element {
                     hover
                     sx={{ "&:last-child td, &:last-child th": { borderBottom: 0 } }}
                   >
-                    <TableCell sx={{ maxWidth: 280 }}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+                    <TableCell sx={{ maxWidth: 320 }}>
+                      <Box
+                        onClick={() => setSpecsProductId(row.product.id)}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1.2,
+                          minWidth: 0,
+                          cursor: "pointer",
+                          "&:hover .product-name-text": {
+                            color: "primary.main",
+                            textDecoration: "underline",
+                          },
+                        }}
+                      >
                         <Avatar
                           src={row.product.imageUrl ?? row.product.brand.imageUrl ?? undefined}
                           alt={row.product.name}
                           variant="rounded"
-                          sx={{ width: 28, height: 28, fontSize: "0.75rem", flexShrink: 0 }}
+                          sx={{ width: 32, height: 32, fontSize: "0.75rem", flexShrink: 0 }}
                         >
                           {row.product.name.slice(0, 1).toUpperCase()}
                         </Avatar>
-                        <Tooltip title={row.product.name} placement="top-start">
-                          <Typography variant="body2" noWrap>
+                        <Tooltip
+                          title={`Ver ficha técnica de: ${row.product.name}`}
+                          placement="top-start"
+                        >
+                          <Typography
+                            className="product-name-text"
+                            variant="body2"
+                            sx={{ fontWeight: 600, transition: "color 0.2s ease" }}
+                            noWrap
+                          >
                             {row.product.name}
                           </Typography>
                         </Tooltip>
@@ -663,38 +687,50 @@ export default function DistributorInventoryPage(): JSX.Element {
                       </TableCell>
                     ) : null}
                     <TableCell align="right">
-                      <Tooltip title="Editar oferta">
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            setEditingRow(row);
-                            form.reset({
-                              product_id: row.product.id,
-                              distributor_sku: row.distributorSku ?? "",
-                              price: row.price,
-                              stock_quantity: row.stockQuantity,
-                              lead_time_days: row.leadTimeDays ?? undefined,
-                              minimum_order_quantity: row.minimumOrderQuantity,
-                            });
-                          }}
-                          aria-label="Editar"
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Remover do distribuidor">
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            if (window.confirm("Remover este produto do distribuidor?")) {
-                              deleteMutation.mutate(row.id);
-                            }
-                          }}
-                          aria-label="Excluir"
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
+                        <Tooltip title="Ficha Técnica & Especificações">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => setSpecsProductId(row.product.id)}
+                            aria-label="Ficha Técnica"
+                          >
+                            <DescriptionOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Editar oferta">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setEditingRow(row);
+                              form.reset({
+                                product_id: row.product.id,
+                                distributor_sku: row.distributorSku ?? "",
+                                price: row.price,
+                                stock_quantity: row.stockQuantity,
+                                lead_time_days: row.leadTimeDays ?? undefined,
+                                minimum_order_quantity: row.minimumOrderQuantity,
+                              });
+                            }}
+                            aria-label="Editar"
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Remover do distribuidor">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              if (window.confirm("Remover este produto do distribuidor?")) {
+                                deleteMutation.mutate(row.id);
+                              }
+                            }}
+                            aria-label="Excluir"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))
@@ -914,13 +950,28 @@ export default function DistributorInventoryPage(): JSX.Element {
           >
             <DialogContent>
               <Box display="flex" flexDirection="column" gap={2} pt={1}>
-                <TextField
-                  label="Produto"
-                  value={editingRow.product.name}
-                  size="small"
-                  fullWidth
-                  disabled
-                />
+                <Box display="flex" justifyContent="space-between" alignItems="center" gap={1}>
+                  <TextField
+                    label="Produto"
+                    value={editingRow.product.name}
+                    size="small"
+                    fullWidth
+                    disabled
+                  />
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<DescriptionOutlinedIcon />}
+                    onClick={() => {
+                      const pid = editingRow.product.id;
+                      setEditingRow(null);
+                      setSpecsProductId(pid);
+                    }}
+                    sx={{ whiteSpace: "nowrap", textTransform: "none", height: 40, flexShrink: 0 }}
+                  >
+                    Ficha Técnica
+                  </Button>
+                </Box>
                 <Controller
                   name="distributor_sku"
                   control={form.control}
@@ -1018,6 +1069,18 @@ export default function DistributorInventoryPage(): JSX.Element {
           </form>
         </Dialog>
       )}
+
+      {/* Product Specs & Datasheet Modal */}
+      <ProductSpecsDialog
+        open={Boolean(specsProductId)}
+        productId={specsProductId}
+        onClose={() => setSpecsProductId(null)}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "distributors", id, "products"] });
+          queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
+        }}
+        defaultTab={1}
+      />
     </Box>
   );
 }
