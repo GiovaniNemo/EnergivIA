@@ -10,6 +10,7 @@ import { AppMuiThemeProvider } from "@/components/providers/app-mui-theme-provid
 import { RequireOrganization } from "@/components/layout/require-organization";
 import { ProposalStudyProvider } from "@/components/pipeline/proposal-study-provider";
 import { TrialLockOverlay } from "@/components/TrialLockOverlay";
+import { WelcomeIntroSplash } from "@/components/layout/welcome-intro-splash";
 
 export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.Element {
   const pathname = usePathname();
@@ -25,6 +26,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
 
   return (
     <OrganizationProvider>
+      <WelcomeIntroSplash />
       <TrialLockOverlay />
       <RequireOrganization>
         <AppMuiThemeProvider>
