@@ -162,50 +162,76 @@ export default function AdminProductsPage(): JSX.Element {
         field: "name",
         headerName: "Nome do Produto",
         flex: 1,
-        minWidth: 260,
+        minWidth: 280,
         renderCell: (cellParams: GridRenderCellParams<Product>) => {
           const imageSrc = cellParams.row.imageUrl ?? cellParams.row.brand?.imageUrl ?? undefined;
           const powerBadge = getProductPowerBadge(cellParams.row);
 
           return (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 0.5 }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+                width: "100%",
+                height: "100%",
+                py: 1,
+              }}
+            >
               <Avatar
                 src={imageSrc}
                 alt={cellParams.row.name}
                 variant="rounded"
                 sx={{
-                  width: 36,
-                  height: 36,
-                  fontSize: "0.8rem",
+                  width: 38,
+                  height: 38,
+                  fontSize: "0.85rem",
                   fontWeight: 700,
                   bgcolor: "action.selected",
                   border: "1px solid",
                   borderColor: "divider",
+                  flexShrink: 0,
                 }}
               >
                 {cellParams.row.name.slice(0, 1).toUpperCase()}
               </Avatar>
-              <Box sx={{ overflow: "hidden" }}>
+              <Box
+                sx={{
+                  minWidth: 0,
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                }}
+              >
                 <Box display="flex" alignItems="center" gap={1}>
-                  <Typography
-                    variant="body2"
-                    sx={{ fontWeight: 600, color: "text.primary" }}
-                    noWrap
-                  >
-                    {cellParams.row.name}
-                  </Typography>
+                  <Tooltip title={cellParams.row.name} placement="top-start">
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 600, color: "text.primary", lineHeight: 1.3 }}
+                      noWrap
+                    >
+                      {cellParams.row.name}
+                    </Typography>
+                  </Tooltip>
                   {powerBadge && (
                     <Chip
-                      icon={<BoltIcon sx={{ fontSize: "0.9rem !important" }} />}
+                      icon={<BoltIcon sx={{ fontSize: "0.85rem !important" }} />}
                       label={powerBadge}
                       size="small"
                       color="primary"
                       variant="outlined"
-                      sx={{ height: 20, fontSize: "0.7rem", fontWeight: 700 }}
+                      sx={{ height: 20, fontSize: "0.7rem", fontWeight: 700, flexShrink: 0 }}
                     />
                   )}
                 </Box>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ lineHeight: 1.3, mt: 0.25 }}
+                  noWrap
+                >
                   {cellParams.row.brand?.name ?? "Marca não informada"}
                 </Typography>
               </Box>
@@ -216,7 +242,7 @@ export default function AdminProductsPage(): JSX.Element {
       {
         field: "category",
         headerName: "Categoria",
-        width: 150,
+        width: 160,
         renderCell: (cellParams: GridRenderCellParams<Product>) => (
           <Chip
             label={formatCategoryLabel(cellParams.row.category?.name)}
@@ -501,9 +527,9 @@ export default function AdminProductsPage(): JSX.Element {
 
         <Box
           sx={{
-            height: 540,
+            height: 600,
             width: "100%",
-            minHeight: 400,
+            minHeight: 450,
             "& .MuiDataGrid-root": { border: "none" },
             "& .MuiDataGrid-columnHeaders": (theme) => ({
               backgroundColor: alpha(theme.palette.action.hover, 0.6),
@@ -530,6 +556,7 @@ export default function AdminProductsPage(): JSX.Element {
             loading={isLoading}
             rowCount={productsData?.total ?? 0}
             paginationMode="server"
+            rowHeight={68}
             paginationModel={{
               page: (params.page ?? 1) - 1,
               pageSize: params.pageSize ?? 25,
