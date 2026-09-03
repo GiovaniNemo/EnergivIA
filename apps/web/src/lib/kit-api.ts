@@ -11,6 +11,7 @@ export interface GenerateKitRequest {
   pinned_module_id?: string;
   pinned_inverter_id?: string;
   inverter_type?: "string" | "microinverter" | "hybrid" | "off_grid";
+  grid_topology?: string;
   string_box_id?: string;
 }
 

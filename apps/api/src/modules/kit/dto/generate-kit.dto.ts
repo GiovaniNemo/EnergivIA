@@ -35,6 +35,10 @@ export class GenerateKitDto {
 
   @IsOptional()
   @IsString()
+  grid_topology?: string;
+
+  @IsOptional()
+  @IsString()
   string_box_id?: string;
 }
 

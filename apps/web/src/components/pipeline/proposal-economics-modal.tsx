@@ -127,8 +127,8 @@ function kitRequestEquals(a: ProposalKitRequest | null, b: ProposalKitRequest): 
     Boolean(a.ownStock) === Boolean(b.ownStock) &&
     a.supplierId === b.supplierId &&
     a.pinnedModuleId === b.pinnedModuleId &&
-    a.pinnedInverterId === b.pinnedInverterId &&
     a.inverterType === b.inverterType &&
+    a.gridTopology === b.gridTopology &&
     a.stringBoxId === b.stringBoxId
   );
 }
@@ -173,6 +173,7 @@ type ProposalKitDraft = {
   source: ProposalKitSource;
   pins: { moduleId?: string; inverterId?: string };
   inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
+  gridTopology?: "auto" | "mono_220" | "biphasic_127_220" | "tri_380" | "tri_220" | "mono_127";
   stringBoxId?: string;
 };
 
@@ -185,6 +186,7 @@ type ProposalKitRequest = {
   pinnedModuleId?: string;
   pinnedInverterId?: string;
   inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
+  gridTopology?: "auto" | "mono_220" | "biphasic_127_220" | "tri_380" | "tri_220" | "mono_127";
   stringBoxId?: string;
 };
 
@@ -442,6 +444,8 @@ export const ProposalEconomicsModal = forwardRef<
     source: { kind: "auto" },
     pins: {},
     inverterType: "string",
+    gridTopology: "auto",
+    stringBoxId: "none",
   });
   const [stringBoxOptions, setStringBoxOptions] = useState<
     { id: string; name: string; brandName: string; price: number }[]
@@ -606,6 +610,18 @@ export const ProposalEconomicsModal = forwardRef<
     setKitSwapCategory(null);
     setKitQtyDrafts({});
     setKitQtyResetNotice(false);
+    const extractedConn =
+      billAttachment.status === "ready" && billAttachment.extractedData?.tipo_conexao
+        ? String(billAttachment.extractedData.tipo_conexao).toLowerCase()
+        : "";
+    const initialGridTopo: ProposalKitDraft["gridTopology"] = extractedConn.includes("tri")
+      ? "tri_380"
+      : extractedConn.includes("bi")
+        ? "biphasic_127_220"
+        : extractedConn.includes("mono")
+          ? "mono_220"
+          : "auto";
+
     setProposalKitDraft({
       systemKw: String(kw),
       roof: generatedProposal.roofType,
@@ -613,8 +629,17 @@ export const ProposalEconomicsModal = forwardRef<
       brandCustom: "",
       source: { kind: "auto" },
       pins: {},
+      inverterType: "string",
+      gridTopology: initialGridTopo,
+      stringBoxId: "none",
     });
-    setProposalKitRequest({ systemKw: kw, roof: generatedProposal.roofType });
+    setProposalKitRequest({
+      systemKw: kw,
+      roof: generatedProposal.roofType,
+      inverterType: "string",
+      gridTopology: initialGridTopo,
+      stringBoxId: "none",
+    });
   }, [proposalResultOpen, generatedProposal?.id]);
 
   useEffect(() => {
@@ -634,6 +659,9 @@ export const ProposalEconomicsModal = forwardRef<
           ...(req.pinnedModuleId ? { pinned_module_id: req.pinnedModuleId } : {}),
           ...(req.pinnedInverterId ? { pinned_inverter_id: req.pinnedInverterId } : {}),
           ...(req.inverterType ? { inverter_type: req.inverterType } : {}),
+          ...(req.gridTopology && req.gridTopology !== "auto"
+            ? { grid_topology: req.gridTopology }
+            : {}),
           ...(req.stringBoxId ? { string_box_id: req.stringBoxId } : {}),
         };
         const preview = await generateKitWhatsAppPreview(reqPayload);
@@ -684,6 +712,7 @@ export const ProposalEconomicsModal = forwardRef<
           ? { pinnedInverterId: proposalKitDraft.pins.inverterId }
           : {}),
         inverterType: proposalKitDraft.inverterType,
+        gridTopology: proposalKitDraft.gridTopology,
         stringBoxId: proposalKitDraft.stringBoxId,
       };
       setProposalKitRequest((prev) => (kitRequestEquals(prev, next) ? prev : next));
@@ -2460,7 +2489,7 @@ export const ProposalEconomicsModal = forwardRef<
                     ) : null}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                       <Label htmlFor="proposal-kit-inverter-type">Tipo de Inversor</Label>
                       <Select
@@ -2483,11 +2512,34 @@ export const ProposalEconomicsModal = forwardRef<
                     </div>
 
                     <div className="space-y-1.5">
+                      <Label htmlFor="proposal-kit-grid-topology">Padrão da rede / Tensão</Label>
+                      <Select
+                        id="proposal-kit-grid-topology"
+                        className="h-11 w-full border-emerald-500/15"
+                        value={proposalKitDraft.gridTopology || "auto"}
+                        onChange={(e) =>
+                          setProposalKitDraft((d) => ({
+                            ...d,
+                            gridTopology: e.target.value as ProposalKitDraft["gridTopology"],
+                            pins: { ...d.pins, inverterId: undefined },
+                          }))
+                        }
+                      >
+                        <option value="auto">Automático / Qualquer</option>
+                        <option value="tri_380">Trifásico 380V / 220V</option>
+                        <option value="tri_220">Trifásico 220V / 127V</option>
+                        <option value="biphasic_127_220">Bifásico 220V / 127V</option>
+                        <option value="mono_220">Monofásico 220V</option>
+                        <option value="mono_127">Monofásico 127V</option>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
                       <Label htmlFor="proposal-kit-string-box">
                         String Box (Opcional)
                         {proposalKitResult?.string_configuration ? (
                           <span className="ml-1 text-[0.7rem] font-normal text-emerald-600 dark:text-emerald-400">
-                            (Sugerido: {proposalKitResult.string_configuration.string_count}E/
+                            (Sug.: {proposalKitResult.string_configuration.string_count}E/
                             {Math.min(proposalKitResult.string_configuration.string_count, 2)}S)
                           </span>
                         ) : null}
@@ -2495,16 +2547,16 @@ export const ProposalEconomicsModal = forwardRef<
                       <Select
                         id="proposal-kit-string-box"
                         className="h-11 w-full border-emerald-500/15"
-                        value={proposalKitDraft.stringBoxId || ""}
+                        value={proposalKitDraft.stringBoxId || "none"}
                         onChange={(e) =>
                           setProposalKitDraft((d) => ({
                             ...d,
-                            stringBoxId: e.target.value || undefined,
+                            stringBoxId: e.target.value || "none",
                           }))
                         }
                       >
-                        <option value="">(Automático / Recomendado)</option>
-                        <option value="none">(Sem String Box)</option>
+                        <option value="none">Sem String Box (Padrão)</option>
+                        <option value="auto">Automático / Recomendado</option>
                         {stringBoxOptions.map((sb) => (
                           <option key={sb.id} value={sb.id}>
                             {sb.brandName ? `${sb.brandName} - ` : ""}

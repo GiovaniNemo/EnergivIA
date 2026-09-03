@@ -470,6 +470,48 @@ export class KitGenerationService {
       microInverters = [];
     }
 
+    if (input.grid_topology && input.grid_topology !== "auto" && input.grid_topology !== "any") {
+      const topTarget = input.grid_topology;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const matchesTopo = (specs: any) => {
+        const top = String(specs?.grid_topology || "").toLowerCase();
+        const std = String(specs?.grid_standard || "").toUpperCase();
+        const volt = String(
+          specs?.output_voltage_v || specs?.ac_output_voltage || ""
+        ).toLowerCase();
+        if (topTarget === "mono_220") {
+          return top === "mono_220" || std === "EU" || volt.includes("220") || volt.includes("230");
+        }
+        if (topTarget === "biphasic_127_220") {
+          return (
+            top === "biphasic_127_220" ||
+            std === "US" ||
+            volt.includes("127/220") ||
+            volt.includes("bif")
+          );
+        }
+        if (topTarget === "tri_380") {
+          return top === "tri_380" || std === "TRI_380" || volt.includes("380");
+        }
+        if (topTarget === "tri_220") {
+          return (
+            top === "tri_220" ||
+            std === "TRI_220" ||
+            volt.includes("220/127") ||
+            (volt.includes("220") && (top.includes("tri") || std.includes("TRI")))
+          );
+        }
+        if (topTarget === "mono_127") {
+          return top === "mono_127" || volt.includes("127");
+        }
+        return true;
+      };
+      const filteredString = stringInverters.filter((i) => matchesTopo(i.specs));
+      if (filteredString.length > 0) stringInverters = filteredString;
+      const filteredMicro = microInverters.filter((i) => matchesTopo(i.specs));
+      if (filteredMicro.length > 0) microInverters = filteredMicro;
+    }
+
     if (modules.length === 0) {
       console.log(
         `[buildKit] ${source.supplierId || source.distributorId || source.stockOwnerOrgId}: No modules found`
@@ -530,12 +572,18 @@ export class KitGenerationService {
     ]);
 
     let stringBox = null;
-    if (input.string_box_id && input.string_box_id !== "none") {
-      stringBox = await this.productRepo.findStringBoxById(input.string_box_id, source);
-    } else if (input.string_box_id !== "none" && isStringSizingResult(sizingResult)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mpptCount = (sizingResult.inverter.specs as any)?.mppt_count || 1;
-      stringBox = await this.productRepo.findRecommendedStringBox(stringCount, mpptCount, source);
+    if (
+      input.string_box_id &&
+      input.string_box_id !== "none" &&
+      input.string_box_id !== "sem_string_box"
+    ) {
+      if (input.string_box_id === "auto" && isStringSizingResult(sizingResult)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mpptCount = (sizingResult.inverter.specs as any)?.mppt_count || 1;
+        stringBox = await this.productRepo.findRecommendedStringBox(stringCount, mpptCount, source);
+      } else {
+        stringBox = await this.productRepo.findStringBoxById(input.string_box_id, source);
+      }
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
