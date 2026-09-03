@@ -11,6 +11,14 @@ import { Input } from "@/components/ui/input";
 import { ImageDropzone } from "@/components/ui/image-dropzone";
 import { LoadingState } from "@/components/ui/loading-state";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Step,
   StepConnector,
   stepConnectorClasses,
@@ -25,6 +33,7 @@ import {
   FileText,
   Zap,
   ShieldCheck,
+  ShieldAlert,
   Sparkles,
   CheckCircle2,
   CreditCard,
@@ -37,6 +46,8 @@ import {
   LogOut,
   Loader2,
   MapPin,
+  Scale,
+  ExternalLink,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 
@@ -227,6 +238,8 @@ export default function CreateOrganizationPage() {
   const [selectedSegments, setSelectedSegments] = useState<string[]>([]);
   const [templateValueProposition, setTemplateValueProposition] = useState("");
   const [templateTone, setTemplateTone] = useState("Comercial");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -353,6 +366,10 @@ export default function CreateOrganizationPage() {
     const selectedSegmentsSnapshot = [...selectedSegments];
     if (!skipTemplateStep && selectedSegmentsSnapshot.length === 0) {
       setError("Selecione pelo menos um segmento para gerar suas propostas.");
+      return;
+    }
+    if (!termsAccepted) {
+      setError("Você precisa aceitar os Termos de Uso e Isenção Técnica para continuar.");
       return;
     }
     setError(null);
@@ -948,6 +965,73 @@ export default function CreateOrganizationPage() {
                         helperText="Inclua diferenciais, número de projetos e pontos fortes da sua operação para personalizar suas propostas."
                       />
                     </div>
+                    <div className="rounded-xl border border-amber-200/80 bg-amber-50/70 p-3.5 text-xs text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/20 dark:text-amber-200">
+                      <div className="flex items-start gap-2.5">
+                        <ShieldAlert className="h-4 w-4 shrink-0 text-amber-700 mt-0.5 dark:text-amber-400" />
+                        <div className="space-y-1">
+                          <p className="font-semibold text-amber-900 dark:text-amber-300">
+                            Aviso de Inteligência Artificial e Engenharia Solar:
+                          </p>
+                          <p className="leading-relaxed text-amber-800/90 dark:text-amber-400/90 text-[11.5px]">
+                            As estimativas de geração e propostas da EnergivIA têm caráter comercial
+                            preliminar. A responsabilidade técnica, vistoria presencial no local,
+                            validação estrutural/elétrica e emissão de ART/TRT perante a
+                            distribuidora são exclusivas do integrador credenciado.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-3.5 space-y-2">
+                      <label className="flex items-start gap-3 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={termsAccepted}
+                          onChange={(e) => {
+                            setTermsAccepted(e.target.checked);
+                            if (error) setError(null);
+                          }}
+                          className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-[#0f6b86] focus:ring-[#0f6b86] cursor-pointer"
+                        />
+                        <span className="text-xs text-zinc-700 leading-snug">
+                          Declaro que li e concordo com os{" "}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setTermsModalOpen(true);
+                            }}
+                            className="font-semibold text-[#0A4A63] underline hover:text-[#1f7f9b] transition-colors"
+                          >
+                            Termos de Uso e Isenção Técnica
+                          </button>{" "}
+                          e com a{" "}
+                          <Link
+                            href="/privacidade"
+                            target="_blank"
+                            className="font-semibold text-[#0A4A63] underline hover:text-[#1f7f9b] transition-colors"
+                          >
+                            Política de Privacidade
+                          </Link>
+                          .
+                        </span>
+                      </label>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-zinc-100 text-[11px] text-zinc-500">
+                        <span className="flex items-center gap-1 text-emerald-700 font-medium">
+                          <ShieldCheck className="h-3.5 w-3.5" /> Conformidade LGPD e Marco Civil
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setTermsModalOpen(true)}
+                          className="inline-flex items-center gap-1 font-medium text-[#1f7f9b] hover:underline cursor-pointer"
+                        >
+                          <FileText className="h-3 w-3" />
+                          Ler termos na íntegra
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="flex flex-col gap-2 border-t border-[var(--color-border)] pt-3 sm:flex-row">
                       <Button type="button" variant="outline" className="w-full" onClick={goBack}>
                         Voltar
@@ -976,6 +1060,132 @@ export default function CreateOrganizationPage() {
           </div>
         </main>
       </div>
+
+      {/* Modal de Termos de Uso e Isenção Técnica */}
+      <Dialog open={termsModalOpen} onOpenChange={setTermsModalOpen}>
+        <DialogContent muiMaxWidth="md" className="max-h-[85vh] flex flex-col p-6">
+          <DialogHeader className="space-y-1 border-b border-zinc-200 pb-4">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#1f7f9b]">
+              <Scale className="h-4 w-4" />
+              Documento Oficial EnergivIA
+            </div>
+            <DialogTitle className="text-xl font-bold text-zinc-900">
+              Termos de Uso e Isenção de Responsabilidade Técnica
+            </DialogTitle>
+            <DialogDescription className="text-xs text-zinc-500">
+              Revisado em conformidade com o Marco Civil da Internet (Lei 12.965/14) e LGPD (Lei
+              13.709/18).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto pr-2 my-4 space-y-6 text-xs leading-relaxed text-zinc-700">
+            {/* Box de Destaque */}
+            <div className="rounded-xl border border-amber-300 bg-amber-50/80 p-4 text-amber-950">
+              <div className="flex items-start gap-2.5">
+                <ShieldAlert className="h-5 w-5 shrink-0 text-amber-700 mt-0.5" />
+                <div>
+                  <p className="font-bold text-amber-900">
+                    Aviso Importante: Inteligência Artificial e Responsabilidade do Integrador
+                  </p>
+                  <p className="mt-1 leading-relaxed text-amber-900">
+                    A EnergivIA é uma ferramenta de suporte comercial e estimativas preliminares.{" "}
+                    <strong>
+                      Todo e qualquer dimensionamento gerado por IA deve ser obrigatoriamente
+                      revisado por técnico ou engenheiro habilitado (CREA/CFT)
+                    </strong>{" "}
+                    mediante vistoria técnica presencial no imóvel antes da instalação e homologação
+                    perante a concessionária de energia.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <section className="space-y-1.5">
+              <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
+                <FileText className="h-4 w-4 text-[#1f7f9b]" /> 1. Objeto e Escopo
+              </h4>
+              <p>
+                A plataforma <strong>EnergivIA</strong> disponibiliza software para automação de
+                propostas comerciais, leitura inteligente de contas de luz e estimativas financeiras
+                para o mercado de energia solar. A EnergivIA não executa projetos elétricos
+                executivos e não emite ART/TRT.
+              </p>
+            </section>
+
+            <section className="space-y-1.5">
+              <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
+                <Zap className="h-4 w-4 text-[#1f7f9b]" /> 2. Estimativas por Inteligência
+                Artificial
+              </h4>
+              <p>
+                Os cálculos de irradiação (HSP), quantidade de painéis, inversores e economia
+                estimada são simulações matemáticas. Variações de sombreamento, orientação de
+                telhado, cabeamento ou mudanças tarifárias da distribuidora (Lei 14.300/22) podem
+                gerar divergências em relação à geração real.
+              </p>
+            </section>
+
+            <section className="space-y-1.5">
+              <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
+                <Building2 className="h-4 w-4 text-[#1f7f9b]" /> 3. Responsabilidade do Integrador
+              </h4>
+              <p>
+                O Integrador é o único e exclusivo responsável por: (i) inspecionar fisicamente o
+                imóvel e a estrutura do telhado/padrão de energia; (ii) verificar a compatibilidade
+                e segurança dos equipamentos; (iii) emitir a devida ART/TRT por engenheiro
+                responsável; e (iv) aprovar o parecer de acesso na concessionária.
+              </p>
+            </section>
+
+            <section className="space-y-1.5">
+              <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
+                <ShieldCheck className="h-4 w-4 text-[#1f7f9b]" /> 4. Privacidade de Dados (LGPD)
+              </h4>
+              <p>
+                O Integrador atua como Controlador dos dados e faturas de seus clientes finais
+                inseridos na plataforma, declarando possuir autorização legal para o envio. A
+                EnergivIA atua como Operadora técnica dos dados com criptografia e isolamento
+                seguro.
+              </p>
+            </section>
+          </div>
+
+          <DialogFooter className="border-t border-zinc-200 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <Link
+              href="/termos-de-uso"
+              target="_blank"
+              className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-[#0A4A63] transition-colors"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Abrir página completa em nova guia
+            </Link>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setTermsModalOpen(false)}
+              >
+                Fechar
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="bg-[#0f6b86] text-white hover:bg-[#0A4A63]"
+                onClick={() => {
+                  setTermsAccepted(true);
+                  if (error) setError(null);
+                  setTermsModalOpen(false);
+                }}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                Li e concordo com os Termos
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

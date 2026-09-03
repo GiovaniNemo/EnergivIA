@@ -508,6 +508,12 @@ export default function HomePage(): JSX.Element {
                 <a href={appLoginUrl} className="hover:text-white transition-colors">
                   Criar conta
                 </a>
+                <Link href="/termos-de-uso" className="hover:text-white transition-colors">
+                  Termos de Uso
+                </Link>
+                <Link href="/privacidade" className="hover:text-white transition-colors">
+                  Privacidade
+                </Link>
               </nav>
             </div>
             <p className="mt-8 text-center text-sm sm:text-left text-slate-400">
