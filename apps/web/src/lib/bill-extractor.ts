@@ -112,33 +112,7 @@ export async function extractEnergyBillFromText(
 ): Promise<BillExtractionResult> {
   const key = apiKey || process.env["OPENAI_API_KEY"];
 
-  // 1. Executa primeiro a extração determinística de alta precisão matemática
-  const deterministic = extractDataFromTextDeterministic(rawText);
-  if (
-    deterministic.isComplete ||
-    (deterministic.historico_consumo.length > 0 &&
-      (deterministic.consumo_mes_atual_kwh || deterministic.historico_consumo[0]?.consumo_kwh))
-  ) {
-    const res = processExtractedBillData(
-      {
-        distribuidora: deterministic.distribuidora,
-        cidade: deterministic.cidade,
-        uf: deterministic.uf,
-        tipo_conexao: deterministic.tipo_conexao,
-        nome_cliente: deterministic.nome_cliente,
-        codigo_instalacao_ou_uc: deterministic.codigo_instalacao_ou_uc,
-        mes_referencia_atual: deterministic.mes_referencia_atual,
-        consumo_mes_atual_kwh: deterministic.consumo_mes_atual_kwh,
-        valor_total_fatura_reais: deterministic.valor_total_fatura_reais,
-        historico_consumo: deterministic.historico_consumo,
-      },
-      rawText
-    );
-    res.extractionEngine = "OCR";
-    return res;
-  }
-
-  // 2. Se a extração determinística não encontrou histórico suficiente, usa IA
+  // 1. Motor Primário: IA Inteligente (OpenAI GPT-4o) para compreensão contextual e tabular
   if (key) {
     try {
       const openai = new OpenAI({ apiKey: key });
@@ -150,7 +124,7 @@ export async function extractEnergyBillFromText(
           { role: "system", content: BILL_EXTRACTION_SYSTEM_PROMPT },
           {
             role: "user",
-            content: `Extraia com máxima precisão todos os dados e TODOS os meses do histórico de consumo do seguinte texto de fatura de energia:\n\n${rawText}`,
+            content: `Extraia com máxima precisão todos os dados e o histórico exato de consumo faturado a partir do seguinte texto de fatura de energia:\n\n${rawText}`,
           },
         ],
       });
@@ -168,7 +142,8 @@ export async function extractEnergyBillFromText(
     }
   }
 
-  // 3. Fallback determinístico offline
+  // 2. Motor de Fallback: Extração determinística local (apenas se OpenAI não estiver configurada ou falhar)
+  const deterministic = extractDataFromTextDeterministic(rawText);
   const res = processExtractedBillData(
     {
       distribuidora: deterministic.distribuidora,

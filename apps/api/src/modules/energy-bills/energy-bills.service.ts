@@ -681,28 +681,19 @@ export class EnergyBillsService {
           this.logger.warn(`Erro leitura PDF com pdfParse: ${String(pdfErr)}`);
         }
 
-        // Se o PDF tem camada de texto digital, executa primeiro o parser determinístico de alta precisão
+        // Se o PDF tem camada de texto digital, envia direto para a IA interpretar
         if (rawText && rawText.trim().length >= 30) {
-          const localParsed = this.parseBillTextDeterministic(rawText);
-          if (
-            localParsed.isComplete ||
-            (localParsed.consumptionHistoryLabeled.length > 0 &&
-              (localParsed.consumptionKwh ||
-                localParsed.consumptionHistoryLabeled[0]?.consumptionKwh))
-          ) {
-            extractedData = this.processExtractedResultWithMath(
-              localParsed as unknown as Record<string, unknown>
-            );
-            extractionEngine = "OCR";
-          } else if (openAiApiKey) {
+          if (openAiApiKey) {
             extractedData = await this.extractDataWithOpenAI(
               rawText,
               openAiApiKey,
               tenantId,
               billId
             );
+            if (extractedData) extractionEngine = "AI";
           } else if (this.genAI) {
             extractedData = await this.extractDataWithGemini(rawText, tenantId, billId);
+            if (extractedData) extractionEngine = "AI";
           }
         }
 
