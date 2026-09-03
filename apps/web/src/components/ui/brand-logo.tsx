@@ -42,16 +42,16 @@ export function BrandLogo({
 
   const config = {
     sm: {
-      imgClass: "h-8 max-h-9 w-auto max-w-[190px]",
-      iconClass: "h-7 w-7",
+      imgClass: "h-full max-h-[48px] w-full object-contain scale-110",
+      iconClass: "h-8 w-8",
     },
     md: {
-      imgClass: "h-11 sm:h-12 w-full max-h-[48px] max-w-[250px]",
-      iconClass: "h-8 w-8 sm:h-9 sm:w-9",
+      imgClass: "h-full max-h-[72px] w-full object-contain scale-125",
+      iconClass: "h-10 w-10 sm:h-12 sm:w-12 scale-110",
     },
     lg: {
-      imgClass: "h-14 sm:h-16 w-full max-h-[60px] max-w-[320px]",
-      iconClass: "h-11 w-11 md:h-14 md:w-14",
+      imgClass: "h-full max-h-[96px] w-full object-contain scale-150",
+      iconClass: "h-12 w-12 md:h-16 md:w-16 scale-125",
     },
   }[size];
 
@@ -88,7 +88,7 @@ export function BrandLogo({
   return (
     <div
       className={cn(
-        "flex w-full h-full items-center justify-center select-none transition-opacity hover:opacity-95 px-1",
+        "flex w-full h-full items-center justify-center select-none transition-opacity hover:opacity-95",
         className
       )}
     >
