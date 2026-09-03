@@ -479,30 +479,43 @@ export class KitGenerationService {
         const volt = String(
           specs?.output_voltage_v || specs?.ac_output_voltage || ""
         ).toLowerCase();
+
+        const isMono220 =
+          top === "mono_220" ||
+          std === "EU" ||
+          volt.includes("220") ||
+          volt.includes("230") ||
+          (!top.includes("tri") && !std.includes("TRI"));
+
+        const isTri380 =
+          top === "tri_380" || std === "TRI_380" || volt.includes("380") || volt.includes("400");
+
+        const isTri220 =
+          top === "tri_220" ||
+          std === "TRI_220" ||
+          volt.includes("220/127") ||
+          (volt.includes("220") && (top.includes("tri") || std.includes("TRI")));
+
+        const isSplitPhase =
+          top === "biphasic_127_220" ||
+          std === "US" ||
+          volt.includes("127/220") ||
+          volt.includes("bif");
+
         if (topTarget === "mono_220") {
-          return top === "mono_220" || std === "EU" || volt.includes("220") || volt.includes("230");
+          return isMono220;
         }
         if (topTarget === "biphasic_127_220") {
-          return (
-            top === "biphasic_127_220" ||
-            std === "US" ||
-            volt.includes("127/220") ||
-            volt.includes("bif")
-          );
-        }
-        if (topTarget === "tri_380") {
-          return top === "tri_380" || std === "TRI_380" || volt.includes("380");
+          // Em rede bifásica 127/220V: inversor string on-grid 220V liga Fase-Fase; inversores híbridos aceitam split-phase ou 220V
+          return isSplitPhase || isMono220;
         }
         if (topTarget === "tri_220") {
-          return (
-            top === "tri_220" ||
-            std === "TRI_220" ||
-            volt.includes("220/127") ||
-            (volt.includes("220") && (top.includes("tri") || std.includes("TRI")))
-          );
+          // Em rede trifásica 220V: aceita inversores Trifásicos 220V E TAMBÉM inversores Monofásicos 220V (ligação Fase-Fase)
+          return isTri220 || isMono220;
         }
-        if (topTarget === "mono_127") {
-          return top === "mono_127" || volt.includes("127");
+        if (topTarget === "tri_380") {
+          // Em rede trifásica 380V: aceita inversores Trifásicos 380V E TAMBÉM inversores Monofásicos 220V (ligação Fase-Neutro)
+          return isTri380 || isMono220;
         }
         return true;
       };

@@ -173,7 +173,7 @@ type ProposalKitDraft = {
   source: ProposalKitSource;
   pins: { moduleId?: string; inverterId?: string };
   inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
-  gridTopology?: "auto" | "mono_220" | "biphasic_127_220" | "tri_380" | "tri_220" | "mono_127";
+  gridTopology?: "auto" | "mono_220" | "biphasic_127_220" | "tri_220" | "tri_380";
   stringBoxId?: string;
 };
 
@@ -186,7 +186,7 @@ type ProposalKitRequest = {
   pinnedModuleId?: string;
   pinnedInverterId?: string;
   inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
-  gridTopology?: "auto" | "mono_220" | "biphasic_127_220" | "tri_380" | "tri_220" | "mono_127";
+  gridTopology?: "auto" | "mono_220" | "biphasic_127_220" | "tri_220" | "tri_380";
   stringBoxId?: string;
 };
 
@@ -2526,11 +2526,10 @@ export const ProposalEconomicsModal = forwardRef<
                         }
                       >
                         <option value="auto">Automático / Qualquer</option>
-                        <option value="tri_380">Trifásico 380V / 220V</option>
-                        <option value="tri_220">Trifásico 220V / 127V</option>
-                        <option value="biphasic_127_220">Bifásico 220V / 127V</option>
                         <option value="mono_220">Monofásico 220V</option>
-                        <option value="mono_127">Monofásico 127V</option>
+                        <option value="biphasic_127_220">Bifásico 127V / 220V</option>
+                        <option value="tri_220">Trifásico 220V (ou Mono 220V)</option>
+                        <option value="tri_380">Trifásico 380V (ou Mono 220V)</option>
                       </Select>
                     </div>
 
