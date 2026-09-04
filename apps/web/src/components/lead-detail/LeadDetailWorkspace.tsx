@@ -14,12 +14,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { useProposalStudy } from "@/components/pipeline/proposal-study-provider";
 import {
+  appendLeadActivity,
   createDeal,
   createLeadFinancialSimulation,
   getLead,
   listSimulationsForLead,
+  patchDeal,
   type LeadDetail,
   type LeadFinancialSimulationInput,
+  type ProposalSummary,
   type SimulationListItem,
 } from "@/lib/leads-api";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -31,6 +34,8 @@ import { ProposalList } from "./ProposalList";
 import { SalesProgress } from "./SalesProgress";
 import { SimulationCard } from "./SimulationCard";
 import { TransformToOpportunityCard } from "./TransformToOpportunityCard";
+import { EditLeadDialog } from "./EditLeadDialog";
+import { QuickFollowUpDialog } from "./QuickFollowUpDialog";
 import {
   buildAutoDealPayloadFromSimulation,
   buildPipelineDealForApiDeal,
@@ -54,6 +59,8 @@ export function LeadDetailWorkspace(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [ctaBusy, setCtaBusy] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editLeadOpen, setEditLeadOpen] = useState(false);
+  const [quickFollowUpOpen, setQuickFollowUpOpen] = useState(false);
   const [dealTitle, setDealTitle] = useState("");
   const [dealValue, setDealValue] = useState("");
   const [createErr, setCreateErr] = useState<string | null>(null);
@@ -105,9 +112,10 @@ export function LeadDetailWorkspace(): JSX.Element {
 
   const activeDeal = useMemo(() => (lead ? pickActiveDeal(lead.deals) : null), [lead]);
   const hasDeal = Boolean(activeDeal);
+  const activeProposals = useMemo(() => activeDeal?.proposals ?? [], [activeDeal]);
+  const latestProposal = activeProposals[0] ?? null;
 
   const primaryCta = useMemo(() => resolvePrimaryCta(activeDeal, sims), [activeDeal, sims]);
-
   const progress = useMemo(() => computeSalesProgress(activeDeal, sims), [activeDeal, sims]);
 
   const pipelineDeal = useMemo(
@@ -133,6 +141,50 @@ export function LeadDetailWorkspace(): JSX.Element {
       setCtaBusy(false);
     }
   }, [currentOrganizationId, leadId, reload, sims]);
+
+  const handleSendProposalWhatsApp = useCallback(
+    (proposalTarget?: ProposalSummary) => {
+      const prop = proposalTarget || latestProposal;
+      if (!prop || !lead) return;
+      const cleanPhone = lead.whatsapp.replace(/\D/g, "");
+      const waTarget = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "https://app.energivia.com.br";
+      const proposalUrl = `${origin}/proposta/${prop.id}`;
+
+      const text = `Olá ${lead.name}, tudo bem? ☀️\n\nConforme conversamos, segue o link do seu projeto personalizado de energia solar:\n${proposalUrl}\n\nQualquer dúvida estou à disposição para te explicar os detalhes do dimensionamento e condições de pagamento!`;
+
+      const waUrl = `https://wa.me/${waTarget}?text=${encodeURIComponent(text)}`;
+      window.open(waUrl, "_blank");
+
+      // Registra automaticamente envio e conclui follow-up
+      if (currentOrganizationId && leadId) {
+        void appendLeadActivity(currentOrganizationId, leadId, {
+          kind: "PROPOSAL_SENT",
+          text: `Proposta comercial enviada via WhatsApp (${prop.title || "Proposta"})`,
+        });
+        if (activeDeal) {
+          void patchDeal(currentOrganizationId, activeDeal.id, {
+            lastContactAt: new Date().toISOString(),
+            stage: activeDeal.stage === "PROPOSAL" ? "NEGOTIATION" : activeDeal.stage,
+          }).then(() => reload());
+        }
+      }
+    },
+    [activeDeal, currentOrganizationId, latestProposal, lead, leadId, reload]
+  );
+
+  const handleCopyProposalLink = useCallback(
+    (proposalTarget?: ProposalSummary) => {
+      const prop = proposalTarget || latestProposal;
+      if (!prop) return;
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "https://app.energivia.com.br";
+      const proposalUrl = `${origin}/proposta/${prop.id}`;
+      void navigator.clipboard.writeText(proposalUrl);
+    },
+    [latestProposal]
+  );
 
   const handlePrimaryCta = useCallback(async () => {
     if (!lead || !pipelineDeal) return;
@@ -165,7 +217,9 @@ export function LeadDetailWorkspace(): JSX.Element {
         break;
       case "send_proposal":
       case "open_proposal":
-        if (primaryCta.proposalId) {
+        if (latestProposal) {
+          handleSendProposalWhatsApp(latestProposal);
+        } else if (primaryCta.proposalId) {
           router.push(`/propostas/${primaryCta.proposalId}`);
         }
         break;
@@ -174,6 +228,8 @@ export function LeadDetailWorkspace(): JSX.Element {
     }
   }, [
     createOpportunityFromBestSimulation,
+    handleSendProposalWhatsApp,
+    latestProposal,
     lead,
     openStudyForDeal,
     pipelineDeal,
@@ -272,7 +328,6 @@ export function LeadDetailWorkspace(): JSX.Element {
     return <LoadingState label="Carregando cliente" compact />;
   }
 
-  const activeProposals = activeDeal?.proposals ?? [];
   const showSimBridge = !hasDeal && hasUsableSimulation(sims);
 
   const explorationColumn = (
@@ -292,7 +347,13 @@ export function LeadDetailWorkspace(): JSX.Element {
       ) : null}
       <SalesProgress
         progress={progress}
-        onRecommendedAction={() => void handlePrimaryCta()}
+        onRecommendedAction={() => {
+          if (!progress.followUpDone && progress.proposalDone) {
+            setQuickFollowUpOpen(true);
+          } else {
+            void handlePrimaryCta();
+          }
+        }}
         recommendedBusy={ctaBusy}
       />
       {currentOrganizationId ? (
@@ -320,7 +381,13 @@ export function LeadDetailWorkspace(): JSX.Element {
       ) : null}
       <SalesProgress
         progress={progress}
-        onRecommendedAction={() => void handlePrimaryCta()}
+        onRecommendedAction={() => {
+          if (!progress.followUpDone && progress.proposalDone) {
+            setQuickFollowUpOpen(true);
+          } else {
+            void handlePrimaryCta();
+          }
+        }}
         recommendedBusy={ctaBusy}
       />
       <SimulationCard
@@ -334,6 +401,7 @@ export function LeadDetailWorkspace(): JSX.Element {
           organizationId={currentOrganizationId}
           proposals={activeProposals}
           onChanged={() => void reload()}
+          onSendWhatsApp={handleSendProposalWhatsApp}
         />
       ) : null}
       {currentOrganizationId ? (
@@ -356,6 +424,10 @@ export function LeadDetailWorkspace(): JSX.Element {
         primaryCta={primaryCta}
         onPrimaryCta={() => void handlePrimaryCta()}
         primaryBusy={ctaBusy}
+        onEditLead={() => setEditLeadOpen(true)}
+        onQuickFollowUp={() => setQuickFollowUpOpen(true)}
+        onSendProposalWhatsApp={() => handleSendProposalWhatsApp()}
+        onCopyProposalLink={() => handleCopyProposalLink()}
       />
 
       <Stack direction={{ xs: "column", lg: "row" }} spacing={3} alignItems="flex-start">
@@ -364,12 +436,17 @@ export function LeadDetailWorkspace(): JSX.Element {
         </Box>
 
         <Box sx={{ width: "100%", maxWidth: { lg: 320 }, flexShrink: 0 }}>
-          <LeadSidebar lead={lead} bills={lead.energyBills} />
+          <LeadSidebar
+            lead={lead}
+            bills={lead.energyBills}
+            onEditLead={() => setEditLeadOpen(true)}
+          />
         </Box>
       </Stack>
 
+      {/* Modal de Criação de Oportunidade */}
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Nova oportunidade</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>Nova oportunidade</DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
           <TextField
             label="Título"
@@ -392,13 +469,37 @@ export function LeadDetailWorkspace(): JSX.Element {
             </Typography>
           ) : null}
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={() => setCreateOpen(false)}>Cancelar</Button>
           <Button variant="contained" onClick={() => void submitCreateDeal()}>
             Criar
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Modal de Edição Completa dos Dados do Cliente */}
+      {currentOrganizationId && lead && (
+        <EditLeadDialog
+          open={editLeadOpen}
+          onClose={() => setEditLeadOpen(false)}
+          organizationId={currentOrganizationId}
+          lead={lead}
+          onSuccess={() => void reload()}
+        />
+      )}
+
+      {/* Modal Rápido de Registro de Follow-up */}
+      {currentOrganizationId && lead && (
+        <QuickFollowUpDialog
+          open={quickFollowUpOpen}
+          onClose={() => setQuickFollowUpOpen(false)}
+          organizationId={currentOrganizationId}
+          leadId={leadId}
+          leadName={lead.name}
+          deal={activeDeal}
+          onSuccess={() => void reload()}
+        />
+      )}
     </Stack>
   );
 }

@@ -1,68 +1,51 @@
 "use client";
 
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
-import SendIcon from "@mui/icons-material/Send";
+import { useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import Tooltip from "@mui/material/Tooltip";
 import Link from "next/link";
+import { Send, Copy, ExternalLink, FileText, Check } from "lucide-react";
 import type { ProposalSummary } from "@/lib/leads-api";
-import { sendProposalWithPdf } from "@/lib/leads-api";
 import { proposalStatusLabel } from "@/lib/proposal-card-meta";
-import { useCallback, useState } from "react";
 
 type ProposalListProps = {
   organizationId: string;
   proposals: ProposalSummary[];
   onChanged: () => void;
+  onSendWhatsApp?: (proposal: ProposalSummary) => void;
 };
 
-export function ProposalList({
-  organizationId,
-  proposals,
-  onChanged,
-}: ProposalListProps): JSX.Element {
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
+export function ProposalList({ proposals, onSendWhatsApp }: ProposalListProps): JSX.Element {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const resend = useCallback(
-    async (p: ProposalSummary) => {
-      if (!p.pdfUrl?.trim()) {
-        setMsg("Gere o PDF no editor da proposta antes de reenviar.");
-        return;
-      }
-      setBusyId(p.id);
-      setMsg(null);
-      try {
-        await sendProposalWithPdf(organizationId, p.id, p.pdfUrl);
-        setMsg("Proposta marcada como enviada.");
-        onChanged();
-      } catch (e) {
-        setMsg(e instanceof Error ? e.message : "Falha ao reenviar.");
-      } finally {
-        setBusyId(null);
-      }
-    },
-    [organizationId, onChanged]
-  );
+  const copyProposalUrl = (id: string) => {
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "https://app.energivia.com.br";
+    const url = `${origin}/proposta/${id}`;
+    navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2500);
+  };
 
   if (!proposals.length) {
     return (
       <Box
         sx={{
-          borderRadius: 2,
+          borderRadius: 2.5,
           border: "1px dashed var(--color-border)",
           bgcolor: "var(--color-card)",
           p: 3,
         }}
       >
-        <Typography variant="subtitle1" fontWeight={700}>
-          Propostas
+        <Typography variant="subtitle1" fontWeight={700} sx={{ color: "var(--color-foreground)" }}>
+          Propostas Comerciais
         </Typography>
         <Typography variant="body2" sx={{ mt: 1, color: "var(--color-muted-foreground)" }}>
-          Crie sua primeira proposta a partir da simulação para enviar ao cliente.
+          Crie sua proposta a partir do estudo energético acima para apresentar valores e kits ao
+          cliente.
         </Typography>
       </Box>
     );
@@ -71,81 +54,152 @@ export function ProposalList({
   return (
     <Box
       sx={{
-        borderRadius: 2,
+        borderRadius: 2.5,
         border: "1px solid var(--color-border)",
         bgcolor: "var(--color-card)",
         p: 2.5,
       }}
     >
-      <Typography
-        variant="overline"
-        sx={{ letterSpacing: 1, color: "var(--color-muted-foreground)" }}
-      >
-        Propostas (negócio ativo)
-      </Typography>
-      {msg ? (
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
         <Typography
-          variant="caption"
-          sx={{ display: "block", mt: 1, color: "var(--color-muted-foreground)" }}
+          variant="overline"
+          sx={{ letterSpacing: 1, color: "var(--color-muted-foreground)", fontWeight: 700 }}
         >
-          {msg}
+          Propostas Comerciais ({proposals.length})
         </Typography>
-      ) : null}
-      <Stack spacing={2} sx={{ mt: 1 }}>
-        {proposals.map((p) => (
-          <Box
-            key={p.id}
-            sx={{
-              borderRadius: 1,
-              border: "1px solid var(--color-border)",
-              p: 1.5,
-              bgcolor: "var(--color-background)",
-            }}
-          >
-            <Typography variant="subtitle2" fontWeight={700}>
-              {p.title}
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5 }}>
-              Status: {proposalStatusLabel(p.status)}
-              {typeof p.clientViewCount === "number"
-                ? ` · Visualizações: ${p.clientViewCount}`
-                : ""}
-            </Typography>
-            <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 1.5 }}>
-              <Button
-                component={Link}
-                href={`/propostas/${p.id}`}
-                size="small"
-                variant="outlined"
-                startIcon={<OpenInNewIcon />}
+      </Box>
+
+      <Stack spacing={2}>
+        {proposals.map((p) => {
+          const origin =
+            typeof window !== "undefined" ? window.location.origin : "https://app.energivia.com.br";
+          const publicUrl = `${origin}/proposta/${p.id}`;
+
+          return (
+            <Box
+              key={p.id}
+              sx={{
+                borderRadius: 2,
+                border: "1px solid var(--color-border)",
+                p: 2,
+                bgcolor: "var(--color-background)",
+                transition: "border-color 0.2s ease",
+                "&:hover": {
+                  borderColor: "var(--color-primary-400)",
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 1,
+                }}
               >
-                Abrir no editor
-              </Button>
-              {p.pdfUrl ? (
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={700}
+                  sx={{ color: "var(--color-foreground)" }}
+                >
+                  {p.title || "Proposta Fotovoltaica"}
+                </Typography>
+                <Box
+                  sx={{
+                    px: 1.25,
+                    py: 0.25,
+                    borderRadius: 10,
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    bgcolor: "var(--color-accent)",
+                    color: "var(--color-foreground)",
+                  }}
+                >
+                  {proposalStatusLabel(p.status)}
+                  {typeof p.clientViewCount === "number" && p.clientViewCount > 0
+                    ? ` · ${p.clientViewCount} visualização${p.clientViewCount > 1 ? "ões" : ""}`
+                    : ""}
+                </Box>
+              </Box>
+
+              <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 2 }} alignItems="center">
+                {onSendWhatsApp && (
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="success"
+                    startIcon={<Send size={14} />}
+                    onClick={() => onSendWhatsApp(p)}
+                    sx={{ textTransform: "none", borderRadius: 1.5, fontWeight: 600 }}
+                  >
+                    Enviar no WhatsApp
+                  </Button>
+                )}
+
+                <Tooltip title={copiedId === p.id ? "Link copiado!" : "Copiar link público"}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={
+                      copiedId === p.id ? (
+                        <Check size={14} className="text-emerald-500" />
+                      ) : (
+                        <Copy size={14} />
+                      )
+                    }
+                    onClick={() => copyProposalUrl(p.id)}
+                    sx={{ textTransform: "none", borderRadius: 1.5 }}
+                  >
+                    {copiedId === p.id ? "Copiado!" : "Copiar Link"}
+                  </Button>
+                </Tooltip>
+
                 <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<PictureAsPdfIcon />}
-                  href={p.pdfUrl}
+                  component="a"
+                  href={publicUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  component="a"
+                  size="small"
+                  variant="outlined"
+                  startIcon={<ExternalLink size={14} />}
+                  sx={{ textTransform: "none", borderRadius: 1.5 }}
                 >
-                  Ver PDF
+                  Visualizar Proposta
                 </Button>
-              ) : null}
-              <Button
-                size="small"
-                variant="text"
-                startIcon={<SendIcon />}
-                disabled={busyId === p.id}
-                onClick={() => void resend(p)}
-              >
-                Reenviar
-              </Button>
-            </Stack>
-          </Box>
-        ))}
+
+                <Button
+                  component={Link}
+                  href={`/propostas/${p.id}`}
+                  size="small"
+                  variant="text"
+                  sx={{
+                    textTransform: "none",
+                    borderRadius: 1.5,
+                    color: "var(--color-muted-foreground)",
+                  }}
+                >
+                  Editar Proposta
+                </Button>
+
+                {p.pdfUrl && (
+                  <Button
+                    size="small"
+                    variant="text"
+                    startIcon={<FileText size={14} />}
+                    href={p.pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    component="a"
+                    sx={{ textTransform: "none", borderRadius: 1.5 }}
+                  >
+                    Baixar PDF
+                  </Button>
+                )}
+              </Stack>
+            </Box>
+          );
+        })}
       </Stack>
     </Box>
   );

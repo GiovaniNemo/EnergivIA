@@ -1,22 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
+import Tooltip from "@mui/material/Tooltip";
 import Link from "next/link";
 import type { DealStage, DealWithProposals, LeadDetail } from "@/lib/leads-api";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowLeft,
+  Edit2,
   FileText,
   Handshake,
+  MessageSquare,
   Phone,
+  Send,
   Sparkles,
   Thermometer,
   Trophy,
   TrendingDown,
   Wallet,
+  Check,
+  Copy,
 } from "lucide-react";
 import {
   dealStageAccent,
@@ -55,6 +63,10 @@ type LeadHeaderProps = {
   primaryCta: PrimaryCta;
   onPrimaryCta: () => void;
   primaryBusy?: boolean;
+  onEditLead?: () => void;
+  onQuickFollowUp?: () => void;
+  onSendProposalWhatsApp?: () => void;
+  onCopyProposalLink?: () => void;
 };
 
 export function LeadHeader({
@@ -63,9 +75,21 @@ export function LeadHeader({
   primaryCta,
   onPrimaryCta,
   primaryBusy,
+  onEditLead,
+  onQuickFollowUp,
+  onSendProposalWhatsApp,
+  onCopyProposalLink,
 }: LeadHeaderProps): JSX.Element {
+  const [copied, setCopied] = useState(false);
   const soonest = pickSoonestNextDeal(lead.deals);
   const nextLine = nextActionDisplay(activeDeal, soonest);
+  const hasProposals = Boolean(activeDeal && activeDeal.proposals.length > 0);
+
+  const handleCopy = () => {
+    onCopyProposalLink?.();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
 
   return (
     <Box
@@ -77,33 +101,71 @@ export function LeadHeader({
         boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 14px rgba(0, 0, 0, 0.04)",
       }}
     >
-      <Link
-        href="/clientes"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          fontSize: "0.8125rem",
-          fontWeight: 600,
-          color: "var(--color-muted-foreground)",
-          textDecoration: "none",
-        }}
-      >
-        <ArrowLeft size={16} strokeWidth={2.25} aria-hidden />
-        Clientes
-      </Link>
-      <Typography
-        variant="h4"
-        component="h1"
+      <Box
         sx={{
-          mt: 1.5,
-          fontWeight: 700,
-          color: "var(--color-foreground)",
-          letterSpacing: "-0.02em",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 1,
         }}
       >
-        {lead.name}
-      </Typography>
+        <Link
+          href="/clientes"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: "0.8125rem",
+            fontWeight: 600,
+            color: "var(--color-muted-foreground)",
+            textDecoration: "none",
+          }}
+        >
+          <ArrowLeft size={16} strokeWidth={2.25} aria-hidden />
+          Voltar para Clientes
+        </Link>
+
+        {onEditLead && (
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={onEditLead}
+            startIcon={<Edit2 size={14} />}
+            sx={{ textTransform: "none", borderRadius: 2, fontSize: "0.8rem", py: 0.5, px: 1.5 }}
+          >
+            Editar dados do cliente
+          </Button>
+        )}
+      </Box>
+
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mt: 1.5, flexWrap: "wrap" }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{
+            fontWeight: 700,
+            color: "var(--color-foreground)",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          {lead.name}
+        </Typography>
+
+        {onEditLead && (
+          <Tooltip title="Editar nome">
+            <button
+              type="button"
+              onClick={onEditLead}
+              className="p-1.5 rounded-lg text-[var(--color-muted-foreground)] hover:text-foreground hover:bg-[var(--color-muted)] transition"
+              aria-label="Editar nome do cliente"
+            >
+              <Edit2 size={18} />
+            </button>
+          </Tooltip>
+        )}
+      </Box>
+
       {lead.company ? (
         <Typography variant="body2" sx={{ mt: 0.5, color: "var(--color-muted-foreground)" }}>
           {lead.company}
@@ -114,21 +176,74 @@ export function LeadHeader({
         <>
           <DealSummaryCard deal={activeDeal} />
 
-          <Typography
-            variant="body2"
-            sx={{ mt: 2, color: "var(--color-muted-foreground)", lineHeight: 1.55 }}
+          <Box
+            sx={{
+              mt: 2,
+              p: 1.75,
+              borderRadius: 2,
+              bgcolor: "var(--color-background)",
+              border: "1px solid var(--color-border)",
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 1.5,
+            }}
           >
-            <Box component="span" sx={{ color: "var(--color-foreground)", fontWeight: 600 }}>
-              Próxima ação:{" "}
-            </Box>
-            {nextLine === "—" ? (
-              <Box component="span" sx={{ fontStyle: "italic" }}>
-                Nenhuma agendada
+            <Typography variant="body2" sx={{ color: "var(--color-muted-foreground)" }}>
+              <Box component="span" sx={{ color: "var(--color-foreground)", fontWeight: 600 }}>
+                Próxima ação:{" "}
               </Box>
-            ) : (
-              nextLine
-            )}
-          </Typography>
+              {nextLine === "—" ? (
+                <Box component="span" sx={{ fontStyle: "italic" }}>
+                  Nenhuma agendada
+                </Box>
+              ) : (
+                nextLine
+              )}
+            </Typography>
+
+            <Stack direction="row" spacing={1} flexWrap="wrap">
+              {onQuickFollowUp && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<MessageSquare size={14} />}
+                  onClick={onQuickFollowUp}
+                  sx={{ textTransform: "none", borderRadius: 1.5 }}
+                >
+                  Registrar Contato / Follow-up
+                </Button>
+              )}
+
+              {hasProposals && onSendProposalWhatsApp && (
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="success"
+                  startIcon={<Send size={14} />}
+                  onClick={onSendProposalWhatsApp}
+                  sx={{ textTransform: "none", borderRadius: 1.5, fontWeight: 600 }}
+                >
+                  Enviar Proposta no WhatsApp
+                </Button>
+              )}
+
+              {hasProposals && onCopyProposalLink && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={
+                    copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />
+                  }
+                  onClick={handleCopy}
+                  sx={{ textTransform: "none", borderRadius: 1.5 }}
+                >
+                  {copied ? "Link Copiado!" : "Copiar Link"}
+                </Button>
+              )}
+            </Stack>
+          </Box>
         </>
       ) : (
         <Typography
