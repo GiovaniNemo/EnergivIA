@@ -152,7 +152,12 @@ export function LeadDetailWorkspace(): JSX.Element {
       case "create_proposal":
         setCtaBusy(true);
         try {
-          await openStudyForDeal(pipelineDeal);
+          const best = pickBestSimulation(sims);
+          if (best) {
+            await openStudyForDeal(pipelineDeal, { existingSimulation: best });
+          } else {
+            await openStudyForDeal(pipelineDeal);
+          }
           await reload();
         } finally {
           setCtaBusy(false);
@@ -175,6 +180,7 @@ export function LeadDetailWorkspace(): JSX.Element {
     primaryCta,
     reload,
     router,
+    sims,
   ]);
 
   const submitCreateDeal = useCallback(async () => {
@@ -225,12 +231,17 @@ export function LeadDetailWorkspace(): JSX.Element {
     if (!pipelineDeal) return;
     setCtaBusy(true);
     try {
-      await openStudyForDeal(pipelineDeal);
+      const best = pickBestSimulation(sims);
+      if (best) {
+        await openStudyForDeal(pipelineDeal, { existingSimulation: best });
+      } else {
+        await openStudyForDeal(pipelineDeal);
+      }
       await reload();
     } finally {
       setCtaBusy(false);
     }
-  }, [openStudyForDeal, pipelineDeal, reload]);
+  }, [openStudyForDeal, pipelineDeal, reload, sims]);
 
   if (orgLoading) {
     return <LoadingState label="Carregando organização" compact />;

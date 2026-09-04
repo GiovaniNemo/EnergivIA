@@ -60,6 +60,7 @@ import {
   type DealStage as ApiDealStage,
   type EnergyBillExtractedPayload,
   type LeadDetail,
+  type SimulationListItem,
 } from "@/lib/leads-api";
 import { sizingBillHistoryFromExtracted } from "@/lib/bill-consumption-calendar-series";
 import {
@@ -383,15 +384,117 @@ export function buildDealFromLeadDetail(leadDetail: LeadDetail): Deal {
   };
 }
 
+export function buildGeneratedProposalFromSimulation(
+  deal: Deal,
+  simulation: SimulationListItem
+): GeneratedProposal | null {
+  const input =
+    simulation.input && typeof simulation.input === "object"
+      ? (simulation.input as Record<string, unknown>)
+      : undefined;
+  const result =
+    simulation.result && typeof simulation.result === "object"
+      ? (simulation.result as Record<string, unknown>)
+      : undefined;
+  const inputSizing =
+    input?.["sizing"] && typeof input["sizing"] === "object"
+      ? (input["sizing"] as Record<string, unknown>)
+      : undefined;
+  const resultSizing =
+    result?.["sizing"] && typeof result["sizing"] === "object"
+      ? (result["sizing"] as Record<string, unknown>)
+      : undefined;
+
+  const monthlyConsumptionKwh =
+    typeof inputSizing?.["monthlyConsumptionKwh"] === "number" &&
+    (inputSizing["monthlyConsumptionKwh"] as number) > 0
+      ? (inputSizing["monthlyConsumptionKwh"] as number)
+      : typeof resultSizing?.["monthlyConsumptionKwh"] === "number" &&
+          (resultSizing["monthlyConsumptionKwh"] as number) > 0
+        ? (resultSizing["monthlyConsumptionKwh"] as number)
+        : typeof input?.["monthlyConsumptionKwh"] === "number" &&
+            (input["monthlyConsumptionKwh"] as number) > 0
+          ? (input["monthlyConsumptionKwh"] as number)
+          : 300;
+
+  const tamanhoSistemaKw =
+    typeof input?.["systemSizeKw"] === "number" && (input["systemSizeKw"] as number) > 0
+      ? (input["systemSizeKw"] as number)
+      : typeof resultSizing?.["recommendedPowerKw"] === "number" &&
+          (resultSizing["recommendedPowerKw"] as number) > 0
+        ? (resultSizing["recommendedPowerKw"] as number)
+        : typeof inputSizing?.["systemSizeKw"] === "number" &&
+            (inputSizing["systemSizeKw"] as number) > 0
+          ? (inputSizing["systemSizeKw"] as number)
+          : 3;
+
+  const economiaMensal =
+    typeof result?.["monthlySavings"] === "number" && (result["monthlySavings"] as number) > 0
+      ? (result["monthlySavings"] as number)
+      : Math.round(monthlyConsumptionKwh * 0.85);
+
+  const valorSistema =
+    typeof input?.["investmentAmount"] === "number" && (input["investmentAmount"] as number) > 0
+      ? (input["investmentAmount"] as number)
+      : typeof result?.["systemCost"] === "number" && (result["systemCost"] as number) > 0
+        ? (result["systemCost"] as number)
+        : Math.round(tamanhoSistemaKw * 3500);
+
+  const payback =
+    typeof result?.["paybackYears"] === "number" &&
+    Number.isFinite(result["paybackYears"] as number)
+      ? (result["paybackYears"] as number)
+      : economiaMensal > 0
+        ? valorSistema / (economiaMensal * 12)
+        : 3.5;
+
+  const roofTypeRaw =
+    (typeof input?.["roofType"] === "string" ? input["roofType"] : null) ||
+    (typeof inputSizing?.["roofType"] === "string" ? inputSizing["roofType"] : null) ||
+    "ceramic";
+  const validRoofTypes: RoofType[] = [
+    "ceramic",
+    "metallic",
+    "fibrocement",
+    "ground",
+    "slab",
+    "fibrometal",
+    "none",
+  ];
+  const roofType: RoofType = validRoofTypes.includes(roofTypeRaw as RoofType)
+    ? (roofTypeRaw as RoofType)
+    : "ceramic";
+
+  return {
+    id: simulation.id,
+    dealId: deal.dealId || deal.id,
+    economiaMensal,
+    valorSistema,
+    payback,
+    status: "generated",
+    createdAt: simulation.createdAt ? new Date(simulation.createdAt) : new Date(),
+    tamanhoSistemaKw,
+    roofType,
+    monthlyConsumptionKwh,
+  };
+}
+
 export type ProposalEconomicsSync = {
   updateDealStage: (leadId: string, stage: DealStage) => void;
   updateDealProposalStatus: (leadId: string, hasProposal: boolean) => void;
 };
 
 export type ProposalEconomicsModalHandle = {
-  openFromDeal: (deal: Deal, opts?: { forceStudyModal?: boolean }) => Promise<void>;
-  openFromLeadId: (leadId: string, opts?: { forceStudyModal?: boolean }) => Promise<void>;
+  openFromDeal: (
+    deal: Deal,
+    opts?: { forceStudyModal?: boolean; existingSimulation?: SimulationListItem }
+  ) => Promise<void>;
+  openFromLeadId: (
+    leadId: string,
+    opts?: { forceStudyModal?: boolean; existingSimulation?: SimulationListItem }
+  ) => Promise<void>;
   openWithFile: (deal: Deal, file: File) => Promise<void>;
+  openWithSimulation: (deal: Deal, simulation: SimulationListItem) => Promise<void>;
 };
 
 type ProposalEconomicsModalProps = {
@@ -1181,12 +1284,11 @@ export const ProposalEconomicsModal = forwardRef<
   ]);
 
   async function createProposalFromPipelineModal(): Promise<void> {
-    if (!currentOrganizationId || !proposalDeal || !generatedProposal?.dealId) return;
+    if (!currentOrganizationId || !proposalDeal || !generatedProposal) return;
     setProposalCreateLoading(true);
     setProposalCreateError(null);
     try {
       const leadId = proposalDeal.leadId;
-      const dealId = generatedProposal.dealId;
       const sysKw = Math.max(
         0.5,
         proposalKitResult?.system_power_kw ?? generatedProposal.tamanhoSistemaKw
@@ -1256,6 +1358,18 @@ export const ProposalEconomicsModal = forwardRef<
 
       const validUntil = new Date();
       validUntil.setDate(validUntil.getDate() + 30);
+
+      let targetDealId = generatedProposal.dealId || proposalDeal.dealId;
+      if (!targetDealId) {
+        const createdDeal = await createDeal(currentOrganizationId, leadId, {
+          title: buildSystemDealTitle(sysKw),
+          value: Math.max(1000, investmentFromRules),
+          stage: "PROPOSAL",
+          temperature: "WARM",
+        });
+        targetDealId = createdDeal.id;
+      }
+      const dealId = targetDealId;
 
       const created = await createProposalForDeal(currentOrganizationId, dealId, {
         simulationId: sim.id,
@@ -1422,12 +1536,34 @@ export const ProposalEconomicsModal = forwardRef<
   }
   async function handleCreateProposalClick(
     deal: Deal,
-    _opts?: { forceStudyModal?: boolean }
+    opts?: { forceStudyModal?: boolean; existingSimulation?: SimulationListItem }
   ): Promise<void> {
     if (!currentOrganizationId) return;
     setProposalDeal(deal);
     setProposalError(null);
     resetProposalForm();
+
+    if (opts?.existingSimulation && !opts.forceStudyModal) {
+      const gen = buildGeneratedProposalFromSimulation(deal, opts.existingSimulation);
+      if (gen) {
+        setGeneratedProposal(gen);
+        setProposalKitDraft({
+          systemKw: String(gen.tamanhoSistemaKw),
+          roof: gen.roofType,
+          brandPreset: "",
+          brandCustom: "",
+          source: { kind: "auto" },
+          pins: {},
+          inverterType: "string",
+          gridTopology: "auto",
+          stringBoxId: "none",
+        });
+        setProposalResultOpen(true);
+        setProposalFormOpen(false);
+        return;
+      }
+    }
+
     setProposalFormOpen(true);
   }
 
@@ -1452,6 +1588,9 @@ export const ProposalEconomicsModal = forwardRef<
       await handleCreateProposalClickRef.current(deal, { forceStudyModal: true });
       await new Promise((r) => setTimeout(r, 50));
       await handleBillFileSelectedRef.current(file);
+    },
+    openWithSimulation: async (deal, simulation) => {
+      await handleCreateProposalClickRef.current(deal, { existingSimulation: simulation });
     },
   }));
 
