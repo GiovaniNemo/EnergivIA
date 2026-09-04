@@ -827,11 +827,18 @@ export class WhatsappBotService {
     });
 
     // 6. Gera a resposta pelo motor de estado do bot e gera a proposta real
-    const replyText = await this.generateBotResponse({
-      conversation: freshConversation || conversation,
-      incomingText,
-      extractionResult,
-    });
+    let replyText = "";
+    try {
+      replyText = await this.generateBotResponse({
+        conversation: freshConversation || conversation,
+        incomingText,
+        extractionResult,
+      });
+    } catch (err: any) {
+      this.logger.error(`Erro ao gerar resposta do bot para ${fromWaId}:`, err);
+      replyText =
+        "Desculpe, ocorreu um erro inesperado ao processar sua solicitação. Por favor, tente novamente (digite '0' ou 'novo').";
+    }
 
     if (replyText) {
       await this.prisma.message.create({
@@ -1796,12 +1803,7 @@ export class WhatsappBotService {
         (cabs.length > 1 && cabs[1] !== cabPreto ? cabs[1] : null);
       const con = cons[0];
 
-      const normalizeStr = (str: string) =>
-        (str || "")
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .toUpperCase()
-          .trim();
+      // Removed normalizeStr redeclaration to fix Temporal Dead Zone ReferenceError
 
       const matchedEsts = ests.filter((p: any) => {
         const n = p.product?.name || "";
