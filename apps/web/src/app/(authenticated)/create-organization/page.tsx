@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { createOrganization, uploadOrganizationLogo } from "@/lib/organizations-api";
+import { triggerWelcomeIntroSplash } from "@/components/layout/welcome-intro-splash";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImageDropzone } from "@/components/ui/image-dropzone";
@@ -395,6 +396,7 @@ export default function CreateOrganizationPage() {
       });
       setCurrentOrganizationId(organization.id);
       await refetch();
+      triggerWelcomeIntroSplash();
       router.replace("/painel");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao criar empresa");

@@ -8,15 +8,37 @@ interface WelcomeIntroSplashProps {
   onComplete?: () => void;
 }
 
+export function triggerWelcomeIntroSplash(): void {
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem("energivia_show_welcome_splash", "true");
+  }
+}
+
 export function WelcomeIntroSplash({ onComplete }: WelcomeIntroSplashProps): JSX.Element | null {
+  const [shouldShow, setShouldShow] = useState<boolean | null>(null);
   // Step: 1 = "Bem-vindo à EnergivIA", 2 = "O seu parceiro via IA", 3 = Loading State
   const [step, setStep] = useState<number>(1);
   const [isExiting, setIsExiting] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const [progress, setProgress] = useState(0);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isPending =
+        sessionStorage.getItem("energivia_show_welcome_splash") === "true" ||
+        localStorage.getItem("energivia_show_welcome_splash") === "true";
+      setShouldShow(isPending);
+    } else {
+      setShouldShow(false);
+    }
+  }, []);
+
   const handleFinish = useCallback(() => {
     setIsExiting(true);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("energivia_show_welcome_splash");
+      localStorage.removeItem("energivia_show_welcome_splash");
+    }
     setTimeout(() => {
       setIsDismissed(true);
       if (onComplete) onComplete();
@@ -24,6 +46,8 @@ export function WelcomeIntroSplash({ onComplete }: WelcomeIntroSplashProps): JSX
   }, [onComplete]);
 
   useEffect(() => {
+    if (!shouldShow) return;
+
     // ESC key listener to skip intro quickly
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -32,9 +56,11 @@ export function WelcomeIntroSplash({ onComplete }: WelcomeIntroSplashProps): JSX
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleFinish]);
+  }, [shouldShow, handleFinish]);
 
   useEffect(() => {
+    if (!shouldShow) return;
+
     // Timeline sequence
     // Phase 1: Step 1 (0 -> 2400ms) - "Bem-vindo à EnergivIA"
     const timerStep2 = setTimeout(() => {
@@ -65,9 +91,9 @@ export function WelcomeIntroSplash({ onComplete }: WelcomeIntroSplashProps): JSX
       clearTimeout(timerFinish);
       clearInterval(progressInterval);
     };
-  }, [handleFinish]);
+  }, [shouldShow, handleFinish]);
 
-  if (isDismissed) return null;
+  if (!shouldShow || isDismissed) return null;
 
   return (
     <div
