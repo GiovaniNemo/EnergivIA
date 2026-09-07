@@ -1391,11 +1391,12 @@ export default function PipelinePage(): JSX.Element {
       )}
 
       {}
+      {/* KPI Cards (Carousel no mobile, Grid no desktop) */}
       {activeView === "kanban" && (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.6fr_1fr_1fr]">
-          {}
+        <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-2.5 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:grid-cols-[1.6fr_1fr_1fr] snap-x">
+          {/* Card 1: Ação Prioritária */}
           <div
-            className={`relative overflow-hidden rounded-xl border bg-gradient-to-br p-4 ${
+            className={`min-w-[85vw] sm:min-w-0 snap-center shrink-0 sm:shrink relative overflow-hidden rounded-xl border bg-gradient-to-br p-4 ${
               summary.overdueDeals > 0
                 ? "border-red-200 from-red-50 to-white dark:border-red-900 dark:from-red-950/30 dark:to-[var(--color-card)]"
                 : "border-emerald-200 from-emerald-50 to-white dark:border-emerald-900 dark:from-emerald-950/30 dark:to-[var(--color-card)]"
@@ -1439,8 +1440,8 @@ export default function PipelinePage(): JSX.Element {
               {summary.overdueDeals > 0 ? "Ver prioridades →" : "Acompanhar pipeline →"}
             </button>
           </div>
-          {}
-          <div className="relative overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4">
+          {/* Card 2: Pipeline Ativo */}
+          <div className="min-w-[85vw] sm:min-w-0 snap-center shrink-0 sm:shrink relative overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
               Pipeline ativo
             </p>
@@ -1466,8 +1467,8 @@ export default function PipelinePage(): JSX.Element {
               />
             </svg>
           </div>
-          {/* Conversão */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4">
+          {/* Card 3: Conversão */}
+          <div className="min-w-[85vw] sm:min-w-0 snap-center shrink-0 sm:shrink rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
               Conversão Proposta → Fechado
             </p>
@@ -1512,8 +1513,8 @@ export default function PipelinePage(): JSX.Element {
       {}
       {activeView === "kanban" && (
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] overflow-hidden">
-          {}
-          <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-3">
+          {/* Header visível apenas no desktop */}
+          <div className="hidden sm:flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-3">
             <span className="text-sm font-semibold text-[var(--color-foreground)]">
               {groupBy === "assignee" ? "Funil por responsável" : "Funil por estágio"}
             </span>
@@ -1547,7 +1548,7 @@ export default function PipelinePage(): JSX.Element {
               </button>
             </div>
           </div>
-          <div className="p-3">
+          <div className="p-2 sm:p-3">
             <KanbanBoard
               stages={
                 groupBy === "assignee"

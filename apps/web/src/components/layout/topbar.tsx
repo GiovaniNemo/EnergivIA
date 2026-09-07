@@ -241,11 +241,11 @@ export function Topbar() {
             </Link>
           ))}
 
-        {/* Desktop WhatsApp AI Button */}
+        {/* WhatsApp AI Button (Responsive) */}
         <button
           type="button"
           onClick={() => setWhatsappModalOpen(true)}
-          className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 px-3 py-1.5 text-xs font-bold text-white hover:from-emerald-600 hover:to-green-700 shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95 hover:from-emerald-600 hover:to-green-700 shrink-0"
           title="Conhecer IA no WhatsApp"
         >
           {customWaLogoUrl ? (
@@ -257,19 +257,8 @@ export function Topbar() {
           ) : (
             <WhatsappIcon className="h-4 w-4 shrink-0 text-white" />
           )}
-          IA no WhatsApp 💬
-        </button>
-
-        {/* Mobile WhatsApp AI Topbar Icon */}
-        <button
-          type="button"
-          onClick={() => setWhatsappModalOpen(true)}
-          className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 sm:hidden hover:bg-emerald-500/20 transition-colors relative"
-          aria-label="Conhecer IA no WhatsApp"
-          title="IA no WhatsApp"
-        >
-          <WhatsappIcon className="h-4 w-4" />
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="hidden sm:inline">IA no WhatsApp 💬</span>
+          <span className="sm:hidden text-[11px]">IA WhatsApp</span>
         </button>
 
         <NotificationsBell />
@@ -289,18 +278,6 @@ export function Topbar() {
         )}
         <UserMenu />
       </div>
-
-      {/* Mobile Floating Action Button (FAB) for WhatsApp AI */}
-      <button
-        type="button"
-        onClick={() => setWhatsappModalOpen(true)}
-        className="fixed bottom-6 right-5 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 px-4 py-3 text-xs font-bold text-white shadow-xl shadow-emerald-600/30 sm:hidden hover:scale-105 active:scale-95 transition-all border border-emerald-400/30"
-        aria-label="Falar com IA no WhatsApp"
-      >
-        <WhatsappIcon className="h-4 w-4" />
-        <span>IA WhatsApp</span>
-        <span className="h-2 w-2 rounded-full bg-white animate-ping" />
-      </button>
 
       {/* Mobile Search Dialog */}
       <Dialog open={mobileSearchOpen} onOpenChange={setMobileSearchOpen}>
