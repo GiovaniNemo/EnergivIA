@@ -147,11 +147,11 @@ export function ProposalInternalHeader({
         </div>
 
         <div className="flex w-full flex-col gap-3 lg:max-w-md lg:shrink-0">
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               type="button"
               size="lg"
-              className="h-12 flex-1 gap-2 bg-emerald-600 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 hover:bg-emerald-700"
+              className="h-12 w-full sm:flex-1 gap-2 bg-emerald-600 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 hover:bg-emerald-700"
               onClick={onSendToClient}
             >
               <Send className="h-4 w-4 shrink-0" />
@@ -160,7 +160,7 @@ export function ProposalInternalHeader({
             <Button
               type="button"
               size="lg"
-              className="h-12 flex-1 gap-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-500 dark:hover:bg-emerald-950/50 text-sm font-semibold shadow-sm"
+              className="h-12 w-full sm:flex-1 gap-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-500 dark:hover:bg-emerald-950/50 text-sm font-semibold shadow-sm"
               variant="outline"
               onClick={onCloseProposal}
             >

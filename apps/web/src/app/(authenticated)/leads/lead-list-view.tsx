@@ -10,6 +10,7 @@ import {
   Search,
   UserPlus,
   Users,
+  MessageCircle,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,6 +38,7 @@ import {
   createLead,
   getLeadsDashboardStats,
   listLeads,
+  waMeUrl,
   type DealStage,
   type LeadListItem,
   type LeadsDashboardStats,
@@ -479,129 +481,235 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
               Nenhum cliente nesta visão. Ajuste filtros ou cadastre um novo cliente.
             </p>
           ) : (
-            <table className="w-full min-w-[860px] border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-[var(--color-border)] text-xs uppercase tracking-wide text-[var(--color-muted-foreground)]">
-                  <th className="py-3 pr-4 font-medium">Nome / Info</th>
-                  <th className="py-3 pr-4 font-medium">Status</th>
-                  <th className="py-3 pr-4 font-medium">Atividade</th>
-                  <th className="py-3 pr-4 font-medium">Próximo passo</th>
-                  <th className="py-3 text-right font-medium">Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="cursor-pointer border-b border-[var(--color-border)]/70 transition hover:bg-[var(--color-muted)]/25"
-                    onClick={() => setDrawerLeadId(row.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setDrawerLeadId(row.id);
-                      }
-                    }}
-                    tabIndex={0}
-                    role="button"
-                  >
-                    <td className="py-3 pr-4">
-                      <p className="font-medium text-[var(--color-foreground)]">{row.name}</p>
-                      <p className="text-xs text-[var(--color-muted-foreground)]">
-                        {row.email ?? "—"}
-                        {row.cpfCnpj ? (
-                          <>
-                            {" · "}
-                            {formatCpfCnpjDigits(row.cpfCnpj)}
-                          </>
-                        ) : null}
-                      </p>
-                    </td>
-                    <td className="py-3 pr-4 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-2">
-                        <DealStageBadge stage={row.latestDealStage} />
-                        {row.latestDealTemperature === "HOT" ? (
-                          <span className="inline-flex" title="Quente">
-                            <Flame
-                              className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400"
-                              aria-hidden
-                            />
-                          </span>
-                        ) : null}
-                      </span>
-                    </td>
-                    <td className="py-3 pr-4">
-                      {(() => {
-                        const act = lastActivityPresentation(
-                          row.latestDealUpdatedAt ?? row.updatedAt
-                        );
-                        return (
-                          <span className="inline-flex items-center gap-2">
-                            <span
-                              className={`inline-block h-2 w-2 shrink-0 rounded-full ${ACTIVITY_TONE_DOT_CLASS[act.tone]}`}
-                              aria-hidden
-                            />
-                            <span className={`text-sm ${ACTIVITY_TONE_TEXT_CLASS[act.tone]}`}>
-                              {act.label}
+            <>
+              {/* Mobile Cards View */}
+              <div className="space-y-3 md:hidden">
+                {filteredRows.map((row) => {
+                  const act = lastActivityPresentation(row.latestDealUpdatedAt ?? row.updatedAt);
+                  return (
+                    <div
+                      key={row.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setDrawerLeadId(row.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setDrawerLeadId(row.id);
+                        }
+                      }}
+                      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3.5 shadow-sm transition hover:border-[var(--color-foreground)]/20 active:scale-[0.99]"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-semibold text-sm text-[var(--color-foreground)] truncate">
+                            {row.name}
+                          </h4>
+                          <p className="text-xs text-[var(--color-muted-foreground)] truncate">
+                            {row.email ?? row.whatsapp ?? "Sem e-mail cadastrado"}
+                          </p>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-1.5">
+                          <DealStageBadge stage={row.latestDealStage} />
+                          {row.latestDealTemperature === "HOT" && (
+                            <span title="Quente">
+                              <Flame className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
                             </span>
-                          </span>
-                        );
-                      })()}
-                    </td>
-                    <td className="py-3 pr-4">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {row.latestDealStage === "LOST" ? (
-                          <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                            {formatNextStepSummary(
-                              row.nextActionAt,
-                              row.nextActionType,
-                              row.latestDealStage
-                            )}
-                          </span>
-                        ) : row.nextActionAt ? (
-                          <span
-                            className={`inline-flex items-center gap-1.5 text-sm ${
-                              isOverdue(row.nextActionAt)
-                                ? "font-medium text-amber-800 dark:text-amber-300"
-                                : "text-[var(--color-foreground)]"
-                            }`}
-                          >
-                            <Calendar className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
-                            {formatNextStepSummary(
-                              row.nextActionAt,
-                              row.nextActionType,
-                              row.latestDealStage
-                            )}
-                          </span>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 gap-1 border-dashed text-xs font-medium"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openNextStepModal(row);
-                            }}
-                          >
-                            <Plus className="h-3.5 w-3.5" aria-hidden />
-                            Definir
-                          </Button>
-                        )}
-                        {isOverdue(row.nextActionAt) && row.latestDealStage !== "LOST" ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-200">
-                            <AlertTriangle className="h-3 w-3" aria-hidden />
-                            Atrasado
-                          </span>
-                        ) : null}
+                          )}
+                        </div>
                       </div>
-                    </td>
-                    <td className="py-3 text-right font-medium tabular-nums text-[var(--color-foreground)]">
-                      {formatDealValueDisplay(row.latestDealValue)}
-                    </td>
+
+                      <div className="mt-3 flex items-center justify-between border-t border-[var(--color-border)]/60 pt-2.5 text-xs">
+                        <div className="flex items-center gap-1.5 text-[var(--color-muted-foreground)]">
+                          <span
+                            className={`inline-block h-2 w-2 shrink-0 rounded-full ${ACTIVITY_TONE_DOT_CLASS[act.tone]}`}
+                          />
+                          <span className={ACTIVITY_TONE_TEXT_CLASS[act.tone]}>{act.label}</span>
+                        </div>
+                        <div className="font-bold text-[var(--color-foreground)] tabular-nums">
+                          {formatDealValueDisplay(row.latestDealValue)}
+                        </div>
+                      </div>
+
+                      {/* Next Step & Quick Actions */}
+                      <div className="mt-2.5 flex items-center justify-between gap-2 pt-1">
+                        <div className="min-w-0 flex-1">
+                          {row.nextActionAt ? (
+                            <span
+                              className={`inline-flex items-center gap-1 text-[11px] ${
+                                isOverdue(row.nextActionAt)
+                                  ? "font-semibold text-amber-700 dark:text-amber-300"
+                                  : "text-[var(--color-muted-foreground)]"
+                              }`}
+                            >
+                              <Calendar className="h-3 w-3 shrink-0" />
+                              <span className="truncate">
+                                {formatNextStepSummary(
+                                  row.nextActionAt,
+                                  row.nextActionType,
+                                  row.latestDealStage
+                                )}
+                              </span>
+                              {isOverdue(row.nextActionAt) && (
+                                <span className="rounded bg-amber-500/15 px-1 py-0.2 text-[9px] font-bold text-amber-700 dark:text-amber-300">
+                                  Atrasado
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                              Sem próximo passo
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          className="flex items-center gap-1.5 shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {row.whatsapp && (
+                            <a
+                              href={waMeUrl(row.whatsapp)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 hover:bg-emerald-100 transition-colors"
+                              title="Abrir WhatsApp"
+                              aria-label="WhatsApp"
+                            >
+                              <MessageCircle className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table View */}
+              <table className="hidden md:table w-full min-w-[860px] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--color-border)] text-xs uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                    <th className="py-3 pr-4 font-medium">Nome / Info</th>
+                    <th className="py-3 pr-4 font-medium">Status</th>
+                    <th className="py-3 pr-4 font-medium">Atividade</th>
+                    <th className="py-3 pr-4 font-medium">Próximo passo</th>
+                    <th className="py-3 text-right font-medium">Valor</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredRows.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="cursor-pointer border-b border-[var(--color-border)]/70 transition hover:bg-[var(--color-muted)]/25"
+                      onClick={() => setDrawerLeadId(row.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setDrawerLeadId(row.id);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                    >
+                      <td className="py-3 pr-4">
+                        <p className="font-medium text-[var(--color-foreground)]">{row.name}</p>
+                        <p className="text-xs text-[var(--color-muted-foreground)]">
+                          {row.email ?? "—"}
+                          {row.cpfCnpj ? (
+                            <>
+                              {" · "}
+                              {formatCpfCnpjDigits(row.cpfCnpj)}
+                            </>
+                          ) : null}
+                        </p>
+                      </td>
+                      <td className="py-3 pr-4 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-2">
+                          <DealStageBadge stage={row.latestDealStage} />
+                          {row.latestDealTemperature === "HOT" ? (
+                            <span className="inline-flex" title="Quente">
+                              <Flame
+                                className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400"
+                                aria-hidden
+                              />
+                            </span>
+                          ) : null}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4">
+                        {(() => {
+                          const act = lastActivityPresentation(
+                            row.latestDealUpdatedAt ?? row.updatedAt
+                          );
+                          return (
+                            <span className="inline-flex items-center gap-2">
+                              <span
+                                className={`inline-block h-2 w-2 shrink-0 rounded-full ${ACTIVITY_TONE_DOT_CLASS[act.tone]}`}
+                                aria-hidden
+                              />
+                              <span className={`text-sm ${ACTIVITY_TONE_TEXT_CLASS[act.tone]}`}>
+                                {act.label}
+                              </span>
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className="py-3 pr-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {row.latestDealStage === "LOST" ? (
+                            <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                              {formatNextStepSummary(
+                                row.nextActionAt,
+                                row.nextActionType,
+                                row.latestDealStage
+                              )}
+                            </span>
+                          ) : row.nextActionAt ? (
+                            <span
+                              className={`inline-flex items-center gap-1.5 text-sm ${
+                                isOverdue(row.nextActionAt)
+                                  ? "font-medium text-amber-800 dark:text-amber-300"
+                                  : "text-[var(--color-foreground)]"
+                              }`}
+                            >
+                              <Calendar className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
+                              {formatNextStepSummary(
+                                row.nextActionAt,
+                                row.nextActionType,
+                                row.latestDealStage
+                              )}
+                            </span>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 gap-1 border-dashed text-xs font-medium"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openNextStepModal(row);
+                              }}
+                            >
+                              <Plus className="h-3.5 w-3.5" aria-hidden />
+                              Definir
+                            </Button>
+                          )}
+                          {isOverdue(row.nextActionAt) && row.latestDealStage !== "LOST" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-200">
+                              <AlertTriangle className="h-3 w-3" aria-hidden />
+                              Atrasado
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className="py-3 text-right font-medium tabular-nums text-[var(--color-foreground)]">
+                        {formatDealValueDisplay(row.latestDealValue)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )}
           {list && list.meta.totalPages > 1 ? (
             <div className="mt-4 flex items-center justify-end gap-2">

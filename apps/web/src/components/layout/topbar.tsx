@@ -5,7 +5,8 @@ import { useTheme } from "@/components/providers/theme-provider";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, LogOut, Menu, UserRound, Timer, AlertTriangle } from "lucide-react";
+import { Moon, Sun, LogOut, Menu, UserRound, Timer, AlertTriangle, Search } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useSidebar } from "@/components/layout/sidebar-inset";
 import { OrganizationSwitcher } from "@/components/layout/organization-switcher";
 import { NotificationsBell } from "@/components/layout/notifications-bell";
@@ -135,6 +136,8 @@ export function Topbar() {
   const isMobile = useIsMobile();
   const collapsed = !open && !isMobile;
   const searchHandleRef = useRef<GlobalSearchHandle | null>(null);
+  const mobileSearchHandleRef = useRef<GlobalSearchHandle | null>(null);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [customWaLogoUrl, setCustomWaLogoUrl] = useState<string>("");
 
@@ -197,12 +200,24 @@ export function Topbar() {
           </Button>
         ) : null}
         <OrganizationSwitcher />
+        {/* Desktop Global Search */}
         <div className="hidden min-w-0 flex-1 max-w-md sm:block">
           <GlobalSearch ref={searchHandleRef} />
         </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-1 px-3 md:gap-2">
+        {/* Mobile Search Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="flex h-9 w-9 items-center justify-center rounded-lg sm:hidden text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+          onClick={() => setMobileSearchOpen(true)}
+          aria-label="Abrir pesquisa"
+        >
+          <Search className="h-4 w-4" />
+        </Button>
+
         {!hasActiveSub &&
           (trialDaysLeft === 0 ? (
             <Link
@@ -225,6 +240,8 @@ export function Topbar() {
               </span>
             </Link>
           ))}
+
+        {/* Desktop WhatsApp AI Button */}
         <button
           type="button"
           onClick={() => setWhatsappModalOpen(true)}
@@ -242,6 +259,19 @@ export function Topbar() {
           )}
           IA no WhatsApp 💬
         </button>
+
+        {/* Mobile WhatsApp AI Topbar Icon */}
+        <button
+          type="button"
+          onClick={() => setWhatsappModalOpen(true)}
+          className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 sm:hidden hover:bg-emerald-500/20 transition-colors relative"
+          aria-label="Conhecer IA no WhatsApp"
+          title="IA no WhatsApp"
+        >
+          <WhatsappIcon className="h-4 w-4" />
+          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+        </button>
+
         <NotificationsBell />
         <Button
           variant="ghost"
@@ -259,6 +289,28 @@ export function Topbar() {
         )}
         <UserMenu />
       </div>
+
+      {/* Mobile Floating Action Button (FAB) for WhatsApp AI */}
+      <button
+        type="button"
+        onClick={() => setWhatsappModalOpen(true)}
+        className="fixed bottom-6 right-5 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 px-4 py-3 text-xs font-bold text-white shadow-xl shadow-emerald-600/30 sm:hidden hover:scale-105 active:scale-95 transition-all border border-emerald-400/30"
+        aria-label="Falar com IA no WhatsApp"
+      >
+        <WhatsappIcon className="h-4 w-4" />
+        <span>IA WhatsApp</span>
+        <span className="h-2 w-2 rounded-full bg-white animate-ping" />
+      </button>
+
+      {/* Mobile Search Dialog */}
+      <Dialog open={mobileSearchOpen} onOpenChange={setMobileSearchOpen}>
+        <DialogContent className="max-w-[95vw] p-4 sm:max-w-md top-[20%] translate-y-0">
+          <DialogTitle className="sr-only">Pesquisa Global</DialogTitle>
+          <div className="pt-2">
+            <GlobalSearch ref={mobileSearchHandleRef} onSelect={() => setMobileSearchOpen(false)} />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <WhatsappConnectionModal open={whatsappModalOpen} onOpenChange={setWhatsappModalOpen} />
     </header>

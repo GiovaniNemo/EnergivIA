@@ -1812,14 +1812,27 @@ export default function PipelinePage(): JSX.Element {
                           e.stopPropagation();
                           nextBestAction.onClick();
                         }}
-                        className="flex-1 rounded-[6px] bg-[var(--color-foreground)] px-2 py-1.5 text-center text-[11px] font-semibold text-[var(--color-background)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex-1 rounded-[6px] bg-[var(--color-foreground)] px-2 py-1.5 text-center text-[11px] font-semibold text-[var(--color-background)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 truncate"
                       >
                         {nextBestAction.label}
                       </button>
+                      {deal.whatsapp && (
+                        <a
+                          href={waMeUrl(deal.whatsapp)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex h-[28px] w-[28px] items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 hover:bg-emerald-100 transition-colors shrink-0"
+                          title="Abrir WhatsApp"
+                          aria-label="WhatsApp"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                        </a>
+                      )}
                       <IconButton
                         aria-label="Mais ações"
                         size="small"
-                        className="!h-[28px] !w-[28px] !rounded-md !border !border-[var(--color-border)]"
+                        className="!h-[28px] !w-[28px] !rounded-md !border !border-[var(--color-border)] shrink-0"
                         onClick={(e) => {
                           e.stopPropagation();
                           setActionsMenu({ dealId: deal.id, anchorEl: e.currentTarget });
