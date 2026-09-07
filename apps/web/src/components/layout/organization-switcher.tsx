@@ -27,18 +27,18 @@ export function OrganizationSwitcher() {
       <button
         type="button"
         className={cn(
-          "flex h-9 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 text-sm font-medium text-[var(--color-foreground)] shadow-sm transition-colors",
+          "flex h-9 max-w-[140px] xs:max-w-[180px] sm:max-w-none items-center gap-1.5 sm:gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-2 sm:px-3 text-xs sm:text-sm font-medium text-[var(--color-foreground)] shadow-sm transition-colors",
           "hover:bg-[var(--color-accent)] hover:text-[var(--color-accent-foreground)]"
         )}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        <Building2 className="h-4 w-4 shrink-0 text-[var(--color-muted-foreground)]" />
-        <span className="max-w-[140px] truncate sm:max-w-[200px]">
+        <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-[var(--color-muted-foreground)]" />
+        <span className="max-w-[65px] xs:max-w-[100px] sm:max-w-[180px] truncate">
           {currentOrganization?.name ?? "Organização"}
         </span>
-        <ChevronDown className="h-4 w-4 shrink-0 text-[var(--color-muted-foreground)]" />
+        <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-[var(--color-muted-foreground)] opacity-70" />
       </button>
       {open && (
         <div

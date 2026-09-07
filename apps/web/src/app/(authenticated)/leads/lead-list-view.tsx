@@ -296,7 +296,7 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
           {!stats ? (
             <LoadingState compact label="Carregando resumo" />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
               {(
                 [
                   {
@@ -340,22 +340,22 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
                       setStatusFilter(filterStage);
                       setPage(1);
                     }}
-                    className={`w-full rounded-xl border px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-card)] ${
+                    className={`w-full rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-card)] ${
                       active
                         ? "border-[var(--color-ring)]/60 bg-[var(--color-accent)]/50 shadow-sm ring-1 ring-[var(--color-ring)]/35"
                         : "border-[var(--color-border)] bg-[var(--color-muted)]/15 hover:bg-[var(--color-muted)]/35"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                    <div className="flex items-center justify-between gap-1 sm:gap-2">
+                      <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
                         {label}
                       </span>
                       <Icon
-                        className="h-4 w-4 text-[var(--color-muted-foreground)] opacity-60"
+                        className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[var(--color-muted-foreground)] opacity-60"
                         aria-hidden
                       />
                     </div>
-                    <p className="mt-1 text-2xl font-bold tabular-nums text-[var(--color-foreground)]">
+                    <p className="mt-0.5 sm:mt-1 text-xl sm:text-2xl font-bold tabular-nums text-[var(--color-foreground)]">
                       {value}
                     </p>
                   </button>

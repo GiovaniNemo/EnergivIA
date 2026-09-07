@@ -419,7 +419,7 @@ export function PipelineTableView({ deals, onOpenDeal }: TableViewProps): JSX.El
 
       {}
       {selectedCount > 0 && (
-        <div className="fixed bottom-10 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-xl bg-[var(--color-foreground)] px-3.5 py-2.5 text-xs text-[var(--color-background)] shadow-2xl">
+        <div className="fixed bottom-10 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-xl bg-zinc-900 px-3.5 py-2.5 text-xs text-white shadow-2xl dark:bg-zinc-800 dark:border dark:border-zinc-700">
           <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[11px] font-bold text-white">
             {selectedCount}
           </span>

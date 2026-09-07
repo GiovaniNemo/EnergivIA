@@ -1813,7 +1813,7 @@ export default function PipelinePage(): JSX.Element {
                           e.stopPropagation();
                           nextBestAction.onClick();
                         }}
-                        className="flex-1 rounded-[6px] bg-[var(--color-foreground)] px-2 py-1.5 text-center text-[11px] font-semibold text-[var(--color-background)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 truncate"
+                        className="flex-1 rounded-[6px] bg-emerald-600 px-2.5 py-1.5 text-center text-[11px] font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 truncate"
                       >
                         {nextBestAction.label}
                       </button>

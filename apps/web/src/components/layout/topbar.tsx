@@ -187,12 +187,12 @@ export function Topbar() {
       </div>
 
       {/* Page context / actions */}
-      <div className="flex min-w-0 flex-1 items-center gap-2 px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2 sm:gap-2 sm:px-4">
         {isMobile ? (
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 shrink-0 rounded-lg"
+            className="h-8 w-8 shrink-0 rounded-lg sm:h-9 sm:w-9"
             onClick={() => setOpen(true)}
             aria-label="Abrir menu"
           >
@@ -206,12 +206,12 @@ export function Topbar() {
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1 px-3 md:gap-2">
+      <div className="flex shrink-0 items-center gap-0.5 px-1.5 sm:gap-1.5 sm:px-3 md:gap-2">
         {/* Mobile Search Button */}
         <Button
           variant="ghost"
           size="icon"
-          className="flex h-9 w-9 items-center justify-center rounded-lg sm:hidden text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+          className="flex h-8 w-8 items-center justify-center rounded-lg sm:hidden text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
           onClick={() => setMobileSearchOpen(true)}
           aria-label="Abrir pesquisa"
         >
@@ -245,7 +245,7 @@ export function Topbar() {
         <button
           type="button"
           onClick={() => setWhatsappModalOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95 hover:from-emerald-600 hover:to-green-700 shrink-0"
+          className="inline-flex h-8 items-center gap-1 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 px-2 sm:h-9 sm:gap-1.5 sm:px-2.5 text-xs font-bold text-white shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95 hover:from-emerald-600 hover:to-green-700 shrink-0"
           title="Conhecer IA no WhatsApp"
         >
           {customWaLogoUrl ? (
@@ -257,15 +257,15 @@ export function Topbar() {
           ) : (
             <WhatsappIcon className="h-4 w-4 shrink-0 text-white" />
           )}
-          <span className="hidden sm:inline">IA no WhatsApp 💬</span>
-          <span className="sm:hidden text-[11px]">IA WhatsApp</span>
+          <span className="hidden md:inline">IA no WhatsApp 💬</span>
+          <span className="hidden xs:inline md:hidden text-[11px]">IA</span>
         </button>
 
         <NotificationsBell />
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 rounded-lg"
+          className="h-8 w-8 rounded-lg sm:h-9 sm:w-9"
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
           aria-label="Alternar tema"
         >
