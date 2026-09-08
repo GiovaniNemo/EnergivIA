@@ -17,111 +17,14 @@ import {
   Zap,
 } from "lucide-react";
 
-type MessageItem =
-  | {
-      id: string;
-      type: "user";
-      text: string;
-      time: string;
-    }
-  | {
-      id: string;
-      type: "user_doc";
-      title: string;
-      subtitle: string;
-      time: string;
-    }
-  | {
-      id: string;
-      type: "bot";
-      kind:
-        | "welcome"
-        | "ask_bill"
-        | "ocr_result"
-        | "kit_dynamis"
-        | "ask_name"
-        | "ask_phone"
-        | "ask_template"
-        | "final_proposal";
-      time: string;
-    };
-
-type Action =
-  | { type: "typing_input"; text: string; duration: number }
-  | { type: "send_user"; text: string; time: string }
-  | { type: "send_user_doc"; title: string; subtitle: string; time: string; duration: number }
-  | { type: "bot_typing"; label: string; duration: number }
-  | {
-      type: "send_bot";
-      kind: MessageItem["type"] extends "bot" ? MessageItem["kind"] : never;
-      time: string;
-    }
-  | { type: "pause"; duration: number };
-
 interface Milestone {
   id: number;
   title: string;
   tag: string;
   description: string;
-  actionIndex: number;
+  startTime: number;
+  endTime: number;
 }
-
-const SCRIPT_ACTIONS: Action[] = [
-  // 0: Passo 1 - Início
-  { type: "typing_input", text: "Boa tarde", duration: 700 },
-  { type: "send_user", text: "Boa tarde", time: "16:53" },
-  { type: "bot_typing", label: "EnergivIA está digitando...", duration: 1100 },
-  { type: "send_bot", kind: "welcome", time: "16:53" },
-  { type: "pause", duration: 1200 },
-  { type: "typing_input", text: "1", duration: 500 },
-  { type: "send_user", text: "1", time: "16:54" },
-  { type: "bot_typing", label: "EnergivIA está digitando...", duration: 1000 },
-  { type: "send_bot", kind: "ask_bill", time: "16:54" },
-  { type: "pause", duration: 1200 },
-
-  // 10: Passo 2 - Envio da Fatura & OCR
-  {
-    type: "send_user_doc",
-    title: "SegundaViaCopel.pdf",
-    subtitle: "1 página • 524 kB • PDF",
-    duration: 800,
-    time: "16:54",
-  },
-  { type: "bot_typing", label: "EnergivIA analisando fatura com IA...", duration: 1600 },
-  { type: "send_bot", kind: "ocr_result", time: "16:54" },
-  { type: "pause", duration: 1400 },
-  { type: "typing_input", text: "2", duration: 500 },
-  { type: "send_user", text: "2", time: "16:54" },
-
-  // 16: Passo 3 - Dimensionamento & Kit Dynamis
-  { type: "bot_typing", label: "EnergivIA calculando melhor kit solar...", duration: 1400 },
-  { type: "send_bot", kind: "kit_dynamis", time: "16:54" },
-  { type: "pause", duration: 1400 },
-  { type: "typing_input", text: "1", duration: 500 },
-  { type: "send_user", text: "1", time: "16:55" },
-  { type: "bot_typing", label: "EnergivIA está digitando...", duration: 900 },
-  { type: "send_bot", kind: "ask_name", time: "16:55" },
-  { type: "pause", duration: 1000 },
-
-  // 24: Passo 4 - Registro do Cliente (Marcelo)
-  { type: "typing_input", text: "Marcelo", duration: 700 },
-  { type: "send_user", text: "Marcelo", time: "16:55" },
-  { type: "bot_typing", label: "EnergivIA está digitando...", duration: 900 },
-  { type: "send_bot", kind: "ask_phone", time: "16:55" },
-  { type: "pause", duration: 1000 },
-  { type: "typing_input", text: "(44) 99888-0000", duration: 900 },
-  { type: "send_user", text: "(44) 99888-0000", time: "16:55" },
-  { type: "bot_typing", label: "EnergivIA está digitando...", duration: 900 },
-  { type: "send_bot", kind: "ask_template", time: "16:55" },
-  { type: "pause", duration: 1000 },
-  { type: "typing_input", text: "1", duration: 500 },
-  { type: "send_user", text: "1", time: "16:55" },
-
-  // 36: Passo 5 - Proposta Comercial Pronta
-  { type: "bot_typing", label: "EnergivIA gerando proposta em PDF...", duration: 1600 },
-  { type: "send_bot", kind: "final_proposal", time: "16:56" },
-  { type: "pause", duration: 8000 },
-];
 
 const MILESTONES: Milestone[] = [
   {
@@ -129,169 +32,229 @@ const MILESTONES: Milestone[] = [
     title: "Início & Menu Interativo",
     tag: "Passo 1",
     description: "O cliente manda 'Boa tarde' e o bot apresenta as opções comerciais.",
-    actionIndex: 0,
+    startTime: 0,
+    endTime: 6000,
   },
   {
     id: 1,
-    title: "Leitura da Fatura Copel",
+    title: "Leitura da Fatura de Energia",
     tag: "Passo 2",
     description: "Envio do PDF da fatura e extração por IA do consumo (257 kWh/mês) e telhado.",
-    actionIndex: 10,
+    startTime: 6000,
+    endTime: 11800,
   },
   {
     id: 2,
     title: "Seleção do Kit Dynamis",
     tag: "Passo 3",
     description: "Cálculo da potência (3,15 kWp), preço do kit Dynamis e escolha do integrador.",
-    actionIndex: 16,
+    startTime: 11800,
+    endTime: 17800,
   },
   {
     id: 3,
     title: "Dados do Cliente no CRM",
     tag: "Passo 4",
     description: "Coleta do nome (Marcelo), WhatsApp fictício e template desejado.",
-    actionIndex: 24,
+    startTime: 17800,
+    endTime: 25200,
   },
   {
     id: 4,
     title: "Proposta Pronta com Link",
     tag: "Passo 5",
     description: "Entrega do link elegante da proposta pronto para enviar ao cliente.",
-    actionIndex: 36,
+    startTime: 25200,
+    endTime: 35000,
   },
 ];
 
+const TOTAL_CYCLE_MS = 35000;
+
+interface ScheduledMessage {
+  id: string;
+  showAt: number;
+  type: "user" | "user_doc" | "bot";
+  text?: string;
+  title?: string;
+  subtitle?: string;
+  kind?:
+    | "welcome"
+    | "ask_bill"
+    | "ocr_result"
+    | "kit_dynamis"
+    | "ask_name"
+    | "ask_phone"
+    | "ask_template"
+    | "final_proposal";
+  time: string;
+}
+
+const SCHEDULED_MESSAGES: ScheduledMessage[] = [
+  // Passo 1
+  { id: "m1", showAt: 600, type: "user", text: "Boa tarde", time: "16:53" },
+  { id: "m2", showAt: 1700, type: "bot", kind: "welcome", time: "16:53" },
+  { id: "m3", showAt: 3700, type: "user", text: "1", time: "16:54" },
+  { id: "m4", showAt: 4700, type: "bot", kind: "ask_bill", time: "16:54" },
+
+  // Passo 2
+  {
+    id: "m5",
+    showAt: 6800,
+    type: "user_doc",
+    title: "Fatura_de_Energia.pdf",
+    subtitle: "1 página • 480 kB • PDF",
+    time: "16:54",
+  },
+  { id: "m6", showAt: 8400, type: "bot", kind: "ocr_result", time: "16:54" },
+  { id: "m7", showAt: 10700, type: "user", text: "2", time: "16:54" },
+
+  // Passo 3
+  { id: "m8", showAt: 13200, type: "bot", kind: "kit_dynamis", time: "16:54" },
+  { id: "m9", showAt: 15500, type: "user", text: "1", time: "16:55" },
+  { id: "m10", showAt: 16500, type: "bot", kind: "ask_name", time: "16:55" },
+
+  // Passo 4
+  { id: "m11", showAt: 18400, type: "user", text: "Marcelo", time: "16:55" },
+  { id: "m12", showAt: 19400, type: "bot", kind: "ask_phone", time: "16:55" },
+  { id: "m13", showAt: 21600, type: "user", text: "(44) 99888-0000", time: "16:55" },
+  { id: "m14", showAt: 22600, type: "bot", kind: "ask_template", time: "16:55" },
+  { id: "m15", showAt: 24300, type: "user", text: "1", time: "16:55" },
+
+  // Passo 5
+  { id: "m16", showAt: 26800, type: "bot", kind: "final_proposal", time: "16:56" },
+];
+
+interface TypingSpan {
+  start: number;
+  end: number;
+  label: string;
+}
+
+const BOT_TYPING_SPANS: TypingSpan[] = [
+  { start: 600, end: 1700, label: "EnergivIA está digitando..." },
+  { start: 3700, end: 4700, label: "EnergivIA está digitando..." },
+  { start: 6800, end: 8400, label: "EnergivIA analisando fatura com IA..." },
+  { start: 11800, end: 13200, label: "EnergivIA calculando melhor kit solar..." },
+  { start: 15500, end: 16500, label: "EnergivIA está digitando..." },
+  { start: 18400, end: 19400, label: "EnergivIA está digitando..." },
+  { start: 21600, end: 22600, label: "EnergivIA está digitando..." },
+  { start: 25200, end: 26800, label: "EnergivIA gerando proposta em PDF..." },
+];
+
+interface InputDraftSpan {
+  start: number;
+  end: number;
+  fullText: string;
+}
+
+const USER_INPUT_DRAFTS: InputDraftSpan[] = [
+  { start: 0, end: 600, fullText: "Boa tarde" },
+  { start: 3200, end: 3700, fullText: "1" },
+  { start: 10200, end: 10700, fullText: "2" },
+  { start: 15000, end: 15500, fullText: "1" },
+  { start: 17800, end: 18400, fullText: "Marcelo" },
+  { start: 20600, end: 21600, fullText: "(44) 99888-0000" },
+  { start: 23800, end: 24300, fullText: "1" },
+];
+
 export function WhatsappFlowSimulator(): JSX.Element {
-  const [actionIndex, setActionIndex] = useState<number>(0);
+  const [timeMs, setTimeMs] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [speed, setSpeed] = useState<number>(1);
-  const [inputDraft, setInputDraft] = useState<string>("");
-  const [typingIndicator, setTypingIndicator] = useState<string | null>(null);
 
-  // Computed messages based on the current actionIndex
-  const messages = useMemo(() => {
-    const list: MessageItem[] = [];
-    for (let i = 0; i < actionIndex; i++) {
-      const act = SCRIPT_ACTIONS[i];
-      if (act.type === "send_user") {
-        list.push({
-          id: `u-${i}`,
-          type: "user",
-          text: act.text,
-          time: act.time,
-        });
-      } else if (act.type === "send_user_doc") {
-        list.push({
-          id: `udoc-${i}`,
-          type: "user_doc",
-          title: act.title,
-          subtitle: act.subtitle,
-          time: act.time,
-        });
-      } else if (act.type === "send_bot") {
-        list.push({
-          id: `b-${i}`,
-          type: "bot",
-          kind: act.kind,
-          time: act.time,
+  const bottomAnchorRef = useRef<HTMLDivElement>(null);
+  const lastTimeRef = useRef<number | null>(null);
+
+  // High-precision smooth animation loop (60fps)
+  useEffect(() => {
+    if (!isPlaying) {
+      lastTimeRef.current = null;
+      return;
+    }
+
+    let animFrameId: number;
+
+    const tick = (now: number) => {
+      if (lastTimeRef.current !== null) {
+        const delta = now - lastTimeRef.current;
+        setTimeMs((prev) => {
+          const next = prev + delta * speed;
+          if (next >= TOTAL_CYCLE_MS) {
+            return 0; // Seamless loop back to beginning
+          }
+          return next;
         });
       }
-    }
-    return list;
-  }, [actionIndex]);
+      lastTimeRef.current = now;
+      animFrameId = requestAnimationFrame(tick);
+    };
 
-  // Determine current active milestone
+    animFrameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animFrameId);
+  }, [isPlaying, speed]);
+
+  // Messages visible at current time
+  const visibleMessages = useMemo(() => {
+    return SCHEDULED_MESSAGES.filter((m) => timeMs >= m.showAt);
+  }, [timeMs]);
+
+  // Active bot typing indicator
+  const activeBotTyping = useMemo(() => {
+    const span = BOT_TYPING_SPANS.find((s) => timeMs >= s.start && timeMs < s.end);
+    return span ? span.label : null;
+  }, [timeMs]);
+
+  // Active user text in input draft bar
+  const activeInputDraft = useMemo(() => {
+    const span = USER_INPUT_DRAFTS.find((s) => timeMs >= s.start && timeMs < s.end);
+    if (!span) return "";
+    const progress = (timeMs - span.start) / (span.end - span.start);
+    const charsToShow = Math.max(1, Math.floor(progress * span.fullText.length));
+    return span.fullText.slice(0, charsToShow);
+  }, [timeMs]);
+
+  // Active milestone index
   const activeMilestoneIndex = useMemo(() => {
     for (let i = MILESTONES.length - 1; i >= 0; i--) {
-      if (actionIndex >= MILESTONES[i].actionIndex) {
+      if (timeMs >= MILESTONES[i].startTime) {
         return i;
       }
     }
     return 0;
-  }, [actionIndex]);
+  }, [timeMs]);
 
-  const chatScrollRef = useRef<HTMLDivElement>(null);
+  // Continuous fluid progress for each milestone (0% to 100%)
+  const milestoneProgresses = useMemo(() => {
+    return MILESTONES.map((m) => {
+      if (timeMs <= m.startTime) return 0;
+      if (timeMs >= m.endTime) return 100;
+      return ((timeMs - m.startTime) / (m.endTime - m.startTime)) * 100;
+    });
+  }, [timeMs]);
 
-  // Auto-scroll chat to bottom
-  const scrollToBottom = () => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTo({
-        top: chatScrollRef.current.scrollHeight,
+  // Smooth scroll to bottom whenever visible message count changes or typing starts/stops
+  const prevMsgCountRef = useRef(0);
+  const prevTypingRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (
+      visibleMessages.length !== prevMsgCountRef.current ||
+      activeBotTyping !== prevTypingRef.current
+    ) {
+      prevMsgCountRef.current = visibleMessages.length;
+      prevTypingRef.current = activeBotTyping;
+
+      bottomAnchorRef.current?.scrollIntoView({
         behavior: "smooth",
+        block: "nearest",
       });
     }
-  };
+  }, [visibleMessages.length, activeBotTyping]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, typingIndicator]);
-
-  // Main execution loop
-  useEffect(() => {
-    if (!isPlaying) return;
-
-    if (actionIndex >= SCRIPT_ACTIONS.length) {
-      // Loop back to start
-      const loopTimeout = setTimeout(() => {
-        setActionIndex(0);
-        setInputDraft("");
-        setTypingIndicator(null);
-      }, 5000 / speed);
-      return () => clearTimeout(loopTimeout);
-    }
-
-    const currentAction = SCRIPT_ACTIONS[actionIndex];
-
-    if (currentAction.type === "typing_input") {
-      setInputDraft(currentAction.text);
-      const timer = setTimeout(() => {
-        setActionIndex((prev) => prev + 1);
-      }, currentAction.duration / speed);
-      return () => clearTimeout(timer);
-    }
-
-    if (currentAction.type === "send_user") {
-      setInputDraft("");
-      // Advance immediately
-      setActionIndex((prev) => prev + 1);
-      return;
-    }
-
-    if (currentAction.type === "send_user_doc") {
-      const timer = setTimeout(() => {
-        setActionIndex((prev) => prev + 1);
-      }, currentAction.duration / speed);
-      return () => clearTimeout(timer);
-    }
-
-    if (currentAction.type === "bot_typing") {
-      setTypingIndicator(currentAction.label);
-      const timer = setTimeout(() => {
-        setTypingIndicator(null);
-        setActionIndex((prev) => prev + 1);
-      }, currentAction.duration / speed);
-      return () => clearTimeout(timer);
-    }
-
-    if (currentAction.type === "send_bot") {
-      setTypingIndicator(null);
-      setActionIndex((prev) => prev + 1);
-      return;
-    }
-
-    if (currentAction.type === "pause") {
-      const timer = setTimeout(() => {
-        setActionIndex((prev) => prev + 1);
-      }, currentAction.duration / speed);
-      return () => clearTimeout(timer);
-    }
-  }, [actionIndex, isPlaying, speed]);
-
-  const handleSelectMilestone = (milestoneIndex: number) => {
-    const targetAction = MILESTONES[milestoneIndex].actionIndex;
-    setActionIndex(targetAction);
-    setInputDraft("");
-    setTypingIndicator(null);
+  const handleSelectMilestone = (idx: number) => {
+    setTimeMs(MILESTONES[idx].startTime);
+    lastTimeRef.current = null;
     setIsPlaying(true);
   };
 
@@ -300,9 +263,8 @@ export function WhatsappFlowSimulator(): JSX.Element {
   };
 
   const handleReset = () => {
-    setActionIndex(0);
-    setInputDraft("");
-    setTypingIndicator(null);
+    setTimeMs(0);
+    lastTimeRef.current = null;
     setIsPlaying(true);
   };
 
@@ -313,7 +275,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
         {/* Ambient Glow */}
         <div className="absolute -inset-2 rounded-[52px] bg-gradient-to-r from-emerald-500/20 via-teal-500/15 to-sky-500/20 blur-xl -z-10 opacity-70 animate-pulse" />
 
-        {/* Device Frame */}
+        {/* Device Shell */}
         <div className="relative rounded-[46px] border-[7px] border-slate-800 bg-slate-950 p-2 shadow-2xl shadow-black/80 ring-1 ring-slate-700/50">
           {/* Inner Screen */}
           <div className="relative flex h-[600px] sm:h-[640px] w-full flex-col overflow-hidden rounded-[36px] bg-[#0b141a] text-slate-100 font-sans">
@@ -372,8 +334,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
 
             {/* Chat Messages Flow */}
             <div
-              ref={chatScrollRef}
-              className="relative flex-1 space-y-2.5 overflow-y-auto p-2.5 text-[11.5px] sm:text-xs scrollbar-thin scrollbar-thumb-slate-800"
+              className="relative flex-1 space-y-2.5 overflow-y-auto p-2.5 text-[11.5px] sm:text-xs scroll-smooth scrollbar-thin scrollbar-thumb-slate-800"
               style={{
                 backgroundImage: `radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)`,
                 backgroundSize: "16px 16px",
@@ -387,12 +348,12 @@ export function WhatsappFlowSimulator(): JSX.Element {
               </div>
 
               {/* RENDER DYNAMIC MESSAGES */}
-              {messages.map((msg) => {
+              {visibleMessages.map((msg) => {
                 if (msg.type === "user") {
                   return (
                     <div
                       key={msg.id}
-                      className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300"
+                      className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out"
                     >
                       <div className="max-w-[85%] rounded-xl rounded-tr-none bg-[#005c4b] px-3 py-1.5 text-slate-100 shadow">
                         <p className="leading-snug">{msg.text}</p>
@@ -409,7 +370,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                   return (
                     <div
                       key={msg.id}
-                      className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300"
+                      className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out"
                     >
                       <div className="max-w-[85%] rounded-xl rounded-tr-none bg-[#005c4b] p-2 text-slate-100 shadow">
                         <div className="flex items-center gap-2 rounded-lg bg-slate-950/70 p-1.5 border border-emerald-500/30">
@@ -436,7 +397,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                 return (
                   <div
                     key={msg.id}
-                    className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300"
+                    className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out"
                   >
                     <div className="max-w-[92%] rounded-xl rounded-tl-none bg-[#202c33] p-2.5 text-slate-200 shadow border border-slate-800">
                       {msg.kind === "welcome" && (
@@ -638,26 +599,29 @@ export function WhatsappFlowSimulator(): JSX.Element {
               })}
 
               {/* LIVE TYPING INDICATOR */}
-              {typingIndicator && (
-                <div className="flex items-center gap-2 text-slate-400 text-xs py-1 animate-in fade-in duration-200">
+              {activeBotTyping && (
+                <div className="flex items-center gap-2 text-slate-400 text-xs py-1 animate-in fade-in slide-in-from-bottom-1 duration-200 ease-out">
                   <div className="flex gap-1 rounded-full bg-[#202c33] px-3 py-2 border border-slate-800">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce" />
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce [animation-delay:150ms]" />
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce [animation-delay:300ms]" />
                   </div>
                   <span className="text-[10.5px] text-slate-400 animate-pulse">
-                    {typingIndicator}
+                    {activeBotTyping}
                   </span>
                 </div>
               )}
+
+              {/* Scroll Anchor */}
+              <div ref={bottomAnchorRef} className="h-2 shrink-0" />
             </div>
 
             {/* Simulated WhatsApp Chat Input Bar */}
             <div className="relative z-20 flex items-center gap-2 bg-[#1f2c34] px-3 py-2 border-t border-slate-800 text-slate-400">
               <div className="flex-1 min-h-[34px] flex items-center rounded-full bg-[#2a3942] px-3.5 py-1 text-xs">
-                {inputDraft ? (
+                {activeInputDraft ? (
                   <span className="text-white font-medium flex items-center gap-0.5">
-                    {inputDraft}
+                    {activeInputDraft}
                     <span className="inline-block w-1.5 h-3.5 bg-emerald-400 animate-pulse" />
                   </span>
                 ) : (
@@ -665,7 +629,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                 )}
               </div>
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-slate-950 transition">
-                {inputDraft ? (
+                {activeInputDraft ? (
                   <Send className="h-4 w-4 fill-slate-950 animate-in scale-90" />
                 ) : (
                   <Zap className="h-4 w-4 fill-slate-950" />
@@ -738,23 +702,23 @@ export function WhatsappFlowSimulator(): JSX.Element {
           </p>
         </div>
 
-        {/* Stories-like Progress Bars */}
+        {/* Stories-like 60fps Continuous Fluid Progress Bars */}
         <div className="grid grid-cols-5 gap-1.5 pt-1">
           {MILESTONES.map((m, idx) => {
             const isCurrent = activeMilestoneIndex === idx;
-            const isCompleted = activeMilestoneIndex > idx;
+            const pct = milestoneProgresses[idx];
             return (
               <div key={m.id} className="space-y-1">
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
                   <div
-                    className="h-full bg-gradient-to-r from-emerald-400 to-sky-400 transition-all duration-300"
+                    className="h-full bg-gradient-to-r from-emerald-400 to-sky-400 will-change-[width]"
                     style={{
-                      width: isCompleted ? "100%" : isCurrent ? "60%" : "0%",
+                      width: `${pct}%`,
                     }}
                   />
                 </div>
                 <p
-                  className={`text-[10px] font-semibold text-center truncate transition ${
+                  className={`text-[10px] font-semibold text-center truncate transition-colors duration-200 ${
                     isCurrent ? "text-emerald-400 font-bold" : "text-slate-500"
                   }`}
                 >
@@ -774,7 +738,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                 key={m.id}
                 type="button"
                 onClick={() => handleSelectMilestone(idx)}
-                className={`w-full text-left rounded-2xl border p-3 transition-all ${
+                className={`w-full text-left rounded-2xl border p-3 transition-all duration-200 ${
                   isCurrent
                     ? "border-emerald-500/50 bg-gradient-to-r from-slate-900 to-slate-800/80 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/20"
                     : "border-slate-800 bg-slate-900/40 text-slate-400 hover:border-slate-700 hover:bg-slate-900"
@@ -783,7 +747,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
+                      className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold transition-colors ${
                         isCurrent
                           ? "bg-emerald-400 text-slate-950 shadow-sm"
                           : "bg-slate-800 text-slate-400"
@@ -792,7 +756,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                       {idx + 1}
                     </span>
                     <span
-                      className={`text-xs sm:text-sm font-semibold ${
+                      className={`text-xs sm:text-sm font-semibold transition-colors ${
                         isCurrent ? "text-white" : "text-slate-300"
                       }`}
                     >
