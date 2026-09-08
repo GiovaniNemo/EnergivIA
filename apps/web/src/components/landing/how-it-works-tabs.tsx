@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { FileText, Smartphone } from "lucide-react";
+import { WhatsappFlowSimulator } from "./whatsapp-flow-simulator";
 
 type HowItWorksTabId = "whatsapp" | "propostas";
 
@@ -49,7 +50,7 @@ export function HowItWorksTabs(): JSX.Element {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-3 rounded-3xl border border-slate-800 bg-slate-900 p-2 sm:grid-cols-3">
+        <div className="mt-10 grid gap-3 rounded-3xl border border-slate-800 bg-slate-900 p-2 sm:grid-cols-2">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -98,28 +99,7 @@ export function HowItWorksTabs(): JSX.Element {
 }
 
 function WhatsappDemoContent(): JSX.Element {
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-slate-300">
-        Aqui entra o vídeo real do fluxo completo no WhatsApp: envio da conta, análise da IA,
-        simulação, seleção de kit e geração/envio da proposta. A estrutura já está pronta para
-        receber seu arquivo final.
-      </p>
-      <div className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-950">
-        <video
-          controls
-          preload="metadata"
-          poster="/landing/demo.png"
-          className="h-[260px] w-full bg-black object-contain sm:h-[360px]"
-        >
-          Seu navegador não suporta reprodução de vídeo.
-        </video>
-      </div>
-      <p className="text-xs text-slate-400">
-        Assim que o vídeo final for enviado, basta atualizar o caminho no source da tab.
-      </p>
-    </div>
-  );
+  return <WhatsappFlowSimulator />;
 }
 
 function ProposalsDemoContent(): JSX.Element {
