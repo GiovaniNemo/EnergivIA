@@ -1719,6 +1719,41 @@ export class WhatsappBotService {
     ];
   }
 
+  private readonly ROOF_OPTIONS_TEXT =
+    `Qual a estrutura do telhado?\n` +
+    `1️⃣ Cerâmica (Colonial)\n` +
+    `2️⃣ Fibrocimento\n` +
+    `3️⃣ Metálico\n` +
+    `4️⃣ Solo\n` +
+    `5️⃣ Laje\n` +
+    `6️⃣ Fibrometal\n` +
+    `7️⃣ Sem estrutura\n\n` +
+    `(Responda com o número da opção)`;
+
+  private readonly GRID_OPTIONS_TEXT =
+    `Qual o padrão de entrada da instalação?\n` +
+    `1️⃣ Monofásico 220V\n` +
+    `2️⃣ Bifásico 127V/220V\n` +
+    `3️⃣ Trifásico 220V\n` +
+    `4️⃣ Trifásico 380V\n\n` +
+    `(Responda com o número da opção)`;
+
+  private numToEmoji(num: number): string {
+    const emojis: Record<number, string> = {
+      1: "1️⃣",
+      2: "2️⃣",
+      3: "3️⃣",
+      4: "4️⃣",
+      5: "5️⃣",
+      6: "6️⃣",
+      7: "7️⃣",
+      8: "8️⃣",
+      9: "9️⃣",
+      10: "🔟",
+    };
+    return emojis[num] || `${num}️⃣`;
+  }
+
   private getGreetingText(contactName?: string): string {
     const now = new Date();
     const utcHours = now.getUTCHours();
@@ -2075,6 +2110,7 @@ ${catalogContext}`;
         // 5. Extração de Padrão Elétrico
         if (
           lowerC === "1" ||
+          lowerC.includes("1️⃣") ||
           lowerC.includes("monofásico") ||
           lowerC.includes("monofasico") ||
           lowerC.includes("mono 220") ||
@@ -2085,6 +2121,7 @@ ${catalogContext}`;
           }
         } else if (
           lowerC === "2" ||
+          lowerC.includes("2️⃣") ||
           lowerC.includes("bifásico") ||
           lowerC.includes("bifasico") ||
           lowerC.includes("127/220") ||
@@ -2095,6 +2132,7 @@ ${catalogContext}`;
           }
         } else if (
           lowerC === "3" ||
+          lowerC.includes("3️⃣") ||
           lowerC.includes("trifasico 220") ||
           lowerC.includes("trifásico 220") ||
           lowerC.includes("tri 220") ||
@@ -2105,6 +2143,7 @@ ${catalogContext}`;
           }
         } else if (
           lowerC === "4" ||
+          lowerC.includes("4️⃣") ||
           lowerC.includes("trifasico 380") ||
           lowerC.includes("trifásico 380") ||
           lowerC.includes("tri 380") ||
@@ -2119,6 +2158,7 @@ ${catalogContext}`;
         // 6. Extração de Tipo de Telhado
         if (
           lowerC === "1" ||
+          lowerC.includes("1️⃣") ||
           lowerC.includes("cerâmica") ||
           lowerC.includes("ceramica") ||
           lowerC.includes("colonial")
@@ -2128,30 +2168,37 @@ ${catalogContext}`;
           }
         } else if (
           lowerC === "2" ||
+          lowerC.includes("2️⃣") ||
           lowerC.includes("fibrocimento") ||
           lowerC.includes("fibromadeira")
         ) {
           if (messages[i - 1]?.content?.includes("Qual a estrutura do telhado?")) {
             roofType = "Fibrocimento";
           }
-        } else if (lowerC === "3" || lowerC.includes("metálico") || lowerC.includes("metalico")) {
+        } else if (
+          lowerC === "3" ||
+          lowerC.includes("3️⃣") ||
+          lowerC.includes("metálico") ||
+          lowerC.includes("metalico")
+        ) {
           if (messages[i - 1]?.content?.includes("Qual a estrutura do telhado?")) {
             roofType = "Metálico";
           }
-        } else if (lowerC === "4" || lowerC.includes("solo")) {
+        } else if (lowerC === "4" || lowerC.includes("4️⃣") || lowerC.includes("solo")) {
           if (messages[i - 1]?.content?.includes("Qual a estrutura do telhado?")) {
             roofType = "Solo";
           }
-        } else if (lowerC === "5" || lowerC.includes("laje")) {
+        } else if (lowerC === "5" || lowerC.includes("5️⃣") || lowerC.includes("laje")) {
           if (messages[i - 1]?.content?.includes("Qual a estrutura do telhado?")) {
             roofType = "Laje";
           }
-        } else if (lowerC === "6" || lowerC.includes("fibrometal")) {
+        } else if (lowerC === "6" || lowerC.includes("6️⃣") || lowerC.includes("fibrometal")) {
           if (messages[i - 1]?.content?.includes("Qual a estrutura do telhado?")) {
             roofType = "Fibrometal";
           }
         } else if (
           lowerC === "7" ||
+          lowerC.includes("7️⃣") ||
           lowerC.includes("sem estrutura") ||
           lowerC.includes("nenhuma")
         ) {
@@ -2196,14 +2243,7 @@ ${catalogContext}`;
       return (
         `Legal, dados extraídos com precisão!\n` +
         `Consumo médio de *${kwh} kWh/mês* em *${cidade}* (${baseTexto}).${conexaoInfo}\n\n` +
-        `Qual a estrutura do telhado?\n` +
-        `1 - Cerâmica (Colonial)\n` +
-        `2 - Fibrocimento\n` +
-        `3 - Metálico\n` +
-        `4 - Solo\n` +
-        `5 - Laje\n` +
-        `6 - Fibrometal\n` +
-        `7 - Sem estrutura`
+        this.ROOF_OPTIONS_TEXT
       );
     }
 
@@ -2236,14 +2276,14 @@ ${catalogContext}`;
       const templates = await this.getAvailableTemplates(conversation.organizationId);
       let templateListText = "";
       templates.forEach((t, i) => {
-        templateListText += `${i + 1} - ${t.name}\n`;
+        templateListText += `${this.numToEmoji(i + 1)} ${t.name}\n`;
       });
 
       return (
         `Cliente *${clientName}* anotado com sucesso! 👤✨\n\n` +
         `Qual modelo de proposta comercial você deseja usar para o seu cliente?\n` +
         `${templateListText}\n` +
-        `(Responda com o número do modelo desejado)`
+        `(Responda com o número da opção desejada)`
       );
     }
 
@@ -2559,12 +2599,19 @@ ${catalogContext}`;
     // ESTADO E: O Bot perguntou a estrutura do telhado OU o usuário respondeu a estrutura
     const roofMatch = [
       { key: "1", name: "Cerâmica (Colonial)" },
+      { key: "1️⃣", name: "Cerâmica (Colonial)" },
       { key: "2", name: "Fibrocimento" },
+      { key: "2️⃣", name: "Fibrocimento" },
       { key: "3", name: "Metálico" },
+      { key: "3️⃣", name: "Metálico" },
       { key: "4", name: "Solo" },
+      { key: "4️⃣", name: "Solo" },
       { key: "5", name: "Laje" },
+      { key: "5️⃣", name: "Laje" },
       { key: "6", name: "Fibrometal" },
+      { key: "6️⃣", name: "Fibrometal" },
       { key: "7", name: "Sem estrutura" },
+      { key: "7️⃣", name: "Sem estrutura" },
       { key: "cerâmica", name: "Cerâmica (Colonial)" },
       { key: "ceramica", name: "Cerâmica (Colonial)" },
       { key: "colonial", name: "Cerâmica (Colonial)" },
@@ -2598,7 +2645,7 @@ ${catalogContext}`;
       if (quotes.length === 0) {
         return (
           `No momento não encontramos kits com todos os componentes e estrutura (${selectedRoof}) disponíveis nos distribuidores cadastrados com estoque compatível.\n\n` +
-          `Você pode selecionar a opção "7 - Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado.`
+          `Você pode selecionar a opção "7️⃣ Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado.`
         );
       }
 
@@ -2611,7 +2658,7 @@ ${catalogContext}`;
       let quoteText = `Excelente! Seguem as melhores opções de kits dimensionados ${infoCabecalho}:\n\n`;
 
       quotes.forEach((q, index) => {
-        quoteText += `${index + 1} - ${q.distributorName} - R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+        quoteText += `${this.numToEmoji(index + 1)} *${q.distributorName}* - R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
         quoteText += `Itens do Kit:\n`;
         q.items.forEach((item) => {
           quoteText += `${item}\n`;
@@ -2620,21 +2667,32 @@ ${catalogContext}`;
         quoteText += `*Obs: A estimativa de geração considera condições ideais de irradiação solar. A geração real pode variar conforme as caídas e inclinação do telhado, orientação solar (azimute) e eventuais sombreamentos.\n\n`;
       });
 
-      quoteText += `Qual opção você prefere para o seu cliente? (Responda com o número)`;
+      quoteText += `Qual opção você prefere para o seu cliente? (Responda com o número da opção)`;
       return quoteText;
     }
 
     // ESTADO F: O Bot perguntou o padrão de entrada da rede elétrica
     if (lastBotMsg.includes("Qual o padrão de entrada da instalação?")) {
       let chosenGrid = "Monofásico 220V";
-      if (lower === "1" || lower.includes("mono")) {
+      if (lower === "1" || lower.includes("1️⃣") || lower.includes("mono")) {
         chosenGrid = "Monofásico 220V";
-      } else if (lower === "2" || lower.includes("bi") || lower.includes("127/220")) {
+      } else if (
+        lower === "2" ||
+        lower.includes("2️⃣") ||
+        lower.includes("bi") ||
+        lower.includes("127/220")
+      ) {
         chosenGrid = "Bifásico 127V/220V";
-      } else if (lower === "3" || lower.includes("tri 220") || lower.includes("tri_220")) {
+      } else if (
+        lower === "3" ||
+        lower.includes("3️⃣") ||
+        lower.includes("tri 220") ||
+        lower.includes("tri_220")
+      ) {
         chosenGrid = "Trifásico 220V";
       } else if (
         lower === "4" ||
+        lower.includes("4️⃣") ||
         lower.includes("tri 380") ||
         lower.includes("tri_380") ||
         lower.includes("380")
@@ -2642,17 +2700,7 @@ ${catalogContext}`;
         chosenGrid = "Trifásico 380V";
       }
 
-      return (
-        `Legal! Padrão registrado: *${chosenGrid}*. ⚡\n\n` +
-        `Qual a estrutura do telhado?\n` +
-        `1 - Cerâmica (Colonial)\n` +
-        `2 - Fibrocimento\n` +
-        `3 - Metálico\n` +
-        `4 - Solo\n` +
-        `5 - Laje\n` +
-        `6 - Fibrometal\n` +
-        `7 - Sem estrutura`
-      );
+      return `Legal! Padrão registrado: *${chosenGrid}*. ⚡\n\n` + this.ROOF_OPTIONS_TEXT;
     }
 
     // ESTADO G: O Bot perguntou a cidade da instalação
@@ -2660,12 +2708,7 @@ ${catalogContext}`;
       const hspRes = getHsp(incomingText);
       return (
         `Perfeito! Localização identificada: *${hspRes.city}/${hspRes.uf}* (Irradiação solar de ${hspRes.hsp.toFixed(2)} kWh/m²/dia calculada com precisão). 📍☀️\n\n` +
-        `Qual o padrão de entrada da instalação?\n` +
-        `1 - Monofásico 220V\n` +
-        `2 - Bifásico 127V/220V\n` +
-        `3 - Trifásico 220V\n` +
-        `4 - Trifásico 380V\n\n` +
-        `(Responda com o número da opção)`
+        this.GRID_OPTIONS_TEXT
       );
     }
 
@@ -2742,15 +2785,7 @@ ${catalogContext}`;
     if (kwpDirectMatch && kwpDirectMatch[1]) {
       const targetKWp = parseFloat(kwpDirectMatch[1].replace(",", "."));
       if (targetKWp > 0) {
-        return (
-          `Legal! Potência solicitada: *${targetKWp} kWp*. ☀️\n\n` +
-          `Qual o padrão de entrada da instalação?\n` +
-          `1 - Monofásico 220V\n` +
-          `2 - Bifásico 127V/220V\n` +
-          `3 - Trifásico 220V\n` +
-          `4 - Trifásico 380V\n\n` +
-          `(Responda com o número da opção)`
-        );
+        return `Legal! Potência solicitada: *${targetKWp} kWp*. ☀️\n\n` + this.GRID_OPTIONS_TEXT;
       }
     }
 
@@ -2768,12 +2803,7 @@ ${catalogContext}`;
 
       return (
         `Legal! Quantidade solicitada: *${modCount} placas${extraInfo}*. ☀️\n\n` +
-        `Qual o padrão de entrada da instalação?\n` +
-        `1 - Monofásico 220V\n` +
-        `2 - Bifásico 127V/220V\n` +
-        `3 - Trifásico 220V\n` +
-        `4 - Trifásico 380V\n\n` +
-        `(Responda com o número da opção)`
+        this.GRID_OPTIONS_TEXT
       );
     }
 
@@ -2801,12 +2831,7 @@ ${catalogContext}`;
           const hspRes = getHsp(cand);
           return (
             `Legal, consumo registrado: *${consumo} kWh/mês* em *${hspRes.city}/${hspRes.uf}*! ☀️📍\n\n` +
-            `Qual o padrão de entrada da instalação?\n` +
-            `1 - Monofásico 220V\n` +
-            `2 - Bifásico 127V/220V\n` +
-            `3 - Trifásico 220V\n` +
-            `4 - Trifásico 380V\n\n` +
-            `(Responda com o número da opção)`
+            this.GRID_OPTIONS_TEXT
           );
         }
 
