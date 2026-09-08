@@ -1,1 +1,1 @@
-pnpm --filter @energivia/web lint && NEXT_DIST_DIR=.next-prepush pnpm --filter @energivia/web build
+NODE_OPTIONS="--max-old-space-size=4096" pnpm --filter @energivia/web lint && NEXT_DIST_DIR=.next-prepush NODE_OPTIONS="--max-old-space-size=4096" pnpm --filter @energivia/web build
