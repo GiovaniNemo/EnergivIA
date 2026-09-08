@@ -50,24 +50,24 @@ const STATE_SOLAR_INDEX: Record<string, number> = {
   sc: 4.9,
 };
 
-function calculateBaseSystemKw(monthlyConsumption: number): number {
+export function calculateBaseSystemKw(monthlyConsumption: number): number {
   const safetyFactor = 1.2;
   const productivityPerKwMonth = 130;
   return (monthlyConsumption * safetyFactor) / productivityPerKwMonth;
 }
 
-function applyPreferenceFactor(baseKw: number, preferences?: KitPreferences): number {
+export function applyPreferenceFactor(baseKw: number, preferences?: KitPreferences): number {
   if (!preferences) return baseKw;
   if (preferences.cheaper) return baseKw * 0.92;
   if (preferences.moreGeneration) return baseKw * 1.1;
   return baseKw;
 }
 
-function roundToHalf(kw: number): number {
+export function roundToHalf(kw: number): number {
   return Math.round(kw * 2) / 2;
 }
 
-function normalizeLocation(location: string): string {
+export function normalizeLocation(location: string): string {
   if (!location) return "";
   return location
     .normalize("NFD")
@@ -77,7 +77,7 @@ function normalizeLocation(location: string): string {
     .trim();
 }
 
-function getCitySolarIndex(location: string): number {
+export function getCitySolarIndex(location: string): number {
   const normalized = normalizeLocation(location);
   const compactKey = normalized.replace(", ", ",");
   const cityIndex = CITY_SOLAR_INDEX[compactKey];
@@ -91,14 +91,20 @@ function getCitySolarIndex(location: string): number {
   return DEFAULT_CITY_SOLAR_INDEX;
 }
 
-function generationFromKw(kw: number, citySolarIndex: number, performanceRatio: number): number {
+export function generationFromKw(
+  kw: number,
+  citySolarIndex: number,
+  performanceRatio: number
+): number {
   return Math.round(kw * citySolarIndex * 30 * performanceRatio);
 }
 
-function moduleCountFromKw(kw: number): number {
+export function moduleCountFromKw(kw: number): number {
   const modulePowerKw = 0.55;
   return Math.max(1, Math.round(kw / modulePowerKw));
 }
+
+export { ROOF_TYPE_FACTOR };
 
 function modulePowerWFromKw(kw: number, modules: number): number | undefined {
   if (modules <= 0) return undefined;

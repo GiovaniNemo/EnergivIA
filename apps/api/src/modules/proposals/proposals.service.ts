@@ -8,8 +8,8 @@ import {
   PROJECT_COST_ESSENTIAL_MARGIN_NAME,
   PROJECT_COST_ESSENTIAL_LABOR_NAME,
 } from "@energivia/proposal-economia";
-import chromium from "@sparticuz/chromium";
-import puppeteerCore from "puppeteer-core";
+import { PdfRendererService } from "./pdf-renderer.service";
+import { resolvePublicWebAppBaseUrl } from "../../common/public-web-app-base-url";
 
 import { PrismaService } from "../../prisma/prisma.service";
 import { softDeleteWhere as soft } from "../../prisma/soft-delete";
@@ -66,7 +66,8 @@ export class ProposalsService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly leadActivityLog: LeadActivityLogService,
-    private readonly stockReservation: StockReservationService
+    private readonly stockReservation: StockReservationService,
+    private readonly pdfRenderer: PdfRendererService
   ) {}
 
   async list(tenantId: string) {
@@ -681,67 +682,14 @@ export class ProposalsService {
       throw new BadRequestException("Proposta não encontrada para gerar PDF.");
     }
 
-    const webBaseUrl = process.env["PUBLIC_WEB_APP_BASE_URL"] || "https://www.energivia.com.br";
-
-    // 2. Usa o token público (se existir) ou o ID como fallback
+    const webBaseUrl = resolvePublicWebAppBaseUrl();
     const token = proposal.publicToken || proposal.id;
-
-    // ATENÇÃO: Verifique se a rota do seu frontend para o cliente final é "/proposta/" mesmo
-    // ou se é algo como "/p/", "/proposta/publica/", etc.
     const targetUrl = `${webBaseUrl}/proposta/${token}`;
 
-    this.logger.log(`Iniciando geração de PDF para a proposta ${proposalId} na URL: ${targetUrl}`);
-
-    // Identifica se está rodando localmente (Windows/Mac) ou na Vercel/Railway (Linux)
-    const isLocal = process.platform === "win32" || process.platform === "darwin";
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let browser: any = null;
-
-    try {
-      if (isLocal) {
-        // AMBIENTE LOCAL: Importa dinamicamente o puppeteer normal
-        const puppeteerLocal = await import("puppeteer");
-        browser = await puppeteerLocal.default.launch({
-          headless: true,
-          args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        });
-      } else {
-        // AMBIENTE NUVEM (VERCEL): Usa o puppeteer-core + sparticuz/chromium
-        browser = await puppeteerCore.launch({
-          args: chromium.args,
-          executablePath: await chromium.executablePath(),
-          headless: true,
-        });
-      }
-
-      const page = await browser.newPage();
-
-      await page.goto(targetUrl, {
-        waitUntil: "networkidle0",
-        timeout: 30000,
-      });
-
-      const pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: {
-          top: "10mm",
-          right: "10mm",
-          bottom: "10mm",
-          left: "10mm",
-        },
-      });
-
-      return Buffer.from(pdfBuffer);
-    } catch (error) {
-      this.logger.error(`Erro ao gerar PDF da proposta ${proposalId}: ${String(error)}`);
-      throw new BadRequestException("Não foi possível gerar o PDF da proposta.");
-    } finally {
-      if (browser) {
-        await browser.close();
-      }
-    }
+    this.logger.log(
+      `Iniciando geração de PDF resiliente para proposta ${proposalId} na URL: ${targetUrl}`
+    );
+    return this.pdfRenderer.renderUrlToPdf({ url: targetUrl });
   }
 
   async generateAiSection(prompt: string, contextText?: string) {
@@ -787,11 +735,16 @@ Adapte a linguagem para um tom comercial confiável, moderno e persuasivo.`,
 
           const result = await genModel.generateContent(userInput);
           const text = result.response.text();
-          const clean = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+          const clean = text
+            .replace(/```json/gi, "")
+            .replace(/```/g, "")
+            .trim();
           return JSON.parse(clean);
         } catch (err: unknown) {
           lastError = err;
-          this.logger.warn(`Modelo ${modelCandidate} falhou para proposta: ${err instanceof Error ? err.message : String(err)}`);
+          this.logger.warn(
+            `Modelo ${modelCandidate} falhou para proposta: ${err instanceof Error ? err.message : String(err)}`
+          );
         }
       }
 
@@ -802,4 +755,3 @@ Adapte a linguagem para um tom comercial confiável, moderno e persuasivo.`,
     }
   }
 }
-

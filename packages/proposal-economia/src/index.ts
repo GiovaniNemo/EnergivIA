@@ -52,7 +52,9 @@ export interface QuickEconomiaSimulationResult {
 export function parseExtractedNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
-    const raw = value.trim().replace(/\s/g, "");
+    // Strip common currency symbols, prefixes and whitespaces (e.g., "R$", "$")
+    const cleanStr = value.replace(/^[^\d\-+]+/, "").trim();
+    const raw = cleanStr.replace(/\s/g, "").replace(/[^\d.,\-+]/g, "");
     if (!raw) return 0;
     const hasComma = raw.includes(",");
     const hasDot = raw.includes(".");

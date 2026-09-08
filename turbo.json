@@ -23,6 +23,10 @@
     "lint": {
       "dependsOn": ["^build"]
     },
+    "test": {
+      "cache": true,
+      "outputs": []
+    },
     "db:generate": {
       "cache": false
     },

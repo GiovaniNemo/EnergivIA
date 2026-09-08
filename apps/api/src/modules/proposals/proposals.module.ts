@@ -7,6 +7,7 @@ import { ProposalOperationsController } from "./proposal-operations.controller";
 import { ProposalEquipmentController } from "./proposal-equipment.controller";
 import { ProposalEquipmentService } from "./proposal-equipment.service";
 import { ProposalsService } from "./proposals.service";
+import { PdfRendererService } from "./pdf-renderer.service";
 import { ProposalTemplatesController } from "./proposal-templates.controller";
 import { ProposalTemplatesService } from "./proposal-templates.service";
 import { PublicProposalsController } from "./public-proposals.controller";
@@ -20,7 +21,12 @@ import { PublicProposalsController } from "./public-proposals.controller";
     ProposalTemplatesController,
     PublicProposalsController,
   ],
-  providers: [ProposalsService, ProposalTemplatesService, ProposalEquipmentService],
-  exports: [ProposalsService, ProposalTemplatesService],
+  providers: [
+    ProposalsService,
+    ProposalTemplatesService,
+    ProposalEquipmentService,
+    PdfRendererService,
+  ],
+  exports: [ProposalsService, ProposalTemplatesService, PdfRendererService],
 })
 export class ProposalsModule {}
