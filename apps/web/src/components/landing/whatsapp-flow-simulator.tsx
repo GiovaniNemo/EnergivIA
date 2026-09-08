@@ -163,7 +163,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [speed, setSpeed] = useState<number>(1);
 
-  const bottomAnchorRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const lastTimeRef = useRef<number | null>(null);
 
   // High-precision smooth animation loop (60fps)
@@ -245,10 +245,12 @@ export function WhatsappFlowSimulator(): JSX.Element {
       prevMsgCountRef.current = visibleMessages.length;
       prevTypingRef.current = activeBotTyping;
 
-      bottomAnchorRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTo({
+          top: chatContainerRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }
     }
   }, [visibleMessages.length, activeBotTyping]);
 
@@ -334,6 +336,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
 
             {/* Chat Messages Flow */}
             <div
+              ref={chatContainerRef}
               className="relative flex-1 space-y-2.5 overflow-y-auto p-2.5 text-[11.5px] sm:text-xs scroll-smooth scrollbar-thin scrollbar-thumb-slate-800"
               style={{
                 backgroundImage: `radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)`,
@@ -611,9 +614,6 @@ export function WhatsappFlowSimulator(): JSX.Element {
                   </span>
                 </div>
               )}
-
-              {/* Scroll Anchor */}
-              <div ref={bottomAnchorRef} className="h-2 shrink-0" />
             </div>
 
             {/* Simulated WhatsApp Chat Input Bar */}
