@@ -4,7 +4,8 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCenter,
   type DragEndEvent,
   type DragOverEvent,
@@ -214,7 +215,8 @@ export function KanbanBoard<T extends KanbanItemBase>({
   onExpandClosed,
 }: KanbanBoardProps<T>): JSX.Element {
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -301,7 +303,7 @@ export function KanbanBoard<T extends KanbanItemBase>({
       onDragEnd={(e) => void handleDragEnd(e)}
       onDragCancel={handleDragCancel}
     >
-      <div className="w-full overflow-x-auto pb-2">
+      <div className="w-full max-w-full overflow-x-auto pb-2 [touch-action:pan-x_pan-y] overscroll-x-contain">
         <div
           className={`grid min-w-[1050px] lg:min-w-[1150px] gap-3 pb-1 ${closedCollapsed ? "grid-cols-[1fr_1fr_1fr_1fr_52px]" : "grid-cols-5"}`}
         >

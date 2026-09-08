@@ -802,7 +802,7 @@ export default function PipelinePage(): JSX.Element {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 w-full max-w-full min-w-0">
       {}
       <CreateDealModal
         open={createOpen}
@@ -1393,7 +1393,7 @@ export default function PipelinePage(): JSX.Element {
       {}
       {/* KPI Cards (Carousel no mobile, Grid no desktop) */}
       {activeView === "kanban" && (
-        <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-2.5 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:grid-cols-[1.6fr_1fr_1fr] snap-x">
+        <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-2.5 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:grid-cols-[1.6fr_1fr_1fr] snap-x w-full max-w-full min-w-0">
           {/* Card 1: Ação Prioritária */}
           <div
             className={`min-w-[85vw] sm:min-w-0 snap-center shrink-0 sm:shrink relative overflow-hidden rounded-xl border bg-gradient-to-br p-4 ${
@@ -1512,7 +1512,7 @@ export default function PipelinePage(): JSX.Element {
 
       {}
       {activeView === "kanban" && (
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] overflow-hidden">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] overflow-hidden w-full max-w-full min-w-0">
           {/* Header visível apenas no desktop */}
           <div className="hidden sm:flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-3">
             <span className="text-sm font-semibold text-[var(--color-foreground)]">
@@ -1548,7 +1548,7 @@ export default function PipelinePage(): JSX.Element {
               </button>
             </div>
           </div>
-          <div className="p-2 sm:p-3">
+          <div className="p-2 sm:p-3 w-full max-w-full min-w-0 overflow-hidden">
             <KanbanBoard
               stages={
                 groupBy === "assignee"

@@ -231,7 +231,7 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full min-w-0">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{copy.title}</h1>
@@ -280,7 +280,7 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
         </Dialog>
       </div>
 
-      <Card className="border-[var(--color-border)] bg-[var(--color-card)]">
+      <Card className="border-[var(--color-border)] bg-[var(--color-card)] w-full max-w-full min-w-0 overflow-hidden">
         <CardHeader className="pb-2">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]">
@@ -296,7 +296,7 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
           {!stats ? (
             <LoadingState compact label="Carregando resumo" />
           ) : (
-            <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4 w-full min-w-0">
               {(
                 [
                   {
@@ -340,18 +340,18 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
                       setStatusFilter(filterStage);
                       setPage(1);
                     }}
-                    className={`w-full rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-card)] ${
+                    className={`w-full min-w-0 rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-card)] ${
                       active
                         ? "border-[var(--color-ring)]/60 bg-[var(--color-accent)]/50 shadow-sm ring-1 ring-[var(--color-ring)]/35"
                         : "border-[var(--color-border)] bg-[var(--color-muted)]/15 hover:bg-[var(--color-muted)]/35"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-1 sm:gap-2">
-                      <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                    <div className="flex items-center justify-between gap-1 sm:gap-2 min-w-0">
+                      <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] truncate">
                         {label}
                       </span>
                       <Icon
-                        className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[var(--color-muted-foreground)] opacity-60"
+                        className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[var(--color-muted-foreground)] opacity-60 shrink-0"
                         aria-hidden
                       />
                     </div>
@@ -366,7 +366,7 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
         </CardContent>
       </Card>
 
-      <Card className="border-[var(--color-border)] bg-[var(--color-card)]">
+      <Card className="border-[var(--color-border)] bg-[var(--color-card)] w-full max-w-full min-w-0 overflow-hidden">
         <CardHeader className="space-y-4 pb-2">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <Search className="h-4 w-4 text-emerald-500" aria-hidden />
@@ -466,12 +466,12 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
         </CardHeader>
       </Card>
 
-      <Card className="border-[var(--color-border)] bg-[var(--color-card)]">
+      <Card className="border-[var(--color-border)] bg-[var(--color-card)] w-full max-w-full min-w-0 overflow-hidden">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Lista de clientes</CardTitle>
           <CardDescription>Nome, status da oportunidade, atividade e valor</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="min-w-0 w-full p-3 sm:p-6">
           {loadError ? (
             <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
           ) : !list ? (
@@ -483,7 +483,7 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
           ) : (
             <>
               {/* Mobile Cards View */}
-              <div className="space-y-3 md:hidden">
+              <div className="space-y-3 md:hidden w-full max-w-full min-w-0">
                 {filteredRows.map((row) => {
                   const act = lastActivityPresentation(row.latestDealUpdatedAt ?? row.updatedAt);
                   return (
@@ -498,9 +498,9 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
                           setDrawerLeadId(row.id);
                         }
                       }}
-                      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3.5 shadow-sm transition hover:border-[var(--color-foreground)]/20 active:scale-[0.99]"
+                      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3.5 shadow-sm transition hover:border-[var(--color-foreground)]/20 active:scale-[0.99] w-full max-w-full min-w-0 overflow-hidden"
                     >
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start justify-between gap-2 min-w-0">
                         <div className="min-w-0 flex-1">
                           <h4 className="font-semibold text-sm text-[var(--color-foreground)] truncate">
                             {row.name}
@@ -519,24 +519,26 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
                         </div>
                       </div>
 
-                      <div className="mt-3 flex items-center justify-between border-t border-[var(--color-border)]/60 pt-2.5 text-xs">
-                        <div className="flex items-center gap-1.5 text-[var(--color-muted-foreground)]">
+                      <div className="mt-3 flex items-center justify-between border-t border-[var(--color-border)]/60 pt-2.5 text-xs min-w-0">
+                        <div className="flex items-center gap-1.5 text-[var(--color-muted-foreground)] min-w-0 truncate">
                           <span
                             className={`inline-block h-2 w-2 shrink-0 rounded-full ${ACTIVITY_TONE_DOT_CLASS[act.tone]}`}
                           />
-                          <span className={ACTIVITY_TONE_TEXT_CLASS[act.tone]}>{act.label}</span>
+                          <span className={`${ACTIVITY_TONE_TEXT_CLASS[act.tone]} truncate`}>
+                            {act.label}
+                          </span>
                         </div>
-                        <div className="font-bold text-[var(--color-foreground)] tabular-nums">
+                        <div className="font-bold text-[var(--color-foreground)] tabular-nums shrink-0 ml-2">
                           {formatDealValueDisplay(row.latestDealValue)}
                         </div>
                       </div>
 
                       {/* Next Step & Quick Actions */}
-                      <div className="mt-2.5 flex items-center justify-between gap-2 pt-1">
+                      <div className="mt-2.5 flex items-center justify-between gap-2 pt-1 min-w-0">
                         <div className="min-w-0 flex-1">
                           {row.nextActionAt ? (
                             <span
-                              className={`inline-flex items-center gap-1 text-[11px] ${
+                              className={`inline-flex max-w-full min-w-0 items-center gap-1 text-[11px] ${
                                 isOverdue(row.nextActionAt)
                                   ? "font-semibold text-amber-700 dark:text-amber-300"
                                   : "text-[var(--color-muted-foreground)]"
@@ -551,7 +553,7 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
                                 )}
                               </span>
                               {isOverdue(row.nextActionAt) && (
-                                <span className="rounded bg-amber-500/15 px-1 py-0.2 text-[9px] font-bold text-amber-700 dark:text-amber-300">
+                                <span className="rounded bg-amber-500/15 px-1 py-0.2 text-[9px] font-bold text-amber-700 dark:text-amber-300 shrink-0">
                                   Atrasado
                                 </span>
                               )}
@@ -586,7 +588,7 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
               </div>
 
               {/* Desktop Table View */}
-              <div className="hidden md:block overflow-x-auto">
+              <div className="hidden md:block w-full max-w-full overflow-x-auto">
                 <table className="w-full min-w-[860px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-[var(--color-border)] text-xs uppercase tracking-wide text-[var(--color-muted-foreground)]">

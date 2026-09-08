@@ -46,7 +46,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
                       <AppSidebar />
                       <SidebarInset>
                         <main
-                          className={`flex-1 bg-[var(--color-background)] ${isFullscreenChat ? "overflow-hidden p-0" : "overflow-auto p-4 md:p-6"}`}
+                          className={`flex-1 min-w-0 w-full max-w-full bg-[var(--color-background)] ${isFullscreenChat ? "overflow-hidden p-0" : "overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6"}`}
                         >
                           {isFullscreenChat ? (
                             children

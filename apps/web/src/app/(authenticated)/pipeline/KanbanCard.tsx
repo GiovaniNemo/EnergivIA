@@ -20,6 +20,7 @@ export function KanbanCard({ id, children }: KanbanCardProps): JSX.Element {
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.55 : 1,
+        touchAction: "manipulation",
       }}
       {...attributes}
       {...listeners}
