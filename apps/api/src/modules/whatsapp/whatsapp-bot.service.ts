@@ -406,6 +406,7 @@ export class WhatsappBotService {
         conversation: freshConversation || conversation,
         incomingText,
         extractionResult,
+        contactName,
       });
     } catch (err: any) {
       this.logger.error(`Erro ao gerar resposta do bot para ${fromWaId}:`, err);
@@ -1718,15 +1719,249 @@ export class WhatsappBotService {
     ];
   }
 
+  private getGreetingText(contactName?: string): string {
+    const now = new Date();
+    const utcHours = now.getUTCHours();
+    const brHours = (utcHours - 3 + 24) % 24;
+
+    let saudacao = "Olá";
+    if (brHours >= 5 && brHours < 12) {
+      saudacao = "Bom dia";
+    } else if (brHours >= 12 && brHours < 18) {
+      saudacao = "Boa tarde";
+    } else {
+      saudacao = "Boa noite";
+    }
+
+    const cleanName = (contactName || "").trim();
+    const firstName = cleanName && cleanName !== "Integrador" ? ` ${cleanName.split(" ")[0]}` : "";
+
+    return `${saudacao}${firstName}! Tudo bem? ☀️`;
+  }
+
+  private buildGreetingMenu(contactName?: string): string {
+    const greeting = this.getGreetingText(contactName);
+    return (
+      `${greeting}\n` +
+      `Sou seu assistente de vendas e dimensionamento da *EnergivIA*.\n\n` +
+      `Como posso ajudar você a gerar orçamentos e propostas para seus clientes hoje?\n\n` +
+      `*Escolha uma opção digitando o número:*\n` +
+      `1️⃣ Enviar fatura de energia (PDF ou foto)\n` +
+      `2️⃣ Simular por consumo mensal (ex: 450 kWh)\n` +
+      `3️⃣ Simular por potência de pico (ex: 5 kWp)\n` +
+      `4️⃣ Simular por quantidade de placas (ex: 10 módulos)\n` +
+      `5️⃣ Dúvidas sobre equipamentos e preços de catálogo\n\n` +
+      `_(Ou me envie diretamente a conta de luz em PDF/foto ou sua dúvida)_`
+    );
+  }
+
+  private async searchCatalogProducts(query: string, limit = 5) {
+    try {
+      const clean = query
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\w\s\d]/g, " ")
+        .trim();
+
+      const stopWords = new Set([
+        "de",
+        "do",
+        "da",
+        "dos",
+        "das",
+        "para",
+        "com",
+        "sem",
+        "em",
+        "na",
+        "no",
+        "nas",
+        "nos",
+        "um",
+        "uma",
+        "uns",
+        "umas",
+        "o",
+        "a",
+        "os",
+        "as",
+        "que",
+        "qual",
+        "quanto",
+        "custa",
+        "valor",
+        "preco",
+        "preço",
+        "tem",
+        "voce",
+        "voces",
+        "temos",
+        "sobre",
+        "qualquer",
+        "mais",
+        "ola",
+        "olá",
+        "bom",
+        "dia",
+        "boa",
+        "tarde",
+        "noite",
+        "gostaria",
+        "saber",
+      ]);
+
+      const terms = clean.split(/\s+/).filter((t) => t.length >= 2 && !stopWords.has(t));
+
+      const OR: any[] = [];
+      for (const term of terms) {
+        OR.push({ name: { contains: term, mode: "insensitive" } });
+        OR.push({ category: { name: { contains: term, mode: "insensitive" } } });
+        OR.push({ brand: { name: { contains: term, mode: "insensitive" } } });
+      }
+
+      const products = await this.prisma.product.findMany({
+        where: {
+          active: true,
+          ...(OR.length > 0 ? { OR } : {}),
+        },
+        include: {
+          brand: true,
+          category: true,
+          distributorProducts: {
+            include: { distributor: true },
+            take: 3,
+          },
+        },
+        take: limit,
+      });
+
+      return products;
+    } catch (e) {
+      this.logger.error("Erro pesquisando catálogo de produtos para WhatsApp:", e);
+      return [];
+    }
+  }
+
+  private async answerFreeformQuestion({
+    userQuestion,
+    organizationId,
+  }: {
+    userQuestion: string;
+    organizationId?: string | null;
+  }): Promise<string> {
+    const openAiKey = this.config.get<string>("OPENAI_API_KEY");
+    if (!openAiKey) {
+      return (
+        `Não consegui consultar as especificações no momento. ` +
+        `Para cotar um kit completo, você pode me enviar a fatura em PDF/foto ou digitar o consumo médio em kWh (ex: *450 kWh*).`
+      );
+    }
+
+    const matchingProducts = await this.searchCatalogProducts(userQuestion, 4);
+
+    let catalogContext = "";
+    if (matchingProducts.length > 0) {
+      catalogContext = "PRODUTOS ENCONTRADOS NO BANCO DE DADOS DA PLATAFORMA ENERGIVIA:\n";
+      for (const p of matchingProducts) {
+        const prices = p.distributorProducts
+          .map(
+            (dp) =>
+              `${dp.distributor.name}: R$ ${Number(dp.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} (Estoque: ${dp.stockQuantity})`
+          )
+          .join(" | ");
+        const specsText = p.specs ? JSON.stringify(p.specs) : "Padrão do fabricante";
+        catalogContext += `- Produto: ${p.name}\n  Categoria: ${p.category?.name || "Solar"}\n  Marca: ${p.brand?.name || "Fabricante"}\n  Ficha Técnica / Specs: ${specsText}\n  Preços / Distribuidores: ${prices || "Sob consulta"}\n`;
+      }
+    } else {
+      catalogContext =
+        "NENHUM PRODUTO ESPECÍFICO ENCONTRADO NO CATÁLOGO DO BANCO DE DADOS PARA ESSA PESQUISA.";
+    }
+
+    const systemPrompt = `Você é o assistente técnico e comercial inteligente da plataforma EnergivIA via WhatsApp.
+REGRAS OBRIGATÓRIAS E INEGOCIÁVEIS:
+1. ESCOPO ESTRITO: Responda APENAS sobre energia solar fotovoltaica e estritamente sobre os produtos/dados cadastrados na EnergivIA. Se o usuário perguntar sobre qualquer assunto fora de energia solar (esportes, piadas, culinária, política, curiosidades gerais, etc.), recuse educadamente em 1 linha e convide-o a simular um projeto solar ou tirar dúvidas da plataforma.
+2. ZERO ALUCINAÇÃO / DADOS REAIS: Utilize EXCLUSIVAMENTE os produtos, fichas técnicas e preços listados abaixo em "CONTEXTO DO CATÁLOGO". NUNCA invente preços, potências, garantias ou marcas. NUNCA mencione informações da internet que não estejam no catálogo abaixo.
+3. SE NÃO ENCONTRAR NO CATÁLOGO: Se o produto ou especificação exata não constar no catálogo abaixo, diga claramente em 1 ou 2 frases que não localizou esse modelo cadastrado no momento no catálogo dos distribuidores e oriente a informar o consumo (kWh) ou potência (kWp) para simularmos um kit completo.
+4. RESPOSTA ULTRACURTA E DIRETA (MÁXIMO 2 A 3 FRASES): Seja 100% conciso, amigável e direto ao ponto. Proibido textos longos, introduções prolixas ou listas extensas. Economize tokens ao máximo.
+
+CONTEXTO DO CATÁLOGO:
+${catalogContext}`;
+
+    const startTime = Date.now();
+    const model = "gpt-4o-mini";
+
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openAiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0,
+          max_tokens: 150,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userQuestion },
+          ],
+        }),
+      });
+
+      const latencyMs = Date.now() - startTime;
+      if (!response.ok) {
+        void this.aiUsage.logUsage({
+          organizationId,
+          feature: AiFeature.WHATSAPP_BOT,
+          model,
+          latencyMs,
+          status: "ERROR",
+          errorMessage: `OpenAI HTTP ${response.status}`,
+        });
+        return "Desculpe, tive uma instabilidade temporária ao consultar o catálogo. Por favor, tente novamente em instantes.";
+      }
+
+      const json = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+        usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+      };
+
+      if (json.usage) {
+        void this.aiUsage.logUsage({
+          organizationId,
+          feature: AiFeature.WHATSAPP_BOT,
+          model,
+          promptTokens: json.usage.prompt_tokens || 0,
+          completionTokens: json.usage.completion_tokens || 0,
+          totalTokens: json.usage.total_tokens || 0,
+          latencyMs,
+          status: "SUCCESS",
+        });
+      }
+
+      const answer = json.choices?.[0]?.message?.content?.trim();
+      return (
+        answer ||
+        "Não localizei essa informação no catálogo no momento. Você pode enviar a conta de luz ou digitar o consumo em kWh para gerarmos uma cotação completa!"
+      );
+    } catch (err) {
+      this.logger.error("Erro na resposta conversacional de IA no WhatsApp:", err);
+      return "Não consegui processar a consulta agora. Digite *novo* para reiniciar ou envie a fatura em PDF/foto.";
+    }
+  }
+
   private async generateBotResponse({
     conversation,
     incomingText,
     extractionResult,
+    contactName,
   }: {
     conversation: {
       id: string;
       organizationId: string;
       title: string | null;
+      metadata?: unknown;
       messages?: Array<{
         role: string;
         content?: string | null;
@@ -1735,9 +1970,16 @@ export class WhatsappBotService {
     };
     incomingText: string;
     extractionResult: BillExtractionResult | null;
+    contactName?: string;
   }): Promise<string> {
     const lower = incomingText.toLowerCase().trim();
     const messages = conversation?.messages || [];
+    const resolvedContactName =
+      contactName ||
+      (conversation?.metadata as Record<string, unknown> | null | undefined)?.[
+        "contactName"
+      ]?.toString() ||
+      "Integrador";
 
     // Helper interno para decodificar o estado acumulado da conversa
     const extractContextFromSession = () => {
@@ -2427,25 +2669,72 @@ export class WhatsappBotService {
       );
     }
 
-    // ESTADO H: Saudação inicial
+    // Opções do menu inicial (1 a 5) quando não estiver em fluxos específicos
+    const isChoosingOtherOption =
+      lastBotMsg.includes("Qual opção você prefere para o seu cliente?") ||
+      lastBotMsg.includes("Qual o padrão de entrada da instalação?") ||
+      lastBotMsg.includes("Qual a estrutura do telhado?") ||
+      lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar");
+
+    if (!isChoosingOtherOption) {
+      if (lower === "1" || lower === "1." || lower === "opcao 1" || lower === "opção 1") {
+        return (
+          `Perfeito! 📄 Envie o arquivo em *PDF* ou a *foto da conta de luz* do seu cliente por aqui mesmo.\n\n` +
+          `Nossa inteligência artificial vai extrair automaticamente todos os dados de consumo e histórico!`
+        );
+      }
+      if (lower === "2" || lower === "2." || lower === "opcao 2" || lower === "opção 2") {
+        return (
+          `Legal! ⚡ Qual é o *consumo médio mensal* do seu cliente em kWh?\n\n` +
+          `(Exemplo: digite *450 kWh* ou *600 kWh*)`
+        );
+      }
+      if (lower === "3" || lower === "3." || lower === "opcao 3" || lower === "opção 3") {
+        return (
+          `Excelente! ☀️ Qual a *potência de pico* desejada para o sistema solar?\n\n` +
+          `(Exemplo: digite *5 kWp* ou *7.5 kWp*)`
+        );
+      }
+      if (lower === "4" || lower === "4." || lower === "opcao 4" || lower === "opção 4") {
+        return (
+          `Ótimo! 🔌 Quantas *placas solares* você deseja no kit e qual a potência delas?\n\n` +
+          `(Exemplo: digite *10 placas de 590W* ou *12 módulos*)`
+        );
+      }
+      if (lower === "5" || lower === "5." || lower === "opcao 5" || lower === "opção 5") {
+        return (
+          `Com certeza! 🔎 Você pode me perguntar sobre modelos, marcas e preços dos inversores, módulos ou estruturas cadastrados no nosso catálogo da EnergivIA.\n\n` +
+          `(Exemplo: *"qual o valor do inversor de 5kw?"* ou *"quais marcas de módulos estão disponíveis?"*)`
+        );
+      }
+    }
+
+    // ESTADO H: Saudação inicial / Menu
+    const greetingTriggers = [
+      "oi",
+      "olá",
+      "ola",
+      "bom dia",
+      "boa tarde",
+      "boa noite",
+      "start",
+      "ajuda",
+      "help",
+      "menu",
+      "inicio",
+      "início",
+      "comecar",
+      "começar",
+      "opcoes",
+      "opções",
+    ];
     if (
-      lower === "oi" ||
-      lower === "olá" ||
-      lower === "ola" ||
-      lower === "bom dia" ||
-      lower === "boa tarde" ||
-      lower === "boa noite" ||
-      lower === "start" ||
-      lower === "ajuda"
+      greetingTriggers.includes(lower) ||
+      lower.startsWith("bom dia") ||
+      lower.startsWith("boa tarde") ||
+      lower.startsWith("boa noite")
     ) {
-      return (
-        `Olá! Sou seu assistente de vendas e dimensionamento da EnergivIA. ☀️\n\n` +
-        `Como posso ajudar você a gerar orçamentos e propostas para seus clientes hoje?\n\n` +
-        `Você pode me enviar a fatura de energia (PDF ou foto) ou informar:\n` +
-        `• O consumo médio (ex: "300 kWh")\n` +
-        `• A potência do sistema (ex: "5 kWp")\n` +
-        `• Ou a quantidade de placas (ex: "12 placas de 590W")`
-      );
+      return this.buildGreetingMenu(resolvedContactName);
     }
 
     // ESTADO I: Entrada por kWp direto (ex: "5 kwp", "kit 7.5kwp", "15 kwp")
@@ -2528,12 +2817,14 @@ export class WhatsappBotService {
       }
     }
 
-    return (
-      `Entendi! Para dimensionarmos o kit ideal para o seu cliente, você pode:\n\n` +
-      `1. Enviar o arquivo ou foto da fatura de energia\n` +
-      `2. Digitar o consumo médio (ex: *300 kWh*)\n` +
-      `3. Informar a potência do sistema (ex: *5 kWp*)\n` +
-      `4. Ou a quantidade de placas (ex: *12 placas de 590W*)`
-    );
+    // Fallback Inteligente: Pergunta livre respondida com IA confinada ao catálogo
+    if (incomingText.trim().length >= 3) {
+      return await this.answerFreeformQuestion({
+        userQuestion: incomingText,
+        organizationId: conversation.organizationId,
+      });
+    }
+
+    return this.buildGreetingMenu(resolvedContactName);
   }
 }
