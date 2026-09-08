@@ -456,7 +456,7 @@ export function AIAssistantWidget() {
   }
 
   return (
-    <div className="fixed flex flex-col items-end bottom-6 right-6 z-[9999]">
+    <div className="fixed flex flex-col items-end bottom-6 right-6 z-40">
       {/* Chat Window */}
       {isOpen && (
         <div className="flex flex-col bg-gray-950 border border-gray-800 shadow-[0_0_40px_rgba(16,185,129,0.15)] rounded-2xl w-[390px] sm:w-[420px] h-[640px] max-h-[85vh] max-w-[calc(100vw-32px)] mb-4 overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">

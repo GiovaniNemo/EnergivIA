@@ -258,7 +258,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
             ref,
             style: paperStyle,
             className: cn(
-              "relative my-auto box-border flex w-full max-h-[min(90vh,calc(100dvh-2rem))] flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-6 pb-6 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.55)] outline-none ring-1 ring-white/[0.06]",
+              "relative my-auto box-border flex w-full max-h-[min(90vh,calc(100dvh-2rem))] flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3.5 pb-4 sm:rounded-2xl sm:px-6 sm:pb-6 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.55)] outline-none ring-1 ring-white/[0.06]",
               showCloseButton && !paperHasFlushPadding && "pt-12",
               !showCloseButton && "pt-6",
               allowOverflow ? "overflow-visible" : "overflow-hidden",
@@ -268,6 +268,12 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
             sx: {
               bgcolor: "var(--color-card)",
               color: "var(--color-foreground)",
+              m: { xs: "8px !important", sm: "24px !important", md: "32px !important" },
+              width: { xs: "calc(100% - 16px) !important", sm: "100%" },
+              maxHeight: {
+                xs: "calc(100dvh - 16px) !important",
+                sm: "min(90vh, calc(100dvh - 2rem))",
+              },
               ...(muiMaxWidth === false && {
                 maxWidth: "none !important",
               }),

@@ -1656,20 +1656,20 @@ export const ProposalEconomicsModal = forwardRef<
         <DialogContent
           muiMaxWidth="md"
           stickyChrome
-          className="flex max-h-[min(92vh,calc(100dvh-2rem))] flex-col overflow-hidden rounded-3xl p-0"
+          className="flex max-h-[min(92vh,calc(100dvh-2rem))] flex-col overflow-hidden rounded-2xl sm:rounded-3xl p-0"
         >
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <DialogHeader className="shrink-0 space-y-2 border-b border-[var(--color-border)] bg-[var(--color-background)] px-5 pb-4 pt-6 sm:px-8 sm:pb-5 sm:pt-7">
-              <DialogTitle className="flex items-start gap-2.5 text-lg font-semibold leading-tight tracking-tight sm:items-center sm:text-2xl">
-                <Zap className="mt-0.5 h-5 w-5 shrink-0 text-amber-500 sm:mt-0" />
+            <DialogHeader className="shrink-0 space-y-1.5 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 pb-3.5 pt-4 pr-12 sm:space-y-2 sm:px-8 sm:pb-5 sm:pt-7">
+              <DialogTitle className="flex items-start gap-2 text-base font-semibold leading-tight tracking-tight sm:items-center sm:text-2xl">
+                <Zap className="mt-0.5 h-4 w-4 shrink-0 text-amber-500 sm:mt-0 sm:h-5 sm:w-5" />
                 <span className="min-w-0">Economia do cliente em segundos</span>
               </DialogTitle>
-              <p className="text-sm leading-relaxed text-[var(--color-muted-foreground)] sm:text-[1.05rem]">
-                Envie a conta de luz do cliente para gerar uma estimativa rapida e fortalecer sua
+              <p className="text-xs leading-relaxed text-[var(--color-muted-foreground)] sm:text-[1.05rem]">
+                Envie a conta de luz do cliente para gerar uma estimativa rápida e fortalecer sua
                 abordagem comercial com dados claros.
               </p>
             </DialogHeader>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-8 sm:py-6">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-8 sm:py-6">
               <div className="space-y-5">
                 {proposalError ? (
                   <p className="text-sm text-red-600 dark:text-red-400">{proposalError}</p>
@@ -1712,11 +1712,11 @@ export const ProposalEconomicsModal = forwardRef<
                 <div className="grid gap-5">
                   {proposalInputMode === "upload" ? (
                     <div className="grid gap-3">
-                      <Label className="text-sm">Conta de luz (imagem ou PDF)</Label>
+                      <Label className="text-xs sm:text-sm">Conta de luz (imagem ou PDF)</Label>
                       <div
                         role="button"
                         tabIndex={0}
-                        className={`relative rounded-2xl border-2 border-dashed px-4 py-6 transition sm:px-6 sm:py-8 ${
+                        className={`relative rounded-2xl border-2 border-dashed px-3 py-4 transition sm:px-6 sm:py-8 ${
                           isUploadDragActive
                             ? "border-emerald-500 bg-emerald-500/10 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]"
                             : "border-[var(--color-border)] bg-[var(--color-card)] hover:border-emerald-300"
@@ -1860,11 +1860,11 @@ export const ProposalEconomicsModal = forwardRef<
                             <div className="rounded-full bg-[var(--color-muted)] p-3">
                               <Upload className="h-6 w-6 text-[var(--color-muted-foreground)]" />
                             </div>
-                            <p className="text-xl font-semibold">
+                            <p className="text-base font-semibold sm:text-xl">
                               Arraste e solte aqui ou{" "}
                               <span className="text-emerald-600">selecione o arquivo</span>
                             </p>
-                            <p className="text-sm text-[var(--color-muted-foreground)]">
+                            <p className="text-xs text-[var(--color-muted-foreground)] sm:text-sm">
                               Formatos aceitos: imagem ou PDF da conta do cliente
                             </p>
                           </div>
@@ -1907,11 +1907,46 @@ export const ProposalEconomicsModal = forwardRef<
                               );
                             })()}
                           </div>
-                          <img
-                            src={billAttachment.fileUrl}
-                            alt="Conta enviada"
-                            className="max-h-36 w-full rounded-lg border border-emerald-500/20 object-contain bg-white sm:max-h-52"
-                          />
+                          {(() => {
+                            const isPdf =
+                              billAttachment.fileName?.toLowerCase().endsWith(".pdf") ||
+                              billAttachment.fileUrl?.toLowerCase().includes(".pdf");
+                            if (isPdf) {
+                              return (
+                                <div className="flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs">
+                                  <FileText className="h-7 w-7 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-semibold text-[var(--color-foreground)] truncate">
+                                      {billAttachment.fileName || "Fatura anexada (PDF)"}
+                                    </p>
+                                    <p className="text-[var(--color-muted-foreground)] text-[0.7rem]">
+                                      Documento PDF pronto para simulação
+                                    </p>
+                                  </div>
+                                  {billAttachment.fileUrl ? (
+                                    <a
+                                      href={billAttachment.fileUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="shrink-0 rounded-md bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-500 transition-colors"
+                                    >
+                                      Visualizar
+                                    </a>
+                                  ) : null}
+                                </div>
+                              );
+                            }
+                            return (
+                              <img
+                                src={billAttachment.fileUrl}
+                                alt="Conta enviada"
+                                className="max-h-36 w-full rounded-lg border border-emerald-500/20 object-contain bg-white sm:max-h-52"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = "none";
+                                }}
+                              />
+                            );
+                          })()}
                           <dl className="grid gap-1.5 text-xs">
                             <div className="flex flex-wrap gap-x-2 gap-y-0.5">
                               <dt className="font-medium text-[var(--color-foreground)]">
@@ -2314,16 +2349,16 @@ export const ProposalEconomicsModal = forwardRef<
                 </div>
               </div>
             </div>
-            <DialogFooter className="shrink-0 flex-row flex-wrap items-center justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--color-background)] px-5 py-4 sm:gap-3 sm:px-8 sm:py-5">
+            <DialogFooter className="shrink-0 flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 sm:gap-3 sm:px-8 sm:py-5">
               <Button
                 variant="ghost"
-                className="text-[var(--color-muted-foreground)]"
+                className="h-10 sm:h-11 w-full sm:w-auto text-[var(--color-muted-foreground)]"
                 onClick={() => setProposalFormOpen(false)}
               >
                 Cancelar
               </Button>
               <Button
-                className="h-11 rounded-xl px-6 text-base font-semibold"
+                className="h-11 sm:h-12 w-full sm:w-auto rounded-xl px-6 text-sm sm:text-base font-semibold"
                 disabled={proposalLoading}
                 onClick={() => {
                   const fieldErrors: ProposalFieldErrors = {};
@@ -3210,23 +3245,23 @@ export const ProposalEconomicsModal = forwardRef<
                         {proposalKitResult.string_configuration.modules_per_string} módulos
                       </p>
                     ) : null}
-                    <div className="overflow-hidden rounded-xl border border-[var(--color-border)] shadow-sm">
-                      <table className="w-full text-xs sm:text-sm">
+                    <div className="overflow-x-auto overscroll-x-contain rounded-xl border border-[var(--color-border)] shadow-sm">
+                      <table className="w-full min-w-[500px] text-xs sm:text-sm">
                         <thead>
                           <tr className="border-b border-[var(--color-border)] bg-gradient-to-r from-[var(--color-muted)]/50 to-[var(--color-muted)]/20">
-                            <th className="p-3 text-left text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                            <th className="p-2.5 sm:p-3 text-left text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
                               Item
                             </th>
-                            <th className="p-3 text-left text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                            <th className="p-2.5 sm:p-3 text-left text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
                               Marca
                             </th>
-                            <th className="p-3 text-right text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                            <th className="p-2.5 sm:p-3 text-right text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
                               Qtd
                             </th>
-                            <th className="hidden p-3 text-right text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] sm:table-cell">
+                            <th className="hidden p-2.5 sm:p-3 text-right text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] sm:table-cell">
                               Un.
                             </th>
-                            <th className="p-3 text-right text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                            <th className="p-2.5 sm:p-3 text-right text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
                               Total
                             </th>
                           </tr>
@@ -3256,7 +3291,7 @@ export const ProposalEconomicsModal = forwardRef<
                                   idx % 2 === 1 ? "bg-[var(--color-muted)]/15" : ""
                                 }`}
                               >
-                                <td className="p-3 font-medium text-[var(--color-foreground)]">
+                                <td className="p-2.5 sm:p-3 font-medium text-[var(--color-foreground)]">
                                   {item.product_name}
                                   {isAdjusted ? (
                                     <span className="mt-0.5 block text-[0.7rem] font-normal text-[var(--color-muted-foreground)]">
@@ -3284,10 +3319,10 @@ export const ProposalEconomicsModal = forwardRef<
                                     </span>
                                   ) : null}
                                 </td>
-                                <td className="p-3 text-[var(--color-muted-foreground)]">
+                                <td className="p-2.5 sm:p-3 text-[var(--color-muted-foreground)]">
                                   {item.brand_name}
                                 </td>
-                                <td className="p-3 text-right tabular-nums text-[var(--color-foreground)]">
+                                <td className="p-2.5 sm:p-3 text-right tabular-nums text-[var(--color-foreground)]">
                                   {isModuleRow ? (
                                     <span className="inline-flex items-center gap-1">
                                       <button
@@ -3343,13 +3378,13 @@ export const ProposalEconomicsModal = forwardRef<
                                     />
                                   )}
                                 </td>
-                                <td className="hidden p-3 text-right tabular-nums text-[var(--color-muted-foreground)] sm:table-cell">
+                                <td className="hidden p-2.5 sm:p-3 text-right tabular-nums text-[var(--color-muted-foreground)] sm:table-cell">
                                   {item.unit_price.toLocaleString("pt-BR", {
                                     style: "currency",
                                     currency: "BRL",
                                   })}
                                 </td>
-                                <td className="p-3 text-right font-medium tabular-nums text-[var(--color-foreground)]">
+                                <td className="p-2.5 sm:p-3 text-right font-medium tabular-nums text-[var(--color-foreground)]">
                                   {(qty * item.unit_price).toLocaleString("pt-BR", {
                                     style: "currency",
                                     currency: "BRL",
@@ -3363,12 +3398,12 @@ export const ProposalEconomicsModal = forwardRef<
                           <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/30">
                             <td
                               colSpan={3}
-                              className="p-3 text-right text-xs font-medium text-[var(--color-muted-foreground)]"
+                              className="p-2.5 sm:p-3 text-right text-xs font-medium text-[var(--color-muted-foreground)]"
                             >
                               Total dos equipamentos
                             </td>
-                            <td className="hidden p-3 sm:table-cell" />
-                            <td className="p-3 text-right text-sm font-semibold tabular-nums text-[var(--color-foreground)]">
+                            <td className="hidden p-2.5 sm:p-3 sm:table-cell" />
+                            <td className="p-2.5 sm:p-3 text-right text-sm font-semibold tabular-nums text-[var(--color-foreground)]">
                               {formatCurrency(kitItemsTotal(effectiveKitItems))}
                             </td>
                           </tr>
