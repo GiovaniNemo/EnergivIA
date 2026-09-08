@@ -41,6 +41,7 @@ import { RadarModule } from "./modules/radar/radar.module";
 import { SystemSettingsModule } from "./modules/system-settings/system-settings.module";
 import { EmailModule } from "./common/email/email.module";
 import { AiUsageModule } from "./modules/ai-usage/ai-usage.module";
+import { WebhooksModule } from "./modules/webhooks/webhooks.module";
 
 @Module({
   controllers: [HealthController],
@@ -94,6 +95,7 @@ import { AiUsageModule } from "./modules/ai-usage/ai-usage.module";
     RadarModule,
     SystemSettingsModule,
     AiUsageModule,
+    WebhooksModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: SentryGlobalFilter },

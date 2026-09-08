@@ -6,7 +6,9 @@ import {
   NotFoundException,
   Logger,
   ForbiddenException,
+  Optional,
 } from "@nestjs/common";
+import { WebhooksDispatcherService } from "../webhooks/webhooks-dispatcher.service";
 import type { Prisma, ProposalStatus, ProposalTemplate } from "@prisma/client";
 import type { JwtPayload } from "@energivia/types";
 import { isProposalIntegratorSnapshot } from "@energivia/shared-types";
@@ -74,7 +76,8 @@ export class ProposalsService {
     private readonly notificationsService: NotificationsService,
     private readonly leadActivityLog: LeadActivityLogService,
     private readonly stockReservation: StockReservationService,
-    private readonly pdfRenderer: PdfRendererService
+    private readonly pdfRenderer: PdfRendererService,
+    @Optional() private readonly webhooksDispatcher?: WebhooksDispatcherService
   ) {}
 
   async list(tenantId: string, userRole?: string) {
@@ -238,6 +241,14 @@ export class ProposalsService {
         label: `Proposta criada (${data.title})`,
         meta: { proposalId: created.id, dealId: data.dealId },
         occurredAt: created.createdAt,
+      })
+      .catch(() => {});
+    this.webhooksDispatcher
+      ?.dispatch(tenantId, "proposal.created", {
+        proposalId: created.id,
+        title: created.title,
+        dealId: data.dealId,
+        status: created.status,
       })
       .catch(() => {});
     return created;
@@ -439,6 +450,21 @@ export class ProposalsService {
 
     await this.notificationsService.handlePublicProposalResponse(proposal.id, dto);
 
+    this.webhooksDispatcher
+      ?.dispatch(
+        proposal.tenantId,
+        dto.decision === "ACCEPT" ? "proposal.accepted" : "proposal.rejected",
+        {
+          proposalId: proposal.id,
+          decision: dto.decision,
+          status: updated.status,
+          dealId: proposal.dealId,
+          comments: dto.comments?.trim() || null,
+          signatureName: dto.signatureName?.trim() || null,
+        }
+      )
+      .catch(() => {});
+
     return {
       success: true,
       decision: dto.decision,
@@ -469,6 +495,15 @@ export class ProposalsService {
         occurredAt: updated.sentAt ?? new Date(),
       });
     }
+
+    this.webhooksDispatcher
+      ?.dispatch(tenantId, "proposal.sent", {
+        proposalId: id,
+        title: before.title,
+        dealId: before.deal?.leadId,
+        pdfUrl,
+      })
+      .catch(() => {});
 
     return updated;
   }

@@ -187,3 +187,5 @@ export function generateSolarKits(input: GenerateSolarKitsInput): GenerateSolarK
 
   return { kits };
 }
+
+export * from "./grupo-a";
