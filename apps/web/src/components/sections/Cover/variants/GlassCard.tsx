@@ -27,7 +27,6 @@ export function GlassCard({
   const pills = [
     { value: content.potenciaKwp, unit: "kWp" },
     { value: content.geracaoMensal, unit: "kWh/mês" },
-    { value: content.coberturaConsumo, unit: "cobertura" },
     { value: content.equivalenteArvores, unit: "árv./ano" },
   ].filter((p) => p.value?.trim());
 

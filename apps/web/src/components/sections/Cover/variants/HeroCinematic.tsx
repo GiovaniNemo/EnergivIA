@@ -49,7 +49,6 @@ export function HeroCinematic({
   const stats = [
     { value: content.potenciaKwp, unit: "kWp", label: "Potência" },
     { value: content.geracaoMensal, unit: "kWh/mês", label: "Geração" },
-    { value: content.coberturaConsumo, unit: "%", label: "Cobertura" },
   ].filter((s) => s.value?.trim());
 
   return (

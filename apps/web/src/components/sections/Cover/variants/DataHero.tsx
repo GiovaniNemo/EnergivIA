@@ -24,7 +24,6 @@ export function DataHero({
   const minHeightPx = Math.round(250 * (style.coverHeight / 100));
 
   const bottomStats = [
-    { value: content.coberturaConsumo, unit: "%", label: "Cobertura do consumo" },
     { value: content.geracaoMensal, unit: "kWh", label: "Geração mensal" },
     { value: content.equivalenteArvores, unit: "árv./ano", label: "Equivalente em árvores" },
   ].filter((s) => s.value?.trim());

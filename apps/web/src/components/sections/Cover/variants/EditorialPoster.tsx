@@ -27,7 +27,6 @@ export function EditorialPoster({
   const stats = [
     { value: content.potenciaKwp, unit: "kWp", label: "Potência" },
     { value: content.geracaoMensal, unit: "kWh", label: "Geração mensal" },
-    { value: content.coberturaConsumo, unit: "%", label: "Cobertura" },
     { value: content.equivalenteArvores, unit: "árv.", label: "Eq. árvores/ano" },
   ].filter((s) => s.value?.trim());
 
