@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   CheckCheck,
@@ -11,101 +11,288 @@ import {
   Phone,
   Play,
   RotateCcw,
+  Send,
   Sparkles,
   Video,
   Zap,
 } from "lucide-react";
 
-interface Step {
+type MessageItem =
+  | {
+      id: string;
+      type: "user";
+      text: string;
+      time: string;
+    }
+  | {
+      id: string;
+      type: "user_doc";
+      title: string;
+      subtitle: string;
+      time: string;
+    }
+  | {
+      id: string;
+      type: "bot";
+      kind:
+        | "welcome"
+        | "ask_bill"
+        | "ocr_result"
+        | "kit_dynamis"
+        | "ask_name"
+        | "ask_phone"
+        | "ask_template"
+        | "final_proposal";
+      time: string;
+    };
+
+type Action =
+  | { type: "typing_input"; text: string; duration: number }
+  | { type: "send_user"; text: string; time: string }
+  | { type: "send_user_doc"; title: string; subtitle: string; time: string; duration: number }
+  | { type: "bot_typing"; label: string; duration: number }
+  | {
+      type: "send_bot";
+      kind: MessageItem["type"] extends "bot" ? MessageItem["kind"] : never;
+      time: string;
+    }
+  | { type: "pause"; duration: number };
+
+interface Milestone {
   id: number;
   title: string;
   tag: string;
-  durationMs: number;
   description: string;
+  actionIndex: number;
 }
 
-const STEPS: Step[] = [
+const SCRIPT_ACTIONS: Action[] = [
+  // 0: Passo 1 - Início
+  { type: "typing_input", text: "Boa tarde", duration: 700 },
+  { type: "send_user", text: "Boa tarde", time: "16:53" },
+  { type: "bot_typing", label: "EnergivIA está digitando...", duration: 1100 },
+  { type: "send_bot", kind: "welcome", time: "16:53" },
+  { type: "pause", duration: 1200 },
+  { type: "typing_input", text: "1", duration: 500 },
+  { type: "send_user", text: "1", time: "16:54" },
+  { type: "bot_typing", label: "EnergivIA está digitando...", duration: 1000 },
+  { type: "send_bot", kind: "ask_bill", time: "16:54" },
+  { type: "pause", duration: 1200 },
+
+  // 10: Passo 2 - Envio da Fatura & OCR
+  {
+    type: "send_user_doc",
+    title: "SegundaViaCopel.pdf",
+    subtitle: "1 página • 524 kB • PDF",
+    duration: 800,
+    time: "16:54",
+  },
+  { type: "bot_typing", label: "EnergivIA analisando fatura com IA...", duration: 1600 },
+  { type: "send_bot", kind: "ocr_result", time: "16:54" },
+  { type: "pause", duration: 1400 },
+  { type: "typing_input", text: "2", duration: 500 },
+  { type: "send_user", text: "2", time: "16:54" },
+
+  // 16: Passo 3 - Dimensionamento & Kit Dynamis
+  { type: "bot_typing", label: "EnergivIA calculando melhor kit solar...", duration: 1400 },
+  { type: "send_bot", kind: "kit_dynamis", time: "16:54" },
+  { type: "pause", duration: 1400 },
+  { type: "typing_input", text: "1", duration: 500 },
+  { type: "send_user", text: "1", time: "16:55" },
+  { type: "bot_typing", label: "EnergivIA está digitando...", duration: 900 },
+  { type: "send_bot", kind: "ask_name", time: "16:55" },
+  { type: "pause", duration: 1000 },
+
+  // 24: Passo 4 - Registro do Cliente (Marcelo)
+  { type: "typing_input", text: "Marcelo", duration: 700 },
+  { type: "send_user", text: "Marcelo", time: "16:55" },
+  { type: "bot_typing", label: "EnergivIA está digitando...", duration: 900 },
+  { type: "send_bot", kind: "ask_phone", time: "16:55" },
+  { type: "pause", duration: 1000 },
+  { type: "typing_input", text: "(44) 99888-0000", duration: 900 },
+  { type: "send_user", text: "(44) 99888-0000", time: "16:55" },
+  { type: "bot_typing", label: "EnergivIA está digitando...", duration: 900 },
+  { type: "send_bot", kind: "ask_template", time: "16:55" },
+  { type: "pause", duration: 1000 },
+  { type: "typing_input", text: "1", duration: 500 },
+  { type: "send_user", text: "1", time: "16:55" },
+
+  // 36: Passo 5 - Proposta Comercial Pronta
+  { type: "bot_typing", label: "EnergivIA gerando proposta em PDF...", duration: 1600 },
+  { type: "send_bot", kind: "final_proposal", time: "16:56" },
+  { type: "pause", duration: 8000 },
+];
+
+const MILESTONES: Milestone[] = [
   {
     id: 0,
-    title: "Início & Envio da Conta",
+    title: "Início & Menu Interativo",
     tag: "Passo 1",
-    durationMs: 4200,
-    description: "O integrador inicia a conversa e envia a fatura em PDF direto pelo WhatsApp.",
+    description: "O cliente manda 'Boa tarde' e o bot apresenta as opções comerciais.",
+    actionIndex: 0,
   },
   {
     id: 1,
-    title: "Leitura OCR & Telhado",
+    title: "Leitura da Fatura Copel",
     tag: "Passo 2",
-    durationMs: 4400,
-    description:
-      "A IA extrai o consumo (257 kWh/mês), tensão e pergunta o tipo de estrutura do telhado.",
+    description: "Envio do PDF da fatura e extração por IA do consumo (257 kWh/mês) e telhado.",
+    actionIndex: 10,
   },
   {
     id: 2,
     title: "Seleção do Kit Dynamis",
     tag: "Passo 3",
-    durationMs: 4200,
-    description:
-      "Apresenta o kit ideal do distribuidor Dynamis com potência de 3,15 kWp e preço final.",
+    description: "Cálculo da potência (3,15 kWp), preço do kit Dynamis e escolha do integrador.",
+    actionIndex: 16,
   },
   {
     id: 3,
-    title: "Registro no CRM",
+    title: "Dados do Cliente no CRM",
     tag: "Passo 4",
-    durationMs: 4000,
-    description:
-      "Registra os dados do cliente (Marcelo) e seleciona o modelo de proposta desejado.",
+    description: "Coleta do nome (Marcelo), WhatsApp fictício e template desejado.",
+    actionIndex: 24,
   },
   {
     id: 4,
     title: "Proposta Pronta com Link",
     tag: "Passo 5",
-    durationMs: 4800,
-    description: "Gera a proposta comercial com link limpo e exclusivo, integrada ao painel CRM.",
+    description: "Entrega do link elegante da proposta pronto para enviar ao cliente.",
+    actionIndex: 36,
   },
 ];
 
 export function WhatsappFlowSimulator(): JSX.Element {
-  const [currentStep, setCurrentStep] = useState<number>(0);
+  const [actionIndex, setActionIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
-  const [progress, setProgress] = useState<number>(0);
   const [speed, setSpeed] = useState<number>(1);
+  const [inputDraft, setInputDraft] = useState<string>("");
+  const [typingIndicator, setTypingIndicator] = useState<string | null>(null);
+
+  // Computed messages based on the current actionIndex
+  const messages = useMemo(() => {
+    const list: MessageItem[] = [];
+    for (let i = 0; i < actionIndex; i++) {
+      const act = SCRIPT_ACTIONS[i];
+      if (act.type === "send_user") {
+        list.push({
+          id: `u-${i}`,
+          type: "user",
+          text: act.text,
+          time: act.time,
+        });
+      } else if (act.type === "send_user_doc") {
+        list.push({
+          id: `udoc-${i}`,
+          type: "user_doc",
+          title: act.title,
+          subtitle: act.subtitle,
+          time: act.time,
+        });
+      } else if (act.type === "send_bot") {
+        list.push({
+          id: `b-${i}`,
+          type: "bot",
+          kind: act.kind,
+          time: act.time,
+        });
+      }
+    }
+    return list;
+  }, [actionIndex]);
+
+  // Determine current active milestone
+  const activeMilestoneIndex = useMemo(() => {
+    for (let i = MILESTONES.length - 1; i >= 0; i--) {
+      if (actionIndex >= MILESTONES[i].actionIndex) {
+        return i;
+      }
+    }
+    return 0;
+  }, [actionIndex]);
+
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-advance steps
-  useEffect(() => {
-    if (!isPlaying) return;
-
-    const currentDuration = STEPS[currentStep].durationMs / speed;
-    const intervalMs = 40;
-    const stepIncrement = (intervalMs / currentDuration) * 100;
-
-    const timer = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          setCurrentStep((curr) => (curr + 1) % STEPS.length);
-          return 0;
-        }
-        return prev + stepIncrement;
-      });
-    }, intervalMs);
-
-    return () => clearInterval(timer);
-  }, [isPlaying, currentStep, speed]);
-
-  // Smooth scroll chat to bottom when step changes
-  useEffect(() => {
+  // Auto-scroll chat to bottom
+  const scrollToBottom = () => {
     if (chatScrollRef.current) {
       chatScrollRef.current.scrollTo({
         top: chatScrollRef.current.scrollHeight,
         behavior: "smooth",
       });
     }
-  }, [currentStep]);
+  };
 
-  const handleSelectStep = (stepIndex: number) => {
-    setCurrentStep(stepIndex);
-    setProgress(0);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, typingIndicator]);
+
+  // Main execution loop
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    if (actionIndex >= SCRIPT_ACTIONS.length) {
+      // Loop back to start
+      const loopTimeout = setTimeout(() => {
+        setActionIndex(0);
+        setInputDraft("");
+        setTypingIndicator(null);
+      }, 5000 / speed);
+      return () => clearTimeout(loopTimeout);
+    }
+
+    const currentAction = SCRIPT_ACTIONS[actionIndex];
+
+    if (currentAction.type === "typing_input") {
+      setInputDraft(currentAction.text);
+      const timer = setTimeout(() => {
+        setActionIndex((prev) => prev + 1);
+      }, currentAction.duration / speed);
+      return () => clearTimeout(timer);
+    }
+
+    if (currentAction.type === "send_user") {
+      setInputDraft("");
+      // Advance immediately
+      setActionIndex((prev) => prev + 1);
+      return;
+    }
+
+    if (currentAction.type === "send_user_doc") {
+      const timer = setTimeout(() => {
+        setActionIndex((prev) => prev + 1);
+      }, currentAction.duration / speed);
+      return () => clearTimeout(timer);
+    }
+
+    if (currentAction.type === "bot_typing") {
+      setTypingIndicator(currentAction.label);
+      const timer = setTimeout(() => {
+        setTypingIndicator(null);
+        setActionIndex((prev) => prev + 1);
+      }, currentAction.duration / speed);
+      return () => clearTimeout(timer);
+    }
+
+    if (currentAction.type === "send_bot") {
+      setTypingIndicator(null);
+      setActionIndex((prev) => prev + 1);
+      return;
+    }
+
+    if (currentAction.type === "pause") {
+      const timer = setTimeout(() => {
+        setActionIndex((prev) => prev + 1);
+      }, currentAction.duration / speed);
+      return () => clearTimeout(timer);
+    }
+  }, [actionIndex, isPlaying, speed]);
+
+  const handleSelectMilestone = (milestoneIndex: number) => {
+    const targetAction = MILESTONES[milestoneIndex].actionIndex;
+    setActionIndex(targetAction);
+    setInputDraft("");
+    setTypingIndicator(null);
+    setIsPlaying(true);
   };
 
   const handleTogglePlay = () => {
@@ -113,23 +300,24 @@ export function WhatsappFlowSimulator(): JSX.Element {
   };
 
   const handleReset = () => {
-    setCurrentStep(0);
-    setProgress(0);
+    setActionIndex(0);
+    setInputDraft("");
+    setTypingIndicator(null);
     setIsPlaying(true);
   };
 
   return (
     <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12 py-4">
-      {/* PHONE MOCKUP CONTAINER */}
+      {/* SMARTPHONE MOCKUP */}
       <div className="relative w-full max-w-[360px] sm:max-w-[400px] select-none">
         {/* Ambient Glow */}
         <div className="absolute -inset-2 rounded-[52px] bg-gradient-to-r from-emerald-500/20 via-teal-500/15 to-sky-500/20 blur-xl -z-10 opacity-70 animate-pulse" />
 
-        {/* Smartphone Shell */}
+        {/* Device Frame */}
         <div className="relative rounded-[46px] border-[7px] border-slate-800 bg-slate-950 p-2 shadow-2xl shadow-black/80 ring-1 ring-slate-700/50">
           {/* Inner Screen */}
           <div className="relative flex h-[600px] sm:h-[640px] w-full flex-col overflow-hidden rounded-[36px] bg-[#0b141a] text-slate-100 font-sans">
-            {/* Top Speaker / Status Bar */}
+            {/* Top Status Bar */}
             <div className="relative z-30 flex items-center justify-between bg-[#1f2c34] px-6 pt-2 pb-1 text-[11px] text-slate-300 font-medium">
               <span>16:56</span>
               <div className="h-4 w-20 rounded-full bg-black/60 shadow-inner" />
@@ -141,12 +329,11 @@ export function WhatsappFlowSimulator(): JSX.Element {
               </div>
             </div>
 
-            {/* WhatsApp Header matching real screenshot */}
+            {/* WhatsApp Header */}
             <div className="relative z-20 flex items-center justify-between border-b border-slate-800 bg-[#1f2c34] px-3 py-2.5 shadow-md">
               <div className="flex items-center gap-2">
                 <ArrowLeft className="h-4 w-4 text-slate-300 cursor-pointer" />
                 <div className="relative">
-                  {/* Robot Avatar from real app */}
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b from-sky-400 via-cyan-500 to-emerald-500 p-0.5 shadow-md overflow-hidden">
                     <div className="flex h-full w-full items-center justify-center rounded-full bg-slate-950 text-cyan-400">
                       <svg
@@ -183,7 +370,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
               </div>
             </div>
 
-            {/* Chat Messages Container */}
+            {/* Chat Messages Flow */}
             <div
               ref={chatScrollRef}
               className="relative flex-1 space-y-2.5 overflow-y-auto p-2.5 text-[11.5px] sm:text-xs scrollbar-thin scrollbar-thumb-slate-800"
@@ -199,341 +386,296 @@ export function WhatsappFlowSimulator(): JSX.Element {
                 </span>
               </div>
 
-              {/* STEP 0: Initial Greeting & Menu */}
-              <div className="flex justify-end">
-                <div className="max-w-[85%] rounded-xl rounded-tr-none bg-[#005c4b] p-2 text-slate-100 shadow">
-                  <p>Boa tarde</p>
-                  <div className="mt-0.5 flex items-center justify-end gap-1 text-[9px] text-emerald-200/80">
-                    <span>16:53</span>
-                    <CheckCheck className="h-3 w-3 text-sky-300" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-start">
-                <div className="max-w-[92%] rounded-xl rounded-tl-none bg-[#202c33] p-2.5 text-slate-200 shadow border border-slate-800">
-                  <p className="leading-snug">
-                    Boa tarde Giovani! Tudo bem? ☀️
-                    <br />
-                    Sou seu assistente de vendas e dimensionamento da <b>EnergivIA</b>.
-                  </p>
-                  <p className="mt-1.5 leading-snug">
-                    Como posso ajudar você a gerar orçamentos e propostas para seus clientes hoje?
-                  </p>
-                  <div className="mt-2 space-y-0.5 text-[10.5px] text-slate-300">
-                    <p className="font-semibold text-white">
-                      Escolha uma opção digitando o número:
-                    </p>
-                    <p>1️⃣ Enviar fatura de energia (PDF ou foto)</p>
-                    <p>2️⃣ Simular por consumo mensal (ex: 450 kWh)</p>
-                    <p>3️⃣ Simular por potência de pico (ex: 5 kWp)</p>
-                    <p>4️⃣ Simular por quantidade de placas (ex: 10 módulos)</p>
-                    <p>5️⃣ Dúvidas sobre equipamentos e preços</p>
-                  </div>
-                  <p className="mt-1.5 text-[10px] italic text-slate-400">
-                    (Ou me envie diretamente a conta de luz em PDF/foto ou sua dúvida)
-                  </p>
-                  <div className="mt-1 flex justify-end text-[9px] text-slate-400">
-                    <span>16:53</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <div className="rounded-xl rounded-tr-none bg-[#005c4b] px-3 py-1.5 text-slate-100 shadow">
-                  <span>1</span>
-                  <div className="mt-0.5 flex items-center justify-end gap-1 text-[9px] text-emerald-200/80">
-                    <span>16:54</span>
-                    <CheckCheck className="h-3 w-3 text-sky-300" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-start">
-                <div className="max-w-[90%] rounded-xl rounded-tl-none bg-[#202c33] p-2 text-slate-200 shadow border border-slate-800">
-                  <p className="leading-snug">
-                    Perfeito! 📄 Envie o arquivo em <b>PDF</b> ou a <b>foto da conta de luz</b> do
-                    seu cliente por aqui mesmo.
-                  </p>
-                  <p className="mt-1 text-[10.5px] text-slate-300">
-                    Nossa inteligência artificial vai extrair automaticamente todos os dados de
-                    consumo e histórico!
-                  </p>
-                  <div className="mt-1 flex justify-end text-[9px] text-slate-400">
-                    <span>16:54</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* STEP 1+: User sends Copel bill & AI extracts */}
-              {currentStep >= 1 && (
-                <>
-                  <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="max-w-[85%] rounded-xl rounded-tr-none bg-[#005c4b] p-2 text-slate-100 shadow">
-                      {/* Document Card */}
-                      <div className="flex items-center gap-2 rounded-lg bg-slate-950/70 p-1.5 border border-emerald-500/30">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-500/20 text-rose-400 font-bold text-[10px]">
-                          <FileText className="h-5 w-5" />
+              {/* RENDER DYNAMIC MESSAGES */}
+              {messages.map((msg) => {
+                if (msg.type === "user") {
+                  return (
+                    <div
+                      key={msg.id}
+                      className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300"
+                    >
+                      <div className="max-w-[85%] rounded-xl rounded-tr-none bg-[#005c4b] px-3 py-1.5 text-slate-100 shadow">
+                        <p className="leading-snug">{msg.text}</p>
+                        <div className="mt-0.5 flex items-center justify-end gap-1 text-[9px] text-emerald-200/80">
+                          <span>{msg.time}</span>
+                          <CheckCheck className="h-3 w-3 text-sky-300" />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-semibold text-white text-[11px]">
-                            SegundaViaCopel.pdf
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (msg.type === "user_doc") {
+                  return (
+                    <div
+                      key={msg.id}
+                      className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300"
+                    >
+                      <div className="max-w-[85%] rounded-xl rounded-tr-none bg-[#005c4b] p-2 text-slate-100 shadow">
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-950/70 p-1.5 border border-emerald-500/30">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-500/20 text-rose-400 font-bold text-[10px]">
+                            <FileText className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-semibold text-white text-[11px]">
+                              {msg.title}
+                            </p>
+                            <p className="text-[9px] text-slate-300">{msg.subtitle}</p>
+                          </div>
+                        </div>
+                        <div className="mt-1 flex items-center justify-end gap-1 text-[9px] text-emerald-200/80">
+                          <span>{msg.time}</span>
+                          <CheckCheck className="h-3 w-3 text-sky-300" />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // BOT MESSAGES
+                return (
+                  <div
+                    key={msg.id}
+                    className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300"
+                  >
+                    <div className="max-w-[92%] rounded-xl rounded-tl-none bg-[#202c33] p-2.5 text-slate-200 shadow border border-slate-800">
+                      {msg.kind === "welcome" && (
+                        <div>
+                          <p className="leading-snug">
+                            Boa tarde Giovani! Tudo bem? ☀️
+                            <br />
+                            Sou seu assistente de vendas e dimensionamento da <b>EnergivIA</b>.
                           </p>
-                          <p className="text-[9px] text-slate-300">1 página • 524 kB • PDF</p>
-                        </div>
-                      </div>
-                      <div className="mt-1 flex items-center justify-end gap-1 text-[9px] text-emerald-200/80">
-                        <span>16:54</span>
-                        <CheckCheck className="h-3 w-3 text-sky-300" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="max-w-[92%] rounded-xl rounded-tl-none bg-[#202c33] p-2.5 text-slate-200 shadow border border-slate-800">
-                      <p className="text-emerald-400 font-medium">
-                        Legal, dados extraídos com precisão!
-                      </p>
-                      <p className="mt-1 text-[11px] leading-snug">
-                        Consumo médio de <b>257 kWh/mês</b> em <b>Maringá/PR</b> (baseado no
-                        histórico de 5 meses da fatura).
-                        <br />
-                        Padrão de rede identificado: <b>Trifásico</b>
-                      </p>
-
-                      <div className="mt-2 space-y-0.5 text-[10.5px]">
-                        <p className="font-semibold text-white">Qual a estrutura do telhado?</p>
-                        <p>1️⃣ Cerâmica (Colonial)</p>
-                        <p>2️⃣ Fibrocimento</p>
-                        <p>3️⃣ Metálico</p>
-                        <p>4️⃣ Solo</p>
-                        <p>5️⃣ Laje</p>
-                        <p>6️⃣ Fibrometal</p>
-                        <p>7️⃣ Sem estrutura</p>
-                      </div>
-                      <p className="mt-1.5 text-[9.5px] italic text-slate-400">
-                        (Responda com o número da opção)
-                      </p>
-                      <div className="mt-1 flex justify-end text-[9px] text-slate-400">
-                        <span>16:54</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="rounded-xl rounded-tr-none bg-[#005c4b] px-3 py-1 text-slate-100 shadow">
-                      <span>2</span>
-                      <div className="mt-0.5 flex items-center justify-end gap-1 text-[9px] text-emerald-200/80">
-                        <span>16:54</span>
-                        <CheckCheck className="h-3 w-3 text-sky-300" />
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* STEP 2+: Kit Dynamis Display (Cleaned & Polished as requested) */}
-              {currentStep >= 2 && (
-                <>
-                  <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="max-w-[92%] rounded-xl rounded-tl-none bg-[#202c33] p-2.5 text-slate-200 shadow border border-slate-800">
-                      <p className="leading-snug">
-                        Excelente! Seguem as melhores opções de kits dimensionados para o consumo de{" "}
-                        <b>257 kWh/mês</b>:
-                      </p>
-
-                      {/* Clean Kit Card - Distributor, Final Price & Consumption */}
-                      <div className="mt-2 rounded-xl bg-slate-950/70 p-2.5 border border-emerald-500/30">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-white text-xs">
-                            1️⃣ Distribuidor: Dynamis
-                          </span>
-                          <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400">
-                            R$ 5.159,23
-                          </span>
-                        </div>
-                        <div className="mt-2 grid grid-cols-2 gap-1.5 text-[10px] text-slate-300">
-                          <div className="rounded bg-slate-900 p-1.5">
-                            <span className="text-slate-400 block text-[9px]">Potência:</span>
-                            <span className="font-semibold text-white">3,15 kWp</span>
+                          <p className="mt-1.5 leading-snug">
+                            Como posso ajudar você a gerar orçamentos e propostas para seus clientes
+                            hoje?
+                          </p>
+                          <div className="mt-2 space-y-0.5 text-[10.5px] text-slate-300">
+                            <p className="font-semibold text-white">
+                              Escolha uma opção digitando o número:
+                            </p>
+                            <p>1️⃣ Enviar fatura de energia (PDF ou foto)</p>
+                            <p>2️⃣ Simular por consumo mensal (ex: 450 kWh)</p>
+                            <p>3️⃣ Simular por potência de pico (ex: 5 kWp)</p>
+                            <p>4️⃣ Simular por quantidade de placas (ex: 10 módulos)</p>
+                            <p>5️⃣ Dúvidas sobre equipamentos e preços</p>
                           </div>
-                          <div className="rounded bg-slate-900 p-1.5">
-                            <span className="text-slate-400 block text-[9px]">Geração Média:</span>
-                            <span className="font-semibold text-emerald-400">332 kWh/mês</span>
-                          </div>
+                          <p className="mt-1.5 text-[10px] italic text-slate-400">
+                            (Ou me envie diretamente a conta de luz em PDF/foto ou sua dúvida)
+                          </p>
                         </div>
-                      </div>
+                      )}
 
-                      <p className="mt-2 text-[10.5px] text-slate-300">
-                        Qual opção você prefere para o seu cliente?{" "}
-                        <span className="text-[9.5px] italic text-slate-400">
-                          (Responda com o número)
-                        </span>
-                      </p>
+                      {msg.kind === "ask_bill" && (
+                        <div>
+                          <p className="leading-snug">
+                            Perfeito! 📄 Envie o arquivo em <b>PDF</b> ou a{" "}
+                            <b>foto da conta de luz</b> do seu cliente por aqui mesmo.
+                          </p>
+                          <p className="mt-1 text-[10.5px] text-slate-300">
+                            Nossa inteligência artificial vai extrair automaticamente todos os dados
+                            de consumo e histórico!
+                          </p>
+                        </div>
+                      )}
+
+                      {msg.kind === "ocr_result" && (
+                        <div>
+                          <p className="text-emerald-400 font-medium">
+                            Legal, dados extraídos com precisão!
+                          </p>
+                          <p className="mt-1 text-[11px] leading-snug">
+                            Consumo médio de <b>257 kWh/mês</b> em <b>Maringá/PR</b> (baseado no
+                            histórico de 5 meses da fatura).
+                            <br />
+                            Padrão de rede identificado: <b>Trifásico</b>
+                          </p>
+
+                          <div className="mt-2 space-y-0.5 text-[10.5px]">
+                            <p className="font-semibold text-white">Qual a estrutura do telhado?</p>
+                            <p>1️⃣ Cerâmica (Colonial)</p>
+                            <p>2️⃣ Fibrocimento</p>
+                            <p>3️⃣ Metálico</p>
+                            <p>4️⃣ Solo</p>
+                            <p>5️⃣ Laje</p>
+                            <p>6️⃣ Fibrometal</p>
+                            <p>7️⃣ Sem estrutura</p>
+                          </div>
+                          <p className="mt-1.5 text-[9.5px] italic text-slate-400">
+                            (Responda com o número da opção)
+                          </p>
+                        </div>
+                      )}
+
+                      {msg.kind === "kit_dynamis" && (
+                        <div>
+                          <p className="leading-snug">
+                            Excelente! Seguem as melhores opções de kits dimensionados para o
+                            consumo de <b>257 kWh/mês</b>:
+                          </p>
+
+                          {/* Clean Kit Card - Dynamis & Price */}
+                          <div className="mt-2 rounded-xl bg-slate-950/70 p-2.5 border border-emerald-500/30">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-white text-xs">
+                                1️⃣ Distribuidor: Dynamis
+                              </span>
+                              <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400">
+                                R$ 5.159,23
+                              </span>
+                            </div>
+                            <div className="mt-2 grid grid-cols-2 gap-1.5 text-[10px] text-slate-300">
+                              <div className="rounded bg-slate-900 p-1.5">
+                                <span className="text-slate-400 block text-[9px]">Potência:</span>
+                                <span className="font-semibold text-white">3,15 kWp</span>
+                              </div>
+                              <div className="rounded bg-slate-900 p-1.5">
+                                <span className="text-slate-400 block text-[9px]">
+                                  Geração Média:
+                                </span>
+                                <span className="font-semibold text-emerald-400">332 kWh/mês</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <p className="mt-2 text-[10.5px] text-slate-300">
+                            Qual opção você prefere para o seu cliente?{" "}
+                            <span className="text-[9.5px] italic text-slate-400">
+                              (Responda com o número)
+                            </span>
+                          </p>
+                        </div>
+                      )}
+
+                      {msg.kind === "ask_name" && (
+                        <div>
+                          <p className="leading-snug">
+                            Ótima escolha! Kit selecionado com sucesso. ☀️
+                          </p>
+                          <p className="mt-1 text-[11px] text-slate-300">
+                            Qual o nome do cliente final para registrarmos no seu CRM?
+                          </p>
+                        </div>
+                      )}
+
+                      {msg.kind === "ask_phone" && (
+                        <div>
+                          <p className="leading-snug">
+                            Certo, vou registrar o cliente Marcelo. E qual o WhatsApp dele com DDD?
+                          </p>
+                        </div>
+                      )}
+
+                      {msg.kind === "ask_template" && (
+                        <div>
+                          <p className="leading-snug">Cliente Marcelo anotado com sucesso! 👤✨</p>
+                          <p className="mt-1.5 font-semibold text-white">
+                            Qual modelo de proposta comercial você deseja usar para o seu cliente?
+                          </p>
+                          <p className="mt-1 text-[11px] text-emerald-300">
+                            1️⃣ Template de Proposta Padrão EnergivIA
+                          </p>
+                          <p className="mt-1 text-[9.5px] italic text-slate-400">
+                            (Responda com o número da opção desejada)
+                          </p>
+                        </div>
+                      )}
+
+                      {msg.kind === "final_proposal" && (
+                        <div>
+                          <p className="leading-snug">
+                            Perfeito! Proposta comercial gerada com sucesso para o cliente{" "}
+                            <b>Marcelo</b>! 📋✅
+                          </p>
+
+                          <div className="mt-2 space-y-1 rounded-lg bg-slate-950/70 p-2 text-[11px] text-slate-300 border border-slate-800">
+                            <div className="flex justify-between">
+                              <span>☀️ Potência:</span>
+                              <span className="font-semibold text-white">3,15 kWp</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>🏢 Distribuidor:</span>
+                              <span className="font-semibold text-emerald-400">Dynamis</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>🎨 Modelo:</span>
+                              <span className="font-medium text-slate-300">Padrão EnergivIA</span>
+                            </div>
+                            <div className="flex justify-between border-t border-slate-800 pt-1 text-emerald-400 font-bold">
+                              <span>💰 Valor Total:</span>
+                              <span>R$ 8.324,04</span>
+                            </div>
+                          </div>
+
+                          {/* Proposal Card with Pretty Link */}
+                          <div className="mt-2 rounded-xl bg-gradient-to-r from-emerald-950/90 to-slate-900 p-2.5 border border-emerald-500/50 shadow-md">
+                            <p className="text-[10px] text-slate-400">
+                              📄 Acesse a Proposta Pronta no link:
+                            </p>
+                            <p className="mt-0.5 font-mono text-[11px] font-bold text-emerald-300 truncate">
+                              app.energivias.com.br/proposta/marcelo-solar
+                            </p>
+
+                            <div className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500 py-1.5 text-slate-950 font-bold text-xs shadow hover:bg-emerald-400 transition">
+                              <ExternalLink className="h-3.5 w-3.5" />
+                              <span>Visualizar Proposta Comercial</span>
+                            </div>
+                          </div>
+
+                          <p className="mt-2 text-[10px] text-slate-300">
+                            Ela já está disponível no seu painel CRM da EnergivIA. Posso te ajudar
+                            com mais algum orçamento hoje?
+                          </p>
+                        </div>
+                      )}
 
                       <div className="mt-1 flex justify-end text-[9px] text-slate-400">
-                        <span>16:54</span>
+                        <span>{msg.time}</span>
                       </div>
                     </div>
                   </div>
+                );
+              })}
 
-                  <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="rounded-xl rounded-tr-none bg-[#005c4b] px-3 py-1 text-slate-100 shadow">
-                      <span>1</span>
-                      <div className="mt-0.5 flex items-center justify-end gap-1 text-[9px] text-emerald-200/80">
-                        <span>16:55</span>
-                        <CheckCheck className="h-3 w-3 text-sky-300" />
-                      </div>
-                    </div>
+              {/* LIVE TYPING INDICATOR */}
+              {typingIndicator && (
+                <div className="flex items-center gap-2 text-slate-400 text-xs py-1 animate-in fade-in duration-200">
+                  <div className="flex gap-1 rounded-full bg-[#202c33] px-3 py-2 border border-slate-800">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce [animation-delay:150ms]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce [animation-delay:300ms]" />
                   </div>
-
-                  <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="max-w-[90%] rounded-xl rounded-tl-none bg-[#202c33] p-2 text-slate-200 shadow border border-slate-800">
-                      <p className="leading-snug">Ótima escolha! Kit selecionado com sucesso. ☀️</p>
-                      <p className="mt-1 text-[11px] text-slate-300">
-                        Qual o nome do cliente final para registrarmos no seu CRM?
-                      </p>
-                      <div className="mt-1 flex justify-end text-[9px] text-slate-400">
-                        <span>16:55</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="rounded-xl rounded-tr-none bg-[#005c4b] px-2.5 py-1 text-slate-100 shadow">
-                      <span>Marcelo</span>
-                      <div className="mt-0.5 flex items-center justify-end gap-1 text-[9px] text-emerald-200/80">
-                        <span>16:55</span>
-                        <CheckCheck className="h-3 w-3 text-sky-300" />
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* STEP 3+: Phone number (fake number) & Template selection */}
-              {currentStep >= 3 && (
-                <>
-                  <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="max-w-[90%] rounded-xl rounded-tl-none bg-[#202c33] p-2 text-slate-200 shadow border border-slate-800">
-                      <p className="leading-snug">
-                        Certo, vou registrar o cliente Marcelo. E qual o WhatsApp dele com DDD?
-                      </p>
-                      <div className="mt-1 flex justify-end text-[9px] text-slate-400">
-                        <span>16:55</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="rounded-xl rounded-tr-none bg-[#005c4b] px-2.5 py-1 text-slate-100 shadow">
-                      <span>(44) 99888-0000</span>
-                      <div className="mt-0.5 flex items-center justify-end gap-1 text-[9px] text-emerald-200/80">
-                        <span>16:55</span>
-                        <CheckCheck className="h-3 w-3 text-sky-300" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="max-w-[92%] rounded-xl rounded-tl-none bg-[#202c33] p-2.5 text-slate-200 shadow border border-slate-800">
-                      <p className="leading-snug">Cliente Marcelo anotado com sucesso! 👤✨</p>
-                      <p className="mt-1.5 font-semibold text-white">
-                        Qual modelo de proposta comercial você deseja usar para o seu cliente?
-                      </p>
-                      <p className="mt-1 text-[11px] text-emerald-300">
-                        1️⃣ Template de Proposta Padrão EnergivIA
-                      </p>
-                      <p className="mt-1 text-[9.5px] italic text-slate-400">
-                        (Responda com o número da opção desejada)
-                      </p>
-                      <div className="mt-1 flex justify-end text-[9px] text-slate-400">
-                        <span>16:55</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="rounded-xl rounded-tr-none bg-[#005c4b] px-3 py-1 text-slate-100 shadow">
-                      <span>1</span>
-                      <div className="mt-0.5 flex items-center justify-end gap-1 text-[9px] text-emerald-200/80">
-                        <span>16:55</span>
-                        <CheckCheck className="h-3 w-3 text-sky-300" />
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* STEP 4: Finished Proposal with Clean & Beautiful Link */}
-              {currentStep >= 4 && (
-                <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="max-w-[95%] rounded-xl rounded-tl-none bg-[#202c33] p-2.5 text-slate-200 shadow border border-emerald-500/40">
-                    <p className="leading-snug">
-                      Perfeito! Proposta comercial gerada com sucesso para o cliente <b>Marcelo</b>!
-                      📋✅
-                    </p>
-
-                    <div className="mt-2 space-y-1 rounded-lg bg-slate-950/70 p-2 text-[11px] text-slate-300 border border-slate-800">
-                      <div className="flex justify-between">
-                        <span>☀️ Potência:</span>
-                        <span className="font-semibold text-white">3,15 kWp</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>🏢 Distribuidor:</span>
-                        <span className="font-semibold text-emerald-400">Dynamis</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>🎨 Modelo:</span>
-                        <span className="font-medium text-slate-300">Padrão EnergivIA</span>
-                      </div>
-                      <div className="flex justify-between border-t border-slate-800 pt-1 text-emerald-400 font-bold">
-                        <span>💰 Valor Total:</span>
-                        <span>R$ 8.324,04</span>
-                      </div>
-                    </div>
-
-                    {/* Proposal Elegant Link & Card */}
-                    <div className="mt-2 rounded-xl bg-gradient-to-r from-emerald-950/90 to-slate-900 p-2.5 border border-emerald-500/50 shadow-md">
-                      <p className="text-[10px] text-slate-400">
-                        📄 Acesse a Proposta Pronta no link:
-                      </p>
-                      <p className="mt-0.5 font-mono text-[11px] font-bold text-emerald-300 truncate">
-                        app.energivias.com.br/proposta/marcelo-solar
-                      </p>
-
-                      <div className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500 py-1.5 text-slate-950 font-bold text-xs shadow hover:bg-emerald-400 transition">
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        <span>Visualizar Proposta Comercial</span>
-                      </div>
-                    </div>
-
-                    <p className="mt-2 text-[10px] text-slate-300">
-                      Ela já está disponível no seu painel CRM da EnergivIA. Posso te ajudar com
-                      mais algum orçamento hoje?
-                    </p>
-
-                    <div className="mt-1.5 flex justify-end text-[9px] text-slate-400">
-                      <span>16:56 • Concluído em 1 min</span>
-                    </div>
-                  </div>
+                  <span className="text-[10.5px] text-slate-400 animate-pulse">
+                    {typingIndicator}
+                  </span>
                 </div>
               )}
             </div>
 
-            {/* Fake WhatsApp Chat Input Bar */}
+            {/* Simulated WhatsApp Chat Input Bar */}
             <div className="relative z-20 flex items-center gap-2 bg-[#1f2c34] px-3 py-2 border-t border-slate-800 text-slate-400">
-              <div className="flex-1 rounded-full bg-[#2a3942] px-3.5 py-1.5 text-xs text-slate-400">
-                Mensagem...
+              <div className="flex-1 min-h-[34px] flex items-center rounded-full bg-[#2a3942] px-3.5 py-1 text-xs">
+                {inputDraft ? (
+                  <span className="text-white font-medium flex items-center gap-0.5">
+                    {inputDraft}
+                    <span className="inline-block w-1.5 h-3.5 bg-emerald-400 animate-pulse" />
+                  </span>
+                ) : (
+                  <span className="text-slate-400">Mensagem...</span>
+                )}
               </div>
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-slate-950">
-                <Zap className="h-4 w-4 fill-slate-950" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-slate-950 transition">
+                {inputDraft ? (
+                  <Send className="h-4 w-4 fill-slate-950 animate-in scale-90" />
+                ) : (
+                  <Zap className="h-4 w-4 fill-slate-950" />
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Video Player Floating Controls */}
+        {/* Floating Player Controls */}
         <div className="mt-3 flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/90 px-4 py-2 text-xs text-slate-300 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <button
@@ -552,7 +694,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
               type="button"
               onClick={handleReset}
               className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-slate-300 hover:text-white transition"
-              title="Reiniciar animação"
+              title="Reiniciar do começo"
             >
               <RotateCcw className="h-3.5 w-3.5" />
             </button>
@@ -585,30 +727,29 @@ export function WhatsappFlowSimulator(): JSX.Element {
       <div className="w-full max-w-lg space-y-4">
         <div>
           <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
-            <Sparkles className="h-3 w-3" /> Fluxo Real via WhatsApp
+            <Sparkles className="h-3 w-3" /> Conversa em Tempo Real
           </span>
           <h3 className="mt-2 text-2xl font-bold text-white tracking-tight">
-            Veja a EnergivIA operando na prática
+            Veja a troca de mensagens na prática
           </h3>
           <p className="mt-1 text-sm text-slate-400">
-            Envie a conta de luz pelo chat do WhatsApp e deixe nossa inteligência artificial cuidar
-            da extração, cálculo solar, seleção de distribuidor e envio da proposta.
+            Acompanhe o diálogo dinâmico: o cliente chama, a IA responde instantaneamente, analisa a
+            fatura e monta a proposta completa em poucos segundos.
           </p>
         </div>
 
         {/* Stories-like Progress Bars */}
         <div className="grid grid-cols-5 gap-1.5 pt-1">
-          {STEPS.map((step, idx) => {
-            const isCurrent = currentStep === idx;
-            const isCompleted = currentStep > idx;
+          {MILESTONES.map((m, idx) => {
+            const isCurrent = activeMilestoneIndex === idx;
+            const isCompleted = activeMilestoneIndex > idx;
             return (
-              <div key={step.id} className="space-y-1">
+              <div key={m.id} className="space-y-1">
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
                   <div
-                    className="h-full bg-gradient-to-r from-emerald-400 to-sky-400 transition-all"
+                    className="h-full bg-gradient-to-r from-emerald-400 to-sky-400 transition-all duration-300"
                     style={{
-                      width: isCompleted ? "100%" : isCurrent ? `${progress}%` : "0%",
-                      transitionDuration: isCurrent ? "40ms" : "200ms",
+                      width: isCompleted ? "100%" : isCurrent ? "60%" : "0%",
                     }}
                   />
                 </div>
@@ -617,7 +758,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                     isCurrent ? "text-emerald-400 font-bold" : "text-slate-500"
                   }`}
                 >
-                  {step.tag}
+                  {m.tag}
                 </p>
               </div>
             );
@@ -626,13 +767,13 @@ export function WhatsappFlowSimulator(): JSX.Element {
 
         {/* Clickable Step Cards */}
         <div className="space-y-2">
-          {STEPS.map((step, idx) => {
-            const isCurrent = currentStep === idx;
+          {MILESTONES.map((m, idx) => {
+            const isCurrent = activeMilestoneIndex === idx;
             return (
               <button
-                key={step.id}
+                key={m.id}
                 type="button"
-                onClick={() => handleSelectStep(idx)}
+                onClick={() => handleSelectMilestone(idx)}
                 className={`w-full text-left rounded-2xl border p-3 transition-all ${
                   isCurrent
                     ? "border-emerald-500/50 bg-gradient-to-r from-slate-900 to-slate-800/80 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/20"
@@ -655,39 +796,39 @@ export function WhatsappFlowSimulator(): JSX.Element {
                         isCurrent ? "text-white" : "text-slate-300"
                       }`}
                     >
-                      {step.title}
+                      {m.title}
                     </span>
                   </div>
 
                   {isCurrent && (
                     <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Em foco
+                      Ao vivo
                     </span>
                   )}
                 </div>
 
                 <p className="mt-1 pl-7 text-[11px] text-slate-400 leading-relaxed">
-                  {step.description}
+                  {m.description}
                 </p>
               </button>
             );
           })}
         </div>
 
-        {/* Key Metrics / Highlights */}
+        {/* Key Highlights */}
         <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-3 text-center">
           <div>
-            <p className="text-lg font-bold text-white">~1 min</p>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Tempo Médio</p>
+            <p className="text-lg font-bold text-white">100%</p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Automatizado</p>
           </div>
           <div className="border-x border-slate-800">
-            <p className="text-lg font-bold text-emerald-400">100%</p>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider">No WhatsApp</p>
+            <p className="text-lg font-bold text-emerald-400">Dynamis</p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Kits Integrados</p>
           </div>
           <div>
-            <p className="text-lg font-bold text-sky-400">Dynamis</p>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Kits Integrados</p>
+            <p className="text-lg font-bold text-sky-400">&lt; 1 min</p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider">PDF Gerado</p>
           </div>
         </div>
       </div>
