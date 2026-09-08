@@ -10,8 +10,11 @@ import {
   Header,
   StreamableFile,
 } from "@nestjs/common";
+import type { JwtPayload } from "@energivia/types";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
+import { OrgOwnerOrAdminGuard } from "../../common/guards/org-owner-or-admin.guard";
 import { TenantId } from "../../common/decorators/tenant-id.decorator";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { ProposalsService } from "./proposals.service";
 
 @Controller("proposals")
@@ -25,13 +28,13 @@ export class ProposalOperationsController {
   }
 
   @Get()
-  list(@TenantId() tenantId: string) {
-    return this.proposalsService.list(tenantId);
+  list(@TenantId() tenantId: string, @CurrentUser() user?: JwtPayload) {
+    return this.proposalsService.list(tenantId, user?.role);
   }
 
   @Get(":id")
-  findOne(@TenantId() tenantId: string, @Param("id") id: string) {
-    return this.proposalsService.findOne(tenantId, id);
+  findOne(@TenantId() tenantId: string, @Param("id") id: string, @CurrentUser() user?: JwtPayload) {
+    return this.proposalsService.findOne(tenantId, id, user?.role);
   }
 
   @Get(":id/generate-pdf")
@@ -50,27 +53,32 @@ export class ProposalOperationsController {
   updateDiscount(
     @TenantId() tenantId: string,
     @Param("id") id: string,
-    @Body() body: { discountBrl: number | null }
+    @Body() body: { discountBrl: number | null },
+    @CurrentUser() user?: JwtPayload
   ) {
-    return this.proposalsService.updateDiscount(tenantId, id, body.discountBrl ?? null);
+    return this.proposalsService.updateDiscount(tenantId, id, body.discountBrl ?? null, user);
   }
 
   @Patch(":id/margin-override")
+  @UseGuards(OrgOwnerOrAdminGuard)
   updateMarginOverride(
     @TenantId() tenantId: string,
     @Param("id") id: string,
-    @Body() body: { marginBrl: number }
+    @Body() body: { marginBrl: number },
+    @CurrentUser() user?: JwtPayload
   ) {
-    return this.proposalsService.updateMarginOverride(tenantId, id, body.marginBrl);
+    return this.proposalsService.updateMarginOverride(tenantId, id, body.marginBrl, user);
   }
 
   @Patch(":id/labor-override")
+  @UseGuards(OrgOwnerOrAdminGuard)
   updateLaborOverride(
     @TenantId() tenantId: string,
     @Param("id") id: string,
-    @Body() body: { laborBrl: number }
+    @Body() body: { laborBrl: number },
+    @CurrentUser() user?: JwtPayload
   ) {
-    return this.proposalsService.updateLaborOverride(tenantId, id, body.laborBrl);
+    return this.proposalsService.updateLaborOverride(tenantId, id, body.laborBrl, user);
   }
 
   @Post(":id/template")

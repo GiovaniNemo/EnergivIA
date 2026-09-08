@@ -1,7 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { BadRequestException, Injectable, NotFoundException, Logger } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  Logger,
+  ForbiddenException,
+} from "@nestjs/common";
 import type { Prisma, ProposalStatus, ProposalTemplate } from "@prisma/client";
+import type { JwtPayload } from "@energivia/types";
 import { isProposalIntegratorSnapshot } from "@energivia/shared-types";
 import { RespondPublicProposalDto } from "./dto/respond-public-proposal.dto";
 import {
@@ -70,7 +77,7 @@ export class ProposalsService {
     private readonly pdfRenderer: PdfRendererService
   ) {}
 
-  async list(tenantId: string) {
+  async list(tenantId: string, userRole?: string) {
     const rows = await this.prisma.proposal.findMany({
       where: { tenantId, ...soft },
       include: {
@@ -83,6 +90,8 @@ export class ProposalsService {
       },
       orderBy: { createdAt: "desc" },
     });
+
+    const isCommercial = userRole === "SALES" || userRole === "VIEWER";
 
     return rows.map((p) => {
       const integrator = parseIntegratorFromRendered(p.renderedData);
@@ -110,8 +119,8 @@ export class ProposalsService {
         createdAt: p.createdAt,
         deal: p.deal,
         quotedValueBrl: quoted,
-        equipmentSubtotalBrl: hasKit ? equip : null,
-        marginBrl: margin,
+        equipmentSubtotalBrl: isCommercial ? null : hasKit ? equip : null,
+        marginBrl: isCommercial ? null : margin,
         kitLineCount: integrator?.kitItems?.length ?? 0,
       };
     });
@@ -249,7 +258,7 @@ export class ProposalsService {
     });
   }
 
-  async findOne(tenantId: string, id: string) {
+  async findOne(tenantId: string, id: string, userRole?: string) {
     const proposal = await this.prisma.proposal.findFirst({
       where: { id, tenantId, ...soft },
       include: {
@@ -259,6 +268,26 @@ export class ProposalsService {
       },
     });
     if (!proposal) throw new NotFoundException("Proposta não encontrada.");
+
+    const isCommercial = userRole === "SALES" || userRole === "VIEWER";
+    if (isCommercial && proposal.renderedData && typeof proposal.renderedData === "object") {
+      const clonedRendered = JSON.parse(JSON.stringify(proposal.renderedData)) as Record<
+        string,
+        unknown
+      >;
+      const integrator = clonedRendered["integrator"];
+      if (integrator && typeof integrator === "object") {
+        const int = integrator as Record<string, unknown>;
+        delete int["equipmentSubtotalBrl"];
+        delete int["projectCostLines"];
+        delete int["computedSaleFromCostRulesBrl"];
+      }
+      return {
+        ...proposal,
+        renderedData: clonedRendered,
+      };
+    }
+
     return proposal;
   }
 
@@ -444,17 +473,60 @@ export class ProposalsService {
     return updated;
   }
 
-  async updateDiscount(tenantId: string, id: string, discountBrl: number | null) {
-    await this.findOne(tenantId, id);
+  async updateDiscount(
+    tenantId: string,
+    id: string,
+    discountBrl: number | null,
+    user?: JwtPayload
+  ) {
+    const proposal = await this.findOne(tenantId, id);
     if (discountBrl != null && (!Number.isFinite(discountBrl) || discountBrl < 0)) {
       throw new BadRequestException("Desconto inválido.");
     }
+
+    const integrator = parseIntegratorFromRendered(proposal.renderedData);
+    const inv = readInvestmentFromSimulationInput(proposal.simulation?.input);
+    const baseSalePrice =
+      integrator != null && typeof integrator.quotedSaleBrl === "number"
+        ? integrator.quotedSaleBrl
+        : (inv ?? 0);
+
+    const isCommercial = user?.role === "SALES" || user?.role === "VIEWER";
+    if (isCommercial && discountBrl != null && discountBrl > 0) {
+      const maxDiscountAllowed = Math.round(baseSalePrice * 0.05 * 100) / 100;
+      if (discountBrl > maxDiscountAllowed) {
+        throw new ForbiddenException(
+          `Desconto de R$ ${discountBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} excede a alçada comercial máxima permitida de 5% (máximo R$ ${maxDiscountAllowed.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}). Solicite aprovação a um Administrador.`
+        );
+      }
+    }
+
     const normalized = discountBrl != null && discountBrl > 0 ? discountBrl : null;
     const nextPublicToken = randomUUID();
     const updated = await this.prisma.proposal.update({
       where: { id },
       data: { discountBrl: normalized, publicToken: nextPublicToken },
     });
+
+    if (proposal.deal?.leadId) {
+      await this.leadActivityLog.append({
+        tenantId,
+        leadId: proposal.deal.leadId,
+        kind: "NOTE_ADDED",
+        label: normalized
+          ? `Desconto comercial atualizado para R$ ${normalized.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+          : "Desconto comercial removido da proposta",
+        meta: {
+          proposalId: id,
+          discountBrl: normalized,
+          previousDiscountBrl: proposal.discountBrl,
+          updatedByUserId: user?.sub,
+          updatedByUserEmail: user?.email,
+          updatedByUserRole: user?.role,
+        },
+      });
+    }
+
     return {
       id: updated.id,
       discountBrl: updated.discountBrl ?? null,
@@ -462,7 +534,13 @@ export class ProposalsService {
     };
   }
 
-  async updateMarginOverride(tenantId: string, id: string, marginBrl: number) {
+  async updateMarginOverride(tenantId: string, id: string, marginBrl: number, user?: JwtPayload) {
+    if (user?.role === "SALES" || user?.role === "VIEWER") {
+      throw new ForbiddenException(
+        "Apenas proprietários e administradores podem alterar a margem do projeto."
+      );
+    }
+
     const proposal = await this.findOne(tenantId, id);
     if (!Number.isFinite(marginBrl) || marginBrl < 0) {
       throw new BadRequestException("Margem inválida.");
@@ -522,13 +600,35 @@ export class ProposalsService {
       },
     });
 
+    if (proposal.deal?.leadId) {
+      await this.leadActivityLog.append({
+        tenantId,
+        leadId: proposal.deal.leadId,
+        kind: "NOTE_ADDED",
+        label: `Margem comercial ajustada manualmente para R$ ${marginBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+        meta: {
+          proposalId: id,
+          marginBrl,
+          updatedByUserId: user?.sub,
+          updatedByUserEmail: user?.email,
+          updatedByUserRole: user?.role,
+        },
+      });
+    }
+
     return {
       id: updated.id,
       publicToken: nextPublicToken,
     };
   }
 
-  async updateLaborOverride(tenantId: string, id: string, laborBrl: number) {
+  async updateLaborOverride(tenantId: string, id: string, laborBrl: number, user?: JwtPayload) {
+    if (user?.role === "SALES" || user?.role === "VIEWER") {
+      throw new ForbiddenException(
+        "Apenas proprietários, administradores ou engenheiros podem alterar o custo de mão de obra."
+      );
+    }
+
     const proposal = await this.findOne(tenantId, id);
     if (!Number.isFinite(laborBrl) || laborBrl < 0) {
       throw new BadRequestException("Mão de obra inválida.");
@@ -589,6 +689,22 @@ export class ProposalsService {
         publicToken: nextPublicToken,
       },
     });
+
+    if (proposal.deal?.leadId) {
+      await this.leadActivityLog.append({
+        tenantId,
+        leadId: proposal.deal.leadId,
+        kind: "NOTE_ADDED",
+        label: `Custo de mão de obra ajustado manualmente para R$ ${laborBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+        meta: {
+          proposalId: id,
+          laborBrl,
+          updatedByUserId: user?.sub,
+          updatedByUserEmail: user?.email,
+          updatedByUserRole: user?.role,
+        },
+      });
+    }
 
     return {
       id: updated.id,

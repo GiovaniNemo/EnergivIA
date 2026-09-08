@@ -10,7 +10,7 @@ export class OrgOwnerOrAdminGuard implements CanActivate {
       return true;
     }
     throw new ForbiddenException(
-      "Apenas proprietários e administradores da organização podem gerir este catálogo."
+      "Acesso restrito a proprietários e administradores da organização."
     );
   }
 }
