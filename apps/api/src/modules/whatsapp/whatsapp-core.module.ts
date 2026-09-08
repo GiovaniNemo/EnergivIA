@@ -6,10 +6,25 @@ import { WhatsappWebhookController } from "./whatsapp-webhook.controller";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { AiUsageModule } from "../ai-usage/ai-usage.module";
 
+import { GeoIrradianceService } from "./services/geo-irradiance.service";
+import { BillExtractorService } from "./services/bill-extractor.service";
+
 @Module({
   imports: [PrismaModule, AiUsageModule],
   controllers: [WhatsappWebhookController],
-  providers: [WhatsappCloudService, WhatsappBotService, WhatsappPairingService],
-  exports: [WhatsappCloudService, WhatsappBotService, WhatsappPairingService],
+  providers: [
+    WhatsappCloudService,
+    WhatsappBotService,
+    WhatsappPairingService,
+    GeoIrradianceService,
+    BillExtractorService,
+  ],
+  exports: [
+    WhatsappCloudService,
+    WhatsappBotService,
+    WhatsappPairingService,
+    GeoIrradianceService,
+    BillExtractorService,
+  ],
 })
 export class WhatsappCoreModule {}
