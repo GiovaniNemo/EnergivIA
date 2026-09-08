@@ -44,6 +44,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { BillScannerVisualizer } from "./bill-scanner-visualizer";
 import {
   createDeal,
   createEnergyBill,
@@ -535,6 +536,8 @@ export const ProposalEconomicsModal = forwardRef<
   const [roofType, setRoofType] = useState<RoofType | "">("");
   const [geoLoading, setGeoLoading] = useState(false);
   const [billAttachment, setBillAttachment] = useState<PipelineBillAttachment>({ status: "none" });
+  const [selectedBillFile, setSelectedBillFile] = useState<File | null>(null);
+  const [selectedBillPreviewUrl, setSelectedBillPreviewUrl] = useState<string | null>(null);
   const [pdfPasswordInput, setPdfPasswordInput] = useState("");
   const [isUploadDragActive, setIsUploadDragActive] = useState(false);
   const billFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1141,6 +1144,15 @@ export const ProposalEconomicsModal = forwardRef<
   const handleBillFileSelected = useCallback(
     async (file: File | undefined | null) => {
       if (!file) return;
+      setSelectedBillFile(file);
+      if (file.type.startsWith("image/")) {
+        try {
+          const url = URL.createObjectURL(file);
+          setSelectedBillPreviewUrl(url);
+        } catch {}
+      } else {
+        setSelectedBillPreviewUrl(null);
+      }
       if (!currentOrganizationId || !proposalDeal?.leadId) {
         console.warn("[energy-bill-pdf] upload blocked — missing org or deal lead", {
           hasOrg: !!currentOrganizationId,
@@ -1530,6 +1542,11 @@ export const ProposalEconomicsModal = forwardRef<
     setRoofType("");
     setBillAttachment({ status: "none" });
     setPdfPasswordInput("");
+    setSelectedBillFile(null);
+    setSelectedBillPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
     setProposalError(null);
     setProposalFieldErrors({});
     setProposalInputMode("upload");
@@ -1716,10 +1733,14 @@ export const ProposalEconomicsModal = forwardRef<
                       <div
                         role="button"
                         tabIndex={0}
-                        className={`relative rounded-2xl border-2 border-dashed px-3 py-4 transition sm:px-6 sm:py-8 ${
+                        className={`relative min-h-[180px] ${
+                          billAttachment.status === "processing"
+                            ? "min-h-[400px] sm:min-h-[440px] p-0 border-transparent shadow-lg"
+                            : "px-3 py-4 sm:px-6 sm:py-8 border-[var(--color-border)] bg-[var(--color-card)] hover:border-emerald-300"
+                        } rounded-2xl border-2 border-dashed transition ${
                           isUploadDragActive
-                            ? "border-emerald-500 bg-emerald-500/10 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]"
-                            : "border-[var(--color-border)] bg-[var(--color-card)] hover:border-emerald-300"
+                            ? "!border-emerald-500 bg-emerald-500/10 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]"
+                            : ""
                         }`}
                         onClick={() => {
                           if (billAttachment.status === "processing") return;
@@ -1757,42 +1778,12 @@ export const ProposalEconomicsModal = forwardRef<
                         }}
                       >
                         {billAttachment.status === "processing" ? (
-                          <div
-                            className="absolute inset-0 z-10 flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-violet-500/15 bg-[var(--color-card)] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] dark:border-violet-400/20 dark:bg-[var(--color-background)]"
-                            role="status"
-                            aria-live="polite"
-                          >
-                            <div
-                              className="pointer-events-none absolute inset-0 opacity-[0.55] dark:opacity-40"
-                              aria-hidden
-                            >
-                              <div className="absolute -left-1/4 top-0 h-40 w-40 rounded-full bg-violet-500/25 blur-3xl dark:bg-violet-400/20" />
-                              <div className="absolute -right-1/4 bottom-0 h-40 w-40 rounded-full bg-emerald-500/25 blur-3xl dark:bg-emerald-400/15" />
-                              <div className="absolute left-1/2 top-1/2 h-px w-[120%] -translate-x-1/2 -translate-y-1/2 rotate-12 bg-gradient-to-r from-transparent via-violet-400/20 to-transparent dark:via-violet-300/15" />
-                            </div>
-                            <div className="relative flex max-w-sm flex-col items-center gap-3.5 px-6 text-center">
-                              <div className="relative">
-                                <div className="absolute inset-0 animate-ping rounded-2xl bg-emerald-400/15 [animation-duration:2s]" />
-                                <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-violet-500/15 via-[var(--color-card)] to-emerald-500/15 shadow-lg shadow-emerald-900/5 dark:from-violet-400/10 dark:shadow-black/20">
-                                  <Sparkles className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
-                                </div>
-                                <Loader2
-                                  className="absolute -bottom-0.5 -right-0.5 h-5 w-5 text-violet-600 motion-safe:animate-spin dark:text-violet-400"
-                                  aria-hidden
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-violet-600/95 dark:text-violet-400/95">
-                                  Análise com IA
-                                </p>
-                                <p className="text-sm font-medium leading-snug text-[var(--color-foreground)]">
-                                  {billAttachment.message}
-                                </p>
-                              </div>
-                              <div className="h-1 w-full max-w-[220px] overflow-hidden rounded-full bg-[var(--color-muted)]">
-                                <div className="h-full w-full rounded-full bg-gradient-to-r from-emerald-500 via-violet-500 to-emerald-500 bg-[length:200%_100%] animate-shimmer" />
-                              </div>
-                            </div>
+                          <div className="absolute inset-0 z-20 flex flex-col overflow-hidden rounded-2xl">
+                            <BillScannerVisualizer
+                              fileName={selectedBillFile?.name}
+                              previewUrl={selectedBillPreviewUrl}
+                              message={billAttachment.message}
+                            />
                           </div>
                         ) : null}
                         <input

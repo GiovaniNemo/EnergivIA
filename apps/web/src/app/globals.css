@@ -448,3 +448,70 @@
     scrollbar-width: none;
   }
 }
+
+/* AI Bill Laser Scanner Animations */
+@keyframes laserSweep {
+  0% {
+    top: 2%;
+    opacity: 0.85;
+  }
+  50% {
+    top: 96%;
+    opacity: 1;
+  }
+  100% {
+    top: 2%;
+    opacity: 0.85;
+  }
+}
+
+@keyframes laserGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.8)) drop-shadow(0 0 16px rgba(16, 185, 129, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(52, 211, 153, 0.95)) drop-shadow(0 0 28px rgba(16, 185, 129, 0.75));
+  }
+}
+
+@keyframes hudBoxFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes radarPing {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+.animate-laser-sweep {
+  animation: laserSweep 3.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.animate-laser-glow {
+  animation: laserGlow 1.8s ease-in-out infinite;
+}
+
+.animate-hud-box {
+  animation: hudBoxFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-radar-ping {
+  animation: radarPing 2s ease-in-out infinite;
+}
