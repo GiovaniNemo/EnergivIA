@@ -15,7 +15,7 @@ import {
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import type { ClosedDealStatus, DealStage } from "@/lib/pipeline-deal";
-import { useIsMobile } from "@/hooks/use-media-query";
+
 import { KanbanCard } from "./KanbanCard";
 import { KanbanColumn } from "./KanbanColumn";
 import { ClosedColumnWithRows } from "./ClosedColumnWithRows";
@@ -289,109 +289,6 @@ export function KanbanBoard<T extends KanbanItemBase>({
     const snapshot = dragStartSnapshotRef.current;
     dragStartSnapshotRef.current = null;
     if (snapshot) onItemsChange(snapshot);
-  }
-
-  const isMobile = useIsMobile();
-  const [selectedMobileStage, setSelectedMobileStage] = useState<DealStage>("novo");
-
-  const STAGE_CONFIG: Record<DealStage, { label: string; icon: string }> = {
-    novo: { label: "Novo", icon: "⚡" },
-    contato: { label: "Contato", icon: "📞" },
-    proposta: { label: "Proposta", icon: "📄" },
-    negociacao: { label: "Negociação", icon: "🤝" },
-    fechado: { label: "Fechado", icon: "🏆" },
-  };
-
-  if (isMobile) {
-    const stageItems = grouped.get(selectedMobileStage) ?? [];
-    return (
-      <div className="w-full space-y-3 pb-6">
-        {/* Mobile Stage Selector Tabs (Carrossel suave de abas) */}
-        <div className="flex w-full items-center gap-2 overflow-x-auto pb-1.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {stages.map((stage) => {
-            const count = (grouped.get(stage) ?? []).length;
-            const isSelected = selectedMobileStage === stage;
-            const cfg = STAGE_CONFIG[stage] ?? { label: stage, icon: "•" };
-            return (
-              <button
-                key={stage}
-                type="button"
-                onClick={() => setSelectedMobileStage(stage)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-all ${
-                  isSelected
-                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-700/20"
-                    : "border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-                }`}
-              >
-                <span>{cfg.icon}</span>
-                <span>{cfg.label}</span>
-                <span
-                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                    isSelected
-                      ? "bg-emerald-800/60 text-white"
-                      : "bg-[var(--color-muted)] text-[var(--color-foreground)]"
-                  }`}
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Selected Stage Content for Mobile */}
-        <div className="w-full">
-          {selectedMobileStage === "fechado" ? (
-            (() => {
-              const rows: Record<ClosedDealStatus, string[]> = {
-                won: [],
-                lost: [],
-                disqualified: [],
-                postponed: [],
-                cancelled: [],
-              };
-              for (const item of stageItems) {
-                rows[getClosedStatus(item)].push(item.id);
-              }
-              return (
-                <ClosedColumnWithRows
-                  key="fechado"
-                  header={renderColumnHeader("fechado", stageItems.length, false)}
-                  rows={rows}
-                  overClosedStatus={null}
-                  renderEmptyRow={renderEmptyClosedRow}
-                  columnCollapsed={false}
-                  onExpand={onExpandClosed}
-                  renderRowItem={(id) => {
-                    const item = stageItems.find((i) => i.id === id);
-                    if (!item) return null;
-                    return (
-                      <div key={item.id} className="mb-2.5">
-                        {renderItem(item, false)}
-                      </div>
-                    );
-                  }}
-                />
-              );
-            })()
-          ) : (
-            <div className="space-y-2.5 pt-1">
-              {stageItems.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-card)]/40 p-8 text-center text-sm text-[var(--color-muted-foreground)]">
-                  Nenhuma oportunidade nesta etapa.
-                </div>
-              ) : (
-                stageItems.map((item) => (
-                  <div key={item.id} className="w-full">
-                    {renderItem(item, false)}
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
   }
 
   return (

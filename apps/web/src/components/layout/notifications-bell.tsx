@@ -14,7 +14,6 @@ import {
   type UserNotificationDto,
 } from "@/lib/notifications-api";
 
-
 function formatWhen(iso: string): string {
   try {
     const d = new Date(iso);
@@ -45,7 +44,7 @@ export function NotificationsBell(): JSX.Element {
     try {
       const c = await getUnreadNotificationCount(currentOrganizationId);
       setUnread(c);
-    } catch { }
+    } catch {}
   }, [currentOrganizationId]);
 
   const loadList = useCallback(async () => {
@@ -118,7 +117,7 @@ export function NotificationsBell(): JSX.Element {
           prev.map((x) => (x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x))
         );
         await refreshCount();
-      } catch { }
+      } catch {}
     }
     setOpen(false);
   }
@@ -129,7 +128,7 @@ export function NotificationsBell(): JSX.Element {
       await markAllNotificationsRead(currentOrganizationId);
       setItems((prev) => prev.map((x) => ({ ...x, readAt: x.readAt ?? new Date().toISOString() })));
       setUnread(0);
-    } catch { }
+    } catch {}
   }
 
   if (!currentOrganizationId) {
@@ -166,7 +165,7 @@ export function NotificationsBell(): JSX.Element {
       </Button>
       {open ? (
         <div
-          className="absolute right-0 top-full z-50 mt-1 w-[min(100vw-2rem,22rem)] rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] py-2 shadow-lg"
+          className="fixed left-2 right-2 top-16 z-50 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1 sm:w-[22rem] rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] py-2 shadow-lg"
           role="dialog"
           aria-label="Notificações"
         >
@@ -197,8 +196,9 @@ export function NotificationsBell(): JSX.Element {
                   <li key={n.id}>
                     <Link
                       href={n.linkPath}
-                      className={`block px-3 py-2.5 text-left transition-colors hover:bg-[var(--color-muted)]/40 ${!n.readAt ? "bg-[var(--color-muted)]/25" : ""
-                        }`}
+                      className={`block px-3 py-2.5 text-left transition-colors hover:bg-[var(--color-muted)]/40 ${
+                        !n.readAt ? "bg-[var(--color-muted)]/25" : ""
+                      }`}
                       onClick={() => void onItemNavigate(n)}
                     >
                       <p className="text-sm font-medium text-[var(--color-foreground)]">

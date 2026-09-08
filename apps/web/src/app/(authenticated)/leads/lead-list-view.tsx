@@ -471,7 +471,7 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
           <CardTitle className="text-base">Lista de clientes</CardTitle>
           <CardDescription>Nome, status da oportunidade, atividade e valor</CardDescription>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent>
           {loadError ? (
             <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
           ) : !list ? (
@@ -586,129 +586,131 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
               </div>
 
               {/* Desktop Table View */}
-              <table className="hidden md:table w-full min-w-[860px] border-collapse text-left text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--color-border)] text-xs uppercase tracking-wide text-[var(--color-muted-foreground)]">
-                    <th className="py-3 pr-4 font-medium">Nome / Info</th>
-                    <th className="py-3 pr-4 font-medium">Status</th>
-                    <th className="py-3 pr-4 font-medium">Atividade</th>
-                    <th className="py-3 pr-4 font-medium">Próximo passo</th>
-                    <th className="py-3 text-right font-medium">Valor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="cursor-pointer border-b border-[var(--color-border)]/70 transition hover:bg-[var(--color-muted)]/25"
-                      onClick={() => setDrawerLeadId(row.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setDrawerLeadId(row.id);
-                        }
-                      }}
-                      tabIndex={0}
-                      role="button"
-                    >
-                      <td className="py-3 pr-4">
-                        <p className="font-medium text-[var(--color-foreground)]">{row.name}</p>
-                        <p className="text-xs text-[var(--color-muted-foreground)]">
-                          {row.email ?? "—"}
-                          {row.cpfCnpj ? (
-                            <>
-                              {" · "}
-                              {formatCpfCnpjDigits(row.cpfCnpj)}
-                            </>
-                          ) : null}
-                        </p>
-                      </td>
-                      <td className="py-3 pr-4 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-2">
-                          <DealStageBadge stage={row.latestDealStage} />
-                          {row.latestDealTemperature === "HOT" ? (
-                            <span className="inline-flex" title="Quente">
-                              <Flame
-                                className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400"
-                                aria-hidden
-                              />
-                            </span>
-                          ) : null}
-                        </span>
-                      </td>
-                      <td className="py-3 pr-4">
-                        {(() => {
-                          const act = lastActivityPresentation(
-                            row.latestDealUpdatedAt ?? row.updatedAt
-                          );
-                          return (
-                            <span className="inline-flex items-center gap-2">
-                              <span
-                                className={`inline-block h-2 w-2 shrink-0 rounded-full ${ACTIVITY_TONE_DOT_CLASS[act.tone]}`}
-                                aria-hidden
-                              />
-                              <span className={`text-sm ${ACTIVITY_TONE_TEXT_CLASS[act.tone]}`}>
-                                {act.label}
-                              </span>
-                            </span>
-                          );
-                        })()}
-                      </td>
-                      <td className="py-3 pr-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {row.latestDealStage === "LOST" ? (
-                            <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                              {formatNextStepSummary(
-                                row.nextActionAt,
-                                row.nextActionType,
-                                row.latestDealStage
-                              )}
-                            </span>
-                          ) : row.nextActionAt ? (
-                            <span
-                              className={`inline-flex items-center gap-1.5 text-sm ${
-                                isOverdue(row.nextActionAt)
-                                  ? "font-medium text-amber-800 dark:text-amber-300"
-                                  : "text-[var(--color-foreground)]"
-                              }`}
-                            >
-                              <Calendar className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
-                              {formatNextStepSummary(
-                                row.nextActionAt,
-                                row.nextActionType,
-                                row.latestDealStage
-                              )}
-                            </span>
-                          ) : (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-8 gap-1 border-dashed text-xs font-medium"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openNextStepModal(row);
-                              }}
-                            >
-                              <Plus className="h-3.5 w-3.5" aria-hidden />
-                              Definir
-                            </Button>
-                          )}
-                          {isOverdue(row.nextActionAt) && row.latestDealStage !== "LOST" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-200">
-                              <AlertTriangle className="h-3 w-3" aria-hidden />
-                              Atrasado
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="py-3 text-right font-medium tabular-nums text-[var(--color-foreground)]">
-                        {formatDealValueDisplay(row.latestDealValue)}
-                      </td>
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--color-border)] text-xs uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                      <th className="py-3 pr-4 font-medium">Nome / Info</th>
+                      <th className="py-3 pr-4 font-medium">Status</th>
+                      <th className="py-3 pr-4 font-medium">Atividade</th>
+                      <th className="py-3 pr-4 font-medium">Próximo passo</th>
+                      <th className="py-3 text-right font-medium">Valor</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredRows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="cursor-pointer border-b border-[var(--color-border)]/70 transition hover:bg-[var(--color-muted)]/25"
+                        onClick={() => setDrawerLeadId(row.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setDrawerLeadId(row.id);
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
+                      >
+                        <td className="py-3 pr-4">
+                          <p className="font-medium text-[var(--color-foreground)]">{row.name}</p>
+                          <p className="text-xs text-[var(--color-muted-foreground)]">
+                            {row.email ?? "—"}
+                            {row.cpfCnpj ? (
+                              <>
+                                {" · "}
+                                {formatCpfCnpjDigits(row.cpfCnpj)}
+                              </>
+                            ) : null}
+                          </p>
+                        </td>
+                        <td className="py-3 pr-4 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-2">
+                            <DealStageBadge stage={row.latestDealStage} />
+                            {row.latestDealTemperature === "HOT" ? (
+                              <span className="inline-flex" title="Quente">
+                                <Flame
+                                  className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400"
+                                  aria-hidden
+                                />
+                              </span>
+                            ) : null}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4">
+                          {(() => {
+                            const act = lastActivityPresentation(
+                              row.latestDealUpdatedAt ?? row.updatedAt
+                            );
+                            return (
+                              <span className="inline-flex items-center gap-2">
+                                <span
+                                  className={`inline-block h-2 w-2 shrink-0 rounded-full ${ACTIVITY_TONE_DOT_CLASS[act.tone]}`}
+                                  aria-hidden
+                                />
+                                <span className={`text-sm ${ACTIVITY_TONE_TEXT_CLASS[act.tone]}`}>
+                                  {act.label}
+                                </span>
+                              </span>
+                            );
+                          })()}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {row.latestDealStage === "LOST" ? (
+                              <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                                {formatNextStepSummary(
+                                  row.nextActionAt,
+                                  row.nextActionType,
+                                  row.latestDealStage
+                                )}
+                              </span>
+                            ) : row.nextActionAt ? (
+                              <span
+                                className={`inline-flex items-center gap-1.5 text-sm ${
+                                  isOverdue(row.nextActionAt)
+                                    ? "font-medium text-amber-800 dark:text-amber-300"
+                                    : "text-[var(--color-foreground)]"
+                                }`}
+                              >
+                                <Calendar className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
+                                {formatNextStepSummary(
+                                  row.nextActionAt,
+                                  row.nextActionType,
+                                  row.latestDealStage
+                                )}
+                              </span>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 gap-1 border-dashed text-xs font-medium"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openNextStepModal(row);
+                                }}
+                              >
+                                <Plus className="h-3.5 w-3.5" aria-hidden />
+                                Definir
+                              </Button>
+                            )}
+                            {isOverdue(row.nextActionAt) && row.latestDealStage !== "LOST" ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-200">
+                                <AlertTriangle className="h-3 w-3" aria-hidden />
+                                Atrasado
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="py-3 text-right font-medium tabular-nums text-[var(--color-foreground)]">
+                          {formatDealValueDisplay(row.latestDealValue)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
           {list && list.meta.totalPages > 1 ? (
