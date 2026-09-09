@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Compass, List, Map as MapIcon, RefreshCw, ArrowUpRight } from "lucide-react";
+import { Compass, List, Map as MapIcon, RefreshCw, ArrowUpRight, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchRadarInstallations } from "@/lib/radar-api";
 import { useOrganization } from "@/components/providers/organization-provider";
@@ -9,6 +9,13 @@ import { RadarStatsHeader } from "@/components/radar/radar-stats-header";
 import { RadarFilters } from "@/components/radar/radar-filters";
 import { RadarMapView, InstallationPoint } from "@/components/radar/radar-map-view";
 import { RadarLeadModal } from "@/components/radar/radar-lead-modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function RadarPage() {
   const { currentOrganization, user } = useOrganization();
@@ -25,6 +32,14 @@ export default function RadarPage() {
 
   const [selectedInstallation, setSelectedInstallation] = useState<InstallationPoint | null>(null);
   const [convertModalOpen, setConvertModalOpen] = useState(false);
+  const [radarUpgradeModalOpen, setRadarUpgradeModalOpen] = useState(false);
+
+  const isPaidProPlan = Boolean(
+    !user?.isTrial &&
+    currentOrganization?.subscription &&
+    currentOrganization?.subscription?.status === "active"
+  );
+  const isLocked = !isPaidProPlan;
 
   const fetchRadarData = async () => {
     setLoading(true);
@@ -170,6 +185,8 @@ export default function RadarPage() {
         setOpportunityType={setOpportunityType}
         onSearch={fetchRadarData}
         loading={loading}
+        isLocked={isLocked}
+        onLockedClick={() => setRadarUpgradeModalOpen(true)}
       />
 
       {/* Conteúdo Principal: Mapa ou Tabela */}
@@ -179,9 +196,15 @@ export default function RadarPage() {
           selectedInstallation={selectedInstallation}
           onSelectInstallation={setSelectedInstallation}
           onOpenConvertModal={(item) => {
+            if (isLocked) {
+              setRadarUpgradeModalOpen(true);
+              return;
+            }
             setSelectedInstallation(item);
             setConvertModalOpen(true);
           }}
+          isLocked={isLocked}
+          onLockedClick={() => setRadarUpgradeModalOpen(true)}
         />
       ) : (
         <div className="bg-neutral-900/90 rounded-2xl border border-neutral-800 overflow-hidden shadow-xl">
@@ -249,13 +272,18 @@ export default function RadarPage() {
                       <Button
                         size="sm"
                         onClick={() => {
+                          if (isLocked) {
+                            setRadarUpgradeModalOpen(true);
+                            return;
+                          }
                           setSelectedInstallation(item);
                           setConvertModalOpen(true);
                         }}
                         className="bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs h-8 px-3"
                       >
-                        <span>Gerar Lead</span>
-                        <ArrowUpRight className="w-3 h-3 ml-1" />
+                        {isLocked ? <Lock className="w-3 h-3 mr-1" /> : null}
+                        <span>{isLocked ? "Desbloquear" : "Gerar Lead"}</span>
+                        {!isLocked && <ArrowUpRight className="w-3 h-3 ml-1" />}
                       </Button>
                     </td>
                   </tr>
@@ -272,6 +300,40 @@ export default function RadarPage() {
         onClose={() => setConvertModalOpen(false)}
         installation={selectedInstallation}
       />
+
+      {/* Modal de Upgrade para o Radar Solar */}
+      <Dialog open={radarUpgradeModalOpen} onOpenChange={setRadarUpgradeModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <span className="p-2 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                <Compass className="w-5 h-5" />
+              </span>
+              Radar Solar ANEEL — Plano Pro
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-sm text-[var(--color-muted-foreground)] leading-relaxed">
+              No plano Start você tem acesso à demonstração do Radar Solar. Para pesquisar usinas
+              por cidades, bairros e classes, navegar livremente pelo mapa satélite de alta
+              resolução e prospectar diretamente no CRM, faça upgrade para o{" "}
+              <strong>Plano Pro</strong> ou superior.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setRadarUpgradeModalOpen(false)}>
+              Fechar
+            </Button>
+            <Button
+              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold"
+              onClick={() => {
+                setRadarUpgradeModalOpen(false);
+                window.location.href = "/gestao/meus-planos";
+              }}
+            >
+              Conhecer Plano Pro &rarr;
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

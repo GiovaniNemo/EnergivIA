@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Sparkles, UserPlus, Satellite, Moon, Map as MapIcon } from "lucide-react";
+import { Sparkles, UserPlus, Satellite, Moon, Map as MapIcon, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface InstallationPoint {
@@ -35,6 +35,8 @@ interface RadarMapViewProps {
   selectedInstallation: InstallationPoint | null;
   onSelectInstallation: (item: InstallationPoint) => void;
   onOpenConvertModal: (item: InstallationPoint) => void;
+  isLocked?: boolean;
+  onLockedClick?: () => void;
 }
 
 type MapLayerType = "dark" | "satellite" | "streets";
@@ -52,15 +54,15 @@ interface LeafletMapInstance {
   fitBounds: (bounds: [number, number][], opts?: Record<string, unknown>) => void;
 }
 
-// Configuração das camadas com suporte a zoom máximo sem erro de 'Map data not yet available'
+// Configuração das camadas sem marcas d'água restritivas
 const TILE_LAYERS: Record<
   MapLayerType,
   { url: string; subdomains: string; maxZoom: number; maxNativeZoom?: number }
 > = {
   dark: {
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
     subdomains: "abcd",
-    maxZoom: 22,
+    maxZoom: 20,
     maxNativeZoom: 19,
   },
   satellite: {
@@ -71,9 +73,9 @@ const TILE_LAYERS: Record<
     maxNativeZoom: 20,
   },
   streets: {
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png",
-    subdomains: "abcd",
-    maxZoom: 22,
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    subdomains: "abc",
+    maxZoom: 19,
     maxNativeZoom: 19,
   },
 };
@@ -83,6 +85,8 @@ export function RadarMapView({
   selectedInstallation,
   onSelectInstallation,
   onOpenConvertModal,
+  isLocked = false,
+  onLockedClick,
 }: RadarMapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<LeafletMapInstance | null>(null);
@@ -213,11 +217,17 @@ export function RadarMapView({
       zoomControl: false,
       attributionControl: false,
       preferCanvas: true, // Renderização ultra-rápida via Canvas
+      dragging: !isLocked,
+      touchZoom: !isLocked,
+      doubleClickZoom: !isLocked,
+      scrollWheelZoom: !isLocked,
+      boxZoom: !isLocked,
+      keyboard: !isLocked,
     }) as LeafletMapInstance;
     map.setView([initialLat, initialLng], 13);
 
-    // Controle de Zoom na direita
-    if (typeof L["control"] === "object" || typeof L["control"] === "function") {
+    // Controle de Zoom na direita (apenas quando não bloqueado)
+    if (!isLocked && (typeof L["control"] === "object" || typeof L["control"] === "function")) {
       const ctrl = (
         L["control"] as {
           zoom: (opts: Record<string, unknown>) => { addTo: (m: unknown) => unknown };
@@ -564,12 +574,52 @@ export function RadarMapView({
           </div>
 
           <Button
-            onClick={() => onOpenConvertModal(selectedInstallation)}
+            onClick={() => {
+              if (isLocked) {
+                onLockedClick?.();
+                return;
+              }
+              onOpenConvertModal(selectedInstallation);
+            }}
             className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
           >
-            <UserPlus className="w-4 h-4" />
-            <span>Converter em Oportunidade no CRM</span>
+            {isLocked ? <Lock className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+            <span>
+              {isLocked ? "Desbloquear Prospecção (Plano Pro)" : "Converter em Oportunidade no CRM"}
+            </span>
           </Button>
+        </div>
+      )}
+
+      {/* Overlay de Bloqueio Interativo para Planos sem Acesso Pro */}
+      {isLocked && (
+        <div
+          onClick={onLockedClick}
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] p-4 text-center cursor-pointer group transition-all"
+        >
+          <div className="max-w-md bg-neutral-950/95 border border-amber-500/40 p-6 rounded-2xl shadow-2xl space-y-3.5 transform group-hover:scale-[1.02] transition-transform">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/10">
+              <Lock className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">Navegação & Prospecção Bloqueadas</h3>
+              <p className="text-xs text-neutral-300 leading-relaxed mt-1">
+                Você está no modo de demonstração do Radar Solar ANEEL. A navegação interativa no
+                mapa, filtros por município e prospecção direta de usinas e vizinhança são
+                exclusivas a partir do <strong className="text-amber-400">Plano Pro</strong>.
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onLockedClick?.();
+              }}
+              className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold text-xs h-9 px-5 rounded-xl shadow-md"
+            >
+              Desbloquear Radar Completo &rarr;
+            </Button>
+          </div>
         </div>
       )}
     </div>

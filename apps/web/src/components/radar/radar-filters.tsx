@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { Search, SlidersHorizontal, ChevronDown, Check, Loader2 } from "lucide-react";
+import { Search, SlidersHorizontal, ChevronDown, Check, Loader2, Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { listGeoStates, listGeoCities, GeoState, GeoCity } from "@/lib/leads-api";
@@ -20,6 +20,8 @@ interface RadarFiltersProps {
   setOpportunityType: (val: string) => void;
   onSearch: () => void;
   loading?: boolean;
+  isLocked?: boolean;
+  onLockedClick?: () => void;
 }
 
 const DEFAULT_BRAZIL_STATES: Array<{ uf: string; name: string; id?: string }> = [
@@ -65,6 +67,8 @@ export function RadarFilters({
   setOpportunityType,
   onSearch,
   loading,
+  isLocked = false,
+  onLockedClick,
 }: RadarFiltersProps) {
   const { currentOrganization } = useOrganization();
   const orgId = currentOrganization?.id;
@@ -166,34 +170,58 @@ export function RadarFilters({
   }, [cities, searchQuery]);
 
   const handleStateChange = (newUf: string) => {
+    if (isLocked) {
+      onLockedClick?.();
+      return;
+    }
     setUf(newUf);
     setCityName("");
     setSearchQuery("");
   };
 
   const handleSelectCity = (cName: string) => {
+    if (isLocked) {
+      onLockedClick?.();
+      return;
+    }
     setCityName(cName);
     setSearchQuery(cName);
     setDropdownOpen(false);
   };
 
   return (
-    <div className="bg-neutral-900/90 backdrop-blur-md p-4 rounded-2xl border border-neutral-800 shadow-lg space-y-3">
+    <div
+      onClick={() => {
+        if (isLocked) onLockedClick?.();
+      }}
+      className={`bg-neutral-900/90 backdrop-blur-md p-4 rounded-2xl border border-neutral-800 shadow-lg space-y-3 relative transition-all ${
+        isLocked ? "cursor-pointer hover:border-amber-500/40" : ""
+      }`}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-bold text-white">
           <SlidersHorizontal className="w-4 h-4 text-amber-400" />
           <span>Filtros de Prospecção Geográfica</span>
+          {isLocked && (
+            <span className="flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 ml-2">
+              <Lock className="w-3 h-3" />
+              <span>Bloqueado no Plano Start</span>
+            </span>
+          )}
         </div>
         <span className="text-xs text-neutral-400">Base ANEEL GD Atualizada</span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+      <div
+        className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 ${isLocked ? "opacity-75 pointer-events-none" : ""}`}
+      >
         {/* Estado */}
         <div>
           <select
             value={uf}
             onChange={(e) => handleStateChange(e.target.value)}
-            className="w-full bg-neutral-950 border border-neutral-800 rounded-md text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500 font-medium"
+            disabled={isLocked}
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-md text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500 font-medium disabled:cursor-not-allowed"
           >
             {stateOptions.map((s) => (
               <option key={s.uf} value={s.uf}>
@@ -209,17 +237,24 @@ export function RadarFilters({
             <Input
               value={searchQuery}
               onChange={(e) => {
+                if (isLocked) return;
                 setSearchQuery(e.target.value);
                 setCityName(e.target.value);
                 if (!dropdownOpen) setDropdownOpen(true);
               }}
-              onFocus={() => setDropdownOpen(true)}
+              onFocus={() => {
+                if (!isLocked) setDropdownOpen(true);
+              }}
+              disabled={isLocked}
               placeholder="Digite ou selecione a cidade..."
-              className="bg-neutral-950 border-neutral-800 text-white h-9 text-xs placeholder-neutral-500 pr-8 focus:border-amber-500 font-medium"
+              className="bg-neutral-950 border-neutral-800 text-white h-9 text-xs placeholder-neutral-500 pr-8 focus:border-amber-500 font-medium disabled:cursor-not-allowed"
             />
             <button
               type="button"
-              onClick={() => setDropdownOpen((prev) => !prev)}
+              disabled={isLocked}
+              onClick={() => {
+                if (!isLocked) setDropdownOpen((prev) => !prev);
+              }}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white"
             >
               {loadingCities ? (
@@ -231,7 +266,7 @@ export function RadarFilters({
           </div>
 
           {/* Lista Suspensa Flutuante de Cidades */}
-          {dropdownOpen && (
+          {dropdownOpen && !isLocked && (
             <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-neutral-950 border border-neutral-800 rounded-xl shadow-2xl divide-y divide-neutral-800/40 animate-in fade-in slide-in-from-top-1 duration-150">
               {loadingCities ? (
                 <div className="p-3 text-center text-xs text-neutral-400 flex items-center justify-center gap-2">
@@ -273,8 +308,9 @@ export function RadarFilters({
           <Input
             value={neighborhood}
             onChange={(e) => setNeighborhood(e.target.value)}
+            disabled={isLocked}
             placeholder="Filtrar por Bairro..."
-            className="bg-neutral-950 border-neutral-800 text-white h-9 text-xs placeholder-neutral-500 font-medium"
+            className="bg-neutral-950 border-neutral-800 text-white h-9 text-xs placeholder-neutral-500 font-medium disabled:cursor-not-allowed"
           />
         </div>
 
@@ -283,7 +319,8 @@ export function RadarFilters({
           <select
             value={classType}
             onChange={(e) => setClassType(e.target.value)}
-            className="w-full bg-neutral-950 border border-neutral-800 rounded-md text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500 font-medium"
+            disabled={isLocked}
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-md text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500 font-medium disabled:cursor-not-allowed"
           >
             <option value="ALL">Todas as Classes</option>
             <option value="RESIDENTIAL">Residencial</option>
@@ -298,7 +335,8 @@ export function RadarFilters({
           <select
             value={opportunityType}
             onChange={(e) => setOpportunityType(e.target.value)}
-            className="w-full bg-neutral-950 border border-neutral-800 rounded-md text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500 font-medium"
+            disabled={isLocked}
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-md text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500 font-medium disabled:cursor-not-allowed"
           >
             <option value="ALL">Todas as Oportunidades</option>
             <option value="UPGRADE_BATTERY">🔋 Retrofit / Baterias (&gt;3 anos)</option>
@@ -310,15 +348,20 @@ export function RadarFilters({
         {/* Botão Buscar */}
         <div>
           <Button
-            onClick={() => {
+            onClick={(e) => {
+              if (isLocked) {
+                e.stopPropagation();
+                onLockedClick?.();
+                return;
+              }
               setDropdownOpen(false);
               onSearch();
             }}
             disabled={loading}
             className="w-full h-9 bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/10"
           >
-            <Search className="w-3.5 h-3.5" />
-            <span>{loading ? "Buscando..." : "Explorar"}</span>
+            {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Search className="w-3.5 h-3.5" />}
+            <span>{isLocked ? "Desbloquear Pro" : loading ? "Buscando..." : "Explorar"}</span>
           </Button>
         </div>
       </div>
