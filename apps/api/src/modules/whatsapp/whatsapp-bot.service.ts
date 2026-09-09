@@ -130,7 +130,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     }
     // Se já foi encerrado por inatividade ou reiniciado
     if (
-      lastBotContent.includes("estou encerrando este atendimento por enquanto") ||
+      lastBotContent.includes("encerramos este atendimento") ||
+      lastBotContent.includes("estou encerrando este atendimento") ||
       lastBotContent.includes("Sessão reiniciada com sucesso")
     ) {
       return false;
@@ -195,7 +196,10 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         if (!lastMsg || lastMsg.role !== "assistant") continue;
 
         // Se a conversa já foi encerrada por inatividade, não processa
-        if (lastMsg.content.includes("estou encerrando este atendimento por enquanto")) {
+        if (
+          lastMsg.content.includes("encerramos este atendimento") ||
+          lastMsg.content.includes("estou encerrando este atendimento")
+        ) {
           continue;
         }
 
@@ -227,8 +231,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         // 15 MINUTOS OU MAIS: Encerra educadamente e profissionalmente
         if (totalIdleTimeMs >= 15 * 60 * 1000) {
           const closureText =
-            `Como não tivemos retorno por aqui, estou encerrando este atendimento por enquanto para não incomodar. ☀️\n\n` +
-            `Mas fique tranquilo: quando quiser retomar ou iniciar uma nova cotação, basta nos enviar uma mensagem aqui no WhatsApp ou digitar *novo*. Tenha um excelente dia e ótimas vendas!`;
+            `Como não tivemos retorno por aqui, encerramos este atendimento. ☀️\n\n` +
+            `Quando quiser iniciar uma nova cotação, basta nos enviar uma mensagem. Estamos à disposição e ótimas vendas!`;
 
           await this.whatsappCloud.sendTextMessage({
             phoneNumberId,
@@ -496,7 +500,9 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       const isInactive15MinInFlow =
         lastMsg && timeSinceLastMsg >= 15 * 60 * 1000 && this.isFlowActive(lastMsg.content);
       const wasClosed =
-        lastMsg && lastMsg.content.includes("estou encerrando este atendimento por enquanto");
+        lastMsg &&
+        (lastMsg.content.includes("encerramos este atendimento") ||
+          lastMsg.content.includes("estou encerrando este atendimento"));
       const isExpired24h = lastMsg && timeSinceLastMsg > SESSION_INACTIVITY_MS;
 
       if (isInactive15MinInFlow || wasClosed || isExpired24h || isNewMedia) {

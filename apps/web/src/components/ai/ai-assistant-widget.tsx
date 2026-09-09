@@ -269,7 +269,8 @@ export function AIAssistantWidget() {
     const lastExisting = baseMessages[baseMessages.length - 1];
     if (
       lastExisting &&
-      lastExisting.content.includes("estou encerrando este atendimento por enquanto")
+      (lastExisting.content.includes("encerramos este atendimento") ||
+        lastExisting.content.includes("estou encerrando este atendimento"))
     ) {
       baseMessages = [];
     }
@@ -461,7 +462,11 @@ export function AIAssistantWidget() {
     if (hasCompletedProposal) return;
 
     // Se a conversa já foi encerrada por inatividade, não processa
-    if (lastMsg.content.includes("estou encerrando este atendimento por enquanto")) return;
+    if (
+      lastMsg.content.includes("encerramos este atendimento") ||
+      lastMsg.content.includes("estou encerrando este atendimento")
+    )
+      return;
 
     // Verifica se há fluxo ativo de atendimento / simulação
     const content = lastMsg.content;
@@ -509,7 +514,7 @@ export function AIAssistantWidget() {
             id: (Date.now() + 1).toString(),
             role: "assistant",
             content:
-              "Como não tivemos retorno por aqui, estou encerrando este atendimento por enquanto para não incomodar. ☀️\n\nMas fique tranquilo: quando quiser retomar ou iniciar uma nova cotação, basta nos enviar uma mensagem por aqui ou clicar em 'Novo' no topo do chat. Tenha um excelente dia e ótimas vendas!",
+              "Como não tivemos retorno por aqui, encerramos este atendimento. ☀️\n\nQuando quiser iniciar uma nova cotação, basta nos enviar uma mensagem por aqui ou clicar em 'Novo' no topo do chat. Estamos à disposição e ótimas vendas!",
           },
         ]);
       },
