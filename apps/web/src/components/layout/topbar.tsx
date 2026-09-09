@@ -7,7 +7,6 @@ import { useOrganization } from "@/components/providers/organization-provider";
 import { Button } from "@/components/ui/button";
 import { Moon, Sun, LogOut, Menu, UserRound, Timer, AlertTriangle, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { useSidebar } from "@/components/layout/sidebar-inset";
 import { OrganizationSwitcher } from "@/components/layout/organization-switcher";
 import { NotificationsBell } from "@/components/layout/notifications-bell";
 import { GlobalSearch, type GlobalSearchHandle } from "@/components/layout/global-search";
@@ -131,8 +130,6 @@ function WhatsappIcon(props: React.SVGProps<SVGSVGElement>): JSX.Element {
 export function Topbar() {
   const { resolvedTheme, setTheme } = useTheme();
   const { currentOrganization, user } = useOrganization();
-  const { isMobile, setOpen } = useSidebar();
-  const [collapsed] = useSidebarCollapsed();
   const searchHandleRef = useRef<GlobalSearchHandle>(null);
   const mobileSearchHandleRef = useRef<GlobalSearchHandle | null>(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
