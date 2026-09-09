@@ -1183,6 +1183,10 @@ export async function POST(req: Request) {
           });
           if (meRes.ok) {
             const meData = await meRes.json();
+            if (meData.name) {
+              const firstName = meData.name.trim().split(" ")[0];
+              if (firstName) integratorUserName = ` ${firstName}`;
+            }
             if (meData.organizations && meData.organizations.length > 0) {
               const currentOrg =
                 meData.organizations.find((o: any) => o.id === meData.currentOrganizationId) ||
@@ -1214,6 +1218,7 @@ export async function POST(req: Request) {
 
     const dynamicSystemPrompt = systemPrompt
       .replace(/\[SAUDACAO\]/g, saudacao)
+      .replace(/\[NOME\]/g, integratorUserName)
       .replace(/\[EMPRESA\]/g, integratorCompanyName);
 
     const result = await streamText({
