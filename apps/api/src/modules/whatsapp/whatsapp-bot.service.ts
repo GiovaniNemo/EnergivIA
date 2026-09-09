@@ -48,7 +48,8 @@ interface WebhookPayload {
   }>;
 }
 
-const SESSION_INACTIVITY_MS = 5 * 60 * 1000; // 5 minutos
+const SESSION_INACTIVITY_MS =
+  Number(process.env.WHATSAPP_SESSION_INACTIVITY_MS) || 24 * 60 * 60 * 1000; // 24 horas (janela padrão da Meta/WhatsApp)
 
 import { WhatsappPairingService } from "./whatsapp-pairing.service";
 
@@ -292,7 +293,7 @@ export class WhatsappBotService {
       const lastMsg = conversation.messages[conversation.messages.length - 1];
       const timeSinceLastMsg = lastMsg ? Date.now() - new Date(lastMsg.createdAt).getTime() : 0;
 
-      // Se inativo por mais de 5min OU enviou nova fatura (PDF/imagem):
+      // Se inativo por mais de 24h (ou configurado) OU enviou nova fatura (PDF/imagem):
       if ((lastMsg && timeSinceLastMsg > SESSION_INACTIVITY_MS) || isNewMedia) {
         this.logger.log(`Resetando contexto para nova sessão: de=${fromWaId}`);
         await this.prisma.message.deleteMany({
