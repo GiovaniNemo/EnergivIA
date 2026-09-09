@@ -118,4 +118,9 @@ export class OrganizationsController {
   ) {
     return this.organizations.removeMember(id, memberId, user.sub);
   }
+
+  @Delete(":id")
+  delete(@Param("id") id: string, @CurrentUser() user: JwtPayload) {
+    return this.organizations.delete(id, user.sub);
+  }
 }

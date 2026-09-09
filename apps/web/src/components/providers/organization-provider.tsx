@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import {
   getMe,
   createOrganization,
+  deleteOrganization,
   MeRequestError,
   type MeResponse,
   type Organization,
@@ -42,6 +43,7 @@ interface OrganizationContextValue {
     templateValueProposition?: string;
     templateTone?: string;
   }) => Promise<Organization>;
+  deleteOrg: (id: string) => Promise<void>;
   refetch: () => Promise<void>;
   loading: boolean;
   error: Error | null;
@@ -126,6 +128,17 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     [refetch, setCurrentOrganizationId]
   );
 
+  const deleteOrg = useCallback(
+    async (id: string) => {
+      const res = await deleteOrganization(id);
+      await refetch();
+      if (res.fallbackOrganizationId) {
+        setCurrentOrganizationId(res.fallbackOrganizationId);
+      }
+    },
+    [refetch, setCurrentOrganizationId]
+  );
+
   const currentOrganization =
     currentOrganizationId && organizations.length > 0
       ? (organizations.find((o) => o.id === currentOrganizationId) ?? organizations[0]!)
@@ -138,6 +151,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     currentOrganization,
     setCurrentOrganizationId,
     createOrg,
+    deleteOrg,
     refetch,
     loading,
     error,

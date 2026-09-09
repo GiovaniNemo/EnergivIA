@@ -16,7 +16,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MapPin, Loader2, Search, CheckCircle2, Plus, Building2, Sparkles } from "lucide-react";
+import {
+  MapPin,
+  Loader2,
+  Search,
+  CheckCircle2,
+  Plus,
+  Building2,
+  Sparkles,
+  Trash2,
+  ShieldCheck,
+  AlertTriangle,
+} from "lucide-react";
 import Link from "next/link";
 
 interface CnpjApiResponse {
@@ -104,6 +115,7 @@ function OrganizationSettingsContent() {
     currentOrganizationId,
     setCurrentOrganizationId,
     createOrg,
+    deleteOrg,
     refetch,
   } = useOrganization();
   const searchParams = useSearchParams();
@@ -154,6 +166,14 @@ function OrganizationSettingsContent() {
   const [createModalError, setCreateModalError] = useState<string | null>(null);
   const [createModalLogoError, setCreateModalLogoError] = useState<string | null>(null);
   const [createdSuccessMessage, setCreatedSuccessMessage] = useState<string | null>(null);
+
+  // Delete organization modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeletingOrg, setIsDeletingOrg] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const primaryOrgId = organizations.length > 0 ? organizations[0]?.id : null;
+  const isPrimaryOrganization = currentOrganization?.id === primaryOrgId;
 
   const newOrgLastSearchedCnpj = useRef<string>("");
   const newOrgLastSearchedCep = useRef<string>("");
@@ -453,6 +473,23 @@ function OrganizationSettingsContent() {
     }
   };
 
+  const handleDeleteOrganization = async () => {
+    if (!currentOrganization || isPrimaryOrganization) return;
+    setIsDeletingOrg(true);
+    setDeleteError(null);
+    try {
+      const orgName = currentOrganization.name;
+      await deleteOrg(currentOrganization.id);
+      setIsDeleteModalOpen(false);
+      setCreatedSuccessMessage(`Organização "${orgName}" foi excluída com sucesso.`);
+      setTimeout(() => setCreatedSuccessMessage(null), 6000);
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Erro ao excluir organização.");
+    } finally {
+      setIsDeletingOrg(false);
+    }
+  };
+
   const fullAddress = [
     street,
     number ? `nº ${number}` : "",
@@ -480,8 +517,21 @@ function OrganizationSettingsContent() {
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Header with Title and Create New Org Button */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Organização</h1>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-3xl font-bold tracking-tight">Organização</h1>
+            {isPrimaryOrganization ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Organização Principal
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                <Building2 className="h-3.5 w-3.5" />
+                Organização Secundária
+              </span>
+            )}
+          </div>
           <p className="text-[var(--color-muted-foreground)]">
             Nome, CNPJ, localização e logotipo da sua empresa no EnergivIA.
           </p>
@@ -513,12 +563,13 @@ function OrganizationSettingsContent() {
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4 text-[var(--color-primary)]" />
               <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                Organização Selecionada
+                Alternar Empresa
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {organizations.map((org) => {
+              {organizations.map((org, index) => {
                 const isActive = org.id === currentOrganizationId;
+                const isOrgPrimary = index === 0;
                 return (
                   <button
                     key={org.id}
@@ -530,8 +581,15 @@ function OrganizationSettingsContent() {
                         : "border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] hover:bg-[var(--color-accent)]"
                     }`}
                   >
-                    <Building2 className="h-3.5 w-3.5 shrink-0" />
+                    {isOrgPrimary ? (
+                      <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                    ) : (
+                      <Building2 className="h-3.5 w-3.5 shrink-0" />
+                    )}
                     <span className="max-w-[160px] truncate">{org.name}</span>
+                    {isOrgPrimary && (
+                      <span className="text-[10px] opacity-80 font-normal">(Principal)</span>
+                    )}
                     {isActive && <CheckCircle2 className="h-3 w-3 shrink-0" />}
                   </button>
                 );
@@ -736,6 +794,40 @@ function OrganizationSettingsContent() {
         </CardContent>
       </Card>
 
+      {/* Zona de Perigo - Exclusão de Organização Secundária */}
+      {!isPrimaryOrganization && organizations.length > 1 && (
+        <Card className="border-red-500/30 bg-red-950/10">
+          <CardHeader>
+            <CardTitle className="text-red-500 flex items-center gap-2 text-base">
+              <Trash2 className="h-5 w-5" />
+              Zona de Perigo — Excluir Empresa
+            </CardTitle>
+            <CardDescription className="text-red-400/80 text-xs">
+              Esta ação excluirá permanentemente a empresa secundária &quot;
+              {currentOrganization.name}&quot; e todos os seus dados vinculados. A sua organização
+              principal permanecerá protegida e intacta.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+            <p className="text-xs text-[var(--color-muted-foreground)]">
+              Deseja remover esta empresa secundária do seu painel?
+            </p>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                setDeleteError(null);
+                setIsDeleteModalOpen(true);
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs h-9 shrink-0"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Excluir Organização
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Modal: Cadastrar Nova Empresa */}
       <Dialog
         open={isCreateModalOpen}
@@ -915,6 +1007,67 @@ function OrganizationSettingsContent() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Confirmação de Exclusão de Empresa Secundária */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-red-500">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Excluir Organização
+            </DialogTitle>
+            <DialogDescription className="space-y-2 pt-2 text-xs leading-relaxed">
+              <span>
+                Tem certeza que deseja excluir a organização secundária{" "}
+                <strong className="text-white font-semibold">
+                  &quot;{currentOrganization.name}&quot;
+                </strong>
+                ?
+              </span>
+              <span className="block text-red-400 font-medium">
+                Esta ação é irreversível. Todos os leads, propostas e configurações vinculados a
+                esta empresa secundária serão removidos.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteError && (
+            <p className="text-xs text-[var(--color-destructive)] font-medium bg-red-500/10 p-2.5 rounded-lg border border-red-500/20">
+              {deleteError}
+            </p>
+          )}
+
+          <DialogFooter className="pt-3 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeletingOrg}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteOrganization}
+              disabled={isDeletingOrg}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold"
+            >
+              {isDeletingOrg ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Excluindo…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Sim, Excluir Empresa
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

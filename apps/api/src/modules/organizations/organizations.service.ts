@@ -1063,4 +1063,70 @@ export class OrganizationsService {
       monthlyMetrics,
     };
   }
+
+  async delete(id: string, userId: string) {
+    const userMemberships = await this.prisma.organizationMember.findMany({
+      where: {
+        userId,
+        status: InvitationStatus.ACCEPTED,
+        organization: { deletedAt: null },
+      },
+      include: { organization: true },
+      orderBy: { invitedAt: "asc" },
+    });
+
+    if (userMemberships.length <= 1) {
+      throw new BadRequestException(
+        "Não é possível excluir a sua única organização. É necessário possuir ao menos outra organização ativa."
+      );
+    }
+
+    // A organização principal (primeira cadastrada / mais antiga) é protegida contra exclusão
+    const primaryMembership = userMemberships[0];
+    if (primaryMembership && primaryMembership.organizationId === id) {
+      throw new BadRequestException(
+        "A organização principal não pode ser excluída. Apenas organizações secundárias podem ser removidas."
+      );
+    }
+
+    await this.requireRole(id, userId, [OrgRole.OWNER, OrgRole.ADMIN]);
+
+    const targetOrg = await this.prisma.tenant.findUnique({
+      where: { id },
+      select: { id: true, name: true, settings: true },
+    });
+    if (!targetOrg) throw new NotFoundException("Organização não encontrada.");
+
+    // Proteção contra exclusão da organização matriz EnergivIA
+    const orgCnpj = cleanCnpj(extractCnpj(targetOrg.settings) ?? undefined);
+    if (orgCnpj === "66304358000116") {
+      throw new ForbiddenException("A organização matriz EnergivIA não pode ser excluída.");
+    }
+
+    // Soft-delete do tenant
+    await this.prisma.tenant.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+
+    // Remove os vínculos de membros desta organização
+    await this.prisma.organizationMember.deleteMany({
+      where: { organizationId: id },
+    });
+
+    // Redireciona o tenantId do usuário caso estivesse apontando para a organização excluída
+    const fallbackOrgId = userMemberships.find((m) => m.organizationId !== id)?.organizationId;
+    if (fallbackOrgId) {
+      await this.prisma.user.updateMany({
+        where: { id: userId, tenantId: id },
+        data: { tenantId: fallbackOrgId },
+      });
+    }
+
+    return {
+      success: true,
+      message: `Organização "${targetOrg.name}" excluída com sucesso.`,
+      fallbackOrganizationId: fallbackOrgId,
+    };
+  }
 }

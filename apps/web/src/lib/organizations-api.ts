@@ -228,6 +228,17 @@ export async function updateOrganization(
   return res.json();
 }
 
+export async function deleteOrganization(
+  id: string
+): Promise<{ success: boolean; message: string; fallbackOrganizationId?: string }> {
+  const res = await apiProxy("DELETE", `/organizations/${id}`, undefined, id);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message ?? "Falha ao excluir organização.");
+  }
+  return res.json();
+}
+
 export async function getMembers(organizationId: string): Promise<Member[]> {
   const res = await apiProxy(
     "GET",
