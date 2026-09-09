@@ -265,13 +265,22 @@ export function AIAssistantWidget() {
     e?.preventDefault();
     if ((!input.trim() && !selectedImage) || isLoading) return;
 
+    let baseMessages = messages;
+    const lastExisting = baseMessages[baseMessages.length - 1];
+    if (
+      lastExisting &&
+      lastExisting.content.includes("estou encerrando este atendimento por enquanto")
+    ) {
+      baseMessages = [];
+    }
+
     const userMsg: Message = {
       id: Date.now().toString(),
       role: "user",
       content: input.trim(),
       imageUrl: selectedImage || undefined,
     };
-    const newMessages = [...messages, userMsg];
+    const newMessages = [...baseMessages, userMsg];
     setMessages(newMessages);
     setInput("");
     removeImage();
@@ -433,6 +442,85 @@ export function AIAssistantWidget() {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  // ── Temporizadores de Inatividade (Lembrete 10 min e Encerramento 15 min no Fluxo) ──
+  useEffect(() => {
+    if (messages.length === 0 || isLoading) return;
+
+    const lastMsg = messages[messages.length - 1];
+    if (!lastMsg || lastMsg.role !== "assistant") return;
+
+    // Se já gerou proposta comercial pronta, não há lembretes nem encerramento
+    const hasCompletedProposal = messages.some(
+      (m) =>
+        m.proposalUrl ||
+        m.content === "__forward_bubble__" ||
+        m.content.includes("proposta/") ||
+        m.content.includes("Proposta comercial gerada com sucesso")
+    );
+    if (hasCompletedProposal) return;
+
+    // Se a conversa já foi encerrada por inatividade, não processa
+    if (lastMsg.content.includes("estou encerrando este atendimento por enquanto")) return;
+
+    // Verifica se há fluxo ativo de atendimento / simulação
+    const content = lastMsg.content;
+    const isFlowActive =
+      content.includes("cidade e estado") ||
+      content.includes("padrão de entrada") ||
+      content.includes("estrutura do telhado") ||
+      content.includes("Qual opção você prefere") ||
+      content.includes("nome do cliente final") ||
+      content.includes("WhatsApp dele") ||
+      content.includes("consumo médio mensal") ||
+      content.includes("potência de pico") ||
+      content.includes("dados extraídos com precisão") ||
+      content.includes("Itens do Kit:");
+
+    if (!isFlowActive) return;
+
+    const alreadyReminded = lastMsg.content.includes("Você ainda está por aí?");
+
+    let reminderTimer: NodeJS.Timeout | null = null;
+    let closureTimer: NodeJS.Timeout | null = null;
+
+    if (!alreadyReminded) {
+      reminderTimer = setTimeout(
+        () => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now().toString(),
+              role: "assistant",
+              content:
+                "Olá! Você ainda está por aí? ☀️\n\nPodemos continuar sua simulação quando quiser. Falta pouco para gerarmos a proposta para o seu cliente!",
+            },
+          ]);
+        },
+        10 * 60 * 1000
+      ); // 10 minutos
+    }
+
+    closureTimer = setTimeout(
+      () => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content:
+              "Como não tivemos retorno por aqui, estou encerrando este atendimento por enquanto para não incomodar. ☀️\n\nMas fique tranquilo: quando quiser retomar ou iniciar uma nova cotação, basta nos enviar uma mensagem por aqui ou clicar em 'Novo' no topo do chat. Tenha um excelente dia e ótimas vendas!",
+          },
+        ]);
+      },
+      15 * 60 * 1000
+    ); // 15 minutos
+
+    return () => {
+      if (reminderTimer) clearTimeout(reminderTimer);
+      if (closureTimer) clearTimeout(closureTimer);
+    };
+  }, [messages, isLoading]);
 
   // Handle toggle event from topbar
   useEffect(() => {

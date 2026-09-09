@@ -109,7 +109,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       this.checkInactiveConversations().catch((err) => {
         this.logger.error("Erro ao verificar inatividade de conversas do WhatsApp:", err);
       });
-    }, 60_000); // Executa verificação a cada 1 minuto
+    }, 30_000); // Executa verificação a cada 30 segundos
   }
 
   onModuleDestroy() {
@@ -161,11 +161,25 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
   private async checkInactiveConversations(): Promise<void> {
     try {
-      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      // Busca um phoneNumberId global recente caso alguma conversa não tenha salvo no metadata
+      let globalPhoneNumberId = this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID")?.trim() || "";
+      if (!globalPhoneNumberId) {
+        const convWithPhone = await this.prisma.conversation.findFirst({
+          where: {
+            channel: "whatsapp",
+          },
+          orderBy: { createdAt: "desc" },
+        });
+        if (convWithPhone && (convWithPhone.metadata as any)?.phoneNumberId) {
+          globalPhoneNumberId = (convWithPhone.metadata as any).phoneNumberId;
+        }
+      }
+
+      // Busca todas as conversas ativas do canal WhatsApp que possuem mensagens
       const conversations = await this.prisma.conversation.findMany({
         where: {
           channel: "whatsapp",
-          updatedAt: { gte: twoHoursAgo },
+          messages: { some: {} },
         },
         include: {
           messages: {
@@ -206,8 +220,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
         const meta = (conversation.metadata as any) || {};
         const toWaId = meta.customerWaId || conversation.title;
-        const phoneNumberId =
-          meta.phoneNumberId || this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID") || "";
+        const phoneNumberId = meta.phoneNumberId || globalPhoneNumberId;
 
         if (!toWaId || !phoneNumberId) continue;
 
@@ -235,6 +248,11 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
               content: closureText,
               channel: "whatsapp",
             },
+          });
+
+          await this.prisma.conversation.update({
+            where: { id: conversation.id },
+            data: { updatedAt: new Date() },
           });
 
           this.logger.log(
@@ -267,6 +285,11 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
               content: reminderText,
               channel: "whatsapp",
             },
+          });
+
+          await this.prisma.conversation.update({
+            where: { id: conversation.id },
+            data: { updatedAt: new Date() },
           });
 
           this.logger.log(
@@ -469,9 +492,25 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       const lastMsg = conversation.messages[conversation.messages.length - 1];
       const timeSinceLastMsg = lastMsg ? Date.now() - new Date(lastMsg.createdAt).getTime() : 0;
 
-      // Se inativo por mais de 24h (ou configurado) OU enviou nova fatura (PDF/imagem):
-      if ((lastMsg && timeSinceLastMsg > SESSION_INACTIVITY_MS) || isNewMedia) {
-        this.logger.log(`Resetando contexto para nova sessão: de=${fromWaId}`);
+      // 15 MINUTOS OU MAIS: Se inativo por mais de 15 minutos no fluxo OU última msg foi encerramento OU inativo > 24h OU nova fatura:
+      const isInactive15MinInFlow =
+        lastMsg && timeSinceLastMsg >= 15 * 60 * 1000 && this.isFlowActive(lastMsg.content);
+      const wasClosed =
+        lastMsg && lastMsg.content.includes("estou encerrando este atendimento por enquanto");
+      const isExpired24h = lastMsg && timeSinceLastMsg > SESSION_INACTIVITY_MS;
+
+      if (isInactive15MinInFlow || wasClosed || isExpired24h || isNewMedia) {
+        this.logger.log(
+          `Resetando contexto para nova sessão: de=${fromWaId}, motivo=${
+            isInactive15MinInFlow
+              ? "inatividade_15min"
+              : wasClosed
+                ? "atendimento_encerrado"
+                : isNewMedia
+                  ? "nova_midia"
+                  : "inatividade_24h"
+          }`
+        );
         await this.prisma.message.deleteMany({
           where: { conversationId: conversation.id },
         });
@@ -496,6 +535,20 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
           },
         },
         include: { messages: { orderBy: { createdAt: "asc" } } },
+      });
+    } else {
+      const currentMeta = (conversation.metadata as Record<string, any>) || {};
+      await this.prisma.conversation.update({
+        where: { id: conversation.id },
+        data: {
+          updatedAt: new Date(),
+          metadata: {
+            ...currentMeta,
+            customerWaId: fromWaId,
+            contactName: contactName || currentMeta["contactName"],
+            phoneNumberId: phoneNumberId || currentMeta["phoneNumberId"],
+          },
+        },
       });
     }
 
@@ -2619,6 +2672,18 @@ ${catalogContext}`;
 
     // ESTADO B: O Bot pediu o nome do cliente final
     if (lastBotMsg.includes("Qual o nome do cliente final")) {
+      const lower = incomingText.toLowerCase().trim();
+      const isGreeting =
+        /^(olá|ola|oi|oii|bom dia|boa tarde|boa noite|menu|iniciar|ajuda|novo|reiniciar)$/i.test(
+          lower
+        );
+      if (isGreeting) {
+        return (
+          `Olá! Identifiquei sua mensagem. ☀️\n\n` +
+          `Para gerarmos a proposta comercial oficial, qual o nome do cliente final? (Ex: João da Silva)\n` +
+          `(Ou envie 0️⃣ para voltar e ver os kits disponíveis, ou *novo* para iniciar outra simulação)`
+        );
+      }
       const clientName = incomingText.trim();
       return `Certo, vou registrar o cliente *${clientName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
     }
