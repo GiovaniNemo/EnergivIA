@@ -1183,10 +1183,6 @@ export async function POST(req: Request) {
           });
           if (meRes.ok) {
             const meData = await meRes.json();
-            if (meData.name) {
-              const firstName = meData.name.trim().split(" ")[0];
-              if (firstName) integratorUserName = ` ${firstName}`;
-            }
             if (meData.organizations && meData.organizations.length > 0) {
               const currentOrg =
                 meData.organizations.find((o: any) => o.id === meData.currentOrganizationId) ||
@@ -1196,8 +1192,6 @@ export async function POST(req: Request) {
               }
             } else if (meData.company) {
               integratorCompanyName = meData.company;
-            } else if (meData.name) {
-              integratorCompanyName = meData.name;
             }
           }
         }
@@ -1216,10 +1210,14 @@ export async function POST(req: Request) {
     else if (currentHour >= 12 && currentHour < 18) saudacao = "Boa tarde";
     else saudacao = "Boa noite";
 
+    let greetingCompany = "";
+    if (integratorCompanyName && integratorCompanyName !== "EnergivIA") {
+      greetingCompany = ` ${integratorCompanyName}`;
+    }
+
     const dynamicSystemPrompt = systemPrompt
       .replace(/\[SAUDACAO\]/g, saudacao)
-      .replace(/\[NOME\]/g, integratorUserName)
-      .replace(/\[EMPRESA\]/g, integratorCompanyName);
+      .replace(/\[EMPRESA\]/g, greetingCompany);
 
     const result = await streamText({
       model: openai("gpt-4o"),
@@ -1230,38 +1228,35 @@ export async function POST(req: Request) {
           description:
             "Usa o motor de cálculo da EnergivIA para dimensionar os componentes físicos e puxar orçamentos REAIS cruzando todos os distribuidores ativos.",
           parameters: z.object({
-            monthlyConsumption: z
-              .any()
-              .optional()
-              .describe(
-                "OBRIGATÓRIO: Consumo mensal (kWh) extraído da fatura. Passe o valor exato em número."
-              ),
-            targetKWp: z
-              .any()
-              .optional()
-              .describe("Potência alvo do sistema em kWp. Pode ser número ou string."),
+            monthlyConsumption: z.any().optional().describe("Consumo mensal (kWh) do cliente."),
+            targetKWp: z.any().optional().describe("Potência alvo do sistema em kWp."),
             targetModules: z
               .number()
               .optional()
+              .describe("Quantidade exata de módulos alvo, se o integrador pedir."),
+            location: z
+              .string()
+              .optional()
+              .describe("Cidade e Estado combinados (ex: 'Cuiabá/MT')"),
+            cidade: z
+              .string()
               .describe(
-                "Quantidade exata de módulos alvo, se o usuário pedir (ex: 'coloque 5 módulos')."
+                "Nome da cidade onde será a instalação. OBRIGATÓRIO quando dimensionado por consumo (ex: 'Cuiabá', 'Maringá', 'São Paulo'). NUNCA chame a ferramenta sem ter perguntado e obtido a cidade!"
               ),
-            location: z.string().optional().describe("Cidade e Estado"),
+            estado: z
+              .string()
+              .describe(
+                "Sigla do estado (UF) onde será a instalação. OBRIGATÓRIO quando dimensionado por consumo (ex: 'MT', 'PR', 'SP')."
+              ),
+            gridVoltage: z
+              .string()
+              .describe(
+                "Padrão de entrada elétrico / Tensão. OBRIGATÓRIO (ex: 'Monofásico 220V', 'Bifásico 127V/220V', 'Trifásico 220V', 'Trifásico 380V'). NUNCA chame a ferramenta sem ter perguntado e obtido o padrão elétrico!"
+              ),
             roofType: z
               .string()
               .describe(
-                "Tipo de telhado. OBRIGATÓRIO (ex: '2', 'fibrocimento', 'metal', 'ceramica')."
-              ),
-            cidade: z.string().optional().describe("Nome da cidade para o motor calcular HSP"),
-            estado: z
-              .string()
-              .optional()
-              .describe("Sigla do estado (UF) para o motor calcular HSP"),
-            gridVoltage: z
-              .string()
-              .optional()
-              .describe(
-                "Padrão de entrada elétrico / Tensão (ex: 'Monofásico 220V', 'Bifásico 127V/220V', 'Trifásico 220V', 'Trifásico 380V', '1', '2', '3', '4')"
+                "Tipo de telhado. OBRIGATÓRIO (ex: 'Cerâmica (Colonial)', 'Fibrocimento', 'Metálico', 'Solo', 'Laje', 'Fibrometal', 'Sem estrutura')."
               ),
             inverterType: z
               .string()
