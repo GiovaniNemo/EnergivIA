@@ -117,9 +117,25 @@ function OrganizationSettingsContent() {
     createOrg,
     deleteOrg,
     refetch,
+    user,
   } = useOrganization();
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const isPrivileged = user?.role === "ADMIN" || user?.role === "PLATFORM";
+  const isPlus = Boolean(
+    currentOrganization?.subscriptionPlan?.toLowerCase().includes("plus") ||
+    currentOrganization?.subscription?.plan?.toLowerCase().includes("plus") ||
+    currentOrganization?.subscriptionPlan?.toLowerCase().includes("enterprise") ||
+    currentOrganization?.subscription?.plan?.toLowerCase().includes("enterprise")
+  );
+  const isFreeOrStart = Boolean(
+    user?.isTrial ||
+    !currentOrganization?.subscription ||
+    currentOrganization?.subscription?.status !== "active"
+  );
+  const canCreateMore = isPrivileged || (!isFreeOrStart && isPlus);
+  const [isMultiOrgUpgradeModalOpen, setIsMultiOrgUpgradeModalOpen] = useState(false);
 
   // Active organization edit form state
   const [name, setName] = useState("");
@@ -182,10 +198,14 @@ function OrganizationSettingsContent() {
   // Auto-open create modal if navigated with ?action=new
   useEffect(() => {
     if (searchParams?.get("action") === "new") {
-      setIsCreateModalOpen(true);
+      if (!canCreateMore && organizations.length >= 1) {
+        setIsMultiOrgUpgradeModalOpen(true);
+      } else {
+        setIsCreateModalOpen(true);
+      }
       router.replace("/configuracoes/organizacao");
     }
-  }, [searchParams, router]);
+  }, [searchParams, router, canCreateMore, organizations.length]);
 
   // Sync current organization details to form
   useEffect(() => {
@@ -441,6 +461,12 @@ function OrganizationSettingsContent() {
 
   const handleCreateOrganizationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canCreateMore && organizations.length >= 1) {
+      setCreateModalError(
+        "O plano Start gratuito permite o cadastro de apenas 1 empresa. Para cadastrar e gerenciar múltiplas empresas, faça upgrade para o Plano Plus."
+      );
+      return;
+    }
     if (!newOrgName.trim()) {
       setCreateModalError("Informe o nome da organização.");
       return;
@@ -538,6 +564,10 @@ function OrganizationSettingsContent() {
         </div>
         <Button
           onClick={() => {
+            if (!canCreateMore && organizations.length >= 1) {
+              setIsMultiOrgUpgradeModalOpen(true);
+              return;
+            }
             resetCreateModal();
             setIsCreateModalOpen(true);
           }}
@@ -1068,6 +1098,40 @@ function OrganizationSettingsContent() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Upgrade para Múltiplas Empresas (Plano Plus) */}
+      <Dialog open={isMultiOrgUpgradeModalOpen} onOpenChange={setIsMultiOrgUpgradeModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-500/20 bg-sky-500/10 text-sky-500">
+                <Building2 className="h-5 w-5" />
+              </span>
+              Múltiplas Empresas — Plano Plus
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-sm text-[var(--color-muted-foreground)] leading-relaxed">
+              No período de teste gratuito (Plano Start), o limite é de{" "}
+              <strong>1 empresa por conta</strong>. O cadastro e gerenciamento de múltiplas
+              empresas, marcas e filiais com propostas e equipes independentes é um recurso
+              exclusivo a partir do <strong>Plano Plus</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setIsMultiOrgUpgradeModalOpen(false)}>
+              Voltar
+            </Button>
+            <Button
+              className="bg-[linear-gradient(90deg,#1b5e7c_0%,#1f7f9b_55%,#39d3bf_100%)] text-white shadow-md font-bold"
+              onClick={() => {
+                setIsMultiOrgUpgradeModalOpen(false);
+                router.push("/gestao/meus-planos");
+              }}
+            >
+              Conhecer Plano Plus &rarr;
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

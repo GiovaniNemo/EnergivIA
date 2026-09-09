@@ -108,15 +108,25 @@ export default function RadarPage() {
               <span>Mapa</span>
             </button>
             <button
-              onClick={() => setViewMode("list")}
+              onClick={() => {
+                if (isLocked) {
+                  setRadarUpgradeModalOpen(true);
+                  return;
+                }
+                setViewMode("list");
+              }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === "list"
                   ? "bg-amber-500 text-black shadow-md shadow-amber-500/20"
                   : "text-neutral-400 hover:text-white"
               }`}
             >
-              <List className="w-3.5 h-3.5" />
-              <span>Lista ({installations.length})</span>
+              {isLocked ? (
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
+              ) : (
+                <List className="w-3.5 h-3.5" />
+              )}
+              <span>Lista {isLocked ? "(Pro)" : `(${installations.length})`}</span>
             </button>
           </div>
 
@@ -153,8 +163,8 @@ export default function RadarPage() {
               </div>
               <p className="text-xs text-neutral-300 mt-1 max-w-2xl leading-relaxed">
                 No plano Start você pode visualizar como funciona a inteligência geográfica de
-                usinas. A pesquisa ativa por município, filtro de potência e prospecção direta de
-                vizinhança é liberada a partir do{" "}
+                usinas. A pesquisa ativa por município, visualização em lista detalhada e prospecção
+                direta de vizinhança é liberada a partir do{" "}
                 <strong className="text-amber-300">Plano Pro</strong>.
               </p>
             </div>
@@ -207,8 +217,45 @@ export default function RadarPage() {
           onLockedClick={() => setRadarUpgradeModalOpen(true)}
         />
       ) : (
-        <div className="bg-neutral-900/90 rounded-2xl border border-neutral-800 overflow-hidden shadow-xl">
-          <div className="overflow-x-auto">
+        <div className="relative bg-neutral-900/90 rounded-2xl border border-neutral-800 overflow-hidden shadow-xl min-h-[400px]">
+          {/* Lock Overlay for Free/Start Plan */}
+          {isLocked && (
+            <div
+              onClick={() => setRadarUpgradeModalOpen(true)}
+              className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-neutral-950/80 backdrop-blur-sm p-6 text-center cursor-pointer transition-all hover:bg-neutral-950/85 group"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center mb-4 shadow-xl shadow-amber-500/10 group-hover:scale-105 transition-transform">
+                <Lock className="w-8 h-8" />
+              </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-wider mb-3">
+                Recurso Bloqueado no Plano Start
+              </div>
+              <h3 className="text-xl font-black text-white max-w-md">
+                Lista Completa de Usinas & Prospecção
+              </h3>
+              <p className="text-sm text-neutral-300 max-w-lg mt-2 leading-relaxed">
+                A visualização tabular com contatos, códigos ANEEL de usinas conectadas e conversão
+                em lote para oportunidades está disponível a partir do{" "}
+                <strong className="text-amber-400">Plano Pro</strong>.
+              </p>
+              <div className="mt-6 flex items-center gap-3">
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRadarUpgradeModalOpen(true);
+                  }}
+                  className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black shadow-lg shadow-amber-500/20 px-6 h-11 text-sm rounded-xl"
+                >
+                  <Lock className="w-4 h-4 mr-2" />
+                  Desbloquear Lista no Plano Pro
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div
+            className={`overflow-x-auto ${isLocked ? "pointer-events-none select-none blur-[4px] opacity-30" : ""}`}
+          >
             <table className="w-full text-left text-xs">
               <thead className="bg-neutral-950/80 text-neutral-400 border-b border-neutral-800 font-semibold uppercase tracking-wider">
                 <tr>

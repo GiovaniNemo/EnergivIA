@@ -205,6 +205,53 @@ export class OrganizationsService {
 
   async create(userId: string, dto: CreateOrganizationDto) {
     await this.validateCnpjAuthorization(userId, dto.cnpj);
+
+    // Bloqueia criação de múltiplas organizações para usuários no plano gratuito / Start
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, email: true },
+    });
+    const roleStr = String(user?.role || "").toUpperCase();
+    const isPrivileged = roleStr === "ADMIN" || roleStr === "PLATFORM";
+
+    if (!isPrivileged) {
+      const existingMemberships = await this.prisma.organizationMember.findMany({
+        where: {
+          userId,
+          status: InvitationStatus.ACCEPTED,
+          organization: { deletedAt: null },
+        },
+        include: {
+          organization: {
+            include: {
+              subscription: {
+                include: { plan: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (existingMemberships.length >= 1) {
+        const hasPlusOrEnterprise = existingMemberships.some((m) => {
+          const sub = m.organization?.subscription;
+          if (!sub || sub.status !== "active") return false;
+          const planName = (sub.plan?.name || "").toLowerCase();
+          return (
+            planName.includes("plus") ||
+            planName.includes("enterprise") ||
+            planName.includes("ilimitado")
+          );
+        });
+
+        if (!hasPlusOrEnterprise) {
+          throw new ForbiddenException(
+            "O plano Start gratuito permite o cadastro de apenas 1 organização. Para cadastrar e gerenciar múltiplas empresas ou filiais, faça upgrade para o Plano Plus."
+          );
+        }
+      }
+    }
+
     const slug = await this.generateUniqueOrganizationSlug(dto.name);
     const templateSettings = buildTemplateSettings(dto);
     const org = await this.prisma.tenant.create({
