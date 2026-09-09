@@ -49,7 +49,7 @@ interface WebhookPayload {
 }
 
 const SESSION_INACTIVITY_MS =
-  Number(process.env.WHATSAPP_SESSION_INACTIVITY_MS) || 24 * 60 * 60 * 1000; // 24 horas (janela padrão da Meta/WhatsApp)
+  Number(process.env["WHATSAPP_SESSION_INACTIVITY_MS"]) || 24 * 60 * 60 * 1000; // 24 horas (janela padrão da Meta/WhatsApp)
 
 import { WhatsappPairingService } from "./whatsapp-pairing.service";
 
