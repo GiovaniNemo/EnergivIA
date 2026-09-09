@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 import { Sparkles, ArrowRight } from "lucide-react";
 
 interface WelcomeIntroSplashProps {
@@ -11,27 +12,51 @@ interface WelcomeIntroSplashProps {
 export function triggerWelcomeIntroSplash(): void {
   if (typeof window !== "undefined") {
     sessionStorage.setItem("energivia_show_welcome_splash", "true");
+    window.dispatchEvent(new CustomEvent("energivia_trigger_welcome_splash"));
   }
 }
 
 export function WelcomeIntroSplash({ onComplete }: WelcomeIntroSplashProps): JSX.Element | null {
-  const [shouldShow, setShouldShow] = useState<boolean | null>(null);
+  const pathname = usePathname();
+  const router = useRouter();
+  const [shouldShow, setShouldShow] = useState<boolean>(false);
   // Step: 1 = "Bem-vindo à EnergivIA", 2 = "O seu parceiro via IA", 3 = Loading State
   const [step, setStep] = useState<number>(1);
   const [isExiting, setIsExiting] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const isPending =
-        sessionStorage.getItem("energivia_show_welcome_splash") === "true" ||
-        localStorage.getItem("energivia_show_welcome_splash") === "true";
-      setShouldShow(isPending);
-    } else {
-      setShouldShow(false);
-    }
+  const startAnimation = useCallback(() => {
+    setStep(1);
+    setProgress(0);
+    setIsExiting(false);
+    setIsDismissed(false);
+    setShouldShow(true);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // Apenas inicia automaticamente no mount se não estiver na tela de criação de organização
+    // Isso garante que após o cadastro no Auth0 o usuário NÃO veja a animação antes de criar a empresa
+    const isPending =
+      sessionStorage.getItem("energivia_show_welcome_splash") === "true" ||
+      localStorage.getItem("energivia_show_welcome_splash") === "true";
+
+    if (isPending && pathname !== "/create-organization") {
+      startAnimation();
+    }
+
+    // Listener para disparo explícito quando o usuário clica em "Criar Organização" / "Começar a vender agora"
+    const handleTriggerEvent = () => {
+      startAnimation();
+    };
+
+    window.addEventListener("energivia_trigger_welcome_splash", handleTriggerEvent);
+    return () => {
+      window.removeEventListener("energivia_trigger_welcome_splash", handleTriggerEvent);
+    };
+  }, [pathname, startAnimation]);
 
   const handleFinish = useCallback(() => {
     setIsExiting(true);
@@ -41,9 +66,12 @@ export function WelcomeIntroSplash({ onComplete }: WelcomeIntroSplashProps): JSX
     }
     setTimeout(() => {
       setIsDismissed(true);
+      if (pathname === "/create-organization") {
+        router.replace("/painel");
+      }
       if (onComplete) onComplete();
     }, 850);
-  }, [onComplete]);
+  }, [pathname, router, onComplete]);
 
   useEffect(() => {
     if (!shouldShow) return;
