@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
 import { WhatsappCloudService } from "./whatsapp-cloud.service";
@@ -81,9 +81,10 @@ function expandInboundPhoneCandidates(raw: string): string[] {
 }
 
 @Injectable()
-export class WhatsappBotService {
+export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WhatsappBotService.name);
   private genAI: GoogleGenerativeAI | null = null;
+  private inactivityCheckTimer?: NodeJS.Timeout;
 
   constructor(
     private readonly config: ConfigService,
@@ -100,6 +101,181 @@ export class WhatsappBotService {
       "";
     if (geminiKey) {
       this.genAI = new GoogleGenerativeAI(geminiKey);
+    }
+  }
+
+  onModuleInit() {
+    this.inactivityCheckTimer = setInterval(() => {
+      this.checkInactiveConversations().catch((err) => {
+        this.logger.error("Erro ao verificar inatividade de conversas do WhatsApp:", err);
+      });
+    }, 60_000); // Executa verificação a cada 1 minuto
+  }
+
+  onModuleDestroy() {
+    if (this.inactivityCheckTimer) {
+      clearInterval(this.inactivityCheckTimer);
+    }
+  }
+
+  private isFlowActive(lastBotContent: string): boolean {
+    if (!lastBotContent) return false;
+    // Se a proposta já foi concluída, não há lembretes nem encerramento
+    if (
+      lastBotContent.includes("Proposta comercial gerada com sucesso") ||
+      lastBotContent.includes("Acesse a Proposta Pronta no link") ||
+      lastBotContent.includes("Disponível no seu painel CRM")
+    ) {
+      return false;
+    }
+    // Se já foi encerrado por inatividade ou reiniciado
+    if (
+      lastBotContent.includes("estou encerrando este atendimento por enquanto") ||
+      lastBotContent.includes("Sessão reiniciada com sucesso")
+    ) {
+      return false;
+    }
+    // Se está apenas no menu inicial (antes de qualquer fluxo ser iniciado)
+    if (
+      lastBotContent.includes("Escolha uma opção digitando o número:") &&
+      !lastBotContent.includes("Qual opção você prefere para o seu cliente?")
+    ) {
+      return false;
+    }
+
+    // Verifica etapas ativas de atendimento / simulação
+    return (
+      lastBotContent.includes("Para qual cidade e estado será a instalação?") ||
+      lastBotContent.includes("Qual o padrão de entrada da instalação?") ||
+      lastBotContent.includes("Qual a estrutura do telhado?") ||
+      lastBotContent.includes("Qual opção você prefere para o seu cliente?") ||
+      lastBotContent.includes("Qual o nome do cliente final") ||
+      lastBotContent.includes("E qual o WhatsApp dele") ||
+      lastBotContent.includes("Qual modelo de proposta comercial você deseja usar") ||
+      lastBotContent.includes("Qual é o *consumo médio mensal*") ||
+      lastBotContent.includes("Qual a *potência de pico*") ||
+      lastBotContent.includes("Quantas *placas solares* você deseja") ||
+      lastBotContent.includes("dados extraídos com precisão")
+    );
+  }
+
+  private async checkInactiveConversations(): Promise<void> {
+    try {
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      const conversations = await this.prisma.conversation.findMany({
+        where: {
+          channel: "whatsapp",
+          updatedAt: { gte: twoHoursAgo },
+        },
+        include: {
+          messages: {
+            orderBy: { createdAt: "asc" },
+          },
+        },
+      });
+
+      for (const conversation of conversations) {
+        if (!conversation.messages || conversation.messages.length === 0) continue;
+
+        const lastMsg = conversation.messages[conversation.messages.length - 1];
+        if (!lastMsg || lastMsg.role !== "assistant") continue;
+
+        // Se a conversa já foi encerrada por inatividade, não processa
+        if (lastMsg.content.includes("estou encerrando este atendimento por enquanto")) {
+          continue;
+        }
+
+        // Recupera a última mensagem funcional (sem ser lembrete)
+        const functionalMsgs = conversation.messages.filter(
+          (m) => m.role === "assistant" && !m.content?.includes("Você ainda está por aí?")
+        );
+        const lastFunctionalBotMsg =
+          functionalMsgs.length > 0 ? functionalMsgs[functionalMsgs.length - 1]?.content || "" : "";
+
+        // Só monitora inatividade se um fluxo de atendimento foi iniciado e não concluído
+        if (!this.isFlowActive(lastFunctionalBotMsg)) {
+          continue;
+        }
+
+        // Calcula o tempo decorrido desde a última resposta do usuário (ou da pergunta do bot se não houve resposta ainda)
+        const lastUserMsg = [...conversation.messages].reverse().find((m) => m.role === "user");
+        const referenceDate = lastUserMsg
+          ? new Date(lastUserMsg.createdAt)
+          : new Date(functionalMsgs[functionalMsgs.length - 1]?.createdAt || lastMsg.createdAt);
+        const totalIdleTimeMs = Date.now() - referenceDate.getTime();
+
+        const meta = (conversation.metadata as any) || {};
+        const toWaId = meta.customerWaId || conversation.title;
+        const phoneNumberId =
+          meta.phoneNumberId || this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID") || "";
+
+        if (!toWaId || !phoneNumberId) continue;
+
+        // 15 MINUTOS OU MAIS: Encerra educadamente e profissionalmente
+        if (totalIdleTimeMs >= 15 * 60 * 1000) {
+          const closureText =
+            `Como não tivemos retorno por aqui, estou encerrando este atendimento por enquanto para não incomodar. ☀️\n\n` +
+            `Mas fique tranquilo: quando quiser retomar ou iniciar uma nova cotação, basta nos enviar uma mensagem aqui no WhatsApp ou digitar *novo*. Tenha um excelente dia e ótimas vendas!`;
+
+          await this.whatsappCloud.sendTextMessage({
+            phoneNumberId,
+            toWaId,
+            body: closureText,
+          });
+
+          // Limpa as mensagens antigas para que a próxima interação comece do zero
+          await this.prisma.message.deleteMany({
+            where: { conversationId: conversation.id },
+          });
+
+          await this.prisma.message.create({
+            data: {
+              conversationId: conversation.id,
+              role: "assistant",
+              content: closureText,
+              channel: "whatsapp",
+            },
+          });
+
+          this.logger.log(
+            `Conversa ${conversation.id} (${toWaId}) encerrada por inatividade de 15 minutos.`
+          );
+          continue;
+        }
+
+        // 10 MINUTOS: Pergunta educadamente se o usuário ainda está por aí
+        if (totalIdleTimeMs >= 10 * 60 * 1000) {
+          // Se já enviou o lembrete, não envia de novo
+          if (lastMsg.content.includes("Você ainda está por aí?")) {
+            continue;
+          }
+
+          const reminderText =
+            `Olá! Você ainda está por aí? ☀️\n\n` +
+            `Podemos continuar sua simulação quando quiser. Falta pouco para gerarmos a proposta para o seu cliente!`;
+
+          await this.whatsappCloud.sendTextMessage({
+            phoneNumberId,
+            toWaId,
+            body: reminderText,
+          });
+
+          await this.prisma.message.create({
+            data: {
+              conversationId: conversation.id,
+              role: "assistant",
+              content: reminderText,
+              channel: "whatsapp",
+            },
+          });
+
+          this.logger.log(
+            `Lembrete de 10 min enviado para conversa ${conversation.id} (${toWaId}).`
+          );
+        }
+      }
+    } catch (err) {
+      this.logger.error("Erro na rotina de checagem de inatividade do WhatsApp:", err);
     }
   }
 
@@ -2317,9 +2493,46 @@ ${catalogContext}`;
 
     // Recupera a última mensagem do bot para saber o estado atual da conversa
     const assistantMessages = messages.filter((m) => m.role === "assistant");
-    const lastBotMsg =
+    const lastRawBotMsg =
       assistantMessages.length > 0
         ? assistantMessages[assistantMessages.length - 1]?.content || ""
+        : "";
+
+    // Se o bot enviou o lembrete de 10 min e o usuário apenas confirmou presença (ex: "sim", "estou aqui", "oi"):
+    if (
+      lastRawBotMsg.includes("Você ainda está por aí?") &&
+      (lower === "sim" ||
+        lower === "estou" ||
+        lower === "oi" ||
+        lower === "ola" ||
+        lower === "olá" ||
+        lower === "opa" ||
+        lower === "estou aqui" ||
+        lower === "continuar" ||
+        lower === "bora" ||
+        lower === "estou por aqui" ||
+        lower === "to aqui" ||
+        lower === "tô aqui")
+    ) {
+      const priorFunctional = assistantMessages.filter(
+        (m) => !m.content?.includes("Você ainda está por aí?")
+      );
+      const priorQuestion =
+        priorFunctional.length > 0
+          ? priorFunctional[priorFunctional.length - 1]?.content || ""
+          : "";
+      if (priorQuestion) {
+        return `Maravilha! Continuando de onde paramos:\n\n${priorQuestion}`;
+      }
+    }
+
+    // Para o fluxo das etapas, recupera a última mensagem funcional (ignorando o lembrete para não perder o passo)
+    const functionalAssistantMessages = assistantMessages.filter(
+      (m) => !m.content?.includes("Você ainda está por aí?")
+    );
+    const lastBotMsg =
+      functionalAssistantMessages.length > 0
+        ? functionalAssistantMessages[functionalAssistantMessages.length - 1]?.content || ""
         : "";
 
     // Tratamento Universal de Voltar / Corrigir
