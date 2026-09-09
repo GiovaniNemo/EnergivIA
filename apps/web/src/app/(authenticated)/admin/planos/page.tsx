@@ -298,13 +298,13 @@ export default function AdminPlanosPage() {
   const handleDeletePlan = async (plan: Plan) => {
     const hasSubscribers = (plan._count?.subscriptions || 0) > 0;
     const confirmMsg = hasSubscribers
-      ? `Atenção: O plano "${plan.name}" possui ${plan._count?.subscriptions} assinaturas vinculadas. Ele será desativado/arquivado para manter a integridade dos contratos. Deseja continuar?`
-      : `Deseja realmente excluir o plano "${plan.name}"?`;
+      ? `Atenção: O plano "${plan.name}" possui ${plan._count?.subscriptions} assinatura(s) vinculada(s) (testes ou contratos).\n\nDeseja realmente EXCLUIR DEFINITIVAMENTE este plano e remover os vínculos de assinatura?\n\n(Se quiser apenas ocultar para novos clientes mantendo o histórico, cancele e use o botão "Desativar").`
+      : `Deseja realmente excluir definitivamente o plano "${plan.name}"?`;
 
     if (!confirm(confirmMsg)) return;
 
     try {
-      const res = await fetch(`/api/proxy/plans/${plan.id}`, {
+      const res = await fetch(`/api/proxy/plans/${plan.id}?force=true`, {
         method: "DELETE",
       });
 
@@ -661,13 +661,35 @@ export default function AdminPlanosPage() {
                           </td>
 
                           <td className="px-6 py-4">
-                            <div className="flex items-baseline gap-1">
-                              <span className="font-extrabold text-lg text-[var(--color-foreground)]">
-                                R$ {priceNum.toFixed(2)}
-                              </span>
-                              <span className="text-xs text-[var(--color-muted-foreground)]">
-                                /{plan.interval === "year" ? "ano" : "mês"}
-                              </span>
+                            <div className="flex flex-col">
+                              {(() => {
+                                const lower = (plan.name || "").toLowerCase();
+                                let orig: number | null = null;
+                                if (lower.includes("essencial") || Math.abs(priceNum - 99.99) < 1)
+                                  orig = 169.99;
+                                else if (lower.includes("plus") || Math.abs(priceNum - 399.99) < 1)
+                                  orig = 699.99;
+                                else if (lower.includes("pro") || Math.abs(priceNum - 199.99) < 1)
+                                  orig = 299.99;
+
+                                return (
+                                  <>
+                                    {orig && (
+                                      <span className="text-xs line-through text-[var(--color-muted-foreground)]">
+                                        De R$ {orig.toFixed(2).replace(".", ",")}
+                                      </span>
+                                    )}
+                                    <div className="flex items-baseline gap-1">
+                                      <span className="font-extrabold text-lg text-[var(--color-foreground)]">
+                                        R$ {priceNum.toFixed(2).replace(".", ",")}
+                                      </span>
+                                      <span className="text-xs text-[var(--color-muted-foreground)]">
+                                        /{plan.interval === "year" ? "ano" : "mês"}
+                                      </span>
+                                    </div>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </td>
 

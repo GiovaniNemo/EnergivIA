@@ -174,7 +174,7 @@ export class PlansService {
     });
   }
 
-  async delete(id: string) {
+  async delete(id: string, force = false) {
     const existing = await this.prisma.plan.findUnique({
       where: { id },
       include: {
@@ -188,23 +188,51 @@ export class PlansService {
       throw new NotFoundException("Plano não encontrado");
     }
 
-    if (existing._count.subscriptions > 0) {
-      await this.prisma.plan.update({
-        where: { id },
-        data: { active: false },
-      });
+    if (existing._count.subscriptions > 0 && !force) {
       return {
-        message: "O plano possui assinaturas vinculadas e foi desativado/arquivado.",
-        action: "deactivated" as const,
+        message: `O plano possui ${existing._count.subscriptions} assinatura(s) vinculada(s). Confirme a exclusão definitiva para remover os vínculos.`,
+        action: "has_subscriptions" as const,
+        count: existing._count.subscriptions,
       };
     }
 
-    await this.prisma.plan.delete({
-      where: { id },
+    // Arquiva no Stripe se tiver stripeId
+    if (existing.stripeId) {
+      try {
+        const currentPrice = await this.stripeService.stripeClient.prices.retrieve(
+          existing.stripeId
+        );
+        await this.stripeService.stripeClient.prices.update(existing.stripeId, { active: false });
+        const productId =
+          typeof currentPrice.product === "string"
+            ? currentPrice.product
+            : currentPrice.product?.id;
+        if (productId) {
+          await this.stripeService.stripeClient.products.update(productId, { active: false });
+        }
+      } catch (stripeErr) {
+        this.logger.warn(`Could not archive Stripe price/product on delete: ${stripeErr}`);
+      }
+    }
+
+    // Exclusão no banco de dados
+    await this.prisma.$transaction(async (tx) => {
+      await tx.tenant.updateMany({
+        where: { subscriptionPlan: id },
+        data: { subscriptionPlan: null },
+      });
+
+      await tx.subscription.deleteMany({
+        where: { planId: id },
+      });
+
+      await tx.plan.delete({
+        where: { id },
+      });
     });
 
     return {
-      message: "Plano excluído com sucesso.",
+      message: "Plano excluído definitivamente com sucesso.",
       action: "deleted" as const,
     };
   }

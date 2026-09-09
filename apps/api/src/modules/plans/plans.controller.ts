@@ -33,7 +33,7 @@ export class PlansController {
   }
 
   @Delete(":id")
-  async remove(@Param("id") id: string) {
-    return this.plansService.delete(id);
+  async remove(@Param("id") id: string, @Query("force") force?: string) {
+    return this.plansService.delete(id, force === "true" || force === "1");
   }
 }

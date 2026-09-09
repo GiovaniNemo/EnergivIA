@@ -79,17 +79,24 @@ export function TrialLockOverlay() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 lg:gap-10 items-stretch">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch max-w-7xl mx-auto">
           {plans.map((plan) => {
             const planName = String(plan?.name || "");
             const planPrice = Number(plan?.price ?? 0);
-            const isBasic = planName.toLowerCase().includes("básic");
-            const isPro = planName.toLowerCase().includes("profissional");
-            const isHighlighted = isPro || (!isBasic && planPrice > 100);
+            const planNameLower = planName.toLowerCase();
+            const isBasic = planNameLower.includes("essencial") || planNameLower.includes("básic");
+            const isPlus = planNameLower.includes("plus");
+            const isPro = planNameLower.includes("pro") && !isPlus;
+            const isHighlighted = isPro;
+
+            let originalPrice: number | null = null;
+            if (isBasic || Math.abs(planPrice - 99.99) < 1) originalPrice = 169.99;
+            else if (isPlus || Math.abs(planPrice - 399.99) < 1) originalPrice = 699.99;
+            else if (isPro || Math.abs(planPrice - 199.99) < 1) originalPrice = 299.99;
 
             // Cores e Icones baseados no plano
             const cardBorder = isHighlighted
-              ? "border-yellow-500/50 shadow-[0_0_40px_rgba(234,179,8,0.15)]"
+              ? "border-yellow-500/60 shadow-[0_0_40px_rgba(234,179,8,0.2)] ring-1 ring-yellow-500/40"
               : "border-gray-800";
             const iconBg = isHighlighted
               ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
@@ -99,43 +106,60 @@ export function TrialLockOverlay() {
             return (
               <div
                 key={plan?.id || Math.random()}
-                className={`relative bg-gray-950/80 backdrop-blur-sm rounded-3xl border ${cardBorder} flex flex-col pt-8 p-8 transition-transform hover:-translate-y-1 duration-300`}
+                className={`relative bg-gray-950/90 backdrop-blur-sm rounded-3xl border ${cardBorder} flex flex-col pt-8 p-7 transition-transform hover:-translate-y-1 duration-300`}
               >
                 {isHighlighted && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-950 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase shadow-[0_0_15px_rgba(250,204,21,0.5)] flex items-center gap-1.5">
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-950 px-4 py-1 rounded-full text-[11px] font-extrabold tracking-widest uppercase shadow-[0_0_15px_rgba(250,204,21,0.5)] flex items-center gap-1.5">
                     <span>⭐️</span> MAIS ESCOLHIDO
                   </div>
                 )}
 
-                <div className="flex justify-between items-start mb-6">
-                  <div className="flex items-center gap-4">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-3">
                     <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center border ${iconBg}`}
+                      className={`w-11 h-11 rounded-xl flex items-center justify-center border ${iconBg}`}
                     >
-                      {isHighlighted ? <Gem className="w-6 h-6" /> : <Rocket className="w-6 h-6" />}
+                      {isPro || isPlus ? (
+                        <Gem className="w-5 h-5" />
+                      ) : (
+                        <Rocket className="w-5 h-5" />
+                      )}
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold text-white leading-tight">
+                      <h3 className="text-xl font-bold text-white leading-tight">
                         {planName || "Plano EnergivIA"}
                       </h3>
-                      <p className="text-sm text-gray-400 mt-1">
-                        {isHighlighted ? "Mais recursos. Mais controle." : "Tudo que você precisa."}
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {isPlus
+                          ? "Grande escala e franquias"
+                          : isPro
+                            ? "Alta conversão e IA"
+                            : "Comece a crescer"}
                       </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="flex flex-col items-end">
-                      <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-extrabold tracking-tight ${priceColor}`}>
-                          R$ {planPrice.toFixed(2).replace(".", ",")}
-                        </span>
-                      </div>
-                      <span className="text-gray-500 text-sm font-medium">/mês</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent my-6" />
+                <div className="mb-4">
+                  {originalPrice && (
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs line-through text-gray-400 font-medium">
+                        R$ {originalPrice.toFixed(2).replace(".", ",")}
+                      </span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        -{Math.round((1 - planPrice / originalPrice) * 100)}% OFF
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-baseline gap-1">
+                    <span className={`text-3xl font-extrabold tracking-tight ${priceColor}`}>
+                      R$ {planPrice.toFixed(2).replace(".", ",")}
+                    </span>
+                    <span className="text-gray-400 text-xs font-medium">/mês</span>
+                  </div>
+                </div>
+
+                <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent mb-6" />
 
                 <div className="flex-grow">
                   <ul className="space-y-4 mb-8">
@@ -158,16 +182,30 @@ export function TrialLockOverlay() {
                       if (feats.length === 0) {
                         if (isBasic) {
                           feats = [
-                            "Até 50 propostas/mês",
-                            "Suporte por email",
-                            "Acesso ao CRM básico",
+                            "Até 30 propostas por mês",
+                            "1 Usuário / Vendedor",
+                            "Dimensionamento Solar Inteligente (HSP)",
+                            "CRM de Negociações básico",
+                            "Geração de PDF Comercial",
+                            "Suporte via e-mail e chat",
+                          ];
+                        } else if (isPlus) {
+                          feats = [
+                            "Propostas e Cálculos Ilimitados",
+                            "Usuários Ilimitados na Equipe",
+                            "Múltiplos Bots de WhatsApp com IA",
+                            "Radar Solar ANEEL Nacional Ilimitado",
+                            "Whitelabel Completo (Sua Marca)",
+                            "Gerente de Contas Dedicado",
                           ];
                         } else if (isPro) {
                           feats = [
-                            "Propostas ilimitadas",
-                            "Suporte WhatsApp prioritário",
-                            "CRM Completo",
-                            "Integração de pagamentos",
+                            "Propostas Comerciais Ilimitadas",
+                            "Até 5 Usuários / Vendedores",
+                            "Bot de WhatsApp com IA 24/7",
+                            "Radar Solar ANEEL Integrado",
+                            "CRM Solar Completo com Automações",
+                            "Suporte Prioritário no WhatsApp",
                           ];
                         }
                       }

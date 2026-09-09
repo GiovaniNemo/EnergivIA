@@ -37,10 +37,19 @@ interface SubscriptionData {
   plan?: Plan;
 }
 
+function getOriginalPrice(planName: string, currentPrice: number): number | null {
+  const lower = (planName || "").toLowerCase();
+  if (lower.includes("essencial") || Math.abs(currentPrice - 99.99) < 1) return 169.99;
+  if (lower.includes("plus") || Math.abs(currentPrice - 399.99) < 1) return 699.99;
+  if (lower.includes("pro") || Math.abs(currentPrice - 199.99) < 1) return 299.99;
+  return null;
+}
+
 function parseFeatures(
   features: string | string[] | null | undefined,
   isBasic?: boolean,
-  isPro?: boolean
+  isPro?: boolean,
+  isPlus?: boolean
 ): string[] {
   if (features) {
     if (Array.isArray(features)) {
@@ -61,10 +70,34 @@ function parseFeatures(
   }
 
   if (isBasic) {
-    return ["Até 50 propostas/mês", "Suporte por email", "Acesso ao CRM básico"];
+    return [
+      "Até 30 propostas por mês",
+      "1 Usuário / Vendedor",
+      "Dimensionamento Solar Inteligente (HSP)",
+      "CRM de Negociações básico",
+      "Geração de PDF Comercial",
+      "Suporte via e-mail e chat",
+    ];
   }
   if (isPro) {
-    return ["Propostas ilimitadas", "Suporte WhatsApp", "CRM Completo", "Integração de pagamentos"];
+    return [
+      "Propostas Comerciais Ilimitadas",
+      "Até 5 Usuários / Vendedores",
+      "Bot de WhatsApp com IA 24/7",
+      "Radar Solar ANEEL Integrado",
+      "CRM Solar Completo com Automações",
+      "Suporte Prioritário no WhatsApp",
+    ];
+  }
+  if (isPlus) {
+    return [
+      "Propostas e Cálculos Ilimitados",
+      "Usuários Ilimitados na Equipe",
+      "Múltiplos Bots de WhatsApp com IA",
+      "Radar Solar ANEEL Nacional Ilimitado",
+      "Whitelabel Completo (Sua Marca)",
+      "Gerente de Contas Dedicado",
+    ];
   }
 
   return ["Acesso total à plataforma", "Geração ilimitada", "Suporte dedicado"];
@@ -430,10 +463,14 @@ function MeusPlanosContent() {
                 typeof plan.price === "number" ? plan.price : parseFloat(String(plan.price) || "0");
               const isCurrentPlan = subscription?.planId === plan.id;
               const isUpgrade = subscription && priceNum > currentPlanPrice;
-              const isPro = plan.name.toLowerCase().includes("profissional");
-              const isBasic = plan.name.toLowerCase().includes("básic");
-              const isHighlighted = isCurrentPlan ? true : isPro || (!isBasic && priceNum > 100);
-              const feats = parseFeatures(plan.features, isBasic, isPro);
+              const planNameLower = (plan.name || "").toLowerCase();
+              const isPlus = planNameLower.includes("plus");
+              const isPro = planNameLower.includes("pro") || planNameLower.includes("profissional");
+              const isBasic =
+                planNameLower.includes("essencial") || planNameLower.includes("básic");
+              const isHighlighted = isCurrentPlan ? true : isPro;
+              const originalPrice = getOriginalPrice(plan.name, priceNum);
+              const feats = parseFeatures(plan.features, isBasic, isPro, isPlus);
 
               return (
                 <div
@@ -442,7 +479,7 @@ function MeusPlanosContent() {
                     isCurrentPlan
                       ? "border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.15)] ring-2 ring-emerald-500/30"
                       : isHighlighted
-                        ? "border-yellow-500/50 shadow-[0_0_30px_rgba(234,179,8,0.1)]"
+                        ? "border-yellow-500/50 shadow-[0_0_30px_rgba(234,179,8,0.1)] ring-1 ring-yellow-500/30"
                         : "border-[var(--color-border)]"
                   } hover:shadow-2xl transition-all duration-300 flex flex-col hover:-translate-y-1`}
                 >
@@ -458,8 +495,8 @@ function MeusPlanosContent() {
                       Disponível p/ Upgrade
                     </div>
                   ) : isHighlighted ? (
-                    <div className="absolute top-0 right-0 bg-[var(--color-primary)] text-white text-xs font-extrabold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider">
-                      Recomendado
+                    <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-xs font-extrabold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider shadow-sm flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" /> Mais Escolhido
                     </div>
                   ) : null}
 
@@ -474,7 +511,7 @@ function MeusPlanosContent() {
                               : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)] border-[var(--color-border)]"
                         }`}
                       >
-                        {isPro || isHighlighted ? (
+                        {isPro || isPlus ? (
                           <Gem className="w-6 h-6" />
                         ) : (
                           <Rocket className="w-6 h-6" />
@@ -485,16 +522,34 @@ function MeusPlanosContent() {
                           {plan.name}
                         </h3>
                         <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
-                          {isPro ? "Para equipes e alto volume" : "Ideal para começar"}
+                          {isPlus
+                            ? "Para empresas com grande escala e franquias"
+                            : isPro
+                              ? "O mais popular • Alta conversão e automação"
+                              : "Ideal para começar a gerar propostas"}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-baseline gap-1 mt-6">
-                      <span className="text-4xl font-extrabold text-[var(--color-foreground)]">
-                        R$ {priceNum.toFixed(2)}
-                      </span>
-                      <span className="text-[var(--color-muted-foreground)] font-medium">/mês</span>
+                    <div className="mt-5">
+                      {originalPrice && (
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm line-through text-[var(--color-muted-foreground)] font-medium">
+                            R$ {originalPrice.toFixed(2).replace(".", ",")}
+                          </span>
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            ECONOMIZE {Math.round((1 - priceNum / originalPrice) * 100)}%
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-extrabold text-[var(--color-foreground)]">
+                          R$ {priceNum.toFixed(2).replace(".", ",")}
+                        </span>
+                        <span className="text-[var(--color-muted-foreground)] font-medium">
+                          /mês
+                        </span>
+                      </div>
                     </div>
                   </div>
 
