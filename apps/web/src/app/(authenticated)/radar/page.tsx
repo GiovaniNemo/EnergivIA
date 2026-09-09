@@ -11,7 +11,7 @@ import { RadarMapView, InstallationPoint } from "@/components/radar/radar-map-vi
 import { RadarLeadModal } from "@/components/radar/radar-lead-modal";
 
 export default function RadarPage() {
-  const { currentOrganization } = useOrganization();
+  const { currentOrganization, user } = useOrganization();
   const [uf, setUf] = useState("SP");
   const [cityName, setCityName] = useState("São Paulo");
   const [neighborhood, setNeighborhood] = useState("");
