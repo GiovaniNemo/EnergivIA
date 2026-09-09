@@ -92,6 +92,8 @@ export const UF_FALLBACK: Record<string, number> = {
   DF: 5.5,
 };
 
+import { BRAZIL_MUNICIPALITIES_DATA } from "../data/municipalities-hsp.data";
+
 export function normalizeTextSimple(str: string): string {
   if (!str) return "";
   return str
@@ -103,7 +105,12 @@ export function normalizeTextSimple(str: string): string {
 
 export function parseLocationString(input: string): { city: string; uf: string } {
   if (!input) return { city: "", uf: "" };
-  let raw = input.trim();
+  let raw = input
+    .replace(
+      /^(?:mudar\s+(?:a\s+)?cidade(?:\s+para)?|trocar\s+(?:a\s+)?cidade(?:\s+para)?|alterar\s+(?:a\s+)?cidade(?:\s+para)?|cidade\s*:?)\s*/i,
+      ""
+    )
+    .trim();
   let uf = "";
 
   const ufMatch = raw.match(/[\s\/\-\(,]([A-Za-z]{2})\)?$/);
@@ -122,6 +129,20 @@ export interface HspLookupResult {
   city: string;
   uf: string;
   exact: boolean;
+}
+
+export function isLocationInput(input: string): boolean {
+  if (!input) return false;
+  const parsed = parseLocationString(input);
+  if (!parsed.city) return false;
+  const normCity = normalizeTextSimple(parsed.city);
+  if (parsed.uf && BRAZIL_MUNICIPALITIES_DATA.byCityUf[`${normCity}_${parsed.uf}`]) {
+    return true;
+  }
+  if (BRAZIL_MUNICIPALITIES_DATA.byCity[normCity]?.length) {
+    return true;
+  }
+  return false;
 }
 
 @Injectable()
@@ -153,22 +174,62 @@ export class GeoIrradianceService {
       }
     } catch (err) {
       this.logger.warn(
-        `Aviso: Falha ao carregar CSV de HSP, usando tabela oficial de UFs: ${String(err)}`
+        `Aviso: Falha ao carregar CSV de HSP, usando base embutida oficial: ${String(err)}`
       );
     }
   }
 
   /**
    * Obtém as Horas de Sol Pleno (HSP) para uma dada cidade e estado.
-   * Procura no banco de dados municipal do Brasil e, se não encontrar, utiliza a média oficial do estado.
+   * Procura na base municipal oficial em memória (5.569 municípios) e, se não encontrar, utiliza a média oficial do estado.
    */
   getHsp(cidade: string, estado?: string): HspLookupResult {
     const parsed = parseLocationString(cidade);
     const searchCity = parsed.city || cidade || "São Paulo";
     const searchUf = (estado || parsed.uf || "").toUpperCase();
+    const normSearchCity = normalizeTextSimple(searchCity);
 
+    // 1. Consulta prioritária na base oficial completa embutida (5.569 municípios)
+    if (searchUf) {
+      const key = `${normSearchCity}_${searchUf}`;
+      const entry = BRAZIL_MUNICIPALITIES_DATA.byCityUf[key];
+      if (entry) {
+        return {
+          hsp: entry.hsp,
+          city: entry.city,
+          uf: entry.uf,
+          exact: true,
+        };
+      }
+    }
+
+    // 2. Se a UF não foi informada ou não bateu exatamente, busca pelo nome da cidade no Brasil
+    const cityMatches = BRAZIL_MUNICIPALITIES_DATA.byCity[normSearchCity];
+    if (cityMatches && cityMatches.length > 0) {
+      // Se tiver UF informada, tenta filtrar
+      if (searchUf) {
+        const matchWithUf = cityMatches.find((m) => m.uf === searchUf);
+        if (matchWithUf) {
+          return {
+            hsp: matchWithUf.hsp,
+            city: matchWithUf.city,
+            uf: matchWithUf.uf,
+            exact: true,
+          };
+        }
+      }
+      // Se não informou UF, usa a cidade encontrada (ex: Cuiabá -> MT)
+      const bestMatch = cityMatches[0]!;
+      return {
+        hsp: bestMatch.hsp,
+        city: bestMatch.city,
+        uf: bestMatch.uf,
+        exact: cityMatches.length === 1,
+      };
+    }
+
+    // 3. Fallback para o CSV carregado em disco se existir
     if (this.cachedHspCsv) {
-      const normSearchCity = normalizeTextSimple(searchCity);
       const targetStateName = UF_TO_STATE_NAME[searchUf]
         ? normalizeTextSimple(UF_TO_STATE_NAME[searchUf]!)
         : normalizeTextSimple(searchUf);
@@ -210,6 +271,17 @@ export class GeoIrradianceService {
       if (fallbackMatch) return fallbackMatch;
     }
 
+    // 4. Se a UF for conhecida, usa a média do estado
+    if (searchUf && UF_FALLBACK[searchUf]) {
+      return {
+        hsp: UF_FALLBACK[searchUf] || 5.0,
+        city: searchCity,
+        uf: searchUf,
+        exact: false,
+      };
+    }
+
+    // 5. Fallback final padrão
     const finalUf = searchUf || "SP";
     return {
       hsp: UF_FALLBACK[finalUf] || 5.0,

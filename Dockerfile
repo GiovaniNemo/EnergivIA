@@ -5,6 +5,7 @@ RUN corepack enable && corepack prepare pnpm@9.14.2 --activate
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* turbo.json ./
 COPY apps ./apps
 COPY packages ./packages
+COPY hsp_brasil_todos_municipios* ./
 RUN pnpm install --frozen-lockfile
 RUN pnpm run build --filter=@energivia/types --filter=@energivia/utils --filter=@energivia/shared-types --filter=@energivia/solar-engine
 RUN pnpm run db:generate --filter=@energivia/api

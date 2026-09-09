@@ -22,7 +22,7 @@ import {
   processExtractedBillData,
   BillExtractorService,
 } from "./services/bill-extractor.service";
-import { getHsp, GeoIrradianceService } from "./services/geo-irradiance.service";
+import { getHsp, isLocationInput, GeoIrradianceService } from "./services/geo-irradiance.service";
 
 interface WebhookMessage {
   id?: string;
@@ -1727,7 +1727,8 @@ export class WhatsappBotService {
     `4️⃣ Solo\n` +
     `5️⃣ Laje\n` +
     `6️⃣ Fibrometal\n` +
-    `7️⃣ Sem estrutura\n\n` +
+    `7️⃣ Sem estrutura\n` +
+    `0️⃣ Voltar / Corrigir padrão elétrico\n\n` +
     `(Responda com o número da opção)`;
 
   private readonly GRID_OPTIONS_TEXT =
@@ -1735,8 +1736,39 @@ export class WhatsappBotService {
     `1️⃣ Monofásico 220V\n` +
     `2️⃣ Bifásico 127V/220V\n` +
     `3️⃣ Trifásico 220V\n` +
-    `4️⃣ Trifásico 380V\n\n` +
+    `4️⃣ Trifásico 380V\n` +
+    `0️⃣ Voltar / Corrigir localização ou consumo\n\n` +
     `(Responda com o número da opção)`;
+
+  private formatQuotesListText(
+    quotes: any[],
+    sessionCtx: {
+      targetKWp?: number;
+      targetModules?: number;
+      consumptionKwh?: number;
+    }
+  ): string {
+    const infoCabecalho = sessionCtx.targetKWp
+      ? `para a potência de *${sessionCtx.targetKWp} kWp*`
+      : sessionCtx.targetModules
+        ? `para *${sessionCtx.targetModules} módulos*`
+        : `para o consumo de *${sessionCtx.consumptionKwh || 300} kWh/mês*`;
+
+    let quoteText = `Excelente! Seguem as melhores opções de kits dimensionados ${infoCabecalho}:\n\n`;
+
+    quotes.forEach((q, index) => {
+      quoteText += `${this.numToEmoji(index + 1)} *${q.distributorName}* - R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+      quoteText += `Itens do Kit:\n`;
+      q.items.forEach((item: string) => {
+        quoteText += `${item}\n`;
+      });
+      quoteText += `Info: Potência: ${q.kwp} kWp | Geração Estimada: ${q.estimatedGeneration} kWh/mês (em condições ideais)*\n`;
+      quoteText += `*Obs: A estimativa de geração considera condições ideais de irradiação solar. A geração real pode variar conforme as caídas e inclinação do telhado, orientação solar (azimute) e eventuais sombreamentos.\n\n`;
+    });
+
+    quoteText += `Qual opção você prefere para o seu cliente?\n(Responda com o número da opção ou envie 0️⃣ para voltar/alterar estrutura)`;
+    return quoteText;
+  }
 
   private numToEmoji(num: number): string {
     const emojis: Record<number, string> = {
@@ -2054,6 +2086,15 @@ ${catalogContext}`;
           const nameM2 = content.match(/Cliente \*([^*]+)\* anotado/i);
           if (nameM1?.[1]) clientName = nameM1[1].trim();
           else if (nameM2?.[1]) clientName = nameM2[1].trim();
+
+          const locM =
+            content.match(/Localização identificada:\s*\*([^*\/]+)\/([A-Za-z]{2})\*/i) ||
+            content.match(/Localização corrigida para:\s*\*([^*\/]+)\/([A-Za-z]{2})\*/i);
+          if (locM && locM[1] && locM[2]) {
+            cidade = locM[1].trim();
+            estado = locM[2].trim().toUpperCase();
+          }
+
           continue; // Não analisa mensagens do bot para evitar capturar exemplos de texto
         }
 
@@ -2085,6 +2126,19 @@ ${catalogContext}`;
         }
 
         // 4. Extração de Cidade e Estado
+        const prevContent = i > 0 ? messages[i - 1]?.content || "" : "";
+        if (
+          prevContent.includes("Para qual cidade e estado será a instalação?") ||
+          prevContent.includes("Vamos alterar a localização") ||
+          prevContent.includes("Vamos corrigir a localização")
+        ) {
+          const hspRes = getHsp(content);
+          if (hspRes.city) {
+            cidade = hspRes.city;
+            estado = hspRes.uf;
+          }
+        }
+
         const cityM = content.match(
           /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
         );
@@ -2102,6 +2156,19 @@ ${catalogContext}`;
             !candLower.includes("metal")
           ) {
             const hspRes = getHsp(candidate);
+            cidade = hspRes.city;
+            estado = hspRes.uf;
+          }
+        }
+
+        if (
+          lowerC.startsWith("mudar cidade") ||
+          lowerC.startsWith("trocar cidade") ||
+          lowerC.startsWith("alterar cidade") ||
+          (isLocationInput(content) && !prevContent.includes("nome do cliente final"))
+        ) {
+          const hspRes = getHsp(content);
+          if (hspRes.city) {
             cidade = hspRes.city;
             estado = hspRes.uf;
           }
@@ -2254,23 +2321,97 @@ ${catalogContext}`;
         ? assistantMessages[assistantMessages.length - 1]?.content || ""
         : "";
 
+    // Tratamento Universal de Voltar / Corrigir
+    const isBackCommand =
+      lower === "0" ||
+      lower === "0️⃣" ||
+      lower === "voltar" ||
+      lower === "corrigir" ||
+      lower === "opcao 0" ||
+      lower === "opção 0";
+
+    if (isBackCommand) {
+      if (lastBotMsg.includes("Qual o padrão de entrada da instalação?")) {
+        if (sessionCtx.consumptionKwh) {
+          return (
+            `Certo! Vamos alterar a localização ou o consumo. 📍\n\n` +
+            `Para qual cidade e estado será a instalação? (Ex: Cuiabá/MT, Maringá/PR, São Paulo/SP)`
+          );
+        }
+        return (
+          `Certo! Vamos alterar o dimensionamento. ☀️\n\n` +
+          `Envie a potência desejada (ex: *5 kWp*), a quantidade de placas (ex: *10 placas*) ou o consumo médio (ex: *450 kWh*).`
+        );
+      }
+
+      if (lastBotMsg.includes("Qual a estrutura do telhado?")) {
+        return (
+          `Sem problemas! Vamos corrigir o padrão elétrico da instalação. ⚡\n\n` +
+          this.GRID_OPTIONS_TEXT
+        );
+      }
+
+      if (lastBotMsg.includes("Qual opção você prefere para o seu cliente?")) {
+        return `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
+      }
+
+      if (lastBotMsg.includes("Qual o nome do cliente final")) {
+        const quotes = await this.calculateDistributorKits({
+          consumptionKwh: sessionCtx.consumptionKwh,
+          targetKWp: sessionCtx.targetKWp,
+          targetModules: sessionCtx.targetModules,
+          modPowerWUser: sessionCtx.modPowerWUser,
+          cidade: sessionCtx.cidade || "São Paulo",
+          estado: sessionCtx.estado || "SP",
+          roofType: sessionCtx.roofType || "Cerâmica (Colonial)",
+          gridVoltage: sessionCtx.gridVoltage || "Monofásico 220V",
+        });
+
+        if (quotes.length > 0) {
+          return this.formatQuotesListText(quotes, sessionCtx);
+        }
+        return `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
+      }
+
+      if (lastBotMsg.includes("E qual o WhatsApp dele")) {
+        return `Sem problemas! Qual o nome correto do cliente final para registrarmos no seu CRM?`;
+      }
+
+      if (lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar")) {
+        return `Certo! Qual o WhatsApp correto do cliente com DDD? (ou digite 0️⃣ para voltar ao nome)`;
+      }
+
+      return (
+        `O que você gostaria de alterar ou corrigir? 📝\n\n` +
+        `1️⃣ Cidade e Estado (ex: digite *Cuiabá/MT*)\n` +
+        `2️⃣ Consumo ou Potência (ex: digite *500 kWh* ou *6 kWp*)\n` +
+        `3️⃣ Padrão de Entrada (ex: digite *mono*, *bi* ou *tri 380V*)\n` +
+        `4️⃣ Estrutura do Telhado (ex: digite *solo*, *laje* ou *fibrocimento*)\n` +
+        `5️⃣ Reiniciar do início (digite *novo*)`
+      );
+    }
+
     // ESTADO A: O Bot acabou de apresentar os distribuidores e pediu para escolher a opção (1 ou 2)
     if (lastBotMsg.includes("Qual opção você prefere para o seu cliente?")) {
-      return (
-        `Ótima escolha! Kit selecionado com sucesso. ☀️\n\n` +
-        `Qual o nome do cliente final para registrarmos no seu CRM?`
-      );
+      const choiceMatch = incomingText.match(/\b([1-9]|10)\b/);
+      if (choiceMatch) {
+        return (
+          `Ótima escolha! Kit selecionado com sucesso. ☀️\n\n` +
+          `Qual o nome do cliente final para registrarmos no seu CRM? (ou digite 0️⃣ para voltar às opções de kits)`
+        );
+      }
+      return `Por favor, responda com o número da opção do kit desejado (ex: 1 ou 2) ou envie 0️⃣ para voltar e alterar a estrutura.`;
     }
 
     // ESTADO B: O Bot pediu o nome do cliente final
     if (lastBotMsg.includes("Qual o nome do cliente final")) {
       const clientName = incomingText.trim();
-      return `Certo, vou registrar o cliente ${clientName}. E qual o WhatsApp dele com DDD?`;
+      return `Certo, vou registrar o cliente *${clientName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
     }
 
     // ESTADO C: O Bot pediu o WhatsApp do cliente final -> Apresenta os modelos de proposta
     if (lastBotMsg.includes("E qual o WhatsApp dele")) {
-      const clientNameMatch = lastBotMsg.match(/registrar o cliente ([^.]+)\./i);
+      const clientNameMatch = lastBotMsg.match(/registrar o cliente \*?([^.*]+)\*?\./i);
       const clientName = clientNameMatch?.[1]?.trim() || "Cliente";
 
       const templates = await this.getAvailableTemplates(conversation.organizationId);
@@ -2278,6 +2419,7 @@ ${catalogContext}`;
       templates.forEach((t, i) => {
         templateListText += `${this.numToEmoji(i + 1)} ${t.name}\n`;
       });
+      templateListText += `0️⃣ Voltar / Rever dados\n`;
 
       return (
         `Cliente *${clientName}* anotado com sucesso! 👤✨\n\n` +
@@ -2628,56 +2770,62 @@ ${catalogContext}`;
       { key: "nenhuma", name: "Sem estrutura" },
     ].find((r) => lower === r.key || lower.includes(r.key));
 
-    if (roofMatch && lastBotMsg.includes("Qual a estrutura do telhado?")) {
-      const selectedRoof = roofMatch.name;
+    if (lastBotMsg.includes("Qual a estrutura do telhado?")) {
+      if (roofMatch) {
+        const selectedRoof = roofMatch.name;
 
-      const quotes = await this.calculateDistributorKits({
-        consumptionKwh: sessionCtx.consumptionKwh,
-        targetKWp: sessionCtx.targetKWp,
-        targetModules: sessionCtx.targetModules,
-        modPowerWUser: sessionCtx.modPowerWUser,
-        cidade: sessionCtx.cidade || "São Paulo",
-        estado: sessionCtx.estado || "SP",
-        roofType: selectedRoof,
-        gridVoltage: sessionCtx.gridVoltage,
-      });
+        const quotes = await this.calculateDistributorKits({
+          consumptionKwh: sessionCtx.consumptionKwh,
+          targetKWp: sessionCtx.targetKWp,
+          targetModules: sessionCtx.targetModules,
+          modPowerWUser: sessionCtx.modPowerWUser,
+          cidade: sessionCtx.cidade || "São Paulo",
+          estado: sessionCtx.estado || "SP",
+          roofType: selectedRoof,
+          gridVoltage: sessionCtx.gridVoltage || "Monofásico 220V",
+        });
 
-      if (quotes.length === 0) {
-        return (
-          `No momento não encontramos kits com todos os componentes e estrutura (${selectedRoof}) disponíveis nos distribuidores cadastrados com estoque compatível.\n\n` +
-          `Você pode selecionar a opção "7️⃣ Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado.`
-        );
+        if (quotes.length === 0) {
+          return (
+            `No momento não encontramos kits com todos os componentes e estrutura (${selectedRoof}) disponíveis nos distribuidores cadastrados com estoque compatível.\n\n` +
+            `Você pode selecionar a opção "7️⃣ Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado (ou envie 0️⃣ para voltar).`
+          );
+        }
+
+        return this.formatQuotesListText(quotes, sessionCtx);
       }
 
-      const infoCabecalho = sessionCtx.targetKWp
-        ? `para a potência de *${sessionCtx.targetKWp} kWp*`
-        : sessionCtx.targetModules
-          ? `para *${sessionCtx.targetModules} módulos*`
-          : `para o consumo de *${sessionCtx.consumptionKwh || 300} kWh/mês*`;
-
-      let quoteText = `Excelente! Seguem as melhores opções de kits dimensionados ${infoCabecalho}:\n\n`;
-
-      quotes.forEach((q, index) => {
-        quoteText += `${this.numToEmoji(index + 1)} *${q.distributorName}* - R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-        quoteText += `Itens do Kit:\n`;
-        q.items.forEach((item) => {
-          quoteText += `${item}\n`;
-        });
-        quoteText += `Info: Potência: ${q.kwp} kWp | Geração Estimada: ${q.estimatedGeneration} kWh/mês (em condições ideais)*\n`;
-        quoteText += `*Obs: A estimativa de geração considera condições ideais de irradiação solar. A geração real pode variar conforme as caídas e inclinação do telhado, orientação solar (azimute) e eventuais sombreamentos.\n\n`;
-      });
-
-      quoteText += `Qual opção você prefere para o seu cliente? (Responda com o número da opção)`;
-      return quoteText;
+      return (
+        `Opção de telhado não reconhecida. Por favor, responda com o número da opção (1 a 7) ou envie 0️⃣ para voltar:\n\n` +
+        this.ROOF_OPTIONS_TEXT
+      );
     }
 
     // ESTADO F: O Bot perguntou o padrão de entrada da rede elétrica
     if (lastBotMsg.includes("Qual o padrão de entrada da instalação?")) {
-      let chosenGrid = "Monofásico 220V";
-      if (lower === "1" || lower.includes("1️⃣") || lower.includes("mono")) {
+      // Verifica se o usuário enviou uma localização para corrigir (ex: "Cuiabá, mt")
+      if (
+        isLocationInput(incomingText) ||
+        incomingText.includes("/") ||
+        incomingText.includes(",") ||
+        lower.startsWith("mudar cidade") ||
+        lower.startsWith("trocar cidade")
+      ) {
+        const hspRes = getHsp(incomingText);
+        if (hspRes.city) {
+          return (
+            `Perfeito! Localização corrigida para: *${hspRes.city}/${hspRes.uf}* (Irradiação solar de ${hspRes.hsp.toFixed(2)} kWh/m²/dia calculada com precisão). 📍☀️\n\n` +
+            this.GRID_OPTIONS_TEXT
+          );
+        }
+      }
+
+      let chosenGrid = "";
+      if (lower === "1" || lower === "1." || lower.includes("1️⃣") || lower.includes("mono")) {
         chosenGrid = "Monofásico 220V";
       } else if (
         lower === "2" ||
+        lower === "2." ||
         lower.includes("2️⃣") ||
         lower.includes("bi") ||
         lower.includes("127/220")
@@ -2685,6 +2833,7 @@ ${catalogContext}`;
         chosenGrid = "Bifásico 127V/220V";
       } else if (
         lower === "3" ||
+        lower === "3." ||
         lower.includes("3️⃣") ||
         lower.includes("tri 220") ||
         lower.includes("tri_220")
@@ -2692,6 +2841,7 @@ ${catalogContext}`;
         chosenGrid = "Trifásico 220V";
       } else if (
         lower === "4" ||
+        lower === "4." ||
         lower.includes("4️⃣") ||
         lower.includes("tri 380") ||
         lower.includes("tri_380") ||
@@ -2700,11 +2850,22 @@ ${catalogContext}`;
         chosenGrid = "Trifásico 380V";
       }
 
-      return `Legal! Padrão registrado: *${chosenGrid}*. ⚡\n\n` + this.ROOF_OPTIONS_TEXT;
+      if (chosenGrid) {
+        return `Legal! Padrão registrado: *${chosenGrid}*. ⚡\n\n` + this.ROOF_OPTIONS_TEXT;
+      }
+
+      return (
+        `Opção não reconhecida. Por favor, responda com o número da opção desejada (1 a 4) ou envie 0️⃣ para voltar:\n\n` +
+        this.GRID_OPTIONS_TEXT
+      );
     }
 
     // ESTADO G: O Bot perguntou a cidade da instalação
-    if (lastBotMsg.includes("Para qual cidade e estado será a instalação?")) {
+    if (
+      lastBotMsg.includes("Para qual cidade e estado será a instalação?") ||
+      lastBotMsg.includes("Vamos alterar a localização") ||
+      lastBotMsg.includes("Vamos corrigir a localização")
+    ) {
       const hspRes = getHsp(incomingText);
       return (
         `Perfeito! Localização identificada: *${hspRes.city}/${hspRes.uf}* (Irradiação solar de ${hspRes.hsp.toFixed(2)} kWh/m²/dia calculada com precisão). 📍☀️\n\n` +
