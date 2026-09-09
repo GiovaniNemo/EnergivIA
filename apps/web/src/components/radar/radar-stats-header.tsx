@@ -24,7 +24,10 @@ export function RadarStatsHeader({ stats, loading }: RadarStatsHeaderProps) {
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-pulse">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-20 bg-neutral-900/60 rounded-xl border border-neutral-800" />
+          <div
+            key={i}
+            className="h-24 bg-slate-100 dark:bg-neutral-900/60 rounded-2xl border border-slate-200 dark:border-neutral-800"
+          />
         ))}
       </div>
     );
@@ -33,29 +36,29 @@ export function RadarStatsHeader({ stats, loading }: RadarStatsHeaderProps) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
       {/* Total de Usinas */}
-      <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950 p-3.5 rounded-2xl border border-neutral-800/80 shadow-md relative overflow-hidden group">
+      <div className="bg-white dark:bg-gradient-to-br dark:from-neutral-900/90 dark:to-neutral-950 p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 dark:border-neutral-800/80 shadow-sm dark:shadow-md relative overflow-hidden group transition-all">
         <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all" />
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+          <span className="text-xs font-semibold text-slate-500 dark:text-neutral-400 uppercase tracking-wider">
             Usinas no Radar
           </span>
-          <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
+          <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 dark:text-amber-400">
             <SunMedium className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-2xl font-black text-white">
+          <span className="text-2xl font-black text-slate-900 dark:text-white">
             {stats.totalCityInstallations && stats.totalCityInstallations > stats.totalInstallations
               ? `${stats.totalCityInstallations.toLocaleString("pt-BR")}`
               : stats.totalInstallations.toLocaleString("pt-BR")}
           </span>
-          <span className="text-xs text-neutral-400">
+          <span className="text-xs text-slate-500 dark:text-neutral-400">
             {stats.totalCityInstallations && stats.totalCityInstallations > stats.totalInstallations
-              ? `usinas cadastradas (${stats.totalInstallations} no mapa)`
+              ? `cadastradas (${stats.totalInstallations} no mapa)`
               : "conexões no mapa"}
           </span>
         </div>
-        <div className="mt-1 flex items-center gap-1.5 text-[11px] text-neutral-500">
+        <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-neutral-400">
           <span>{stats.residentialPercent}% residenciais</span>
           <span>•</span>
           <span>{stats.commercialPercent}% comerciais</span>
@@ -63,66 +66,75 @@ export function RadarStatsHeader({ stats, loading }: RadarStatsHeaderProps) {
       </div>
 
       {/* Potência Mapeada */}
-      <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950 p-3.5 rounded-2xl border border-neutral-800/80 shadow-md relative overflow-hidden group">
+      <div className="bg-white dark:bg-gradient-to-br dark:from-neutral-900/90 dark:to-neutral-950 p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 dark:border-neutral-800/80 shadow-sm dark:shadow-md relative overflow-hidden group transition-all">
         <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all" />
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+          <span className="text-xs font-semibold text-slate-500 dark:text-neutral-400 uppercase tracking-wider">
             Potência Total
           </span>
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 dark:text-emerald-400">
             <Zap className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-2xl font-black text-emerald-400">{stats.totalPowerMwp}</span>
-          <span className="text-xs font-semibold text-neutral-400">MWp instalados</span>
+          <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+            {stats.totalPowerMwp}
+          </span>
+          <span className="text-xs font-semibold text-slate-500 dark:text-neutral-400">
+            MWp instalados
+          </span>
         </div>
-        <div className="mt-1 text-[11px] text-neutral-400">
-          Média de <span className="text-white font-medium">{stats.averagePowerKwp} kWp</span> por
-          sistema
+        <div className="mt-1 text-[11px] text-slate-500 dark:text-neutral-400">
+          Média de{" "}
+          <span className="text-slate-900 dark:text-white font-semibold">
+            {stats.averagePowerKwp} kWp
+          </span>{" "}
+          por sistema
         </div>
       </div>
 
       {/* Alvos de Upgrade & Baterias */}
-      <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950 p-3.5 rounded-2xl border border-neutral-800/80 shadow-md relative overflow-hidden group">
+      <div className="bg-white dark:bg-gradient-to-br dark:from-neutral-900/90 dark:to-neutral-950 p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 dark:border-neutral-800/80 shadow-sm dark:shadow-md relative overflow-hidden group transition-all">
         <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all" />
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-purple-300 uppercase tracking-wider">
+          <span className="text-xs font-semibold text-purple-600 dark:text-purple-300 uppercase tracking-wider">
             Alvos de Retrofit
           </span>
-          <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">
+          <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400">
             <BatteryCharging className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-2xl font-black text-purple-400">{stats.upgradePotentialCount}</span>
-          <span className="text-xs text-neutral-400">usinas &gt; 3 anos</span>
+          <span className="text-2xl font-black text-purple-600 dark:text-purple-400">
+            {stats.upgradePotentialCount}
+          </span>
+          <span className="text-xs text-slate-500 dark:text-neutral-400">usinas &gt; 3 anos</span>
         </div>
-        <div className="mt-1 text-[11px] text-purple-300/80 font-medium">
+        <div className="mt-1 text-[11px] text-purple-600 dark:text-purple-300/90 font-medium">
           Oportunidade p/ baterias & ampliação
         </div>
       </div>
 
       {/* Geração Mensal Estimada */}
-      <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950 p-3.5 rounded-2xl border border-neutral-800/80 shadow-md relative overflow-hidden group">
+      <div className="bg-white dark:bg-gradient-to-br dark:from-neutral-900/90 dark:to-neutral-950 p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 dark:border-neutral-800/80 shadow-sm dark:shadow-md relative overflow-hidden group transition-all">
         <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all" />
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+          <span className="text-xs font-semibold text-slate-500 dark:text-neutral-400 uppercase tracking-wider">
             Geração Mensal
           </span>
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400">
+          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
             <Activity className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-2xl font-black text-white">
+          <span className="text-2xl font-black text-slate-900 dark:text-white">
             {stats.estimatedMonthlyGenerationMwh}
           </span>
-          <span className="text-xs text-neutral-400">MWh/mês</span>
+          <span className="text-xs text-slate-500 dark:text-neutral-400">MWh/mês</span>
         </div>
-        <div className="mt-1 text-[11px] text-neutral-400 truncate">
+        <div className="mt-1 text-[11px] text-slate-500 dark:text-neutral-400 truncate">
           Top Bairros:{" "}
-          <span className="text-neutral-300">
+          <span className="text-slate-700 dark:text-neutral-300 font-medium">
             {stats.topNeighborhoods
               .slice(0, 2)
               .map((n) => n.name)

@@ -194,22 +194,24 @@ export function RadarFilters({
       onClick={() => {
         if (isLocked) onLockedClick?.();
       }}
-      className={`bg-neutral-900/90 backdrop-blur-md p-4 rounded-2xl border border-neutral-800 shadow-lg space-y-3 relative transition-all ${
+      className={`bg-white dark:bg-neutral-900/90 backdrop-blur-md p-4 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm dark:shadow-lg space-y-3 relative transition-all ${
         isLocked ? "cursor-pointer hover:border-amber-500/40" : ""
       }`}
     >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-bold text-white">
-          <SlidersHorizontal className="w-4 h-4 text-amber-400" />
+        <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+          <SlidersHorizontal className="w-4 h-4 text-amber-500" />
           <span>Filtros de Prospecção Geográfica</span>
           {isLocked && (
-            <span className="flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 ml-2">
+            <span className="flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 ml-2">
               <Lock className="w-3 h-3" />
               <span>Bloqueado no Plano Start</span>
             </span>
           )}
         </div>
-        <span className="text-xs text-neutral-400">Base ANEEL GD Atualizada</span>
+        <span className="text-xs text-slate-500 dark:text-neutral-400">
+          Base ANEEL GD Atualizada
+        </span>
       </div>
 
       <div
@@ -221,10 +223,14 @@ export function RadarFilters({
             value={uf}
             onChange={(e) => handleStateChange(e.target.value)}
             disabled={isLocked}
-            className="w-full bg-neutral-950 border border-neutral-800 rounded-md text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500 font-medium disabled:cursor-not-allowed"
+            className="w-full bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 rounded-lg text-slate-900 dark:text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500 font-medium disabled:cursor-not-allowed"
           >
             {stateOptions.map((s) => (
-              <option key={s.uf} value={s.uf}>
+              <option
+                key={s.uf}
+                value={s.uf}
+                className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
+              >
                 {s.uf} - {s.name}
               </option>
             ))}
@@ -247,7 +253,7 @@ export function RadarFilters({
               }}
               disabled={isLocked}
               placeholder="Digite ou selecione a cidade..."
-              className="bg-neutral-950 border-neutral-800 text-white h-9 text-xs placeholder-neutral-500 pr-8 focus:border-amber-500 font-medium disabled:cursor-not-allowed"
+              className="bg-slate-50 dark:bg-neutral-950 border-slate-200 dark:border-neutral-800 text-slate-900 dark:text-white h-9 text-xs placeholder-slate-400 dark:placeholder-neutral-500 pr-8 focus:border-amber-500 font-medium disabled:cursor-not-allowed"
             />
             <button
               type="button"
@@ -255,10 +261,10 @@ export function RadarFilters({
               onClick={() => {
                 if (!isLocked) setDropdownOpen((prev) => !prev);
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
             >
               {loadingCities ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />
               ) : (
                 <ChevronDown className="w-3.5 h-3.5" />
               )}
@@ -267,10 +273,10 @@ export function RadarFilters({
 
           {/* Lista Suspensa Flutuante de Cidades */}
           {dropdownOpen && !isLocked && (
-            <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-neutral-950 border border-neutral-800 rounded-xl shadow-2xl divide-y divide-neutral-800/40 animate-in fade-in slide-in-from-top-1 duration-150">
+            <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-2xl divide-y divide-slate-100 dark:divide-neutral-800/40 animate-in fade-in slide-in-from-top-1 duration-150">
               {loadingCities ? (
-                <div className="p-3 text-center text-xs text-neutral-400 flex items-center justify-center gap-2">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                <div className="p-3 text-center text-xs text-slate-500 dark:text-neutral-400 flex items-center justify-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />
                   <span>Carregando cidades de {uf}...</span>
                 </div>
               ) : filteredCities.length > 0 ? (
@@ -283,17 +289,17 @@ export function RadarFilters({
                       onClick={() => handleSelectCity(c.name)}
                       className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
                         isSelected
-                          ? "bg-amber-500/10 text-amber-400 font-bold"
-                          : "text-neutral-200 hover:bg-neutral-800 hover:text-white"
+                          ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold"
+                          : "text-slate-700 dark:text-neutral-200 hover:bg-slate-100 dark:hover:bg-neutral-800 hover:text-slate-900 dark:hover:text-white"
                       }`}
                     >
                       <span className="truncate">{c.name}</span>
-                      {isSelected && <Check className="w-3.5 h-3.5 shrink-0 text-amber-400" />}
+                      {isSelected && <Check className="w-3.5 h-3.5 shrink-0 text-amber-500" />}
                     </button>
                   );
                 })
               ) : (
-                <div className="p-3 text-center text-xs text-neutral-400">
+                <div className="p-3 text-center text-xs text-slate-500 dark:text-neutral-400">
                   {searchQuery
                     ? `Nenhuma cidade encontrada para "${searchQuery}"`
                     : "Nenhuma cidade disponível"}
@@ -310,7 +316,7 @@ export function RadarFilters({
             onChange={(e) => setNeighborhood(e.target.value)}
             disabled={isLocked}
             placeholder="Filtrar por Bairro..."
-            className="bg-neutral-950 border-neutral-800 text-white h-9 text-xs placeholder-neutral-500 font-medium disabled:cursor-not-allowed"
+            className="bg-slate-50 dark:bg-neutral-950 border-slate-200 dark:border-neutral-800 text-slate-900 dark:text-white h-9 text-xs placeholder-slate-400 dark:placeholder-neutral-500 font-medium disabled:cursor-not-allowed"
           />
         </div>
 
@@ -320,13 +326,38 @@ export function RadarFilters({
             value={classType}
             onChange={(e) => setClassType(e.target.value)}
             disabled={isLocked}
-            className="w-full bg-neutral-950 border border-neutral-800 rounded-md text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500 font-medium disabled:cursor-not-allowed"
+            className="w-full bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 rounded-lg text-slate-900 dark:text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500 font-medium disabled:cursor-not-allowed"
           >
-            <option value="ALL">Todas as Classes</option>
-            <option value="RESIDENTIAL">Residencial</option>
-            <option value="COMMERCIAL">Comercial</option>
-            <option value="INDUSTRIAL">Industrial</option>
-            <option value="RURAL">Rural</option>
+            <option
+              value="ALL"
+              className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
+            >
+              Todas as Classes
+            </option>
+            <option
+              value="RESIDENTIAL"
+              className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
+            >
+              Residencial
+            </option>
+            <option
+              value="COMMERCIAL"
+              className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
+            >
+              Comercial
+            </option>
+            <option
+              value="INDUSTRIAL"
+              className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
+            >
+              Industrial
+            </option>
+            <option
+              value="RURAL"
+              className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
+            >
+              Rural
+            </option>
           </select>
         </div>
 
@@ -336,12 +367,32 @@ export function RadarFilters({
             value={opportunityType}
             onChange={(e) => setOpportunityType(e.target.value)}
             disabled={isLocked}
-            className="w-full bg-neutral-950 border border-neutral-800 rounded-md text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500 font-medium disabled:cursor-not-allowed"
+            className="w-full bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 rounded-lg text-slate-900 dark:text-white h-9 px-2 text-xs focus:outline-none focus:border-amber-500 font-medium disabled:cursor-not-allowed"
           >
-            <option value="ALL">Todas as Oportunidades</option>
-            <option value="UPGRADE_BATTERY">🔋 Retrofit / Baterias (&gt;3 anos)</option>
-            <option value="NEW_NEIGHBORS">👥 Vizinhança Solar</option>
-            <option value="RECENT">⚡ Conexões Recentes</option>
+            <option
+              value="ALL"
+              className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
+            >
+              Todas as Oportunidades
+            </option>
+            <option
+              value="UPGRADE_BATTERY"
+              className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
+            >
+              🔋 Retrofit / Baterias (&gt;3 anos)
+            </option>
+            <option
+              value="NEW_NEIGHBORS"
+              className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
+            >
+              👥 Vizinhança Solar
+            </option>
+            <option
+              value="RECENT"
+              className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
+            >
+              ⚡ Conexões Recentes
+            </option>
           </select>
         </div>
 
@@ -358,7 +409,7 @@ export function RadarFilters({
               onSearch();
             }}
             disabled={loading}
-            className="w-full h-9 bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/10"
+            className="w-full h-9 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm shadow-amber-500/20"
           >
             {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Search className="w-3.5 h-3.5" />}
             <span>{isLocked ? "Desbloquear Pro" : loading ? "Buscando..." : "Explorar"}</span>

@@ -52,7 +52,7 @@ export async function convertRadarToLead(
   payload: {
     installationId: string;
     name: string;
-    whatsapp: string;
+    whatsapp?: string;
     neighborhood?: string;
     city?: string;
     uf?: string;

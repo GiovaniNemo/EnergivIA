@@ -91,13 +91,13 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[520px] bg-[var(--color-surface,#18181b)] text-white border border-neutral-800 shadow-2xl">
+      <DialogContent className="sm:max-w-[520px] bg-white dark:bg-neutral-900 text-slate-900 dark:text-white border border-slate-200 dark:border-neutral-800 shadow-2xl">
         <DialogHeader>
-          <div className="flex items-center gap-2 text-amber-400 font-semibold text-sm">
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-semibold text-xs tracking-wider uppercase">
             <Sparkles className="w-4 h-4" />
             <span>OPORTUNIDADE DE PROSPECÇÃO RADAR</span>
           </div>
-          <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+          <DialogTitle className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             Adicionar ao Funil de Vendas
           </DialogTitle>
         </DialogHeader>
@@ -105,26 +105,28 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
         {success ? (
           <div className="py-8 flex flex-col items-center justify-center text-center space-y-3">
             <CheckCircle2 className="w-14 h-14 text-emerald-500 animate-bounce" />
-            <h4 className="text-lg font-bold text-white">Lead & Oportunidade Criados!</h4>
-            <p className="text-sm text-neutral-400">
+            <h4 className="text-lg font-bold text-slate-900 dark:text-white">
+              Lead & Oportunidade Criados!
+            </h4>
+            <p className="text-sm text-slate-600 dark:text-neutral-400">
               O lead foi inserido no seu pipeline comercial com os dados da usina.
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 py-2">
             {/* Card com dados da Usina */}
-            <div className="bg-neutral-900/80 rounded-xl p-3.5 border border-neutral-800/80 text-xs space-y-2">
-              <div className="flex justify-between items-center text-neutral-300">
+            <div className="bg-slate-50 dark:bg-neutral-950/80 rounded-xl p-3.5 border border-slate-200 dark:border-neutral-800/80 text-xs space-y-2">
+              <div className="flex justify-between items-center text-slate-700 dark:text-neutral-300">
                 <span className="flex items-center gap-1.5 font-medium">
-                  <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                  <MapPin className="w-3.5 h-3.5 text-amber-500" />
                   {installation.neighborhood}, {installation.city} - {installation.uf}
                 </span>
-                <span className="bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-mono font-semibold">
+                <span className="bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded font-mono font-bold">
                   {installation.powerKwp} kWp
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-neutral-400">
-                <Zap className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="flex items-center gap-2 text-slate-500 dark:text-neutral-400">
+                <Zap className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
                 <span>
                   ANEEL: {installation.codeAneel} • Conectado há {installation.yearsConnected} anos
                 </span>
@@ -132,8 +134,8 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs text-neutral-300 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-neutral-400" />
+              <Label className="text-xs text-slate-700 dark:text-neutral-300 flex items-center gap-1.5 font-medium">
+                <User className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-400" />
                 Nome do Contato / Identificação
               </Label>
               <Input
@@ -141,17 +143,17 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: Carlos (Vizinho Usina #432)"
                 required
-                className="bg-neutral-900 border-neutral-800 text-white placeholder-neutral-500 focus:border-amber-500"
+                className="bg-slate-50 dark:bg-neutral-950 border-slate-200 dark:border-neutral-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-neutral-500 focus:border-amber-500"
               />
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-neutral-300 flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-neutral-400" />
+                <Label className="text-xs text-slate-700 dark:text-neutral-300 flex items-center gap-1.5 font-medium">
+                  <Phone className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-400" />
                   WhatsApp do Lead
                 </Label>
-                <span className="text-[10px] text-neutral-400 font-normal">
+                <span className="text-[10px] text-slate-400 dark:text-neutral-400 font-normal">
                   (Opcional - caso já tenha o contato)
                 </span>
               </div>
@@ -159,24 +161,24 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
                 value={whatsapp}
                 onChange={(e) => setWhatsapp(e.target.value)}
                 placeholder="Ex: 11999998888 (opcional)"
-                className="bg-neutral-900 border-neutral-800 text-white placeholder-neutral-500 focus:border-amber-500"
+                className="bg-slate-50 dark:bg-neutral-950 border-slate-200 dark:border-neutral-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-neutral-500 focus:border-amber-500"
               />
-              <p className="text-[11px] text-neutral-400 leading-tight">
+              <p className="text-[11px] text-slate-500 dark:text-neutral-400 leading-tight">
                 💡 Caso ainda não tenha o telefone, deixe em branco para salvar como alvo de visita
                 ou prospecção no campo.
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs text-neutral-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <Label className="text-xs text-slate-700 dark:text-neutral-300 flex items-center gap-1.5 font-medium">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                 Roteiro & Pitch Sugerido de Abordagem
               </Label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="w-full rounded-md bg-neutral-900 border border-neutral-800 p-2 text-xs text-neutral-200 focus:outline-none focus:border-amber-500"
+                className="w-full rounded-md bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 p-2 text-xs text-slate-900 dark:text-neutral-200 focus:outline-none focus:border-amber-500"
               />
             </div>
 
@@ -186,14 +188,14 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
                 variant="outline"
                 onClick={onClose}
                 disabled={loading}
-                className="border-neutral-700 text-neutral-300 hover:bg-neutral-800"
+                className="border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-neutral-800"
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 disabled={loading || !name.trim()}
-                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-semibold shadow-lg shadow-amber-500/20"
+                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-bold shadow-lg shadow-amber-500/20"
               >
                 {loading ? "Criando Oportunidade..." : "Salvar no Pipeline"}
               </Button>
