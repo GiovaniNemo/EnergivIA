@@ -246,7 +246,7 @@ export class OrganizationsService {
 
         if (!hasPlusOrEnterprise) {
           throw new ForbiddenException(
-            "O plano Start gratuito permite o cadastro de apenas 1 organização. Para cadastrar e gerenciar múltiplas empresas ou filiais, faça upgrade para o Plano Plus."
+            "Somente o Plano Plus permite criar uma nova organização com outro CNPJ. Faça upgrade para o Plano Plus para gerenciar múltiplas empresas."
           );
         }
       }

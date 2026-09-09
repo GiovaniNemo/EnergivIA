@@ -381,7 +381,7 @@ export default function CreateOrganizationPage() {
   const finalizeOnboarding = async (skipTemplateStep: boolean) => {
     if (organizations && organizations.length >= 1 && !isPrivileged && !isPlus) {
       setError(
-        "O período de teste gratuito (Plano Start) permite o cadastro de 1 empresa. O gerenciamento de múltiplas empresas e filiais é uma funcionalidade exclusiva do Plano Plus."
+        "Somente o Plano Plus permite criar uma nova organização com outro CNPJ. Faça upgrade para o Plano Plus para gerenciar múltiplas empresas."
       );
       return;
     }
@@ -496,12 +496,12 @@ export default function CreateOrganizationPage() {
             <strong className="text-[var(--color-foreground)]">
               {currentOrganization?.name || organizations[0]?.name}
             </strong>{" "}
-            cadastrada na sua conta. No período de teste gratuito (Plano Start), o limite é de{" "}
-            <strong>1 empresa por integrador</strong>.
+            cadastrada na sua conta. Somente o <strong className="text-sky-400">Plano Plus</strong>{" "}
+            tem acesso para criar uma nova organização com outro CNPJ.
           </p>
           <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
-            O gerenciamento de múltiplas empresas e filiais na mesma conta é liberado exclusivamente
-            no <strong className="text-sky-400">Plano Plus</strong>.
+            O cadastro e gerenciamento de múltiplas empresas e filiais com CNPJs distintos na mesma
+            conta é liberado exclusivamente no <strong className="text-sky-400">Plano Plus</strong>.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Button variant="outline" className="w-full" onClick={() => router.push("/painel")}>

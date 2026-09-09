@@ -463,7 +463,7 @@ function OrganizationSettingsContent() {
     e.preventDefault();
     if (!canCreateMore && organizations.length >= 1) {
       setCreateModalError(
-        "O plano Start gratuito permite o cadastro de apenas 1 empresa. Para cadastrar e gerenciar múltiplas empresas, faça upgrade para o Plano Plus."
+        "Somente o Plano Plus permite criar uma nova organização com outro CNPJ. Faça upgrade para o Plano Plus para gerenciar múltiplas empresas."
       );
       return;
     }
@@ -1109,13 +1109,13 @@ function OrganizationSettingsContent() {
               <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-500/20 bg-sky-500/10 text-sky-500">
                 <Building2 className="h-5 w-5" />
               </span>
-              Múltiplas Empresas — Plano Plus
+              Nova Organização — Exclusivo Plano Plus
             </DialogTitle>
             <DialogDescription className="pt-2 text-sm text-[var(--color-muted-foreground)] leading-relaxed">
-              No período de teste gratuito (Plano Start), o limite é de{" "}
-              <strong>1 empresa por conta</strong>. O cadastro e gerenciamento de múltiplas
-              empresas, marcas e filiais com propostas e equipes independentes é um recurso
-              exclusivo a partir do <strong>Plano Plus</strong>.
+              Somente o <strong>Plano Plus</strong> tem acesso para criar e cadastrar uma nova
+              organização com outro <strong>CNPJ</strong>. Nos planos Start e Pro, o limite é de 1
+              empresa. Para gerenciar filiais, outras marcas ou empresas distintas na mesma conta,
+              faça upgrade para o Plano Plus.
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-end gap-3 pt-4">
