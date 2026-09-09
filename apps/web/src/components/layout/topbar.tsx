@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useTheme } from "@/components/providers/theme-provider";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { useOrganization } from "@/components/providers/organization-provider";
+import { useSidebar } from "@/components/layout/sidebar-inset";
+import { useIsMobile } from "@/hooks/use-media-query";
 import { Button } from "@/components/ui/button";
 import { Moon, Sun, LogOut, Menu, UserRound, Timer, AlertTriangle, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -130,6 +132,9 @@ function WhatsappIcon(props: React.SVGProps<SVGSVGElement>): JSX.Element {
 export function Topbar() {
   const { resolvedTheme, setTheme } = useTheme();
   const { currentOrganization, user } = useOrganization();
+  const { open, setOpen } = useSidebar();
+  const isMobile = useIsMobile();
+  const collapsed = !open && !isMobile;
   const searchHandleRef = useRef<GlobalSearchHandle>(null);
   const mobileSearchHandleRef = useRef<GlobalSearchHandle | null>(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -264,9 +269,9 @@ export function Topbar() {
         >
           {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
-        {(profile ?? user) && (
+        {user && (
           <span className="hidden max-w-[100px] truncate text-sm text-[var(--color-muted-foreground)] sm:block">
-            {profile?.name ?? user?.name ?? user?.email}
+            {user.name ?? user.email}
           </span>
         )}
         <UserMenu />

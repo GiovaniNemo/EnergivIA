@@ -8,7 +8,7 @@ import { useOrganization } from "@/components/providers/organization-provider";
 
 function SuccessContent() {
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get("session_id");
+  const sessionId = searchParams?.get("session_id");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [planName, setPlanName] = useState<string | null>(null);

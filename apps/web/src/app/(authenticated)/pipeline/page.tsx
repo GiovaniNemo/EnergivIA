@@ -220,7 +220,7 @@ export default function PipelinePage(): JSX.Element {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const initialDealParamRef = useRef(searchParams.get("id"));
+  const initialDealParamRef = useRef(searchParams?.get("id"));
   const { currentOrganizationId, loading: orgLoading } = useOrganization();
   const { deals, setDeals, replaceDeals, updateDealStage, updateDealProposalStatus } = useDeals([]);
   const { openStudyForDeal } = useProposalStudy();

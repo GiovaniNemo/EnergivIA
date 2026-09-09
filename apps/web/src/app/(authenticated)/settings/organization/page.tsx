@@ -161,7 +161,7 @@ function OrganizationSettingsContent() {
 
   // Auto-open create modal if navigated with ?action=new
   useEffect(() => {
-    if (searchParams.get("action") === "new") {
+    if (searchParams?.get("action") === "new") {
       setIsCreateModalOpen(true);
       router.replace("/configuracoes/organizacao");
     }

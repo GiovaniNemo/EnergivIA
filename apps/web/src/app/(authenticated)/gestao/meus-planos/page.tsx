@@ -106,7 +106,7 @@ function parseFeatures(
 function MeusPlanosContent() {
   const { currentOrganization, refetch: refetchOrg } = useOrganization();
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get("session_id");
+  const sessionId = searchParams?.get("session_id");
 
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<Plan[]>([]);
