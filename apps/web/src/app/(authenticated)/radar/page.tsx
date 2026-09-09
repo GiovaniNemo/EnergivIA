@@ -118,6 +118,41 @@ export default function RadarPage() {
         </div>
       </div>
 
+      {/* Demo Mode Notice for Start / Trial */}
+      {(user?.isTrial ||
+        !currentOrganization?.subscription ||
+        currentOrganization?.subscription?.status !== "active") && (
+        <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-amber-500/10 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+              <Compass className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-white">
+                  Radar Solar ANEEL — Modo Demonstração
+                </span>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  PLANO PRO
+                </span>
+              </div>
+              <p className="text-xs text-neutral-300 mt-1 max-w-2xl leading-relaxed">
+                No plano Start você pode visualizar como funciona a inteligência geográfica de
+                usinas. A pesquisa ativa por município, filtro de potência e prospecção direta de
+                vizinhança é liberada a partir do{" "}
+                <strong className="text-amber-300">Plano Pro</strong>.
+              </p>
+            </div>
+          </div>
+          <a
+            href="/gestao/meus-planos"
+            className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold rounded-xl text-xs transition shadow-md whitespace-nowrap shrink-0"
+          >
+            Desbloquear no Plano Pro &rarr;
+          </a>
+        </div>
+      )}
+
       {/* Cards de Métricas da Região */}
       <RadarStatsHeader stats={stats} loading={loading} />
 

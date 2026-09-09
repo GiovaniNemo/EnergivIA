@@ -12,6 +12,7 @@ import { BrandLogo } from "@/components/ui/brand-logo";
 import { SidebarSection } from "./SidebarSection";
 import { SidebarNotice } from "./sidebar-notice";
 import { cn } from "@energivia/utils";
+import { getTrialDaysLeft } from "@/lib/business-days";
 
 const ADMIN_SURFACE_SECTIONS: ReadonlySet<SidebarSectionKey> = new Set(["admin", "platform"]);
 const APP_SURFACE_SECTIONS: ReadonlySet<SidebarSectionKey> = new Set(["operation", "management"]);
@@ -40,9 +41,7 @@ export function Sidebar(): JSX.Element {
   const userRole = user?.role ?? null;
 
   const createdAt = currentOrganization?.createdAt ? new Date(currentOrganization.createdAt) : null;
-  const trialDaysLeft = createdAt
-    ? Math.max(0, 7 - Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)))
-    : 7;
+  const trialDaysLeft = createdAt ? getTrialDaysLeft(createdAt, 5) : 5;
 
   const [surface, setSurface] = useState<Surface>("all");
   useEffect(() => {

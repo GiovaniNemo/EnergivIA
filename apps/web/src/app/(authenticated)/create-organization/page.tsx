@@ -364,6 +364,13 @@ export default function CreateOrganizationPage() {
   const selectedSourceOption = referralSources.find((s) => s.id === selectedReferralSource);
 
   const finalizeOnboarding = async (skipTemplateStep: boolean) => {
+    if (organizations && organizations.length >= 1) {
+      setError(
+        "O período de teste gratuito (Plano Start) permite o cadastro de 1 empresa. O gerenciamento de múltiplas empresas e filiais é uma funcionalidade exclusiva do Plano Plus."
+      );
+      return;
+    }
+
     const selectedSegmentsSnapshot = [...selectedSegments];
     if (!skipTemplateStep && selectedSegmentsSnapshot.length === 0) {
       setError("Selecione pelo menos um segmento para gerar suas propostas.");
@@ -394,6 +401,7 @@ export default function CreateOrganizationPage() {
               templateTone: templateTone.trim() || undefined,
             }),
       });
+      await refreshOrganizations();
       setCurrentOrganizationId(organization.id);
       await refetch();
       triggerWelcomeIntroSplash();

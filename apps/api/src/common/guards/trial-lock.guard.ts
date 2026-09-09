@@ -4,6 +4,8 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { IS_TRIAL_LOCK_SKIPPED } from "../decorators/skip-trial-lock.decorator";
 import { IS_PUBLIC_KEY } from "../auth-public.metadata";
 
+import { isTrialExpired } from "../utils/business-days";
+
 @Injectable()
 export class TrialLockGuard implements CanActivate {
   constructor(
@@ -25,11 +27,17 @@ export class TrialLockGuard implements CanActivate {
     if (isSkipped) return true;
 
     const request = context.switchToHttp().getRequest();
+
+    // Permite todas as requisições GET (leitura livre do histórico)
+    if (request.method === "GET") {
+      return true;
+    }
+
     const user = request.user;
     if (!user) return true; // Handled by auth guard
 
-    if (user.role === "ADMIN" || user.role === "OWNER" || user.role === "PLATFORM") {
-      return true; // Admins, Owners and Platform bypass trial lock
+    if (user.role === "ADMIN" || user.role === "PLATFORM") {
+      return true; // Admins and Platform bypass trial lock
     }
 
     if (!user.tenantId) {
@@ -43,20 +51,24 @@ export class TrialLockGuard implements CanActivate {
 
     if (!tenant) return true;
 
-    const now = new Date();
-    const createdAt = tenant.createdAt;
-    const diffTime = Math.abs(now.getTime() - createdAt.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const hasActiveSub = tenant.subscription && tenant.subscription.status === "active";
+    if (hasActiveSub) return true;
 
-    if (diffDays > 7) {
-      // 7 days expired. Check if there's an active subscription.
-      const hasActiveSub = tenant.subscription && tenant.subscription.status === "active";
-      if (!hasActiveSub) {
-        throw new ForbiddenException({
-          message: "Trial expired and no active subscription.",
-          code: "TRIAL_EXPIRED",
-        });
-      }
+    // Está em período Start (Trial)
+    const expired = isTrialExpired(tenant.createdAt, 5);
+    const count = await this.prisma.proposal.count({
+      where: { tenantId: user.tenantId, deletedAt: null },
+    });
+
+    if (expired || count >= 20) {
+      throw new ForbiddenException({
+        message:
+          "Limite do período de teste gratuito atingido (5 dias úteis ou 20 propostas). Assine um plano para continuar gerando propostas.",
+        code: "TRIAL_LIMIT_REACHED",
+        trialExpired: expired,
+        proposalsCount: count,
+        proposalsLimit: 20,
+      });
     }
 
     return true;

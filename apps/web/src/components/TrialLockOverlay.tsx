@@ -16,11 +16,10 @@ interface Plan {
 export function TrialLockOverlay() {
   const { user, loading } = useOrganization();
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    if (user?.isTrialLocked) {
-      document.body.style.overflow = "hidden";
-
+    if (user?.isTrialLocked || modalOpen) {
       const fetchPlans = async () => {
         try {
           const response = await fetch("/api/proxy/plans");
@@ -33,16 +32,50 @@ export function TrialLockOverlay() {
         }
       };
       fetchPlans();
-    } else {
-      document.body.style.overflow = "auto";
     }
+  }, [user?.isTrialLocked, modalOpen]);
 
-    return () => {
-      document.body.style.overflow = "auto";
-    };
-  }, [user?.isTrialLocked]);
+  if (loading) {
+    return null;
+  }
 
-  if (loading || !user?.isTrialLocked) {
+  // Banner amigável quando o limite é atingido (sem travar a tela de leitura)
+  if (
+    user?.isTrial &&
+    (user?.trialExpired || user?.isTrialProposalLimitReached) &&
+    !user?.isTrialLocked
+  ) {
+    return (
+      <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-500/30 px-4 py-2.5 text-xs text-amber-200 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-[55] backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <span className="flex h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+          <span>
+            {user?.isTrialProposalLimitReached
+              ? "⚡ Você atingiu o limite de 20 propostas gratuitas do período de teste."
+              : "☀️ Seu período de teste gratuito de 5 dias úteis foi concluído."}{" "}
+            Seu histórico continua salvo! Faça upgrade para continuar gerando propostas comerciais
+            com IA.
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setModalOpen(true)}
+            className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition shadow-sm"
+          >
+            Ver Planos
+          </button>
+          <a
+            href="/gestao/meus-planos"
+            className="px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-white font-medium rounded-lg text-xs transition border border-neutral-700"
+          >
+            Assinar
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user?.isTrialLocked && !modalOpen) {
     return null;
   }
 

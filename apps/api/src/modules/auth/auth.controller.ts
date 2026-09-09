@@ -11,6 +11,8 @@ import { Public } from "../../common/decorators/public.decorator";
 import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator";
 import { PrismaService } from "../../prisma/prisma.service";
 
+import { isTrialExpired, getTrialDaysLeft } from "../../common/utils/business-days";
+
 @Controller("auth")
 export class AuthController {
   constructor(
@@ -33,18 +35,26 @@ export class AuthController {
     const profile = await this.authService.getProfile(user.sub);
     const organizations = await this.organizationsService.findAllForUser(user.sub);
 
-    let isTrialLocked = false;
-    if (user.role !== "ADMIN" && user.role !== "PLATFORM" && user.tenantId) {
+    let isTrial = false;
+    let trialDaysLeft = 5;
+    let trialExpired = false;
+    let proposalsCount = 0;
+    const proposalsLimit = 20;
+
+    if (user.tenantId) {
       const tenant = await this.prisma.tenant.findUnique({
         where: { id: user.tenantId },
         include: { subscription: true },
       });
+
       if (tenant) {
-        const diffDays = Math.ceil(
-          Math.abs(Date.now() - tenant.createdAt.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        if (diffDays > 7 && (!tenant.subscription || tenant.subscription.status !== "active")) {
-          isTrialLocked = true;
+        isTrial = !tenant.subscription || tenant.subscription.status !== "active";
+        if (isTrial) {
+          trialDaysLeft = getTrialDaysLeft(tenant.createdAt, 5);
+          trialExpired = isTrialExpired(tenant.createdAt, 5);
+          proposalsCount = await this.prisma.proposal.count({
+            where: { tenantId: user.tenantId, deletedAt: null },
+          });
         }
       }
     }
@@ -54,7 +64,13 @@ export class AuthController {
       role: user.role,
       organizations,
       currentOrganizationId: user.tenantId,
-      isTrialLocked,
+      isTrial,
+      trialDaysLeft,
+      trialExpired,
+      proposalsCount,
+      proposalsLimit,
+      isTrialProposalLimitReached: isTrial && proposalsCount >= proposalsLimit,
+      isTrialLocked: false, // Sem trava agressiva de tela cheia
     };
   }
 

@@ -9,6 +9,7 @@ import pdfParse from "pdf-parse";
 import { createWorker } from "tesseract.js";
 import { AiUsageService } from "../ai-usage/ai-usage.service";
 import { AiFeature } from "@prisma/client";
+import { isTrialExpired } from "../../common/utils/business-days";
 
 import type {
   ExtractedBillHistoryItem,
@@ -359,21 +360,28 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     return null;
   }
 
-  private isTenantPlanActive(tenant: {
+  private async isTenantPlanActive(tenant: {
+    id: string;
     createdAt: Date;
     subscription?: { status: string } | null;
-  }): boolean {
+  }): Promise<{ active: boolean; reason?: "trial_expired" | "proposal_limit_reached" }> {
     if (tenant.subscription && tenant.subscription.status === "active") {
-      return true;
+      return { active: true };
     }
 
-    const diffTime = Math.abs(Date.now() - new Date(tenant.createdAt).getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays <= 7) {
-      return true;
+    if (isTrialExpired(tenant.createdAt, 5)) {
+      return { active: false, reason: "trial_expired" };
     }
 
-    return true;
+    const proposalsCount = await this.prisma.proposal.count({
+      where: { tenantId: tenant.id, deletedAt: null },
+    });
+
+    if (proposalsCount >= 20) {
+      return { active: false, reason: "proposal_limit_reached" };
+    }
+
+    return { active: true };
   }
 
   private async processSingleMessage({
@@ -465,17 +473,24 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     }
 
     // 5. Verificação de Assinatura / Plano Ativo
-    if (!this.isTenantPlanActive(tenant)) {
-      this.logger.warn(`Plano expirado para organização ${tenant.id} no WhatsApp ${fromWaId}`);
-      const expiredMsg =
-        `Olá! Identificamos que o período de acesso da sua organização na EnergivIA precisa ser renovado. ☀️\n\n` +
-        `Para continuar utilizando o assistente de IA, dimensionamentos e propostas comerciais automáticas pelo WhatsApp, escolha o seu plano em:\n` +
-        `👉 *https://www.energivia.com.br/gestao/meus-planos*`;
+    const planStatus = await this.isTenantPlanActive(tenant);
+    if (!planStatus.active) {
+      this.logger.warn(
+        `Plano inativo/expirado para organização ${tenant.id} no WhatsApp ${fromWaId} (${planStatus.reason})`
+      );
+      const blockMsg =
+        planStatus.reason === "proposal_limit_reached"
+          ? `Olá! ⚡ Sua empresa atingiu o limite de 20 cotações gratuitas do período de teste da *EnergivIA*.\n\n` +
+            `Para continuar gerando propostas comerciais ilimitadas e dimensionamentos com IA para seus clientes pelo WhatsApp, escolha o seu plano em:\n` +
+            `👉 *https://www.energivia.com.br/gestao/meus-planos*`
+          : `Olá! ☀️ O período de teste gratuito de 5 dias úteis da sua organização na *EnergivIA* foi concluído.\n\n` +
+            `Para continuar utilizando o assistente de IA, dimensionamentos e propostas comerciais automáticas pelo WhatsApp, escolha o seu plano em:\n` +
+            `👉 *https://www.energivia.com.br/gestao/meus-planos*`;
 
       await this.whatsappCloud.sendTextMessage({
         phoneNumberId,
         toWaId: fromWaId,
-        body: expiredMsg,
+        body: blockMsg,
       });
       return;
     }

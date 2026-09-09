@@ -10,12 +10,12 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useSidebar } from "@/components/layout/sidebar-inset";
 import { OrganizationSwitcher } from "@/components/layout/organization-switcher";
 import { NotificationsBell } from "@/components/layout/notifications-bell";
-import { useIsMobile } from "@/hooks/use-media-query";
 import { GlobalSearch, type GlobalSearchHandle } from "@/components/layout/global-search";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { cn } from "@energivia/utils";
 import Link from "next/link";
 import { WhatsappConnectionModal } from "@/components/whatsapp/whatsapp-connection-modal";
+import { getTrialDaysLeft } from "@/lib/business-days";
 
 function userInitials(name?: string | null, email?: string | null): string {
   const clean = typeof name === "string" ? name.trim() : "";
@@ -130,12 +130,10 @@ function WhatsappIcon(props: React.SVGProps<SVGSVGElement>): JSX.Element {
 
 export function Topbar() {
   const { resolvedTheme, setTheme } = useTheme();
-  const { user } = useUser();
-  const { user: profile, currentOrganization } = useOrganization();
-  const { open, setOpen } = useSidebar();
-  const isMobile = useIsMobile();
-  const collapsed = !open && !isMobile;
-  const searchHandleRef = useRef<GlobalSearchHandle | null>(null);
+  const { currentOrganization, user } = useOrganization();
+  const { isMobile, setOpen } = useSidebar();
+  const [collapsed] = useSidebarCollapsed();
+  const searchHandleRef = useRef<GlobalSearchHandle>(null);
   const mobileSearchHandleRef = useRef<GlobalSearchHandle | null>(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
@@ -151,9 +149,7 @@ export function Topbar() {
   }, []);
 
   const createdAt = currentOrganization?.createdAt ? new Date(currentOrganization.createdAt) : null;
-  const trialDaysLeft = createdAt
-    ? Math.max(0, 7 - Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)))
-    : 7;
+  const trialDaysLeft = createdAt ? getTrialDaysLeft(createdAt, 5) : 5;
 
   const hasActiveSub = currentOrganization?.subscription?.status === "active";
 

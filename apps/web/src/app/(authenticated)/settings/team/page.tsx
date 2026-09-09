@@ -14,6 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Users } from "lucide-react";
 import { cn } from "@energivia/utils";
 
 const ROLES = ["OWNER", "ADMIN", "ENGINEER", "SALES", "VIEWER"] as const;
@@ -41,10 +49,11 @@ function getStatusBadgeClass(status: string): string {
 }
 
 export default function TeamPage() {
-  const { currentOrganizationId, user } = useOrganization();
+  const { currentOrganizationId, currentOrganization, user } = useOrganization();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [teamUpgradeModalOpen, setTeamUpgradeModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<string>("VIEWER");
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -189,9 +198,57 @@ export default function TeamPage() {
               🛠️ Testar Servidor de E-mail
             </Button>
           )}
-          <Button onClick={() => setInviteOpen(true)}>Convidar membro</Button>
+          <Button
+            onClick={() => {
+              if (
+                user?.isTrial ||
+                !currentOrganization?.subscription ||
+                currentOrganization?.subscription?.status !== "active"
+              ) {
+                setTeamUpgradeModalOpen(true);
+              } else {
+                setInviteOpen(true);
+              }
+            }}
+          >
+            Convidar membro
+          </Button>
         </div>
       </div>
+
+      {/* Modal de Upgrade para Equipe */}
+      <Dialog open={teamUpgradeModalOpen} onOpenChange={setTeamUpgradeModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <span className="p-2 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                <Users className="w-5 h-5" />
+              </span>
+              Gestão de Equipe & Vendedores
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-sm text-[var(--color-muted-foreground)] leading-relaxed">
+              No período de teste gratuito (Plano Start), o acesso é individual. O convite e
+              gerenciamento de múltiplos usuários e vendedores na equipe é liberado a partir do{" "}
+              <strong>Plano Pro</strong> (até 5 usuários) e <strong>Plano Plus</strong> (usuários
+              ilimitados).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setTeamUpgradeModalOpen(false)}>
+              Fechar
+            </Button>
+            <Button
+              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold"
+              onClick={() => {
+                setTeamUpgradeModalOpen(false);
+                window.location.href = "/gestao/meus-planos";
+              }}
+            >
+              Conhecer Plano Pro &rarr;
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {isPlatformAdmin && diagOpen && (
         <Card className="border-cyan-500/30 bg-cyan-950/20">
