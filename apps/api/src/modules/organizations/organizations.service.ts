@@ -160,7 +160,45 @@ export class OrganizationsService {
     }
   }
 
+  private async validateCnpjAuthorization(userId: string, cnpjRaw?: string) {
+    const clean = cleanCnpj(cnpjRaw);
+    if (!clean) return;
+
+    const officialCnpjs = (
+      process.env["ENERGIVIA_OFFICIAL_CNPJ"] || "57348647000192,57.348.647/0001-92"
+    )
+      .split(",")
+      .map((c) => c.replace(/\D/g, ""))
+      .filter(Boolean);
+
+    if (officialCnpjs.includes(clean)) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, role: true },
+      });
+
+      const authorizedEmails = (process.env["ENERGIVIA_AUTHORIZED_EMAILS"] || "")
+        .split(",")
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+
+      const roleStr = String(user?.role || "").toUpperCase();
+      const isAuthorized =
+        user &&
+        (roleStr === "ADMIN" ||
+          roleStr === "PLATFORM" ||
+          authorizedEmails.includes(user.email.toLowerCase()));
+
+      if (!isAuthorized) {
+        throw new ForbiddenException(
+          "Este CNPJ pertence à administração da EnergivIA e é de uso restrito para contas autorizadas."
+        );
+      }
+    }
+  }
+
   async create(userId: string, dto: CreateOrganizationDto) {
+    await this.validateCnpjAuthorization(userId, dto.cnpj);
     const slug = await this.generateUniqueOrganizationSlug(dto.name);
     const templateSettings = buildTemplateSettings(dto);
     const org = await this.prisma.tenant.create({
@@ -367,6 +405,9 @@ export class OrganizationsService {
 
   async update(id: string, userId: string, dto: UpdateOrganizationDto) {
     await this.requireRole(id, userId, [OrgRole.OWNER, OrgRole.ADMIN]);
+    if (dto.cnpj !== undefined) {
+      await this.validateCnpjAuthorization(userId, dto.cnpj);
+    }
     const current = await this.prisma.tenant.findUnique({
       where: { id },
       select: { settings: true },
