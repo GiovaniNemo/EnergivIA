@@ -165,7 +165,7 @@ export class OrganizationsService {
     if (!clean) return;
 
     const officialCnpjs = (
-      process.env["ENERGIVIA_OFFICIAL_CNPJ"] || "57348647000192,57.348.647/0001-92"
+      process.env["ENERGIVIA_OFFICIAL_CNPJ"] || "66304358000116,66.304.358/0001-16"
     )
       .split(",")
       .map((c) => c.replace(/\D/g, ""))
@@ -177,7 +177,13 @@ export class OrganizationsService {
         select: { email: true, role: true },
       });
 
-      const authorizedEmails = (process.env["ENERGIVIA_AUTHORIZED_EMAILS"] || "")
+      const authorizedEmailsRaw =
+        process.env["ENERGIVIA_AUTHORIZED_CNPJ_EMAILS"] ||
+        process.env["ENERGIVIA_AUTHORIZED_EMAILS"] ||
+        process.env["PLATFORM_ADMIN_EMAILS"] ||
+        "";
+
+      const authorizedEmails = authorizedEmailsRaw
         .split(",")
         .map((e) => e.trim().toLowerCase())
         .filter(Boolean);
