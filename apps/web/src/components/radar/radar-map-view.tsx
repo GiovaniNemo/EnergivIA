@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Sparkles, UserPlus, Satellite, Moon, Map as MapIcon, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "@/components/providers/theme-provider";
 
 export interface InstallationPoint {
   id: string;
@@ -91,16 +90,12 @@ export function RadarMapView({
   isLocked = false,
   onLockedClick,
 }: RadarMapViewProps) {
-  const { resolvedTheme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<LeafletMapInstance | null>(null);
   const tileLayerRef = useRef<unknown>(null);
   const clusterGroupRef = useRef<LeafletClusterGroup | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [activeLayer, setActiveLayer] = useState<MapLayerType>(
-    resolvedTheme === "dark" ? "dark" : "streets"
-  );
-  const userManuallySwitchedLayer = useRef(false);
+  const [activeLayer, setActiveLayer] = useState<MapLayerType>("streets");
 
   // Injeta Leaflet + Leaflet.markercluster CSS e JS dinamicamente
   useEffect(() => {
@@ -216,9 +211,8 @@ export function RadarMapView({
     loadScripts();
   }, []);
 
-  // Altera o Tile Layer quando o usuário muda para Satélite / Escuro / Ruas
-  const handleSwitchLayer = (layer: MapLayerType, manual = true) => {
-    if (manual) userManuallySwitchedLayer.current = true;
+  // Altera o Tile Layer quando o usuário muda para Ruas / Satélite / Analítico
+  const handleSwitchLayer = (layer: MapLayerType) => {
     setActiveLayer(layer);
     if (!mapInstanceRef.current || !tileLayerRef.current) return;
 
@@ -238,14 +232,6 @@ export function RadarMapView({
     });
     (tileLayerRef.current as { addTo: (m: unknown) => unknown }).addTo(mapInstanceRef.current);
   };
-
-  // Sincroniza tema quando o usuário troca o tema do sistema se não tiver escolhido manualmente
-  useEffect(() => {
-    if (!userManuallySwitchedLayer.current && mapInstanceRef.current) {
-      const defaultLayer: MapLayerType = resolvedTheme === "dark" ? "dark" : "streets";
-      handleSwitchLayer(defaultLayer, false);
-    }
-  }, [resolvedTheme]);
 
   // Inicializa a instância do mapa
   useEffect(() => {
@@ -433,20 +419,20 @@ export function RadarMapView({
       {/* Container do Mapa Leaflet */}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-      {/* Alternador de Camadas (Satélite / Dark / Ruas) */}
+      {/* Alternador de Camadas (Ruas / Satélite / Analítico) */}
       <div className="absolute top-3 right-3 z-10 flex items-center bg-white/95 dark:bg-neutral-950/90 backdrop-blur-md p-1 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-xl pointer-events-auto">
         <button
           type="button"
-          onClick={() => handleSwitchLayer("dark")}
+          onClick={() => handleSwitchLayer("streets")}
           className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            activeLayer === "dark"
+            activeLayer === "streets"
               ? "bg-amber-500 text-slate-950 shadow-md font-bold"
               : "text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
           }`}
-          title="Modo Noturno / Analítico"
+          title="Ruas e Bairros (Mapa Claro e Nítido)"
         >
-          <Moon className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Analítico</span>
+          <MapIcon className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Ruas</span>
         </button>
 
         <button
@@ -465,16 +451,16 @@ export function RadarMapView({
 
         <button
           type="button"
-          onClick={() => handleSwitchLayer("streets")}
+          onClick={() => handleSwitchLayer("dark")}
           className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            activeLayer === "streets"
+            activeLayer === "dark"
               ? "bg-amber-500 text-slate-950 shadow-md font-bold"
               : "text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
           }`}
-          title="Ruas e Bairros"
+          title="Modo Noturno / Analítico"
         >
-          <MapIcon className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Ruas</span>
+          <Moon className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Analítico</span>
         </button>
       </div>
 
