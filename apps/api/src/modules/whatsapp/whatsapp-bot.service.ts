@@ -1463,7 +1463,6 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
       let moduleQ = targetModules ? targetModules : Math.ceil((finalTargetKWp * 1000) / modPowerW);
       let realKWp = (moduleQ * modPowerW) / 1000;
-      const estGeneration = Math.round(realKWp * geracaoPorKwp * roofFactor);
 
       // Inversores compatíveis com a tensão/padrão de rede
       const validInvs = [];
@@ -1913,7 +1912,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         distributorId: d.id,
         totalPrice: somaTotal,
         kwp: Number(realKWp.toFixed(2)),
-        estimatedGeneration: Math.round(estGeneration),
+        estimatedGeneration: Math.round(realKWp * geracaoPorKwp * roofFactor),
         items,
         invName: inv.product?.name || "Inversor",
         modCount: moduleQ,
@@ -1982,13 +1981,22 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       targetKWp?: number;
       targetModules?: number;
       consumptionKwh?: number;
+      cidade?: string;
+      estado?: string;
     }
   ): string {
+    const localidade =
+      sessionCtx.cidade && sessionCtx.estado
+        ? ` em *${sessionCtx.cidade}/${sessionCtx.estado}*`
+        : sessionCtx.cidade
+          ? ` em *${sessionCtx.cidade}*`
+          : "";
+
     const infoCabecalho = sessionCtx.targetKWp
-      ? `para a potência de *${sessionCtx.targetKWp} kWp*`
+      ? `para a potência de *${sessionCtx.targetKWp} kWp*${localidade}`
       : sessionCtx.targetModules
-        ? `para *${sessionCtx.targetModules} módulos*`
-        : `para o consumo de *${sessionCtx.consumptionKwh || 300} kWh/mês*`;
+        ? `para *${sessionCtx.targetModules} módulos*${localidade}`
+        : `para o consumo de *${sessionCtx.consumptionKwh || 300} kWh/mês*${localidade}`;
 
     let quoteText = `Excelente! Seguem as melhores opções de kits dimensionados ${infoCabecalho}:\n\n`;
 

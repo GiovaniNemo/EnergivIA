@@ -425,9 +425,26 @@ async function calculateDistributorQuotes({
   const safeConsumption = parsedConsumption || 300;
 
   // 2. Resolução de Cidade e Estado (UF) com Auto-Detecção Completa (5.569 municípios)
-  let rawCity = cidade || safeLocation.split(",")[0].trim();
-  let rawState = estado || safeLocation.split(",")[1]?.trim() || "";
+  let rawCity = (cidade || "").trim();
+  let rawState = (estado || "").trim().toUpperCase();
 
+  // Se a cidade ou UF não vieram ou vieram como fallback genérico ("São Paulo"), tenta extrair das mensagens reais do usuário
+  const isGenericCity = !rawCity || normalizeString(rawCity) === "SAO PAULO";
+  if (isGenericCity) {
+    for (let i = allUserMsgs.length - 1; i >= 0; i--) {
+      const msg = allUserMsgs[i];
+      const hspLookup = getHsp(msg);
+      if (hspLookup && hspLookup.exact && normalizeString(hspLookup.city) !== "SAO PAULO") {
+        rawCity = hspLookup.city;
+        rawState = hspLookup.uf;
+        break;
+      }
+    }
+  }
+
+  if (!rawCity) {
+    rawCity = safeLocation.split(",")[0].trim() || "São Paulo";
+  }
   if (!rawState) {
     for (let i = allUserMsgs.length - 1; i >= 0; i--) {
       const msg = allUserMsgs[i];
@@ -441,10 +458,15 @@ async function calculateDistributorQuotes({
         break;
       }
     }
+    if (!rawState && safeLocation.includes(",")) {
+      rawState = safeLocation.split(",")[1]?.trim() || "";
+    }
   }
 
   const hspResult = getHsp(rawCity, rawState);
   const finalHsp = hspResult.hsp;
+  const finalCity = hspResult.city || rawCity;
+  const finalUf = hspResult.uf || rawState || "SP";
 
   const perdas = 0.284;
   const PR = 1 - perdas;
@@ -589,7 +611,6 @@ async function calculateDistributorQuotes({
     }
     let moduleQ = targetModules ? targetModules : Math.ceil((finalTargetKWp * 1000) / modPowerW);
     let realKWp = (moduleQ * modPowerW) / 1000;
-    const estGeneration = realKWp * geracaoPorKwp * fatorFace;
 
     const validInvs = [];
     for (const invObj of invs) {
@@ -996,12 +1017,17 @@ async function calculateDistributorQuotes({
       });
     }
 
+    const finalEstGeneration = Math.round(realKWp * geracaoPorKwp * fatorFace);
+
     finalQuotes.push({
       distribuidoraId: d.id,
       distribuidora: d.name,
+      cidade: finalCity,
+      estado: finalUf,
       valor_total_do_kit: `R$ ${somaTotal.toFixed(2).replace(".", ",")}`,
       valor_kit_num: somaTotal,
       potencia_kwp: realKWp,
+      geracao_estimada: finalEstGeneration,
       itens_estruturados: structuredItems,
       kit_itens_salvos: [
         `• Inversor: ${cleanProdName(inv.product?.name || inv.descricao)}`,
@@ -1018,7 +1044,7 @@ async function calculateDistributorQuotes({
           : null,
         con ? `• Conectores: 2x ${cleanProdName(con.product?.name || con.descricao)}` : null,
       ].filter(Boolean),
-      info_adicional: `Potência: ${realKWp.toFixed(2)} kWp | Geração Estimada: ${Math.round(estGeneration)} kWh/mês (em condições ideais)*\n*Obs: A estimativa de geração considera condições ideais de irradiação solar. A geração real pode variar conforme as caídas e inclinação do telhado, orientação solar (azimute) e eventuais sombreamentos.`,
+      info_adicional: `Potência: ${realKWp.toFixed(2)} kWp | Geração Estimada: ${finalEstGeneration} kWh/mês (em condições ideais)*\n*Obs: A estimativa de geração considera condições ideais de irradiação solar. A geração real pode variar conforme as caídas e inclinação do telhado, orientação solar (azimute) e eventuais sombreamentos.`,
     });
   }
 

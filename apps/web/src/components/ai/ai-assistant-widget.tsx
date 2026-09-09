@@ -214,7 +214,7 @@ export function AIAssistantWidget() {
         id: Date.now().toString(),
         role: "assistant",
         content:
-          "Olá! Sou seu consultor especialista da EnergivIA. ☀️\n\nQual o consumo médio mensal em kWh/mês (ou envie a fatura em PDF/foto) e para qual cidade/estado será a instalação?",
+          "Legal! ⚡ Qual é o consumo médio mensal do seu cliente em kWh?\n\n(Exemplo: digite *450 kWh* ou envie a foto/PDF da fatura de energia)",
       },
     ]);
   };
