@@ -50,37 +50,7 @@ const ufToState: Record<string, string> = {
   TO: "TOCANTINS",
 };
 
-let cachedCsvData: string[] | null = null;
-const getHspFromCsv = (cidade: string, estado: string) => {
-  try {
-    if (!cachedCsvData) {
-      const csvPath = path.join(process.cwd(), "hsp_brasil_todos_municipios hsp_medio_anual.csv");
-      cachedCsvData = fs.readFileSync(csvPath, "utf8").split("\n");
-    }
-
-    const searchCity = normalizeString(cidade);
-    const uf = estado.trim().toUpperCase();
-    const searchState = normalizeString(ufToState[uf] || uf);
-
-    for (let i = 1; i < cachedCsvData.length; i++) {
-      const cols = cachedCsvData[i].split(";");
-      if (cols.length >= 7) {
-        const csvCity = normalizeString(cols[3]);
-        const csvState = normalizeString(cols[5]);
-
-        if (csvCity === searchCity && csvState === searchState) {
-          const hspValue = parseInt(cols[6], 10);
-          const lat = parseFloat(cols[2]);
-          const lon = parseFloat(cols[1]);
-          return { hsp: hspValue / 1000, lat, lon };
-        }
-      }
-    }
-  } catch (e) {
-    console.error("Erro lendo CSV HSP:", e);
-  }
-  return null;
-};
+import { getHsp } from "@/lib/geo-irradiance";
 
 import pdfParse from "pdf-parse";
 import { auth0 } from "@/lib/auth0";
@@ -404,78 +374,77 @@ async function calculateDistributorQuotes({
   const forcedIncludeStructure = mappedRoof !== "none";
   const safeLocation = location || "São Paulo, SP";
 
-  let parsedConsumption = 300;
+  // 1. Extração robusta do Consumo Mensal (kWh)
+  let parsedConsumption: number | null = null;
   const rawConsumptionStr = String(monthlyConsumption || "").toLowerCase();
   if (rawConsumptionStr && rawConsumptionStr !== "undefined" && rawConsumptionStr !== "null") {
     const parsed = parseFloat(rawConsumptionStr.replace(/[^0-9.,]/g, "").replace(",", "."));
     if (!isNaN(parsed) && parsed > 0) parsedConsumption = parsed;
   }
 
-  if (parsedConsumption === 300) {
-    const allText = messages
-      .filter((m: any) => m.role === "user")
-      .map((m: any) =>
-        typeof m.content === "string"
-          ? m.content.toLowerCase()
-          : Array.isArray(m.content)
-            ? m.content
-                .map((c: any) => (typeof c === "string" ? c : c.text || ""))
-                .join(" ")
-                .toLowerCase()
-            : ""
-      )
-      .join(" ");
-
-    const exactMatch =
-      allText.match(/m[ée]dia mensal exata[^0-9]*(\d+)/i) ||
-      allText.match(/m[ée]dia mensal[^0-9]*(\d+)\s*kwh/i) ||
-      allText.match(/consumo m[ée]dio[^0-9]*(\d+)/i);
-
-    if (exactMatch) {
-      parsedConsumption = parseInt(exactMatch[1], 10);
-    } else {
-      const kwhMatches = [...allText.matchAll(/(\d+)\s*kwh/g)];
-      if (kwhMatches.length > 0) {
-        parsedConsumption = parseInt(kwhMatches[kwhMatches.length - 1][1], 10);
+  // Se o parâmetro não veio ou veio padrão, busca reversamente nas mensagens do usuário
+  if (!parsedConsumption) {
+    for (let i = allUserMsgs.length - 1; i >= 0; i--) {
+      const msg = allUserMsgs[i];
+      const kwhMatch = msg.match(/(\d+(?:[.,]\d+)?)\s*kwh/i);
+      if (kwhMatch) {
+        const parsed = parseFloat(kwhMatch[1].replace(",", "."));
+        if (!isNaN(parsed) && parsed > 0) {
+          parsedConsumption = parsed;
+          break;
+        }
+      }
+      const mediaMatch = msg.match(/consumo[^0-9]*(\d+(?:[.,]\d+)?)/i);
+      if (mediaMatch) {
+        const parsed = parseFloat(mediaMatch[1].replace(",", "."));
+        if (!isNaN(parsed) && parsed > 0) {
+          parsedConsumption = parsed;
+          break;
+        }
       }
     }
   }
-  const safeConsumption = parsedConsumption;
 
-  const cid = cidade || safeLocation.split(",")[0].trim();
-  const est = estado || safeLocation.split(",")[1]?.trim() || "SP";
-  const csvData = getHspFromCsv(cid, est);
+  // Se ainda não encontrou com "kwh", verifica se alguma mensagem recente do usuário foi apenas um número de consumo
+  if (!parsedConsumption) {
+    for (let i = allUserMsgs.length - 1; i >= 0; i--) {
+      const msg = allUserMsgs[i].trim();
+      const numOnly = parseFloat(msg.replace(/[^0-9.,]/g, "").replace(",", "."));
+      if (
+        !isNaN(numOnly) &&
+        numOnly >= 50 &&
+        numOnly <= 50000 &&
+        !["1", "2", "3", "4", "5", "6", "7", "0"].includes(msg)
+      ) {
+        parsedConsumption = numOnly;
+        break;
+      }
+    }
+  }
 
-  const UF_HSP: Record<string, number> = {
-    ac: 4.8,
-    al: 5.5,
-    am: 4.5,
-    ap: 4.9,
-    ba: 5.4,
-    ce: 5.7,
-    df: 5.5,
-    es: 5.1,
-    go: 5.6,
-    ma: 5.3,
-    mg: 5.3,
-    ms: 5.5,
-    mt: 5.4,
-    pa: 4.8,
-    pb: 5.6,
-    pe: 5.3,
-    pi: 5.6,
-    pr: 4.9,
-    rj: 5.0,
-    rn: 5.7,
-    ro: 4.8,
-    rr: 5.1,
-    rs: 4.8,
-    sc: 4.9,
-    se: 5.4,
-    sp: 4.8,
-    to: 5.4,
-  };
-  const finalHsp = csvData?.hsp || UF_HSP[est.toLowerCase()] || 5.0;
+  const safeConsumption = parsedConsumption || 300;
+
+  // 2. Resolução de Cidade e Estado (UF) com Auto-Detecção Completa (5.569 municípios)
+  let rawCity = cidade || safeLocation.split(",")[0].trim();
+  let rawState = estado || safeLocation.split(",")[1]?.trim() || "";
+
+  if (!rawState) {
+    for (let i = allUserMsgs.length - 1; i >= 0; i--) {
+      const msg = allUserMsgs[i];
+      const ufMatch =
+        msg.match(/[\s\/\-\(,]([A-Za-z]{2})\)?$/) ||
+        msg.match(
+          /\b(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b/i
+        );
+      if (ufMatch) {
+        rawState = ufMatch[1].toUpperCase();
+        break;
+      }
+    }
+  }
+
+  const hspResult = getHsp(rawCity, rawState);
+  const finalHsp = hspResult.hsp;
 
   const perdas = 0.284;
   const PR = 1 - perdas;
@@ -485,27 +454,39 @@ async function calculateDistributorQuotes({
   const geracaoPorKwp = finalHsp * 30 * PR;
   const consumoAjustado = safeConsumption * aumentoConsumo;
 
-  let parsedTargetKWp = undefined;
-  if (targetKWp !== undefined && targetKWp !== null) {
-    if (typeof targetKWp === "number") parsedTargetKWp = targetKWp;
-    else if (typeof targetKWp === "string") {
-      const parsed = parseFloat(targetKWp.replace(/[^0-9.,]/g, "").replace(",", "."));
-      if (!isNaN(parsed)) parsedTargetKWp = parsed;
+  // 3. Determinação de targetKWp respeitando precedência do consumo (idêntico ao WhatsApp)
+  let hasExplicitUserKwp = false;
+  let userKwpVal: number | null = null;
+  for (let i = allUserMsgs.length - 1; i >= 0; i--) {
+    const msg = allUserMsgs[i];
+    const kwpMatch = msg.match(/(\d+(?:[.,]\d+)?)\s*kwp/i);
+    if (kwpMatch) {
+      hasExplicitUserKwp = true;
+      userKwpVal = parseFloat(kwpMatch[1].replace(",", "."));
+      break;
     }
   }
 
-  let finalTargetKWp = parsedTargetKWp;
-  if (!finalTargetKWp) {
-    for (let i = allUserMsgs.length - 1; i >= 0; i--) {
-      const msg = allUserMsgs[i];
-      const kwpMatch = msg.match(/(\d+(?:[.,]\d+)?)\s*kwp/i);
-      if (kwpMatch) {
-        finalTargetKWp = parseFloat(kwpMatch[1].replace(",", "."));
-        break;
-      }
+  let finalTargetKWp: number;
+  if (hasExplicitUserKwp && userKwpVal && userKwpVal > 0) {
+    finalTargetKWp = userKwpVal;
+  } else if (parsedConsumption && parsedConsumption > 0) {
+    finalTargetKWp = consumoAjustado / (geracaoPorKwp * fatorFace);
+  } else if (targetKWp !== undefined && targetKWp !== null) {
+    const parsed =
+      typeof targetKWp === "number"
+        ? targetKWp
+        : parseFloat(
+            String(targetKWp)
+              .replace(/[^0-9.,]/g, "")
+              .replace(",", ".")
+          );
+    if (!isNaN(parsed) && parsed > 0) {
+      finalTargetKWp = parsed;
+    } else {
+      finalTargetKWp = consumoAjustado / (geracaoPorKwp * fatorFace);
     }
-  }
-  if (!finalTargetKWp) {
+  } else {
     finalTargetKWp = consumoAjustado / (geracaoPorKwp * fatorFace);
   }
 
@@ -1037,7 +1018,7 @@ async function calculateDistributorQuotes({
           : null,
         con ? `• Conectores: 2x ${cleanProdName(con.product?.name || con.descricao)}` : null,
       ].filter(Boolean),
-      info_adicional: `Potência: ${realKWp.toFixed(2)} kWp | Geração Estimada: ${estGeneration.toFixed(1)} kWh/mês (em condições ideais)*\n*Obs: A estimativa de geração considera condições perfeitas de irradiação solar. A geração real pode variar conforme as caídas e inclinação do telhado, orientação solar (trajetória do sol / azimute) e eventuais sombreamentos.`,
+      info_adicional: `Potência: ${realKWp.toFixed(2)} kWp | Geração Estimada: ${Math.round(estGeneration)} kWh/mês (em condições ideais)*\n*Obs: A estimativa de geração considera condições ideais de irradiação solar. A geração real pode variar conforme as caídas e inclinação do telhado, orientação solar (azimute) e eventuais sombreamentos.`,
     });
   }
 
@@ -1093,7 +1074,7 @@ export async function POST(req: Request) {
                   : `baseado no consumo do mês atual da fatura`;
               const exactIntroInstruction =
                 exactAverageKwh > 0
-                  ? `[RESPOSTA OBRIGATÓRIA DA FATURA: Diga exatamente: "Legal, dados extraídos com precisão!\nConsumo médio de ${exactAverageKwh} kWh/mês em ${locationStr} (${baseMeses}).\n\nQual a estrutura do telhado?\n1 - Cerâmica (Colonial)\n2 - Fibrocimento\n3 - Metálico\n4 - Solo\n5 - Laje\n6 - Fibrometal\n7 - Sem estrutura\n0 - Voltar / Corrigir"]`
+                  ? `[RESPOSTA OBRIGATÓRIA DA FATURA: Diga exatamente: "Legal, dados extraídos com precisão!\nConsumo médio de ${exactAverageKwh} kWh/mês em ${locationStr} (${baseMeses}).\n\nQual a estrutura do telhado?\n1️⃣ Cerâmica (Colonial)\n2️⃣ Fibrocimento\n3️⃣ Metálico\n4️⃣ Solo\n5️⃣ Laje\n6️⃣ Fibrometal\n7️⃣ Sem estrutura\n0️⃣ Voltar / Corrigir"]`
                   : "";
 
               return {
@@ -1125,7 +1106,7 @@ export async function POST(req: Request) {
                 : `baseado no consumo do mês atual da fatura`;
             const exactIntroInstruction =
               exactAverageKwh > 0
-                ? `[RESPOSTA OBRIGATÓRIA DA FATURA: Diga exatamente: "Legal, dados extraídos com precisão!\nConsumo médio de ${exactAverageKwh} kWh/mês em ${locationStr} (${baseMeses}).\n\nQual a estrutura do telhado?\n1 - Cerâmica (Colonial)\n2 - Fibrocimento\n3 - Metálico\n4 - Solo\n5 - Laje\n6 - Fibrometal\n7 - Sem estrutura\n0 - Voltar / Corrigir"]`
+                ? `[RESPOSTA OBRIGATÓRIA DA FATURA: Diga exatamente: "Legal, dados extraídos com precisão!\nConsumo médio de ${exactAverageKwh} kWh/mês em ${locationStr} (${baseMeses}).\n\nQual a estrutura do telhado?\n1️⃣ Cerâmica (Colonial)\n2️⃣ Fibrocimento\n3️⃣ Metálico\n4️⃣ Solo\n5️⃣ Laje\n6️⃣ Fibrometal\n7️⃣ Sem estrutura\n0️⃣ Voltar / Corrigir"]`
                 : "";
 
             const textPart = [
@@ -1228,8 +1209,18 @@ export async function POST(req: Request) {
           description:
             "Usa o motor de cálculo da EnergivIA para dimensionar os componentes físicos e puxar orçamentos REAIS cruzando todos os distribuidores ativos.",
           parameters: z.object({
-            monthlyConsumption: z.any().optional().describe("Consumo mensal (kWh) do cliente."),
-            targetKWp: z.any().optional().describe("Potência alvo do sistema em kWp."),
+            monthlyConsumption: z
+              .any()
+              .optional()
+              .describe(
+                "Consumo mensal (kWh) do cliente (ex: 450). OBRIGATÓRIO se o dimensionamento for por consumo. NUNCA passe targetKWp se for por consumo!"
+              ),
+            targetKWp: z
+              .any()
+              .optional()
+              .describe(
+                "Potência alvo do sistema em kWp. Use SOMENTE se o integrador pediu explicitamente por kWp no chat (ex: '5 kwp'). NUNCA passe este campo se a simulação for por consumo!"
+              ),
             targetModules: z
               .number()
               .optional()
@@ -1237,16 +1228,16 @@ export async function POST(req: Request) {
             location: z
               .string()
               .optional()
-              .describe("Cidade e Estado combinados (ex: 'Cuiabá/MT')"),
+              .describe("Cidade e Estado combinados (ex: 'Abaetetuba/PA')"),
             cidade: z
               .string()
               .describe(
-                "Nome da cidade onde será a instalação. OBRIGATÓRIO quando dimensionado por consumo (ex: 'Cuiabá', 'Maringá', 'São Paulo'). NUNCA chame a ferramenta sem ter perguntado e obtido a cidade!"
+                "Nome da cidade onde será a instalação (ex: 'Abaetetuba', 'Cuiabá', 'Maringá')."
               ),
             estado: z
               .string()
               .describe(
-                "Sigla do estado (UF) onde será a instalação. OBRIGATÓRIO quando dimensionado por consumo (ex: 'MT', 'PR', 'SP')."
+                "Sigla do estado (UF) onde será a instalação (ex: 'PA', 'MT', 'PR'). Se o integrador não digitou a UF mas a cidade é brasileira conhecida (ex: Abaetetuba -> PA), deduza automaticamente!"
               ),
             gridVoltage: z
               .string()
