@@ -35,6 +35,7 @@ import {
   Zap,
   ShieldCheck,
   ShieldAlert,
+  AlertTriangle,
   Sparkles,
   CheckCircle2,
   CreditCard,
@@ -223,7 +224,21 @@ function OnboardingStepIcon(props: StepIconProps): JSX.Element {
 
 export default function CreateOrganizationPage() {
   const router = useRouter();
-  const { setCurrentOrganizationId, refetch, loading: ctxLoading } = useOrganization();
+  const {
+    setCurrentOrganizationId,
+    refetch,
+    loading: ctxLoading,
+    user,
+    organizations,
+    currentOrganization,
+  } = useOrganization();
+  const isPrivileged = user?.role === "ADMIN" || user?.role === "PLATFORM";
+  const isPlus =
+    currentOrganization?.subscriptionPlan?.toLowerCase().includes("plus") ||
+    currentOrganization?.subscription?.plan?.toLowerCase().includes("plus");
+  const alreadyHasOrg = (organizations?.length ?? 0) >= 1;
+  const isBlockedFromCreatingMore = alreadyHasOrg && !isPrivileged && !isPlus;
+
   const [name, setName] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [cep, setCep] = useState("");
@@ -364,7 +379,7 @@ export default function CreateOrganizationPage() {
   const selectedSourceOption = referralSources.find((s) => s.id === selectedReferralSource);
 
   const finalizeOnboarding = async (skipTemplateStep: boolean) => {
-    if (organizations && organizations.length >= 1) {
+    if (organizations && organizations.length >= 1 && !isPrivileged && !isPlus) {
       setError(
         "O período de teste gratuito (Plano Start) permite o cadastro de 1 empresa. O gerenciamento de múltiplas empresas e filiais é uma funcionalidade exclusiva do Plano Plus."
       );
@@ -401,7 +416,6 @@ export default function CreateOrganizationPage() {
               templateTone: templateTone.trim() || undefined,
             }),
       });
-      await refreshOrganizations();
       setCurrentOrganizationId(organization.id);
       await refetch();
       triggerWelcomeIntroSplash();
@@ -463,6 +477,44 @@ export default function CreateOrganizationPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)]">
         <LoadingState label="Carregando contexto da empresa" compact />
+      </div>
+    );
+  }
+
+  if (isBlockedFromCreatingMore) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] p-4">
+        <div className="w-full max-w-lg rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-8 text-center shadow-xl">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-500">
+            <Building2 className="h-7 w-7" />
+          </div>
+          <h1 className="text-2xl font-bold text-[var(--color-foreground)]">
+            Empresa Já Cadastrada
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-[var(--color-muted-foreground)]">
+            Você já possui a empresa{" "}
+            <strong className="text-[var(--color-foreground)]">
+              {currentOrganization?.name || organizations[0]?.name}
+            </strong>{" "}
+            cadastrada na sua conta. No período de teste gratuito (Plano Start), o limite é de{" "}
+            <strong>1 empresa por integrador</strong>.
+          </p>
+          <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
+            O gerenciamento de múltiplas empresas e filiais na mesma conta é liberado exclusivamente
+            no <strong className="text-sky-400">Plano Plus</strong>.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Button variant="outline" className="w-full" onClick={() => router.push("/painel")}>
+              Ir para o Painel
+            </Button>
+            <Button
+              className="w-full bg-[linear-gradient(90deg,#1b5e7c_0%,#1f7f9b_55%,#39d3bf_100%)] text-white shadow-[0_8px_18px_rgba(31,127,155,0.22)]"
+              onClick={() => router.push("/gestao/meus-planos")}
+            >
+              Conhecer Plano Plus &rarr;
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -809,6 +861,14 @@ export default function CreateOrganizationPage() {
                         errorMessage={logoError}
                       />
                     </div>
+
+                    {error && (
+                      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 shrink-0" />
+                        <span>{error}</span>
+                      </div>
+                    )}
+
                     <Button
                       type="button"
                       className="w-full bg-[linear-gradient(90deg,#1b5e7c_0%,#1f7f9b_55%,#39d3bf_100%)] text-white shadow-[0_8px_18px_rgba(31,127,155,0.22)] hover:opacity-95"
@@ -1042,6 +1102,13 @@ export default function CreateOrganizationPage() {
                       </div>
                     </div>
 
+                    {error && (
+                      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 shrink-0" />
+                        <span>{error}</span>
+                      </div>
+                    )}
+
                     <div className="flex flex-col gap-2 border-t border-[var(--color-border)] pt-3 sm:flex-row">
                       <Button type="button" variant="outline" className="w-full" onClick={goBack}>
                         Voltar
@@ -1065,7 +1132,6 @@ export default function CreateOrganizationPage() {
                   </div>
                 </div>
               </div>
-              {error && <p className="mt-3 text-sm text-[var(--color-destructive)]">{error}</p>}
             </div>
           </div>
         </main>
