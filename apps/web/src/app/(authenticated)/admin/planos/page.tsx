@@ -1112,7 +1112,7 @@ export default function AdminPlanosPage() {
 
       {/* PLAN MODAL (CREATE & EDIT) */}
       {isPlanModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-3xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
             {/* STICKY HEADER */}
             <div className="px-6 py-4 md:py-5 border-b border-[var(--color-border)] flex items-center justify-between shrink-0 bg-[var(--color-card)] z-10">
@@ -1644,7 +1644,7 @@ export default function AdminPlanosPage() {
 
       {/* COUPON MODAL (CREATE) */}
       {isCouponModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
             {/* STICKY HEADER */}
             <div className="px-6 py-4 md:py-5 border-b border-[var(--color-border)] flex items-center justify-between shrink-0 bg-[var(--color-card)] z-10">

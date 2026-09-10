@@ -27,11 +27,11 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
   return (
     <OrganizationProvider>
       <WelcomeIntroSplash />
-      <TrialLockOverlay />
       <RequireOrganization>
         <AppMuiThemeProvider>
           <ProposalStudyProvider>
-            <div className="flex min-h-screen flex-1 flex-col">
+            <div className="flex h-screen w-full flex-col overflow-hidden bg-[var(--color-background)]">
+              <TrialLockOverlay />
               {isFullscreenTemplateEditor ||
               isFullscreenBlueprintEditor ||
               isOnboardingOrganization ? (
@@ -40,7 +40,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
                 </main>
               ) : (
                 <SidebarProvider>
-                  <div className="flex h-screen flex-col">
+                  <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     <Topbar />
                     <div className="flex min-h-0 flex-1 overflow-hidden">
                       <AppSidebar />

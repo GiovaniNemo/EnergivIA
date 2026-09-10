@@ -47,7 +47,7 @@ export function TrialLockOverlay() {
     !user?.isTrialLocked
   ) {
     return (
-      <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-500/30 px-4 py-2.5 text-xs text-amber-200 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-[55] backdrop-blur-md">
+      <div className="w-full shrink-0 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-500/30 px-4 py-2.5 text-xs text-amber-200 flex flex-wrap items-center justify-between gap-3 z-20 backdrop-blur-md">
         <div className="flex items-center gap-2">
           <span className="flex h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
           <span>
@@ -79,7 +79,7 @@ export function TrialLockOverlay() {
   // Banner amigável quando o limite mensal de um plano pago for atingido (ex: Plano Essencial = 50 propostas/mês)
   if (!user?.isTrial && user?.isProposalLimitReached && !user?.isTrialLocked) {
     return (
-      <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-500/30 px-4 py-2.5 text-xs text-amber-200 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-[55] backdrop-blur-md">
+      <div className="w-full shrink-0 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-500/30 px-4 py-2.5 text-xs text-amber-200 flex flex-wrap items-center justify-between gap-3 z-20 backdrop-blur-md">
         <div className="flex items-center gap-2">
           <span className="flex h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
           <span>
