@@ -206,15 +206,14 @@ export function Topbar() {
 
       <div className="flex shrink-0 items-center gap-0.5 px-1.5 sm:gap-1.5 sm:px-3 md:gap-2">
         {/* Mobile Search Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="flex h-8 w-8 items-center justify-center rounded-lg sm:hidden text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+        <button
+          type="button"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)] transition-colors sm:hidden"
           onClick={() => setMobileSearchOpen(true)}
           aria-label="Abrir pesquisa"
         >
           <Search className="h-4 w-4" />
-        </Button>
+        </button>
 
         {!hasActiveSub &&
           (trialDaysLeft === 0 ? (
