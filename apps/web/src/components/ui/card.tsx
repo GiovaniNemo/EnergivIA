@@ -13,7 +13,7 @@ const Card = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof MuiCar
       ref={ref}
       elevation={0}
       className={cn(
-        "rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-card-foreground)] shadow-sm",
+        "rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-card-foreground)] shadow-[0_1px_3px_0_rgba(15,23,42,0.06),0_1px_2px_-1px_rgba(15,23,42,0.06)] dark:shadow-none transition-shadow",
         className
       )}
       sx={{

@@ -193,9 +193,9 @@ export function TemplateListPage(): JSX.Element {
   return (
     <div className="w-full min-w-0 space-y-6">
       {isTrial && (
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-sky-500/30 bg-sky-950/20 px-4 py-3 text-sm text-sky-200">
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-sky-500/30 bg-sky-50 dark:bg-sky-950/20 px-4 py-3 text-sm text-sky-950 dark:text-sky-200">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 shrink-0 text-sky-400" />
+            <Sparkles className="h-5 w-5 shrink-0 text-sky-600 dark:text-sky-400" />
             <span>
               <strong>Modo de Avaliação:</strong> Você tem acesso aos modelos oficiais padrão da
               EnergivIA para gerar suas propostas. A criação de templates personalizados é liberada
@@ -206,7 +206,7 @@ export function TemplateListPage(): JSX.Element {
           <Button
             size="sm"
             variant="outline"
-            className="shrink-0 border-sky-500/40 text-sky-300 hover:bg-sky-500/20"
+            className="shrink-0 border-sky-600/40 text-sky-900 dark:text-sky-300 hover:bg-sky-500/10 dark:hover:bg-sky-500/20"
             onClick={() => {
               window.location.href = "/gestao/meus-planos";
             }}

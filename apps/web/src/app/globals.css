@@ -97,50 +97,50 @@
     --color-error: #ef4444;
     --color-error-dark: #b91c1c;
     --color-error-foreground: #ffffff;
-    --color-background: #f1f5f9;
-    --color-foreground: #1a1a1a;
+    --color-background: #f8fafc;
+    --color-foreground: #0f172a;
     --color-muted: #f1f5f9;
-    --color-muted-foreground: #525252;
+    --color-muted-foreground: #475569;
     --color-border: #e2e8f0;
     --color-input: #e2e8f0;
-    --color-ring: #4caf50;
+    --color-ring: #16a34a;
     --color-card: #ffffff;
-    --color-card-foreground: #1a1a1a;
+    --color-card-foreground: #0f172a;
     --color-popover: #ffffff;
-    --color-popover-foreground: #1a1a1a;
-    --color-accent: #e8f5e9;
-    --color-accent-foreground: #1a1a1a;
+    --color-popover-foreground: #0f172a;
+    --color-accent: #f1f5f9;
+    --color-accent-foreground: #0f172a;
     --color-destructive: #ef4444;
     --color-destructive-foreground: #ffffff;
     --font-sans: var(--font-geist-sans), system-ui, sans-serif;
     --font-mono: var(--font-geist-mono), monospace;
     --font-heading: var(--font-geist-sans), system-ui, sans-serif;
-    --color-primary: var(--color-primary-500);
+    --color-primary: var(--color-primary-600);
     --color-sidebar: #ffffff;
-    --sidebar-active-border: rgba(16, 185, 129, 0.45);
-    --sidebar-active-text: #34d399;
+    --sidebar-active-border: rgba(22, 163, 74, 0.45);
+    --sidebar-active-text: #15803d;
     --sidebar-active-bg: linear-gradient(
       95deg,
-      rgba(52, 211, 153, 0.12) 0%,
-      rgba(52, 211, 153, 0.08) 35%,
-      rgba(236, 253, 245, 0.9) 100%
+      rgba(34, 197, 94, 0.12) 0%,
+      rgba(34, 197, 94, 0.06) 35%,
+      rgba(240, 253, 244, 0.95) 100%
     );
-    --sidebar-active-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.15),
-      0 8px 20px rgba(16, 185, 129, 0.12);
+    --sidebar-active-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.16),
+      0 4px 12px rgba(22, 163, 74, 0.08);
   }
 
   /* Força tema claro na landing (home) independente do tema global */
   .landing-light {
-    --color-background: #f1f5f9;
-    --color-foreground: #1a1a1a;
+    --color-background: #f8fafc;
+    --color-foreground: #0f172a;
     --color-muted: #f1f5f9;
-    --color-muted-foreground: #525252;
+    --color-muted-foreground: #475569;
     --color-border: #e2e8f0;
     --color-card: #ffffff;
-    --color-card-foreground: #1a1a1a;
-    --color-accent: #e8f5e9;
-    --color-accent-foreground: #1a1a1a;
-    --color-ring: #4caf50;
+    --color-card-foreground: #0f172a;
+    --color-accent: #f1f5f9;
+    --color-accent-foreground: #0f172a;
+    --color-ring: #16a34a;
   }
 
   /* Dark theme — charcoal + luminous green (dashboard reference) */

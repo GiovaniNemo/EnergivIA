@@ -557,14 +557,14 @@ export default function DashboardPage(): JSX.Element {
         </aside>
       </section>
 
-      {}
+      {/* KPI GRID */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((stat) => {
           const Icon = stat.icon;
           return (
             <article
               key={stat.label}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+              className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_3px_0_rgba(15,23,42,0.06),0_1px_2px_-1px_rgba(15,23,42,0.06)] dark:shadow-none transition-all hover:shadow-[0_4px_12px_-2px_rgba(15,23,42,0.08)]"
             >
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-[13px] font-medium text-[var(--color-card-foreground)]">
@@ -583,9 +583,9 @@ export default function DashboardPage(): JSX.Element {
                 <div
                   className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${
                     stat.trend === "up"
-                      ? "text-[#388e3c]"
+                      ? "text-[#16a34a]"
                       : stat.trend === "down"
-                        ? "text-[#b91c1c]"
+                        ? "text-[#dc2626]"
                         : "text-[var(--color-muted-foreground)]"
                   }`}
                 >
@@ -600,9 +600,9 @@ export default function DashboardPage(): JSX.Element {
         })}
       </section>
 
-      {}
+      {/* CHARTS & ACTIVITY */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
-        <article className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+        <article className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-[0_1px_3px_0_rgba(15,23,42,0.06),0_1px_2px_-1px_rgba(15,23,42,0.06)] dark:shadow-none">
           <h3 className="text-[15px] font-semibold text-[var(--color-foreground)]">
             Propostas — últimos 14 dias
           </h3>
@@ -610,8 +610,8 @@ export default function DashboardPage(): JSX.Element {
             Volume diário · {chartPoints.total} no período
           </p>
           <div
-            className="mt-4 h-[220px] overflow-hidden rounded-md"
-            style={{ background: "linear-gradient(180deg, rgba(76,175,80,0.06), transparent)" }}
+            className="mt-4 h-[220px] overflow-hidden rounded-xl border border-[var(--color-border)]/50"
+            style={{ background: "linear-gradient(180deg, rgba(34,197,94,0.06), transparent)" }}
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -644,18 +644,18 @@ export default function DashboardPage(): JSX.Element {
                 />
                 <Tooltip
                   content={<ProposalsBarTooltip />}
-                  cursor={{ fill: "rgba(76,175,80,0.08)" }}
+                  cursor={{ fill: "rgba(34,197,94,0.08)" }}
                 />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={40}>
                   {chartPoints.days.map((point, idx) => (
-                    <Cell key={`cell-${idx}`} fill={point.recent ? "#4caf50" : "#cbd5e1"} />
+                    <Cell key={`cell-${idx}`} fill={point.recent ? "#16a34a" : "#cbd5e1"} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         </article>
-        <article className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+        <article className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-[0_1px_3px_0_rgba(15,23,42,0.06),0_1px_2px_-1px_rgba(15,23,42,0.06)] dark:shadow-none">
           <h3 className="text-[15px] font-semibold text-[var(--color-foreground)]">
             Atividade recente
           </h3>
@@ -701,8 +701,8 @@ export default function DashboardPage(): JSX.Element {
         </article>
       </section>
 
-      {}
-      <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+      {/* PIPELINE / FUNIL */}
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-[0_1px_3px_0_rgba(15,23,42,0.06),0_1px_2px_-1px_rgba(15,23,42,0.06)] dark:shadow-none">
         <div className="mb-3 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
           <div>
             <h3 className="text-[15px] font-semibold text-[var(--color-foreground)]">
