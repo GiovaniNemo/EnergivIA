@@ -13,6 +13,7 @@ import { InviteMemberDto } from "./dto/invite-member.dto";
 import { UpdateMemberDto } from "./dto/update-member.dto";
 import { CreateWhatsappInboundPhoneDto } from "./dto/create-whatsapp-inbound-phone.dto";
 import { EmailService } from "../../common/email/email.service";
+import { getTenantPlanDetails } from "../../common/utils/plan-limits";
 
 import { softDeleteWhere as soft } from "../../prisma/soft-delete";
 
@@ -420,6 +421,31 @@ export class OrganizationsService {
     dto: CreateWhatsappInboundPhoneDto
   ) {
     await this.requireRole(organizationId, userId, [OrgRole.OWNER, OrgRole.ADMIN]);
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: organizationId },
+      include: {
+        subscription: {
+          include: { plan: true },
+        },
+      },
+    });
+
+    if (tenant) {
+      const planDetails = getTenantPlanDetails(tenant);
+      const maxPhones = planDetails.features.maxWhatsappNumbers;
+      if (maxPhones !== null && maxPhones !== undefined && maxPhones > 0) {
+        const currentPhones = await this.prisma.tenantWhatsappInboundPhone.count({
+          where: { organizationId },
+        });
+        if (currentPhones >= maxPhones) {
+          throw new BadRequestException(
+            `Limite de ${maxPhones} número(s) de WhatsApp atingido para o seu plano (${planDetails.planName}). Faça upgrade para o Plano Pro para conectar mais números.`
+          );
+        }
+      }
+    }
+
     const phoneDigits = normalizeInboundPhoneDigits(dto.phone);
     const dedupeKeys = expandInboundPhoneLookupCandidates(phoneDigits);
 
@@ -563,6 +589,34 @@ export class OrganizationsService {
 
   async invite(organizationId: string, inviterId: string, dto: InviteMemberDto) {
     await this.requireRole(organizationId, inviterId, [OrgRole.OWNER, OrgRole.ADMIN]);
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: organizationId },
+      include: {
+        subscription: {
+          include: { plan: true },
+        },
+      },
+    });
+
+    if (tenant) {
+      const planDetails = getTenantPlanDetails(tenant);
+      const memberLimit = planDetails.features.maxTeamMembers;
+      if (memberLimit !== null && memberLimit !== undefined && memberLimit > 0) {
+        const currentMembersCount = await this.prisma.organizationMember.count({
+          where: {
+            organizationId,
+            status: { in: [InvitationStatus.ACCEPTED, InvitationStatus.PENDING] },
+          },
+        });
+        if (currentMembersCount >= memberLimit) {
+          throw new BadRequestException(
+            `Limite de ${memberLimit} usuário(s) na equipe atingido para o seu plano (${planDetails.planName}). Faça upgrade para o Plano Pro para convidar mais membros.`
+          );
+        }
+      }
+    }
+
     const normalizedEmail = dto.email.trim().toLowerCase();
 
     const existing = await this.prisma.organizationMember.findFirst({
@@ -574,6 +628,7 @@ export class OrganizationsService {
         ],
       },
     });
+
     if (existing) {
       if (existing.status === InvitationStatus.ACCEPTED) {
         throw new ConflictException("Usuário já é membro desta organização");

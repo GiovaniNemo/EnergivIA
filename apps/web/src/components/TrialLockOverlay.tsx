@@ -39,7 +39,7 @@ export function TrialLockOverlay() {
     return null;
   }
 
-  // Banner amigável quando o limite é atingido (sem travar a tela de leitura)
+  // Banner amigável quando o limite do trial é atingido
   if (
     user?.isTrial &&
     (user?.trialExpired || user?.isTrialProposalLimitReached) &&
@@ -69,6 +69,36 @@ export function TrialLockOverlay() {
             className="px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-white font-medium rounded-lg text-xs transition border border-neutral-700"
           >
             Assinar
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Banner amigável quando o limite mensal de um plano pago for atingido (ex: Plano Essencial = 50 propostas/mês)
+  if (!user?.isTrial && user?.isProposalLimitReached && !user?.isTrialLocked) {
+    return (
+      <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-500/30 px-4 py-2.5 text-xs text-amber-200 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-[55] backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <span className="flex h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+          <span>
+            ⚡ Você atingiu o limite mensal de {user?.proposalsLimit ?? 50} propostas do{" "}
+            {user?.planName || "seu plano"}. Faça upgrade para o Plano Pro para gerar propostas
+            comerciais ilimitadas.
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setModalOpen(true)}
+            className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition shadow-sm"
+          >
+            Fazer Upgrade
+          </button>
+          <a
+            href="/gestao/meus-planos"
+            className="px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-white font-medium rounded-lg text-xs transition border border-neutral-700"
+          >
+            Ver Planos
           </a>
         </div>
       </div>

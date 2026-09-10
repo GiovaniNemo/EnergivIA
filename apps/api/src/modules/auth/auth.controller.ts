@@ -11,7 +11,7 @@ import { Public } from "../../common/decorators/public.decorator";
 import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator";
 import { PrismaService } from "../../prisma/prisma.service";
 
-import { isTrialExpired, getTrialDaysLeft } from "../../common/utils/business-days";
+import { getTenantPlanDetails } from "../../common/utils/plan-limits";
 
 @Controller("auth")
 export class AuthController {
@@ -39,22 +39,93 @@ export class AuthController {
     let trialDaysLeft = 5;
     let trialExpired = false;
     let proposalsCount = 0;
-    const proposalsLimit = 20;
+    let proposalsLimit: number | null = 20;
+    let planTier = "TRIAL";
+    let planName = "Plano Start";
+    let planFeatures = null;
+    let membersCount = 1;
+    let membersLimit: number | null = 1;
+    let customTemplatesCount = 0;
+    let customTemplatesLimit: number | null = 0;
+    let whatsappPhonesCount = 0;
+    let whatsappPhonesLimit: number | null = 0;
+    let hasProposalViewAlerts = false;
+    let isProposalLimitReached = false;
 
     if (user.tenantId) {
       const tenant = await this.prisma.tenant.findUnique({
         where: { id: user.tenantId },
-        include: { subscription: true },
+        include: {
+          subscription: {
+            include: { plan: true },
+          },
+        },
       });
 
       if (tenant) {
-        isTrial = !tenant.subscription || tenant.subscription.status !== "active";
+        const planDetails = getTenantPlanDetails(tenant);
+        isTrial = planDetails.isTrial;
+        trialDaysLeft = planDetails.trialDaysLeft;
+        trialExpired = planDetails.trialExpired;
+        planTier = planDetails.tier;
+        planName = planDetails.planName;
+        planFeatures = planDetails.features;
+        proposalsLimit = planDetails.features.maxProposalsPerMonth ?? null;
+        membersLimit = planDetails.features.maxTeamMembers ?? null;
+        customTemplatesLimit = planDetails.features.maxCustomTemplates ?? null;
+        whatsappPhonesLimit = planDetails.features.maxWhatsappNumbers ?? null;
+        hasProposalViewAlerts = planDetails.features.hasProposalViewAlerts;
+
+        // Contagem de membros
+        membersCount = await this.prisma.organizationMember.count({
+          where: {
+            organizationId: user.tenantId,
+            status: { in: ["ACCEPTED", "PENDING"] },
+          },
+        });
+
+        // Contagem de templates customizados
+        customTemplatesCount = await this.prisma.proposalTemplate.count({
+          where: {
+            tenantId: user.tenantId,
+            deletedAt: null,
+            status: { not: "ARCHIVED" },
+          },
+        });
+
+        // Contagem de números de WhatsApp
+        whatsappPhonesCount = await this.prisma.tenantWhatsappInboundPhone.count({
+          where: { organizationId: user.tenantId },
+        });
+
+        // Contagem de propostas
         if (isTrial) {
-          trialDaysLeft = getTrialDaysLeft(tenant.createdAt, 5);
-          trialExpired = isTrialExpired(tenant.createdAt, 5);
+          // No trial conta o total geral
           proposalsCount = await this.prisma.proposal.count({
             where: { tenantId: user.tenantId, deletedAt: null },
           });
+          proposalsLimit = 20;
+          isProposalLimitReached = proposalsCount >= 20;
+        } else if (proposalsLimit !== null && proposalsLimit > 0) {
+          // No Essencial com limite mensal, conta propostas criadas no mês atual (início do mês corrente)
+          const startOfMonth = new Date();
+          startOfMonth.setDate(1);
+          startOfMonth.setHours(0, 0, 0, 0);
+
+          proposalsCount = await this.prisma.proposal.count({
+            where: {
+              tenantId: user.tenantId,
+              deletedAt: null,
+              createdAt: { gte: startOfMonth },
+            },
+          });
+          isProposalLimitReached = proposalsCount >= proposalsLimit;
+        } else {
+          // Pro / Plus ilimitado
+          proposalsCount = await this.prisma.proposal.count({
+            where: { tenantId: user.tenantId, deletedAt: null },
+          });
+          isProposalLimitReached = false;
         }
       }
     }
@@ -69,8 +140,19 @@ export class AuthController {
       trialExpired,
       proposalsCount,
       proposalsLimit,
-      isTrialProposalLimitReached: isTrial && proposalsCount >= proposalsLimit,
-      isTrialLocked: false, // Sem trava agressiva de tela cheia
+      isTrialProposalLimitReached: isTrial ? isProposalLimitReached : false,
+      isProposalLimitReached,
+      isTrialLocked: false,
+      planTier,
+      planName,
+      planFeatures,
+      membersCount,
+      membersLimit,
+      customTemplatesCount,
+      customTemplatesLimit,
+      whatsappPhonesCount,
+      whatsappPhonesLimit,
+      hasProposalViewAlerts,
     };
   }
 

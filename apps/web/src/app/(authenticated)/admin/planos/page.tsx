@@ -25,13 +25,16 @@ import {
   DollarSign,
 } from "lucide-react";
 
+import { type PlanFeaturesConfig, normalizePlanFeatures } from "@energivia/shared-types";
+
 interface Plan {
   id: string;
   name: string;
   description?: string | null;
   price: number | string;
   interval?: string;
-  features?: string | string[] | null;
+  features?: string | string[] | Record<string, unknown> | null;
+  featuresConfig?: PlanFeaturesConfig;
   active?: boolean;
   stripeId?: string | null;
   createdAt?: string;
@@ -58,16 +61,23 @@ interface Coupon {
 }
 
 const PREDEFINED_BENEFITS = [
-  "Até 50 propostas/mês",
+  "Até 50 propostas comerciais/mês",
   "Propostas comerciais ilimitadas",
-  "Dimensionamento solar por IA",
+  "Dimensionamento solar por IA (HSP)",
   "OCR avançado de faturas de energia",
-  "Assistente WhatsApp IA integrado",
-  "CRM Solar Completo",
+  "Assistente WhatsApp IA integrado (1 número)",
+  "Múltiplos Bots de WhatsApp com IA",
+  "CRM Solar Completo & Pipeline",
+  "Templates padrão + 1 template personalizado",
+  "Criação e edição de templates ilimitada",
+  "Alertas em tempo real por Email e WhatsApp quando o cliente abre a proposta",
+  "Radar Solar ANEEL Completo (prospecção e lista)",
   "Geração de PDF com logotipo próprio",
   "Suporte prioritário via WhatsApp",
-  "Múltiplos usuários por equipe",
-  "Histórico financeiro & comissões",
+  "Até 2 usuários na equipe (1 convidado)",
+  "Até 5 usuários na equipe",
+  "Usuários ilimitados na equipe",
+  "Whitelabel completo (Sua marca)",
 ];
 
 export default function AdminPlanosPage() {
@@ -88,6 +98,16 @@ export default function AdminPlanosPage() {
     features: [] as string[],
     newFeatureInput: "",
     active: true,
+    // Limites quantitativos
+    maxProposalsPerMonth: "50",
+    maxTeamMembers: "2",
+    maxCustomTemplates: "1",
+    maxWhatsappNumbers: "1",
+    // Flags booleanas
+    hasProposalViewAlerts: false,
+    hasWhatsappBot: true,
+    hasRadarSolar: false,
+    hasCustomBranding: false,
   });
   const [planSubmitting, setPlanSubmitting] = useState(false);
 
@@ -162,38 +182,58 @@ export default function AdminPlanosPage() {
       description: "",
       price: "",
       interval: "month",
-      features: ["Propostas ilimitadas", "Suporte WhatsApp", "CRM Solar Integrado"],
+      features: [
+        "Até 50 propostas comerciais/mês",
+        "2 Usuários na equipe",
+        "Templates padrão + 1 personalizado",
+        "1 Número de WhatsApp integrado",
+      ],
       newFeatureInput: "",
       active: true,
+      maxProposalsPerMonth: "50",
+      maxTeamMembers: "2",
+      maxCustomTemplates: "1",
+      maxWhatsappNumbers: "1",
+      hasProposalViewAlerts: false,
+      hasWhatsappBot: true,
+      hasRadarSolar: false,
+      hasCustomBranding: false,
     });
     setIsPlanModalOpen(true);
   };
 
   const handleOpenEditPlan = (plan: Plan) => {
     setEditingPlan(plan);
-    let parsedFeatures: string[] = [];
-    if (plan.features) {
-      if (Array.isArray(plan.features)) {
-        parsedFeatures = plan.features;
-      } else if (typeof plan.features === "string") {
-        try {
-          const arr = JSON.parse(plan.features);
-          if (Array.isArray(arr)) parsedFeatures = arr;
-          else parsedFeatures = plan.features.split(",").map((s) => s.trim());
-        } catch {
-          parsedFeatures = plan.features.split(",").map((s) => s.trim());
-        }
-      }
-    }
+    const config = plan.featuresConfig || normalizePlanFeatures(plan.features, plan.name);
 
     setPlanForm({
       name: plan.name,
       description: plan.description || "",
       price: String(plan.price),
       interval: plan.interval || "month",
-      features: parsedFeatures.filter(Boolean),
+      features: config.bulletPoints && config.bulletPoints.length > 0 ? config.bulletPoints : [],
       newFeatureInput: "",
       active: plan.active !== false,
+      maxProposalsPerMonth:
+        config.maxProposalsPerMonth !== null && config.maxProposalsPerMonth !== undefined
+          ? String(config.maxProposalsPerMonth)
+          : "",
+      maxTeamMembers:
+        config.maxTeamMembers !== null && config.maxTeamMembers !== undefined
+          ? String(config.maxTeamMembers)
+          : "",
+      maxCustomTemplates:
+        config.maxCustomTemplates !== null && config.maxCustomTemplates !== undefined
+          ? String(config.maxCustomTemplates)
+          : "",
+      maxWhatsappNumbers:
+        config.maxWhatsappNumbers !== null && config.maxWhatsappNumbers !== undefined
+          ? String(config.maxWhatsappNumbers)
+          : "",
+      hasProposalViewAlerts: Boolean(config.hasProposalViewAlerts),
+      hasWhatsappBot: Boolean(config.hasWhatsappBot),
+      hasRadarSolar: Boolean(config.hasRadarSolar),
+      hasCustomBranding: Boolean(config.hasCustomBranding),
     });
     setIsPlanModalOpen(true);
   };
@@ -227,12 +267,31 @@ export default function AdminPlanosPage() {
 
     setPlanSubmitting(true);
     try {
+      const featuresConfig: PlanFeaturesConfig = {
+        maxProposalsPerMonth:
+          planForm.maxProposalsPerMonth.trim() === ""
+            ? null
+            : Number(planForm.maxProposalsPerMonth),
+        maxTeamMembers:
+          planForm.maxTeamMembers.trim() === "" ? null : Number(planForm.maxTeamMembers),
+        maxCustomTemplates:
+          planForm.maxCustomTemplates.trim() === "" ? null : Number(planForm.maxCustomTemplates),
+        maxWhatsappNumbers:
+          planForm.maxWhatsappNumbers.trim() === "" ? null : Number(planForm.maxWhatsappNumbers),
+        hasProposalViewAlerts: planForm.hasProposalViewAlerts,
+        hasWhatsappBot: planForm.hasWhatsappBot,
+        hasRadarSolar: planForm.hasRadarSolar,
+        hasCustomBranding: planForm.hasCustomBranding,
+        bulletPoints: planForm.features,
+      };
+
       const payload = {
         name: planForm.name.trim(),
         description: planForm.description.trim() || undefined,
         price: Number(planForm.price),
         interval: planForm.interval,
-        features: planForm.features,
+        features: featuresConfig,
+        featuresConfig,
         active: planForm.active,
       };
 
@@ -1047,6 +1106,176 @@ export default function AdminPlanosPage() {
                   onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
                   className="w-full bg-[var(--color-background)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded-xl p-3 text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition"
                 />
+              </div>
+
+              {/* RECURSOS E LIMITES QUANTITATIVOS */}
+              <div className="p-4 bg-[var(--color-background)] rounded-2xl border border-[var(--color-border)] space-y-4">
+                <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2.5">
+                  <div>
+                    <span className="text-xs font-bold text-[var(--color-foreground)] uppercase tracking-wider flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                      Regras & Limites do Plano
+                    </span>
+                    <p className="text-[11px] text-[var(--color-muted-foreground)] mt-0.5">
+                      Deixe o campo vazio para tornar a funcionalidade <strong>ILIMITADA</strong>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[11px] font-bold text-[var(--color-muted-foreground)] uppercase mb-1">
+                      Limite de Propostas / Mês
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Ilimitado (vazio)"
+                      value={planForm.maxProposalsPerMonth}
+                      onChange={(e) =>
+                        setPlanForm({ ...planForm, maxProposalsPerMonth: e.target.value })
+                      }
+                      className="w-full bg-[var(--color-card)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded-xl p-2.5 text-xs font-bold focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition"
+                    />
+                    <span className="text-[10px] text-[var(--color-muted-foreground)]">
+                      Ex: 50 para Essencial
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-[var(--color-muted-foreground)] uppercase mb-1">
+                      Limite de Usuários na Equipe
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Ilimitado (vazio)"
+                      value={planForm.maxTeamMembers}
+                      onChange={(e) => setPlanForm({ ...planForm, maxTeamMembers: e.target.value })}
+                      className="w-full bg-[var(--color-card)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded-xl p-2.5 text-xs font-bold focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition"
+                    />
+                    <span className="text-[10px] text-[var(--color-muted-foreground)]">
+                      Ex: 2 para Essencial, 5 para Pro
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-[var(--color-muted-foreground)] uppercase mb-1">
+                      Templates Personalizados
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Ilimitado (vazio)"
+                      value={planForm.maxCustomTemplates}
+                      onChange={(e) =>
+                        setPlanForm({ ...planForm, maxCustomTemplates: e.target.value })
+                      }
+                      className="w-full bg-[var(--color-card)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded-xl p-2.5 text-xs font-bold focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition"
+                    />
+                    <span className="text-[10px] text-[var(--color-muted-foreground)]">
+                      Ex: 1 para Essencial
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-[var(--color-muted-foreground)] uppercase mb-1">
+                      Números de WhatsApp Integrados
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Ilimitado (vazio)"
+                      value={planForm.maxWhatsappNumbers}
+                      onChange={(e) =>
+                        setPlanForm({ ...planForm, maxWhatsappNumbers: e.target.value })
+                      }
+                      className="w-full bg-[var(--color-card)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded-xl p-2.5 text-xs font-bold focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition"
+                    />
+                    <span className="text-[10px] text-[var(--color-muted-foreground)]">
+                      Ex: 1 para Essencial, 3 para Pro
+                    </span>
+                  </div>
+                </div>
+
+                {/* TOGGLE SWITCHES DE MÓDULOS */}
+                <div className="space-y-2.5 pt-2 border-t border-[var(--color-border)]">
+                  <label className="flex items-center justify-between p-2.5 bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] cursor-pointer hover:border-[var(--color-primary)]/40 transition">
+                    <div>
+                      <span className="text-xs font-bold text-[var(--color-foreground)] block">
+                        Alertas de Visualização de Proposta (Email & WhatsApp)
+                      </span>
+                      <span className="text-[10px] text-[var(--color-muted-foreground)]">
+                        Notifica em tempo real quando o cliente abre o link da proposta (Pro / Plus)
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={planForm.hasProposalViewAlerts}
+                      onChange={(e) =>
+                        setPlanForm({ ...planForm, hasProposalViewAlerts: e.target.checked })
+                      }
+                      className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-800"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-2.5 bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] cursor-pointer hover:border-[var(--color-primary)]/40 transition">
+                    <div>
+                      <span className="text-xs font-bold text-[var(--color-foreground)] block">
+                        Bot de WhatsApp IA
+                      </span>
+                      <span className="text-[10px] text-[var(--color-muted-foreground)]">
+                        Assistente virtual com inteligência artificial para cotações no WhatsApp
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={planForm.hasWhatsappBot}
+                      onChange={(e) =>
+                        setPlanForm({ ...planForm, hasWhatsappBot: e.target.checked })
+                      }
+                      className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-800"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-2.5 bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] cursor-pointer hover:border-[var(--color-primary)]/40 transition">
+                    <div>
+                      <span className="text-xs font-bold text-[var(--color-foreground)] block">
+                        Radar Solar ANEEL Completo
+                      </span>
+                      <span className="text-[10px] text-[var(--color-muted-foreground)]">
+                        Acesso à visualização tabular, contatos e conversão de usinas em leads
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={planForm.hasRadarSolar}
+                      onChange={(e) =>
+                        setPlanForm({ ...planForm, hasRadarSolar: e.target.checked })
+                      }
+                      className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-800"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-2.5 bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] cursor-pointer hover:border-[var(--color-primary)]/40 transition">
+                    <div>
+                      <span className="text-xs font-bold text-[var(--color-foreground)] block">
+                        Whitelabel & Logotipo Próprio
+                      </span>
+                      <span className="text-[10px] text-[var(--color-muted-foreground)]">
+                        Remoção de marcas da plataforma e personalização total da identidade visual
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={planForm.hasCustomBranding}
+                      onChange={(e) =>
+                        setPlanForm({ ...planForm, hasCustomBranding: e.target.checked })
+                      }
+                      className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-800"
+                    />
+                  </label>
+                </div>
               </div>
 
               {/* BENEFITS TAGS BUILDER */}

@@ -7,6 +7,7 @@ import { LeadActivityLogService } from "../lead-activity-log/lead-activity-log.s
 import { PrismaService } from "../../prisma/prisma.service";
 import { EmailService } from "../../common/email/email.service";
 import { WhatsappCloudService } from "../whatsapp/whatsapp-cloud.service";
+import { getTenantPlanDetails } from "../../common/utils/plan-limits";
 import type { RespondPublicProposalDto } from "../proposals/dto/respond-public-proposal.dto";
 
 const COMMERCIAL_ROLES: OrgRole[] = ["OWNER", "ADMIN", "SALES"];
@@ -227,29 +228,44 @@ export class NotificationsService {
         });
       }
 
-      // 4. Email Notification
-      this.sendProposalViewedEmail({
-        tenantId,
-        leadName: lead?.name || "Cliente",
-        proposalTitle: p.title,
-        proposalUrl: fullProposalUrl,
-        isRevisit: !isFirstView,
-        viewCount: p.clientViewCount,
-      }).catch((err) => {
-        this.logger.warn(`Failed to send proposal viewed email: ${err}`);
+      // 4. Email & WhatsApp Notifications (somente para planos com alertas de abertura ativados: Pro e Plus)
+      const tenantRecord = await this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        include: {
+          subscription: {
+            include: { plan: true },
+          },
+        },
       });
 
-      // 5. WhatsApp Notification
-      this.sendProposalViewedWhatsapp({
-        tenantId,
-        leadName: lead?.name || "Cliente",
-        proposalTitle: p.title,
-        fullProposalUrl,
-        isRevisit: !isFirstView,
-        viewCount: p.clientViewCount,
-      }).catch((err) => {
-        this.logger.warn(`Failed to send proposal viewed whatsapp: ${err}`);
-      });
+      const planDetails = tenantRecord ? getTenantPlanDetails(tenantRecord) : null;
+      const canSendExternalAlerts = planDetails?.features?.hasProposalViewAlerts ?? false;
+
+      if (canSendExternalAlerts) {
+        // Email Notification
+        this.sendProposalViewedEmail({
+          tenantId,
+          leadName: lead?.name || "Cliente",
+          proposalTitle: p.title,
+          proposalUrl: fullProposalUrl,
+          isRevisit: !isFirstView,
+          viewCount: p.clientViewCount,
+        }).catch((err) => {
+          this.logger.warn(`Failed to send proposal viewed email: ${err}`);
+        });
+
+        // WhatsApp Notification
+        this.sendProposalViewedWhatsapp({
+          tenantId,
+          leadName: lead?.name || "Cliente",
+          proposalTitle: p.title,
+          fullProposalUrl,
+          isRevisit: !isFirstView,
+          viewCount: p.clientViewCount,
+        }).catch((err) => {
+          this.logger.warn(`Failed to send proposal viewed whatsapp: ${err}`);
+        });
+      }
     }
   }
 

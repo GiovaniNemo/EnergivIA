@@ -206,6 +206,12 @@ export default function TeamPage() {
                 currentOrganization?.subscription?.status !== "active"
               ) {
                 setTeamUpgradeModalOpen(true);
+              } else if (
+                user?.membersLimit !== null &&
+                user?.membersLimit !== undefined &&
+                members.length >= user.membersLimit
+              ) {
+                setTeamUpgradeModalOpen(true);
               } else {
                 setInviteOpen(true);
               }
@@ -227,10 +233,21 @@ export default function TeamPage() {
               Gestão de Equipe & Vendedores
             </DialogTitle>
             <DialogDescription className="pt-2 text-sm text-[var(--color-muted-foreground)] leading-relaxed">
-              No período de teste gratuito (Plano Start), o acesso é individual. O convite e
-              gerenciamento de múltiplos usuários e vendedores na equipe é liberado a partir do{" "}
-              <strong>Plano Pro</strong> (até 5 usuários) e <strong>Plano Plus</strong> (usuários
-              ilimitados).
+              {user?.isTrial ? (
+                <>
+                  No período de teste gratuito (Plano Start), o acesso é individual. O convite e
+                  gerenciamento de múltiplos usuários na equipe é liberado no{" "}
+                  <strong>Plano Essencial</strong> (até 2 usuários) e <strong>Plano Pro</strong>{" "}
+                  (até 5 usuários).
+                </>
+              ) : (
+                <>
+                  Você atingiu o limite de <strong>{user?.membersLimit ?? 2} membros</strong> na
+                  equipe do seu plano atual ({user?.planName || "Plano Essencial"}). Para adicionar
+                  mais vendedores e gestores, faça upgrade para o <strong>Plano Pro</strong> (até 5
+                  usuários) ou <strong>Plano Plus</strong> (ilimitado).
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-end gap-3 pt-4">
@@ -244,7 +261,7 @@ export default function TeamPage() {
                 window.location.href = "/gestao/meus-planos";
               }}
             >
-              Conhecer Plano Pro &rarr;
+              Conhecer Planos &rarr;
             </Button>
           </div>
         </DialogContent>

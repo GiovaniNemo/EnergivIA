@@ -198,8 +198,9 @@ export function TemplateListPage(): JSX.Element {
             <Sparkles className="h-5 w-5 shrink-0 text-sky-400" />
             <span>
               <strong>Modo de Avaliação:</strong> Você tem acesso aos modelos oficiais padrão da
-              EnergivIA para gerar suas propostas. A criação e personalização de layouts exclusivos
-              são liberadas a partir do <strong>Plano Pro</strong>.
+              EnergivIA para gerar suas propostas. A criação de templates personalizados é liberada
+              no <strong>Plano Essencial</strong> (1 template) e <strong>Plano Pro</strong>{" "}
+              (ilimitado).
             </span>
           </div>
           <Button
@@ -226,6 +227,12 @@ export function TemplateListPage(): JSX.Element {
           onClick={() => {
             if (isTrial) {
               setTemplateUpgradeModalOpen(true);
+            } else if (
+              user?.customTemplatesLimit !== null &&
+              user?.customTemplatesLimit !== undefined &&
+              templates.length >= user.customTemplatesLimit
+            ) {
+              setTemplateUpgradeModalOpen(true);
             } else {
               setCreateDialogOpen(true);
             }
@@ -234,7 +241,10 @@ export function TemplateListPage(): JSX.Element {
         >
           {creating ? (
             "Criando..."
-          ) : isTrial ? (
+          ) : isTrial ||
+            (user?.customTemplatesLimit !== null &&
+              user?.customTemplatesLimit !== undefined &&
+              templates.length >= user.customTemplatesLimit) ? (
             <span className="flex items-center gap-1.5">
               <Lock className="h-4 w-4" /> Novo template
             </span>
@@ -258,10 +268,21 @@ export function TemplateListPage(): JSX.Element {
               Personalização de Templates
             </DialogTitle>
             <DialogDescription className="pt-2 text-sm leading-relaxed text-[var(--color-muted-foreground)]">
-              No período de teste gratuito, você pode utilizar todos os templates oficiais padrão da
-              EnergivIA nas suas cotações e propostas. A criação, edição e customização de layouts
-              exclusivos da sua marca são liberadas nos planos <strong>Pro</strong> e{" "}
-              <strong>Plus</strong>.
+              {isTrial ? (
+                <>
+                  No período de teste gratuito, você pode utilizar todos os templates oficiais
+                  padrão da EnergivIA. A criação de templates personalizados exclusivos é liberada
+                  no <strong>Plano Essencial</strong> (1 template próprio) e nos planos{" "}
+                  <strong>Pro</strong> e <strong>Plus</strong> (ilimitados).
+                </>
+              ) : (
+                <>
+                  Você atingiu o limite de{" "}
+                  <strong>{user?.customTemplatesLimit ?? 1} template personalizado</strong> do seu
+                  plano ({user?.planName || "Plano Essencial"}). Para criar templates e layouts
+                  ilimitados, faça upgrade para o <strong>Plano Pro</strong>.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-end gap-3 pt-4">

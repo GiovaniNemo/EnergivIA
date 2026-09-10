@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException, Logger } from "@nestjs/common";
+import { Injectable, NotFoundException, Logger, OnModuleInit } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { StripeService } from "../stripe/stripe.service";
+import { Prisma } from "@prisma/client";
+import { normalizePlanFeatures } from "@energivia/shared-types";
 
 @Injectable()
-export class PlansService {
+export class PlansService implements OnModuleInit {
   private readonly logger = new Logger(PlansService.name);
 
   constructor(
@@ -11,8 +13,39 @@ export class PlansService {
     private stripeService: StripeService
   ) {}
 
+  async onModuleInit() {
+    try {
+      await this.syncDefaultPlans();
+    } catch (err) {
+      this.logger.warn(`Could not sync default plans on init: ${err}`);
+    }
+  }
+
+  private async syncDefaultPlans() {
+    const plans = await this.prisma.plan.findMany();
+    for (const plan of plans) {
+      const currentFeats = plan.features as Record<string, unknown> | null;
+      const isStructured =
+        currentFeats &&
+        typeof currentFeats === "object" &&
+        !Array.isArray(currentFeats) &&
+        ("maxProposalsPerMonth" in currentFeats || "hasProposalViewAlerts" in currentFeats);
+
+      if (!isStructured) {
+        const normalized = normalizePlanFeatures(plan.features, plan.name);
+        await this.prisma.plan.update({
+          where: { id: plan.id },
+          data: {
+            features: normalized as unknown as Prisma.InputJsonValue,
+          },
+        });
+        this.logger.log(`Synced structured features for plan "${plan.name}" (${plan.id})`);
+      }
+    }
+  }
+
   async findAll(includeInactive = false) {
-    return this.prisma.plan.findMany({
+    const plans = await this.prisma.plan.findMany({
       where: includeInactive ? {} : { active: true },
       orderBy: { price: "asc" },
       include: {
@@ -25,6 +58,11 @@ export class PlansService {
         },
       },
     });
+
+    return plans.map((p) => ({
+      ...p,
+      featuresConfig: normalizePlanFeatures(p.features, p.name),
+    }));
   }
 
   async findOne(id: string) {
@@ -39,7 +77,10 @@ export class PlansService {
       },
     });
     if (!plan) throw new NotFoundException("Plan not found");
-    return plan;
+    return {
+      ...plan,
+      featuresConfig: normalizePlanFeatures(plan.features, plan.name),
+    };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,18 +102,26 @@ export class PlansService {
       this.logger.warn(`Could not create Stripe product/price during plan creation: ${error}`);
     }
 
+    const normalizedFeatures = normalizePlanFeatures(data.featuresConfig || data.features, name);
+
     // 3. Salva no banco com o stripeId
-    return this.prisma.plan.create({
+    const created = await this.prisma.plan.create({
       data: {
         name,
         description,
         price,
         interval,
-        features: data.features || [],
+        features: normalizedFeatures as unknown as Prisma.InputJsonValue,
         active: data.active !== undefined ? Boolean(data.active) : true,
+
         stripeId: stripePriceId,
       },
     });
+
+    return {
+      ...created,
+      featuresConfig: normalizePlanFeatures(created.features, created.name),
+    };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -149,18 +198,38 @@ export class PlansService {
       this.logger.error(`Error synchronizing plan update with Stripe: ${stripeErr}`);
     }
 
-    return this.prisma.plan.update({
+    const rawFeaturesToSave =
+      data.featuresConfig !== undefined
+        ? data.featuresConfig
+        : data.features !== undefined
+          ? data.features
+          : undefined;
+
+    const normalizedFeatures =
+      rawFeaturesToSave !== undefined
+        ? normalizePlanFeatures(rawFeaturesToSave, newName)
+        : undefined;
+
+    const updated = await this.prisma.plan.update({
       where: { id },
       data: {
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.description !== undefined ? { description: data.description } : {}),
         ...(newPrice !== undefined ? { price: newPrice } : {}),
         ...(data.interval !== undefined ? { interval: data.interval } : {}),
-        ...(data.features !== undefined ? { features: data.features } : {}),
+        ...(normalizedFeatures !== undefined
+          ? { features: normalizedFeatures as unknown as Prisma.InputJsonValue }
+          : {}),
+
         ...(data.active !== undefined ? { active: Boolean(data.active) } : {}),
         ...(newStripeId ? { stripeId: newStripeId } : {}),
       },
     });
+
+    return {
+      ...updated,
+      featuresConfig: normalizePlanFeatures(updated.features, updated.name),
+    };
   }
 
   async toggleActive(id: string, active?: boolean) {

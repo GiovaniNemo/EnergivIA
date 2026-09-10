@@ -20,11 +20,13 @@ import {
   Loader2,
 } from "lucide-react";
 
+import { normalizePlanFeatures } from "@energivia/shared-types";
+
 interface Plan {
   id: string;
   name: string;
   price: number | string;
-  features?: string | string[] | null;
+  features?: string | string[] | Record<string, unknown> | null;
   active?: boolean;
 }
 
@@ -46,61 +48,19 @@ function getOriginalPrice(planName: string, currentPrice: number): number | null
 }
 
 function parseFeatures(
-  features: string | string[] | null | undefined,
+  features: string | string[] | Record<string, unknown> | null | undefined,
+  planName?: string,
   isBasic?: boolean,
   isPro?: boolean,
   isPlus?: boolean
 ): string[] {
-  if (features) {
-    if (Array.isArray(features)) {
-      return features;
-    }
-    if (typeof features === "string") {
-      try {
-        const parsed = JSON.parse(features);
-        if (Array.isArray(parsed)) return parsed;
-      } catch {
-        // Not JSON
-      }
-      return features
-        .split(",")
-        .map((f) => f.trim())
-        .filter(Boolean);
-    }
+  const effectiveName =
+    planName || (isPlus ? "Plus" : isPro ? "Pro" : isBasic ? "Essencial" : "Essencial");
+  const config = normalizePlanFeatures(features, effectiveName);
+  if (config.bulletPoints && config.bulletPoints.length > 0) {
+    return config.bulletPoints;
   }
-
-  if (isBasic) {
-    return [
-      "Até 30 propostas por mês",
-      "1 Usuário / Vendedor",
-      "Dimensionamento Solar Inteligente (HSP)",
-      "CRM de Negociações básico",
-      "Geração de PDF Comercial",
-      "Suporte via e-mail e chat",
-    ];
-  }
-  if (isPro) {
-    return [
-      "Propostas Comerciais Ilimitadas",
-      "Até 5 Usuários / Vendedores",
-      "Bot de WhatsApp com IA 24/7",
-      "Radar Solar ANEEL Integrado",
-      "CRM Solar Completo com Automações",
-      "Suporte Prioritário no WhatsApp",
-    ];
-  }
-  if (isPlus) {
-    return [
-      "Propostas e Cálculos Ilimitados",
-      "Usuários Ilimitados na Equipe",
-      "Múltiplos Bots de WhatsApp com IA",
-      "Radar Solar ANEEL Nacional Ilimitado",
-      "Whitelabel Completo (Sua Marca)",
-      "Gerente de Contas Dedicado",
-    ];
-  }
-
-  return ["Acesso total à plataforma", "Geração ilimitada", "Suporte dedicado"];
+  return ["Acesso total à plataforma", "Geração comercial com IA", "Suporte dedicado"];
 }
 
 function MeusPlanosContent() {
@@ -470,7 +430,7 @@ function MeusPlanosContent() {
                 planNameLower.includes("essencial") || planNameLower.includes("básic");
               const isHighlighted = isCurrentPlan ? true : isPro;
               const originalPrice = getOriginalPrice(plan.name, priceNum);
-              const feats = parseFeatures(plan.features, isBasic, isPro, isPlus);
+              const feats = parseFeatures(plan.features, plan.name, isBasic, isPro, isPlus);
 
               return (
                 <div

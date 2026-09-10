@@ -8,6 +8,7 @@ import {
   type ProposalTemplateConfig,
   type ProposalTemplateSectionKey,
 } from "@energivia/shared-types";
+import { getTenantPlanDetails } from "../../common/utils/plan-limits";
 import type { CreateProposalTemplateDto } from "./dto/create-proposal-template.dto";
 import type { UpdateProposalTemplateDto } from "./dto/update-proposal-template.dto";
 
@@ -57,6 +58,35 @@ export class ProposalTemplatesService implements OnModuleInit {
   }
 
   async create(tenantId: string, dto: CreateProposalTemplateDto) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: {
+        subscription: {
+          include: { plan: true },
+        },
+      },
+    });
+
+    if (tenant) {
+      const planDetails = getTenantPlanDetails(tenant);
+      const templateLimit = planDetails.features.maxCustomTemplates;
+      if (templateLimit !== null && templateLimit !== undefined) {
+        if (templateLimit === 0) {
+          throw new BadRequestException(
+            "No período de testes, você tem acesso aos modelos oficiais padrão da EnergivIA. A criação de templates personalizados é liberada no Plano Essencial (1 template) e Pro (ilimitado)."
+          );
+        }
+        const currentCount = await this.prisma.proposalTemplate.count({
+          where: { tenantId, deletedAt: null, status: { not: "ARCHIVED" } },
+        });
+        if (currentCount >= templateLimit) {
+          throw new BadRequestException(
+            `Limite de ${templateLimit} template(s) personalizado(s) atingido para o seu plano (${planDetails.planName}). Faça upgrade para o Plano Pro para criar templates ilimitados.`
+          );
+        }
+      }
+    }
+
     const config = this.normalizeConfig(dto.config);
     const shouldSetDefault = dto.isDefault === true;
 

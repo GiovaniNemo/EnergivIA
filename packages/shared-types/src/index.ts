@@ -1,5 +1,6 @@
 export * from "./chat";
 export * from "./kits";
+export * from "./plans";
 export * from "./product-catalog";
 export * from "./proposal-integrator";
 export * from "./proposal-templates";

@@ -36,6 +36,8 @@ export interface Organization {
   } | null;
 }
 
+import type { PlanFeaturesConfig } from "@energivia/shared-types";
+
 export interface MeResponse {
   id: string;
   email: string;
@@ -45,7 +47,24 @@ export interface MeResponse {
   tenantId?: string | null;
   organizations?: Organization[];
   currentOrganizationId?: string | null;
+  isTrial?: boolean;
+  trialDaysLeft?: number;
+  trialExpired?: boolean;
+  proposalsCount?: number;
+  proposalsLimit?: number | null;
+  isTrialProposalLimitReached?: boolean;
+  isProposalLimitReached?: boolean;
   isTrialLocked?: boolean;
+  planTier?: "TRIAL" | "ESSENCIAL" | "PRO" | "PLUS" | string;
+  planName?: string;
+  planFeatures?: PlanFeaturesConfig | null;
+  membersCount?: number;
+  membersLimit?: number | null;
+  customTemplatesCount?: number;
+  customTemplatesLimit?: number | null;
+  whatsappPhonesCount?: number;
+  whatsappPhonesLimit?: number | null;
+  hasProposalViewAlerts?: boolean;
 }
 
 export class MeRequestError extends Error {
