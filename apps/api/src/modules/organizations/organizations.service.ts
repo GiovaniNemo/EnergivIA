@@ -142,6 +142,7 @@ export class OrganizationsService {
       OrgRole.ADMIN,
       OrgRole.SALES,
       OrgRole.ENGINEER,
+      OrgRole.VIEWER,
     ]);
     return this.whatsappPairing.generatePairingCode(organizationId, userId);
   }
@@ -422,34 +423,7 @@ export class OrganizationsService {
   ) {
     await this.requireRole(organizationId, userId, [OrgRole.OWNER, OrgRole.ADMIN]);
 
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: organizationId },
-      include: {
-        subscription: {
-          include: { plan: true },
-        },
-      },
-    });
-
-    if (tenant) {
-      const planDetails = getTenantPlanDetails(tenant);
-      const maxPhones = planDetails.features.maxWhatsappNumbers;
-      if (maxPhones === 0) {
-        throw new BadRequestException(
-          `A conexão de números de WhatsApp não está disponível no seu plano (${planDetails.planName}). Faça upgrade para o Plano Essencial ou superior.`
-        );
-      }
-      if (maxPhones !== null && maxPhones !== undefined && maxPhones > 0) {
-        const currentPhones = await this.prisma.tenantWhatsappInboundPhone.count({
-          where: { organizationId },
-        });
-        if (currentPhones >= maxPhones) {
-          throw new BadRequestException(
-            `Limite de ${maxPhones} número(s) de WhatsApp atingido para o seu plano (${planDetails.planName}). Faça upgrade para o Plano Pro para conectar mais números.`
-          );
-        }
-      }
-    }
+    // Trava de planos removida para WhatsApp: conexão de números liberada para todos os planos
 
     const phoneDigits = normalizeInboundPhoneDigits(dto.phone);
     const dedupeKeys = expandInboundPhoneLookupCandidates(phoneDigits);
