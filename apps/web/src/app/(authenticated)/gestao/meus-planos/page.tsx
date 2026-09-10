@@ -65,7 +65,7 @@ function parseFeatures(
 }
 
 function MeusPlanosContent() {
-  const { currentOrganization, refetch: refetchOrg } = useOrganization();
+  const { currentOrganization, user, refetch: refetchOrg } = useOrganization();
   const searchParams = useSearchParams();
   const sessionId = searchParams?.get("session_id");
 
