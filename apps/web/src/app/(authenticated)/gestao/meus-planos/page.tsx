@@ -425,7 +425,9 @@ function MeusPlanosContent() {
               const isUpgrade = subscription && priceNum > currentPlanPrice;
               const planNameLower = (plan.name || "").toLowerCase();
               const isPlus = planNameLower.includes("plus");
-              const isPro = planNameLower.includes("pro") || planNameLower.includes("profissional");
+              const isPro =
+                (planNameLower.includes("pro") || planNameLower.includes("profissional")) &&
+                !isPlus;
               const isBasic =
                 planNameLower.includes("essencial") || planNameLower.includes("básic");
               const isHighlighted = isCurrentPlan ? true : isPro;
@@ -438,9 +440,11 @@ function MeusPlanosContent() {
                   className={`relative bg-[var(--color-card)] rounded-3xl shadow-xl overflow-hidden border ${
                     isCurrentPlan
                       ? "border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.15)] ring-2 ring-emerald-500/30"
-                      : isHighlighted
-                        ? "border-yellow-500/50 shadow-[0_0_30px_rgba(234,179,8,0.1)] ring-1 ring-yellow-500/30"
-                        : "border-[var(--color-border)]"
+                      : isPlus
+                        ? "border-purple-500/40 shadow-[0_0_30px_rgba(168,85,247,0.12)] ring-1 ring-purple-500/30"
+                        : isHighlighted
+                          ? "border-yellow-500/50 shadow-[0_0_30px_rgba(234,179,8,0.1)] ring-1 ring-yellow-500/30"
+                          : "border-[var(--color-border)]"
                   } hover:shadow-2xl transition-all duration-300 flex flex-col hover:-translate-y-1`}
                 >
                   {/* Status Badges */}
@@ -450,7 +454,13 @@ function MeusPlanosContent() {
                       Seu Plano Atual
                     </div>
                   ) : isUpgrade ? (
-                    <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950 text-xs font-extrabold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider flex items-center gap-1 shadow-md">
+                    <div
+                      className={`absolute top-0 right-0 text-xs font-extrabold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider flex items-center gap-1 shadow-md ${
+                        isPlus
+                          ? "bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-500/20"
+                          : "bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950"
+                      }`}
+                    >
                       <Sparkles className="w-3.5 h-3.5" />
                       Disponível p/ Upgrade
                     </div>
@@ -463,12 +473,14 @@ function MeusPlanosContent() {
                   <div className="p-8 border-b border-[var(--color-border)] bg-[var(--color-muted)]/20">
                     <div className="flex items-center gap-3 mb-2">
                       <div
-                        className={`w-12 h-12 rounded-2xl flex items-center justify-center border ${
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${
                           isCurrentPlan
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                            : isHighlighted
-                              ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/30"
-                              : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)] border-[var(--color-border)]"
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
+                            : isPlus
+                              ? "bg-purple-500/15 text-purple-400 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+                              : isHighlighted
+                                ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.15)]"
+                                : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)] border-[var(--color-border)]"
                         }`}
                       >
                         {isPro || isPlus ? (
@@ -497,7 +509,13 @@ function MeusPlanosContent() {
                           <span className="text-sm line-through text-[var(--color-muted-foreground)] font-medium">
                             R$ {originalPrice.toFixed(2).replace(".", ",")}
                           </span>
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <span
+                            className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                              isPlus
+                                ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                                : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                            }`}
+                          >
                             ECONOMIZE {Math.round((1 - priceNum / originalPrice) * 100)}%
                           </span>
                         </div>
@@ -524,9 +542,11 @@ function MeusPlanosContent() {
                             className={`w-5 h-5 shrink-0 mt-0.5 ${
                               isCurrentPlan
                                 ? "text-emerald-400"
-                                : isHighlighted
-                                  ? "text-yellow-400"
-                                  : "text-emerald-500"
+                                : isPlus
+                                  ? "text-purple-400"
+                                  : isHighlighted
+                                    ? "text-yellow-400"
+                                    : "text-emerald-500"
                             }`}
                           />
                           <span className="leading-tight">{feat}</span>
@@ -550,7 +570,11 @@ function MeusPlanosContent() {
                               ? `Fazer Upgrade para ${plan.name}`
                               : `Fazer Upgrade para Plano ${plan.name}`
                           }
-                          className="w-full bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-slate-950 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-yellow-500/20 hover:scale-[1.02]"
+                          className={`w-full py-3.5 rounded-xl font-bold transition-all shadow-lg hover:scale-[1.02] ${
+                            isPlus
+                              ? "bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white shadow-purple-500/25"
+                              : "bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-slate-950 shadow-yellow-500/20"
+                          }`}
                         />
                       ) : (
                         <PaymentWrapper
@@ -566,7 +590,11 @@ function MeusPlanosContent() {
                                 ? `Assinar ${plan.name}`
                                 : `Assinar Plano ${plan.name}`
                           }
-                          className="w-full bg-[var(--color-primary)] text-white py-3.5 rounded-xl font-bold hover:opacity-90 transition-all shadow-md hover:scale-[1.02]"
+                          className={`w-full py-3.5 rounded-xl font-bold transition-all shadow-md hover:scale-[1.02] ${
+                            isPlus
+                              ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-500/25"
+                              : "bg-[var(--color-primary)] text-white hover:opacity-90"
+                          }`}
                         />
                       )}
                     </div>

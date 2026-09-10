@@ -161,11 +161,19 @@ export function TrialLockOverlay() {
             // Cores e Icones baseados no plano
             const cardBorder = isHighlighted
               ? "border-yellow-500/60 shadow-[0_0_40px_rgba(234,179,8,0.2)] ring-1 ring-yellow-500/40"
-              : "border-gray-800";
-            const iconBg = isHighlighted
-              ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-              : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
-            const priceColor = isHighlighted ? "text-yellow-400" : "text-emerald-400";
+              : isPlus
+                ? "border-purple-500/40 shadow-[0_0_30px_rgba(168,85,247,0.15)] ring-1 ring-purple-500/30"
+                : "border-gray-800";
+            const iconBg = isPlus
+              ? "bg-purple-500/15 text-purple-400 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+              : isHighlighted
+                ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
+            const priceColor = isPlus
+              ? "text-purple-400"
+              : isHighlighted
+                ? "text-yellow-400"
+                : "text-emerald-400";
 
             return (
               <div
@@ -181,7 +189,7 @@ export function TrialLockOverlay() {
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-11 h-11 rounded-xl flex items-center justify-center border ${iconBg}`}
+                      className={`w-11 h-11 rounded-xl flex items-center justify-center border transition-all ${iconBg}`}
                     >
                       {isPro || isPlus ? (
                         <Gem className="w-5 h-5" />
@@ -210,7 +218,13 @@ export function TrialLockOverlay() {
                       <span className="text-xs line-through text-gray-400 font-medium">
                         R$ {originalPrice.toFixed(2).replace(".", ",")}
                       </span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full border ${
+                          isPlus
+                            ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+                            : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                        }`}
+                      >
                         -{Math.round((1 - planPrice / originalPrice) * 100)}% OFF
                       </span>
                     </div>
@@ -241,7 +255,13 @@ export function TrialLockOverlay() {
                               className="flex items-start gap-3 text-[15px] text-gray-300"
                             >
                               <CheckCircle2
-                                className={`w-5 h-5 shrink-0 ${isHighlighted ? "text-yellow-500" : "text-emerald-500"}`}
+                                className={`w-5 h-5 shrink-0 ${
+                                  isPlus
+                                    ? "text-purple-400"
+                                    : isHighlighted
+                                      ? "text-yellow-500"
+                                      : "text-emerald-500"
+                                }`}
                               />
                               <span className="leading-tight mt-0.5">{featStr}</span>
                             </li>
@@ -268,9 +288,11 @@ export function TrialLockOverlay() {
                   {/* Container to wrapper the PaymentForm button to inherit styles visually */}
                   <div
                     className={`[&_button]:w-full [&_button]:py-3.5 [&_button]:rounded-xl [&_button]:text-base [&_button]:font-bold [&_button]:shadow-lg [&_button]:transition-all [&_button:hover]:scale-[1.02] ${
-                      isHighlighted
-                        ? "[&_button]:bg-gradient-to-r [&_button]:from-yellow-400 [&_button]:to-amber-500 [&_button]:text-yellow-950 [&_button:hover]:shadow-yellow-500/25"
-                        : "[&_button]:bg-emerald-500 [&_button]:text-white [&_button:hover]:bg-emerald-400 [&_button:hover]:shadow-emerald-500/25"
+                      isPlus
+                        ? "[&_button]:bg-gradient-to-r [&_button]:from-purple-600 [&_button]:to-indigo-600 [&_button]:text-white [&_button:hover]:from-purple-500 [&_button:hover]:to-indigo-500 [&_button:hover]:shadow-purple-500/25"
+                        : isHighlighted
+                          ? "[&_button]:bg-gradient-to-r [&_button]:from-yellow-400 [&_button]:to-amber-500 [&_button]:text-yellow-950 [&_button:hover]:shadow-yellow-500/25"
+                          : "[&_button]:bg-emerald-500 [&_button]:text-white [&_button:hover]:bg-emerald-400 [&_button:hover]:shadow-emerald-500/25"
                     }`}
                   >
                     <PaymentWrapper planId={plan?.id || ""} planName={planName} />
