@@ -248,7 +248,7 @@ export function normalizePlanFeatures(
         : Boolean(baseDefaults.hasCustomBranding);
 
     let bulletPoints = baseDefaults.bulletPoints;
-    if (Array.isArray(parsed["bulletPoints"]) && parsed["bulletPoints"].length > 0) {
+    if (Array.isArray(parsed["bulletPoints"])) {
       bulletPoints = (parsed["bulletPoints"] as unknown[]).map(String);
     }
 

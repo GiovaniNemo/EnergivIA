@@ -342,6 +342,18 @@ export default function AdminPlanosPage() {
 
     setPlanSubmitting(true);
     try {
+      // Garante que se o usuário estiver editando um item em linha ou digitou no input sem clicar em adicionar, o texto seja salvo
+      let featuresToSave = [...planForm.features];
+      if (editingFeatureIndex !== null && editingFeatureText.trim()) {
+        featuresToSave[editingFeatureIndex] = editingFeatureText.trim();
+      }
+      if (
+        planForm.newFeatureInput.trim() &&
+        !featuresToSave.includes(planForm.newFeatureInput.trim())
+      ) {
+        featuresToSave.push(planForm.newFeatureInput.trim());
+      }
+
       const featuresConfig: PlanFeaturesConfig = {
         maxProposalsPerMonth:
           planForm.maxProposalsPerMonth.trim() === ""
@@ -357,7 +369,7 @@ export default function AdminPlanosPage() {
         hasWhatsappBot: planForm.hasWhatsappBot,
         hasRadarSolar: planForm.hasRadarSolar,
         hasCustomBranding: planForm.hasCustomBranding,
-        bulletPoints: planForm.features,
+        bulletPoints: featuresToSave,
       };
 
       const payload = {
