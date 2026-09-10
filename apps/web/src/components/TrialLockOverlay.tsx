@@ -4,12 +4,13 @@ import React, { useEffect, useState } from "react";
 import { useOrganization } from "./providers/organization-provider";
 import PaymentWrapper from "./PaymentForm";
 import { Rocket, Gem, CheckCircle2, LockKeyhole, TrendingUp, LogOut } from "lucide-react";
+import { normalizePlanFeatures } from "@energivia/shared-types";
 
 interface Plan {
   id: string;
   name: string;
   price: number;
-  features: string | string[];
+  features: string | string[] | Record<string, unknown>;
   active?: boolean;
 }
 
@@ -227,51 +228,8 @@ export function TrialLockOverlay() {
                 <div className="flex-grow">
                   <ul className="space-y-4 mb-8">
                     {(() => {
-                      let feats: string[] = [];
-                      if (plan?.features) {
-                        if (Array.isArray(plan.features)) {
-                          feats = plan.features.map((f) => String(f ?? ""));
-                        } else if (typeof plan.features === "string") {
-                          try {
-                            const parsed = JSON.parse(plan.features);
-                            if (Array.isArray(parsed)) feats = parsed.map((f) => String(f ?? ""));
-                            else feats = plan.features.split(",");
-                          } catch {
-                            feats = plan.features.split(",");
-                          }
-                        }
-                      }
-
-                      if (feats.length === 0) {
-                        if (isBasic) {
-                          feats = [
-                            "Até 30 propostas por mês",
-                            "1 Usuário / Vendedor",
-                            "Dimensionamento Solar Inteligente (HSP)",
-                            "CRM de Negociações básico",
-                            "Geração de PDF Comercial",
-                            "Suporte via e-mail e chat",
-                          ];
-                        } else if (isPlus) {
-                          feats = [
-                            "Propostas e Cálculos Ilimitados",
-                            "Usuários Ilimitados na Equipe",
-                            "Múltiplos Bots de WhatsApp com IA",
-                            "Radar Solar ANEEL Nacional Ilimitado",
-                            "Whitelabel Completo (Sua Marca)",
-                            "Gerente de Contas Dedicado",
-                          ];
-                        } else if (isPro) {
-                          feats = [
-                            "Propostas Comerciais Ilimitadas",
-                            "Até 5 Usuários / Vendedores",
-                            "Bot de WhatsApp com IA 24/7",
-                            "Radar Solar ANEEL Integrado",
-                            "CRM Solar Completo com Automações",
-                            "Suporte Prioritário no WhatsApp",
-                          ];
-                        }
-                      }
+                      const config = normalizePlanFeatures(plan?.features, plan?.name);
+                      const feats = config.bulletPoints || [];
 
                       if (feats.length > 0) {
                         return feats.map((feat: unknown, idx: number) => {

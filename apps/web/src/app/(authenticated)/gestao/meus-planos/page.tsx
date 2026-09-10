@@ -361,7 +361,7 @@ function MeusPlanosContent() {
                 </span>
               </div>
               <p className="text-sm text-[var(--color-muted-foreground)] mt-0.5">
-                O período gratuito de 7 dias da sua empresa encerrou. Escolha um dos planos abaixo
+                O período gratuito de 5 dias da sua empresa encerrou. Escolha um dos planos abaixo
                 para continuar gerando orçamentos, dimensionamentos solares e propostas comerciais.
               </p>
             </div>

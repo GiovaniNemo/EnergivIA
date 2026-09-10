@@ -2,7 +2,12 @@ import { Injectable, NotFoundException, Logger, OnModuleInit } from "@nestjs/com
 import { PrismaService } from "../../prisma/prisma.service";
 import { StripeService } from "../stripe/stripe.service";
 import { Prisma } from "@prisma/client";
-import { normalizePlanFeatures } from "@energivia/shared-types";
+import {
+  normalizePlanFeatures,
+  DEFAULT_ESSENCIAL_PLAN_FEATURES,
+  DEFAULT_PRO_PLAN_FEATURES,
+  DEFAULT_PLUS_PLAN_FEATURES,
+} from "@energivia/shared-types";
 
 @Injectable()
 export class PlansService implements OnModuleInit {
@@ -24,23 +29,41 @@ export class PlansService implements OnModuleInit {
   private async syncDefaultPlans() {
     const plans = await this.prisma.plan.findMany();
     for (const plan of plans) {
-      const currentFeats = plan.features as Record<string, unknown> | null;
-      const isStructured =
-        currentFeats &&
-        typeof currentFeats === "object" &&
-        !Array.isArray(currentFeats) &&
-        ("maxProposalsPerMonth" in currentFeats || "hasProposalViewAlerts" in currentFeats);
+      const planNameLower = (plan.name || "").toLowerCase();
+      const normalized = normalizePlanFeatures(plan.features, plan.name);
 
-      if (!isStructured) {
-        const normalized = normalizePlanFeatures(plan.features, plan.name);
-        await this.prisma.plan.update({
-          where: { id: plan.id },
-          data: {
-            features: normalized as unknown as Prisma.InputJsonValue,
-          },
-        });
-        this.logger.log(`Synced structured features for plan "${plan.name}" (${plan.id})`);
+      let targetDefaults = normalized;
+      if (planNameLower.includes("plus") || planNameLower.includes("enterprise")) {
+        targetDefaults = {
+          ...DEFAULT_PLUS_PLAN_FEATURES,
+          ...normalized,
+          bulletPoints: DEFAULT_PLUS_PLAN_FEATURES.bulletPoints,
+        };
+      } else if (planNameLower.includes("pro") || planNameLower.includes("premium")) {
+        targetDefaults = {
+          ...DEFAULT_PRO_PLAN_FEATURES,
+          ...normalized,
+          bulletPoints: DEFAULT_PRO_PLAN_FEATURES.bulletPoints,
+        };
+      } else if (
+        planNameLower.includes("essencial") ||
+        planNameLower.includes("basic") ||
+        planNameLower.includes("básic")
+      ) {
+        targetDefaults = {
+          ...DEFAULT_ESSENCIAL_PLAN_FEATURES,
+          ...normalized,
+          bulletPoints: DEFAULT_ESSENCIAL_PLAN_FEATURES.bulletPoints,
+        };
       }
+
+      await this.prisma.plan.update({
+        where: { id: plan.id },
+        data: {
+          features: targetDefaults as unknown as Prisma.InputJsonValue,
+        },
+      });
+      this.logger.log(`Synced structured features for plan "${plan.name}" (${plan.id})`);
     }
   }
 
