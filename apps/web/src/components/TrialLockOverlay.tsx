@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useOrganization } from "./providers/organization-provider";
 import PaymentWrapper from "./PaymentForm";
-import { Rocket, Gem, CheckCircle2, LockKeyhole, TrendingUp, LogOut } from "lucide-react";
+import { Rocket, Gem, CheckCircle2, LockKeyhole, LogOut } from "lucide-react";
 import { normalizePlanFeatures } from "@energivia/shared-types";
 
 interface Plan {
@@ -138,26 +138,21 @@ export function TrialLockOverlay() {
             Sair da conta
           </a>
 
-          <div className="relative w-full max-w-5xl rounded-3xl p-6 lg:p-12 mt-12 md:mt-0">
-            <div className="text-center mb-12">
-              <div className="w-14 h-14 bg-red-500/10 text-red-500 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
-                <LockKeyhole className="w-6 h-6" />
+          <div className="relative w-full max-w-6xl rounded-3xl p-5 lg:p-8 mt-6 md:mt-0">
+            <div className="text-center mb-6">
+              <div className="w-11 h-11 bg-red-500/10 text-red-500 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-3 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
+                <LockKeyhole className="w-5 h-5" />
               </div>
-              <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-2 tracking-tight">
                 Seu período de testes <span className="text-emerald-400">acabou!</span>
               </h2>
-              <p className="text-lg md:text-xl text-gray-400 mb-2 font-medium">
-                Continue impulsionando seus resultados com a plataforma EnergivIA.
+              <p className="text-sm md:text-base text-gray-400 font-medium">
+                Escolha o plano ideal para continuar gerando orçamentos e propostas comerciais com
+                IA.
               </p>
-              <div className="inline-flex items-center gap-2 bg-gray-900/50 border border-gray-800 rounded-full px-5 py-2 mt-2">
-                <span className="text-emerald-400">✨</span>
-                <span className="text-sm text-gray-300">
-                  Escolha o plano ideal e leve sua gestão solar para o próximo nível.
-                </span>
-              </div>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch max-w-7xl mx-auto">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch max-w-6xl mx-auto">
               {plans.map((plan) => {
                 const planName = String(plan?.name || "");
                 const planPrice = Number(plan?.price ?? 0);
@@ -175,12 +170,12 @@ export function TrialLockOverlay() {
 
                 // Cores e Icones baseados no plano
                 const cardBorder = isHighlighted
-                  ? "border-yellow-500/60 shadow-[0_0_40px_rgba(234,179,8,0.2)] ring-1 ring-yellow-500/40"
+                  ? "border-yellow-500/60 shadow-[0_0_30px_rgba(234,179,8,0.15)] ring-1 ring-yellow-500/40"
                   : isPlus
-                    ? "border-purple-500/40 shadow-[0_0_30px_rgba(168,85,247,0.15)] ring-1 ring-purple-500/30"
+                    ? "border-purple-500/40 shadow-[0_0_20px_rgba(168,85,247,0.12)] ring-1 ring-purple-500/30"
                     : "border-gray-800";
                 const iconBg = isPlus
-                  ? "bg-purple-500/15 text-purple-400 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+                  ? "bg-purple-500/15 text-purple-400 border-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.2)]"
                   : isHighlighted
                     ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
                     : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
@@ -193,48 +188,46 @@ export function TrialLockOverlay() {
                 return (
                   <div
                     key={plan?.id || Math.random()}
-                    className={`relative bg-gray-950/90 backdrop-blur-sm rounded-3xl border ${cardBorder} flex flex-col pt-8 p-7 transition-transform hover:-translate-y-1 duration-300`}
+                    className={`relative bg-gray-950/95 backdrop-blur-md rounded-2xl border ${cardBorder} flex flex-col p-5 sm:p-6 transition-all duration-200`}
                   >
                     {isHighlighted && (
-                      <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-950 px-4 py-1 rounded-full text-[11px] font-extrabold tracking-widest uppercase shadow-[0_0_15px_rgba(250,204,21,0.5)] flex items-center gap-1.5">
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-950 px-3 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase shadow-[0_0_12px_rgba(250,204,21,0.5)] flex items-center gap-1">
                         <span>⭐️</span> MAIS ESCOLHIDO
                       </div>
                     )}
 
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-11 h-11 rounded-xl flex items-center justify-center border transition-all ${iconBg}`}
-                        >
-                          {isPro || isPlus ? (
-                            <Gem className="w-5 h-5" />
-                          ) : (
-                            <Rocket className="w-5 h-5" />
-                          )}
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-white leading-tight">
-                            {planName || "Plano EnergivIA"}
-                          </h3>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {isPlus
-                              ? "Grande escala e franquias"
-                              : isPro
-                                ? "Alta conversão e IA"
-                                : "Comece a crescer"}
-                          </p>
-                        </div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center border transition-all ${iconBg}`}
+                      >
+                        {isPro || isPlus ? (
+                          <Gem className="w-4 h-4" />
+                        ) : (
+                          <Rocket className="w-4 h-4" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-white leading-tight">
+                          {planName || "Plano EnergivIA"}
+                        </h3>
+                        <p className="text-[11px] text-gray-400">
+                          {isPlus
+                            ? "Grande escala e franquias"
+                            : isPro
+                              ? "Alta conversão e IA"
+                              : "Comece a crescer"}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="mb-4">
+                    <div className="mb-3 bg-gray-900/40 rounded-xl p-3 border border-gray-800/60">
                       {originalPrice && (
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs line-through text-gray-400 font-medium">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-[11px] line-through text-gray-400 font-medium">
                             R$ {originalPrice.toFixed(2).replace(".", ",")}
                           </span>
                           <span
-                            className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full border ${
+                            className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full border ${
                               isPlus
                                 ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
                                 : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
@@ -245,17 +238,17 @@ export function TrialLockOverlay() {
                         </div>
                       )}
                       <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-extrabold tracking-tight ${priceColor}`}>
+                        <span
+                          className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${priceColor}`}
+                        >
                           R$ {planPrice.toFixed(2).replace(".", ",")}
                         </span>
                         <span className="text-gray-400 text-xs font-medium">/mês</span>
                       </div>
                     </div>
 
-                    <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent mb-6" />
-
-                    <div className="flex-grow">
-                      <ul className="space-y-4 mb-8">
+                    <div className="flex-grow mb-4">
+                      <ul className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
                         {(() => {
                           const config = normalizePlanFeatures(plan?.features, plan?.name);
                           const feats = config.bulletPoints || [];
@@ -267,10 +260,10 @@ export function TrialLockOverlay() {
                               return (
                                 <li
                                   key={idx}
-                                  className="flex items-start gap-3 text-[15px] text-gray-300"
+                                  className="flex items-start gap-2 text-xs text-gray-300 leading-tight"
                                 >
                                   <CheckCircle2
-                                    className={`w-5 h-5 shrink-0 ${
+                                    className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${
                                       isPlus
                                         ? "text-purple-400"
                                         : isHighlighted
@@ -278,33 +271,25 @@ export function TrialLockOverlay() {
                                           : "text-emerald-500"
                                     }`}
                                   />
-                                  <span className="leading-tight mt-0.5">{featStr}</span>
+                                  <span>{featStr}</span>
                                 </li>
                               );
                             });
                           }
 
                           return (
-                            <li className="text-gray-400">Assine para liberar os recursos!</li>
+                            <li className="text-xs text-gray-400">
+                              Assine para liberar os recursos!
+                            </li>
                           );
                         })()}
                       </ul>
                     </div>
 
-                    {isHighlighted && (
-                      <div className="bg-yellow-500/5 border border-yellow-500/10 rounded-xl p-4 mb-6 flex items-start gap-3">
-                        <TrendingUp className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                        <p className="text-sm text-yellow-200/80 leading-relaxed">
-                          Tenha uma gestão completa do seu negócio e escale seus resultados com
-                          eficiência.
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="mt-auto">
+                    <div className="mt-auto pt-2 border-t border-gray-800/80">
                       {/* Container to wrapper the PaymentForm button to inherit styles visually */}
                       <div
-                        className={`[&_button]:w-full [&_button]:py-3.5 [&_button]:rounded-xl [&_button]:text-base [&_button]:font-bold [&_button]:shadow-lg [&_button]:transition-all [&_button:hover]:scale-[1.02] ${
+                        className={`[&_button]:w-full [&_button]:py-2.5 [&_button]:rounded-xl [&_button]:text-xs [&_button]:font-bold [&_button]:shadow-md [&_button]:transition-all [&_button:hover]:scale-[1.01] ${
                           isPlus
                             ? "[&_button]:bg-gradient-to-r [&_button]:from-purple-600 [&_button]:to-indigo-600 [&_button]:text-white [&_button:hover]:from-purple-500 [&_button:hover]:to-indigo-500 [&_button:hover]:shadow-purple-500/25"
                             : isHighlighted
