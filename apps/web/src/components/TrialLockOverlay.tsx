@@ -248,10 +248,11 @@ export function TrialLockOverlay() {
                     </div>
 
                     <div className="flex-grow mb-4">
-                      <ul className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
+                      <ul className="space-y-2.5">
                         {(() => {
                           const config = normalizePlanFeatures(plan?.features, plan?.name);
-                          const feats = config.bulletPoints || [];
+                          const allFeats = config.bulletPoints || [];
+                          const feats = allFeats.slice(0, 5);
 
                           if (feats.length > 0) {
                             return feats.map((feat: unknown, idx: number) => {
@@ -263,7 +264,7 @@ export function TrialLockOverlay() {
                                   className="flex items-start gap-2 text-xs text-gray-300 leading-tight"
                                 >
                                   <CheckCircle2
-                                    className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${
+                                    className={`w-4 h-4 shrink-0 mt-0.5 ${
                                       isPlus
                                         ? "text-purple-400"
                                         : isHighlighted
@@ -287,18 +288,17 @@ export function TrialLockOverlay() {
                     </div>
 
                     <div className="mt-auto pt-2 border-t border-gray-800/80">
-                      {/* Container to wrapper the PaymentForm button to inherit styles visually */}
-                      <div
-                        className={`[&_button]:w-full [&_button]:py-2.5 [&_button]:rounded-xl [&_button]:text-xs [&_button]:font-bold [&_button]:shadow-md [&_button]:transition-all [&_button:hover]:scale-[1.01] ${
+                      <PaymentWrapper
+                        planId={plan?.id || ""}
+                        planName={planName}
+                        className={
                           isPlus
-                            ? "[&_button]:bg-gradient-to-r [&_button]:from-purple-600 [&_button]:to-indigo-600 [&_button]:text-white [&_button:hover]:from-purple-500 [&_button:hover]:to-indigo-500 [&_button:hover]:shadow-purple-500/25"
+                            ? "w-full py-2.5 rounded-xl text-xs font-bold shadow-md transition-all hover:scale-[1.01] bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-500 hover:to-indigo-500 shadow-purple-500/25"
                             : isHighlighted
-                              ? "[&_button]:bg-gradient-to-r [&_button]:from-yellow-400 [&_button]:to-amber-500 [&_button]:text-yellow-950 [&_button:hover]:shadow-yellow-500/25"
-                              : "[&_button]:bg-emerald-500 [&_button]:text-white [&_button:hover]:bg-emerald-400 [&_button:hover]:shadow-emerald-500/25"
-                        }`}
-                      >
-                        <PaymentWrapper planId={plan?.id || ""} planName={planName} />
-                      </div>
+                              ? "w-full py-2.5 rounded-xl text-xs font-bold shadow-md transition-all hover:scale-[1.01] bg-gradient-to-r from-yellow-400 to-amber-500 text-yellow-950 hover:shadow-yellow-500/25"
+                              : "w-full py-2.5 rounded-xl text-xs font-bold shadow-md transition-all hover:scale-[1.01] bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/25"
+                        }
+                      />
                     </div>
                   </div>
                 );
