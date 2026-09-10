@@ -1112,12 +1112,13 @@ export default function AdminPlanosPage() {
 
       {/* PLAN MODAL (CREATE & EDIT) */}
       {isPlanModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-          <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl space-y-6 my-8">
-            <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-3xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* STICKY HEADER */}
+            <div className="px-6 py-4 md:py-5 border-b border-[var(--color-border)] flex items-center justify-between shrink-0 bg-[var(--color-card)] z-10">
               <div>
-                <h3 className="text-2xl font-extrabold text-[var(--color-foreground)] flex items-center gap-2">
-                  <Layers className="w-6 h-6 text-[var(--color-primary)]" />
+                <h3 className="text-xl md:text-2xl font-extrabold text-[var(--color-foreground)] flex items-center gap-2">
+                  <Layers className="w-5 h-5 md:w-6 md:h-6 text-[var(--color-primary)]" />
                   {editingPlan ? `Editar Plano: ${editingPlan.name}` : "Criar Novo Plano"}
                 </h3>
                 <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
@@ -1126,13 +1127,18 @@ export default function AdminPlanosPage() {
               </div>
               <button
                 onClick={() => setIsPlanModalOpen(false)}
-                className="p-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition"
+                className="p-2 rounded-xl text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)] transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSavePlan} className="space-y-5">
+            {/* SCROLLABLE BODY */}
+            <form
+              id="plan-form"
+              onSubmit={handleSavePlan}
+              className="overflow-y-auto flex-1 p-5 md:p-6 space-y-5"
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-[var(--color-foreground)] uppercase tracking-wider mb-1.5">
@@ -1388,7 +1394,7 @@ export default function AdminPlanosPage() {
                 </div>
 
                 {/* Reorderable & Editable Benefits List */}
-                <div className="space-y-2 p-3 bg-[var(--color-background)] rounded-2xl border border-[var(--color-border)] max-h-80 overflow-y-auto">
+                <div className="space-y-2 p-3 bg-[var(--color-background)] rounded-2xl border border-[var(--color-border)] max-h-60 overflow-y-auto">
                   {planForm.features.length === 0 ? (
                     <div className="py-6 text-center text-xs text-[var(--color-muted-foreground)]">
                       Nenhum benefício adicionado. Adicione acima ou selecione as sugestões rápidas
@@ -1564,7 +1570,7 @@ export default function AdminPlanosPage() {
                   <span className="text-[11px] font-semibold text-[var(--color-muted-foreground)]">
                     Sugestões rápidas (clique para incluir):
                   </span>
-                  <div className="flex flex-wrap gap-1.5 mt-1.5 max-h-24 overflow-y-auto">
+                  <div className="flex flex-wrap gap-1.5 mt-1.5 max-h-20 overflow-y-auto">
                     {PREDEFINED_BENEFITS.filter((b) => !planForm.features.includes(b)).map(
                       (sug, idx) => (
                         <button
@@ -1601,47 +1607,50 @@ export default function AdminPlanosPage() {
                   <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                 </label>
               </div>
+            </form>
 
-              <div className="flex gap-3 pt-2">
-                {editingPlan && (
-                  <button
-                    type="button"
-                    onClick={() => handleDeletePlan(editingPlan)}
-                    className="px-4 py-3 rounded-xl bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 font-bold text-sm transition flex items-center gap-2"
-                    title="Excluir este plano"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Excluir</span>
-                  </button>
-                )}
+            {/* STICKY FOOTER */}
+            <div className="p-4 md:px-6 md:py-4 border-t border-[var(--color-border)] bg-[var(--color-card)] shrink-0 flex items-center justify-end gap-3 z-10">
+              {editingPlan && (
                 <button
                   type="button"
-                  onClick={() => setIsPlanModalOpen(false)}
-                  className="flex-1 py-3 rounded-xl bg-[var(--color-card)] hover:bg-[var(--color-muted)] text-[var(--color-foreground)] border border-[var(--color-border)] font-bold text-sm transition"
+                  onClick={() => handleDeletePlan(editingPlan)}
+                  className="mr-auto px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 font-bold text-sm transition flex items-center gap-2"
+                  title="Excluir este plano"
                 >
-                  Cancelar
+                  <Trash2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Excluir</span>
                 </button>
-                <button
-                  type="submit"
-                  disabled={planSubmitting}
-                  className="flex-1 py-3 rounded-xl bg-[var(--color-primary)] text-white font-bold text-sm shadow-lg shadow-[var(--color-primary)]/20 transition hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {planSubmitting ? "Sincronizando com Stripe..." : "Salvar & Atualizar Plano"}
-                </button>
-              </div>
-            </form>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsPlanModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl bg-[var(--color-card)] hover:bg-[var(--color-muted)] text-[var(--color-foreground)] border border-[var(--color-border)] font-bold text-sm transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                form="plan-form"
+                disabled={planSubmitting}
+                className="px-6 py-2.5 rounded-xl bg-[var(--color-primary)] text-white font-bold text-sm shadow-lg shadow-[var(--color-primary)]/20 transition hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {planSubmitting ? "Sincronizando..." : "Salvar & Atualizar Plano"}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* COUPON MODAL (CREATE) */}
       {isCouponModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-          <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-3xl p-6 md:p-8 max-w-xl w-full shadow-2xl space-y-6 my-8">
-            <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* STICKY HEADER */}
+            <div className="px-6 py-4 md:py-5 border-b border-[var(--color-border)] flex items-center justify-between shrink-0 bg-[var(--color-card)] z-10">
               <div>
-                <h3 className="text-2xl font-extrabold text-[var(--color-foreground)] flex items-center gap-2">
-                  <Tag className="w-6 h-6 text-emerald-400" />
+                <h3 className="text-xl md:text-2xl font-extrabold text-[var(--color-foreground)] flex items-center gap-2">
+                  <Tag className="w-5 h-5 md:w-6 md:h-6 text-emerald-400" />
                   Criar Cupom de Desconto
                 </h3>
                 <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
@@ -1650,13 +1659,18 @@ export default function AdminPlanosPage() {
               </div>
               <button
                 onClick={() => setIsCouponModalOpen(false)}
-                className="p-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition"
+                className="p-2 rounded-xl text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)] transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveCoupon} className="space-y-4">
+            {/* SCROLLABLE BODY */}
+            <form
+              id="coupon-form"
+              onSubmit={handleSaveCoupon}
+              className="overflow-y-auto flex-1 p-5 md:p-6 space-y-4"
+            >
               <div>
                 <label className="block text-xs font-bold text-[var(--color-foreground)] uppercase tracking-wider mb-1.5">
                   Código Promocional (O que o cliente digita) *
@@ -1828,24 +1842,26 @@ export default function AdminPlanosPage() {
                   />
                 </div>
               </div>
-
-              <div className="flex gap-3 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setIsCouponModalOpen(false)}
-                  className="flex-1 py-3 rounded-xl bg-[var(--color-card)] hover:bg-[var(--color-muted)] text-[var(--color-foreground)] border border-[var(--color-border)] font-bold text-sm transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={couponSubmitting}
-                  className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {couponSubmitting ? "Criando no Stripe..." : "Salvar & Ativar Cupom"}
-                </button>
-              </div>
             </form>
+
+            {/* STICKY FOOTER */}
+            <div className="p-4 md:px-6 md:py-4 border-t border-[var(--color-border)] bg-[var(--color-card)] shrink-0 flex items-center justify-end gap-3 z-10">
+              <button
+                type="button"
+                onClick={() => setIsCouponModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl bg-[var(--color-card)] hover:bg-[var(--color-muted)] text-[var(--color-foreground)] border border-[var(--color-border)] font-bold text-sm transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                form="coupon-form"
+                disabled={couponSubmitting}
+                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {couponSubmitting ? "Criando no Stripe..." : "Salvar & Ativar Cupom"}
+              </button>
+            </div>
           </div>
         </div>
       )}
