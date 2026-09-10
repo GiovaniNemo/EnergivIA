@@ -34,12 +34,9 @@ export default function RadarPage() {
   const [convertModalOpen, setConvertModalOpen] = useState(false);
   const [radarUpgradeModalOpen, setRadarUpgradeModalOpen] = useState(false);
 
-  const isPaidProPlan = Boolean(
-    !user?.isTrial &&
-    currentOrganization?.subscription &&
-    currentOrganization?.subscription?.status === "active"
-  );
-  const isLocked = !isPaidProPlan;
+  const isAdmin = user?.role === "ADMIN" || user?.role === "PLATFORM";
+  const hasRadarFeature = Boolean(user?.planFeatures?.hasRadarSolar);
+  const isLocked = !isAdmin && (!hasRadarFeature || Boolean(user?.isTrial));
 
   const fetchRadarData = async () => {
     setLoading(true);

@@ -434,6 +434,11 @@ export class OrganizationsService {
     if (tenant) {
       const planDetails = getTenantPlanDetails(tenant);
       const maxPhones = planDetails.features.maxWhatsappNumbers;
+      if (maxPhones === 0) {
+        throw new BadRequestException(
+          `A conexão de números de WhatsApp não está disponível no seu plano (${planDetails.planName}). Faça upgrade para o Plano Essencial ou superior.`
+        );
+      }
       if (maxPhones !== null && maxPhones !== undefined && maxPhones > 0) {
         const currentPhones = await this.prisma.tenantWhatsappInboundPhone.count({
           where: { organizationId },
