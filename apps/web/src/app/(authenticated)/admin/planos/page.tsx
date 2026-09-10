@@ -23,6 +23,10 @@ import {
   ShieldCheck,
   Sliders,
   DollarSign,
+  GripVertical,
+  ChevronUp,
+  ChevronDown,
+  Pencil,
 } from "lucide-react";
 
 import { type PlanFeaturesConfig, normalizePlanFeatures } from "@energivia/shared-types";
@@ -111,6 +115,12 @@ export default function AdminPlanosPage() {
   });
   const [planSubmitting, setPlanSubmitting] = useState(false);
 
+  // Drag & drop and Inline Edit state for features in Plan Modal
+  const [editingFeatureIndex, setEditingFeatureIndex] = useState<number | null>(null);
+  const [editingFeatureText, setEditingFeatureText] = useState("");
+  const [draggedFeatureIndex, setDraggedFeatureIndex] = useState<number | null>(null);
+  const [dragOverFeatureIndex, setDragOverFeatureIndex] = useState<number | null>(null);
+
   // Coupon Modal state
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
   const [couponForm, setCouponForm] = useState({
@@ -177,6 +187,10 @@ export default function AdminPlanosPage() {
 
   const handleOpenCreatePlan = () => {
     setEditingPlan(null);
+    setEditingFeatureIndex(null);
+    setEditingFeatureText("");
+    setDraggedFeatureIndex(null);
+    setDragOverFeatureIndex(null);
     setPlanForm({
       name: "",
       description: "",
@@ -207,6 +221,10 @@ export default function AdminPlanosPage() {
 
   const handleOpenEditPlan = (plan: Plan) => {
     setEditingPlan(plan);
+    setEditingFeatureIndex(null);
+    setEditingFeatureText("");
+    setDraggedFeatureIndex(null);
+    setDragOverFeatureIndex(null);
     const config = plan.featuresConfig || normalizePlanFeatures(plan.features, plan.name);
 
     setPlanForm({
@@ -214,7 +232,8 @@ export default function AdminPlanosPage() {
       description: plan.description || "",
       price: String(plan.price),
       interval: plan.interval || "month",
-      features: config.bulletPoints && config.bulletPoints.length > 0 ? config.bulletPoints : [],
+      features:
+        config.bulletPoints && config.bulletPoints.length > 0 ? [...config.bulletPoints] : [],
       newFeatureInput: "",
       active: plan.active !== false,
       maxProposalsPerMonth:
@@ -255,10 +274,63 @@ export default function AdminPlanosPage() {
   };
 
   const handleRemoveFeature = (index: number) => {
+    if (editingFeatureIndex === index) {
+      setEditingFeatureIndex(null);
+      setEditingFeatureText("");
+    }
     setPlanForm({
       ...planForm,
       features: planForm.features.filter((_, i) => i !== index),
     });
+  };
+
+  const handleStartEditFeature = (index: number) => {
+    setEditingFeatureIndex(index);
+    setEditingFeatureText(planForm.features[index] || "");
+  };
+
+  const handleSaveEditFeature = (index: number) => {
+    const trimmed = editingFeatureText.trim();
+    if (!trimmed) {
+      handleRemoveFeature(index);
+      return;
+    }
+    const updated = [...planForm.features];
+    updated[index] = trimmed;
+    setPlanForm({ ...planForm, features: updated });
+    setEditingFeatureIndex(null);
+    setEditingFeatureText("");
+  };
+
+  const handleCancelEditFeature = () => {
+    setEditingFeatureIndex(null);
+    setEditingFeatureText("");
+  };
+
+  const handleMoveFeature = (fromIndex: number, toIndex: number) => {
+    if (
+      fromIndex < 0 ||
+      fromIndex >= planForm.features.length ||
+      toIndex < 0 ||
+      toIndex >= planForm.features.length ||
+      fromIndex === toIndex
+    ) {
+      return;
+    }
+    const updated = [...planForm.features];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+    setPlanForm({ ...planForm, features: updated });
+
+    if (editingFeatureIndex === fromIndex) {
+      setEditingFeatureIndex(toIndex);
+    } else if (editingFeatureIndex !== null) {
+      if (fromIndex < editingFeatureIndex && toIndex >= editingFeatureIndex) {
+        setEditingFeatureIndex(editingFeatureIndex - 1);
+      } else if (fromIndex > editingFeatureIndex && toIndex <= editingFeatureIndex) {
+        setEditingFeatureIndex(editingFeatureIndex + 1);
+      }
+    }
   };
 
   const handleSavePlan = async (e: React.FormEvent) => {
@@ -1281,16 +1353,21 @@ export default function AdminPlanosPage() {
                 </div>
               </div>
 
-              {/* BENEFITS TAGS BUILDER */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-[var(--color-foreground)] uppercase tracking-wider">
-                  Benefícios & Funcionalidades Inclusas
-                </label>
+              {/* BENEFITS LIST BUILDER */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-[var(--color-foreground)] uppercase tracking-wider">
+                    Benefícios & Funcionalidades Inclusas ({planForm.features.length})
+                  </label>
+                  <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                    Arraste para reordenar ou clique no lápis para editar
+                  </span>
+                </div>
 
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Digite um benefício e clique em Adicionar"
+                    placeholder="Digite um novo benefício e clique em Adicionar"
                     value={planForm.newFeatureInput}
                     onChange={(e) => setPlanForm({ ...planForm, newFeatureInput: e.target.value })}
                     onKeyDown={(e) => {
@@ -1304,36 +1381,181 @@ export default function AdminPlanosPage() {
                   <button
                     type="button"
                     onClick={() => handleAddFeature(planForm.newFeatureInput)}
-                    className="px-4 py-3 rounded-xl bg-[var(--color-muted)] hover:bg-[var(--color-primary)] hover:text-white text-[var(--color-foreground)] font-bold text-sm transition"
+                    className="px-4 py-3 rounded-xl bg-[var(--color-muted)] hover:bg-[var(--color-primary)] hover:text-white text-[var(--color-foreground)] font-bold text-sm transition shrink-0"
                   >
                     + Adicionar
                   </button>
                 </div>
 
-                {/* Selected Benefits Tags */}
-                <div className="flex flex-wrap gap-2 p-3 bg-[var(--color-background)] rounded-xl border border-[var(--color-border)] min-h-[60px] items-center">
+                {/* Reorderable & Editable Benefits List */}
+                <div className="space-y-2 p-3 bg-[var(--color-background)] rounded-2xl border border-[var(--color-border)] max-h-80 overflow-y-auto">
                   {planForm.features.length === 0 ? (
-                    <span className="text-xs text-[var(--color-muted-foreground)]">
+                    <div className="py-6 text-center text-xs text-[var(--color-muted-foreground)]">
                       Nenhum benefício adicionado. Adicione acima ou selecione as sugestões rápidas
                       abaixo.
-                    </span>
+                    </div>
                   ) : (
-                    planForm.features.map((feat, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-card)] text-[var(--color-foreground)] border border-[var(--color-border)] text-xs font-medium shadow-sm"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        {feat}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFeature(idx)}
-                          className="hover:text-red-400 transition ml-1"
+                    planForm.features.map((feat, idx) => {
+                      const isEditing = editingFeatureIndex === idx;
+                      const isDragging = draggedFeatureIndex === idx;
+                      const isDragOver = dragOverFeatureIndex === idx;
+
+                      return (
+                        <div
+                          key={idx}
+                          draggable={!isEditing}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", String(idx));
+                            setDraggedFeatureIndex(idx);
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            if (dragOverFeatureIndex !== idx) {
+                              setDragOverFeatureIndex(idx);
+                            }
+                          }}
+                          onDragLeave={() => {
+                            if (dragOverFeatureIndex === idx) {
+                              setDragOverFeatureIndex(null);
+                            }
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            if (draggedFeatureIndex !== null && draggedFeatureIndex !== idx) {
+                              handleMoveFeature(draggedFeatureIndex, idx);
+                            }
+                            setDraggedFeatureIndex(null);
+                            setDragOverFeatureIndex(null);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedFeatureIndex(null);
+                            setDragOverFeatureIndex(null);
+                          }}
+                          className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all duration-150 ${
+                            isDragging
+                              ? "opacity-40 border-dashed border-[var(--color-primary)] bg-[var(--color-card)]"
+                              : isDragOver
+                                ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 ring-2 ring-[var(--color-primary)]/30 scale-[1.01]"
+                                : isEditing
+                                  ? "border-[var(--color-primary)] bg-[var(--color-card)] shadow-md"
+                                  : "border-[var(--color-border)] bg-[var(--color-card)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-muted)]/30"
+                          }`}
                         >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))
+                          {/* Drag Handle */}
+                          <div
+                            className={`p-1 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] select-none shrink-0 ${
+                              isEditing
+                                ? "opacity-30 cursor-not-allowed"
+                                : "cursor-grab active:cursor-grabbing"
+                            }`}
+                            title={isEditing ? "" : "Clique e arraste para reordenar"}
+                          >
+                            <GripVertical className="w-4 h-4" />
+                          </div>
+
+                          {/* Index Badge */}
+                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-[var(--color-muted)] text-[var(--color-muted-foreground)] shrink-0">
+                            #{idx + 1}
+                          </span>
+
+                          {/* Item Content: View vs Edit */}
+                          {isEditing ? (
+                            <div className="flex-1 flex items-center gap-2 min-w-0">
+                              <input
+                                type="text"
+                                autoFocus
+                                value={editingFeatureText}
+                                onChange={(e) => setEditingFeatureText(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleSaveEditFeature(idx);
+                                  } else if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    handleCancelEditFeature();
+                                  }
+                                }}
+                                className="flex-1 bg-[var(--color-background)] text-[var(--color-foreground)] border border-[var(--color-primary)] rounded-lg px-2.5 py-1.5 text-xs font-medium outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSaveEditFeature(idx)}
+                                className="p-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold transition shrink-0"
+                                title="Salvar alteração (Enter)"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleCancelEditFeature}
+                                className="p-1.5 rounded-lg bg-[var(--color-muted)] hover:bg-[var(--color-muted)]/80 text-[var(--color-foreground)] transition shrink-0"
+                                title="Cancelar (Esc)"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div
+                              className="flex-1 flex items-center gap-2 min-w-0 cursor-pointer"
+                              onClick={() => handleStartEditFeature(idx)}
+                              title="Clique para editar este item"
+                            >
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                              <span className="text-xs font-medium text-[var(--color-foreground)] truncate">
+                                {feat}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Action Buttons (when not editing) */}
+                          {!isEditing && (
+                            <div className="flex items-center gap-1 shrink-0 ml-auto">
+                              {/* Move Up */}
+                              <button
+                                type="button"
+                                disabled={idx === 0}
+                                onClick={() => handleMoveFeature(idx, idx - 1)}
+                                className="p-1 rounded-md text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-20 disabled:hover:bg-transparent disabled:cursor-not-allowed transition"
+                                title="Mover para cima"
+                              >
+                                <ChevronUp className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Move Down */}
+                              <button
+                                type="button"
+                                disabled={idx === planForm.features.length - 1}
+                                onClick={() => handleMoveFeature(idx, idx + 1)}
+                                className="p-1 rounded-md text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-20 disabled:hover:bg-transparent disabled:cursor-not-allowed transition"
+                                title="Mover para baixo"
+                              >
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Edit text */}
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditFeature(idx)}
+                                className="p-1.5 rounded-lg bg-[var(--color-muted)]/60 hover:bg-[var(--color-primary)] hover:text-white text-[var(--color-muted-foreground)] transition"
+                                title="Editar texto do item"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Delete */}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFeature(idx)}
+                                className="p-1.5 rounded-lg hover:bg-rose-500/10 hover:text-rose-400 text-[var(--color-muted-foreground)] transition"
+                                title="Remover item"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
 
@@ -1342,7 +1564,7 @@ export default function AdminPlanosPage() {
                   <span className="text-[11px] font-semibold text-[var(--color-muted-foreground)]">
                     Sugestões rápidas (clique para incluir):
                   </span>
-                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  <div className="flex flex-wrap gap-1.5 mt-1.5 max-h-24 overflow-y-auto">
                     {PREDEFINED_BENEFITS.filter((b) => !planForm.features.includes(b)).map(
                       (sug, idx) => (
                         <button
