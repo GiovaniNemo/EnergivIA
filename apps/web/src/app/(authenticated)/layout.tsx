@@ -16,9 +16,9 @@ export default async function AuthenticatedLayout({
     }
   }
   return (
-    <>
-      <AuthenticatedShell>{children}</AuthenticatedShell>
+    <AuthenticatedShell>
+      {children}
       <AIAssistantWidget />
-    </>
+    </AuthenticatedShell>
   );
 }

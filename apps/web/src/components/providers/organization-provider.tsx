@@ -160,8 +160,23 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
   return <OrganizationContext.Provider value={value}>{children}</OrganizationContext.Provider>;
 }
 
-export function useOrganization() {
+export function useOrganization(): OrganizationContextValue {
   const ctx = useContext(OrganizationContext);
-  if (!ctx) throw new Error("useOrganization must be used within OrganizationProvider");
+  if (!ctx) {
+    return {
+      user: null,
+      organizations: [],
+      currentOrganizationId: null,
+      currentOrganization: null,
+      setCurrentOrganizationId: () => {},
+      createOrg: async () => {
+        throw new Error("useOrganization must be used within OrganizationProvider");
+      },
+      deleteOrg: async () => {},
+      refetch: async () => {},
+      loading: false,
+      error: null,
+    };
+  }
   return ctx;
 }
