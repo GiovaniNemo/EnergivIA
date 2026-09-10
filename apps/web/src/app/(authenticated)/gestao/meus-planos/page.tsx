@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { normalizePlanFeatures } from "@energivia/shared-types";
+import { getTrialDaysLeft } from "@/lib/business-days";
 
 interface Plan {
   id: string;
@@ -222,9 +223,8 @@ function MeusPlanosContent() {
   const orgCreatedAt = currentOrganization?.createdAt
     ? new Date(currentOrganization.createdAt)
     : null;
-  const trialDaysLeft = orgCreatedAt
-    ? Math.max(0, 7 - Math.floor((Date.now() - orgCreatedAt.getTime()) / (1000 * 60 * 60 * 24)))
-    : 7;
+  const trialDaysLeft =
+    user?.trialDaysLeft ?? (orgCreatedAt ? getTrialDaysLeft(orgCreatedAt, 5) : 5);
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto min-h-screen bg-[var(--color-background)] animate-in fade-in duration-500">
