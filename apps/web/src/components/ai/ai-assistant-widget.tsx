@@ -16,8 +16,11 @@ import {
   Zap,
   HelpCircle,
   Sparkles,
+  LockKeyhole,
+  ArrowRight,
 } from "lucide-react";
 import clsx from "clsx";
+import { useOrganization } from "@/components/providers/organization-provider";
 
 type Message = {
   id: string;
@@ -189,6 +192,32 @@ function ForwardBubble({
 export function AIAssistantWidget() {
   const pathname = usePathname();
   const normalizedPath = (pathname ?? "").replace(/\/$/, "") || "/";
+  const { user } = useOrganization();
+
+  const isTrial = user?.isTrial ?? false;
+  const isTrialExpired = Boolean(isTrial && user?.trialExpired);
+  const isTrialLimitReached = Boolean(isTrial && user?.isTrialProposalLimitReached);
+  const isPlanLimitReached = Boolean(!isTrial && user?.isProposalLimitReached);
+  const isLocked = Boolean(
+    isTrialExpired || isTrialLimitReached || isPlanLimitReached || user?.isTrialLocked
+  );
+
+  let lockTitle = "Recurso Bloqueado";
+  let lockDescription =
+    "Seu limite de uso foi atingido. Faça upgrade do seu plano para continuar gerando orçamentos com a IA.";
+
+  if (isTrialExpired) {
+    lockTitle = "Período de Testes Expirado";
+    lockDescription =
+      "Seu período de teste gratuito de 5 dias úteis encerrou. Assine um plano para continuar conversando com a IA e gerando orçamentos.";
+  } else if (isTrialLimitReached) {
+    lockTitle = "Limite de Testes Atingido";
+    lockDescription =
+      "Você atingiu o limite de 20 propostas gratuitas do período de teste. Faça upgrade para continuar utilizando o assistente com IA.";
+  } else if (isPlanLimitReached) {
+    lockTitle = "Limite Mensal Atingido";
+    lockDescription = `Você atingiu o limite mensal de ${user?.proposalsLimit ?? 50} propostas do seu plano. Faça upgrade para continuar gerando orçamentos com IA.`;
+  }
 
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -209,6 +238,7 @@ export function AIAssistantWidget() {
   }, [input]);
 
   const handleStartKwhConsulting = () => {
+    if (isLocked) return;
     setMessages([
       {
         id: Date.now().toString(),
@@ -220,6 +250,7 @@ export function AIAssistantWidget() {
   };
 
   const handleStartKwpConsulting = () => {
+    if (isLocked) return;
     setMessages([
       {
         id: Date.now().toString(),
@@ -231,6 +262,7 @@ export function AIAssistantWidget() {
   };
 
   const handleStartQuestionsConsulting = () => {
+    if (isLocked) return;
     setMessages([
       {
         id: Date.now().toString(),
@@ -242,10 +274,12 @@ export function AIAssistantWidget() {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (isLocked) return;
     setInput(e.target.value);
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isLocked) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -263,7 +297,7 @@ export function AIAssistantWidget() {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if ((!input.trim() && !selectedImage) || isLoading) return;
+    if (isLocked || (!input.trim() && !selectedImage) || isLoading) return;
 
     let baseMessages = messages;
     const lastExisting = baseMessages[baseMessages.length - 1];
@@ -723,6 +757,29 @@ export function AIAssistantWidget() {
               );
             })}
 
+            {isLocked && (
+              <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex flex-col gap-2.5 animate-in fade-in">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                    <LockKeyhole className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-bold text-amber-300">{lockTitle}</h4>
+                    <p className="text-[11px] text-amber-200/80 mt-0.5 leading-relaxed">
+                      {lockDescription}
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href="/gestao/meus-planos"
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition shadow-sm"
+                >
+                  <span>Ver Planos & Assinar</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            )}
+
             {isLoading && messages[messages.length - 1]?.role === "user" && (
               <div className="flex justify-start">
                 <div className="bg-gray-900 border border-gray-800 text-gray-400 rounded-2xl rounded-bl-none p-4 flex gap-1 items-center">
@@ -737,77 +794,96 @@ export function AIAssistantWidget() {
 
           {/* Input Area */}
           <div className="p-3.5 bg-gray-900 border-t border-gray-800 shrink-0">
-            {selectedImage && (
-              <div className="mb-3 relative inline-block">
-                {selectedImage.startsWith("data:application/pdf") ? (
-                  <div className="flex items-center justify-center w-16 h-16 bg-gray-800 rounded border border-gray-700">
-                    <span className="text-xs font-bold text-gray-400">PDF</span>
-                  </div>
-                ) : (
-                  <img
-                    src={selectedImage}
-                    alt="Preview"
-                    className="h-16 rounded border border-gray-700"
-                  />
-                )}
-                <button
-                  onClick={removeImage}
-                  className="absolute -top-2 -right-2 bg-gray-800 rounded-full p-0.5 shadow hover:bg-gray-700"
+            {isLocked ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 bg-gray-950/80 border border-amber-500/30 rounded-xl p-2.5 text-xs text-amber-200/90">
+                  <LockKeyhole className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>
+                    Envio desabilitado. Assine um plano para continuar gerando orçamentos.
+                  </span>
+                </div>
+                <a
+                  href="/gestao/meus-planos"
+                  className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition text-center shadow-sm"
                 >
-                  <X className="w-4 h-4 text-white" />
-                </button>
+                  Assinar Plano para Desbloquear
+                </a>
               </div>
+            ) : (
+              <>
+                {selectedImage && (
+                  <div className="mb-3 relative inline-block">
+                    {selectedImage.startsWith("data:application/pdf") ? (
+                      <div className="flex items-center justify-center w-16 h-16 bg-gray-800 rounded border border-gray-700">
+                        <span className="text-xs font-bold text-gray-400">PDF</span>
+                      </div>
+                    ) : (
+                      <img
+                        src={selectedImage}
+                        alt="Preview"
+                        className="h-16 rounded border border-gray-700"
+                      />
+                    )}
+                    <button
+                      onClick={removeImage}
+                      className="absolute -top-2 -right-2 bg-gray-800 rounded-full p-0.5 shadow hover:bg-gray-700"
+                    >
+                      <X className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                )}
+                <form
+                  onSubmit={handleSubmit}
+                  className="flex items-end gap-2 bg-gray-950 border border-gray-800 rounded-xl p-2 focus-within:border-emerald-500/50 transition-colors shadow-inner"
+                >
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,.pdf,application/pdf"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={handleImageSelect}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-2 text-gray-400 hover:text-emerald-400 transition-colors rounded-lg hover:bg-gray-900 shrink-0 mb-0.5"
+                    title="Anexar Fatura"
+                  >
+                    <ImageIcon className="w-5 h-5" />
+                  </button>
+
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={handleInputChange}
+                    placeholder="Digite sua mensagem ou pergunta..."
+                    className="flex-1 max-h-40 min-h-[44px] bg-transparent text-sm text-white placeholder:text-gray-500 resize-none outline-none py-2 px-1.5 leading-relaxed overflow-y-auto scrollbar-thin"
+                    rows={1}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        if (input.trim() || selectedImage) {
+                          e.currentTarget.form?.dispatchEvent(
+                            new Event("submit", { cancelable: true, bubbles: true })
+                          );
+                        }
+                      }
+                    }}
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={isLoading || (!input.trim() && !selectedImage)}
+                    className="p-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 mb-0.5"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </form>
+                <p className="text-[10px] text-gray-500 text-center mt-2.5">
+                  A inteligência artificial pode cometer erros.
+                </p>
+              </>
             )}
-            <form
-              onSubmit={handleSubmit}
-              className="flex items-end gap-2 bg-gray-950 border border-gray-800 rounded-xl p-2 focus-within:border-emerald-500/50 transition-colors shadow-inner"
-            >
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,.pdf,application/pdf"
-                className="hidden"
-                ref={fileInputRef}
-                onChange={handleImageSelect}
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="p-2 text-gray-400 hover:text-emerald-400 transition-colors rounded-lg hover:bg-gray-900 shrink-0 mb-0.5"
-                title="Anexar Fatura"
-              >
-                <ImageIcon className="w-5 h-5" />
-              </button>
-
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={handleInputChange}
-                placeholder="Digite sua mensagem ou pergunta..."
-                className="flex-1 max-h-40 min-h-[44px] bg-transparent text-sm text-white placeholder:text-gray-500 resize-none outline-none py-2 px-1.5 leading-relaxed overflow-y-auto scrollbar-thin"
-                rows={1}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    if (input.trim() || selectedImage) {
-                      e.currentTarget.form?.dispatchEvent(
-                        new Event("submit", { cancelable: true, bubbles: true })
-                      );
-                    }
-                  }
-                }}
-              />
-
-              <button
-                type="submit"
-                disabled={isLoading || (!input.trim() && !selectedImage)}
-                className="p-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 mb-0.5"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
-            <p className="text-[10px] text-gray-500 text-center mt-2.5">
-              A inteligência artificial pode cometer erros.
-            </p>
           </div>
         </div>
       )}

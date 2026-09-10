@@ -92,8 +92,9 @@ function MeusPlanosContent() {
       }
 
       // 2. Fetch current subscription if organization exists
-      if (currentOrganization?.id) {
-        const subRes = await fetch(`/api/proxy/stripe/subscription/${currentOrganization.id}`);
+      const targetOrgId = currentOrganization?.id || user?.currentOrganizationId || user?.tenantId;
+      if (targetOrgId) {
+        const subRes = await fetch(`/api/proxy/stripe/subscription/${targetOrgId}`);
         if (subRes.ok) {
           const subData = await subRes.json();
           if (subData && subData.status !== "canceled") {
@@ -108,7 +109,7 @@ function MeusPlanosContent() {
     } finally {
       setLoading(false);
     }
-  }, [currentOrganization?.id]);
+  }, [currentOrganization?.id, user?.currentOrganizationId, user?.tenantId]);
 
   useEffect(() => {
     loadData();

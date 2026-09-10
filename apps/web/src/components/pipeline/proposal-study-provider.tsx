@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useRef, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { useOrganization } from "@/components/providers/organization-provider";
 import type { Deal } from "@/lib/pipeline-deal";
 import type { SimulationListItem } from "@/lib/leads-api";
@@ -19,6 +20,7 @@ type ProposalStudyContextValue = {
   ) => Promise<void>;
   openStudyForDealWithFile: (deal: Deal, file: File) => Promise<void>;
   openStudyForDealWithSimulation: (deal: Deal, simulation: SimulationListItem) => Promise<void>;
+  isProposalCreationLocked: boolean;
 };
 
 const ProposalStudyContext = createContext<ProposalStudyContextValue | null>(null);
@@ -32,22 +34,42 @@ export function useProposalStudy(): ProposalStudyContextValue {
 }
 
 export function ProposalStudyProvider({ children }: { children: ReactNode }): JSX.Element {
-  const { currentOrganizationId } = useOrganization();
+  const { currentOrganizationId, user } = useOrganization();
+  const router = useRouter();
   const modalRef = useRef<ProposalEconomicsModalHandle>(null);
+
+  const isTrial = user?.isTrial ?? false;
+  const isTrialExpired = Boolean(isTrial && user?.trialExpired);
+  const isTrialLimitReached = Boolean(isTrial && user?.isTrialProposalLimitReached);
+  const isPlanLimitReached = Boolean(!isTrial && user?.isProposalLimitReached);
+  const isProposalCreationLocked = Boolean(
+    isTrialExpired || isTrialLimitReached || isPlanLimitReached || user?.isTrialLocked
+  );
 
   const openStudyForDeal = useCallback(
     async (
       deal: Deal,
       opts?: { forceStudyModal?: boolean; existingSimulation?: SimulationListItem }
     ) => {
+      if (isProposalCreationLocked && !opts?.existingSimulation) {
+        router.push("/gestao/meus-planos");
+        return;
+      }
       await modalRef.current?.openFromDeal(deal, opts);
     },
-    []
+    [isProposalCreationLocked, router]
   );
 
-  const openStudyForDealWithFile = useCallback(async (deal: Deal, file: File) => {
-    await modalRef.current?.openWithFile(deal, file);
-  }, []);
+  const openStudyForDealWithFile = useCallback(
+    async (deal: Deal, file: File) => {
+      if (isProposalCreationLocked) {
+        router.push("/gestao/meus-planos");
+        return;
+      }
+      await modalRef.current?.openWithFile(deal, file);
+    },
+    [isProposalCreationLocked, router]
+  );
 
   const openStudyForDealWithSimulation = useCallback(
     async (deal: Deal, simulation: SimulationListItem) => {
@@ -57,8 +79,18 @@ export function ProposalStudyProvider({ children }: { children: ReactNode }): JS
   );
 
   const value = useMemo(
-    () => ({ openStudyForDeal, openStudyForDealWithFile, openStudyForDealWithSimulation }),
-    [openStudyForDeal, openStudyForDealWithFile, openStudyForDealWithSimulation]
+    () => ({
+      openStudyForDeal,
+      openStudyForDealWithFile,
+      openStudyForDealWithSimulation,
+      isProposalCreationLocked,
+    }),
+    [
+      openStudyForDeal,
+      openStudyForDealWithFile,
+      openStudyForDealWithSimulation,
+      isProposalCreationLocked,
+    ]
   );
 
   return (

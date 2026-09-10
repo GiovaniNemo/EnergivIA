@@ -1055,6 +1055,58 @@ export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
 
+    // Validação de Limites de Plano / Trial
+    let token = "";
+    try {
+      const session = await auth0.getSession();
+      if (session) {
+        try {
+          const authResult = await auth0.getAccessToken({
+            audience: process.env["AUTH0_AUDIENCE"],
+          });
+          token = authResult.token || session.accessToken || session.idToken || "";
+        } catch {
+          token = session.idToken || session.accessToken || "";
+        }
+      }
+    } catch (e) {
+      console.warn("Sessão Auth0 não encontrada no /api/chat:", e);
+    }
+
+    if (token) {
+      const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
+      try {
+        const meRes = await fetch(`${baseURL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          const isTrial = meData.isTrial;
+          const isLocked = Boolean(
+            (isTrial && (meData.trialExpired || meData.isTrialProposalLimitReached)) ||
+            (!isTrial && meData.isProposalLimitReached) ||
+            meData.isTrialLocked
+          );
+          if (isLocked) {
+            let lockMsg =
+              "☀️ Seu período de testes de 5 dias úteis encerrou. Faça upgrade para continuar utilizando o assistente com IA.\n\n👉 Acesse: https://app.energivia.com.br/gestao/meus-planos";
+            if (isTrial && meData.isTrialProposalLimitReached) {
+              lockMsg =
+                "⚡ Você atingiu o limite de 20 propostas gratuitas do período de teste. Faça upgrade para continuar gerando orçamentos com a IA.\n\n👉 Acesse: https://app.energivia.com.br/gestao/meus-planos";
+            } else if (!isTrial && meData.isProposalLimitReached) {
+              lockMsg = `⚡ Você atingiu o limite mensal de ${meData.proposalsLimit ?? 50} propostas do seu plano. Faça upgrade para o Plano Pro para continuar gerando orçamentos.\n\n👉 Acesse: https://app.energivia.com.br/gestao/meus-planos`;
+            }
+            return new Response(lockMsg, {
+              status: 200,
+              headers: { "Content-Type": "text/plain; charset=utf-8" },
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("Erro ao validar plano do usuário no /api/chat:", e);
+      }
+    }
+
     const formattedMessages = (
       await Promise.all(
         messages.map(async (m: any, index: number) => {

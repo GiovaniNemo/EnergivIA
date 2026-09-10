@@ -223,7 +223,7 @@ export default function PipelinePage(): JSX.Element {
   const initialDealParamRef = useRef(searchParams?.get("id"));
   const { currentOrganizationId, loading: orgLoading } = useOrganization();
   const { deals, setDeals, replaceDeals, updateDealStage, updateDealProposalStatus } = useDeals([]);
-  const { openStudyForDeal } = useProposalStudy();
+  const { openStudyForDeal, isProposalCreationLocked } = useProposalStudy();
   const [proposalBusyLeadId, setProposalBusyLeadId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -710,6 +710,15 @@ export default function PipelinePage(): JSX.Element {
   function resolveNextBestAction(deal: Deal): NextBestAction {
     const nextStage = getAdvanceStage(deal.stage);
     if (!deal.hasProposal) {
+      if (isProposalCreationLocked) {
+        return {
+          label: "🔒 Criar proposta (Plano Expirado)",
+          disabled: false,
+          onClick: () => {
+            router.push("/gestao/meus-planos");
+          },
+        };
+      }
       return {
         label: proposalBusyLeadId === deal.leadId ? "Calculando economia..." : "Criar proposta",
         disabled: proposalBusyLeadId === deal.leadId,

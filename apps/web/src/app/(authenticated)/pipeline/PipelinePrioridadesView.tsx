@@ -235,6 +235,7 @@ function stagePillClass(stage: DealStage): string {
 
 interface PriorityItemProps {
   deal: Deal;
+  isProposalCreationLocked?: boolean;
   onOpenProposal: (deal: Deal) => void;
   onFollowUp: (deal: Deal) => void;
   onAdvance: (deal: Deal) => void;
@@ -243,6 +244,7 @@ interface PriorityItemProps {
 
 function PriorityItem({
   deal,
+  isProposalCreationLocked,
   onOpenProposal,
   onFollowUp,
   onAdvance,
@@ -256,7 +258,9 @@ function PriorityItem({
   const avatarColor = getAvatarColorClass(deal.clientName);
 
   function primaryLabel(): string {
-    if (!deal.hasProposal) return "Criar proposta →";
+    if (!deal.hasProposal) {
+      return isProposalCreationLocked ? "🔒 Criar proposta (Plano Expirado)" : "Criar proposta →";
+    }
     if (
       deal.proposalFollowUpStatus === "viewed" ||
       deal.proposalFollowUpStatus === "waiting" ||
@@ -380,10 +384,18 @@ export function PipelinePrioridadesView({
   onAdvance,
   onOpenContact,
 }: PrioridadesViewProps) {
-  const { currentOrganizationId } = useOrganization();
+  const { currentOrganizationId, user } = useOrganization();
   const [focus, setFocus] = useState<FocusSuggestion | null>(null);
   const [focusLoading, setFocusLoading] = useState(false);
   const [reasoningOpen, setReasoningOpen] = useState(false);
+
+  const isTrial = user?.isTrial ?? false;
+  const isTrialExpired = Boolean(isTrial && user?.trialExpired);
+  const isTrialLimitReached = Boolean(isTrial && user?.isTrialProposalLimitReached);
+  const isPlanLimitReached = Boolean(!isTrial && user?.isProposalLimitReached);
+  const isProposalCreationLocked = Boolean(
+    isTrialExpired || isTrialLimitReached || isPlanLimitReached || user?.isTrialLocked
+  );
 
   const openDeals = useMemo(() => deals.filter((d) => d.stage !== "fechado"), [deals]);
 
@@ -431,7 +443,13 @@ export function PipelinePrioridadesView({
     };
   }, [currentOrganizationId, openDeals]);
 
-  const itemCallbacks = { onOpenProposal, onFollowUp, onAdvance, onOpenContact };
+  const itemCallbacks = {
+    isProposalCreationLocked,
+    onOpenProposal,
+    onFollowUp,
+    onAdvance,
+    onOpenContact,
+  };
 
   return (
     <>

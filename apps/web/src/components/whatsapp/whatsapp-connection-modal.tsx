@@ -28,7 +28,7 @@ interface WhatsappConnectionModalProps {
 }
 
 export function WhatsappConnectionModal({ open, onOpenChange }: WhatsappConnectionModalProps) {
-  const { currentOrganization, currentOrganizationId } = useOrganization();
+  const { currentOrganization, currentOrganizationId, user } = useOrganization();
   const [inboundPhones, setInboundPhones] = useState<WhatsappInboundPhoneRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,11 +38,14 @@ export function WhatsappConnectionModal({ open, onOpenChange }: WhatsappConnecti
   const [pairingInfo, setPairingInfo] = useState<WhatsappPairingCodeResponse | null>(null);
   const [pairingLoading, setPairingLoading] = useState(false);
 
+  const effectiveRole = String(currentOrganization?.role || user?.role || "").toUpperCase();
   const canEdit =
-    currentOrganization?.role === "OWNER" ||
-    currentOrganization?.role === "ADMIN" ||
-    currentOrganization?.role === "SALES" ||
-    currentOrganization?.role === "ENGINEER";
+    effectiveRole === "OWNER" ||
+    effectiveRole === "ADMIN" ||
+    effectiveRole === "PLATFORM" ||
+    effectiveRole === "SALES" ||
+    effectiveRole === "ENGINEER" ||
+    effectiveRole === "MEMBER";
 
   // Load phones when open
   useEffect(() => {
