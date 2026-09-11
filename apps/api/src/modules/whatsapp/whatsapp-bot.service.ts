@@ -376,7 +376,56 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     monthlyLimit?: number | null;
   }> {
     const planDetails = getTenantPlanDetails(tenant);
-    // Trava dos planos removida: WhatsApp Bot liberado para todos os usuários e planos
+
+    if (planDetails.isTrial) {
+      if (planDetails.trialExpired) {
+        return { active: false, reason: "trial_expired", planName: planDetails.planName };
+      }
+
+      const proposalsCount = await this.prisma.proposal.count({
+        where: { tenantId: tenant.id, deletedAt: null },
+      });
+
+      if (proposalsCount >= 20) {
+        return {
+          active: false,
+          reason: "proposal_limit_reached",
+          planName: planDetails.planName,
+          monthlyLimit: 20,
+        };
+      }
+
+      return { active: true, planName: planDetails.planName };
+    }
+
+    if (!planDetails.features.hasWhatsappBot) {
+      return { active: false, reason: "bot_disabled", planName: planDetails.planName };
+    }
+
+    const monthlyLimit = planDetails.features.maxProposalsPerMonth;
+    if (monthlyLimit !== null && monthlyLimit !== undefined && monthlyLimit > 0) {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const count = await this.prisma.proposal.count({
+        where: {
+          tenantId: tenant.id,
+          deletedAt: null,
+          createdAt: { gte: startOfMonth },
+        },
+      });
+
+      if (count >= monthlyLimit) {
+        return {
+          active: false,
+          reason: "proposal_limit_reached",
+          planName: planDetails.planName,
+          monthlyLimit,
+        };
+      }
+    }
+
     return { active: true, planName: planDetails.planName };
   }
 
