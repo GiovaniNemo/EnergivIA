@@ -81,7 +81,7 @@ export function Sidebar(): JSX.Element {
         }),
       }))
       .filter((section) => section.items.length > 0);
-  }, [userRole, surface, currentOrganization, trialDaysLeft]);
+  }, [isOwnerOrAdmin, isPlatform, surface, currentOrganization, trialDaysLeft]);
 
   const activeMenuPath = useMemo(() => {
     const currentPath = (pathname ?? "").replace(/\/$/, "");
