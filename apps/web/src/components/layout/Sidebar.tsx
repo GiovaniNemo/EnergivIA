@@ -31,6 +31,12 @@ function detectSurface(_pathname: string | null): Surface {
   return "all";
 }
 
+const PLATFORM_ADMIN_EMAILS = [
+  "sgiovanimendes@gmail.com",
+  "contato@energivia.com.br",
+  "admin@energivia.com.br",
+];
+
 export function Sidebar(): JSX.Element {
   const pathname = usePathname();
   const { open, setOpen } = useSidebar();
@@ -38,9 +44,22 @@ export function Sidebar(): JSX.Element {
   const collapsed = !open && !isMobile;
   const showDrawer = isMobile && open;
   const { user, currentOrganization } = useOrganization();
-  const effectiveRole = (currentOrganization?.role || user?.role || "").toUpperCase();
-  const isPlatform = effectiveRole === "PLATFORM";
-  const isOwnerOrAdmin = isPlatform || effectiveRole === "OWNER" || effectiveRole === "ADMIN";
+  const userEmail = (user?.email || "").toLowerCase().trim();
+  const globalRole = (user?.role || "").toUpperCase();
+  const orgRole = (currentOrganization?.role || "").toUpperCase();
+
+  const isPlatform =
+    globalRole === "PLATFORM" ||
+    globalRole === "SUPERADMIN" ||
+    orgRole === "PLATFORM" ||
+    PLATFORM_ADMIN_EMAILS.includes(userEmail);
+
+  const isOwnerOrAdmin =
+    isPlatform ||
+    orgRole === "OWNER" ||
+    orgRole === "ADMIN" ||
+    globalRole === "OWNER" ||
+    globalRole === "ADMIN";
 
   const createdAt = currentOrganization?.createdAt ? new Date(currentOrganization.createdAt) : null;
   const trialDaysLeft = createdAt ? getTrialDaysLeft(createdAt, 5) : 5;
@@ -59,7 +78,8 @@ export function Sidebar(): JSX.Element {
           if (item.section !== sectionKey) return false;
 
           if (surface === "admin" && !ADMIN_SURFACE_SECTIONS.has(sectionKey)) return false;
-          if (surface === "app" && !APP_SURFACE_SECTIONS.has(sectionKey)) return false;
+          if (surface === "app" && !APP_SURFACE_SECTIONS.has(sectionKey) && !isPlatform)
+            return false;
 
           if (item.requiresRole === "platform" && !isPlatform) return false;
           if ((item.requiresRole === "admin" || item.requiresRole === "owner") && !isOwnerOrAdmin)
