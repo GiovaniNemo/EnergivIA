@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useOrganization } from "@/components/providers/organization-provider";
 import {
   getMembers,
@@ -171,6 +172,30 @@ export default function TeamPage() {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
         <p className="text-[var(--color-muted-foreground)]">Selecione uma organização.</p>
+      </div>
+    );
+  }
+
+  const effectiveRole = (currentOrganization?.role || user?.role || "").toUpperCase();
+  const canManageTeam = effectiveRole === "OWNER" || effectiveRole === "ADMIN" || isPlatformAdmin;
+
+  if (!canManageTeam) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center text-center p-6">
+        <div className="rounded-full bg-amber-500/10 p-3 text-amber-500 mb-4">
+          <Users className="h-8 w-8" />
+        </div>
+        <h2 className="text-xl font-bold text-[var(--color-foreground)]">Acesso Restrito</h2>
+        <p className="mt-2 max-w-md text-sm text-[var(--color-muted-foreground)]">
+          Apenas administradores e o proprietário da organização podem gerenciar a equipe e convidar
+          novos membros.
+        </p>
+        <Link
+          href="/painel"
+          className="mt-5 inline-flex h-9 items-center justify-center rounded-lg bg-[var(--color-primary)] px-4 text-sm font-medium text-[var(--color-primary-foreground)] transition-colors hover:bg-[#43a047]"
+        >
+          Voltar ao Painel
+        </Link>
       </div>
     );
   }

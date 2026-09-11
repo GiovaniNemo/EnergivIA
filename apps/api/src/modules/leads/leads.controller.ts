@@ -1,7 +1,9 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from "@nestjs/common";
+import type { JwtPayload } from "@energivia/types";
 import { LeadsService } from "./leads.service";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
 import { TenantId } from "../../common/decorators/tenant-id.decorator";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { CreateLeadDto } from "./dto/create-lead.dto";
 import { UpdateLeadDto } from "./dto/update-lead.dto";
 import { QueryLeadsDto } from "./dto/query-leads.dto";
@@ -13,18 +15,26 @@ export class LeadsController {
   constructor(private readonly leadsService: LeadsService) {}
 
   @Post()
-  create(@TenantId() tenantId: string, @Body() dto: CreateLeadDto) {
-    return this.leadsService.create(tenantId, dto);
+  create(
+    @TenantId() tenantId: string,
+    @Body() dto: CreateLeadDto,
+    @CurrentUser() user?: JwtPayload
+  ) {
+    return this.leadsService.create(tenantId, dto, user);
   }
 
   @Get("stats")
-  stats(@TenantId() tenantId: string) {
-    return this.leadsService.getDashboardStats(tenantId);
+  stats(@TenantId() tenantId: string, @CurrentUser() user?: JwtPayload) {
+    return this.leadsService.getDashboardStats(tenantId, user);
   }
 
   @Get()
-  findAll(@TenantId() tenantId: string, @Query() query: QueryLeadsDto) {
-    return this.leadsService.findAll(tenantId, query);
+  findAll(
+    @TenantId() tenantId: string,
+    @Query() query: QueryLeadsDto,
+    @CurrentUser() user?: JwtPayload
+  ) {
+    return this.leadsService.findAll(tenantId, query, user);
   }
 
   @Get(":id/activity")

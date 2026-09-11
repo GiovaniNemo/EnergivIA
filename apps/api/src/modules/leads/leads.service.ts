@@ -56,17 +56,45 @@ export class LeadsService {
     private readonly leadActivityLog: LeadActivityLogService
   ) {}
 
-  async getDashboardStats(tenantId: string) {
+  async getDashboardStats(tenantId: string, user?: { sub?: string; role?: string }) {
+    const isOwnerOrAdmin =
+      user?.role === "OWNER" || user?.role === "ADMIN" || user?.role === "PLATFORM";
+
+    const dealWhere: Prisma.DealWhereInput = {
+      tenantId,
+      ...soft,
+      ...(!isOwnerOrAdmin && user?.sub ? { assignedUserId: user.sub } : {}),
+    };
+
+    const leadWhere: Prisma.LeadWhereInput = {
+      tenantId,
+      ...soft,
+      ...(!isOwnerOrAdmin && user?.sub
+        ? {
+            deals: {
+              some: {
+                assignedUserId: user.sub,
+                ...soft,
+              },
+            },
+          }
+        : {}),
+    };
+
     const [totalLeads, dealsInProposal, dealsInNegotiation, dealsWon] = await Promise.all([
-      this.prisma.lead.count({ where: { tenantId, ...soft } }),
-      this.prisma.deal.count({ where: { tenantId, ...soft, stage: "PROPOSAL" } }),
-      this.prisma.deal.count({ where: { tenantId, ...soft, stage: "NEGOTIATION" } }),
-      this.prisma.deal.count({ where: { tenantId, ...soft, stage: "WON" } }),
+      this.prisma.lead.count({ where: leadWhere }),
+      this.prisma.deal.count({ where: { ...dealWhere, stage: "PROPOSAL" } }),
+      this.prisma.deal.count({ where: { ...dealWhere, stage: "NEGOTIATION" } }),
+      this.prisma.deal.count({ where: { ...dealWhere, stage: "WON" } }),
     ]);
     return { totalLeads, dealsInProposal, dealsInNegotiation, dealsWon };
   }
 
-  async create(tenantId: string, dto: CreateLeadDto): Promise<Lead> {
+  async create(
+    tenantId: string,
+    dto: CreateLeadDto,
+    _user?: { sub?: string; role?: string }
+  ): Promise<Lead> {
     const cpfCnpj = resolveOptionalCpfCnpj(dto.cpfCnpj);
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -128,12 +156,28 @@ export class LeadsService {
     });
   }
 
-  async findAll(tenantId: string, query: QueryLeadsDto): Promise<PaginatedResponse<LeadListRow>> {
+  async findAll(
+    tenantId: string,
+    query: QueryLeadsDto,
+    user?: { sub?: string; role?: string }
+  ): Promise<PaginatedResponse<LeadListRow>> {
     const { skip, take } = getSkipTake(query.page ?? 1, query.pageSize ?? 20);
+    const isOwnerOrAdmin =
+      user?.role === "OWNER" || user?.role === "ADMIN" || user?.role === "PLATFORM";
 
     const where: Prisma.LeadWhereInput = {
       tenantId,
       ...soft,
+      ...(!isOwnerOrAdmin && user?.sub
+        ? {
+            deals: {
+              some: {
+                assignedUserId: user.sub,
+                ...soft,
+              },
+            },
+          }
+        : {}),
     };
     if (query.search) {
       const digits = query.search.replace(/\D/g, "");
@@ -159,7 +203,7 @@ export class LeadsService {
         orderBy: { updatedAt: "desc" },
         include: {
           deals: {
-            where: soft,
+            where: !isOwnerOrAdmin && user?.sub ? { ...soft, assignedUserId: user.sub } : soft,
             select: {
               id: true,
               stage: true,

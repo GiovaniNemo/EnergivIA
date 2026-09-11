@@ -99,6 +99,7 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: Building2,
     path: "/configuracoes/organizacao",
     section: "management",
+    requiresRole: "admin",
   },
   {
     label: "Custos do projeto",
@@ -106,6 +107,7 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/configuracoes/custos-projeto",
     section: "management",
     tooltip: "Regras de custo (fixo, % ou por kWp) e faixas de potência",
+    requiresRole: "admin",
   },
   {
     label: "Estoque",
@@ -114,7 +116,13 @@ export const MENU_ITEMS: MenuItem[] = [
     section: "management",
     tooltip: "Seu estoque próprio: produtos, quantidade e custo para montar propostas",
   },
-  { label: "Equipe", icon: UserPlus, path: "/configuracoes/equipe", section: "management" },
+  {
+    label: "Equipe",
+    icon: UserPlus,
+    path: "/configuracoes/equipe",
+    section: "management",
+    requiresRole: "admin",
+  },
   {
     label: "Templates de Proposta",
     icon: Palette,
@@ -127,8 +135,15 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/gestao/meus-planos",
     section: "management",
     tooltip: "Assine um plano para acessar recursos premium",
+    requiresRole: "admin",
   },
-  { label: "Configurações", icon: Settings, path: "/configuracoes", section: "management" },
+  {
+    label: "Configurações",
+    icon: Settings,
+    path: "/configuracoes",
+    section: "management",
+    requiresRole: "admin",
+  },
 
   {
     label: "Distribuidores",

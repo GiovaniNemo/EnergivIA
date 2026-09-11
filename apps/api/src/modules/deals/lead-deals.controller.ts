@@ -1,6 +1,8 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import type { JwtPayload } from "@energivia/types";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
 import { TenantId } from "../../common/decorators/tenant-id.decorator";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { DealsService } from "./deals.service";
 import { CreateDealDto } from "./dto/create-deal.dto";
 
@@ -13,9 +15,10 @@ export class LeadDealsController {
   create(
     @TenantId() tenantId: string,
     @Param("leadId") leadId: string,
-    @Body() dto: CreateDealDto
+    @Body() dto: CreateDealDto,
+    @CurrentUser() user?: JwtPayload
   ) {
-    return this.dealsService.create(tenantId, leadId, dto);
+    return this.dealsService.create(tenantId, leadId, dto, user);
   }
 
   @Get("leads/:leadId/deals")

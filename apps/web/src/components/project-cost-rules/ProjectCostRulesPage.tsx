@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
+import { ShieldAlert } from "lucide-react";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -13,19 +15,21 @@ import { CostRulesGroupedList } from "./CostRulesGroupedList";
 
 export function ProjectCostRulesPage(): JSX.Element {
   const queryClient = useQueryClient();
-  const { currentOrganization, currentOrganizationId } = useOrganization();
+  const { user, currentOrganization, currentOrganizationId } = useOrganization();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CostRuleRow | null>(null);
   const [snack, setSnack] = useState<{ severity: "success" | "error"; message: string } | null>(
     null
   );
 
-  const canEdit = currentOrganization?.role === "OWNER" || currentOrganization?.role === "ADMIN";
+  const effectiveRole = (currentOrganization?.role || user?.role || "").toUpperCase();
+  const canEdit =
+    effectiveRole === "OWNER" || effectiveRole === "ADMIN" || effectiveRole === "PLATFORM";
 
   const query = useQuery({
     queryKey: ["cost-rules", currentOrganizationId],
     queryFn: () => listCostRules(currentOrganizationId!),
-    enabled: Boolean(currentOrganizationId),
+    enabled: Boolean(currentOrganizationId) && canEdit,
   });
 
   const invalidate = useCallback(() => {
@@ -69,6 +73,27 @@ export function ProjectCostRulesPage(): JSX.Element {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
         <p className="text-[var(--color-muted-foreground)]">Selecione uma organização.</p>
+      </div>
+    );
+  }
+
+  if (!canEdit) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center text-center p-6">
+        <div className="rounded-full bg-amber-500/10 p-3 text-amber-500 mb-4">
+          <ShieldAlert className="h-8 w-8" />
+        </div>
+        <h2 className="text-xl font-bold text-[var(--color-foreground)]">Acesso Restrito</h2>
+        <p className="mt-2 max-w-md text-sm text-[var(--color-muted-foreground)]">
+          As regras de custo do projeto e margens são dados sensíveis da empresa e só podem ser
+          acessados e configurados por administradores da organização.
+        </p>
+        <Link
+          href="/painel"
+          className="mt-5 inline-flex h-9 items-center justify-center rounded-lg bg-[var(--color-primary)] px-4 text-sm font-medium text-[var(--color-primary-foreground)] transition-colors hover:bg-[#43a047]"
+        >
+          Voltar ao Painel
+        </Link>
       </div>
     );
   }

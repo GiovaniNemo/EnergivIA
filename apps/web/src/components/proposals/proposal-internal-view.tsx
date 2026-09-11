@@ -117,7 +117,12 @@ function computeBillSavingsPct(proposal: ProposalDetail): number | null {
 
 export function ProposalInternalView({ proposalId }: { proposalId: string }): JSX.Element {
   const router = useRouter();
-  const { currentOrganizationId, currentOrganization, loading: orgLoading } = useOrganization();
+  const {
+    user,
+    currentOrganizationId,
+    currentOrganization,
+    loading: orgLoading,
+  } = useOrganization();
   const [proposal, setProposal] = useState<ProposalDetail | null>(null);
   const [templates, setTemplates] = useState<ProposalTemplateEntity[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
@@ -518,6 +523,10 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
 
   const marginHealth = getMarginHealth(marginPct);
 
+  const effectiveRole = (currentOrganization?.role || user?.role || "").toUpperCase();
+  const isOwnerOrAdmin =
+    effectiveRole === "OWNER" || effectiveRole === "ADMIN" || effectiveRole === "PLATFORM";
+
   return (
     <div className="w-full min-w-0 space-y-10">
       {copyState === "done" && (
@@ -544,7 +553,7 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
         onCloseProposal={() => void handleCloseProposal()}
         publicProposalPath={publicProposalPath}
         templateEditorUrl={templateEditorPath}
-        canEditTemplate={Boolean(templateIdForEditor)}
+        canEditTemplate={Boolean(templateIdForEditor) && isOwnerOrAdmin}
         onCopyPublicLink={() => void copyPublicLink()}
         copyState={copyState}
         onExportPdf={() => void downloadInternalPdf()}
@@ -562,7 +571,7 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
       />
 
       <section
-        className="grid gap-6 lg:grid-cols-2 lg:items-stretch"
+        className={`grid gap-6 ${isOwnerOrAdmin ? "lg:grid-cols-2" : "grid-cols-1"} items-stretch`}
         aria-label="Resumo comercial e financeiro"
       >
         <ProposalSalesHeroCard
@@ -575,37 +584,39 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
           paybackClassName={paybackToneClass(paybackY)}
           paybackWarning={paybackY > 20}
         />
-        <ProposalBusinessHeroCard
-          hasKit={hasEquipmentBreakdown}
-          marginPct={marginPct}
-          marginAppliedBrl={marginAppliedFromRules ?? null}
-          laborAppliedBrl={laborAppliedFromRules ?? null}
-          hasRuleCostBreakdown={hasRuleCostBreakdown}
-          equipmentCost={hasEquipmentBreakdown ? equipmentSubtotal : null}
-          remainderAfterEquipmentBrl={remainderAgg}
-          saleToClient={quotedSale}
-          health={marginHealth}
-          isEditingMargin={isEditingMargin}
-          onEditMarginClick={() => {
-            setMarginOverrideDraft(marginAppliedFromRules ?? 0);
-            setIsEditingMargin(true);
-          }}
-          marginOverrideDraft={marginOverrideDraft}
-          onMarginOverrideChange={setMarginOverrideDraft}
-          marginOverrideSaving={marginOverrideSaving}
-          onSaveMarginOverride={() => void saveMarginOverride()}
-          onCancelMarginEdit={() => setIsEditingMargin(false)}
-          isEditingLabor={isEditingLabor}
-          onEditLaborClick={() => {
-            setLaborOverrideDraft(laborAppliedFromRules ?? 0);
-            setIsEditingLabor(true);
-          }}
-          laborOverrideDraft={laborOverrideDraft}
-          onLaborOverrideChange={setLaborOverrideDraft}
-          laborOverrideSaving={laborOverrideSaving}
-          onSaveLaborOverride={() => void saveLaborOverride()}
-          onCancelLaborEdit={() => setIsEditingLabor(false)}
-        />
+        {isOwnerOrAdmin && (
+          <ProposalBusinessHeroCard
+            hasKit={hasEquipmentBreakdown}
+            marginPct={marginPct}
+            marginAppliedBrl={marginAppliedFromRules ?? null}
+            laborAppliedBrl={laborAppliedFromRules ?? null}
+            hasRuleCostBreakdown={hasRuleCostBreakdown}
+            equipmentCost={hasEquipmentBreakdown ? equipmentSubtotal : null}
+            remainderAfterEquipmentBrl={remainderAgg}
+            saleToClient={quotedSale}
+            health={marginHealth}
+            isEditingMargin={isEditingMargin}
+            onEditMarginClick={() => {
+              setMarginOverrideDraft(marginAppliedFromRules ?? 0);
+              setIsEditingMargin(true);
+            }}
+            marginOverrideDraft={marginOverrideDraft}
+            onMarginOverrideChange={setMarginOverrideDraft}
+            marginOverrideSaving={marginOverrideSaving}
+            onSaveMarginOverride={() => void saveMarginOverride()}
+            onCancelMarginEdit={() => setIsEditingMargin(false)}
+            isEditingLabor={isEditingLabor}
+            onEditLaborClick={() => {
+              setLaborOverrideDraft(laborAppliedFromRules ?? 0);
+              setIsEditingLabor(true);
+            }}
+            laborOverrideDraft={laborOverrideDraft}
+            onLaborOverrideChange={setLaborOverrideDraft}
+            laborOverrideSaving={laborOverrideSaving}
+            onSaveLaborOverride={() => void saveLaborOverride()}
+            onCancelLaborEdit={() => setIsEditingLabor(false)}
+          />
+        )}
       </section>
 
       {regeneratedPublicUrl ? (
@@ -687,7 +698,8 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
         </p>
       ) : null}
 
-      {integrator?.defaultEssentialCostNames &&
+      {isOwnerOrAdmin &&
+      integrator?.defaultEssentialCostNames &&
       integrator.defaultEssentialCostNames.length > 0 &&
       !orgCostRulesExist &&
       !costDefaultsSaved ? (
@@ -733,7 +745,7 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
         </div>
       ) : null}
 
-      {integrator?.projectCostLines && integrator.projectCostLines.length > 0 ? (
+      {isOwnerOrAdmin && integrator?.projectCostLines && integrator.projectCostLines.length > 0 ? (
         <section
           className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4"
           aria-label="Custos do projeto aplicados"

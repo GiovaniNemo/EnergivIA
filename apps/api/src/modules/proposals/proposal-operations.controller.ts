@@ -29,7 +29,7 @@ export class ProposalOperationsController {
 
   @Get()
   list(@TenantId() tenantId: string, @CurrentUser() user?: JwtPayload) {
-    return this.proposalsService.list(tenantId, user?.role);
+    return this.proposalsService.list(tenantId, user);
   }
 
   @Get(":id")

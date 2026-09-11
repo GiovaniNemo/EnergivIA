@@ -38,7 +38,9 @@ export function Sidebar(): JSX.Element {
   const collapsed = !open && !isMobile;
   const showDrawer = isMobile && open;
   const { user, currentOrganization } = useOrganization();
-  const userRole = user?.role ?? null;
+  const effectiveRole = (currentOrganization?.role || user?.role || "").toUpperCase();
+  const isPlatform = effectiveRole === "PLATFORM";
+  const isOwnerOrAdmin = isPlatform || effectiveRole === "OWNER" || effectiveRole === "ADMIN";
 
   const createdAt = currentOrganization?.createdAt ? new Date(currentOrganization.createdAt) : null;
   const trialDaysLeft = createdAt ? getTrialDaysLeft(createdAt, 5) : 5;
@@ -59,13 +61,8 @@ export function Sidebar(): JSX.Element {
           if (surface === "admin" && !ADMIN_SURFACE_SECTIONS.has(sectionKey)) return false;
           if (surface === "app" && !APP_SURFACE_SECTIONS.has(sectionKey)) return false;
 
-          if (item.requiresRole === "platform" && userRole !== "PLATFORM") return false;
-          if (
-            (item.requiresRole === "admin" || item.requiresRole === "owner") &&
-            userRole !== "OWNER" &&
-            userRole !== "ADMIN" &&
-            userRole !== "PLATFORM"
-          )
+          if (item.requiresRole === "platform" && !isPlatform) return false;
+          if ((item.requiresRole === "admin" || item.requiresRole === "owner") && !isOwnerOrAdmin)
             return false;
           return true;
         }).map((item) => {

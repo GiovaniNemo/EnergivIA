@@ -164,6 +164,10 @@ export default function DashboardPage(): JSX.Element {
   const todayLine = useMemo(() => formatTodayLine(), []);
   const greetingName = firstName(user?.name);
 
+  const effectiveRole = (currentOrganization?.role || user?.role || "").toUpperCase();
+  const isOwnerOrAdmin =
+    effectiveRole === "OWNER" || effectiveRole === "ADMIN" || effectiveRole === "PLATFORM";
+
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -293,22 +297,27 @@ export default function DashboardPage(): JSX.Element {
     const items: FeedEntry[] = [];
     leads
       .filter((l) => l.latestDealStage === "WON")
-      .slice(0, 3)
+      .slice(0, 4)
       .forEach((l) => {
         items.push({
           kind: "success",
           icon: Check,
           text: (
             <>
-              <strong className="font-semibold">{l.name}</strong> aceitou proposta
+              <strong className="font-semibold">{l.name}</strong> fechou negócio
               {l.latestDealValue ? ` · ${formatBRL(asNumber(l.latestDealValue))}` : ""}
+              {isOwnerOrAdmin && l.latestDealAssignedUserName ? (
+                <span className="ml-1 text-[11px] text-[var(--color-muted-foreground)]">
+                  (resp: {l.latestDealAssignedUserName})
+                </span>
+              ) : null}
             </>
           ),
           time: relativeTime(l.latestDealUpdatedAt ?? l.updatedAt),
           sortKey: new Date(l.latestDealUpdatedAt ?? l.updatedAt).getTime() || 0,
         });
       });
-    sentProposals.slice(0, 5).forEach((p) => {
+    sentProposals.slice(0, 6).forEach((p) => {
       items.push({
         kind: "neutral",
         icon: FileText,
@@ -322,13 +331,13 @@ export default function DashboardPage(): JSX.Element {
         sortKey: new Date(p.createdAt).getTime() || 0,
       });
     });
-    leads.slice(0, 5).forEach((l) => {
+    leads.slice(0, 6).forEach((l) => {
       items.push({
         kind: "info",
         icon: l.source?.toLowerCase().includes("whats") ? MessageSquare : Search,
         text: (
           <>
-            Novo lead {l.source ? `via ${l.source}` : ""} ·{" "}
+            Novo cliente {l.source ? `via ${l.source}` : ""} ·{" "}
             <strong className="font-semibold">{l.name}</strong>
           </>
         ),
@@ -336,8 +345,8 @@ export default function DashboardPage(): JSX.Element {
         sortKey: new Date(l.createdAt).getTime() || 0,
       });
     });
-    return items.sort((a, b) => b.sortKey - a.sortKey).slice(0, 4);
-  }, [leads, sentProposals]);
+    return items.sort((a, b) => b.sortKey - a.sortKey).slice(0, 5);
+  }, [leads, sentProposals, isOwnerOrAdmin]);
 
   const pipeline = useMemo(() => {
     return STAGE_DEFS.map((def) => {
@@ -370,28 +379,28 @@ export default function DashboardPage(): JSX.Element {
     icon: typeof Users;
   }[] = [
     {
-      label: "Leads este mês",
+      label: isOwnerOrAdmin ? "Leads da empresa" : "Seus leads este mês",
       value: orgId ? String(leadsThisMonth) : "—",
       delta: stats ? `${stats.totalLeads} no total` : "",
       trend: leadsThisMonth > 0 ? "up" : "neutral",
       icon: Users,
     },
     {
-      label: "Propostas enviadas",
+      label: isOwnerOrAdmin ? "Propostas da equipe" : "Suas propostas enviadas",
       value: orgId ? String(sentProposals.length) : "—",
       delta: proposalsToday > 0 ? `${proposalsToday} enviadas hoje` : "—",
       trend: proposalsToday > 0 ? "up" : "neutral",
       icon: FileText,
     },
     {
-      label: "Taxa de conversão",
+      label: isOwnerOrAdmin ? "Taxa de conversão (empresa)" : "Sua taxa de conversão",
       value: stats ? `${conversionPct}%` : "—",
       delta: stats ? `${stats.dealsWon} fechadas / ${stats.totalLeads} leads` : "",
       trend: conversionPct > 0 ? "up" : "neutral",
       icon: TrendingUp,
     },
     {
-      label: "Receita prevista",
+      label: isOwnerOrAdmin ? "Receita prevista (empresa)" : "Sua receita prevista",
       value: orgId ? formatBRL(forecastRevenue) : "—",
       delta: stats
         ? `${(stats.dealsInProposal ?? 0) + (stats.dealsInNegotiation ?? 0)} negócios em aberto`
@@ -406,12 +415,25 @@ export default function DashboardPage(): JSX.Element {
       {}
       <header className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <h1 className="text-[28px] font-bold tracking-[-0.02em] text-[var(--color-foreground)]">
-            Painel
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-[28px] font-bold tracking-[-0.02em] text-[var(--color-foreground)]">
+              Painel
+            </h1>
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                isOwnerOrAdmin
+                  ? "border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                  : "border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+              }`}
+            >
+              {isOwnerOrAdmin ? "Visão da Empresa" : "Seu Painel Comercial"}
+            </span>
+          </div>
           <p className="mt-1.5 text-sm text-[var(--color-muted-foreground)]">
             {greetingName ? `Olá, ${greetingName}. ` : ""}
-            Aqui está o resumo de hoje, {todayLine}.
+            {isOwnerOrAdmin
+              ? `Aqui está o resumo consolidado da empresa hoje, ${todayLine}.`
+              : `Aqui está o resumo das suas oportunidades e propostas hoje, ${todayLine}.`}
             {currentOrganization?.name ? ` · ${currentOrganization.name}` : ""}
           </p>
         </div>
@@ -604,7 +626,9 @@ export default function DashboardPage(): JSX.Element {
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
         <article className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-[0_1px_3px_0_rgba(15,23,42,0.06),0_1px_2px_-1px_rgba(15,23,42,0.06)] dark:shadow-none">
           <h3 className="text-[15px] font-semibold text-[var(--color-foreground)]">
-            Propostas — últimos 14 dias
+            {isOwnerOrAdmin
+              ? "Propostas da equipe — últimos 14 dias"
+              : "Suas propostas — últimos 14 dias"}
           </h3>
           <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
             Volume diário · {chartPoints.total} no período
@@ -657,10 +681,12 @@ export default function DashboardPage(): JSX.Element {
         </article>
         <article className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-[0_1px_3px_0_rgba(15,23,42,0.06),0_1px_2px_-1px_rgba(15,23,42,0.06)] dark:shadow-none">
           <h3 className="text-[15px] font-semibold text-[var(--color-foreground)]">
-            Atividade recente
+            {isOwnerOrAdmin ? "Atividade recente da equipe" : "Suas atividades recentes"}
           </h3>
           <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-            Últimas interações do funil
+            {isOwnerOrAdmin
+              ? "Últimas interações de todo o time em tempo real"
+              : "Últimas interações dos seus clientes em tempo real"}
           </p>
           <div className="mt-3 flex flex-col">
             {feed.length === 0 ? (
@@ -706,7 +732,7 @@ export default function DashboardPage(): JSX.Element {
         <div className="mb-3 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
           <div>
             <h3 className="text-[15px] font-semibold text-[var(--color-foreground)]">
-              Funil — Negociações
+              {isOwnerOrAdmin ? "Funil — Todas as Negociações" : "Seu Funil — Suas Negociações"}
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
               {leads.length} {leads.length === 1 ? "lead" : "leads"} no funil ·{" "}

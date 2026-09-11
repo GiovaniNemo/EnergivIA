@@ -539,6 +539,31 @@ function OrganizationSettingsContent() {
     );
   }
 
+  const effectiveRole = (currentOrganization?.role || user?.role || "").toUpperCase();
+  const isOwnerOrAdmin =
+    effectiveRole === "OWNER" || effectiveRole === "ADMIN" || effectiveRole === "PLATFORM";
+
+  if (!isOwnerOrAdmin) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center text-center p-6">
+        <div className="rounded-full bg-amber-500/10 p-3 text-amber-500 mb-4">
+          <Building2 className="h-8 w-8" />
+        </div>
+        <h2 className="text-xl font-bold text-[var(--color-foreground)]">Acesso Restrito</h2>
+        <p className="mt-2 max-w-md text-sm text-[var(--color-muted-foreground)]">
+          Os dados cadastrais e fiscais da organização só podem ser configurados e alterados por
+          administradores da empresa.
+        </p>
+        <Link
+          href="/painel"
+          className="mt-5 inline-flex h-9 items-center justify-center rounded-lg bg-[var(--color-primary)] px-4 text-sm font-medium text-[var(--color-primary-foreground)] transition-colors hover:bg-[#43a047]"
+        >
+          Voltar ao Painel
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Header with Title and Create New Org Button */}

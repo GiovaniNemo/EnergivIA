@@ -80,9 +80,17 @@ export class ProposalsService {
     @Optional() private readonly webhooksDispatcher?: WebhooksDispatcherService
   ) {}
 
-  async list(tenantId: string, userRole?: string) {
+  async list(tenantId: string, user?: { sub?: string; role?: string } | string) {
+    const userRole = typeof user === "string" ? user : user?.role;
+    const userId = typeof user === "object" ? user?.sub : undefined;
+    const isOwnerOrAdmin = userRole === "OWNER" || userRole === "ADMIN" || userRole === "PLATFORM";
+
     const rows = await this.prisma.proposal.findMany({
-      where: { tenantId, ...soft },
+      where: {
+        tenantId,
+        ...soft,
+        ...(!isOwnerOrAdmin && userId ? { deal: { assignedUserId: userId } } : {}),
+      },
       include: {
         deal: {
           include: {

@@ -74,7 +74,7 @@ export class CostRulesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(organizationId: string, userId: string) {
-    await this.requireMembership(organizationId, userId);
+    await this.requireOwnerOrAdmin(organizationId, userId);
     const org = await this.prisma.tenant.findFirst({ where: { id: organizationId, ...soft } });
     if (!org) throw new NotFoundException("Organização não encontrada.");
 

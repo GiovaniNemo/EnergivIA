@@ -22,18 +22,34 @@ export class DealsService {
     await assertLeadInTenant(this.prisma, tenantId, leadId);
   }
 
-  async create(tenantId: string, leadId: string, dto: CreateDealDto): Promise<Deal> {
+  async create(
+    tenantId: string,
+    leadId: string,
+    dto: CreateDealDto,
+    user?: { sub?: string; role?: string }
+  ): Promise<Deal> {
     await this.assertLead(tenantId, leadId);
     if (dto.stage === "LOST" && !dto.lostReason) {
       throw new BadRequestException(
         "Quando o estágio for Perdido (LOST), informe o motivo da perda (lostReason)."
       );
     }
-    if (dto.assignedUserId) {
+    const isOwnerOrAdmin =
+      user?.role === "OWNER" || user?.role === "ADMIN" || user?.role === "PLATFORM";
+
+    let targetAssignedUserId: string | null = dto.assignedUserId ?? null;
+    if (!targetAssignedUserId && user?.sub) {
+      targetAssignedUserId = user.sub;
+    }
+    if (!isOwnerOrAdmin && user?.sub) {
+      targetAssignedUserId = user.sub;
+    }
+
+    if (targetAssignedUserId) {
       const member = await this.prisma.organizationMember.findFirst({
         where: {
           organizationId: tenantId,
-          userId: dto.assignedUserId,
+          userId: targetAssignedUserId,
           status: "ACCEPTED",
         },
         select: { id: true },
@@ -46,7 +62,7 @@ export class DealsService {
       data: {
         tenantId,
         leadId,
-        assignedUserId: dto.assignedUserId ?? null,
+        assignedUserId: targetAssignedUserId,
         title: dto.title,
         value:
           dto.value !== undefined && dto.value !== null ? new Prisma.Decimal(dto.value) : undefined,
