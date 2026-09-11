@@ -1,44 +1,114 @@
 import "./index.css";
 import { Composition } from "remotion";
-import { HelloWorld } from "./HelloWorld";
-import { Logo } from "./HelloWorld/Logo";
+import { InstitutionalVideo } from "./InstitutionalVideo";
+import { Scene1Hero } from "./InstitutionalVideo/Scene1Hero";
+import { Scene2OCR } from "./InstitutionalVideo/Scene2OCR";
+import { Scene3Engineering } from "./InstitutionalVideo/Scene3Engineering";
+import { Scene4WhatsAppCRM } from "./InstitutionalVideo/Scene4WhatsAppCRM";
+import { Scene5ProposalFinance } from "./InstitutionalVideo/Scene5ProposalFinance";
+import { Scene6CTA } from "./InstitutionalVideo/Scene6CTA";
+import { VideoBackground } from "./InstitutionalVideo/Background";
 
-// Each <Composition> is an entry in the sidebar!
+// Wrapper for individual scene preview with background
+const ScenePreview: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => (
+  <div style={{ position: "relative", width: "100%", height: "100%" }}>
+    <VideoBackground />
+    {children}
+  </div>
+);
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      {/* Principal: Vídeo Institucional Completo EnergivIA (30s) */}
       <Composition
-        // You can take the "id" to render a video:
-        // npx remotion render HelloWorld
-        id="HelloWorld"
-        component={HelloWorld}
-        durationInFrames={150}
+        id="EnergiviaInstitucional"
+        component={InstitutionalVideo}
+        durationInFrames={900}
         fps={30}
         width={1920}
         height={1080}
-        // You can override these props for each render:
-        // https://www.remotion.dev/docs/parametrized-rendering
-        defaultProps={{
-          titleText: "Welcome to Remotion",
-          titleColor: "#000000",
-          logoColor1: "#91EAE4",
-          logoColor2: "#86A8E7",
-        }}
       />
 
-      {/* Mount any React component to make it show up in the sidebar and work on it individually! */}
+      {/* Cenas Individuais para edição e preview detalhado no Remotion Studio */}
       <Composition
-        id="OnlyLogo"
-        component={Logo}
+        id="Cena1-Hero"
+        component={() => (
+          <ScenePreview>
+            <Scene1Hero />
+          </ScenePreview>
+        )}
         durationInFrames={150}
         fps={30}
         width={1920}
         height={1080}
-        defaultProps={{
-          logoColor1: "#91dAE2",
-          logoColor2: "#86A8E7",
-        }}
+      />
+
+      <Composition
+        id="Cena2-OCR-Fatura"
+        component={() => (
+          <ScenePreview>
+            <Scene2OCR />
+          </ScenePreview>
+        )}
+        durationInFrames={150}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+
+      <Composition
+        id="Cena3-Dimensionamento"
+        component={() => (
+          <ScenePreview>
+            <Scene3Engineering />
+          </ScenePreview>
+        )}
+        durationInFrames={150}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+
+      <Composition
+        id="Cena4-WhatsApp-CRM"
+        component={() => (
+          <ScenePreview>
+            <Scene4WhatsAppCRM />
+          </ScenePreview>
+        )}
+        durationInFrames={150}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+
+      <Composition
+        id="Cena5-Proposta-Financiamento"
+        component={() => (
+          <ScenePreview>
+            <Scene5ProposalFinance />
+          </ScenePreview>
+        )}
+        durationInFrames={150}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+
+      <Composition
+        id="Cena6-Resultados-CTA"
+        component={() => (
+          <ScenePreview>
+            <Scene6CTA />
+          </ScenePreview>
+        )}
+        durationInFrames={150}
+        fps={30}
+        width={1920}
+        height={1080}
       />
     </>
   );

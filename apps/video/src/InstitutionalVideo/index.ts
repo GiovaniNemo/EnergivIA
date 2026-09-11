@@ -1,0 +1,1 @@
+export { InstitutionalVideo } from "./InstitutionalVideo";

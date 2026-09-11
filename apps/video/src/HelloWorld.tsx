@@ -55,7 +55,11 @@ export const HelloWorld: React.FC<HelloWorldProps> = ({
 
   // A <AbsoluteFill> is just a absolutely positioned <div>!
   return (
-    <AbsoluteFill style={{ backgroundColor: "white" }}>
+    <AbsoluteFill
+      style={{
+        backgroundColor: "white",
+      }}
+    >
       <AbsoluteFill style={{ opacity }}>
         <AbsoluteFill style={{ transform: `translateY(${logoTranslation}px)` }}>
           <Logo logoColor1={logoColor1} logoColor2={logoColor2} />
