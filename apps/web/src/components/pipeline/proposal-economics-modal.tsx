@@ -3317,7 +3317,7 @@ export const ProposalEconomicsModal = forwardRef<
                     </div>
                   </div>
                 ) : null}
-                {proposalKitResult ? (
+                {quotingMode === "distributor" && proposalKitResult ? (
                   <div
                     className={`space-y-5 transition-opacity ${
                       proposalKitLoading ? "pointer-events-none opacity-50" : ""
