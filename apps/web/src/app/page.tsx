@@ -13,6 +13,9 @@ import {
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { HowItWorksTabs } from "@/components/landing/how-it-works-tabs";
+import { BubbleSidebar } from "@/components/landing/bubble-sidebar";
+import { ConvergingHeroShowcase } from "@/components/landing/converging-hero-showcase";
+import { ConvergingPanelsSection } from "@/components/landing/converging-panels-section";
 
 const btnBase =
   "inline-flex h-11 items-center justify-center rounded-full px-6 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 focus-visible:ring-offset-2";
@@ -50,6 +53,7 @@ export const metadata: Metadata = {
 export default function HomePage(): JSX.Element {
   return (
     <div className="landing-light min-h-screen flex flex-col bg-slate-950 text-white antialiased">
+      <BubbleSidebar />
       <div className="landing-hero relative overflow-hidden min-h-[85vh] flex flex-col bg-[#edf5f5]">
         <div className="pointer-events-none absolute left-1/2 top-0 h-[360px] w-[760px] -translate-x-1/2 rounded-full bg-teal-400/18 blur-[120px]" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_16%,rgba(20,184,166,0.1),transparent_52%)]" />
@@ -153,22 +157,7 @@ export default function HomePage(): JSX.Element {
                 </div>
               </div>
             </div>
-            <div
-              className="relative mx-auto mt-8 w-full max-w-[1240px]"
-              style={{ animation: "fadeInScale 760ms ease-out both" }}
-            >
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-1/3 bg-gradient-to-t from-[#f3f8f8] to-transparent" />
-              <Image
-                src="/landing/demo.png"
-                alt="Demonstração do painel da EnergivIA"
-                width={1080}
-                height={675}
-                className="h-auto w-full object-contain"
-                style={{ animation: "floatGentle 6s ease-in-out 900ms infinite" }}
-                priority
-                unoptimized
-              />
-            </div>
+            <ConvergingHeroShowcase />
           </div>
         </div>
       </div>
@@ -238,6 +227,8 @@ export default function HomePage(): JSX.Element {
             </div>
           </div>
         </section>
+
+        <ConvergingPanelsSection />
 
         <section
           id="diferenciais"
