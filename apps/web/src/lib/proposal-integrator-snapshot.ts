@@ -75,15 +75,27 @@ export function buildProposalIntegratorRenderedData(
       ? opts.systemKwp
       : kit.system_power_kw;
 
-  const cost = computeProjectCostSection(equipmentSubtotalBrl, systemKw, orgRules);
+  const isKwpRate = opts?.sourceType === "kwp_rate";
+
+  const cost = isKwpRate
+    ? {
+        projectCostLines: [],
+        defaultEssentialCostNames: [],
+        computedSaleFromCostRulesBrl: equipmentSubtotalBrl,
+      }
+    : computeProjectCostSection(equipmentSubtotalBrl, systemKw, orgRules);
 
   const freightBrl =
-    opts?.freight && Number.isFinite(opts.freight.valueBrl) && opts.freight.valueBrl > 0
+    !isKwpRate &&
+    opts?.freight &&
+    Number.isFinite(opts.freight.valueBrl) &&
+    opts.freight.valueBrl > 0
       ? Math.round(opts.freight.valueBrl * 100) / 100
       : 0;
   const freightState = freightBrl > 0 ? opts!.freight!.state : undefined;
-  const computedWithFreight =
-    Math.round((cost.computedSaleFromCostRulesBrl + freightBrl) * 100) / 100;
+  const computedWithFreight = isKwpRate
+    ? equipmentSubtotalBrl
+    : Math.round((cost.computedSaleFromCostRulesBrl + freightBrl) * 100) / 100;
   const quoted = Math.max(1000, computedWithFreight);
   const freightLines =
     freightState != null
@@ -108,7 +120,7 @@ export function buildProposalIntegratorRenderedData(
       systemPowerKw: kit.system_power_kw,
       ...(opts?.sourceType ? { sourceType: opts.sourceType } : {}),
       ...(notes?.trim() ? { notes: notes.trim() } : {}),
-      projectCostLines: [...cost.projectCostLines, ...freightLines],
+      projectCostLines: isKwpRate ? [] : [...cost.projectCostLines, ...freightLines],
       ...(freightState != null ? { freightState, freightBrl } : {}),
       ...(cost.defaultEssentialCostNames.length
         ? { defaultEssentialCostNames: cost.defaultEssentialCostNames }

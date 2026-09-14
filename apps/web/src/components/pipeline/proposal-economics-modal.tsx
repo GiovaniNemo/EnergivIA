@@ -82,6 +82,7 @@ import {
   type KitSourceOption,
   type KitSwapCategory,
 } from "@/lib/kit-api";
+import { generateKwpRateTiers } from "@/lib/kwp-rate-kit-engine";
 import { buildProposalIntegratorRenderedData } from "@/lib/proposal-integrator-snapshot";
 import { getStockFreightRules, searchStockProducts } from "@/lib/stock-api";
 import { fetchDistributorProducts, fetchProducts } from "@/lib/admin-api";
@@ -648,6 +649,40 @@ export const ProposalEconomicsModal = forwardRef<
   const [proposalCreateLoading, setProposalCreateLoading] = useState(false);
   const [proposalCreateError, setProposalCreateError] = useState<string | null>(null);
   const [proposalDiscount, setProposalDiscount] = useState<number | null>(null);
+  const [quotingMode, setQuotingMode] = useState<"distributor" | "kwp_rate">("distributor");
+  const [kwpRateValue, setKwpRateValue] = useState<number>(2800);
+  const [selectedKwpTierId, setSelectedKwpTierId] = useState<
+    "economic" | "cost_benefit" | "premium"
+  >("cost_benefit");
+
+  const kwpRateTiers = useMemo(() => {
+    const kwp = Math.max(
+      0.5,
+      parseFloat(proposalKitDraft.systemKw) || (generatedProposal?.tamanhoSistemaKw ?? 3.5)
+    );
+    return generateKwpRateTiers({
+      kwp,
+      ratePerKwp: kwpRateValue,
+      roofType: proposalKitDraft.roof || roofType || "ceramic",
+      monthlyConsumption: parseFloat(inputConsumption) || generatedProposal?.monthlyConsumptionKwh,
+      cidade: selectedCity?.name,
+      estado: selectedState?.uf,
+    });
+  }, [
+    proposalKitDraft.systemKw,
+    proposalKitDraft.roof,
+    roofType,
+    generatedProposal?.tamanhoSistemaKw,
+    generatedProposal?.monthlyConsumptionKwh,
+    kwpRateValue,
+    inputConsumption,
+    selectedCity?.name,
+    selectedState?.uf,
+  ]);
+
+  const selectedKwpTier = useMemo(() => {
+    return kwpRateTiers.find((t) => t.id === selectedKwpTierId) || kwpRateTiers[1];
+  }, [kwpRateTiers, selectedKwpTierId]);
   useEffect(() => {
     if (!currentOrganizationId) return;
     let cancelled = false;
@@ -1301,9 +1336,16 @@ export const ProposalEconomicsModal = forwardRef<
     setProposalCreateError(null);
     try {
       const leadId = proposalDeal.leadId;
+      const isKwp = quotingMode === "kwp_rate";
+      const selectedKwpTier = isKwp
+        ? kwpRateTiers.find((t) => t.id === selectedKwpTierId) || kwpRateTiers[1]
+        : null;
+
       const sysKw = Math.max(
         0.5,
-        proposalKitResult?.system_power_kw ?? generatedProposal.tamanhoSistemaKw
+        isKwp && selectedKwpTier
+          ? selectedKwpTier.systemKwp
+          : (proposalKitResult?.system_power_kw ?? generatedProposal.tamanhoSistemaKw)
       );
       const cityRow = geoCities.find((c) => c.id === selectedCity?.id);
       const billHistorySizing =
@@ -1312,9 +1354,10 @@ export const ProposalEconomicsModal = forwardRef<
           : {};
       const quickLike: SimulationResult = {
         economiaMensal: generatedProposal.economiaMensal,
-        valorSistema: generatedProposal.valorSistema,
+        valorSistema:
+          isKwp && selectedKwpTier ? selectedKwpTier.totalPrice : generatedProposal.valorSistema,
         payback: generatedProposal.payback,
-        tamanhoSistema: generatedProposal.tamanhoSistemaKw,
+        tamanhoSistema: sysKw,
         monthlyConsumptionKwh: generatedProposal.monthlyConsumptionKwh,
       };
       const persistedDraft = quickResultToPersistedSimulationDraft(quickLike, {
@@ -1323,16 +1366,44 @@ export const ProposalEconomicsModal = forwardRef<
       });
       const organizationCostRules = await listCostRules(currentOrganizationId);
 
-      const kitForProposal = proposalKitResult
-        ? {
-            ...proposalKitResult,
-            kit_items: proposalKitResult.kit_items.map((item) => {
-              const raw = kitQtyDraftsRef.current[item.product_id];
-              const parsed = raw != null ? parseInt(raw, 10) : NaN;
-              return Number.isFinite(parsed) && parsed >= 1 ? { ...item, quantity: parsed } : item;
-            }),
-          }
-        : null;
+      let kitForProposal: GenerateKitResult | null = null;
+      if (isKwp && selectedKwpTier) {
+        kitForProposal = {
+          kit_id: `kwp_rate_${selectedKwpTier.id}`,
+          system_power_kw: selectedKwpTier.systemKwp,
+          own_stock_used: false,
+          kit_items: selectedKwpTier.structuredItems.map((item) => ({
+            product_id: item.productId || "",
+            product_name: item.productName,
+            brand_name: item.brandName,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+          })),
+          modules: {
+            product_id: selectedKwpTier.structuredItems[0]?.productId || "",
+            product_name: selectedKwpTier.moduleModel,
+            brand_name: selectedKwpTier.moduleBrand,
+            quantity: selectedKwpTier.moduleQty,
+            unit_price: selectedKwpTier.structuredItems[0]?.unitPrice ?? 0,
+          },
+          inverter: {
+            product_id: selectedKwpTier.structuredItems[1]?.productId || "",
+            product_name: selectedKwpTier.inverterModel,
+            brand_name: selectedKwpTier.inverterBrand,
+            quantity: 1,
+            unit_price: selectedKwpTier.structuredItems[1]?.unitPrice ?? 0,
+          },
+        };
+      } else if (proposalKitResult) {
+        kitForProposal = {
+          ...proposalKitResult,
+          kit_items: proposalKitResult.kit_items.map((item) => {
+            const raw = kitQtyDraftsRef.current[item.product_id];
+            const parsed = raw != null ? parseInt(raw, 10) : NaN;
+            return Number.isFinite(parsed) && parsed >= 1 ? { ...item, quantity: parsed } : item;
+          }),
+        };
+      }
 
       let freight: { state: string; valueBrl: number } | undefined;
       if (proposalKitResult?.own_stock_used && selectedState?.uf) {
@@ -1345,19 +1416,30 @@ export const ProposalEconomicsModal = forwardRef<
 
       const renderedData = buildProposalIntegratorRenderedData(
         kitForProposal,
-        Math.max(1000, Math.round(generatedProposal.valorSistema)),
-        generatedProposal.estimateNote,
+        isKwp && selectedKwpTier
+          ? selectedKwpTier.totalPrice
+          : Math.max(1000, Math.round(generatedProposal.valorSistema)),
+        isKwp
+          ? `Cotação Chave na Mão por R$/kWp (${selectedKwpTier?.name})`
+          : generatedProposal.estimateNote,
         {
-          organizationRules: organizationCostRules,
+          organizationRules: isKwp ? [] : organizationCostRules,
           systemKwp: sysKw,
-          ...(proposalKitResult?.own_stock_used ? { sourceType: "own_stock" as const } : {}),
+          sourceType: isKwp
+            ? ("kwp_rate" as const)
+            : proposalKitResult?.own_stock_used
+              ? ("own_stock" as const)
+              : ("distributor" as const),
           ...(freight ? { freight } : {}),
         }
       );
 
-      const investmentFromRules = Math.round(
-        (renderedData as { integrator: { quotedSaleBrl: number } }).integrator.quotedSaleBrl
-      );
+      const investmentFromRules =
+        isKwp && selectedKwpTier
+          ? selectedKwpTier.totalPrice
+          : Math.round(
+              (renderedData as { integrator: { quotedSaleBrl: number } }).integrator.quotedSaleBrl
+            );
 
       const sim = await createLeadFinancialSimulation(currentOrganizationId, leadId, {
         input: {
@@ -2731,120 +2813,292 @@ export const ProposalEconomicsModal = forwardRef<
                     </div>
                   </div>
 
-                  <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-3.5 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-foreground)]">
-                        Origem do kit
-                      </p>
-                      <p className="mt-0.5 text-xs leading-snug text-[var(--color-muted-foreground)]">
-                        Todos os equipamentos vêm de uma única origem — trocar a origem remonta o
-                        kit inteiro.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {kitSourceLoading && !kitSourceOptions ? (
-                        <span className="inline-flex animate-pulse items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3.5 py-1.5 text-xs text-[var(--color-muted-foreground)]">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          Comparando origens…
-                        </span>
-                      ) : null}
-                      {ownStockOption ? (
+                  {/* Seletor de Modo de Cotação */}
+                  <div className="space-y-3 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.08] to-emerald-600/[0.02] p-4 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--color-foreground)] flex items-center gap-2">
+                          <Zap className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          Modo de Cotação
+                        </p>
+                        <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
+                          Escolha entre kits com estoque de distribuidores ou cotação por R$/kWp da
+                          sua região (chave na mão).
+                        </p>
+                      </div>
+                      <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-1 shrink-0">
                         <button
                           type="button"
-                          disabled={!ownStockOption.available}
-                          title={
-                            ownStockOption.available
-                              ? "Montar o kit 100% do seu estoque"
-                              : "Seu estoque não cobre o kit completo para esta configuração"
-                          }
-                          className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${
-                            kitDraftSource.kind === "own"
-                              ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
-                              : ownStockOption.available
-                                ? "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
-                                : "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-muted-foreground)] opacity-70"
+                          onClick={() => setQuotingMode("distributor")}
+                          className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
+                            quotingMode === "distributor"
+                              ? "bg-emerald-600 font-semibold text-white shadow-sm"
+                              : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
                           }`}
-                          onClick={() =>
-                            setProposalKitDraft((d) => ({
-                              ...d,
-                              source: { kind: "own" },
-                              pins: {},
-                            }))
-                          }
                         >
-                          <Warehouse className="h-3.5 w-3.5" />
-                          Meu estoque
-                          {ownStockOption.available && ownStockOption.total != null ? (
-                            <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-                              {formatCurrency(ownStockOption.total)}
-                            </span>
-                          ) : (
-                            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:text-amber-300">
-                              cobre {ownStockOption.covered_categories ?? 0}/
-                              {ownStockOption.required_categories ?? 5}
-                            </span>
-                          )}
+                          Distribuidores Reais
                         </button>
-                      ) : null}
-                      {supplierOptions.map((s) => (
                         <button
-                          key={s.supplier_id}
                           type="button"
-                          disabled={!s.available}
-                          title={
-                            s.available
-                              ? s.complete
-                                ? `Montar o kit 100% de ${s.supplier_name}`
-                                : `${s.supplier_name} cobre só ${s.item_count ?? 0} de 5 itens do kit`
-                              : `${s.supplier_name} não tem módulo/inversor compatível`
-                          }
-                          className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${
-                            kitDraftSource.kind === "supplier" &&
-                            kitDraftSource.id === s.supplier_id
-                              ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
-                              : s.available
-                                ? "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
-                                : "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-muted-foreground)] opacity-70"
+                          onClick={() => setQuotingMode("kwp_rate")}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                            quotingMode === "kwp_rate"
+                              ? "bg-emerald-600 font-semibold text-white shadow-sm"
+                              : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
                           }`}
-                          onClick={() =>
-                            setProposalKitDraft((d) => ({
-                              ...d,
-                              source: { kind: "supplier", id: s.supplier_id },
-                              pins: {},
-                            }))
-                          }
                         >
-                          {s.supplier_name}
-                          {s.total != null ? (
-                            <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-                              {formatCurrency(s.total)}
-                            </span>
-                          ) : (
-                            <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-                              indisponível
-                            </span>
-                          )}
-                          {s.available && !s.complete ? (
-                            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:text-amber-300">
-                              {s.item_count ?? 0}/5 itens
-                            </span>
-                          ) : null}
+                          <Sparkles className="h-3.5 w-3.5" />
+                          Preço por kWp da Região
                         </button>
-                      ))}
-                      {!kitSourceLoading && kitSourceOptions && supplierOptions.length === 0 ? (
-                        <span className="text-xs text-[var(--color-muted-foreground)]">
-                          Nenhum fornecedor cadastrado — kit montado pela melhor oferta do catálogo.
-                        </span>
-                      ) : null}
-                      {!kitSourceLoading && kitSourceOptions === null ? (
-                        <span className="text-xs text-[var(--color-muted-foreground)]">
-                          Não foi possível comparar as origens — kit montado pela melhor oferta do
-                          catálogo.
-                        </span>
-                      ) : null}
+                      </div>
                     </div>
+
+                    {quotingMode === "kwp_rate" ? (
+                      <div className="pt-3 border-t border-emerald-500/20 space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="kwp-rate-input" className="text-xs font-semibold">
+                              Valor cobrado por kWp instalado (R$/kWp)
+                            </Label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--color-muted-foreground)] font-medium">
+                                R$
+                              </span>
+                              <Input
+                                id="kwp-rate-input"
+                                type="number"
+                                min={500}
+                                step={50}
+                                value={kwpRateValue}
+                                onChange={(e) =>
+                                  setKwpRateValue(Math.max(0, parseFloat(e.target.value) || 0))
+                                }
+                                className="pl-9 h-10 font-semibold text-sm border-emerald-500/30 focus-visible:ring-emerald-500"
+                                placeholder="2800"
+                              />
+                            </div>
+                            <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                              Valor final para o cliente: já inclui equipamentos, materiais
+                              elétricos e instalação.
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-900 dark:text-emerald-200">
+                            <span className="font-semibold block mb-0.5">
+                              ℹ️ Custos e Mão de Obra Inclusos
+                            </span>
+                            O valor por kWp é rateado nos produtos e não somará custos extras de
+                            projeto para não duplicar valores.
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 pt-1">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                            Selecione o kit desejado para a proposta:
+                          </p>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {kwpRateTiers.map((tier) => {
+                              const isSelected = selectedKwpTierId === tier.id;
+                              return (
+                                <div
+                                  key={tier.id}
+                                  onClick={() => setSelectedKwpTierId(tier.id)}
+                                  className={`cursor-pointer rounded-xl border p-3.5 transition-all flex flex-col justify-between ${
+                                    isSelected
+                                      ? "border-emerald-500 bg-emerald-500/[0.08] ring-2 ring-emerald-500/40 shadow-sm"
+                                      : "border-[var(--color-border)] bg-[var(--color-background)] hover:border-emerald-500/40"
+                                  }`}
+                                >
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <span
+                                        className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                          tier.id === "economic"
+                                            ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30"
+                                            : tier.id === "cost_benefit"
+                                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                              : "bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30"
+                                        }`}
+                                      >
+                                        {tier.badge}
+                                      </span>
+                                      <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                                        {tier.ratePerKwpEffective.toLocaleString("pt-BR", {
+                                          style: "currency",
+                                          currency: "BRL",
+                                        })}
+                                        /kWp
+                                      </span>
+                                    </div>
+
+                                    <div>
+                                      <h4 className="text-base font-bold text-[var(--color-foreground)]">
+                                        {tier.name}
+                                      </h4>
+                                      <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                        {tier.totalPriceFormatted}
+                                      </p>
+                                    </div>
+
+                                    <div className="pt-2 border-t border-[var(--color-border)]/60 text-xs space-y-1.5 text-[var(--color-muted-foreground)]">
+                                      <p className="truncate">
+                                        <strong className="text-[var(--color-foreground)]">
+                                          Inversor:
+                                        </strong>{" "}
+                                        {tier.inverterBrand} ({tier.systemKwp} kW)
+                                      </p>
+                                      <p className="truncate">
+                                        <strong className="text-[var(--color-foreground)]">
+                                          Módulos:
+                                        </strong>{" "}
+                                        {tier.moduleQty}x {tier.moduleBrand} ({tier.modulePowerW}W)
+                                      </p>
+                                      <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                                        + Estrutura, Cabos e Conectores diluídos
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="pt-3 mt-2 border-t border-[var(--color-border)]/40 flex items-center justify-between">
+                                    <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                                      Geração: ~{tier.estimatedMonthlyGenerationKwh} kWh/mês
+                                    </span>
+                                    <span
+                                      className={`h-4 w-4 rounded-full border flex items-center justify-center ${
+                                        isSelected
+                                          ? "border-emerald-500 bg-emerald-500 text-white"
+                                          : "border-[var(--color-border)]"
+                                      }`}
+                                    >
+                                      {isSelected ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
-                  {kitDraftSource.kind === "own" &&
+
+                  {quotingMode === "distributor" ? (
+                    <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-3.5 py-3">
+                      <div>
+                        <p className="text-sm font-medium text-[var(--color-foreground)]">
+                          Origem do kit
+                        </p>
+                        <p className="mt-0.5 text-xs leading-snug text-[var(--color-muted-foreground)]">
+                          Todos os equipamentos vêm de uma única origem — trocar a origem remonta o
+                          kit inteiro.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {kitSourceLoading && !kitSourceOptions ? (
+                          <span className="inline-flex animate-pulse items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3.5 py-1.5 text-xs text-[var(--color-muted-foreground)]">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Comparando origens…
+                          </span>
+                        ) : null}
+                        {ownStockOption ? (
+                          <button
+                            type="button"
+                            disabled={!ownStockOption.available}
+                            title={
+                              ownStockOption.available
+                                ? "Montar o kit 100% do seu estoque"
+                                : "Seu estoque não cobre o kit completo para esta configuração"
+                            }
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${
+                              kitDraftSource.kind === "own"
+                                ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
+                                : ownStockOption.available
+                                  ? "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
+                                  : "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-muted-foreground)] opacity-70"
+                            }`}
+                            onClick={() =>
+                              setProposalKitDraft((d) => ({
+                                ...d,
+                                source: { kind: "own" },
+                                pins: {},
+                              }))
+                            }
+                          >
+                            <Warehouse className="h-3.5 w-3.5" />
+                            Meu estoque
+                            {ownStockOption.available && ownStockOption.total != null ? (
+                              <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+                                {formatCurrency(ownStockOption.total)}
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:text-amber-300">
+                                cobre {ownStockOption.covered_categories ?? 0}/
+                                {ownStockOption.required_categories ?? 5}
+                              </span>
+                            )}
+                          </button>
+                        ) : null}
+                        {supplierOptions.map((s) => (
+                          <button
+                            key={s.supplier_id}
+                            type="button"
+                            disabled={!s.available}
+                            title={
+                              s.available
+                                ? s.complete
+                                  ? `Montar o kit 100% de ${s.supplier_name}`
+                                  : `${s.supplier_name} cobre só ${s.item_count ?? 0} de 5 itens do kit`
+                                : `${s.supplier_name} não tem módulo/inversor compatível`
+                            }
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${
+                              kitDraftSource.kind === "supplier" &&
+                              kitDraftSource.id === s.supplier_id
+                                ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
+                                : s.available
+                                  ? "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
+                                  : "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-muted-foreground)] opacity-70"
+                            }`}
+                            onClick={() =>
+                              setProposalKitDraft((d) => ({
+                                ...d,
+                                source: { kind: "supplier", id: s.supplier_id },
+                                pins: {},
+                              }))
+                            }
+                          >
+                            {s.supplier_name}
+                            {s.total != null ? (
+                              <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+                                {formatCurrency(s.total)}
+                              </span>
+                            ) : (
+                              <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+                                indisponível
+                              </span>
+                            )}
+                            {s.available && !s.complete ? (
+                              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:text-amber-300">
+                                {s.item_count ?? 0}/5 itens
+                              </span>
+                            ) : null}
+                          </button>
+                        ))}
+                        {!kitSourceLoading && kitSourceOptions && supplierOptions.length === 0 ? (
+                          <span className="text-xs text-[var(--color-muted-foreground)]">
+                            Nenhum fornecedor cadastrado — kit montado pela melhor oferta do
+                            catálogo.
+                          </span>
+                        ) : null}
+                        {!kitSourceLoading && kitSourceOptions === null ? (
+                          <span className="text-xs text-[var(--color-muted-foreground)]">
+                            Não foi possível comparar as origens — kit montado pela melhor oferta do
+                            catálogo.
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                  {quotingMode === "distributor" &&
+                  kitDraftSource.kind === "own" &&
                   proposalKitResult &&
                   !proposalKitResult.own_stock_used ? (
                     <p className="rounded-lg border border-amber-500/30 bg-amber-50 px-3 py-2 text-xs leading-snug text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
@@ -2852,7 +3106,7 @@ export const ProposalEconomicsModal = forwardRef<
                       quantidade). Este kit foi montado com o <strong>catálogo global</strong>.
                     </p>
                   ) : null}
-                  {proposalKitError ? (
+                  {quotingMode === "distributor" && proposalKitError ? (
                     <p className="text-sm text-red-600 dark:text-red-400">{proposalKitError}</p>
                   ) : null}
                 </div>
@@ -2865,14 +3119,19 @@ export const ProposalEconomicsModal = forwardRef<
                       <Zap className="h-5 w-5" />
                     </span>
                     Equipamentos do kit
-                    {proposalKitLoading && proposalKitResult ? (
+                    {quotingMode === "distributor" && proposalKitLoading && proposalKitResult ? (
                       <span className="inline-flex items-center gap-1.5 text-xs font-normal text-[var(--color-muted-foreground)]">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         Atualizando…
                       </span>
                     ) : null}
                   </h3>
-                  {proposalKitResult ? (
+                  {quotingMode === "kwp_rate" && selectedKwpTier ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                      <Sparkles className="h-3 w-3" />
+                      Cotação Chave na Mão ({selectedKwpTier.tierName})
+                    </span>
+                  ) : quotingMode === "distributor" && proposalKitResult ? (
                     proposalKitResult.own_stock_used ? (
                       <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
                         <Warehouse className="h-3 w-3" />
@@ -2886,7 +3145,151 @@ export const ProposalEconomicsModal = forwardRef<
                     )
                   ) : null}
                 </div>
-                {proposalKitLoading && !proposalKitResult ? (
+                {quotingMode === "kwp_rate" && selectedKwpTier ? (
+                  <div className="space-y-5">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="inline-flex items-baseline gap-2 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-500/12 to-emerald-600/5 px-4 py-2.5">
+                        <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                          Potência dimensionada
+                        </span>
+                        <span className="text-xl font-bold tabular-nums tracking-tight text-emerald-700 dark:text-emerald-300">
+                          {selectedKwpTier.systemKwp.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 1,
+                            maximumFractionDigits: 2,
+                          })}{" "}
+                          <span className="text-base font-semibold">kWp</span>
+                        </span>
+                      </div>
+                      <div className="inline-flex items-baseline gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-4 py-2.5">
+                        <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                          Taxa regional
+                        </span>
+                        <span className="text-base font-bold tabular-nums text-[var(--color-foreground)]">
+                          {formatCurrency(selectedKwpTier.effectiveRatePerKwp)}/kWp
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="flex gap-3 rounded-xl border border-[var(--color-border)] bg-gradient-to-br from-[var(--color-background)] to-emerald-500/[0.04] p-3 shadow-sm">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                          <Sun className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                            Módulos ({selectedKwpTier.tierName})
+                          </p>
+                          <p className="text-sm font-semibold leading-snug text-[var(--color-foreground)]">
+                            <span className="tabular-nums text-emerald-600 dark:text-emerald-400">
+                              {selectedKwpTier.modulesQty}×
+                            </span>{" "}
+                            {selectedKwpTier.moduleBrand} ({selectedKwpTier.modulePowerW}W)
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+                            Subtotal diluído:{" "}
+                            {formatCurrency(selectedKwpTier.items[0]?.total_price ?? 0)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 rounded-xl border border-[var(--color-border)] bg-gradient-to-br from-[var(--color-background)] to-violet-500/[0.04] p-3 shadow-sm">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-600 dark:text-violet-400">
+                          <Cpu className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                            Inversor ({selectedKwpTier.tierName})
+                          </p>
+                          <p className="text-sm font-semibold leading-snug text-[var(--color-foreground)]">
+                            <span className="tabular-nums text-violet-600 dark:text-violet-400">
+                              1×
+                            </span>{" "}
+                            {selectedKwpTier.inverterBrand} ({selectedKwpTier.inverterPowerKw} kW)
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+                            Subtotal diluído:{" "}
+                            {formatCurrency(selectedKwpTier.items[1]?.total_price ?? 0)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3 text-xs leading-relaxed text-[var(--color-foreground)]">
+                      <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                        Chave na mão:
+                      </span>{" "}
+                      O valor de {formatCurrency(selectedKwpTier.turnkeyTotalBrl)} (
+                      {formatCurrency(selectedKwpTier.effectiveRatePerKwp)}/kWp) já cobre
+                      equipamentos, mão de obra, projeto e sua margem comercial. Não há taxas extras
+                      de regras de custo.
+                    </div>
+
+                    <div className="overflow-x-auto overscroll-x-contain rounded-xl border border-[var(--color-border)] shadow-sm">
+                      <table className="w-full min-w-[500px] text-xs sm:text-sm">
+                        <thead>
+                          <tr className="border-b border-[var(--color-border)] bg-gradient-to-r from-[var(--color-muted)]/50 to-[var(--color-muted)]/20">
+                            <th className="p-2.5 sm:p-3 text-left text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                              Item
+                            </th>
+                            <th className="p-2.5 sm:p-3 text-left text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                              Marca
+                            </th>
+                            <th className="p-2.5 sm:p-3 text-right text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                              Qtd
+                            </th>
+                            <th className="hidden p-2.5 sm:p-3 text-right text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] sm:table-cell">
+                              Un. Diluído
+                            </th>
+                            <th className="p-2.5 sm:p-3 text-right text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                              Total Diluído
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedKwpTier.items.map((item, idx) => (
+                            <tr
+                              key={item.product_id}
+                              className={`border-b border-[var(--color-border)]/80 transition-colors last:border-0 hover:bg-emerald-500/[0.04] ${
+                                idx % 2 === 1 ? "bg-[var(--color-muted)]/15" : ""
+                              }`}
+                            >
+                              <td className="p-2.5 sm:p-3 font-medium text-[var(--color-foreground)]">
+                                {item.product_name}
+                              </td>
+                              <td className="p-2.5 sm:p-3 text-[var(--color-muted-foreground)]">
+                                {item.brand_name}
+                              </td>
+                              <td className="p-2.5 sm:p-3 text-right tabular-nums text-[var(--color-foreground)]">
+                                {item.quantity}
+                              </td>
+                              <td className="hidden p-2.5 sm:p-3 text-right tabular-nums text-[var(--color-muted-foreground)] sm:table-cell">
+                                {formatCurrency(item.unit_price)}
+                              </td>
+                              <td className="p-2.5 sm:p-3 text-right font-medium tabular-nums text-[var(--color-foreground)]">
+                                {formatCurrency(item.total_price)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/30">
+                            <td
+                              colSpan={3}
+                              className="p-2.5 sm:p-3 text-right text-xs font-semibold text-[var(--color-muted-foreground)]"
+                            >
+                              Total Chave na Mão Diluído
+                            </td>
+                            <td className="hidden p-2.5 sm:p-3 sm:table-cell" />
+                            <td className="p-2.5 sm:p-3 text-right text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                              {formatCurrency(selectedKwpTier.turnkeyTotalBrl)}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                ) : null}
+                {quotingMode === "distributor" && proposalKitLoading && !proposalKitResult ? (
                   <div className="relative overflow-hidden rounded-2xl border border-violet-500/15 bg-[var(--color-card)] px-4 py-10">
                     <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden>
                       <div className="absolute -left-1/4 top-0 h-32 w-32 rounded-full bg-violet-500/20 blur-3xl" />
@@ -3507,9 +3910,9 @@ export const ProposalEconomicsModal = forwardRef<
                   className="h-11 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-base font-semibold text-white shadow-sm hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-60 sm:w-auto"
                   disabled={
                     proposalCreateLoading ||
-                    proposalKitLoading ||
+                    (quotingMode === "distributor" && (proposalKitLoading || !!proposalKitError)) ||
                     !generatedProposal?.dealId ||
-                    !!proposalKitError
+                    (quotingMode === "kwp_rate" && !selectedKwpTier)
                   }
                   title="Ao concluir, você vai para a ficha do cliente com a proposta em destaque."
                   onClick={() => void createProposalFromPipelineModal()}

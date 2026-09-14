@@ -30,7 +30,7 @@ export interface ProposalProjectCostLine {
   percentageBase?: ProposalProjectCostPercentageBase;
 }
 
-export type ProposalIntegratorSourceType = "distributor" | "own_stock";
+export type ProposalIntegratorSourceType = "distributor" | "own_stock" | "kwp_rate";
 
 export interface ProposalIntegratorSnapshot {
   version: typeof PROPOSAL_INTEGRATOR_SNAPSHOT_VERSION;

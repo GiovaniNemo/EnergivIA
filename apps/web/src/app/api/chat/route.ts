@@ -10,6 +10,7 @@ import path from "path";
 
 import { systemPrompt } from "./prompt";
 import { computeProjectCostSection } from "@energivia/proposal-economia";
+import { generateKwpRateTiers } from "@/lib/kwp-rate-kit-engine";
 
 const normalizeString = (str: string) => {
   if (!str) return "";
@@ -168,10 +169,69 @@ function extractQuotedKitFromMessages(messages: any[]) {
     }
 
     if (items.length > 0) {
+      const isKwpRate =
+        text.includes("Econômico") ||
+        text.includes("Custo-Benefício") ||
+        text.includes("Premium") ||
+        text.includes("Chave na Mão") ||
+        text.includes("Chave na mão") ||
+        text.includes("R$/kWp");
+
+      if (isKwpRate && kitPrice > 0) {
+        const modItem = items.find((i) => i.categoryName === "module");
+        const invItem = items.find(
+          (i) => i.categoryName === "inverter" || i.categoryName === "microinverter"
+        );
+        const estItem = items.find((i) => i.categoryName === "structure_kit");
+        const cabPItem = items.find(
+          (i) => i.categoryName === "dc_cable" && i.productName.toLowerCase().includes("preto")
+        );
+        const cabVItem = items.find(
+          (i) => i.categoryName === "dc_cable" && i.productName.toLowerCase().includes("vermelho")
+        );
+        const conItem = items.find((i) => i.categoryName === "connector");
+
+        const modTotal = Math.round(kitPrice * 0.45);
+        const invTotal = Math.round(kitPrice * 0.35);
+        const estTotal = estItem ? Math.round(kitPrice * 0.08) : 0;
+        const cabPTotal = cabPItem ? Math.round(kitPrice * 0.03) : 0;
+        const cabVTotal = cabVItem ? Math.round(kitPrice * 0.03) : 0;
+        const conTotal = Math.max(
+          0,
+          kitPrice - (modTotal + invTotal + estTotal + cabPTotal + cabVTotal)
+        );
+
+        if (modItem) {
+          modItem.lineTotal = modTotal;
+          modItem.unitPrice = Math.round((modTotal / (modItem.quantity || 1)) * 100) / 100;
+        }
+        if (invItem) {
+          invItem.lineTotal = invTotal;
+          invItem.unitPrice = invTotal;
+        }
+        if (estItem) {
+          estItem.lineTotal = estTotal;
+          estItem.unitPrice = estTotal;
+        }
+        if (cabPItem) {
+          cabPItem.lineTotal = cabPTotal;
+          cabPItem.unitPrice = Math.round((cabPTotal / (cabPItem.quantity || 1)) * 100) / 100;
+        }
+        if (cabVItem) {
+          cabVItem.lineTotal = cabVTotal;
+          cabVItem.unitPrice = Math.round((cabVTotal / (cabVItem.quantity || 1)) * 100) / 100;
+        }
+        if (conItem) {
+          conItem.lineTotal = conTotal;
+          conItem.unitPrice = Math.round((conTotal / (conItem.quantity || 1)) * 100) / 100;
+        }
+      }
+
       return {
         kitItems: items,
         valorKitTotal: kitPrice,
         potenciaSistemaKw: kwp,
+        isKwpRate,
       };
     }
   }
@@ -1379,6 +1439,67 @@ export async function POST(req: Request) {
             }
           },
         }),
+        gerar_cotacao_por_kwp: tool({
+          description:
+            "Gera 3 opções de kits solares completos (1 - Econômico, 2 - Custo-Benefício, 3 - Premium) usando o valor em R$/kWp instalado cobrado pelo integrador na região dele. Todos os materiais (Inversor, Módulos, Estrutura, Cabos, Conectores) e a mão de obra já estão 100% inclusos no valor total.",
+          parameters: z.object({
+            ratePerKwp: z
+              .number()
+              .describe(
+                "Valor em Reais (R$) cobrado por kWp instalado na região (ex: 2800 ou 3000)."
+              ),
+            monthlyConsumption: z.any().optional().describe("Consumo mensal em kWh (ex: 450)."),
+            targetKWp: z
+              .any()
+              .optional()
+              .describe("Potência alvo do sistema em kWp se especificado pelo integrador."),
+            cidade: z.string().optional().describe("Nome da cidade da instalação."),
+            estado: z.string().optional().describe("Sigla do estado (UF)."),
+            roofType: z
+              .string()
+              .optional()
+              .describe("Tipo de telhado (Cerâmica, Fibrocimento, Metálico, Solo, Laje, etc.)."),
+          }),
+          execute: async (args: any) => {
+            try {
+              let kwp = Number(args.targetKWp) || 0;
+              if (kwp <= 0 && args.monthlyConsumption) {
+                const kwh = Number(args.monthlyConsumption) || 450;
+                kwp = Math.round((kwh / 135) * 100) / 100;
+              }
+              if (kwp <= 0) kwp = 3.5;
+
+              const tiers = generateKwpRateTiers({
+                kwp,
+                ratePerKwp: Number(args.ratePerKwp) || 2800,
+                roofType: args.roofType,
+                monthlyConsumption: Number(args.monthlyConsumption) || undefined,
+                cidade: args.cidade,
+                estado: args.estado,
+              });
+
+              const formattedOptions = tiers
+                .map((t, idx) => {
+                  const numEmoji = idx === 0 ? "1️⃣" : idx === 1 ? "2️⃣" : "3️⃣";
+                  return `${numEmoji} ${t.name} (${t.badge}) - ${t.totalPriceFormatted}\nItens do Kit:\n${t.kitSummaryLines.join("\n")}\nInfo: Potência: ${t.systemKwp.toFixed(2)} kWp | Geração Estimada: ${t.estimatedMonthlyGenerationKwh} kWh/mês (em condições ideais)*\n*Obs: Chave na mão (equipamentos + mão de obra inclusos).`;
+                })
+                .join("\n\n");
+
+              return {
+                success: true,
+                ofertasKwp: formattedOptions,
+                tiers,
+                mensagemInstrucao:
+                  "Apresente EXATAMENTE as 3 opções com os números 1️⃣, 2️⃣ e 3️⃣ e pergunte: 'Qual opção você prefere para o seu cliente?'",
+              };
+            } catch (e: any) {
+              return {
+                success: false,
+                mensagem: "Falha ao gerar cotação por kWp: " + e.message,
+              };
+            }
+          },
+        }),
         cadastrar_cliente_crm: tool({
           description:
             "Registra um novo cliente/lead no CRM da plataforma EnergivIA, salva a cotação e anexa o PDF da fatura.",
@@ -1824,13 +1945,34 @@ export async function POST(req: Request) {
                 console.warn("Falha ao buscar cost rules:", e);
               }
 
-              const costCalc = computeProjectCostSection(
-                equipmentSubtotalBrl,
-                systemKwp,
-                costRules
-              );
-              const quotedSaleBrl =
-                costCalc.computedSaleFromCostRulesBrl > 0
+              const isKwpRateQuote =
+                args.sourceType === "kwp_rate" ||
+                Boolean(args.isKwpRate) ||
+                Boolean(
+                  rawKitItems.some((it: any) => String(it.productId || "").startsWith("kwp-"))
+                ) ||
+                Boolean(
+                  messages.some((m: any) => {
+                    const c = typeof m.content === "string" ? m.content : "";
+                    return (
+                      c.includes("Chave na Mão") ||
+                      c.includes("Chave na mão") ||
+                      c.includes("R$/kWp") ||
+                      c.includes("gerar_cotacao_por_kwp")
+                    );
+                  })
+                );
+
+              const costCalc = isKwpRateQuote
+                ? {
+                    projectCostLines: [],
+                    defaultEssentialCostNames: [],
+                    computedSaleFromCostRulesBrl: equipmentSubtotalBrl,
+                  }
+                : computeProjectCostSection(equipmentSubtotalBrl, systemKwp, costRules);
+              const quotedSaleBrl = isKwpRateQuote
+                ? equipmentSubtotalBrl
+                : costCalc.computedSaleFromCostRulesBrl > 0
                   ? costCalc.computedSaleFromCostRulesBrl
                   : equipmentSubtotalBrl > 0
                     ? equipmentSubtotalBrl
@@ -1897,10 +2039,10 @@ export async function POST(req: Request) {
                 equipmentSubtotalBrl,
                 quotedSaleBrl,
                 systemPowerKw: systemKwp,
-                sourceType: "distributor" as const,
-                distributorId: chosenDistributorId,
-                projectCostLines: costCalc.projectCostLines,
-                defaultEssentialCostNames: costCalc.defaultEssentialCostNames,
+                sourceType: (isKwpRateQuote ? "kwp_rate" : "distributor") as const,
+                distributorId: isKwpRateQuote ? undefined : chosenDistributorId,
+                projectCostLines: isKwpRateQuote ? [] : costCalc.projectCostLines,
+                defaultEssentialCostNames: isKwpRateQuote ? [] : costCalc.defaultEssentialCostNames,
                 computedSaleFromCostRulesBrl: quotedSaleBrl,
               };
 

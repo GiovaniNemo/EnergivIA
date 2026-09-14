@@ -261,6 +261,18 @@ export function AIAssistantWidget() {
     ]);
   };
 
+  const handleStartKwpRateConsulting = () => {
+    if (isLocked) return;
+    setMessages([
+      {
+        id: Date.now().toString(),
+        role: "assistant",
+        content:
+          "Excelente! ⚡ Na cotação por R$/kWp da sua região, montamos kits completos com materiais e mão de obra inclusos (Econômico, Custo-Benefício e Premium).\n\nQual é o consumo médio mensal (kWh) ou potência desejada (kWp), e qual valor você costuma cobrar por kWp instalado na sua região? (Ex: 500 kWh a R$ 2.800/kWp)",
+      },
+    ]);
+  };
+
   const handleStartQuestionsConsulting = () => {
     if (isLocked) return;
     setMessages([
@@ -687,6 +699,24 @@ export function AIAssistantWidget() {
                       </p>
                       <p className="text-[10px] text-gray-400 truncate">
                         Cotar por potência alvo ou quantidade
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleStartKwpRateConsulting}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-gray-900/90 hover:bg-gray-800 border border-emerald-500/30 hover:border-emerald-500/60 text-left transition-all group active:scale-[0.98] shadow-[0_0_12px_rgba(16,185,129,0.08)]"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/25 shrink-0 transition-colors">
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-emerald-300 group-hover:text-emerald-200 transition-colors">
+                        Cotar por R$/kWp da sua Região
+                      </p>
+                      <p className="text-[10px] text-gray-400 truncate">
+                        Kits mockados chave na mão (3 opções)
                       </p>
                     </div>
                   </button>
