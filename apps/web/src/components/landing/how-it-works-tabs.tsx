@@ -115,7 +115,7 @@ function ProposalsDemoContent(): JSX.Element {
             className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-sm"
           >
             <Image
-              src="/landing/product-demo-poster.jpg"
+              src="/landing/demo.png"
               alt={item.title}
               width={1080}
               height={675}

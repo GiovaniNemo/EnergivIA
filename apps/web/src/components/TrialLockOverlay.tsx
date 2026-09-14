@@ -3,16 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useOrganization } from "./providers/organization-provider";
 import PaymentWrapper from "./PaymentForm";
-import {
-  Rocket,
-  Gem,
-  CheckCircle2,
-  LockKeyhole,
-  LogOut,
-  Zap,
-  Sun,
-  AlertTriangle,
-} from "lucide-react";
+import { Rocket, Gem, CheckCircle2, LockKeyhole, LogOut } from "lucide-react";
 import { normalizePlanFeatures } from "@energivia/shared-types";
 
 interface Plan {
@@ -61,19 +52,12 @@ export function TrialLockOverlay() {
       <div className="w-full shrink-0 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-500/30 px-3 py-2 sm:px-4 sm:py-2.5 text-xs text-amber-950 dark:text-amber-200 font-medium flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 z-30 backdrop-blur-md">
         <div className="flex items-start sm:items-center gap-2">
           <span className="mt-1 sm:mt-0 flex h-2 w-2 shrink-0 rounded-full bg-amber-400 animate-pulse" />
-          <span className="leading-snug inline-flex items-center gap-1.5 flex-wrap">
-            {user?.isTrialProposalLimitReached ? (
-              <Zap className="h-3.5 w-3.5 text-amber-400 shrink-0 inline" />
-            ) : (
-              <Sun className="h-3.5 w-3.5 text-amber-400 shrink-0 inline" />
-            )}
-            <span>
-              {user?.isTrialProposalLimitReached
-                ? "Você atingiu o limite de 20 propostas gratuitas do período de teste."
-                : "Seu período de teste gratuito de 5 dias úteis foi concluído."}{" "}
-              Seu histórico continua salvo! Faça upgrade para continuar gerando propostas comerciais
-              com IA.
-            </span>
+          <span className="leading-snug">
+            {user?.isTrialProposalLimitReached
+              ? "⚡ Você atingiu o limite de 20 propostas gratuitas do período de teste."
+              : "☀️ Seu período de teste gratuito de 5 dias úteis foi concluído."}{" "}
+            Seu histórico continua salvo! Faça upgrade para continuar gerando propostas comerciais
+            com IA.
           </span>
         </div>
         <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
@@ -97,13 +81,10 @@ export function TrialLockOverlay() {
       <div className="w-full shrink-0 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-500/30 px-3 py-2 sm:px-4 sm:py-2.5 text-xs text-amber-950 dark:text-amber-200 font-medium flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 z-30 backdrop-blur-md">
         <div className="flex items-start sm:items-center gap-2">
           <span className="mt-1 sm:mt-0 flex h-2 w-2 shrink-0 rounded-full bg-amber-400 animate-pulse" />
-          <span className="leading-snug inline-flex items-center gap-1.5 flex-wrap">
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0 inline" />
-            <span>
-              Você atingiu o limite mensal de {user?.proposalsLimit ?? 50} propostas do{" "}
-              {user?.planName || "seu plano"}. Faça upgrade para o Plano Pro para gerar propostas
-              comerciais ilimitadas.
-            </span>
+          <span className="leading-snug">
+            ⚡ Você atingiu o limite mensal de {user?.proposalsLimit ?? 50} propostas do{" "}
+            {user?.planName || "seu plano"}. Faça upgrade para o Plano Pro para gerar propostas
+            comerciais ilimitadas.
           </span>
         </div>
         <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
