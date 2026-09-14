@@ -228,7 +228,8 @@ function unlockedBillImageUploadName(originalFileName: string): {
   };
 }
 
-function formatCurrency(value: number): string {
+function formatCurrency(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "R$ 0,00";
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
@@ -2087,7 +2088,7 @@ export const ProposalEconomicsModal = forwardRef<
                                       GD — consumo rede (kWh)
                                     </dt>
                                     <dd className="tabular-nums text-[var(--color-muted-foreground)]">
-                                      {gds.grid.toLocaleString("pt-BR")}
+                                      {gds.grid?.toLocaleString("pt-BR") ?? "0"}
                                     </dd>
                                   </div>
                                   <div className="flex flex-wrap gap-x-2 gap-y-0.5">
@@ -2095,7 +2096,7 @@ export const ProposalEconomicsModal = forwardRef<
                                       GD — injetado/gerado (kWh)
                                     </dt>
                                     <dd className="tabular-nums text-[var(--color-muted-foreground)]">
-                                      {gds.injected.toLocaleString("pt-BR")}
+                                      {gds.injected?.toLocaleString("pt-BR") ?? "0"}
                                     </dd>
                                   </div>
                                   <div className="flex flex-wrap gap-x-2 gap-y-0.5">
@@ -2103,7 +2104,7 @@ export const ProposalEconomicsModal = forwardRef<
                                       Base p/ simulação (kWh/mês)
                                     </dt>
                                     <dd className="font-semibold tabular-nums text-[var(--color-foreground)]">
-                                      ≈ {gds.combined.toLocaleString("pt-BR")}
+                                      ≈ {gds.combined?.toLocaleString("pt-BR") ?? "0"}
                                     </dd>
                                   </div>
                                   <p className="text-[0.65rem] text-[var(--color-muted-foreground)]">
@@ -2583,7 +2584,9 @@ export const ProposalEconomicsModal = forwardRef<
                     Consumo base (kWh/mês)
                   </p>
                   <p className="text-lg font-semibold tabular-nums text-[var(--color-foreground)]">
-                    {Math.round(generatedProposal.monthlyConsumptionKwh).toLocaleString("pt-BR")}
+                    {Math.round(generatedProposal.monthlyConsumptionKwh ?? 0).toLocaleString(
+                      "pt-BR"
+                    )}
                   </p>
                 </div>
                 <div>
@@ -2599,7 +2602,7 @@ export const ProposalEconomicsModal = forwardRef<
                     Payback (est.)
                   </p>
                   <p className="text-lg font-semibold tabular-nums text-[var(--color-foreground)]">
-                    {generatedProposal.payback.toFixed(1)} anos
+                    {(generatedProposal.payback ?? 0).toFixed(1)} anos
                   </p>
                 </div>
                 <div className="sm:col-span-3">
@@ -2611,10 +2614,13 @@ export const ProposalEconomicsModal = forwardRef<
                     {" · "}
                     Potência alvo inicial:{" "}
                     <span className="font-semibold text-[var(--color-foreground)]">
-                      {clampSystemKw(generatedProposal.tamanhoSistemaKw).toLocaleString("pt-BR", {
-                        minimumFractionDigits: 1,
-                        maximumFractionDigits: 1,
-                      })}{" "}
+                      {clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0)?.toLocaleString(
+                        "pt-BR",
+                        {
+                          minimumFractionDigits: 1,
+                          maximumFractionDigits: 1,
+                        }
+                      ) ?? "0"}{" "}
                       kWp
                     </span>
                   </p>
@@ -2922,11 +2928,7 @@ export const ProposalEconomicsModal = forwardRef<
                                         {tier.badge}
                                       </span>
                                       <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                                        {tier.ratePerKwpEffective.toLocaleString("pt-BR", {
-                                          style: "currency",
-                                          currency: "BRL",
-                                        })}
-                                        /kWp
+                                        {formatCurrency(tier.ratePerKwpEffective)}/kWp
                                       </span>
                                     </div>
 
@@ -3129,7 +3131,7 @@ export const ProposalEconomicsModal = forwardRef<
                   {quotingMode === "kwp_rate" && selectedKwpTier ? (
                     <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
                       <Sparkles className="h-3 w-3" />
-                      Cotação Chave na Mão ({selectedKwpTier.tierName})
+                      Cotação Chave na Mão ({selectedKwpTier.name})
                     </span>
                   ) : quotingMode === "distributor" && proposalKitResult ? (
                     proposalKitResult.own_stock_used ? (
@@ -3153,10 +3155,10 @@ export const ProposalEconomicsModal = forwardRef<
                           Potência dimensionada
                         </span>
                         <span className="text-xl font-bold tabular-nums tracking-tight text-emerald-700 dark:text-emerald-300">
-                          {selectedKwpTier.systemKwp.toLocaleString("pt-BR", {
+                          {selectedKwpTier.systemKwp?.toLocaleString("pt-BR", {
                             minimumFractionDigits: 1,
                             maximumFractionDigits: 2,
-                          })}{" "}
+                          }) ?? "0"}{" "}
                           <span className="text-base font-semibold">kWp</span>
                         </span>
                       </div>
@@ -3165,7 +3167,7 @@ export const ProposalEconomicsModal = forwardRef<
                           Taxa regional
                         </span>
                         <span className="text-base font-bold tabular-nums text-[var(--color-foreground)]">
-                          {formatCurrency(selectedKwpTier.effectiveRatePerKwp)}/kWp
+                          {formatCurrency(selectedKwpTier.ratePerKwpEffective)}/kWp
                         </span>
                       </div>
                     </div>
@@ -3177,17 +3179,17 @@ export const ProposalEconomicsModal = forwardRef<
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-                            Módulos ({selectedKwpTier.tierName})
+                            Módulos ({selectedKwpTier.name})
                           </p>
                           <p className="text-sm font-semibold leading-snug text-[var(--color-foreground)]">
                             <span className="tabular-nums text-emerald-600 dark:text-emerald-400">
-                              {selectedKwpTier.modulesQty}×
+                              {selectedKwpTier.moduleQty}×
                             </span>{" "}
                             {selectedKwpTier.moduleBrand} ({selectedKwpTier.modulePowerW}W)
                           </p>
                           <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
                             Subtotal diluído:{" "}
-                            {formatCurrency(selectedKwpTier.items[0]?.total_price ?? 0)}
+                            {formatCurrency(selectedKwpTier.structuredItems?.[0]?.lineTotal ?? 0)}
                           </p>
                         </div>
                       </div>
@@ -3198,17 +3200,17 @@ export const ProposalEconomicsModal = forwardRef<
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-                            Inversor ({selectedKwpTier.tierName})
+                            Inversor ({selectedKwpTier.name})
                           </p>
                           <p className="text-sm font-semibold leading-snug text-[var(--color-foreground)]">
                             <span className="tabular-nums text-violet-600 dark:text-violet-400">
                               1×
                             </span>{" "}
-                            {selectedKwpTier.inverterBrand} ({selectedKwpTier.inverterPowerKw} kW)
+                            {selectedKwpTier.inverterBrand}
                           </p>
                           <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
                             Subtotal diluído:{" "}
-                            {formatCurrency(selectedKwpTier.items[1]?.total_price ?? 0)}
+                            {formatCurrency(selectedKwpTier.structuredItems?.[1]?.lineTotal ?? 0)}
                           </p>
                         </div>
                       </div>
@@ -3218,8 +3220,8 @@ export const ProposalEconomicsModal = forwardRef<
                       <span className="font-semibold text-emerald-700 dark:text-emerald-400">
                         Chave na mão:
                       </span>{" "}
-                      O valor de {formatCurrency(selectedKwpTier.turnkeyTotalBrl)} (
-                      {formatCurrency(selectedKwpTier.effectiveRatePerKwp)}/kWp) já cobre
+                      O valor de {formatCurrency(selectedKwpTier.totalPrice)} (
+                      {formatCurrency(selectedKwpTier.ratePerKwpEffective)}/kWp) já cobre
                       equipamentos, mão de obra, projeto e sua margem comercial. Não há taxas extras
                       de regras de custo.
                     </div>
@@ -3246,27 +3248,27 @@ export const ProposalEconomicsModal = forwardRef<
                           </tr>
                         </thead>
                         <tbody>
-                          {selectedKwpTier.items.map((item, idx) => (
+                          {(selectedKwpTier.structuredItems ?? []).map((item, idx) => (
                             <tr
-                              key={item.product_id}
+                              key={item.productId || `${item.productName}-${idx}`}
                               className={`border-b border-[var(--color-border)]/80 transition-colors last:border-0 hover:bg-emerald-500/[0.04] ${
                                 idx % 2 === 1 ? "bg-[var(--color-muted)]/15" : ""
                               }`}
                             >
                               <td className="p-2.5 sm:p-3 font-medium text-[var(--color-foreground)]">
-                                {item.product_name}
+                                {item.productName}
                               </td>
                               <td className="p-2.5 sm:p-3 text-[var(--color-muted-foreground)]">
-                                {item.brand_name}
+                                {item.brandName}
                               </td>
                               <td className="p-2.5 sm:p-3 text-right tabular-nums text-[var(--color-foreground)]">
                                 {item.quantity}
                               </td>
                               <td className="hidden p-2.5 sm:p-3 text-right tabular-nums text-[var(--color-muted-foreground)] sm:table-cell">
-                                {formatCurrency(item.unit_price)}
+                                {formatCurrency(item.unitPrice)}
                               </td>
                               <td className="p-2.5 sm:p-3 text-right font-medium tabular-nums text-[var(--color-foreground)]">
-                                {formatCurrency(item.total_price)}
+                                {formatCurrency(item.lineTotal)}
                               </td>
                             </tr>
                           ))}
@@ -3281,7 +3283,7 @@ export const ProposalEconomicsModal = forwardRef<
                             </td>
                             <td className="hidden p-2.5 sm:p-3 sm:table-cell" />
                             <td className="p-2.5 sm:p-3 text-right text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                              {formatCurrency(selectedKwpTier.turnkeyTotalBrl)}
+                              {formatCurrency(selectedKwpTier.totalPrice)}
                             </td>
                           </tr>
                         </tfoot>
@@ -3327,10 +3329,10 @@ export const ProposalEconomicsModal = forwardRef<
                           Potência dimensionada
                         </span>
                         <span className="text-xl font-bold tabular-nums tracking-tight text-emerald-700 dark:text-emerald-300">
-                          {proposalKitResult.system_power_kw.toLocaleString("pt-BR", {
+                          {proposalKitResult.system_power_kw?.toLocaleString("pt-BR", {
                             minimumFractionDigits: 1,
                             maximumFractionDigits: 2,
-                          })}{" "}
+                          }) ?? "0"}{" "}
                           <span className="text-base font-semibold">kWp</span>
                         </span>
                       </div>
@@ -3773,16 +3775,10 @@ export const ProposalEconomicsModal = forwardRef<
                                   )}
                                 </td>
                                 <td className="hidden p-2.5 sm:p-3 text-right tabular-nums text-[var(--color-muted-foreground)] sm:table-cell">
-                                  {item.unit_price.toLocaleString("pt-BR", {
-                                    style: "currency",
-                                    currency: "BRL",
-                                  })}
+                                  {formatCurrency(item.unit_price)}
                                 </td>
                                 <td className="p-2.5 sm:p-3 text-right font-medium tabular-nums text-[var(--color-foreground)]">
-                                  {(qty * item.unit_price).toLocaleString("pt-BR", {
-                                    style: "currency",
-                                    currency: "BRL",
-                                  })}
+                                  {formatCurrency(qty * (item.unit_price ?? 0))}
                                 </td>
                               </tr>
                             );

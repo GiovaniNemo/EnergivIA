@@ -240,10 +240,13 @@ export function generateKwpRateTiers({
       description: cfg.description,
       priceFactor: cfg.priceFactor,
       totalPrice,
-      totalPriceFormatted: totalPrice.toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      }),
+      totalPriceFormatted:
+        typeof totalPrice === "number" && Number.isFinite(totalPrice)
+          ? totalPrice.toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            })
+          : "R$ 0,00",
       ratePerKwpEffective,
       systemKwp: realSystemKwp,
       estimatedMonthlyGenerationKwh: estGeneration,
