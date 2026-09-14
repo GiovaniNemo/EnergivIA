@@ -2,13 +2,14 @@
 
 import { useRef } from "react";
 import { motion, useScroll, useTransform, useSpring, MotionValue } from "framer-motion";
-import Image from "next/image";
+import { MockProposalPreview, type ProposalMockType } from "./mock-proposal-previews";
 
 interface PanelData {
   id: number;
   title: string;
   badge: string;
-  image: string;
+  mockType: ProposalMockType;
+  clientName: string;
   initialTransform: { x: number; y: number; rotate: number };
   className: string;
 }
@@ -24,7 +25,8 @@ const panels: PanelData[] = [
     id: 1,
     title: "Residencial",
     badge: "PROPOSTAS EM MINUTOS",
-    image: "/landing/demo.png", // Usando imagem de fallback disponível
+    mockType: "residential",
+    clientName: "Residencial Família Santana",
     initialTransform: { x: -100, y: -80, rotate: -6 },
     className: "md:col-span-1 md:row-span-1",
   },
@@ -32,7 +34,8 @@ const panels: PanelData[] = [
     id: 2,
     title: "Comercial",
     badge: "ANÁLISE TÉCNICA E TARIFA",
-    image: "/landing/demo.png",
+    mockType: "commercial",
+    clientName: "Supermercado Central",
     initialTransform: { x: 100, y: -60, rotate: 4 },
     className: "md:col-span-1 md:row-span-1",
   },
@@ -40,7 +43,8 @@ const panels: PanelData[] = [
     id: 3,
     title: "Usinas e Autoconsumo",
     badge: "CRIAÇÃO DE CENÁRIOS E ROI",
-    image: "/landing/demo.png",
+    mockType: "usinas",
+    clientName: "Usina Solar Horizonte",
     initialTransform: { x: -80, y: 80, rotate: 5 },
     className: "md:col-span-1 md:row-span-1",
   },
@@ -48,7 +52,8 @@ const panels: PanelData[] = [
     id: 4,
     title: "Operação no WhatsApp",
     badge: "CONVERSÃO EM TEMPO REAL",
-    image: "/landing/demo.png",
+    mockType: "whatsapp",
+    clientName: "Dr. Marcos Silveira",
     initialTransform: { x: 90, y: 100, rotate: -4 },
     className: "md:col-span-1 md:row-span-1",
   },
@@ -64,22 +69,16 @@ function PanelCard({ panel, smoothProgress, opacity }: PanelCardProps) {
       style={{ x, y, rotate, opacity }}
       className={`group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl transition-all duration-300 hover:border-emerald-500/50 ${panel.className}`}
     >
-      <div className="absolute inset-0 bg-slate-950/40 z-10 transition-colors group-hover:bg-transparent/20" />
-      <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-950">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.15)_0%,rgba(0,0,0,0.8)_100%)] z-10 mix-blend-multiply" />
-        <Image
-          src={panel.image}
-          alt={panel.title}
-          fill
-          className="object-cover opacity-60 transition-transform duration-700 ease-out group-hover:scale-105"
-          unoptimized
-        />
-        <div className="absolute inset-0 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] z-20 rounded-3xl group-hover:shadow-[inset_0_0_20px_rgba(16,185,129,0.2)] transition-shadow duration-500" />
+      <div className="relative h-[380px] sm:h-[410px] w-full overflow-hidden bg-slate-950 p-2.5 sm:p-3 pb-20 sm:pb-24">
+        <div className="h-full w-full transition-transform duration-500 ease-out group-hover:scale-[1.02]">
+          <MockProposalPreview type={panel.mockType} clientName={panel.clientName} />
+        </div>
+        <div className="pointer-events-none absolute inset-0 rounded-3xl shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] group-hover:shadow-[inset_0_0_24px_rgba(16,185,129,0.15)] transition-shadow duration-500" />
       </div>
 
-      <div className="absolute bottom-0 left-0 w-full p-6 sm:p-8 z-30 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent">
-        <h3 className="text-2xl font-bold text-white sm:text-3xl">{panel.title}</h3>
-        <p className="mt-2 text-xs font-semibold tracking-widest text-emerald-400 uppercase">
+      <div className="pointer-events-none absolute bottom-0 left-0 w-full p-5 sm:p-7 z-30 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent">
+        <h3 className="text-xl font-bold text-white sm:text-2xl">{panel.title}</h3>
+        <p className="mt-1 text-xs font-semibold tracking-widest text-emerald-400 uppercase">
           {panel.badge}
         </p>
       </div>

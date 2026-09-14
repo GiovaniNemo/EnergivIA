@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
 import { FileText, Smartphone } from "lucide-react";
 import { WhatsappFlowSimulator } from "./whatsapp-flow-simulator";
+
+import { MockProposalPreview, type ProposalMockType } from "./mock-proposal-previews";
 
 type HowItWorksTabId = "whatsapp" | "propostas";
 
@@ -20,10 +21,30 @@ const tabs: Array<{ id: HowItWorksTabId; label: string; description: string }> =
   },
 ];
 
-const proposalPreviewItems = [
-  { id: "p1", title: "Proposta residencial", subtitle: "Cliente: Família Santana" },
-  { id: "p2", title: "Proposta comercial", subtitle: "Cliente: Mercado Central" },
-  { id: "p3", title: "Proposta industrial", subtitle: "Cliente: Fábrica Horizonte" },
+const proposalPreviewItems: Array<{
+  id: string;
+  title: string;
+  subtitle: string;
+  type: ProposalMockType;
+}> = [
+  {
+    id: "p1",
+    title: "Proposta residencial",
+    subtitle: "Cliente: Família Santana",
+    type: "residential",
+  },
+  {
+    id: "p2",
+    title: "Proposta comercial",
+    subtitle: "Cliente: Mercado Central",
+    type: "commercial",
+  },
+  {
+    id: "p3",
+    title: "Proposta industrial",
+    subtitle: "Cliente: Fábrica Horizonte",
+    type: "industrial",
+  },
 ];
 
 export function HowItWorksTabs(): JSX.Element {
@@ -112,19 +133,18 @@ function ProposalsDemoContent(): JSX.Element {
         {proposalPreviewItems.map((item) => (
           <article
             key={item.id}
-            className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-sm"
+            className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/90 shadow-lg transition-all duration-300 hover:border-emerald-500/50 hover:shadow-emerald-500/10"
           >
-            <Image
-              src="/landing/demo.png"
-              alt={item.title}
-              width={1080}
-              height={675}
-              className="h-36 w-full border-b border-slate-700 object-cover"
-              unoptimized
-            />
-            <div className="p-3">
+            <div className="h-[290px] sm:h-[310px] w-full p-2.5 sm:p-3">
+              <MockProposalPreview
+                type={item.type}
+                clientName={item.subtitle.replace("Cliente: ", "")}
+                compact
+              />
+            </div>
+            <div className="border-t border-slate-800 bg-slate-950/80 p-3.5">
               <p className="text-sm font-semibold text-slate-100">{item.title}</p>
-              <p className="mt-1 text-xs text-slate-400">{item.subtitle}</p>
+              <p className="mt-0.5 text-xs text-slate-400">{item.subtitle}</p>
             </div>
           </article>
         ))}
