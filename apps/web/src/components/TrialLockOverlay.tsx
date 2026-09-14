@@ -49,10 +49,10 @@ export function TrialLockOverlay() {
     !user?.isTrialLocked
   ) {
     bannerElement = (
-      <div className="w-full shrink-0 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-500/30 px-4 py-2.5 text-xs text-amber-950 dark:text-amber-200 font-medium flex flex-wrap items-center justify-between gap-3 z-20 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <span className="flex h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-          <span>
+      <div className="w-full shrink-0 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-500/30 px-3 py-2 sm:px-4 sm:py-2.5 text-xs text-amber-950 dark:text-amber-200 font-medium flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 z-30 backdrop-blur-md">
+        <div className="flex items-start sm:items-center gap-2">
+          <span className="mt-1 sm:mt-0 flex h-2 w-2 shrink-0 rounded-full bg-amber-400 animate-pulse" />
+          <span className="leading-snug">
             {user?.isTrialProposalLimitReached
               ? "⚡ Você atingiu o limite de 20 propostas gratuitas do período de teste."
               : "☀️ Seu período de teste gratuito de 5 dias úteis foi concluído."}{" "}
@@ -60,7 +60,7 @@ export function TrialLockOverlay() {
             com IA.
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
           <button
             onClick={() => setModalOpen(true)}
             className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition shadow-sm cursor-pointer"
@@ -78,16 +78,16 @@ export function TrialLockOverlay() {
     );
   } else if (!user?.isTrial && user?.isProposalLimitReached && !user?.isTrialLocked) {
     bannerElement = (
-      <div className="w-full shrink-0 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-500/30 px-4 py-2.5 text-xs text-amber-950 dark:text-amber-200 font-medium flex flex-wrap items-center justify-between gap-3 z-20 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <span className="flex h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-          <span>
+      <div className="w-full shrink-0 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-500/30 px-3 py-2 sm:px-4 sm:py-2.5 text-xs text-amber-950 dark:text-amber-200 font-medium flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 z-30 backdrop-blur-md">
+        <div className="flex items-start sm:items-center gap-2">
+          <span className="mt-1 sm:mt-0 flex h-2 w-2 shrink-0 rounded-full bg-amber-400 animate-pulse" />
+          <span className="leading-snug">
             ⚡ Você atingiu o limite mensal de {user?.proposalsLimit ?? 50} propostas do{" "}
             {user?.planName || "seu plano"}. Faça upgrade para o Plano Pro para gerar propostas
             comerciais ilimitadas.
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
           <button
             onClick={() => setModalOpen(true)}
             className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition shadow-sm cursor-pointer"

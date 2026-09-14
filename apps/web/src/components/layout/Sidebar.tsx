@@ -122,6 +122,10 @@ export function Sidebar(): JSX.Element {
     return activeMenuPath === normalized;
   };
 
+  const isTrialLimitReached = Boolean(
+    (user?.isTrial && (user?.trialExpired || user?.isTrialProposalLimitReached)) ||
+    (!user?.isTrial && user?.isProposalLimitReached)
+  );
   const closeOnMobile = isMobile ? () => setOpen(false) : undefined;
 
   return (
@@ -129,7 +133,7 @@ export function Sidebar(): JSX.Element {
       {showDrawer ? (
         <button
           type="button"
-          className="fixed inset-0 z-40 bg-black/55 md:hidden"
+          className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-xs md:hidden"
           onClick={() => setOpen(false)}
           aria-label="Fechar menu"
         />
@@ -137,9 +141,9 @@ export function Sidebar(): JSX.Element {
 
       <aside
         className={cn(
-          "relative z-50 flex h-full shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-sidebar)] transition-[width] duration-200",
+          "flex h-full shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-sidebar)] transition-[width] duration-200",
           !open && "hidden md:flex",
-          showDrawer && "fixed inset-0 w-full shadow-2xl"
+          showDrawer ? "fixed inset-0 z-[90] w-full shadow-2xl flex" : "relative z-30"
         )}
         style={showDrawer ? undefined : { width: collapsed ? "5rem" : "18rem" }}
       >
@@ -160,6 +164,37 @@ export function Sidebar(): JSX.Element {
         ) : (
           <div className="h-3" />
         )}
+
+        {showDrawer && isTrialLimitReached ? (
+          <div className="mx-3 mt-2.5 mb-1 rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-amber-500/15 p-3 text-xs text-amber-200">
+            <div className="flex items-start gap-2.5">
+              <span className="mt-1 flex h-2 w-2 shrink-0 rounded-full bg-amber-400 animate-pulse" />
+              <div className="flex-1 space-y-1">
+                <p className="font-semibold text-amber-300">
+                  {user?.isTrialProposalLimitReached
+                    ? "Limite de 20 propostas atingido"
+                    : user?.trialExpired
+                      ? "Período de testes finalizado"
+                      : `Limite de ${user?.proposalsLimit ?? 50} propostas atingido`}
+                </p>
+                <p className="text-[11px] leading-relaxed text-amber-200/80">
+                  {user?.isTrialProposalLimitReached
+                    ? "Você atingiu o limite de 20 propostas gratuitas do período de teste. Faça upgrade para continuar gerando propostas comerciais com IA."
+                    : "Faça upgrade do seu plano para continuar gerando propostas comerciais com IA."}
+                </p>
+                <div className="pt-1.5">
+                  <Link
+                    href="/gestao/meus-planos"
+                    onClick={() => setOpen(false)}
+                    className="inline-flex items-center justify-center rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 transition hover:bg-amber-400 shadow-sm"
+                  >
+                    Ver Planos e Assinar
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <nav className="flex-1 space-y-4 overflow-y-auto pb-5 pt-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {sections.map((section) => (
