@@ -187,12 +187,28 @@ export class StripeService {
     maxRedemptions?: number;
     expiresAt?: string | Date;
   }) {
-    const cleanCode = params.code.trim().toUpperCase();
+    const cleanCode = params.code
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9_-]/g, "");
+    if (!cleanCode) {
+      throw new Error(
+        "O código do cupom deve conter apenas letras, números, hífens (-) ou underlines (_). Caracteres como % não são permitidos."
+      );
+    }
     const duration = params.duration || "once";
+
+    let redeemBy: number | undefined = undefined;
+    if (params.expiresAt) {
+      const parsedTime = new Date(params.expiresAt).getTime();
+      if (!isNaN(parsedTime) && parsedTime > Date.now()) {
+        redeemBy = Math.floor(parsedTime / 1000);
+      }
+    }
 
     const couponParams: Stripe.CouponCreateParams = {
       id: cleanCode,
-      name: params.name || `Cupom ${cleanCode}`,
+      name: params.name?.trim() || `Cupom ${cleanCode}`,
       duration,
       currency: params.discountType === "amount" ? "brl" : undefined,
       ...(params.discountType === "percent"
@@ -202,9 +218,7 @@ export class StripeService {
         ? { duration_in_months: Number(params.durationInMonths) }
         : {}),
       ...(params.maxRedemptions ? { max_redemptions: Number(params.maxRedemptions) } : {}),
-      ...(params.expiresAt
-        ? { redeem_by: Math.floor(new Date(params.expiresAt).getTime() / 1000) }
-        : {}),
+      ...(redeemBy ? { redeem_by: redeemBy } : {}),
     };
 
     const coupon = await this.stripe.coupons.create(couponParams);

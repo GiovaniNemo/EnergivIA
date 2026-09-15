@@ -134,6 +134,7 @@ export default function AdminPlanosPage() {
     expiresAt: "",
   });
   const [couponSubmitting, setCouponSubmitting] = useState(false);
+  const [couponModalError, setCouponModalError] = useState<string | null>(null);
 
   // Toast state
   const [toast, setToast] = useState<{
@@ -486,12 +487,15 @@ export default function AdminPlanosPage() {
       maxRedemptions: "",
       expiresAt: "",
     });
+    setCouponModalError(null);
     setIsCouponModalOpen(true);
   };
 
   const handleSaveCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCouponModalError(null);
     if (!couponForm.code.trim() || !couponForm.discountValue) {
+      setCouponModalError("Preencha o código e o valor do desconto");
       showToast("Preencha o código e o valor do desconto", "error");
       return;
     }
@@ -524,10 +528,12 @@ export default function AdminPlanosPage() {
       }
 
       showToast(`Cupom ${payload.code} criado e sincronizado com o Stripe!`);
+      setCouponModalError(null);
       setIsCouponModalOpen(false);
       fetchData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro ao criar cupom";
+      setCouponModalError(msg);
       showToast(msg, "error");
     } finally {
       setCouponSubmitting(false);
@@ -569,7 +575,7 @@ export default function AdminPlanosPage() {
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed top-6 right-6 z-50 p-4 rounded-2xl border flex items-center gap-3 shadow-2xl animate-in slide-in-from-top duration-300 max-w-md ${
+          className={`fixed top-6 right-6 z-[9999] p-4 rounded-2xl border flex items-center gap-3 shadow-2xl animate-in slide-in-from-top duration-300 max-w-md ${
             toast.type === "success"
               ? "bg-emerald-950/90 border-emerald-500/50 text-emerald-200"
               : toast.type === "error"
@@ -1683,6 +1689,13 @@ export default function AdminPlanosPage() {
               onSubmit={handleSaveCoupon}
               className="overflow-y-auto flex-1 p-5 md:p-6 space-y-4"
             >
+              {couponModalError && (
+                <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-start gap-2.5 animate-in fade-in duration-150">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+                  <span className="leading-relaxed font-medium">{couponModalError}</span>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-bold text-[var(--color-foreground)] uppercase tracking-wider mb-1.5">
                   Código Promocional (O que o cliente digita) *
@@ -1690,16 +1703,21 @@ export default function AdminPlanosPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Ex: PRIMEIRAPARCELA20, SOLAR30, BEMVINDO"
+                  placeholder="Ex: PRIMEIRAPARCELA20, SOLAR30, V1T4L1C10"
                   value={couponForm.code}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setCouponModalError(null);
                     setCouponForm({
                       ...couponForm,
-                      code: e.target.value.toUpperCase().replace(/\s/g, ""),
-                    })
-                  }
+                      code: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""),
+                    });
+                  }}
                   className="w-full bg-[var(--color-background)] text-[var(--color-foreground)] font-mono font-bold tracking-wider border border-[var(--color-border)] rounded-xl p-3 text-base focus:ring-2 focus:ring-emerald-500 outline-none transition"
                 />
+                <p className="text-[11px] text-[var(--color-muted-foreground)] mt-1">
+                  Use apenas letras, números, hífens (-) ou (_). Caracteres especiais como % não são
+                  aceitos pelo Stripe.
+                </p>
               </div>
 
               <div>
