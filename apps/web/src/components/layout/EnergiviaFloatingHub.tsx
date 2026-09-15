@@ -179,14 +179,14 @@ export function EnergiviaFloatingHub() {
             <X className="w-7 h-7" />
           </motion.div>
         ) : (
-          /* Imagem fixa do 'E' tecnológico da EnergivIA */
-          <div className="relative w-full h-full flex items-center justify-center p-2">
+          /* Imagem fixa do cérebro com circuitos e nós neurais */
+          <div className="relative w-full h-full flex items-center justify-center p-2.5">
             <Image
-              src="/energivia-e-logo.png"
+              src="/brain-circuit-icon.png"
               alt="EnergivIA"
-              width={50}
-              height={50}
-              className="w-[46px] h-[46px] object-contain shrink-0 select-none drop-shadow-[0_0_12px_rgba(0,229,255,0.7)]"
+              width={48}
+              height={48}
+              className="w-[44px] h-[44px] object-contain shrink-0 select-none drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]"
               priority
               unoptimized
             />
