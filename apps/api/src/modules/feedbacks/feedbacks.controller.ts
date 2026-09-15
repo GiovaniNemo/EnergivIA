@@ -1,14 +1,14 @@
-import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, UseGuards, Headers } from "@nestjs/common";
 import { FeedbacksService } from "./feedbacks.service";
 import { CreateFeedbackDto } from "./dto/create-feedback.dto";
 import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator";
 import { Public } from "../../common/decorators/public.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
-import { TenantId } from "../../common/decorators/tenant-id.decorator";
+import { OptionalTenantId } from "../../common/decorators/tenant-id.decorator";
 import type { JwtPayload } from "@energivia/types";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
 
-@Controller("feedbacks")
+@Controller(["feedbacks", "api/feedbacks"])
 export class FeedbacksController {
   constructor(private readonly feedbacksService: FeedbacksService) {}
 
@@ -19,9 +19,11 @@ export class FeedbacksController {
   create(
     @Body() dto: CreateFeedbackDto,
     @CurrentUser() user?: JwtPayload,
-    @TenantId() tenantId?: string
+    @OptionalTenantId() tenantId?: string,
+    @Headers("x-organization-id") headerOrgId?: string
   ) {
-    return this.feedbacksService.create(dto, user, tenantId);
+    const effectiveTenantId = tenantId || headerOrgId || dto.tenantId;
+    return this.feedbacksService.create(dto, user, effectiveTenantId);
   }
 
   @Get("summary")

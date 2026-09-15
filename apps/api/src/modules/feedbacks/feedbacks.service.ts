@@ -12,7 +12,8 @@ export class FeedbacksService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateFeedbackDto, user?: JwtPayload, tenantIdFromHeader?: string) {
-    let resolvedTenantId = tenantIdFromHeader || user?.tenantId || dto.tenantId || null;
+    let resolvedTenantId =
+      (tenantIdFromHeader || user?.tenantId || dto.tenantId || "").trim() || null;
     let resolvedUserId: string | null = null;
     let resolvedUserName = dto.userName || (user as any)?.name || null;
     let resolvedUserEmail = dto.userEmail || user?.email || null;

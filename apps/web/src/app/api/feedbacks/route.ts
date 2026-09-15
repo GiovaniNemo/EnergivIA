@@ -33,19 +33,40 @@ export async function POST(request: NextRequest) {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
+    const orgId =
+      request.headers.get("x-organization-id") ??
+      request.cookies.get("energivia-organization-id")?.value ??
+      body.tenantId ??
+      "";
+    if (orgId) {
+      headers["x-organization-id"] = orgId;
+    }
+
     // Complementa dados do usuário logado se não vierem no body
     const payload = {
       ...body,
       userName: body.userName || sessionUser?.name,
       userEmail: body.userEmail || sessionUser?.email,
+      tenantId: orgId || body.tenantId || undefined,
     };
 
-    const res = await fetch(`${BACKEND_URL}/feedbacks`, {
+    const cleanBackendUrl = BACKEND_URL.replace(/\/$/, "");
+    let res = await fetch(`${cleanBackendUrl}/feedbacks`, {
       method: "POST",
       headers,
       body: JSON.stringify(payload),
       cache: "no-store",
     });
+
+    if (!res.ok && res.status === 404 && cleanBackendUrl.endsWith("/api")) {
+      const fallbackUrl = cleanBackendUrl.replace(/\/api$/, "");
+      res = await fetch(`${fallbackUrl}/feedbacks`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      });
+    }
 
     if (res.ok) {
       const data = await res.json();
