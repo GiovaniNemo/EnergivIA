@@ -60,24 +60,56 @@ export class FeedbacksService {
       if (tenant) {
         const planDetails = getTenantPlanDetails(tenant);
         resolvedPlanName = planDetails.isTrial ? "TRIAL" : planDetails.planName;
+      } else {
+        resolvedTenantId = null;
       }
     }
 
-    const feedback = await this.prisma.platformFeedback.create({
-      data: {
-        tenantId: resolvedTenantId,
-        userId: resolvedUserId,
-        userName: resolvedUserName,
-        userEmail: resolvedUserEmail,
-        phone: dto.phone || null,
-        rating: Math.max(1, Math.min(5, Math.round(dto.rating))),
-        comment: dto.comment?.trim() || null,
-        tags: (dto.tags as any) || undefined,
-        channel: (dto.channel || "web").toLowerCase(),
-        userPlan: resolvedPlanName,
-        metadata: (dto.metadata as any) || undefined,
-      },
-    });
+    if (resolvedUserId) {
+      const userExists = await this.prisma.user.findUnique({
+        where: { id: resolvedUserId },
+        select: { id: true },
+      });
+      if (!userExists) {
+        resolvedUserId = null;
+      }
+    }
+
+    let feedback;
+    try {
+      feedback = await this.prisma.platformFeedback.create({
+        data: {
+          tenantId: resolvedTenantId,
+          userId: resolvedUserId,
+          userName: resolvedUserName,
+          userEmail: resolvedUserEmail,
+          phone: dto.phone || null,
+          rating: Math.max(1, Math.min(5, Math.round(dto.rating))),
+          comment: dto.comment?.trim() || null,
+          tags: (dto.tags as any) || undefined,
+          channel: (dto.channel || "web").toLowerCase(),
+          userPlan: resolvedPlanName,
+          metadata: (dto.metadata as any) || undefined,
+        },
+      });
+    } catch (createErr) {
+      this.logger.warn(`Erro ao criar feedback com relações (tentando sem FK): ${createErr}`);
+      feedback = await this.prisma.platformFeedback.create({
+        data: {
+          tenantId: null,
+          userId: null,
+          userName: resolvedUserName,
+          userEmail: resolvedUserEmail,
+          phone: dto.phone || null,
+          rating: Math.max(1, Math.min(5, Math.round(dto.rating))),
+          comment: dto.comment?.trim() || null,
+          tags: (dto.tags as any) || undefined,
+          channel: (dto.channel || "web").toLowerCase(),
+          userPlan: resolvedPlanName,
+          metadata: (dto.metadata as any) || undefined,
+        },
+      });
+    }
 
     this.logger.log(
       `Novo feedback registrado! Nota: ${feedback.rating}/5 | Canal: ${feedback.channel} | Usuário: ${feedback.userName || "Anônimo"}`

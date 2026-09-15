@@ -27,6 +27,7 @@
     "@mui/icons-material": "^7.3.9",
     "@mui/material": "^7.3.9",
     "@mui/x-data-grid": "^8.27.4",
+    "@neondatabase/serverless": "^1.1.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@sentry/nextjs": "^10.56.0",
     "@sparticuz/chromium": "^149.0.0",

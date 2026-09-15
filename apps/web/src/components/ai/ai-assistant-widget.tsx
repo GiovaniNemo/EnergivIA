@@ -573,11 +573,25 @@ export function AIAssistantWidget() {
     };
   }, [messages, isLoading]);
 
-  // Handle toggle event from topbar
+  // Notifica o hub sobre abertura e fechamento do chat
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("ai-chat-visibility-change", { detail: { isOpen } }));
+  }, [isOpen]);
+
+  // Handle toggle event from topbar and hub
   useEffect(() => {
     const handleToggle = () => setIsOpen((prev) => !prev);
+    const handleOpen = () => setIsOpen(true);
+    const handleClose = () => setIsOpen(false);
+
     window.addEventListener("toggle-ai-chat", handleToggle);
-    return () => window.removeEventListener("toggle-ai-chat", handleToggle);
+    window.addEventListener("open-ai-chat", handleOpen);
+    window.addEventListener("close-ai-chat", handleClose);
+    return () => {
+      window.removeEventListener("toggle-ai-chat", handleToggle);
+      window.removeEventListener("open-ai-chat", handleOpen);
+      window.removeEventListener("close-ai-chat", handleClose);
+    };
   }, []);
 
   const handleNewChat = () => {
@@ -916,16 +930,6 @@ export function AIAssistantWidget() {
             )}
           </div>
         </div>
-      )}
-
-      {/* Floating Button */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="w-14 h-14 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] transition-all flex items-center justify-center animate-in zoom-in group"
-        >
-          <Bot className="w-7 h-7 group-hover:scale-110 transition-transform" />
-        </button>
       )}
     </div>
   );

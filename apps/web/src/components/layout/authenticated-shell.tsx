@@ -12,6 +12,7 @@ import { ProposalStudyProvider } from "@/components/pipeline/proposal-study-prov
 import { TrialLockOverlay } from "@/components/TrialLockOverlay";
 import { FeedbackPromptCard } from "@/components/feedback/FeedbackPromptCard";
 import { WelcomeIntroSplash } from "@/components/layout/welcome-intro-splash";
+import { EnergiviaFloatingHub } from "@/components/layout/EnergiviaFloatingHub";
 
 export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.Element {
   const pathname = usePathname();
@@ -34,6 +35,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
             <div className="flex h-screen w-full flex-col overflow-hidden bg-[var(--color-background)]">
               <TrialLockOverlay />
               <FeedbackPromptCard />
+              <EnergiviaFloatingHub />
               {isFullscreenTemplateEditor ||
               isFullscreenBlueprintEditor ||
               isOnboardingOrganization ? (

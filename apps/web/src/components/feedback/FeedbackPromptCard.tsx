@@ -11,7 +11,6 @@ const FEEDBACK_TAGS = [
   "🎨 Layout Moderno",
   "💬 WhatsApp Ágil",
   "📊 Cálculos Confiáveis",
-  "💰 Preços & Financiamento",
 ];
 
 const RATING_LABELS: Record<number, { title: string; color: string }> = {
@@ -33,29 +32,67 @@ export function FeedbackPromptCard() {
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Notifica o sistema/hub sobre abertura e fechamento do card
   useEffect(() => {
-    // Verifica se já enviou feedback anteriormente
-    const hasSubmitted = localStorage.getItem("energivia_feedback_submitted");
-    const dismissedUntil = localStorage.getItem("energivia_feedback_dismissed_until");
+    window.dispatchEvent(
+      new CustomEvent("feedback-prompt-visibility-change", { detail: { isOpen } })
+    );
+  }, [isOpen]);
 
-    // Perfeito para o primeiro momento: abre automaticamente para todos verem e testarem
-    if (hasSubmitted) {
-      setIsOpen(false);
-      return;
-    }
-
-    if (dismissedUntil && Date.now() < Number(dismissedUntil)) {
-      setIsOpen(false);
-      return;
-    }
-
-    // Abre com um leve delay natural após o carregamento da plataforma
-    const timer = setTimeout(() => {
+  useEffect(() => {
+    // Ouvinte para abertura sob demanda disparada pela bolinha de Avaliação no Hub
+    const handleOpen = () => {
       setIsOpen(true);
-    }, 1500);
+      setSubmitted(false);
+      setErrorMessage(null);
+    };
+    window.addEventListener("open-feedback-prompt", handleOpen);
 
-    return () => clearTimeout(timer);
-  }, []);
+    // Se a trava dos 5 dias estiver ativa, nunca exibir a avaliação (as duas não podem aparecer juntas)
+    if (user?.isTrialLocked) {
+      setIsOpen(false);
+      return () => {
+        window.removeEventListener("open-feedback-prompt", handleOpen);
+      };
+    }
+
+    // Verifica se já enviou anteriormente ou se já foi exibido automaticamente uma vez
+    const hasSubmitted = localStorage.getItem("energivia_feedback_submitted");
+    const hasAutoShown = localStorage.getItem("energivia_feedback_auto_shown");
+
+    if (hasSubmitted || hasAutoShown) {
+      return () => {
+        window.removeEventListener("open-feedback-prompt", handleOpen);
+      };
+    }
+
+    // Regra de exibição automática ÚNICA (1 vez):
+    // 1. Integrador já contratou ou colocou um plano pago (!user?.isTrial)
+    // 2. OU completou os 5 dias de cadastro/teste (trialDaysLeft === 0 ou trialExpired)
+    const hasPaidPlan = Boolean(!user?.isTrial && (user?.planTier || user?.planName));
+    const reachedFiveDays = Boolean(
+      user?.isTrial &&
+      (user?.trialDaysLeft === 0 || user?.trialExpired || user?.isTrialProposalLimitReached)
+    );
+
+    if (hasPaidPlan || reachedFiveDays) {
+      const timer = setTimeout(() => {
+        if (!user?.isTrialLocked) {
+          setIsOpen(true);
+          localStorage.setItem("energivia_feedback_auto_shown", "true");
+        }
+      }, 2000);
+
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener("open-feedback-prompt", handleOpen);
+      };
+    }
+
+    return () => {
+      window.removeEventListener("open-feedback-prompt", handleOpen);
+    };
+  }, [user]);
 
   const handleDismiss = () => {
     setIsOpen(false);
@@ -123,25 +160,9 @@ export function FeedbackPromptCard() {
 
   return (
     <>
-      {/* Botão flutuante posicionado ACIMA do widget de atendimento (sem sobreposição) */}
-      {!isOpen && (
-        <button
-          onClick={() => {
-            setIsOpen(true);
-            setSubmitted(false);
-            setErrorMessage(null);
-          }}
-          className="fixed bottom-24 right-5 sm:bottom-24 sm:right-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold text-xs shadow-xl shadow-amber-500/30 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer border border-amber-300/40"
-          title="Avaliar a EnergivIA"
-        >
-          <Star className="w-4 h-4 fill-slate-950 text-slate-950" />
-          <span>Avaliar EnergivIA ⭐</span>
-        </button>
-      )}
-
-      {/* Card Flutuante de Avaliação também posicionado acima do widget */}
+      {/* Card Flutuante de Avaliação (acionado via Hub Orbital ou disparo automático controlado) */}
       {isOpen && (
-        <div className="fixed bottom-24 right-5 sm:bottom-24 sm:right-6 z-50 w-[92vw] max-w-[420px] animate-in fade-in slide-in-from-bottom-6 duration-300">
+        <div className="fixed bottom-6 right-5 sm:bottom-6 sm:right-6 z-50 w-[92vw] max-w-[420px] animate-in fade-in slide-in-from-bottom-6 duration-300">
           <div className="relative overflow-hidden rounded-2xl bg-neutral-900/95 backdrop-blur-xl border border-amber-500/30 shadow-2xl shadow-black/80 text-white p-5 sm:p-6 transition-all">
             {/* Brilho decorativo de fundo */}
             <div className="absolute -top-16 -right-16 w-36 h-36 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
