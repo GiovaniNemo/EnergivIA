@@ -12,11 +12,11 @@ export class FeedbacksService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateFeedbackDto, user?: JwtPayload, tenantIdFromHeader?: string) {
-    let resolvedTenantId = tenantIdFromHeader || user?.tenantId || null;
+    let resolvedTenantId = tenantIdFromHeader || user?.tenantId || dto.tenantId || null;
     let resolvedUserId: string | null = null;
     let resolvedUserName = dto.userName || (user as any)?.name || null;
     let resolvedUserEmail = dto.userEmail || user?.email || null;
-    let resolvedPlanName: string = "TRIAL";
+    let resolvedPlanName: string = dto.userPlan || "TRIAL";
 
     if (user?.sub) {
       const dbUser = await this.prisma.user.findFirst({

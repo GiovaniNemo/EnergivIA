@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
 import { FeedbacksService } from "./feedbacks.service";
 import { CreateFeedbackDto } from "./dto/create-feedback.dto";
 import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator";
+import { Public } from "../../common/decorators/public.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { TenantId } from "../../common/decorators/tenant-id.decorator";
 import type { JwtPayload } from "@energivia/types";
@@ -12,6 +13,7 @@ export class FeedbacksController {
   constructor(private readonly feedbacksService: FeedbacksService) {}
 
   @Post()
+  @Public()
   @SkipTrialLock()
   @UseGuards(UnifiedAuthGuard)
   create(
@@ -23,6 +25,7 @@ export class FeedbacksController {
   }
 
   @Get("summary")
+  @Public()
   @SkipTrialLock()
   @UseGuards(UnifiedAuthGuard)
   getMetricsSummary() {

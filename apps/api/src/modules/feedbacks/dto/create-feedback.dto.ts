@@ -30,5 +30,13 @@ export class CreateFeedbackDto {
   phone?: string;
 
   @IsOptional()
+  @IsString()
+  tenantId?: string;
+
+  @IsOptional()
+  @IsString()
+  userPlan?: string;
+
+  @IsOptional()
   metadata?: Record<string, unknown>;
 }

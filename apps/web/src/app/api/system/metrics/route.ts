@@ -35,6 +35,19 @@ export async function GET() {
 
     if (res.ok) {
       const data = await res.json();
+      if (!data.feedbacksSummary) {
+        try {
+          const fbRes = await fetch(`${BACKEND_URL}/feedbacks/summary`, {
+            headers,
+            cache: "no-store",
+          });
+          if (fbRes.ok) {
+            data.feedbacksSummary = await fbRes.json();
+          }
+        } catch {
+          // Ignored
+        }
+      }
       return NextResponse.json(data);
     }
   } catch (err) {

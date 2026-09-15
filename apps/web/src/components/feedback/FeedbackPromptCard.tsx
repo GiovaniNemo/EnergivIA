@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { useOrganization } from "../providers/organization-provider";
-import { Star, X, Sparkles, Send, MessageSquareHeart, CheckCircle2 } from "lucide-react";
+import { Star, X, Sparkles, Send, CheckCircle2 } from "lucide-react";
 
 const FEEDBACK_TAGS = [
   "⚡ Propostas Rápidas",
@@ -30,6 +31,7 @@ export function FeedbackPromptCard() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // Verifica se já enviou feedback anteriormente
@@ -75,6 +77,7 @@ export function FeedbackPromptCard() {
     if (submitting) return;
 
     setSubmitting(true);
+    setErrorMessage(null);
     try {
       const payload = {
         rating,
@@ -83,10 +86,11 @@ export function FeedbackPromptCard() {
         channel: "web",
         userName: user?.name,
         userEmail: user?.email,
+        tenantId: user?.currentOrganizationId || user?.tenantId,
         userPlan: user?.isTrial ? "TRIAL" : user?.planName || "PAID",
       };
 
-      const res = await fetch("/api/proxy/feedbacks", {
+      const res = await fetch("/api/feedbacks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -99,18 +103,17 @@ export function FeedbackPromptCard() {
           setIsOpen(false);
         }, 2500);
       } else {
-        // Fallback local caso a API retorne algo inesperado
-        setSubmitted(true);
-        setTimeout(() => {
-          setIsOpen(false);
-        }, 2000);
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Falha ao registrar feedback:", errorData);
+        setErrorMessage(
+          errorData.error || "Não foi possível registrar o feedback no momento. Tente novamente."
+        );
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao enviar avaliação:", err);
-      setSubmitted(true);
-      setTimeout(() => {
-        setIsOpen(false);
-      }, 2000);
+      setErrorMessage(
+        "Erro de conexão ao enviar avaliação. Verifique sua conexão e tente novamente."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -120,24 +123,25 @@ export function FeedbackPromptCard() {
 
   return (
     <>
-      {/* Botão flutuante para reabrir a qualquer momento (Ideal para demonstração e feedback voluntário) */}
+      {/* Botão flutuante posicionado ACIMA do widget de atendimento (sem sobreposição) */}
       {!isOpen && (
         <button
           onClick={() => {
             setIsOpen(true);
             setSubmitted(false);
+            setErrorMessage(null);
           }}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/25 transition-all duration-300 hover:scale-105 cursor-pointer border border-amber-300/30"
+          className="fixed bottom-24 right-5 sm:bottom-24 sm:right-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold text-xs shadow-xl shadow-amber-500/30 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer border border-amber-300/40"
           title="Avaliar a EnergivIA"
         >
-          <MessageSquareHeart className="w-4 h-4" />
+          <Star className="w-4 h-4 fill-slate-950 text-slate-950" />
           <span>Avaliar EnergivIA ⭐</span>
         </button>
       )}
 
-      {/* Card Flutuante de Avaliação */}
+      {/* Card Flutuante de Avaliação também posicionado acima do widget */}
       {isOpen && (
-        <div className="fixed bottom-5 right-5 z-50 w-[92vw] max-w-[420px] animate-in fade-in slide-in-from-bottom-6 duration-300">
+        <div className="fixed bottom-24 right-5 sm:bottom-24 sm:right-6 z-50 w-[92vw] max-w-[420px] animate-in fade-in slide-in-from-bottom-6 duration-300">
           <div className="relative overflow-hidden rounded-2xl bg-neutral-900/95 backdrop-blur-xl border border-amber-500/30 shadow-2xl shadow-black/80 text-white p-5 sm:p-6 transition-all">
             {/* Brilho decorativo de fundo */}
             <div className="absolute -top-16 -right-16 w-36 h-36 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -264,6 +268,12 @@ export function FeedbackPromptCard() {
                     className="w-full rounded-xl bg-neutral-950/80 border border-neutral-800 px-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/40 resize-none"
                   />
                 </div>
+
+                {errorMessage && (
+                  <div className="p-2 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-[11px] leading-tight">
+                    {errorMessage}
+                  </div>
+                )}
 
                 {/* Botões de Ação */}
                 <div className="flex items-center justify-between gap-2 pt-1">
