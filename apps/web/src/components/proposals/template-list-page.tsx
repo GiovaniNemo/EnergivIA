@@ -67,8 +67,20 @@ import type { ProposalDocumentJson } from "./editor/types";
 
 export function TemplateListPage(): JSX.Element {
   const router = useRouter();
-  const { currentOrganizationId, currentOrganization, user } = useOrganization();
-  const isTrial = Boolean(user?.isTrial || !currentOrganization?.subscriptionPlan);
+  const { currentOrganizationId, user } = useOrganization();
+  const isAdmin = user?.role === "ADMIN" || user?.role === "PLATFORM";
+  const hasPaidPlan =
+    user?.planTier === "PLUS" ||
+    user?.planTier === "PRO" ||
+    user?.planTier === "ESSENCIAL" ||
+    Boolean(user?.isTrial === false);
+  const isTrial = !isAdmin && (user?.isTrial ?? !hasPaidPlan);
+  const isLimitReached =
+    !isAdmin &&
+    !isTrial &&
+    user?.customTemplatesLimit !== null &&
+    user?.customTemplatesLimit !== undefined &&
+    templates.length >= user.customTemplatesLimit;
   const [templates, setTemplates] = useState<ProposalTemplateEntity[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -225,13 +237,7 @@ export function TemplateListPage(): JSX.Element {
         </div>
         <Button
           onClick={() => {
-            if (isTrial) {
-              setTemplateUpgradeModalOpen(true);
-            } else if (
-              user?.customTemplatesLimit !== null &&
-              user?.customTemplatesLimit !== undefined &&
-              templates.length >= user.customTemplatesLimit
-            ) {
+            if (isTrial || isLimitReached) {
               setTemplateUpgradeModalOpen(true);
             } else {
               setCreateDialogOpen(true);
@@ -241,10 +247,7 @@ export function TemplateListPage(): JSX.Element {
         >
           {creating ? (
             "Criando..."
-          ) : isTrial ||
-            (user?.customTemplatesLimit !== null &&
-              user?.customTemplatesLimit !== undefined &&
-              templates.length >= user.customTemplatesLimit) ? (
+          ) : isTrial || isLimitReached ? (
             <span className="flex items-center gap-1.5">
               <Lock className="h-4 w-4" /> Novo template
             </span>

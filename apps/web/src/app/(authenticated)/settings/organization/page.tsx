@@ -124,15 +124,18 @@ function OrganizationSettingsContent() {
 
   const isPrivileged = user?.role === "ADMIN" || user?.role === "PLATFORM";
   const isPlus = Boolean(
+    user?.planTier === "PLUS" ||
+    user?.planName?.toLowerCase().includes("plus") ||
+    user?.planTier === "PRO" ||
     currentOrganization?.subscriptionPlan?.toLowerCase().includes("plus") ||
     currentOrganization?.subscription?.plan?.toLowerCase().includes("plus") ||
     currentOrganization?.subscriptionPlan?.toLowerCase().includes("enterprise") ||
     currentOrganization?.subscription?.plan?.toLowerCase().includes("enterprise")
   );
   const isFreeOrStart = Boolean(
-    user?.isTrial ||
-    !currentOrganization?.subscription ||
-    currentOrganization?.subscription?.status !== "active"
+    user?.isTrial &&
+    !user?.planTier &&
+    (!currentOrganization?.subscription || currentOrganization?.subscription?.status !== "active")
   );
   const canCreateMore = isPrivileged || (!isFreeOrStart && isPlus);
   const [isMultiOrgUpgradeModalOpen, setIsMultiOrgUpgradeModalOpen] = useState(false);

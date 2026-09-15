@@ -233,9 +233,12 @@ export default function CreateOrganizationPage() {
     currentOrganization,
   } = useOrganization();
   const isPrivileged = user?.role === "ADMIN" || user?.role === "PLATFORM";
-  const isPlus =
+  const isPlus = Boolean(
+    user?.planTier === "PLUS" ||
+    user?.planName?.toLowerCase().includes("plus") ||
     currentOrganization?.subscriptionPlan?.toLowerCase().includes("plus") ||
-    currentOrganization?.subscription?.plan?.toLowerCase().includes("plus");
+    currentOrganization?.subscription?.plan?.toLowerCase().includes("plus")
+  );
   const alreadyHasOrg = (organizations?.length ?? 0) >= 1;
   const isBlockedFromCreatingMore = alreadyHasOrg && !isPrivileged && !isPlus;
 
