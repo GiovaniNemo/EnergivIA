@@ -11,7 +11,6 @@ export function EnergiviaFloatingHub() {
   const normalizedPath = (pathname ?? "").replace(/\/$/, "") || "/";
 
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const hubRef = useRef<HTMLDivElement | null>(null);
@@ -154,12 +153,10 @@ export function EnergiviaFloatingHub() {
         )}
       </AnimatePresence>
 
-      {/* Botão Flutuante Principal: Rede Neural que se transforma no Cérebro da EnergivIA */}
+      {/* Botão Flutuante Principal Fixo */}
       <button
         type="button"
         onClick={() => setIsExpanded((prev) => !prev)}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
         aria-label="Menu Inteligente EnergivIA"
         className={`relative w-[64px] h-[64px] rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
           isExpanded
@@ -167,22 +164,11 @@ export function EnergiviaFloatingHub() {
             : "bg-gradient-to-br from-[#060c18] via-[#09182b] to-[#040810] border border-emerald-500/40 hover:border-amber-400/80 shadow-[0_4px_25px_rgba(16,185,129,0.35)] hover:shadow-[0_4px_35px_rgba(245,158,11,0.5)] hover:scale-108 active:scale-95"
         }`}
       >
-        {/* Anel de energia pulsante quando em repouso */}
-        {!isExpanded && (
-          <div className="absolute inset-0 rounded-full border border-emerald-400/25 animate-ping opacity-30 pointer-events-none" />
-        )}
-
-        {/* Brilho radial de fundo dinâmico */}
-        <div
-          className={`absolute inset-0 rounded-full transition-opacity duration-500 pointer-events-none ${
-            isHovered
-              ? "opacity-100 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.35)_0%,rgba(245,158,11,0.22)_50%,transparent_80%)]"
-              : "opacity-40 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.2)_0%,transparent_70%)]"
-          }`}
-        />
+        {/* Halo estático suave */}
+        <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.25)_0%,transparent_70%)] pointer-events-none" />
 
         {isExpanded ? (
-          /* Quando expandido, exibe o ícone de fechar suave */
+          /* Quando expandido, exibe o ícone de fechar */
           <motion.div
             initial={{ rotate: -90, opacity: 0 }}
             animate={{ rotate: 0, opacity: 1 }}
@@ -193,74 +179,17 @@ export function EnergiviaFloatingHub() {
             <X className="w-7 h-7" />
           </motion.div>
         ) : (
-          /* Metamorfose: Cérebro de Rede Neural (repouso) -> Cérebro Oficial EnergivIA (hover) */
-          <div className="relative w-full h-full flex items-center justify-center">
-            {/* Camada 1: Cérebro de Rede Neural (Constelação de nós e sinapses) */}
-            <motion.div
-              animate={{
-                opacity: isHovered ? 0 : 1,
-                scale: isHovered ? 0.8 : 1,
-                rotate: isHovered ? 8 : 0,
-                filter: isHovered
-                  ? "brightness(1.8) drop-shadow(0 0 15px rgba(52,211,153,1)) blur(2px)"
-                  : "brightness(1) drop-shadow(0 0 6px rgba(0,245,212,0.65)) drop-shadow(0 0 12px rgba(16,185,129,0.4)) blur(0px)",
-              }}
-              transition={{
-                duration: 0.42,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-              className="absolute inset-0 flex items-center justify-center p-2.5 pointer-events-none"
-            >
-              <Image
-                src="/neural-brain-white.png"
-                alt="Rede Neural EnergivIA"
-                width={48}
-                height={48}
-                className="w-[45px] h-[45px] object-contain shrink-0 select-none"
-                priority
-                unoptimized
-              />
-            </motion.div>
-
-            {/* Onda de choque / Flash de transição bio-elétrica */}
-            <motion.div
-              animate={{
-                opacity: isHovered ? [0, 0.85, 0] : 0,
-                scale: isHovered ? [0.6, 1.4] : 0.6,
-              }}
-              transition={{
-                duration: 0.48,
-                ease: "easeOut",
-              }}
-              className="absolute inset-1 rounded-full border-2 border-emerald-400/80 pointer-events-none"
+          /* Imagem fixa do 'E' tecnológico da EnergivIA */
+          <div className="relative w-full h-full flex items-center justify-center p-2">
+            <Image
+              src="/energivia-e-logo.png"
+              alt="EnergivIA"
+              width={50}
+              height={50}
+              className="w-[46px] h-[46px] object-contain shrink-0 select-none drop-shadow-[0_0_12px_rgba(0,229,255,0.7)]"
+              priority
+              unoptimized
             />
-
-            {/* Camada 2: Cérebro Oficial da EnergivIA (bateria solar + circuitos + cores reais da marca) */}
-            <motion.div
-              animate={{
-                opacity: isHovered ? 1 : 0,
-                scale: isHovered ? 1 : 0.8,
-                rotate: isHovered ? 0 : -8,
-                filter: isHovered
-                  ? "drop-shadow(0 0 10px rgba(16,185,129,0.95)) drop-shadow(0 0 20px rgba(245,158,11,0.5)) blur(0px)"
-                  : "drop-shadow(0 0 0px transparent) blur(2px)",
-              }}
-              transition={{
-                duration: 0.42,
-                ease: [0.16, 1, 0.3, 1],
-              }}
-              className="absolute inset-0 flex items-center justify-center p-2.5 pointer-events-none"
-            >
-              <Image
-                src="/favicon-dark.png"
-                alt="Cérebro EnergivIA"
-                width={48}
-                height={48}
-                className="w-[45px] h-[45px] object-contain shrink-0 select-none"
-                priority
-                unoptimized
-              />
-            </motion.div>
           </div>
         )}
       </button>
