@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE "platform_feedbacks" (
+CREATE TABLE IF NOT EXISTS "platform_feedbacks" (
     "id" TEXT NOT NULL,
     "tenant_id" TEXT,
     "user_id" TEXT,
@@ -13,18 +13,30 @@ CREATE TABLE "platform_feedbacks" (
     "user_plan" TEXT,
     "metadata" JSONB,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "platform_feedbacks_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
-CREATE INDEX "platform_feedbacks_tenant_id_idx" ON "platform_feedbacks"("tenant_id");
-CREATE INDEX "platform_feedbacks_user_id_idx" ON "platform_feedbacks"("user_id");
-CREATE INDEX "platform_feedbacks_channel_idx" ON "platform_feedbacks"("channel");
-CREATE INDEX "platform_feedbacks_rating_idx" ON "platform_feedbacks"("rating");
-CREATE INDEX "platform_feedbacks_created_at_idx" ON "platform_feedbacks"("created_at");
+CREATE INDEX IF NOT EXISTS "platform_feedbacks_tenant_id_idx" ON "platform_feedbacks"("tenant_id");
+CREATE INDEX IF NOT EXISTS "platform_feedbacks_user_id_idx" ON "platform_feedbacks"("user_id");
+CREATE INDEX IF NOT EXISTS "platform_feedbacks_channel_idx" ON "platform_feedbacks"("channel");
+CREATE INDEX IF NOT EXISTS "platform_feedbacks_rating_idx" ON "platform_feedbacks"("rating");
+CREATE INDEX IF NOT EXISTS "platform_feedbacks_created_at_idx" ON "platform_feedbacks"("created_at");
 
 -- AddForeignKey
-ALTER TABLE "platform_feedbacks" ADD CONSTRAINT "platform_feedbacks_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "platform_feedbacks" ADD CONSTRAINT "platform_feedbacks_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'platform_feedbacks_tenant_id_fkey'
+  ) THEN
+    ALTER TABLE "platform_feedbacks" ADD CONSTRAINT "platform_feedbacks_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'platform_feedbacks_user_id_fkey'
+  ) THEN
+    ALTER TABLE "platform_feedbacks" ADD CONSTRAINT "platform_feedbacks_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END $$;
