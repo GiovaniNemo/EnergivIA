@@ -42,6 +42,7 @@ import { SystemSettingsModule } from "./modules/system-settings/system-settings.
 import { EmailModule } from "./common/email/email.module";
 import { AiUsageModule } from "./modules/ai-usage/ai-usage.module";
 import { WebhooksModule } from "./modules/webhooks/webhooks.module";
+import { FeedbacksModule } from "./modules/feedbacks/feedbacks.module";
 
 @Module({
   controllers: [HealthController],
@@ -96,6 +97,7 @@ import { WebhooksModule } from "./modules/webhooks/webhooks.module";
     SystemSettingsModule,
     AiUsageModule,
     WebhooksModule,
+    FeedbacksModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: SentryGlobalFilter },

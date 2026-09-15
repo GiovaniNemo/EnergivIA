@@ -45,6 +45,7 @@ model Tenant {
   freightRules          FreightRule[]
   subscription          Subscription?
   aiUsageLogs           AiUsageLog[]
+  feedbacks             PlatformFeedback[]
 
   @@index([slug])
   @@index([deletedAt])
@@ -156,6 +157,7 @@ model User {
   assignedDeals     Deal[]               @relation("DealAssignedUser")
   stockMovements    StockMovement[]
   aiUsageLogs       AiUsageLog[]
+  feedbacks         PlatformFeedback[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -1411,3 +1413,31 @@ model AiUsageLog {
   @@index([createdAt])
   @@map("ai_usage_logs")
 }
+
+model PlatformFeedback {
+  id             String    @id @default(cuid())
+  tenantId       String?   @map("tenant_id")
+  userId         String?   @map("user_id")
+  userName       String?   @map("user_name")
+  userEmail      String?   @map("user_email")
+  phone          String?
+  rating         Int
+  comment        String?   @db.Text
+  tags           Json?
+  channel        String    @default("web") // "web" | "whatsapp"
+  userPlan       String?   @map("user_plan")
+  metadata       Json?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([channel])
+  @@index([rating])
+  @@index([createdAt])
+  @@map("platform_feedbacks")
+}
+

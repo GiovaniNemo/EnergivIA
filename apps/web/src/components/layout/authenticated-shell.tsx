@@ -10,6 +10,7 @@ import { AppMuiThemeProvider } from "@/components/providers/app-mui-theme-provid
 import { RequireOrganization } from "@/components/layout/require-organization";
 import { ProposalStudyProvider } from "@/components/pipeline/proposal-study-provider";
 import { TrialLockOverlay } from "@/components/TrialLockOverlay";
+import { FeedbackPromptCard } from "@/components/feedback/FeedbackPromptCard";
 import { WelcomeIntroSplash } from "@/components/layout/welcome-intro-splash";
 
 export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.Element {
@@ -32,6 +33,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
           <ProposalStudyProvider>
             <div className="flex h-screen w-full flex-col overflow-hidden bg-[var(--color-background)]">
               <TrialLockOverlay />
+              <FeedbackPromptCard />
               {isFullscreenTemplateEditor ||
               isFullscreenBlueprintEditor ||
               isOnboardingOrganization ? (

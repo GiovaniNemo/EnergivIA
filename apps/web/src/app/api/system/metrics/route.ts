@@ -141,5 +141,51 @@ export async function GET() {
         month: "Mai/26",
       },
     ],
+    feedbacksSummary: {
+      totalFeedbacks: 14,
+      averageRating: 4.8,
+      satisfactionRate: 93,
+      starDistribution: { 1: 0, 2: 0, 3: 1, 4: 2, 5: 11 },
+      channelDistribution: { web: 9, whatsapp: 5 },
+      planDistribution: { trial: 8, paid: 6 },
+      recentFeedbacks: [
+        {
+          id: "fb-1",
+          rating: 5,
+          comment:
+            "A IA do WhatsApp gerou a proposta para o meu cliente em menos de 1 minuto! Fechei a venda hoje mesmo.",
+          tags: ["⚡ Propostas Rápidas", "💬 WhatsApp Ágil"],
+          channel: "whatsapp",
+          userName: "Marcos Vinicius",
+          companyName: "Solari Engenharia",
+          userPlan: "PRO",
+          createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+        },
+        {
+          id: "fb-2",
+          rating: 5,
+          comment:
+            "Muito top a plataforma, o cálculo de dimensionamento e a taxa de retorno ficou perfeita no PDF.",
+          tags: ["📊 Cálculos Confiáveis", "🎨 Layout Moderno"],
+          channel: "web",
+          userName: "Dra. Camila Santos",
+          companyName: "Luz Forte Energia Solar",
+          userPlan: "TRIAL",
+          createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+        },
+        {
+          id: "fb-3",
+          rating: 4,
+          comment:
+            "Gostei bastante do teste de 5 dias. O atendimento e as integrações com os distribuidores facilitaram muito.",
+          tags: ["🤖 IA Precisa"],
+          channel: "web",
+          userName: "Rodrigo Almeida",
+          companyName: "EcoVolt Solar",
+          userPlan: "TRIAL",
+          createdAt: new Date(Date.now() - 1000 * 60 * 360).toISOString(),
+        },
+      ],
+    },
   });
 }

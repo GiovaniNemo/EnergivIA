@@ -18,6 +18,7 @@ import {
   ArrowUpRight,
   Share2,
   MapPin,
+  Star,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -104,6 +105,30 @@ interface MonthlyMetricData {
   referralEntries: ReferralEntry[];
 }
 
+interface FeedbackItem {
+  id: string;
+  rating: number;
+  comment?: string;
+  tags?: string[];
+  channel: string;
+  userName: string;
+  userEmail?: string;
+  phone?: string;
+  companyName?: string;
+  userPlan: string;
+  createdAt: string;
+}
+
+interface FeedbacksSummary {
+  totalFeedbacks: number;
+  averageRating: number;
+  satisfactionRate: number;
+  starDistribution: Record<number, number>;
+  channelDistribution: { web: number; whatsapp: number };
+  planDistribution: { trial: number; paid: number };
+  recentFeedbacks: FeedbackItem[];
+}
+
 interface MetricsData {
   overview: OverviewMetrics;
   timeline: TimelinePoint[];
@@ -114,6 +139,7 @@ interface MetricsData {
   stateBreakdown?: StateItem[];
   stateMonthly?: Record<string, Record<string, number>>;
   monthlyMetrics?: Record<string, MonthlyMetricData>;
+  feedbacksSummary?: FeedbacksSummary;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -195,6 +221,8 @@ export default function AdminMetricasPage() {
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [selectedGlobalMonth, setSelectedGlobalMonth] = useState<string>("ALL");
   const [showReferralDetails, setShowReferralDetails] = useState<boolean>(false);
+  const [feedbackChannelFilter, setFeedbackChannelFilter] = useState<string>("ALL");
+  const [feedbackRatingFilter, setFeedbackRatingFilter] = useState<number | null>(null);
 
   const fetchMetrics = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
@@ -1292,6 +1320,318 @@ export default function AdminMetricasPage() {
               </span>
               <span className="font-bold text-emerald-500">OCR Híbrido Local</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 5: Feedbacks & Avaliações (NPS e Satisfação dos Usuários) */}
+      <div className="p-6 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-[var(--color-foreground)] flex items-center gap-2">
+              <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
+              Feedbacks & Avaliações dos Usuários (NPS & Satisfação)
+            </h2>
+            <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
+              Opiniões em tempo real coletadas durante os 5 dias de teste free e de assinantes de
+              planos pagos
+            </p>
+          </div>
+
+          {/* Filtros de Canal e Estrelas */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-0.5 text-xs">
+              <button
+                onClick={() => setFeedbackChannelFilter("ALL")}
+                className={`px-2.5 py-1 rounded-md font-medium transition cursor-pointer ${
+                  feedbackChannelFilter === "ALL"
+                    ? "bg-amber-500 text-slate-950 font-bold"
+                    : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                }`}
+              >
+                Todos Canais
+              </button>
+              <button
+                onClick={() => setFeedbackChannelFilter("web")}
+                className={`px-2.5 py-1 rounded-md font-medium transition cursor-pointer ${
+                  feedbackChannelFilter === "web"
+                    ? "bg-amber-500 text-slate-950 font-bold"
+                    : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                }`}
+              >
+                🌐 Web
+              </button>
+              <button
+                onClick={() => setFeedbackChannelFilter("whatsapp")}
+                className={`px-2.5 py-1 rounded-md font-medium transition cursor-pointer ${
+                  feedbackChannelFilter === "whatsapp"
+                    ? "bg-amber-500 text-slate-950 font-bold"
+                    : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                }`}
+              >
+                📱 WhatsApp
+              </button>
+            </div>
+
+            <select
+              value={feedbackRatingFilter ?? ""}
+              onChange={(e) =>
+                setFeedbackRatingFilter(e.target.value ? Number(e.target.value) : null)
+              }
+              aria-label="Filtrar por classificação de estrelas"
+              className="text-xs rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] px-2.5 py-1.5 focus:outline-none focus:border-amber-500 cursor-pointer"
+            >
+              <option value="">Todas as Estrelas (1-5)</option>
+              <option value="5">⭐⭐⭐⭐⭐ 5 Estrelas</option>
+              <option value="4">⭐⭐⭐⭐ 4 Estrelas</option>
+              <option value="3">⭐⭐⭐ 3 Estrelas</option>
+              <option value="2">⭐⭐ 2 Estrelas</option>
+              <option value="1">⭐ 1 Estrela</option>
+            </select>
+          </div>
+        </div>
+
+        {/* 4 Cards de Resumo de Feedback */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Nota Média */}
+          <div className="p-4 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-1">
+            <span className="text-[11px] font-medium text-[var(--color-muted-foreground)]">
+              Nota Média de Satisfação
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-black text-amber-400">
+                {data?.feedbacksSummary?.averageRating?.toFixed(1) ?? "5.0"}
+              </span>
+              <div className="flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star
+                    key={s}
+                    className={`w-3.5 h-3.5 ${
+                      s <= Math.round(data?.feedbacksSummary?.averageRating ?? 5)
+                        ? "fill-amber-400 text-amber-400"
+                        : "fill-transparent text-neutral-600"
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+            <span className="text-[10px] text-[var(--color-muted-foreground)] block">
+              Escala de 1 a 5 estrelas
+            </span>
+          </div>
+
+          {/* Card 2: Total de Avaliações */}
+          <div className="p-4 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-1">
+            <span className="text-[11px] font-medium text-[var(--color-muted-foreground)]">
+              Total de Avaliações
+            </span>
+            <div className="text-2xl font-black text-[var(--color-foreground)]">
+              {data?.feedbacksSummary?.totalFeedbacks ?? 0}
+            </div>
+            <span className="text-[10px] text-emerald-500 font-medium block">
+              Coletadas na web e WhatsApp
+            </span>
+          </div>
+
+          {/* Card 3: Taxa de Satisfação */}
+          <div className="p-4 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-1">
+            <span className="text-[11px] font-medium text-[var(--color-muted-foreground)]">
+              Taxa de Satisfação (4-5 ⭐)
+            </span>
+            <div className="text-2xl font-black text-emerald-400">
+              {data?.feedbacksSummary?.satisfactionRate ?? 100}%
+            </div>
+            <span className="text-[10px] text-[var(--color-muted-foreground)] block">
+              Avaliações positivas / promotores
+            </span>
+          </div>
+
+          {/* Card 4: Origem dos Feedbacks */}
+          <div className="p-4 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-1">
+            <span className="text-[11px] font-medium text-[var(--color-muted-foreground)]">
+              Origem dos Feedbacks
+            </span>
+            <div className="flex items-center gap-3 text-xs pt-1">
+              <div>
+                <span className="text-[var(--color-muted-foreground)]">Web: </span>
+                <span className="font-bold text-sky-400">
+                  {data?.feedbacksSummary?.channelDistribution?.web ?? 0}
+                </span>
+              </div>
+              <div>
+                <span className="text-[var(--color-muted-foreground)]">WhatsApp: </span>
+                <span className="font-bold text-emerald-400">
+                  {data?.feedbacksSummary?.channelDistribution?.whatsapp ?? 0}
+                </span>
+              </div>
+            </div>
+            <span className="text-[10px] text-[var(--color-muted-foreground)] block">
+              {data?.feedbacksSummary?.planDistribution?.trial ?? 0} Trial •{" "}
+              {data?.feedbacksSummary?.planDistribution?.paid ?? 0} Pagantes
+            </span>
+          </div>
+        </div>
+
+        {/* Distribuição por Estrelas */}
+        <div className="p-4 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-2.5">
+          <span className="text-xs font-bold text-[var(--color-foreground)] block">
+            Distribuição de Notas (1 a 5 Estrelas)
+          </span>
+          <div className="space-y-1.5">
+            {[5, 4, 3, 2, 1].map((st) => {
+              const count = data?.feedbacksSummary?.starDistribution?.[st] ?? 0;
+              const total = data?.feedbacksSummary?.totalFeedbacks || 1;
+              const pct = Math.round((count / total) * 100);
+              return (
+                <div key={st} className="flex items-center gap-3 text-xs">
+                  <div className="flex items-center gap-1 w-16 shrink-0 font-semibold text-[var(--color-foreground)]">
+                    <span>{st}</span>
+                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                  </div>
+                  <div className="flex-1 h-2 rounded-full bg-neutral-800 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        st >= 4 ? "bg-amber-400" : st === 3 ? "bg-yellow-500" : "bg-red-400"
+                      }`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="w-16 text-right font-mono text-[var(--color-muted-foreground)] text-[11px]">
+                    {count} ({pct}%)
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Lista e Feed de Depoimentos & Avaliações */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-xs text-[var(--color-muted-foreground)]">
+            <span className="font-semibold text-[var(--color-foreground)]">
+              Feed de Comentários e Avaliações Recebidas
+            </span>
+            <span>
+              {
+                (data?.feedbacksSummary?.recentFeedbacks ?? []).filter((f) => {
+                  if (feedbackChannelFilter !== "ALL" && f.channel !== feedbackChannelFilter)
+                    return false;
+                  if (feedbackRatingFilter !== null && f.rating !== feedbackRatingFilter)
+                    return false;
+                  return true;
+                }).length
+              }{" "}
+              avaliacões listadas
+            </span>
+          </div>
+
+          <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+            {(data?.feedbacksSummary?.recentFeedbacks ?? [])
+              .filter((f) => {
+                if (feedbackChannelFilter !== "ALL" && f.channel !== feedbackChannelFilter)
+                  return false;
+                if (feedbackRatingFilter !== null && f.rating !== feedbackRatingFilter)
+                  return false;
+                return true;
+              })
+              .map((item) => (
+                <div
+                  key={item.id}
+                  className="p-3.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] hover:border-amber-500/40 transition space-y-2 text-xs"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            className={`w-3.5 h-3.5 ${
+                              s <= item.rating
+                                ? "fill-amber-400 text-amber-400"
+                                : "fill-transparent text-neutral-600"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="font-bold text-[var(--color-foreground)]">
+                        {item.userName || "Integrador"}
+                      </span>
+                      {item.companyName && (
+                        <span className="text-[var(--color-muted-foreground)] text-[11px]">
+                          • {item.companyName}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {/* Badge de Canal */}
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          item.channel === "whatsapp"
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                            : "bg-sky-500/10 text-sky-400 border-sky-500/30"
+                        }`}
+                      >
+                        {item.channel === "whatsapp" ? "📱 WhatsApp" : "🌐 Plataforma Web"}
+                      </span>
+
+                      {/* Badge de Plano */}
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                          item.userPlan?.toUpperCase() === "TRIAL"
+                            ? "bg-amber-500/10 text-amber-300 border-amber-500/30"
+                            : "bg-purple-500/10 text-purple-300 border-purple-500/30"
+                        }`}
+                      >
+                        {item.userPlan?.toUpperCase() === "TRIAL"
+                          ? "☀️ Teste Free (5 dias)"
+                          : `💎 ${item.userPlan || "Plano Ativo"}`}
+                      </span>
+
+                      {/* Data */}
+                      <span className="text-[10px] text-[var(--color-muted-foreground)]">
+                        {new Date(item.createdAt).toLocaleDateString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {item.comment && (
+                    <p className="text-[var(--color-foreground)] leading-relaxed italic bg-neutral-900/40 p-2 rounded-lg border border-neutral-800/40">
+                      &ldquo;{item.comment}&rdquo;
+                    </p>
+                  )}
+
+                  {item.tags && item.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {item.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 text-[10px] font-medium border border-amber-500/20"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+            {(data?.feedbacksSummary?.recentFeedbacks ?? []).filter((f) => {
+              if (feedbackChannelFilter !== "ALL" && f.channel !== feedbackChannelFilter)
+                return false;
+              if (feedbackRatingFilter !== null && f.rating !== feedbackRatingFilter) return false;
+              return true;
+            }).length === 0 && (
+              <div className="py-8 text-center text-xs text-[var(--color-muted-foreground)]">
+                Nenhum feedback encontrado para os filtros selecionados.
+              </div>
+            )}
           </div>
         </div>
       </div>

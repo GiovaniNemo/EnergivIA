@@ -1137,6 +1137,42 @@ export class OrganizationsService {
       .map(([state, count]) => ({ state, count }))
       .sort((a, b) => b.count - a.count);
 
+    // Platform Feedbacks & NPS Metrics
+    const feedbacksList = await this.prisma.platformFeedback
+      .findMany({
+        orderBy: { createdAt: "desc" },
+        take: 100,
+        include: {
+          tenant: { select: { name: true } },
+          user: { select: { name: true, email: true } },
+        },
+      })
+      .catch(() => []);
+
+    const totalFeedbacks = feedbacksList.length;
+    let avgRating = 5.0;
+    let satisfiedCount = 0;
+    const starDistribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const channelDistribution = { web: 0, whatsapp: 0 };
+    const planDistribution = { trial: 0, paid: 0 };
+
+    if (totalFeedbacks > 0) {
+      const sumRatings = feedbacksList.reduce((acc, f) => acc + (f.rating || 5), 0);
+      avgRating = Number((sumRatings / totalFeedbacks).toFixed(1));
+      feedbacksList.forEach((f) => {
+        const r = Math.round(f.rating || 5);
+        if (r >= 1 && r <= 5) starDistribution[r] = (starDistribution[r] || 0) + 1;
+        if (r >= 4) satisfiedCount++;
+        if (f.channel === "whatsapp") channelDistribution.whatsapp++;
+        else channelDistribution.web++;
+        if (f.userPlan?.toUpperCase() === "TRIAL") planDistribution.trial++;
+        else planDistribution.paid++;
+      });
+    }
+
+    const satisfactionRate =
+      totalFeedbacks > 0 ? Math.round((satisfiedCount / totalFeedbacks) * 100) : 100;
+
     return {
       overview: {
         totalTenants,
@@ -1168,6 +1204,27 @@ export class OrganizationsService {
       referralMonthly,
       referralEntries,
       monthlyMetrics,
+      feedbacksSummary: {
+        totalFeedbacks,
+        averageRating: avgRating,
+        satisfactionRate,
+        starDistribution,
+        channelDistribution,
+        planDistribution,
+        recentFeedbacks: feedbacksList.map((f) => ({
+          id: f.id,
+          rating: f.rating,
+          comment: f.comment,
+          tags: f.tags,
+          channel: f.channel,
+          userName: f.userName || f.user?.name || f.tenant?.name || "Integrador",
+          userEmail: f.userEmail || f.user?.email,
+          phone: f.phone,
+          companyName: f.tenant?.name,
+          userPlan: f.userPlan || "TRIAL",
+          createdAt: f.createdAt.toISOString(),
+        })),
+      },
     };
   }
 
