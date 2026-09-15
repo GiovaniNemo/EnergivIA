@@ -730,7 +730,7 @@ export function AIAssistantWidget() {
                         Cotar por R$/kWp da sua Região
                       </p>
                       <p className="text-[10px] text-gray-400 truncate">
-                        Kits mockados chave na mão (3 opções)
+                        Kits completos instalados (3 opções)
                       </p>
                     </div>
                   </button>

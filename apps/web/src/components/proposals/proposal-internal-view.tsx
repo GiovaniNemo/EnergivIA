@@ -751,13 +751,13 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
         (!integrator?.projectCostLines?.length && integrator?.kitItems?.length)) ? (
         <section
           className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.05] p-4"
-          aria-label="Cotação Chave na Mão"
+          aria-label="Cotação por R$/kWp"
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 <Zap className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                Cotação Chave na Mão (R$/kWp)
+                Cotação por R$/kWp
               </span>
               <span className="text-xs text-[var(--color-muted-foreground)]">
                 Preço fechado da região: equipamentos, materiais de instalação e mão de obra

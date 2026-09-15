@@ -1481,7 +1481,7 @@ export async function POST(req: Request) {
               const formattedOptions = tiers
                 .map((t, idx) => {
                   const numEmoji = idx === 0 ? "1️⃣" : idx === 1 ? "2️⃣" : "3️⃣";
-                  return `${numEmoji} ${t.name} (${t.badge}) - ${t.totalPriceFormatted}\nItens do Kit:\n${t.kitSummaryLines.join("\n")}\nInfo: Potência: ${t.systemKwp.toFixed(2)} kWp | Geração Estimada: ${t.estimatedMonthlyGenerationKwh} kWh/mês (em condições ideais)*\n*Obs: Chave na mão (equipamentos + mão de obra inclusos).`;
+                  return `${numEmoji} ${t.name} (${t.badge}) - ${t.totalPriceFormatted}\nItens do Kit:\n${t.kitSummaryLines.join("\n")}\nInfo: Potência: ${t.systemKwp.toFixed(2)} kWp | Geração Estimada: ${t.estimatedMonthlyGenerationKwh} kWh/mês (em condições ideais)*\n*Obs: Projeto completo (equipamentos + instalação inclusos).`;
                 })
                 .join("\n\n");
 

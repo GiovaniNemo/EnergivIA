@@ -15,7 +15,7 @@ Escolha uma opção digitando o número:
 2️⃣ Simular por consumo mensal (ex: 450 kWh)
 3️⃣ Simular por potência de pico (ex: 5 kWp)
 4️⃣ Simular por quantidade de placas (ex: 10 módulos)
-5️⃣ Cotar por Preço/kWp da minha região (Chave na Mão)
+5️⃣ Cotar por Preço/kWp da minha região (Instalação Completa)
 6️⃣ Dúvidas sobre equipamentos e preços de catálogo
 
 (Ou me envie diretamente a conta de luz em PDF/foto ou sua dúvida)"
@@ -95,7 +95,7 @@ Pergunte:
 
 Como você prefere cotar os kits para o seu cliente?
 1️⃣ Buscar kits reais em distribuidores parceiros
-2️⃣ Cotar pelo meu preço de R$/kWp da região (Chave na Mão - Econômico, Custo-Benefício e Premium)
+2️⃣ Cotar pelo meu preço de R$/kWp da região (Projeto Completo - Econômico, Custo-Benefício e Premium)
 0️⃣ Voltar / Corrigir estrutura"
 
 - Se escolher 1️⃣ (Distribuidores): Chame IMEDIATAMENTE 'gerar_cotacao_distribuidor'.

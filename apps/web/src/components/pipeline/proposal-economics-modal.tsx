@@ -1420,9 +1420,7 @@ export const ProposalEconomicsModal = forwardRef<
         isKwp && selectedKwpTier
           ? selectedKwpTier.totalPrice
           : Math.max(1000, Math.round(generatedProposal.valorSistema)),
-        isKwp
-          ? `Cotação Chave na Mão por R$/kWp (${selectedKwpTier?.name})`
-          : generatedProposal.estimateNote,
+        isKwp ? `Cotação por R$/kWp (${selectedKwpTier?.name})` : generatedProposal.estimateNote,
         {
           organizationRules: isKwp ? [] : organizationCostRules,
           systemKwp: sysKw,
@@ -2829,7 +2827,7 @@ export const ProposalEconomicsModal = forwardRef<
                         </p>
                         <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
                           Escolha entre kits com estoque de distribuidores ou cotação por R$/kWp da
-                          sua região (chave na mão).
+                          sua região (projeto completo com instalação).
                         </p>
                       </div>
                       <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-1 shrink-0">
@@ -3131,7 +3129,7 @@ export const ProposalEconomicsModal = forwardRef<
                   {quotingMode === "kwp_rate" && selectedKwpTier ? (
                     <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
                       <Sparkles className="h-3 w-3" />
-                      Cotação Chave na Mão ({selectedKwpTier.name})
+                      Cotação por R$/kWp ({selectedKwpTier.name})
                     </span>
                   ) : quotingMode === "distributor" && proposalKitResult ? (
                     proposalKitResult.own_stock_used ? (
@@ -3218,7 +3216,7 @@ export const ProposalEconomicsModal = forwardRef<
 
                     <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3 text-xs leading-relaxed text-[var(--color-foreground)]">
                       <span className="font-semibold text-emerald-700 dark:text-emerald-400">
-                        Chave na mão:
+                        Projeto completo:
                       </span>{" "}
                       O valor de {formatCurrency(selectedKwpTier.totalPrice)} (
                       {formatCurrency(selectedKwpTier.ratePerKwpEffective)}/kWp) já cobre
@@ -3279,7 +3277,7 @@ export const ProposalEconomicsModal = forwardRef<
                               colSpan={3}
                               className="p-2.5 sm:p-3 text-right text-xs font-semibold text-[var(--color-muted-foreground)]"
                             >
-                              Total Chave na Mão Diluído
+                              Total do Projeto Diluído
                             </td>
                             <td className="hidden p-2.5 sm:p-3 sm:table-cell" />
                             <td className="p-2.5 sm:p-3 text-right text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
