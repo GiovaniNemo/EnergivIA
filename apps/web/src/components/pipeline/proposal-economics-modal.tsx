@@ -122,6 +122,27 @@ function clampSystemKw(kw: number): number {
   return Math.min(1000, Math.max(0.5, rounded));
 }
 
+function extractPowerBadge(text?: string | null): string | null {
+  if (!text) return null;
+  const match = text.match(/\b(\d+(?:[.,]\d+)?)\s*(kwp|kw|wp|w)\b/i);
+  if (match) {
+    const val = match[1];
+    const rawUnit = match[2].toLowerCase();
+    const unit =
+      rawUnit === "kwp" ? "kWp" : rawUnit === "kw" ? "kW" : rawUnit === "wp" ? "Wp" : "W";
+    return `${val} ${unit}`;
+  }
+  const matchKtl = text.match(/\b(\d+(?:[.,]\d+)?)\s*ktl\b/i);
+  if (matchKtl) {
+    return `${matchKtl[1]} kW`;
+  }
+  const matchK = text.match(/\b(\d+(?:[.,]\d+)?)\s*k(?=[-\s]|\b)/i);
+  if (matchK) {
+    return `${matchK[1]} kW`;
+  }
+  return null;
+}
+
 function kitRequestEquals(a: ProposalKitRequest | null, b: ProposalKitRequest): boolean {
   return (
     a !== null &&
@@ -2770,9 +2791,9 @@ export const ProposalEconomicsModal = forwardRef<
               ) : null}
 
               {/* 2. Seletor Visual Principal: Modo de Cotação */}
-              <div className="space-y-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 sm:p-5 shadow-xs">
+              <div className="space-y-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-2.5 sm:p-5 shadow-xs">
                 <div>
-                  <h3 className="text-base font-bold text-[var(--color-foreground)] flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-bold text-[var(--color-foreground)] flex items-center gap-2">
                     <Zap className="h-4 w-4 text-emerald-500" />
                     Modo de Cotação da Proposta
                   </h3>
@@ -2781,7 +2802,7 @@ export const ProposalEconomicsModal = forwardRef<
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3.5 pt-0.5">
                   {/* Card: Distribuidores Reais */}
                   <div
                     role="button"
@@ -2793,38 +2814,38 @@ export const ProposalEconomicsModal = forwardRef<
                         setQuotingMode("distributor");
                       }
                     }}
-                    className={`relative cursor-pointer rounded-xl border p-4 transition-all flex flex-col justify-between text-left select-none ${
+                    className={`relative cursor-pointer rounded-xl border p-2.5 sm:p-4 transition-all flex flex-col justify-between text-left select-none ${
                       quotingMode === "distributor"
                         ? "border-emerald-500 bg-emerald-500/[0.04] ring-1 ring-emerald-500 shadow-xs"
                         : "border-[var(--color-border)] bg-[var(--color-background)] hover:border-[var(--color-border)] hover:bg-[var(--color-muted)]/10"
                     }`}
                   >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-sm font-bold text-[var(--color-foreground)]">
-                          <Package className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
+                          <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                           Distribuidores Reais
                         </span>
                         <span
-                          className={`h-5 w-5 rounded-full border flex items-center justify-center transition-colors ${
+                          className={`h-4 w-4 sm:h-5 sm:w-5 shrink-0 rounded-full border flex items-center justify-center transition-colors ${
                             quotingMode === "distributor"
                               ? "border-emerald-500 bg-emerald-500 text-white"
                               : "border-[var(--color-border)]"
                           }`}
                         >
                           {quotingMode === "distributor" ? (
-                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <CheckCircle2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                           ) : null}
                         </span>
                       </div>
-                      <p className="text-xs sm:text-sm text-[var(--color-muted-foreground)] leading-relaxed">
-                        Cotação com equipamentos reais em estoque de distribuidores parceiros ou do
-                        seu estoque. Permite consultar datasheets e trocar módulos ou inversores.
+                      <p className="text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)] leading-snug">
+                        Cotação com estoque real de distribuidores parceiros, troca de módulos e
+                        inversores.
                       </p>
                     </div>
-                    <div className="mt-3 pt-2.5 border-t border-[var(--color-border)]/50 flex items-center justify-between">
-                      <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                        • Estoque e catálogo em tempo real
+                    <div className="mt-2 sm:mt-3 pt-2 sm:pt-2.5 border-t border-[var(--color-border)]/50 flex items-center justify-between">
+                      <span className="text-[0.62rem] sm:text-xs font-medium text-emerald-700 dark:text-emerald-300 leading-tight">
+                        • Estoque em tempo real
                       </span>
                     </div>
                   </div>
@@ -2840,37 +2861,37 @@ export const ProposalEconomicsModal = forwardRef<
                         setQuotingMode("kwp_rate");
                       }
                     }}
-                    className={`relative cursor-pointer rounded-xl border p-4 transition-all flex flex-col justify-between text-left select-none ${
+                    className={`relative cursor-pointer rounded-xl border p-2.5 sm:p-4 transition-all flex flex-col justify-between text-left select-none ${
                       quotingMode === "kwp_rate"
                         ? "border-emerald-500 bg-emerald-500/[0.04] ring-1 ring-emerald-500 shadow-xs"
                         : "border-[var(--color-border)] bg-[var(--color-background)] hover:border-[var(--color-border)] hover:bg-[var(--color-muted)]/10"
                     }`}
                   >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-sm font-bold text-[var(--color-foreground)]">
-                          <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                          Preço por kWp da Região
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
+                          <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          Preço por kWp
                         </span>
                         <span
-                          className={`h-5 w-5 rounded-full border flex items-center justify-center transition-colors ${
+                          className={`h-4 w-4 sm:h-5 sm:w-5 shrink-0 rounded-full border flex items-center justify-center transition-colors ${
                             quotingMode === "kwp_rate"
                               ? "border-emerald-500 bg-emerald-500 text-white"
                               : "border-[var(--color-border)]"
                           }`}
                         >
                           {quotingMode === "kwp_rate" ? (
-                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <CheckCircle2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                           ) : null}
                         </span>
                       </div>
-                      <p className="text-xs sm:text-sm text-[var(--color-muted-foreground)] leading-relaxed">
-                        Orçamento comercial ágil com base no valor de R$/kWp da sua região. Já
-                        inclui equipamentos, cabos, engenharia e mão de obra de instalação.
+                      <p className="text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)] leading-snug">
+                        Orçamento comercial ágil por R$/kWp da sua região, incluindo equipamentos e
+                        instalação.
                       </p>
                     </div>
-                    <div className="mt-3 pt-2.5 border-t border-[var(--color-border)]/50 flex items-center justify-between">
-                      <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                    <div className="mt-2 sm:mt-3 pt-2 sm:pt-2.5 border-t border-[var(--color-border)]/50 flex items-center justify-between">
+                      <span className="text-[0.62rem] sm:text-xs font-medium text-emerald-700 dark:text-emerald-300 leading-tight">
                         • Projeto completo (Turnkey)
                       </span>
                     </div>
@@ -3509,13 +3530,18 @@ export const ProposalEconomicsModal = forwardRef<
                             </div>
 
                             <div className="mt-1.5 space-y-0.5">
-                              <div className="flex items-baseline gap-1">
+                              <div className="flex items-center gap-1 flex-wrap">
                                 <span className="tabular-nums text-emerald-600 dark:text-emerald-400 font-bold text-xs sm:text-sm">
                                   {proposalKitResult.modules.quantity}×
                                 </span>
                                 <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium">
                                   {proposalKitResult.modules.brand_name}
                                 </span>
+                                {extractPowerBadge(proposalKitResult.modules.product_name) ? (
+                                  <span className="ml-auto inline-flex items-center rounded px-1.5 py-0.2 text-[0.62rem] sm:text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                                    ⚡ {extractPowerBadge(proposalKitResult.modules.product_name)}
+                                  </span>
+                                ) : null}
                               </div>
                               <p className="text-[0.7rem] sm:text-xs font-semibold leading-snug text-[var(--color-foreground)] break-words">
                                 {proposalKitResult.modules.product_name}
@@ -3569,13 +3595,18 @@ export const ProposalEconomicsModal = forwardRef<
                             </div>
 
                             <div className="mt-1.5 space-y-0.5">
-                              <div className="flex items-baseline gap-1">
+                              <div className="flex items-center gap-1 flex-wrap">
                                 <span className="tabular-nums text-violet-600 dark:text-violet-400 font-bold text-xs sm:text-sm">
                                   {proposalKitResult.inverter.quantity}×
                                 </span>
                                 <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium">
                                   {proposalKitResult.inverter.brand_name}
                                 </span>
+                                {extractPowerBadge(proposalKitResult.inverter.product_name) ? (
+                                  <span className="ml-auto inline-flex items-center rounded px-1.5 py-0.2 text-[0.62rem] sm:text-xs font-bold bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30">
+                                    ⚡ {extractPowerBadge(proposalKitResult.inverter.product_name)}
+                                  </span>
+                                ) : null}
                               </div>
                               <p className="text-[0.7rem] sm:text-xs font-semibold leading-snug text-[var(--color-foreground)] break-words">
                                 {proposalKitResult.inverter.product_name}
@@ -3673,7 +3704,7 @@ export const ProposalEconomicsModal = forwardRef<
                                 key={alt.product_id}
                                 type="button"
                                 disabled={!alt.compatible || isCurrent}
-                                className={`flex w-full items-center gap-2.5 border-b border-[var(--color-border)]/60 px-3.5 py-2.5 text-left last:border-0 ${
+                                className={`flex w-full items-start gap-2.5 border-b border-[var(--color-border)]/60 px-3 sm:px-3.5 py-2.5 text-left last:border-0 ${
                                   isCurrent
                                     ? "bg-emerald-500/[0.06]"
                                     : alt.compatible
@@ -3696,10 +3727,10 @@ export const ProposalEconomicsModal = forwardRef<
                                 }}
                               >
                                 {isCurrent ? (
-                                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                  <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                                 ) : (
                                   <span
-                                    className={`h-4 w-4 shrink-0 rounded-full border ${
+                                    className={`h-4 w-4 mt-0.5 shrink-0 rounded-full border ${
                                       alt.compatible
                                         ? "border-[var(--color-border)]"
                                         : "border-dashed border-[var(--color-border)]"
@@ -3708,15 +3739,23 @@ export const ProposalEconomicsModal = forwardRef<
                                   />
                                 )}
                                 <span className="min-w-0 flex-1">
-                                  <span className="block truncate text-sm text-[var(--color-foreground)]">
-                                    {alt.brand_name} {alt.product_name}
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    {extractPowerBadge(alt.product_name) ? (
+                                      <span className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30">
+                                        ⚡ {extractPowerBadge(alt.product_name)}
+                                      </span>
+                                    ) : null}
+                                    <span className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] leading-snug break-words">
+                                      {alt.brand_name ? `${alt.brand_name} ` : ""}
+                                      {alt.product_name}
+                                    </span>
                                     {isCurrent ? (
-                                      <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700 dark:text-emerald-300">
+                                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[0.62rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                                         atual
                                       </span>
                                     ) : null}
-                                  </span>
-                                  <span className="block text-xs text-[var(--color-muted-foreground)]">
+                                  </div>
+                                  <span className="mt-0.5 block text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)] leading-tight break-words">
                                     {alt.compatible
                                       ? `${alt.quantity}× ${formatCurrency(alt.unit_price)}${
                                           alt.string_summary ? ` · ${alt.string_summary}` : ""
@@ -3726,7 +3765,7 @@ export const ProposalEconomicsModal = forwardRef<
                                 </span>
                                 {alt.compatible && delta != null && !isCurrent ? (
                                   <span
-                                    className={`shrink-0 text-xs font-semibold tabular-nums ${
+                                    className={`shrink-0 text-[0.7rem] sm:text-xs font-semibold tabular-nums mt-0.5 whitespace-nowrap ${
                                       delta < 0
                                         ? "text-emerald-600 dark:text-emerald-400"
                                         : delta > 0
@@ -3771,7 +3810,7 @@ export const ProposalEconomicsModal = forwardRef<
                                   <button
                                     key={`${alt.source_type}-${alt.supplier_id ?? "own"}-${alt.product_id}`}
                                     type="button"
-                                    className="flex w-full items-center gap-2.5 border-b border-[var(--color-border)]/60 px-3.5 py-2.5 text-left transition-colors last:border-0 hover:bg-emerald-500/[0.04]"
+                                    className="flex w-full items-start gap-2.5 border-b border-[var(--color-border)]/60 px-3 sm:px-3.5 py-2.5 text-left transition-colors last:border-0 hover:bg-emerald-500/[0.04]"
                                     title={`Remontar o kit inteiro a partir de ${sourceLabel} com este item fixado`}
                                     onClick={() => {
                                       const cat = kitSwapCategory;
@@ -3794,14 +3833,22 @@ export const ProposalEconomicsModal = forwardRef<
                                     }}
                                   >
                                     <span
-                                      className="h-4 w-4 shrink-0 rounded-full border border-[var(--color-border)]"
+                                      className="h-4 w-4 mt-0.5 shrink-0 rounded-full border border-[var(--color-border)]"
                                       aria-hidden
                                     />
                                     <span className="min-w-0 flex-1">
-                                      <span className="block truncate text-sm font-medium text-[var(--color-foreground)]">
-                                        {alt.brand_name} {alt.product_name}
+                                      <div className="flex flex-wrap items-center gap-1.5">
+                                        {extractPowerBadge(alt.product_name) ? (
+                                          <span className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30">
+                                            ⚡ {extractPowerBadge(alt.product_name)}
+                                          </span>
+                                        ) : null}
+                                        <span className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] leading-snug break-words">
+                                          {alt.brand_name ? `${alt.brand_name} ` : ""}
+                                          {alt.product_name}
+                                        </span>
                                         <span
-                                          className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                          className={`rounded-full px-2 py-0.5 text-[0.62rem] sm:text-xs font-semibold ${
                                             alt.source_type === "own_stock"
                                               ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
                                               : "bg-violet-500/15 text-violet-700 dark:text-violet-300"
@@ -3809,8 +3856,8 @@ export const ProposalEconomicsModal = forwardRef<
                                         >
                                           {sourceLabel}
                                         </span>
-                                      </span>
-                                      <span className="block text-xs text-[var(--color-muted-foreground)]">
+                                      </div>
+                                      <span className="mt-0.5 block text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)] leading-tight break-words">
                                         {alt.quantity}× {formatCurrency(alt.unit_price)}
                                         {alt.string_summary ? ` · ${alt.string_summary}` : ""}
                                         {alt.kit_total != null
@@ -3820,7 +3867,7 @@ export const ProposalEconomicsModal = forwardRef<
                                     </span>
                                     {delta != null ? (
                                       <span
-                                        className={`shrink-0 text-xs font-semibold tabular-nums ${
+                                        className={`shrink-0 text-[0.7rem] sm:text-xs font-semibold tabular-nums mt-0.5 whitespace-nowrap ${
                                           delta < 0
                                             ? "text-emerald-600 dark:text-emerald-400"
                                             : delta > 0
