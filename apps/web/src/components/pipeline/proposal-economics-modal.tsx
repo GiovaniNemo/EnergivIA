@@ -2610,58 +2610,47 @@ export const ProposalEconomicsModal = forwardRef<
               <div className="grid gap-3 rounded-2xl border border-emerald-500/15 bg-gradient-to-br from-emerald-500/[0.06] via-[var(--color-muted)]/20 to-violet-500/[0.05] p-4 sm:grid-cols-3">
                 <div>
                   <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                    Consumo base (kWh/mês)
+                    Consumo base do cliente
                   </p>
-                  <p className="text-lg font-semibold tabular-nums text-[var(--color-foreground)]">
+                  <p className="text-lg font-bold tabular-nums text-[var(--color-foreground)]">
                     {Math.round(generatedProposal.monthlyConsumptionKwh ?? 0).toLocaleString(
                       "pt-BR"
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                    Economia mensal (est.)
-                  </p>
-                  <p className="text-lg font-semibold tabular-nums text-[var(--color-foreground)]">
-                    {formatCurrency(generatedProposal.economiaMensal)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                    Payback (est.)
-                  </p>
-                  <p className="text-lg font-semibold tabular-nums text-[var(--color-foreground)]">
-                    {(generatedProposal.payback ?? 0).toFixed(1)} anos
-                  </p>
-                </div>
-                <div className="sm:col-span-3">
-                  <p className="text-xs text-[var(--color-muted-foreground)]">
-                    Valor do sistema (heurístico):{" "}
-                    <span className="font-semibold text-[var(--color-foreground)]">
-                      {formatCurrency(generatedProposal.valorSistema)}
+                    )}{" "}
+                    <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+                      kWh/mês
                     </span>
-                    {" · "}
-                    Potência alvo inicial:{" "}
-                    <span className="font-semibold text-[var(--color-foreground)]">
-                      {clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0)?.toLocaleString(
-                        "pt-BR",
-                        {
-                          minimumFractionDigits: 1,
-                          maximumFractionDigits: 1,
-                        }
-                      ) ?? "0"}{" "}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                    Potência recomendada
+                  </p>
+                  <p className="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                    {clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0)?.toLocaleString(
+                      "pt-BR",
+                      {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 2,
+                      }
+                    ) ?? "0"}{" "}
+                    <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
                       kWp
                     </span>
                   </p>
                 </div>
-                <div className="sm:col-span-3">
-                  <CurrencyInput
-                    id="proposal-discount"
-                    label="Desconto comercial (opcional)"
-                    value={proposalDiscount}
-                    onValueChange={setProposalDiscount}
-                    helperText="Aparece como linha separada na proposta do cliente (valor cheio − desconto = total). Deixe vazio para não aplicar."
-                  />
+                <div>
+                  <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                    Geração mensal prevista
+                  </p>
+                  <p className="text-lg font-bold tabular-nums text-[var(--color-foreground)]">
+                    ~
+                    {Math.round(
+                      (clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0) ?? 0) * 130
+                    ).toLocaleString("pt-BR")}{" "}
+                    <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+                      kWh/mês
+                    </span>
+                  </p>
                 </div>
               </div>
 
