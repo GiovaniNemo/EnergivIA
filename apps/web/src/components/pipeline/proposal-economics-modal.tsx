@@ -544,6 +544,7 @@ export const ProposalEconomicsModal = forwardRef<
   const [pdfPasswordInput, setPdfPasswordInput] = useState("");
   const [isUploadDragActive, setIsUploadDragActive] = useState(false);
   const billFileInputRef = useRef<HTMLInputElement | null>(null);
+  const lastLoadedStateIdRef = useRef<string | null>(null);
   const [proposalKitRequest, setProposalKitRequest] = useState<ProposalKitRequest | null>(null);
   const [proposalKitDraft, setProposalKitDraft] = useState<ProposalKitDraft>({
     systemKw: "5",
@@ -708,8 +709,12 @@ export const ProposalEconomicsModal = forwardRef<
 
   useEffect(() => {
     if (!currentOrganizationId || !selectedState?.id) {
+      lastLoadedStateIdRef.current = null;
       setGeoCities([]);
       setSelectedCity(null);
+      return;
+    }
+    if (lastLoadedStateIdRef.current === selectedState.id && geoCities.length > 0) {
       return;
     }
     let cancelled = false;
@@ -717,6 +722,7 @@ export const ProposalEconomicsModal = forwardRef<
     void listGeoCities(currentOrganizationId, selectedState.id)
       .then((rows) => {
         if (cancelled) return;
+        lastLoadedStateIdRef.current = selectedState.id;
         setGeoCities(rows.map((c) => ({ id: c.id, name: c.name, solarResource: c.solarResource })));
       })
       .catch(() => {
@@ -729,7 +735,7 @@ export const ProposalEconomicsModal = forwardRef<
     return () => {
       cancelled = true;
     };
-  }, [currentOrganizationId, selectedState?.id]);
+  }, [currentOrganizationId, selectedState?.id, geoCities.length]);
 
   useEffect(() => {
     if (!proposalResultOpen || !generatedProposal) {
@@ -995,6 +1001,7 @@ export const ProposalEconomicsModal = forwardRef<
       const st = states.find((s) => s.uf.toUpperCase() === parsed.uf!.toUpperCase());
       if (!st) return;
       setSelectedState(st);
+      lastLoadedStateIdRef.current = st.id;
       const rows = await listGeoCities(orgId, st.id);
       const mapped = rows.map((c) => ({
         id: c.id,
@@ -1049,14 +1056,8 @@ export const ProposalEconomicsModal = forwardRef<
         return;
       }
       setBillAttachment({
-        status: "ready",
-        billId: bill.id,
-        displayName,
-        fileUrl: uploaded.fileUrl,
-        fileName: uploaded.fileName,
-        mimeType: uploaded.mimeType,
-        fileSize: uploaded.fileSize,
-        extractedData: bill.extractedData,
+        status: "processing",
+        message: "Identificando localização e incidência solar...",
       });
 
       let states = geoStates;
@@ -1066,7 +1067,7 @@ export const ProposalEconomicsModal = forwardRef<
           states = rows.map((s) => ({ id: s.id, uf: s.uf, name: s.name }));
           setGeoStates(states);
         } catch {
-          return;
+          // ignore
         }
       }
       const extObj = (bill.extractedData || {}) as Record<string, unknown>;
@@ -1093,6 +1094,17 @@ export const ProposalEconomicsModal = forwardRef<
         const st = states.find((s) => s.uf.toUpperCase() === directUf);
         if (st) setSelectedState(st);
       }
+
+      setBillAttachment({
+        status: "ready",
+        billId: bill.id,
+        displayName,
+        fileUrl: uploaded.fileUrl,
+        fileName: uploaded.fileName,
+        mimeType: uploaded.mimeType,
+        fileSize: uploaded.fileSize,
+        extractedData: bill.extractedData,
+      });
     },
     [applyGeoFromBillLocation, geoStates]
   );
@@ -1507,14 +1519,68 @@ export const ProposalEconomicsModal = forwardRef<
       let proposalEstimateNote: string | undefined;
 
       currentStep = "Preparando dados da fatura";
+      let resolvedIrr = input.irradiacao;
+
+      if (resolvedIrr == null && selectedCity?.id) {
+        const cityRow = geoCities.find((c) => c.id === selectedCity.id);
+        resolvedIrr = irradiacaoFromSolarResource(cityRow?.solarResource);
+      }
+
       if (opts?.energyBill) {
         const ex = opts.energyBill.extractedData ?? null;
         const debugRaw =
           ex?.rawData && typeof ex.rawData === "object"
             ? (ex.rawData as Record<string, unknown>)
             : undefined;
+
+        if (resolvedIrr == null) {
+          const extObj = (ex || {}) as Record<string, unknown>;
+          const rawDataObj =
+            extObj.rawData && typeof extObj.rawData === "object"
+              ? (extObj.rawData as Record<string, unknown>)
+              : undefined;
+          const directCid = String(
+            extObj.cidade || extObj.city || rawDataObj?.cidade || rawDataObj?.city || ""
+          ).trim();
+          const directUf = String(
+            extObj.uf || extObj.state || rawDataObj?.uf || rawDataObj?.state || ""
+          )
+            .trim()
+            .toUpperCase();
+          const rawLoc = resolveBillLocationString(rawDataObj) || resolveBillLocationString(extObj);
+          const locationToParse = directCid && directUf ? `${directCid}/${directUf}` : rawLoc;
+          if (locationToParse) {
+            try {
+              const states =
+                geoStates.length > 0 ? geoStates : await listGeoStates(currentOrganizationId);
+              const parsed = parseBillLocation(locationToParse);
+              if (parsed.uf) {
+                const st = states.find((s) => s.uf.toUpperCase() === parsed.uf!.toUpperCase());
+                if (st) {
+                  const cities = await listGeoCities(currentOrganizationId, st.id);
+                  if (parsed.cityName) {
+                    const targetNorm = normalizeGeoName(parsed.cityName);
+                    const match =
+                      cities.find((c) => normalizeGeoName(c.name) === targetNorm) ??
+                      cities.find(
+                        (c) =>
+                          normalizeGeoName(c.name).includes(targetNorm) ||
+                          targetNorm.includes(normalizeGeoName(c.name))
+                      );
+                    if (match) {
+                      resolvedIrr = irradiacaoFromSolarResource(match.solarResource);
+                    }
+                  }
+                }
+              }
+            } catch (err) {
+              console.warn("[runProposalFlow] error resolving geo fallback", err);
+            }
+          }
+        }
+
         const prepared = prepareQuickEconomiaFromExtracted(ex, {
-          irradiacao: input.irradiacao,
+          irradiacao: resolvedIrr,
           roofType: roof,
         });
         if (!prepared.ok) {
@@ -1528,6 +1594,8 @@ export const ProposalEconomicsModal = forwardRef<
         }
         simulationInput = prepared.input;
         proposalEstimateNote = prepared.estimateNote;
+      } else {
+        simulationInput.irradiacao = resolvedIrr;
       }
 
       currentStep = "Calculando simulação (simulateProposal)";
@@ -1641,6 +1709,39 @@ export const ProposalEconomicsModal = forwardRef<
     setProposalDeal(deal);
     setProposalError(null);
     resetProposalForm();
+
+    try {
+      getLead(currentOrganizationId, deal.leadId)
+        .then(async (detail) => {
+          if (detail.energyBills && detail.energyBills.length > 0) {
+            const latestBill = detail.energyBills[0];
+            if (latestBill?.extractedData) {
+              const extObj = latestBill.extractedData as Record<string, unknown>;
+              const rawDataObj =
+                extObj.rawData && typeof extObj.rawData === "object"
+                  ? (extObj.rawData as Record<string, unknown>)
+                  : undefined;
+              const directCid = String(
+                extObj.cidade || extObj.city || rawDataObj?.cidade || rawDataObj?.city || ""
+              ).trim();
+              const directUf = String(
+                extObj.uf || extObj.state || rawDataObj?.uf || rawDataObj?.state || ""
+              )
+                .trim()
+                .toUpperCase();
+              const rawLoc =
+                resolveBillLocationString(rawDataObj) || resolveBillLocationString(extObj);
+              const locationToParse = directCid && directUf ? `${directCid}/${directUf}` : rawLoc;
+              if (locationToParse) {
+                const states =
+                  geoStates.length > 0 ? geoStates : await listGeoStates(currentOrganizationId);
+                void applyGeoFromBillLocation(currentOrganizationId, locationToParse, states);
+              }
+            }
+          }
+        })
+        .catch(() => {});
+    } catch {}
 
     if (opts?.existingSimulation && !opts.forceStudyModal) {
       const gen = buildGeneratedProposalFromSimulation(deal, opts.existingSimulation);
@@ -2462,7 +2563,11 @@ export const ProposalEconomicsModal = forwardRef<
               </Button>
               <Button
                 className="h-11 sm:h-12 w-full sm:w-auto rounded-xl px-6 text-sm sm:text-base font-semibold"
-                disabled={proposalLoading}
+                disabled={
+                  proposalLoading ||
+                  geoLoading ||
+                  (proposalInputMode === "upload" && billAttachment.status === "processing")
+                }
                 onClick={() => {
                   const fieldErrors: ProposalFieldErrors = {};
                   if (!proposalDeal) return;
@@ -2562,7 +2667,9 @@ export const ProposalEconomicsModal = forwardRef<
                   ? proposalInputMode === "upload"
                     ? "Lendo a conta e calculando..."
                     : "Calculando estimativa..."
-                  : "Calcular economia do cliente"}
+                  : geoLoading
+                    ? "Identificando potencial solar..."
+                    : "Calcular economia do cliente"}
               </Button>
             </DialogFooter>
           </div>
