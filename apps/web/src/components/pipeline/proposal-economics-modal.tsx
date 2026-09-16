@@ -700,10 +700,11 @@ export const ProposalEconomicsModal = forwardRef<
         setGeoStates([]);
       })
       .finally(() => {
-        if (!cancelled) setGeoLoading(false);
+        setGeoLoading(false);
       });
     return () => {
       cancelled = true;
+      setGeoLoading(false);
     };
   }, [currentOrganizationId]);
 
@@ -712,9 +713,11 @@ export const ProposalEconomicsModal = forwardRef<
       lastLoadedStateIdRef.current = null;
       setGeoCities([]);
       setSelectedCity(null);
+      setGeoLoading(false);
       return;
     }
     if (lastLoadedStateIdRef.current === selectedState.id && geoCities.length > 0) {
+      setGeoLoading(false);
       return;
     }
     let cancelled = false;
@@ -730,12 +733,13 @@ export const ProposalEconomicsModal = forwardRef<
         setGeoCities([]);
       })
       .finally(() => {
-        if (!cancelled) setGeoLoading(false);
+        setGeoLoading(false);
       });
     return () => {
       cancelled = true;
+      setGeoLoading(false);
     };
-  }, [currentOrganizationId, selectedState?.id, geoCities.length]);
+  }, [currentOrganizationId, selectedState?.id]);
 
   useEffect(() => {
     if (!proposalResultOpen || !generatedProposal) {
@@ -2565,7 +2569,6 @@ export const ProposalEconomicsModal = forwardRef<
                 className="h-11 sm:h-12 w-full sm:w-auto rounded-xl px-6 text-sm sm:text-base font-semibold"
                 disabled={
                   proposalLoading ||
-                  geoLoading ||
                   (proposalInputMode === "upload" && billAttachment.status === "processing")
                 }
                 onClick={() => {
@@ -2667,9 +2670,7 @@ export const ProposalEconomicsModal = forwardRef<
                   ? proposalInputMode === "upload"
                     ? "Lendo a conta e calculando..."
                     : "Calculando estimativa..."
-                  : geoLoading
-                    ? "Identificando potencial solar..."
-                    : "Calcular economia do cliente"}
+                  : "Calcular economia do cliente"}
               </Button>
             </DialogFooter>
           </div>
