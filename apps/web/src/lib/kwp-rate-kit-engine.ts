@@ -21,6 +21,8 @@ export interface KwpRateKitTier {
   totalPriceFormatted: string;
   ratePerKwpEffective: number;
   systemKwp: number;
+  inverterPowerKw: number;
+  materialsTotal: number;
   estimatedMonthlyGenerationKwh: number;
   inverterBrand: string;
   inverterModel: string;
@@ -72,6 +74,17 @@ export function normalizeRoofDescription(roofType?: string): { code: string; lab
   return { code: "ceramic", label: "Estrutura para Telhado Cerâmico" };
 }
 
+export function getStandardInverterPower(systemKwp: number): number {
+  const STANDARD_SIZES = [3, 3.6, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 75, 100];
+  if (systemKwp <= 3.8) return 3;
+  for (const size of STANDARD_SIZES) {
+    if (size * 1.3 >= systemKwp) {
+      return size;
+    }
+  }
+  return Math.ceil(systemKwp);
+}
+
 export function generateKwpRateTiers({
   kwp,
   ratePerKwp,
@@ -83,7 +96,8 @@ export function generateKwpRateTiers({
   const safeKwp = Math.max(0.5, Number(kwp) || 3.0);
   const safeRate = Math.max(500, Number(ratePerKwp) || 2800);
   const modulePowerW = 585;
-  const moduleQty = Math.max(2, Math.round((safeKwp * 1000) / modulePowerW));
+  // Regra fundamental: mínimo de 4 módulos para qualquer cotação
+  const moduleQty = Math.max(4, Math.round((safeKwp * 1000) / modulePowerW));
   const realSystemKwp = Math.round(((moduleQty * modulePowerW) / 1000) * 100) / 100;
   const estGenPerKwp = 135; // média nacional kWh/mês por kWp
   const estGeneration = Math.round(
@@ -91,17 +105,21 @@ export function generateKwpRateTiers({
   );
 
   const roof = normalizeRoofDescription(roofType);
+  const invPower = getStandardInverterPower(realSystemKwp);
 
   const tierConfigs = [
     {
       id: "economic" as const,
       name: "Econômico",
       badge: "Preço Mais Baixo",
-      tagline: "Menor investimento inicial com ótima entrega",
-      description: "Equipamentos de alta competitividade de mercado e rápido retorno.",
-      priceFactor: 0.93, // -7%
+      tagline: "Menor investimento em equipamentos com boa performance",
+      description:
+        "Equipamentos de entrada com ótimo custo-benefício para quem busca retorno rápido.",
+      priceFactor: 1.0,
+      materialCostFactor: 0.88, // materiais ~12% mais econômicos
       inverterBrand: "Growatt",
-      inverterModel: `Inversor Solar Growatt ${Math.round(realSystemKwp)}kW Monofásico/Bifásico`,
+      inverterPowerKw: invPower,
+      inverterModel: `Inversor Solar Growatt ${invPower}kW Monofásico/Bifásico`,
       moduleBrand: "DAH Solar",
       moduleModel: `Módulo Fotovoltaico DAH Solar ${modulePowerW}W N-Type Bifacial`,
     },
@@ -111,9 +129,11 @@ export function generateKwpRateTiers({
       badge: "Mais Vendido",
       tagline: "Melhor equilíbrio entre preço, tecnologia e durabilidade",
       description: "A linha mais procurada por integradores e clientes finais no Brasil.",
-      priceFactor: 1.0, // Base
+      priceFactor: 1.0,
+      materialCostFactor: 1.0, // padrão de mercado
       inverterBrand: "Deye",
-      inverterModel: `Inversor Solar Deye ${Math.round(realSystemKwp)}kW String On-Grid`,
+      inverterPowerKw: invPower,
+      inverterModel: `Inversor Solar Deye ${invPower}kW String On-Grid`,
       moduleBrand: "Canadian Solar",
       moduleModel: `Módulo Canadian Solar ${modulePowerW}W TOPBiHiKu6 N-Type`,
     },
@@ -123,35 +143,31 @@ export function generateKwpRateTiers({
       badge: "Alta Eficiência",
       tagline: "Tecnologia de ponta, marcas Tier 1 globais e garantia estendida",
       description: "Para clientes exigentes que buscam máxima performance e durabilidade.",
-      priceFactor: 1.1, // +10%
+      priceFactor: 1.0,
+      materialCostFactor: 1.15, // materiais Tier 1 (~15% maior valor agregado)
       inverterBrand: "Huawei",
-      inverterModel: `Inversor Solar Inteligente Huawei SUN2000 ${Math.round(realSystemKwp)}KTL`,
+      inverterPowerKw: invPower,
+      inverterModel: `Inversor Solar Inteligente Huawei SUN2000-${invPower}KTL`,
       moduleBrand: "Jinko Solar",
       moduleModel: `Módulo Fotovoltaico Jinko Solar ${modulePowerW}W Tiger Neo N-Type`,
     },
   ];
 
   return tierConfigs.map((cfg) => {
-    const rawTotal = realSystemKwp * safeRate * cfg.priceFactor;
-    const totalPrice = Math.round(rawTotal);
-    const ratePerKwpEffective = Math.round(totalPrice / realSystemKwp);
+    // Nas 3 opções, o valor do projeto respeita a taxa de R$/kWp informada pelo integrador
+    const totalPrice = Math.round(realSystemKwp * safeRate);
+    const ratePerKwpEffective = safeRate;
 
-    // Diluição proporcional dos produtos:
-    // Módulos: 45%
-    // Inversor: 35%
-    // Estrutura: 8%
-    // Cabos: 6% (3% preto + 3% vermelho)
-    // Conectores: 6%
-    const modTotal = Math.round(totalPrice * 0.45);
-    const invTotal = Math.round(totalPrice * 0.35);
-    const estTotal = roof.code === "none" ? 0 : Math.round(totalPrice * 0.08);
-    const cabPretoTotal = Math.round(totalPrice * 0.03);
-    const cabVermelhoTotal = Math.round(totalPrice * 0.03);
-    // Ajuste de arredondamento nos conectores para somar 100% exato
-    const conTotal = Math.max(
-      0,
-      totalPrice - (modTotal + invTotal + estTotal + cabPretoTotal + cabVermelhoTotal)
-    );
+    // O que varia entre as opções é a composição e custo dos materiais:
+    // Base de equipamentos representa cerca de 55% do valor total do projeto:
+    const baseEquipmentBudget = totalPrice * 0.55 * cfg.materialCostFactor;
+
+    const modTotal = Math.round(baseEquipmentBudget * 0.5);
+    const invTotal = Math.round(baseEquipmentBudget * 0.36);
+    const estTotal = roof.code === "none" ? 0 : Math.round(baseEquipmentBudget * 0.08);
+    const cabPretoTotal = Math.round(baseEquipmentBudget * 0.02);
+    const cabVermelhoTotal = Math.round(baseEquipmentBudget * 0.02);
+    const conTotal = Math.round(baseEquipmentBudget * 0.02);
 
     const modUnitPrice = Math.round((modTotal / moduleQty) * 100) / 100;
     const structuredItems: KwpRateKitItem[] = [
@@ -173,7 +189,7 @@ export function generateKwpRateTiers({
         quantity: 1,
         unitPrice: invTotal,
         lineTotal: invTotal,
-        specs: { powerKw: realSystemKwp, type: "On-Grid String" },
+        specs: { powerKw: invPower, type: "On-Grid String" },
       },
     ];
 
@@ -224,6 +240,8 @@ export function generateKwpRateTiers({
       }
     );
 
+    const materialsTotal = structuredItems.reduce((acc, it) => acc + it.lineTotal, 0);
+
     const kitSummaryLines = [
       `• Inversor: ${cfg.inverterModel}`,
       `• Módulos: ${moduleQty}x ${cfg.moduleModel}`,
@@ -249,6 +267,8 @@ export function generateKwpRateTiers({
           : "R$ 0,00",
       ratePerKwpEffective,
       systemKwp: realSystemKwp,
+      inverterPowerKw: invPower,
+      materialsTotal,
       estimatedMonthlyGenerationKwh: estGeneration,
       inverterBrand: cfg.inverterBrand,
       inverterModel: cfg.inverterModel,

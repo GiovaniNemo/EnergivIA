@@ -117,8 +117,8 @@ export function sizeSolarSystem(input: SolarSizingInput): SizingResult | null {
   const module = modules[0]!;
   // Arredondando para pegar a quantidade que chega mais perto do kWp solicitado (mesmo se ficar um pouco abaixo)
   let moduleQuantity = Math.round(systemPowerW / module.specs.power_w);
-  // Prevenir zero
-  if (moduleQuantity < 1) moduleQuantity = 1;
+  // Prevenir menos de 4 módulos (mínimo técnico e comercial para string e micro)
+  if (moduleQuantity < 4) moduleQuantity = 4;
 
   // Encontra todos os inversores adequados baseados na potência solicitada, ordenados por menor potência max DC
   const candidateInverters = input.stringInverters.filter(

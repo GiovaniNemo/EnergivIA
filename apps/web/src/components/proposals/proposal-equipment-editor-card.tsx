@@ -350,7 +350,7 @@ export function ProposalEquipmentEditorCard({
   })();
 
   const { minAllowedModules, maxAllowedModules } = useMemo(() => {
-    let min = 1;
+    let min = 4;
     let max = Infinity;
 
     if (moduleLine && moduleLine.quantity > 0) {

@@ -1854,7 +1854,7 @@ export const ProposalEconomicsModal = forwardRef<
     const perModuleKw = proposalKitResult.system_power_kw / proposalKitResult.modules.quantity;
     if (!Number.isFinite(perModuleKw) || perModuleKw <= 0) return;
     const currentQty = optimisticModuleQty ?? proposalKitResult.modules.quantity;
-    const targetQty = Math.max(1, currentQty + deltaQty);
+    const targetQty = Math.max(4, currentQty + deltaQty);
     setOptimisticModuleQty(targetQty);
     const kw = Math.min(1000, Math.max(0.5, Math.floor(targetQty * perModuleKw * 100) / 100));
     setProposalKitDraft((d) => ({ ...d, systemKw: String(kw) }));
@@ -3212,7 +3212,7 @@ export const ProposalEconomicsModal = forwardRef<
                                 <strong className="text-[var(--color-foreground)] font-medium">
                                   Inversor:{" "}
                                 </strong>
-                                {tier.inverterBrand} ({tier.systemKwp} kW)
+                                {tier.inverterBrand} ({tier.inverterPowerKw} kW)
                               </p>
                               <p>
                                 <strong className="text-[var(--color-foreground)] font-medium">
@@ -3296,10 +3296,10 @@ export const ProposalEconomicsModal = forwardRef<
                                 Qtd
                               </th>
                               <th className="hidden sm:table-cell p-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                                Un. Diluído
+                                Preço Un.
                               </th>
                               <th className="py-2 px-2 sm:p-3 text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-28 sm:w-32">
-                                Total Diluído
+                                Total
                               </th>
                             </tr>
                           </thead>
@@ -3337,12 +3337,33 @@ export const ProposalEconomicsModal = forwardRef<
                             ))}
                           </tbody>
                           <tfoot>
+                            <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/15">
+                              <td
+                                colSpan={2}
+                                className="py-2 px-2 sm:p-3 text-left sm:text-right text-[0.7rem] sm:text-xs font-medium text-[var(--color-muted-foreground)]"
+                              >
+                                Custo Estimado dos Materiais ({selectedKwpTier.name})
+                              </td>
+                              <td className="hidden sm:table-cell" />
+                              <td className="hidden sm:table-cell" />
+                              <td className="py-2 px-2 sm:p-3 text-right text-xs sm:text-sm font-semibold tabular-nums text-[var(--color-foreground)] whitespace-nowrap">
+                                {formatCurrency(
+                                  selectedKwpTier.materialsTotal ||
+                                    selectedKwpTier.structuredItems?.reduce(
+                                      (acc, i) => acc + i.lineTotal,
+                                      0
+                                    ) ||
+                                    0
+                                )}
+                              </td>
+                            </tr>
                             <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/25">
                               <td
                                 colSpan={2}
-                                className="py-2 px-2 sm:p-3 text-left sm:text-right text-[0.7rem] sm:text-xs font-semibold text-[var(--color-muted-foreground)]"
+                                className="py-2 px-2 sm:p-3 text-left sm:text-right text-[0.7rem] sm:text-xs font-bold text-[var(--color-foreground)]"
                               >
-                                Total do Projeto Diluído
+                                Total do Projeto (
+                                {formatCurrency(selectedKwpTier.ratePerKwpEffective)}/kWp)
                               </td>
                               <td className="hidden sm:table-cell" />
                               <td className="hidden sm:table-cell" />
@@ -4018,8 +4039,14 @@ export const ProposalEconomicsModal = forwardRef<
                                       <span className="inline-flex items-center gap-1 sm:gap-1.5 justify-center sm:justify-end">
                                         <button
                                           type="button"
+                                          disabled={qty <= 4}
                                           aria-label="Um módulo a menos"
-                                          className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
+                                          title={
+                                            qty <= 4
+                                              ? "Mínimo permitido: 4 módulos"
+                                              : "Um módulo a menos"
+                                          }
+                                          className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:bg-transparent"
                                           onClick={() => adjustModuleQuantity(-1)}
                                         >
                                           −
