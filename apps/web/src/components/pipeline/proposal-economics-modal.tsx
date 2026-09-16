@@ -72,7 +72,7 @@ import {
   renderFirstPdfPageToPng,
 } from "@/lib/bill-pdf-client";
 import type { Deal, DealStage } from "@/app/(authenticated)/pipeline/use-deals";
-import { listCostRules } from "@/lib/cost-rules-api";
+import { listCostRules, type CostRuleRow } from "@/lib/cost-rules-api";
 import {
   generateKitWhatsAppPreview,
   listKitAlternatives,
@@ -651,7 +651,23 @@ export const ProposalEconomicsModal = forwardRef<
   const [proposalCreateLoading, setProposalCreateLoading] = useState(false);
   const [proposalCreateError, setProposalCreateError] = useState<string | null>(null);
   const [proposalDiscount, setProposalDiscount] = useState<number | null>(null);
+  const [organizationCostRules, setOrganizationCostRules] = useState<CostRuleRow[]>([]);
   const [quotingMode, setQuotingMode] = useState<"distributor" | "kwp_rate">("distributor");
+
+  useEffect(() => {
+    if (!currentOrganizationId) return;
+    let cancelled = false;
+    void listCostRules(currentOrganizationId)
+      .then((rules) => {
+        if (!cancelled) setOrganizationCostRules(rules);
+      })
+      .catch(() => {
+        if (!cancelled) setOrganizationCostRules([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentOrganizationId]);
   const [kwpRateValue, setKwpRateValue] = useState<number>(2800);
   const [selectedKwpTierId, setSelectedKwpTierId] = useState<
     "economic" | "cost_benefit" | "premium"
@@ -1366,7 +1382,10 @@ export const ProposalEconomicsModal = forwardRef<
         sizingExtras: billHistorySizing,
         solarResource: cityRow?.solarResource,
       });
-      const organizationCostRules = await listCostRules(currentOrganizationId);
+      let rulesForProposal = organizationCostRules;
+      try {
+        rulesForProposal = await listCostRules(currentOrganizationId);
+      } catch {}
 
       let kitForProposal: GenerateKitResult | null = null;
       if (isKwp && selectedKwpTier) {
@@ -1423,7 +1442,7 @@ export const ProposalEconomicsModal = forwardRef<
           : Math.max(1000, Math.round(generatedProposal.valorSistema)),
         isKwp ? `Cotação por R$/kWp (${selectedKwpTier?.name})` : generatedProposal.estimateNote,
         {
-          organizationRules: isKwp ? [] : organizationCostRules,
+          organizationRules: isKwp ? [] : rulesForProposal,
           systemKwp: sysKw,
           sourceType: isKwp
             ? ("kwp_rate" as const)
@@ -1766,6 +1785,10 @@ export const ProposalEconomicsModal = forwardRef<
       if (typeof quoted === "number" && Number.isFinite(quoted) && quoted > 0) {
         return Math.round(quoted);
       }
+      const kitTotal = kitItemsTotal(effectiveKitItems);
+      if (kitTotal > 0) {
+        return Math.round(kitTotal);
+      }
     }
     return Math.max(1000, Math.round(generatedProposal?.valorSistema ?? 0));
   }, [
@@ -1775,6 +1798,7 @@ export const ProposalEconomicsModal = forwardRef<
     kitQtyDrafts,
     generatedProposal,
     organizationCostRules,
+    effectiveKitItems,
   ]);
 
   const finalTotalInvestment = useMemo(() => {
