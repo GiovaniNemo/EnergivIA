@@ -3136,23 +3136,23 @@ export const ProposalEconomicsModal = forwardRef<
                         instalação.
                       </div>
 
-                      <div className="overflow-hidden rounded-xl border border-[var(--color-border)] shadow-xs">
+                      <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] shadow-xs">
                         <table className="w-full text-xs sm:text-sm">
                           <thead>
                             <tr className="border-b border-[var(--color-border)] bg-[var(--color-muted)]/20">
-                              <th className="py-2 px-2.5 sm:p-3 text-left text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                              <th className="py-2 px-2 sm:p-3 text-left text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
                                 Item
                               </th>
                               <th className="hidden sm:table-cell p-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
                                 Marca
                               </th>
-                              <th className="py-2 px-1.5 sm:p-3 text-center sm:text-right text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-16 sm:w-auto">
+                              <th className="py-2 px-1 sm:p-3 text-center sm:text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-14 sm:w-20">
                                 Qtd
                               </th>
                               <th className="hidden sm:table-cell p-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
                                 Un. Diluído
                               </th>
-                              <th className="py-2 px-2.5 sm:p-3 text-right text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-24 sm:w-auto">
+                              <th className="py-2 px-2 sm:p-3 text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-28 sm:w-32">
                                 Total Diluído
                               </th>
                             </tr>
@@ -3165,12 +3165,12 @@ export const ProposalEconomicsModal = forwardRef<
                                   idx % 2 === 1 ? "bg-[var(--color-muted)]/15" : ""
                                 }`}
                               >
-                                <td className="py-2 px-2.5 sm:p-3 font-medium text-[var(--color-foreground)]">
-                                  <p className="text-xs sm:text-sm font-semibold leading-tight line-clamp-2 sm:line-clamp-none">
+                                <td className="py-2 px-2 sm:p-3 font-medium text-[var(--color-foreground)]">
+                                  <p className="text-[0.7rem] sm:text-xs font-semibold leading-tight break-words text-[var(--color-foreground)]">
                                     {item.productName}
                                   </p>
                                   {item.brandName ? (
-                                    <p className="text-[0.65rem] sm:hidden text-[var(--color-muted-foreground)] font-normal mt-0.5">
+                                    <p className="text-[0.62rem] sm:hidden text-[var(--color-muted-foreground)] font-normal mt-0.5 break-words">
                                       {item.brandName}
                                     </p>
                                   ) : null}
@@ -3178,13 +3178,13 @@ export const ProposalEconomicsModal = forwardRef<
                                 <td className="hidden sm:table-cell p-3 text-[var(--color-muted-foreground)]">
                                   {item.brandName || "—"}
                                 </td>
-                                <td className="py-2 px-1.5 sm:p-3 text-center sm:text-right tabular-nums text-[var(--color-foreground)] text-xs sm:text-sm">
+                                <td className="py-2 px-1 sm:p-3 text-center sm:text-right tabular-nums text-[var(--color-foreground)] text-xs sm:text-sm">
                                   {item.quantity}
                                 </td>
                                 <td className="hidden sm:table-cell p-3 text-right tabular-nums text-[var(--color-muted-foreground)]">
                                   {formatCurrency(item.unitPrice)}
                                 </td>
-                                <td className="py-2 px-2.5 sm:p-3 text-right font-semibold tabular-nums text-[var(--color-foreground)] text-xs sm:text-sm whitespace-nowrap">
+                                <td className="py-2 px-2 sm:p-3 text-right font-semibold tabular-nums text-[var(--color-foreground)] text-[0.72rem] sm:text-sm whitespace-nowrap">
                                   {formatCurrency(item.lineTotal)}
                                 </td>
                               </tr>
@@ -3194,13 +3194,13 @@ export const ProposalEconomicsModal = forwardRef<
                             <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/25">
                               <td
                                 colSpan={2}
-                                className="py-2 px-2.5 sm:p-3 text-left sm:text-right text-xs font-semibold text-[var(--color-muted-foreground)]"
+                                className="py-2 px-2 sm:p-3 text-left sm:text-right text-[0.7rem] sm:text-xs font-semibold text-[var(--color-muted-foreground)]"
                               >
                                 Total do Projeto Diluído
                               </td>
                               <td className="hidden sm:table-cell" />
                               <td className="hidden sm:table-cell" />
-                              <td className="py-2 px-2.5 sm:p-3 text-right text-sm sm:text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                              <td className="py-2 px-2 sm:p-3 text-right text-xs sm:text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                                 {formatCurrency(selectedKwpTier.totalPrice)}
                               </td>
                             </tr>
@@ -3212,7 +3212,7 @@ export const ProposalEconomicsModal = forwardRef<
                 </div>
               ) : (
                 /* Modo Distribuidor Real */
-                <div className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 sm:p-5 shadow-xs">
+                <div className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-2.5 sm:p-5 shadow-xs">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)]/60 pb-3">
                     <h3 className="flex items-center gap-2 text-base font-bold text-[var(--color-foreground)]">
                       <Package className="h-4 w-4 text-emerald-500" />
@@ -3391,109 +3391,121 @@ export const ProposalEconomicsModal = forwardRef<
                         {/* Card Módulos */}
                         <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-2.5 sm:p-3.5 shadow-xs">
                           <div>
-                            <div className="flex items-center justify-between gap-1 mb-1.5">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <div className="flex h-6 w-6 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                                  <Sun className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                </div>
-                                <span className="truncate text-[0.65rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                                  Módulos
-                                </span>
+                            <div className="flex items-center gap-1.5">
+                              <div className="flex h-5 w-5 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                <Sun className="h-3.5 w-3.5" />
                               </div>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="h-6 sm:h-7 shrink-0 rounded-md px-1.5 sm:px-2.5 text-[0.7rem] sm:text-xs font-medium"
-                                onClick={() =>
-                                  setKitSwapCategory((c) => (c === "module" ? null : "module"))
-                                }
-                              >
-                                {kitSwapCategory === "module" ? "Fechar" : "Trocar"}
-                              </Button>
+                              <span className="text-[0.7rem] sm:text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                                Módulos
+                              </span>
                             </div>
 
-                            <p className="text-xs sm:text-sm font-semibold leading-snug text-[var(--color-foreground)] line-clamp-3 sm:line-clamp-none">
-                              <span className="tabular-nums text-emerald-600 dark:text-emerald-400 font-bold mr-1">
-                                {proposalKitResult.modules.quantity}×
-                              </span>
-                              <span className="text-[var(--color-muted-foreground)] text-[0.7rem] sm:text-xs block sm:inline sm:mr-1">
-                                {proposalKitResult.modules.brand_name}
-                              </span>
-                              {proposalKitResult.modules.product_name}
-                            </p>
+                            <div className="mt-1.5 space-y-0.5">
+                              <div className="flex items-baseline gap-1">
+                                <span className="tabular-nums text-emerald-600 dark:text-emerald-400 font-bold text-xs sm:text-sm">
+                                  {proposalKitResult.modules.quantity}×
+                                </span>
+                                <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium">
+                                  {proposalKitResult.modules.brand_name}
+                                </span>
+                              </div>
+                              <p className="text-[0.7rem] sm:text-xs font-semibold leading-snug text-[var(--color-foreground)] break-words">
+                                {proposalKitResult.modules.product_name}
+                              </p>
+                            </div>
                           </div>
 
-                          {(proposalKitResult.modules as unknown as { datasheet_url?: string })
-                            .datasheet_url ? (
-                            <a
-                              href={
-                                (
-                                  proposalKitResult.modules as unknown as {
-                                    datasheet_url?: string;
-                                  }
-                                ).datasheet_url
+                          <div className="mt-2.5 pt-1.5 border-t border-[var(--color-border)]/50 flex items-center justify-between gap-1">
+                            {(proposalKitResult.modules as unknown as { datasheet_url?: string })
+                              .datasheet_url ? (
+                              <a
+                                href={
+                                  (
+                                    proposalKitResult.modules as unknown as {
+                                      datasheet_url?: string;
+                                    }
+                                  ).datasheet_url
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[0.65rem] sm:text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:underline font-medium"
+                              >
+                                Datasheet
+                              </a>
+                            ) : (
+                              <span />
+                            )}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-6 sm:h-7 shrink-0 rounded-md px-2 text-[0.68rem] sm:text-xs font-semibold"
+                              onClick={() =>
+                                setKitSwapCategory((c) => (c === "module" ? null : "module"))
                               }
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="mt-2 inline-flex items-center gap-1 text-[0.7rem] sm:text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:underline"
                             >
-                              Baixar Datasheet
-                            </a>
-                          ) : null}
+                              {kitSwapCategory === "module" ? "Fechar" : "Trocar"}
+                            </Button>
+                          </div>
                         </div>
 
                         {/* Card Inversor */}
                         <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-2.5 sm:p-3.5 shadow-xs">
                           <div>
-                            <div className="flex items-center justify-between gap-1 mb-1.5">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <div className="flex h-6 w-6 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-md bg-violet-500/10 text-violet-600 dark:text-violet-400">
-                                  <Cpu className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                </div>
-                                <span className="truncate text-[0.65rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                                  Inversor
-                                </span>
+                            <div className="flex items-center gap-1.5">
+                              <div className="flex h-5 w-5 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-md bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                                <Cpu className="h-3.5 w-3.5" />
                               </div>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="h-6 sm:h-7 shrink-0 rounded-md px-1.5 sm:px-2.5 text-[0.7rem] sm:text-xs font-medium"
-                                onClick={() =>
-                                  setKitSwapCategory((c) => (c === "inverter" ? null : "inverter"))
-                                }
-                              >
-                                {kitSwapCategory === "inverter" ? "Fechar" : "Trocar"}
-                              </Button>
+                              <span className="text-[0.7rem] sm:text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                                Inversor
+                              </span>
                             </div>
 
-                            <p className="text-xs sm:text-sm font-semibold leading-snug text-[var(--color-foreground)] line-clamp-3 sm:line-clamp-none">
-                              <span className="tabular-nums text-violet-600 dark:text-violet-400 font-bold mr-1">
-                                {proposalKitResult.inverter.quantity}×
-                              </span>
-                              <span className="text-[var(--color-muted-foreground)] text-[0.7rem] sm:text-xs block sm:inline sm:mr-1">
-                                {proposalKitResult.inverter.brand_name}
-                              </span>
-                              {proposalKitResult.inverter.product_name}
-                            </p>
+                            <div className="mt-1.5 space-y-0.5">
+                              <div className="flex items-baseline gap-1">
+                                <span className="tabular-nums text-violet-600 dark:text-violet-400 font-bold text-xs sm:text-sm">
+                                  {proposalKitResult.inverter.quantity}×
+                                </span>
+                                <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium">
+                                  {proposalKitResult.inverter.brand_name}
+                                </span>
+                              </div>
+                              <p className="text-[0.7rem] sm:text-xs font-semibold leading-snug text-[var(--color-foreground)] break-words">
+                                {proposalKitResult.inverter.product_name}
+                              </p>
+                            </div>
                           </div>
 
-                          {(proposalKitResult.inverter as unknown as { datasheet_url?: string })
-                            .datasheet_url ? (
-                            <a
-                              href={
-                                (
-                                  proposalKitResult.inverter as unknown as {
-                                    datasheet_url?: string;
-                                  }
-                                ).datasheet_url
+                          <div className="mt-2.5 pt-1.5 border-t border-[var(--color-border)]/50 flex items-center justify-between gap-1">
+                            {(proposalKitResult.inverter as unknown as { datasheet_url?: string })
+                              .datasheet_url ? (
+                              <a
+                                href={
+                                  (
+                                    proposalKitResult.inverter as unknown as {
+                                      datasheet_url?: string;
+                                    }
+                                  ).datasheet_url
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[0.65rem] sm:text-xs text-violet-600 hover:text-violet-700 dark:text-violet-400 hover:underline font-medium"
+                              >
+                                Datasheet
+                              </a>
+                            ) : (
+                              <span />
+                            )}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-6 sm:h-7 shrink-0 rounded-md px-2 text-[0.68rem] sm:text-xs font-semibold"
+                              onClick={() =>
+                                setKitSwapCategory((c) => (c === "inverter" ? null : "inverter"))
                               }
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="mt-2 inline-flex items-center gap-1 text-[0.7rem] sm:text-xs text-violet-600 hover:text-violet-700 dark:text-violet-400 hover:underline"
                             >
-                              Baixar Datasheet
-                            </a>
-                          ) : null}
+                              {kitSwapCategory === "inverter" ? "Fechar" : "Trocar"}
+                            </Button>
+                          </div>
                         </div>
                       </div>
 
@@ -3729,23 +3741,23 @@ export const ProposalEconomicsModal = forwardRef<
                           {proposalKitResult.string_configuration.modules_per_string} módulos
                         </p>
                       ) : null}
-                      <div className="overflow-hidden rounded-xl border border-[var(--color-border)] shadow-xs">
+                      <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] shadow-xs">
                         <table className="w-full text-xs sm:text-sm">
                           <thead>
                             <tr className="border-b border-[var(--color-border)] bg-[var(--color-muted)]/20">
-                              <th className="py-2 px-2.5 sm:p-3 text-left text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                              <th className="py-2 px-2 sm:p-3 text-left text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
                                 Item
                               </th>
                               <th className="hidden sm:table-cell p-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
                                 Marca
                               </th>
-                              <th className="py-2 px-1.5 sm:p-3 text-center sm:text-right text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-20 sm:w-auto">
+                              <th className="py-2 px-1 sm:p-3 text-center sm:text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-14 sm:w-20">
                                 Qtd
                               </th>
                               <th className="hidden sm:table-cell p-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
                                 Un.
                               </th>
-                              <th className="py-2 px-2.5 sm:p-3 text-right text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-20 sm:w-auto">
+                              <th className="py-2 px-2 sm:p-3 text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-28 sm:w-32">
                                 Total
                               </th>
                             </tr>
@@ -3775,18 +3787,18 @@ export const ProposalEconomicsModal = forwardRef<
                                     idx % 2 === 1 ? "bg-[var(--color-muted)]/15" : ""
                                   }`}
                                 >
-                                  <td className="py-2 px-2.5 sm:p-3 font-medium text-[var(--color-foreground)]">
+                                  <td className="py-2 px-2 sm:p-3 font-medium text-[var(--color-foreground)]">
                                     <div className="min-w-0">
-                                      <p className="text-xs sm:text-sm font-semibold leading-tight line-clamp-2 sm:line-clamp-none">
+                                      <p className="text-[0.7rem] sm:text-xs font-semibold leading-tight break-words text-[var(--color-foreground)]">
                                         {item.product_name}
                                       </p>
                                       {item.brand_name ? (
-                                        <p className="text-[0.65rem] sm:hidden text-[var(--color-muted-foreground)] font-normal mt-0.5">
+                                        <p className="text-[0.62rem] sm:hidden text-[var(--color-muted-foreground)] font-normal mt-0.5 break-words">
                                           {item.brand_name}
                                         </p>
                                       ) : null}
                                       {isAdjusted ? (
-                                        <span className="mt-0.5 block text-[0.65rem] sm:text-xs font-normal text-[var(--color-muted-foreground)]">
+                                        <span className="mt-0.5 block text-[0.62rem] sm:text-xs font-normal text-[var(--color-muted-foreground)]">
                                           calculado: {item.quantity}
                                           {" · "}
                                           <button
@@ -3815,24 +3827,24 @@ export const ProposalEconomicsModal = forwardRef<
                                   <td className="hidden sm:table-cell p-3 text-[var(--color-muted-foreground)]">
                                     {item.brand_name || "—"}
                                   </td>
-                                  <td className="py-2 px-1.5 sm:p-3 text-center sm:text-right tabular-nums text-[var(--color-foreground)] whitespace-nowrap">
+                                  <td className="py-2 px-1 sm:p-3 text-center sm:text-right tabular-nums text-[var(--color-foreground)] whitespace-nowrap">
                                     {isModuleRow ? (
                                       <span className="inline-flex items-center gap-1 sm:gap-1.5 justify-center sm:justify-end">
                                         <button
                                           type="button"
                                           aria-label="Um módulo a menos"
-                                          className="flex h-5 w-5 sm:h-7 sm:w-7 items-center justify-center rounded border border-[var(--color-border)] text-xs sm:text-sm font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
+                                          className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
                                           onClick={() => adjustModuleQuantity(-1)}
                                         >
                                           −
                                         </button>
-                                        <span className="min-w-[1.8ch] sm:min-w-[2.5ch] text-center font-bold text-xs sm:text-sm">
+                                        <span className="min-w-[1.6ch] sm:min-w-[2.2ch] text-center font-bold text-xs sm:text-sm">
                                           {qty}
                                         </span>
                                         <button
                                           type="button"
                                           aria-label="Um módulo a mais"
-                                          className="flex h-5 w-5 sm:h-7 sm:w-7 items-center justify-center rounded border border-[var(--color-border)] text-xs sm:text-sm font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
+                                          className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
                                           onClick={() => adjustModuleQuantity(1)}
                                         >
                                           +
@@ -3851,7 +3863,7 @@ export const ProposalEconomicsModal = forwardRef<
                                         min={1}
                                         inputMode="numeric"
                                         aria-label={`Quantidade de ${item.product_name}`}
-                                        className={`h-6 sm:h-8 w-11 sm:w-18 rounded border bg-[var(--color-background)] px-1 text-center sm:text-right tabular-nums text-xs sm:text-sm outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 ${
+                                        className={`h-6 sm:h-8 w-10 sm:w-18 rounded border bg-[var(--color-background)] px-1 text-center sm:text-right tabular-nums text-xs sm:text-sm outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 ${
                                           belowCalculated
                                             ? "border-red-500/60 focus:border-red-400"
                                             : "border-[var(--color-border)]"
@@ -3878,7 +3890,7 @@ export const ProposalEconomicsModal = forwardRef<
                                   <td className="hidden sm:table-cell p-3 text-right tabular-nums text-[var(--color-muted-foreground)]">
                                     {formatCurrency(item.unit_price)}
                                   </td>
-                                  <td className="py-2 px-2.5 sm:p-3 text-right font-semibold tabular-nums text-[var(--color-foreground)] text-xs sm:text-sm whitespace-nowrap">
+                                  <td className="py-2 px-2 sm:p-3 text-right font-semibold tabular-nums text-[var(--color-foreground)] text-[0.72rem] sm:text-sm whitespace-nowrap">
                                     {formatCurrency(qty * (item.unit_price ?? 0))}
                                   </td>
                                 </tr>
@@ -3889,13 +3901,13 @@ export const ProposalEconomicsModal = forwardRef<
                             <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/25">
                               <td
                                 colSpan={2}
-                                className="py-2 px-2.5 sm:p-3 text-left sm:text-right text-xs font-semibold text-[var(--color-muted-foreground)]"
+                                className="py-2 px-2 sm:p-3 text-left sm:text-right text-[0.7rem] sm:text-xs font-semibold text-[var(--color-muted-foreground)]"
                               >
                                 Total dos equipamentos
                               </td>
                               <td className="hidden sm:table-cell" />
                               <td className="hidden sm:table-cell" />
-                              <td className="py-2 px-2.5 sm:p-3 text-right text-sm sm:text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                              <td className="py-2 px-2 sm:p-3 text-right text-xs sm:text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                                 {formatCurrency(kitItemsTotal(effectiveKitItems))}
                               </td>
                             </tr>
