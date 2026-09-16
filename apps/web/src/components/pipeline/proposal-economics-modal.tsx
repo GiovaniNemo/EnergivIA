@@ -2680,55 +2680,124 @@ export const ProposalEconomicsModal = forwardRef<
           </DialogHeader>
           {generatedProposal ? (
             <div className="space-y-5 py-1">
-              {/* 1. Dimensionamento Inicial (Premissas do Projeto) */}
-              <div className="grid gap-3 rounded-2xl border border-emerald-500/15 bg-gradient-to-br from-emerald-500/[0.06] via-[var(--color-muted)]/20 to-violet-500/[0.05] p-4 sm:grid-cols-3">
-                <div>
-                  <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                    Consumo base do cliente
-                  </p>
-                  <p className="text-lg font-bold tabular-nums text-[var(--color-foreground)]">
-                    {Math.round(generatedProposal.monthlyConsumptionKwh ?? 0).toLocaleString(
-                      "pt-BR"
-                    )}{" "}
-                    <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-                      kWh/mês
-                    </span>
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                    Potência dimensionada recomendada
-                  </p>
-                  <p className="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                    {clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0)?.toLocaleString(
-                      "pt-BR",
-                      {
-                        minimumFractionDigits: 1,
-                        maximumFractionDigits: 2,
-                      }
-                    ) ?? "0"}{" "}
-                    <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-                      kWp
-                    </span>
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                    Geração mensal prevista
-                  </p>
-                  <p className="text-lg font-bold tabular-nums text-[var(--color-foreground)]">
-                    ~
-                    {Math.round(
-                      (clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0) ?? 0) * 130
-                    ).toLocaleString("pt-BR")}{" "}
-                    <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-                      kWh/mês
-                    </span>
-                  </p>
+              {/* 1. Dimensionamento do Sistema */}
+              <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-[var(--color-card)] shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset] dark:shadow-none">
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent"
+                  aria-hidden
+                />
+                <div className="relative space-y-4 p-4 sm:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-emerald-600/90 dark:text-emerald-400/90">
+                        Dimensionamento
+                      </p>
+                      <h3 className="mt-0.5 text-base font-semibold text-[var(--color-foreground)]">
+                        Dimensionamento do sistema
+                      </h3>
+                      <p className="mt-1 max-w-lg text-xs text-[var(--color-muted-foreground)]">
+                        Dimensionamento a partir do consumo estimado. Ajuste a potência e o tipo de
+                        telhado para recalcular o kit.
+                      </p>
+                    </div>
+                    <Sparkles
+                      className="hidden h-8 w-8 shrink-0 text-emerald-500/35 sm:block"
+                      aria-hidden
+                    />
+                  </div>
+
+                  {/* Métricas do dimensionamento */}
+                  <div className="grid gap-3 rounded-xl border border-emerald-500/15 bg-gradient-to-br from-emerald-500/[0.06] via-[var(--color-muted)]/20 to-violet-500/[0.05] p-3.5 sm:grid-cols-3">
+                    <div>
+                      <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                        Consumo base do cliente
+                      </p>
+                      <p className="text-lg font-bold tabular-nums text-[var(--color-foreground)]">
+                        {Math.round(generatedProposal.monthlyConsumptionKwh ?? 0).toLocaleString(
+                          "pt-BR"
+                        )}{" "}
+                        <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+                          kWh/mês
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                        Potência recomendada
+                      </p>
+                      <p className="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                        {clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0)?.toLocaleString(
+                          "pt-BR",
+                          {
+                            minimumFractionDigits: 1,
+                            maximumFractionDigits: 2,
+                          }
+                        ) ?? "0"}{" "}
+                        <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+                          kWp
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                        Geração mensal prevista
+                      </p>
+                      <p className="text-lg font-bold tabular-nums text-[var(--color-foreground)]">
+                        ~
+                        {Math.round(
+                          (clampSystemKw(
+                            parseFloat(proposalKitDraft.systemKw.replace(",", ".")) ||
+                              generatedProposal.tamanhoSistemaKw ||
+                              0
+                          ) ?? 0) * 130
+                        ).toLocaleString("pt-BR")}{" "}
+                        <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+                          kWh/mês
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Inputs de Dimensionamento */}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="proposal-kit-kw">Potência do sistema (kWp)</Label>
+                      <Input
+                        id="proposal-kit-kw"
+                        type="text"
+                        inputMode="decimal"
+                        className="h-11 border-emerald-500/15 bg-[var(--color-background)] font-medium tabular-nums"
+                        value={proposalKitDraft.systemKw}
+                        onChange={(e) =>
+                          setProposalKitDraft((d) => ({ ...d, systemKw: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="proposal-kit-roof">Tipo de telhado</Label>
+                      <Select
+                        id="proposal-kit-roof"
+                        className="[&_.MuiOutlinedInput-notchedOutline]:border-emerald-500/15"
+                        value={proposalKitDraft.roof}
+                        onChange={(e) =>
+                          setProposalKitDraft((d) => ({
+                            ...d,
+                            roof: e.target.value as RoofType,
+                          }))
+                        }
+                      >
+                        {ROOF_TYPE_SELECT_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* 2. Seletor de Modo de Cotação */}
+              {/* 2. Seletor de Modo de Cotação — No meio entre Dimensionamento e Ajustar kit */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.08] to-emerald-600/[0.02] p-4 shadow-sm">
                 <div>
                   <p className="text-sm font-semibold text-[var(--color-foreground)] flex items-center gap-2">
@@ -2773,6 +2842,7 @@ export const ProposalEconomicsModal = forwardRef<
                 </p>
               ) : null}
 
+              {/* 3. Ajustar Kit */}
               <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-[var(--color-card)] shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset] dark:shadow-none">
                 <div
                   className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent"
@@ -2782,100 +2852,67 @@ export const ProposalEconomicsModal = forwardRef<
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
                       <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-emerald-600/90 dark:text-emerald-400/90">
-                        Dimensionamento
+                        Equipamentos do kit
                       </p>
                       <h3 className="mt-0.5 text-base font-semibold text-[var(--color-foreground)]">
                         Ajustar kit
                       </h3>
                       <p className="mt-1 max-w-lg text-xs text-[var(--color-muted-foreground)]">
-                        Altere potência, telhado ou marca dos módulos — o kit é recalculado
-                        automaticamente.
+                        {quotingMode === "distributor"
+                          ? "Altere marca dos módulos, inversor ou troque o distribuidor parceiro — o kit é recalculado automaticamente."
+                          : "Selecione o kit ideal e configure o valor por kWp da região."}
                       </p>
                     </div>
-                    <Sparkles
-                      className="hidden h-8 w-8 shrink-0 text-violet-500/35 sm:block"
+                    <Package
+                      className="hidden h-8 w-8 shrink-0 text-emerald-500/35 sm:block"
                       aria-hidden
                     />
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="proposal-kit-kw">Potência do sistema (kWp)</Label>
-                      <Input
-                        id="proposal-kit-kw"
-                        type="text"
-                        inputMode="decimal"
-                        className="h-11 border-emerald-500/15 bg-[var(--color-background)] font-medium tabular-nums"
-                        value={proposalKitDraft.systemKw}
-                        onChange={(e) =>
-                          setProposalKitDraft((d) => ({ ...d, systemKw: e.target.value }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="proposal-kit-roof">Tipo de telhado</Label>
-                      <Select
-                        id="proposal-kit-roof"
-                        className="[&_.MuiOutlinedInput-notchedOutline]:border-emerald-500/15"
-                        value={proposalKitDraft.roof}
-                        onChange={(e) =>
-                          setProposalKitDraft((d) => ({
-                            ...d,
-                            roof: e.target.value as RoofType,
-                          }))
-                        }
-                      >
-                        {ROOF_TYPE_SELECT_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-                    {quotingMode === "distributor" ? (
-                      <>
-                        <div className="space-y-1.5 sm:col-span-2">
-                          <Label htmlFor="proposal-kit-brand">Marca dos painéis</Label>
-                          <Select
-                            id="proposal-kit-brand"
-                            className="[&_.MuiOutlinedInput-notchedOutline]:border-emerald-500/15"
-                            value={proposalKitDraft.brandPreset}
+
+                  {quotingMode === "distributor" ? (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="proposal-kit-brand">Marca dos painéis</Label>
+                        <Select
+                          id="proposal-kit-brand"
+                          className="[&_.MuiOutlinedInput-notchedOutline]:border-emerald-500/15"
+                          value={proposalKitDraft.brandPreset}
+                          onChange={(e) =>
+                            setProposalKitDraft((d) => ({
+                              ...d,
+                              brandPreset: e.target.value,
+                              pins: { ...d.pins, moduleId: undefined },
+                            }))
+                          }
+                        >
+                          {MODULE_BRAND_SELECT_OPTIONS.map((o) => (
+                            <option key={o.value || "any"} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                      {proposalKitDraft.brandPreset === "__custom__" ? (
+                        <div className="space-y-1.5">
+                          <Label htmlFor="proposal-kit-brand-custom">Nome da marca</Label>
+                          <Input
+                            id="proposal-kit-brand-custom"
+                            type="text"
+                            placeholder="Ex.: Canadian Solar"
+                            className="h-11 border-emerald-500/15"
+                            value={proposalKitDraft.brandCustom}
                             onChange={(e) =>
                               setProposalKitDraft((d) => ({
                                 ...d,
-                                brandPreset: e.target.value,
+                                brandCustom: e.target.value,
                                 pins: { ...d.pins, moduleId: undefined },
                               }))
                             }
-                          >
-                            {MODULE_BRAND_SELECT_OPTIONS.map((o) => (
-                              <option key={o.value || "any"} value={o.value}>
-                                {o.label}
-                              </option>
-                            ))}
-                          </Select>
+                          />
                         </div>
-                        {proposalKitDraft.brandPreset === "__custom__" ? (
-                          <div className="space-y-1.5 sm:col-span-2">
-                            <Label htmlFor="proposal-kit-brand-custom">Nome da marca</Label>
-                            <Input
-                              id="proposal-kit-brand-custom"
-                              type="text"
-                              placeholder="Ex.: Canadian Solar"
-                              className="h-11 border-emerald-500/15"
-                              value={proposalKitDraft.brandCustom}
-                              onChange={(e) =>
-                                setProposalKitDraft((d) => ({
-                                  ...d,
-                                  brandCustom: e.target.value,
-                                  pins: { ...d.pins, moduleId: undefined },
-                                }))
-                              }
-                            />
-                          </div>
-                        ) : null}
-                      </>
-                    ) : null}
-                  </div>
+                      ) : null}
+                    </div>
+                  ) : null}
 
                   {quotingMode === "distributor" ? (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
