@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Check, CheckCircle2, Loader2, Pencil, X, AlertCircle } from "lucide-react";
 import {
   submitPublicProposalResponse,
@@ -24,6 +25,7 @@ export function ProposalDecisionModal({
   clientName,
   proposalTitle: _proposalTitle,
 }: ProposalDecisionModalProps): JSX.Element | null {
+  const [mounted, setMounted] = useState(false);
   const [signatureName, setSignatureName] = useState(clientName ?? "");
   const [contactWhatsapp, setContactWhatsapp] = useState("");
   const [comments, setComments] = useState("");
@@ -31,7 +33,20 @@ export function ProposalDecisionModal({
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  if (!open || !decisionType) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
+  if (!open || !decisionType || !mounted || typeof document === "undefined") return null;
 
   const isAccept = decisionType === "ACCEPT";
   const isEdit = decisionType === "REQUEST_CHANGES";
@@ -87,11 +102,11 @@ export function ProposalDecisionModal({
     onClose();
   }
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6"
     >
       <div
         className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity"
@@ -265,6 +280,7 @@ export function ProposalDecisionModal({
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
