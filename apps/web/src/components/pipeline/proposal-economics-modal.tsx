@@ -2729,167 +2729,42 @@ export const ProposalEconomicsModal = forwardRef<
               </div>
 
               {/* 2. Seletor de Modo de Cotação */}
-              <div className="space-y-3 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.08] to-emerald-600/[0.02] p-4 shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--color-foreground)] flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                      Modo de Cotação
-                    </p>
-                    <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-                      Escolha entre kits com estoque de distribuidores ou cotação por R$/kWp da sua
-                      região (projeto completo com instalação).
-                    </p>
-                  </div>
-                  <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setQuotingMode("distributor")}
-                      className={`px-3.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                        quotingMode === "distributor"
-                          ? "bg-emerald-600 font-semibold text-white shadow-sm"
-                          : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-                      }`}
-                    >
-                      Distribuidores Parceiros
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQuotingMode("kwp_rate")}
-                      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                        quotingMode === "kwp_rate"
-                          ? "bg-emerald-600 font-semibold text-white shadow-sm"
-                          : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-                      }`}
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Preço por kWp da Região
-                    </button>
-                  </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.08] to-emerald-600/[0.02] p-4 shadow-sm">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--color-foreground)] flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    Modo de Cotação
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
+                    Escolha entre kits com estoque de distribuidores parceiros ou cotação por R$/kWp
+                    da sua região (projeto completo com instalação).
+                  </p>
                 </div>
-
-                {quotingMode === "kwp_rate" ? (
-                  <div className="pt-3 border-t border-emerald-500/20 space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="kwp-rate-input" className="text-xs font-semibold">
-                          Valor cobrado por kWp instalado (R$/kWp)
-                        </Label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--color-muted-foreground)] font-medium">
-                            R$
-                          </span>
-                          <Input
-                            id="kwp-rate-input"
-                            type="number"
-                            min={500}
-                            step={50}
-                            value={kwpRateValue}
-                            onChange={(e) =>
-                              setKwpRateValue(Math.max(0, parseFloat(e.target.value) || 0))
-                            }
-                            className="pl-9 h-10 font-semibold text-sm border-emerald-500/30 focus-visible:ring-emerald-500"
-                            placeholder="2800"
-                          />
-                        </div>
-                        <p className="text-[11px] text-[var(--color-muted-foreground)]">
-                          Valor final para o cliente: já inclui equipamentos, materiais elétricos e
-                          instalação.
-                        </p>
-                      </div>
-                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-900 dark:text-emerald-200">
-                        <span className="font-semibold block mb-0.5">
-                          ℹ️ Custos e Mão de Obra Inclusos
-                        </span>
-                        O valor por kWp é rateado nos produtos e não somará custos extras de projeto
-                        para não duplicar valores.
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 pt-1">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                        Selecione o kit desejado para a proposta:
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {kwpRateTiers.map((tier) => {
-                          const isSelected = selectedKwpTierId === tier.id;
-                          return (
-                            <div
-                              key={tier.id}
-                              onClick={() => setSelectedKwpTierId(tier.id)}
-                              className={`cursor-pointer rounded-xl border p-3.5 transition-all flex flex-col justify-between ${
-                                isSelected
-                                  ? "border-emerald-500 bg-emerald-500/[0.08] ring-2 ring-emerald-500/40 shadow-sm"
-                                  : "border-[var(--color-border)] bg-[var(--color-background)] hover:border-emerald-500/40"
-                              }`}
-                            >
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <span
-                                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                                      tier.id === "economic"
-                                        ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30"
-                                        : tier.id === "cost_benefit"
-                                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                                          : "bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30"
-                                    }`}
-                                  >
-                                    {tier.badge}
-                                  </span>
-                                  <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                                    {formatCurrency(tier.ratePerKwpEffective)}/kWp
-                                  </span>
-                                </div>
-
-                                <div>
-                                  <h4 className="text-base font-bold text-[var(--color-foreground)]">
-                                    {tier.name}
-                                  </h4>
-                                  <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                                    {tier.totalPriceFormatted}
-                                  </p>
-                                </div>
-
-                                <div className="pt-2 border-t border-[var(--color-border)]/60 text-xs space-y-1.5 text-[var(--color-muted-foreground)]">
-                                  <p className="truncate">
-                                    <strong className="text-[var(--color-foreground)]">
-                                      Inversor:
-                                    </strong>{" "}
-                                    {tier.inverterBrand} ({tier.systemKwp} kW)
-                                  </p>
-                                  <p className="truncate">
-                                    <strong className="text-[var(--color-foreground)]">
-                                      Módulos:
-                                    </strong>{" "}
-                                    {tier.moduleQty}x {tier.moduleBrand} ({tier.modulePowerW}W)
-                                  </p>
-                                  <p className="text-[11px] text-[var(--color-muted-foreground)]">
-                                    + Estrutura, Cabos e Conectores diluídos
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="pt-3 mt-2 border-t border-[var(--color-border)]/40 flex items-center justify-between">
-                                <span className="text-[11px] text-[var(--color-muted-foreground)]">
-                                  Geração: ~{tier.estimatedMonthlyGenerationKwh} kWh/mês
-                                </span>
-                                <span
-                                  className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                                    isSelected
-                                      ? "border-emerald-500 bg-emerald-500 text-white"
-                                      : "border-[var(--color-border)]"
-                                  }`}
-                                >
-                                  {isSelected ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
+                <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setQuotingMode("distributor")}
+                    className={`px-3.5 py-2 rounded-lg text-xs font-medium transition-all ${
+                      quotingMode === "distributor"
+                        ? "bg-emerald-600 font-semibold text-white shadow-sm"
+                        : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                    }`}
+                  >
+                    Distribuidores Parceiros
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuotingMode("kwp_rate")}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium transition-all ${
+                      quotingMode === "kwp_rate"
+                        ? "bg-emerald-600 font-semibold text-white shadow-sm"
+                        : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                    }`}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Preço por kWp da Região
+                  </button>
+                </div>
               </div>
 
               {generatedProposal.estimateNote ? (
@@ -2956,124 +2831,130 @@ export const ProposalEconomicsModal = forwardRef<
                         ))}
                       </Select>
                     </div>
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <Label htmlFor="proposal-kit-brand">Marca dos painéis</Label>
-                      <Select
-                        id="proposal-kit-brand"
-                        className="[&_.MuiOutlinedInput-notchedOutline]:border-emerald-500/15"
-                        value={proposalKitDraft.brandPreset}
-                        onChange={(e) =>
-                          setProposalKitDraft((d) => ({
-                            ...d,
-                            brandPreset: e.target.value,
-                            pins: { ...d.pins, moduleId: undefined },
-                          }))
-                        }
-                      >
-                        {MODULE_BRAND_SELECT_OPTIONS.map((o) => (
-                          <option key={o.value || "any"} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-                    {proposalKitDraft.brandPreset === "__custom__" ? (
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label htmlFor="proposal-kit-brand-custom">Nome da marca</Label>
-                        <Input
-                          id="proposal-kit-brand-custom"
-                          type="text"
-                          placeholder="Ex.: Canadian Solar"
-                          className="h-11 border-emerald-500/15"
-                          value={proposalKitDraft.brandCustom}
-                          onChange={(e) =>
-                            setProposalKitDraft((d) => ({
-                              ...d,
-                              brandCustom: e.target.value,
-                              pins: { ...d.pins, moduleId: undefined },
-                            }))
-                          }
-                        />
-                      </div>
+                    {quotingMode === "distributor" ? (
+                      <>
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <Label htmlFor="proposal-kit-brand">Marca dos painéis</Label>
+                          <Select
+                            id="proposal-kit-brand"
+                            className="[&_.MuiOutlinedInput-notchedOutline]:border-emerald-500/15"
+                            value={proposalKitDraft.brandPreset}
+                            onChange={(e) =>
+                              setProposalKitDraft((d) => ({
+                                ...d,
+                                brandPreset: e.target.value,
+                                pins: { ...d.pins, moduleId: undefined },
+                              }))
+                            }
+                          >
+                            {MODULE_BRAND_SELECT_OPTIONS.map((o) => (
+                              <option key={o.value || "any"} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                        {proposalKitDraft.brandPreset === "__custom__" ? (
+                          <div className="space-y-1.5 sm:col-span-2">
+                            <Label htmlFor="proposal-kit-brand-custom">Nome da marca</Label>
+                            <Input
+                              id="proposal-kit-brand-custom"
+                              type="text"
+                              placeholder="Ex.: Canadian Solar"
+                              className="h-11 border-emerald-500/15"
+                              value={proposalKitDraft.brandCustom}
+                              onChange={(e) =>
+                                setProposalKitDraft((d) => ({
+                                  ...d,
+                                  brandCustom: e.target.value,
+                                  pins: { ...d.pins, moduleId: undefined },
+                                }))
+                              }
+                            />
+                          </div>
+                        ) : null}
+                      </>
                     ) : null}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="proposal-kit-inverter-type">Tipo de Inversor</Label>
-                      <Select
-                        id="proposal-kit-inverter-type"
-                        className="h-11 w-full border-emerald-500/15"
-                        value={proposalKitDraft.inverterType || "string"}
-                        onChange={(e) =>
-                          setProposalKitDraft((d) => ({
-                            ...d,
-                            inverterType: e.target.value as ProposalKitDraft["inverterType"],
-                            pins: { ...d.pins, inverterId: undefined },
-                          }))
-                        }
-                      >
-                        <option value="string">String Inverter</option>
-                        <option value="microinverter">Microinversor</option>
-                        <option value="hybrid">Híbrido</option>
-                        <option value="off_grid">Off-Grid</option>
-                      </Select>
-                    </div>
+                  {quotingMode === "distributor" ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="proposal-kit-inverter-type">Tipo de Inversor</Label>
+                        <Select
+                          id="proposal-kit-inverter-type"
+                          className="h-11 w-full border-emerald-500/15"
+                          value={proposalKitDraft.inverterType || "string"}
+                          onChange={(e) =>
+                            setProposalKitDraft((d) => ({
+                              ...d,
+                              inverterType: e.target.value as ProposalKitDraft["inverterType"],
+                              pins: { ...d.pins, inverterId: undefined },
+                            }))
+                          }
+                        >
+                          <option value="string">String Inverter</option>
+                          <option value="microinverter">Microinversor</option>
+                          <option value="hybrid">Híbrido</option>
+                          <option value="off_grid">Off-Grid</option>
+                        </Select>
+                      </div>
 
-                    <div className="space-y-1.5">
-                      <Label htmlFor="proposal-kit-grid-topology">Padrão da rede / Tensão</Label>
-                      <Select
-                        id="proposal-kit-grid-topology"
-                        className="h-11 w-full border-emerald-500/15"
-                        value={proposalKitDraft.gridTopology || "auto"}
-                        onChange={(e) =>
-                          setProposalKitDraft((d) => ({
-                            ...d,
-                            gridTopology: e.target.value as ProposalKitDraft["gridTopology"],
-                            pins: { ...d.pins, inverterId: undefined },
-                          }))
-                        }
-                      >
-                        <option value="auto">Automático / Qualquer</option>
-                        <option value="mono_220">Monofásico 220V</option>
-                        <option value="biphasic_127_220">Bifásico 127V / 220V</option>
-                        <option value="tri_220">Trifásico 220V (ou Mono 220V)</option>
-                        <option value="tri_380">Trifásico 380V (ou Mono 220V)</option>
-                      </Select>
-                    </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="proposal-kit-grid-topology">Padrão da rede / Tensão</Label>
+                        <Select
+                          id="proposal-kit-grid-topology"
+                          className="h-11 w-full border-emerald-500/15"
+                          value={proposalKitDraft.gridTopology || "auto"}
+                          onChange={(e) =>
+                            setProposalKitDraft((d) => ({
+                              ...d,
+                              gridTopology: e.target.value as ProposalKitDraft["gridTopology"],
+                              pins: { ...d.pins, inverterId: undefined },
+                            }))
+                          }
+                        >
+                          <option value="auto">Automático / Qualquer</option>
+                          <option value="mono_220">Monofásico 220V</option>
+                          <option value="biphasic_127_220">Bifásico 127V / 220V</option>
+                          <option value="tri_220">Trifásico 220V (ou Mono 220V)</option>
+                          <option value="tri_380">Trifásico 380V (ou Mono 220V)</option>
+                        </Select>
+                      </div>
 
-                    <div className="space-y-1.5">
-                      <Label htmlFor="proposal-kit-string-box">
-                        String Box (Opcional)
-                        {proposalKitResult?.string_configuration ? (
-                          <span className="ml-1 text-[0.7rem] font-normal text-emerald-600 dark:text-emerald-400">
-                            (Sug.: {proposalKitResult.string_configuration.string_count}E/
-                            {Math.min(proposalKitResult.string_configuration.string_count, 2)}S)
-                          </span>
-                        ) : null}
-                      </Label>
-                      <Select
-                        id="proposal-kit-string-box"
-                        className="h-11 w-full border-emerald-500/15"
-                        value={proposalKitDraft.stringBoxId || "none"}
-                        onChange={(e) =>
-                          setProposalKitDraft((d) => ({
-                            ...d,
-                            stringBoxId: e.target.value || "none",
-                          }))
-                        }
-                      >
-                        <option value="none">Sem String Box (Padrão)</option>
-                        <option value="auto">Automático / Recomendado</option>
-                        {stringBoxOptions.map((sb) => (
-                          <option key={sb.id} value={sb.id}>
-                            {sb.brandName ? `${sb.brandName} - ` : ""}
-                            {sb.name}
-                          </option>
-                        ))}
-                      </Select>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="proposal-kit-string-box">
+                          String Box (Opcional)
+                          {proposalKitResult?.string_configuration ? (
+                            <span className="ml-1 text-[0.7rem] font-normal text-emerald-600 dark:text-emerald-400">
+                              (Sug.: {proposalKitResult.string_configuration.string_count}E/
+                              {Math.min(proposalKitResult.string_configuration.string_count, 2)}S)
+                            </span>
+                          ) : null}
+                        </Label>
+                        <Select
+                          id="proposal-kit-string-box"
+                          className="h-11 w-full border-emerald-500/15"
+                          value={proposalKitDraft.stringBoxId || "none"}
+                          onChange={(e) =>
+                            setProposalKitDraft((d) => ({
+                              ...d,
+                              stringBoxId: e.target.value || "none",
+                            }))
+                          }
+                        >
+                          <option value="none">Sem String Box (Padrão)</option>
+                          <option value="auto">Automático / Recomendado</option>
+                          {stringBoxOptions.map((sb) => (
+                            <option key={sb.id} value={sb.id}>
+                              {sb.brandName ? `${sb.brandName} - ` : ""}
+                              {sb.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
                     </div>
-                  </div>
+                  ) : null}
 
                   {quotingMode === "distributor" ? (
                     <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-3.5 py-3">
@@ -3190,7 +3071,139 @@ export const ProposalEconomicsModal = forwardRef<
                         ) : null}
                       </div>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="space-y-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3.5 sm:p-4">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--color-foreground)] flex items-center gap-1.5">
+                          <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          Opções de Kits — Preço por kWp da Região
+                        </p>
+                        <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
+                          Defina o valor por kWp e selecione o perfil de equipamentos desejado
+                          (projeto completo com instalação).
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="kwp-rate-input" className="text-xs font-semibold">
+                            Valor cobrado por kWp instalado (R$/kWp)
+                          </Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--color-muted-foreground)] font-medium">
+                              R$
+                            </span>
+                            <Input
+                              id="kwp-rate-input"
+                              type="number"
+                              min={500}
+                              step={50}
+                              value={kwpRateValue}
+                              onChange={(e) =>
+                                setKwpRateValue(Math.max(0, parseFloat(e.target.value) || 0))
+                              }
+                              className="pl-9 h-10 font-semibold text-sm border-emerald-500/30 bg-[var(--color-background)] focus-visible:ring-emerald-500"
+                              placeholder="2800"
+                            />
+                          </div>
+                          <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                            Valor final para o cliente: já inclui equipamentos, materiais elétricos
+                            e instalação.
+                          </p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-900 dark:text-emerald-200">
+                          <span className="font-semibold block mb-0.5">
+                            ℹ️ Custos e Mão de Obra Inclusos
+                          </span>
+                          O valor por kWp é rateado nos produtos e não somará custos extras de
+                          projeto para não duplicar valores.
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 pt-1">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                          Selecione o kit desejado:
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {kwpRateTiers.map((tier) => {
+                            const isSelected = selectedKwpTierId === tier.id;
+                            return (
+                              <div
+                                key={tier.id}
+                                onClick={() => setSelectedKwpTierId(tier.id)}
+                                className={`cursor-pointer rounded-xl border p-3.5 transition-all flex flex-col justify-between ${
+                                  isSelected
+                                    ? "border-emerald-500 bg-emerald-500/[0.08] ring-2 ring-emerald-500/40 shadow-sm"
+                                    : "border-[var(--color-border)] bg-[var(--color-background)] hover:border-emerald-500/40"
+                                }`}
+                              >
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span
+                                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                        tier.id === "economic"
+                                          ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30"
+                                          : tier.id === "cost_benefit"
+                                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                            : "bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30"
+                                      }`}
+                                    >
+                                      {tier.badge}
+                                    </span>
+                                    <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                                      {formatCurrency(tier.ratePerKwpEffective)}/kWp
+                                    </span>
+                                  </div>
+
+                                  <div>
+                                    <h4 className="text-base font-bold text-[var(--color-foreground)]">
+                                      {tier.name}
+                                    </h4>
+                                    <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                      {tier.totalPriceFormatted}
+                                    </p>
+                                  </div>
+
+                                  <div className="pt-2 border-t border-[var(--color-border)]/60 text-xs space-y-1.5 text-[var(--color-muted-foreground)]">
+                                    <p className="truncate">
+                                      <strong className="text-[var(--color-foreground)]">
+                                        Inversor:
+                                      </strong>{" "}
+                                      {tier.inverterBrand} ({tier.systemKwp} kW)
+                                    </p>
+                                    <p className="truncate">
+                                      <strong className="text-[var(--color-foreground)]">
+                                        Módulos:
+                                      </strong>{" "}
+                                      {tier.moduleQty}x {tier.moduleBrand} ({tier.modulePowerW}W)
+                                    </p>
+                                    <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                                      + Estrutura, Cabos e Conectores diluídos
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="pt-3 mt-2 border-t border-[var(--color-border)]/40 flex items-center justify-between">
+                                  <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                                    Geração: ~{tier.estimatedMonthlyGenerationKwh} kWh/mês
+                                  </span>
+                                  <span
+                                    className={`h-4 w-4 rounded-full border flex items-center justify-center ${
+                                      isSelected
+                                        ? "border-emerald-500 bg-emerald-500 text-white"
+                                        : "border-[var(--color-border)]"
+                                    }`}
+                                  >
+                                    {isSelected ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {quotingMode === "distributor" &&
                   kitDraftSource.kind === "own" &&
                   proposalKitResult &&
