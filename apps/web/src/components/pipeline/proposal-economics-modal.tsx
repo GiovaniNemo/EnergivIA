@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Autocomplete, CircularProgress, Menu, MenuItem, TextField } from "@mui/material";
+import { motion } from "framer-motion";
 import {
   CheckCircle2,
   ChevronDown,
@@ -1776,25 +1777,34 @@ export const ProposalEconomicsModal = forwardRef<
                   <div className="grid grid-cols-2 gap-1.5">
                     <button
                       type="button"
-                      className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${
+                      className={`relative inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none ${
                         proposalInputMode === "upload"
-                          ? "bg-emerald-500 text-white shadow-sm"
-                          : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-background)]"
+                          ? "text-white"
+                          : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
                       }`}
                       onClick={() => {
                         setProposalInputMode("upload");
                         setProposalFieldErrors({});
                       }}
                     >
-                      <Upload className="h-4 w-4" />
-                      Enviar conta
+                      {proposalInputMode === "upload" && (
+                        <motion.div
+                          layoutId="proposalInputModeIndicator"
+                          className="absolute inset-0 rounded-xl bg-emerald-500 shadow-sm"
+                          transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        <Upload className="h-4 w-4" />
+                        Enviar conta
+                      </span>
                     </button>
                     <button
                       type="button"
-                      className={`inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-medium transition ${
+                      className={`relative inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none ${
                         proposalInputMode === "manual"
-                          ? "bg-[var(--color-background)] text-[var(--color-foreground)] shadow-sm"
-                          : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-background)]"
+                          ? "text-white"
+                          : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
                       }`}
                       onClick={() => {
                         setProposalInputMode("manual");
@@ -1803,7 +1813,14 @@ export const ProposalEconomicsModal = forwardRef<
                         setPdfPasswordInput("");
                       }}
                     >
-                      Preencher manualmente
+                      {proposalInputMode === "manual" && (
+                        <motion.div
+                          layoutId="proposalInputModeIndicator"
+                          className="absolute inset-0 rounded-xl bg-emerald-500 shadow-sm"
+                          transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                        />
+                      )}
+                      <span className="relative z-10">Preencher manualmente</span>
                     </button>
                   </div>
                 </div>
@@ -2166,10 +2183,10 @@ export const ProposalEconomicsModal = forwardRef<
                         <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 p-1.5">
                           <button
                             type="button"
-                            className={`inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium transition ${
+                            className={`relative inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none ${
                               manualSizingBasis === "consumption"
-                                ? "bg-[var(--color-background)] text-[var(--color-foreground)] shadow-sm"
-                                : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-background)]"
+                                ? "text-white"
+                                : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
                             }`}
                             onClick={() => {
                               setManualSizingBasis("consumption");
@@ -2181,14 +2198,21 @@ export const ProposalEconomicsModal = forwardRef<
                               }));
                             }}
                           >
-                            Consumo (kWh)
+                            {manualSizingBasis === "consumption" && (
+                              <motion.div
+                                layoutId="manualSizingBasisIndicator"
+                                className="absolute inset-0 rounded-lg bg-emerald-500 shadow-sm"
+                                transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                              />
+                            )}
+                            <span className="relative z-10">Consumo (kWh)</span>
                           </button>
                           <button
                             type="button"
-                            className={`inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium transition ${
+                            className={`relative inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none ${
                               manualSizingBasis === "power"
-                                ? "bg-[var(--color-background)] text-[var(--color-foreground)] shadow-sm"
-                                : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-background)]"
+                                ? "text-white"
+                                : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
                             }`}
                             onClick={() => {
                               setManualSizingBasis("power");
@@ -2200,7 +2224,14 @@ export const ProposalEconomicsModal = forwardRef<
                               }));
                             }}
                           >
-                            Potência (kWp)
+                            {manualSizingBasis === "power" && (
+                              <motion.div
+                                layoutId="manualSizingBasisIndicator"
+                                className="absolute inset-0 rounded-lg bg-emerald-500 shadow-sm"
+                                transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                              />
+                            )}
+                            <span className="relative z-10">Potência (kWp)</span>
                           </button>
                         </div>
                         <p className="text-xs leading-relaxed text-[var(--color-muted-foreground)]">
