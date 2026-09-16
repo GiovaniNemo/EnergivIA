@@ -2524,118 +2524,6 @@ export const ProposalEconomicsModal = forwardRef<
                   </span>
                 </div>
               </div>
-
-              {/* 4. Viabilidade Financeira & Resumo do Investimento */}
-              <div className="relative overflow-hidden rounded-2xl border border-emerald-500/25 bg-[var(--color-card)] p-4 sm:p-5 shadow-sm">
-                <div
-                  className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600"
-                  aria-hidden
-                />
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">
-                        Resultados da Proposta
-                      </p>
-                      <h3 className="mt-0.5 text-base font-semibold text-[var(--color-foreground)] flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-emerald-500" />
-                        Viabilidade Financeira & Resumo do Investimento
-                      </h3>
-                      <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-                        Métricas consolidadas com base no kit selecionado e condições comerciais
-                        para o cliente.
-                      </p>
-                    </div>
-                    <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                      Calculado em tempo real
-                    </span>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 p-3.5 space-y-1">
-                      <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                        Economia mensal estimada
-                      </p>
-                      <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency(finalMonthlySavings)}
-                      </p>
-                      <p className="text-[11px] text-[var(--color-muted-foreground)]">
-                        ~{finalGeneration.toLocaleString("pt-BR")} kWh/mês gerados (
-                        {finalSystemKw.toLocaleString("pt-BR", {
-                          minimumFractionDigits: 1,
-                          maximumFractionDigits: 2,
-                        })}{" "}
-                        kWp)
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 p-3.5 space-y-1">
-                      <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                        Payback estimado
-                      </p>
-                      <p className="text-xl font-bold tabular-nums text-[var(--color-foreground)]">
-                        ~{finalPayback.toFixed(1).replace(".", ",")} anos
-                      </p>
-                      <p className="text-[11px] text-[var(--color-muted-foreground)]">
-                        Tempo estimado de retorno do investimento
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.05] p-3.5 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                          Investimento total
-                        </p>
-                        {proposalDiscount && proposalDiscount > 0 ? (
-                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded border border-emerald-500/30">
-                            Com desconto
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="flex items-baseline gap-2">
-                        <p className="text-xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
-                          {formatCurrency(finalTotalInvestment)}
-                        </p>
-                        {proposalDiscount && proposalDiscount > 0 ? (
-                          <span className="text-xs line-through text-[var(--color-muted-foreground)] tabular-nums">
-                            {formatCurrency(finalRawInvestment)}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="text-[11px] text-[var(--color-muted-foreground)]">
-                        {quotingMode === "kwp_rate"
-                          ? "Projeto completo (kit + instalação)"
-                          : "Equipamentos + margens configuradas"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-[var(--color-border)]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="space-y-0.5">
-                      <Label
-                        htmlFor="proposal-discount-final"
-                        className="text-xs font-semibold text-[var(--color-foreground)]"
-                      >
-                        Desconto comercial para a proposta (opcional)
-                      </Label>
-                      <p className="text-[11px] text-[var(--color-muted-foreground)]">
-                        Abatimento direto aplicado ao valor total que constará no contrato/proposta
-                        do cliente.
-                      </p>
-                    </div>
-                    <div className="w-full sm:w-56 shrink-0">
-                      <CurrencyInput
-                        id="proposal-discount-final"
-                        label=""
-                        value={proposalDiscount}
-                        onValueChange={setProposalDiscount}
-                        placeholder="R$ 0,00"
-                        maxDecimals={2}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
             <DialogFooter className="shrink-0 flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 sm:gap-3 sm:px-8 sm:py-5">
               <Button
@@ -4012,6 +3900,118 @@ export const ProposalEconomicsModal = forwardRef<
                     ) : null}
                   </div>
                 ) : null}
+              </div>
+
+              {/* 4. Viabilidade Financeira & Resumo do Investimento */}
+              <div className="relative overflow-hidden rounded-2xl border border-emerald-500/25 bg-[var(--color-card)] p-4 sm:p-5 shadow-sm">
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600"
+                  aria-hidden
+                />
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">
+                        Resultados da Proposta
+                      </p>
+                      <h3 className="mt-0.5 text-base font-semibold text-[var(--color-foreground)] flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-emerald-500" />
+                        Viabilidade Financeira & Resumo do Investimento
+                      </h3>
+                      <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
+                        Métricas consolidadas com base no kit selecionado e condições comerciais
+                        para o cliente.
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      Calculado em tempo real
+                    </span>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 p-3.5 space-y-1">
+                      <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                        Economia mensal estimada
+                      </p>
+                      <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                        {formatCurrency(finalMonthlySavings)}
+                      </p>
+                      <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                        ~{finalGeneration.toLocaleString("pt-BR")} kWh/mês gerados (
+                        {finalSystemKw.toLocaleString("pt-BR", {
+                          minimumFractionDigits: 1,
+                          maximumFractionDigits: 2,
+                        })}{" "}
+                        kWp)
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 p-3.5 space-y-1">
+                      <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                        Payback estimado
+                      </p>
+                      <p className="text-xl font-bold tabular-nums text-[var(--color-foreground)]">
+                        ~{finalPayback.toFixed(1).replace(".", ",")} anos
+                      </p>
+                      <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                        Tempo estimado de retorno do investimento
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.05] p-3.5 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                          Investimento total
+                        </p>
+                        {proposalDiscount && proposalDiscount > 0 ? (
+                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                            Com desconto
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <p className="text-xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
+                          {formatCurrency(finalTotalInvestment)}
+                        </p>
+                        {proposalDiscount && proposalDiscount > 0 ? (
+                          <span className="text-xs line-through text-[var(--color-muted-foreground)] tabular-nums">
+                            {formatCurrency(finalRawInvestment)}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                        {quotingMode === "kwp_rate"
+                          ? "Projeto completo (kit + instalação)"
+                          : "Equipamentos + margens configuradas"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-[var(--color-border)]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="proposal-discount-final"
+                        className="text-xs font-semibold text-[var(--color-foreground)]"
+                      >
+                        Desconto comercial para a proposta (opcional)
+                      </Label>
+                      <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                        Abatimento direto aplicado ao valor total que constará no contrato/proposta
+                        do cliente.
+                      </p>
+                    </div>
+                    <div className="w-full sm:w-56 shrink-0">
+                      <CurrencyInput
+                        id="proposal-discount-final"
+                        label=""
+                        value={proposalDiscount}
+                        onValueChange={setProposalDiscount}
+                        placeholder="R$ 0,00"
+                        maxDecimals={2}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           ) : null}
