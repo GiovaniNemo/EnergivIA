@@ -31,6 +31,7 @@ import {
   MessageCircle,
   Warehouse,
   Zap,
+  Bot,
 } from "lucide-react";
 import { buildSystemDealTitle } from "@/components/lead-detail/lead-detail-utils";
 import { Button } from "@/components/ui/button";
@@ -664,6 +665,7 @@ export const ProposalEconomicsModal = forwardRef<
   kitQtyDraftsRef.current = kitQtyDrafts;
   const [kitQtyResetNotice, setKitQtyResetNotice] = useState(false);
   const [proposalKitResult, setProposalKitResult] = useState<GenerateKitResult | null>(null);
+  const [optimisticModuleQty, setOptimisticModuleQty] = useState<number | null>(null);
   const [proposalKitWhatsapp, setProposalKitWhatsapp] = useState<string | null>(null);
   const [proposalKitLoading, setProposalKitLoading] = useState(false);
   const [proposalKitError, setProposalKitError] = useState<string | null>(null);
@@ -842,10 +844,12 @@ export const ProposalEconomicsModal = forwardRef<
         if (cancelled) return;
         setProposalKitResult(preview.json);
         setProposalKitWhatsapp(preview.whatsapp_message);
+        setOptimisticModuleQty(null);
       } catch (e) {
         if (cancelled) return;
         setProposalKitResult(null);
         setProposalKitWhatsapp(null);
+        setOptimisticModuleQty(null);
         setProposalKitError(e instanceof Error ? e.message : "Não foi possível montar o kit.");
       } finally {
         if (!cancelled) setProposalKitLoading(false);
@@ -890,7 +894,7 @@ export const ProposalEconomicsModal = forwardRef<
         stringBoxId: proposalKitDraft.stringBoxId,
       };
       setProposalKitRequest((prev) => (kitRequestEquals(prev, next) ? prev : next));
-    }, 600);
+    }, 250);
     return () => window.clearTimeout(timer);
   }, [proposalResultOpen, generatedProposal, proposalKitDraft]);
 
@@ -1821,12 +1825,19 @@ export const ProposalEconomicsModal = forwardRef<
 
   const effectiveKitQty = useCallback(
     (item: { product_id: string; quantity: number }): number => {
+      if (
+        proposalKitResult &&
+        item.product_id === proposalKitResult.modules.product_id &&
+        optimisticModuleQty != null
+      ) {
+        return optimisticModuleQty;
+      }
       const raw = kitQtyDrafts[item.product_id];
       if (raw == null) return item.quantity;
       const parsed = parseInt(raw, 10);
       return Number.isFinite(parsed) && parsed >= 1 ? parsed : item.quantity;
     },
-    [kitQtyDrafts]
+    [kitQtyDrafts, optimisticModuleQty, proposalKitResult]
   );
 
   const effectiveKitItems = useMemo(
@@ -1842,11 +1853,9 @@ export const ProposalEconomicsModal = forwardRef<
     if (!proposalKitResult) return;
     const perModuleKw = proposalKitResult.system_power_kw / proposalKitResult.modules.quantity;
     if (!Number.isFinite(perModuleKw) || perModuleKw <= 0) return;
-    const draftKw = parseFloat(proposalKitDraft.systemKw.replace(",", "."));
-    const baseKw =
-      Number.isFinite(draftKw) && draftKw > 0 ? draftKw : proposalKitResult.system_power_kw;
-    const currentQty = Math.max(1, Math.ceil(baseKw / perModuleKw - 1e-6));
+    const currentQty = optimisticModuleQty ?? proposalKitResult.modules.quantity;
     const targetQty = Math.max(1, currentQty + deltaQty);
+    setOptimisticModuleQty(targetQty);
     const kw = Math.min(1000, Math.max(0.5, Math.floor(targetQty * perModuleKw * 100) / 100));
     setProposalKitDraft((d) => ({ ...d, systemKw: String(kw) }));
   }
@@ -2117,7 +2126,15 @@ export const ProposalEconomicsModal = forwardRef<
                                       : "Extraído com assistência da IA (Fallback)"
                                   }
                                 >
-                                  {isOcr ? "⚡ OCR" : "🤖 IA"}
+                                  {isOcr ? (
+                                    <>
+                                      <Zap className="h-3 w-3" /> OCR
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Bot className="h-3 w-3" /> IA
+                                    </>
+                                  )}
                                 </span>
                               );
                             })()}
@@ -2803,7 +2820,7 @@ export const ProposalEconomicsModal = forwardRef<
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 sm:gap-3.5 pt-0.5">
-                  {/* Card: Distribuidores Reais */}
+                  {/* Card: Distribuidores Parceiros */}
                   <div
                     role="button"
                     tabIndex={0}
@@ -2824,7 +2841,7 @@ export const ProposalEconomicsModal = forwardRef<
                       <div className="flex items-center justify-between gap-1">
                         <span className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
                           <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          Distribuidores Reais
+                          Distribuidores Parceiros
                         </span>
                         <span
                           className={`h-4 w-4 sm:h-5 sm:w-5 shrink-0 rounded-full border flex items-center justify-center transition-colors ${
@@ -2892,7 +2909,7 @@ export const ProposalEconomicsModal = forwardRef<
                     </div>
                     <div className="mt-2 sm:mt-3 pt-2 sm:pt-2.5 border-t border-[var(--color-border)]/50 flex items-center justify-between">
                       <span className="text-[0.62rem] sm:text-xs font-medium text-emerald-700 dark:text-emerald-300 leading-tight">
-                        • Projeto completo (Turnkey)
+                        • Projeto completo
                       </span>
                     </div>
                   </div>
@@ -3107,7 +3124,7 @@ export const ProposalEconomicsModal = forwardRef<
                     <div>
                       <h3 className="text-base font-bold text-[var(--color-foreground)] flex items-center gap-2">
                         <Sparkles className="h-4 w-4 text-emerald-500" />
-                        Kits por Preço Regional (Turnkey)
+                        Kits por Preço Regional
                       </h3>
                       <p className="mt-0.5 text-xs sm:text-sm text-[var(--color-muted-foreground)]">
                         Selecione o nível de kit desejado para a proposta do cliente:
@@ -3507,10 +3524,16 @@ export const ProposalEconomicsModal = forwardRef<
                             Potência dimensionada:
                           </span>
                           <span className="text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                            {proposalKitResult.system_power_kw?.toLocaleString("pt-BR", {
+                            {(
+                              (optimisticModuleQty != null && proposalKitResult.modules.quantity > 0
+                                ? (proposalKitResult.system_power_kw /
+                                    proposalKitResult.modules.quantity) *
+                                  optimisticModuleQty
+                                : proposalKitResult.system_power_kw) ?? 0
+                            ).toLocaleString("pt-BR", {
                               minimumFractionDigits: 1,
                               maximumFractionDigits: 2,
-                            }) ?? "0"}{" "}
+                            })}{" "}
                             kWp
                           </span>
                         </div>
@@ -3520,28 +3543,31 @@ export const ProposalEconomicsModal = forwardRef<
                         {/* Card Módulos */}
                         <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-2.5 sm:p-3.5 shadow-xs">
                           <div>
-                            <div className="flex items-center gap-1.5">
-                              <div className="flex h-5 w-5 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                                <Sun className="h-3.5 w-3.5" />
+                            <div className="flex items-center justify-between gap-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <div className="flex h-5 w-5 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                  <Sun className="h-3.5 w-3.5" />
+                                </div>
+                                <span className="text-[0.7rem] sm:text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)] truncate">
+                                  Módulos
+                                </span>
                               </div>
-                              <span className="text-[0.7rem] sm:text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                                Módulos
-                              </span>
+                              {extractPowerBadge(proposalKitResult.modules.product_name) ? (
+                                <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 shrink-0">
+                                  <Zap className="h-3 w-3 shrink-0" />
+                                  {extractPowerBadge(proposalKitResult.modules.product_name)}
+                                </span>
+                              ) : null}
                             </div>
 
                             <div className="mt-1.5 space-y-0.5">
                               <div className="flex items-center gap-1 flex-wrap">
                                 <span className="tabular-nums text-emerald-600 dark:text-emerald-400 font-bold text-xs sm:text-sm">
-                                  {proposalKitResult.modules.quantity}×
+                                  {optimisticModuleQty ?? proposalKitResult.modules.quantity}×
                                 </span>
                                 <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium">
                                   {proposalKitResult.modules.brand_name}
                                 </span>
-                                {extractPowerBadge(proposalKitResult.modules.product_name) ? (
-                                  <span className="ml-auto inline-flex items-center rounded px-1.5 py-0.2 text-[0.62rem] sm:text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                                    ⚡ {extractPowerBadge(proposalKitResult.modules.product_name)}
-                                  </span>
-                                ) : null}
                               </div>
                               <p className="text-[0.7rem] sm:text-xs font-semibold leading-snug text-[var(--color-foreground)] break-words">
                                 {proposalKitResult.modules.product_name}
@@ -3585,13 +3611,21 @@ export const ProposalEconomicsModal = forwardRef<
                         {/* Card Inversor */}
                         <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-2.5 sm:p-3.5 shadow-xs">
                           <div>
-                            <div className="flex items-center gap-1.5">
-                              <div className="flex h-5 w-5 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-md bg-violet-500/10 text-violet-600 dark:text-violet-400">
-                                <Cpu className="h-3.5 w-3.5" />
+                            <div className="flex items-center justify-between gap-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <div className="flex h-5 w-5 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-md bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                                  <Cpu className="h-3.5 w-3.5" />
+                                </div>
+                                <span className="text-[0.7rem] sm:text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)] truncate">
+                                  Inversor
+                                </span>
                               </div>
-                              <span className="text-[0.7rem] sm:text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                                Inversor
-                              </span>
+                              {extractPowerBadge(proposalKitResult.inverter.product_name) ? (
+                                <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30 shrink-0">
+                                  <Zap className="h-3 w-3 shrink-0" />
+                                  {extractPowerBadge(proposalKitResult.inverter.product_name)}
+                                </span>
+                              ) : null}
                             </div>
 
                             <div className="mt-1.5 space-y-0.5">
@@ -3602,11 +3636,6 @@ export const ProposalEconomicsModal = forwardRef<
                                 <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium">
                                   {proposalKitResult.inverter.brand_name}
                                 </span>
-                                {extractPowerBadge(proposalKitResult.inverter.product_name) ? (
-                                  <span className="ml-auto inline-flex items-center rounded px-1.5 py-0.2 text-[0.62rem] sm:text-xs font-bold bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30">
-                                    ⚡ {extractPowerBadge(proposalKitResult.inverter.product_name)}
-                                  </span>
-                                ) : null}
                               </div>
                               <p className="text-[0.7rem] sm:text-xs font-semibold leading-snug text-[var(--color-foreground)] break-words">
                                 {proposalKitResult.inverter.product_name}
@@ -3741,8 +3770,9 @@ export const ProposalEconomicsModal = forwardRef<
                                 <span className="min-w-0 flex-1">
                                   <div className="flex flex-wrap items-center gap-1.5">
                                     {extractPowerBadge(alt.product_name) ? (
-                                      <span className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30">
-                                        ⚡ {extractPowerBadge(alt.product_name)}
+                                      <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30">
+                                        <Zap className="h-3 w-3 shrink-0" />
+                                        {extractPowerBadge(alt.product_name)}
                                       </span>
                                     ) : null}
                                     <span className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] leading-snug break-words">
@@ -3839,8 +3869,9 @@ export const ProposalEconomicsModal = forwardRef<
                                     <span className="min-w-0 flex-1">
                                       <div className="flex flex-wrap items-center gap-1.5">
                                         {extractPowerBadge(alt.product_name) ? (
-                                          <span className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30">
-                                            ⚡ {extractPowerBadge(alt.product_name)}
+                                          <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30">
+                                            <Zap className="h-3 w-3 shrink-0" />
+                                            {extractPowerBadge(alt.product_name)}
                                           </span>
                                         ) : null}
                                         <span className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] leading-snug break-words">
@@ -4013,33 +4044,52 @@ export const ProposalEconomicsModal = forwardRef<
                                         {item.quantity}
                                       </span>
                                     ) : (
-                                      <input
-                                        type="number"
-                                        min={1}
-                                        inputMode="numeric"
-                                        aria-label={`Quantidade de ${item.product_name}`}
-                                        className={`h-6 sm:h-8 w-10 sm:w-18 rounded border bg-[var(--color-background)] px-1 text-center sm:text-right tabular-nums text-xs sm:text-sm outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 ${
-                                          belowCalculated
-                                            ? "border-red-500/60 focus:border-red-400"
-                                            : "border-[var(--color-border)]"
-                                        }`}
-                                        value={
-                                          kitQtyDrafts[item.product_id] ?? String(item.quantity)
-                                        }
-                                        onChange={(e) => {
-                                          setKitQtyResetNotice(false);
-                                          const raw = e.target.value;
-                                          setKitQtyDrafts((prev) =>
-                                            raw === String(item.quantity)
-                                              ? (() => {
-                                                  const next = { ...prev };
-                                                  delete next[item.product_id];
-                                                  return next;
-                                                })()
-                                              : { ...prev, [item.product_id]: raw }
-                                          );
-                                        }}
-                                      />
+                                      <span className="inline-flex items-center gap-1 sm:gap-1.5 justify-center sm:justify-end">
+                                        <button
+                                          type="button"
+                                          aria-label={`Diminuir quantidade de ${item.product_name}`}
+                                          className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10 disabled:opacity-30 disabled:pointer-events-none"
+                                          disabled={qty <= 1}
+                                          onClick={() => {
+                                            setKitQtyResetNotice(false);
+                                            const nextQty = Math.max(1, qty - 1);
+                                            setKitQtyDrafts((prev) =>
+                                              nextQty === item.quantity
+                                                ? (() => {
+                                                    const next = { ...prev };
+                                                    delete next[item.product_id];
+                                                    return next;
+                                                  })()
+                                                : { ...prev, [item.product_id]: String(nextQty) }
+                                            );
+                                          }}
+                                        >
+                                          −
+                                        </button>
+                                        <span className="min-w-[1.6ch] sm:min-w-[2.2ch] text-center font-bold text-xs sm:text-sm">
+                                          {qty}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          aria-label={`Aumentar quantidade de ${item.product_name}`}
+                                          className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
+                                          onClick={() => {
+                                            setKitQtyResetNotice(false);
+                                            const nextQty = qty + 1;
+                                            setKitQtyDrafts((prev) =>
+                                              nextQty === item.quantity
+                                                ? (() => {
+                                                    const next = { ...prev };
+                                                    delete next[item.product_id];
+                                                    return next;
+                                                  })()
+                                                : { ...prev, [item.product_id]: String(nextQty) }
+                                            );
+                                          }}
+                                        >
+                                          +
+                                        </button>
+                                      </span>
                                     )}
                                   </td>
                                   <td className="hidden sm:table-cell p-3 text-right tabular-nums text-[var(--color-muted-foreground)]">
