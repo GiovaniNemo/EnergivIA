@@ -37,6 +37,15 @@ export function mergePublicProposalVariables(
 
       if (integrator.projectCostLines && integrator.projectCostLines.length > 0) {
         integrator.projectCostLines.forEach((c) => {
+          const lower = (c.name || "").toLowerCase();
+          if (
+            lower.includes("margem") ||
+            lower.includes("lucro") ||
+            lower.includes("margin") ||
+            lower.includes("profit")
+          ) {
+            return;
+          }
           kitListLines.push(`1x ${c.name} (Serviço Especializado)`);
         });
       }
@@ -78,11 +87,19 @@ export function mergePublicProposalVariables(
       }
     }
 
-    // Build project cost lines for template variable
+    // Build project cost lines for template variable (sem vazar margem de lucro)
     if (integrator.projectCostLines && integrator.projectCostLines.length > 0) {
-      const costLines = integrator.projectCostLines.map(
-        (c) => `${c.name}: ${formatBRL(c.appliedAmountBrl)}`
-      );
+      const costLines = integrator.projectCostLines
+        .filter((c) => {
+          const lower = (c.name || "").toLowerCase();
+          return (
+            !lower.includes("margem") &&
+            !lower.includes("lucro") &&
+            !lower.includes("margin") &&
+            !lower.includes("profit")
+          );
+        })
+        .map((c) => `${c.name}: ${formatBRL(c.appliedAmountBrl)}`);
       merged["custos_projeto_lista"] = costLines.join("\n");
     }
   }

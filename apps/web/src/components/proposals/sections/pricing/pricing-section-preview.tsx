@@ -33,7 +33,19 @@ function parseKitItems(
   return raw
     .split("\n")
     .map((line) => line.trim())
-    .filter(Boolean)
+    .filter((line) => {
+      if (!line) return false;
+      const lower = line.toLowerCase();
+      if (
+        lower.includes("margem") ||
+        lower.includes("lucro") ||
+        lower.includes("margin") ||
+        lower.includes("profit")
+      ) {
+        return false;
+      }
+      return true;
+    })
     .map((line) => {
       // Formato esperado: "2x Nome Produto (Marca) — R$ 1.000,00"
       const priceMatch = line.match(/—\s*(R\$[\s\d.,]+)$/);

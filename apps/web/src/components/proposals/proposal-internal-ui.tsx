@@ -9,6 +9,8 @@ import {
   ChevronDown,
   Copy,
   ExternalLink,
+  Eye,
+  EyeOff,
   FileText,
   LayoutTemplate,
   Lightbulb,
@@ -491,6 +493,7 @@ export function ProposalBusinessHeroCard({
   onSaveLaborOverride,
   onCancelLaborEdit,
 }: ProposalBusinessHeroProps): JSX.Element {
+  const [hideSensitiveValues, setHideSensitiveValues] = useState(false);
   const activeHealth = health === "none" ? null : health;
 
   return (
@@ -513,12 +516,29 @@ export function ProposalBusinessHeroCard({
       ) : (
         <div className="absolute left-0 top-0 h-full w-1 bg-[var(--color-border)]" aria-hidden />
       )}
-      <CardHeader className="space-y-1 pb-2 pl-5 pt-5">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-sky-700 dark:text-sky-400">
-          Visão de negócio
-        </p>
-        <CardTitle className="text-lg font-semibold">Sua margem e custos</CardTitle>
-        <CardDescription className="text-xs">Baseado no kit salvo na negociação.</CardDescription>
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pl-5 pr-5 pt-5">
+        <div className="space-y-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-sky-700 dark:text-sky-400">
+            Visão de negócio
+          </p>
+          <CardTitle className="text-lg font-semibold">Sua margem e custos</CardTitle>
+          <CardDescription className="text-xs">Baseado no kit salvo na negociação.</CardDescription>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+          onClick={() => setHideSensitiveValues((prev) => !prev)}
+          title={
+            hideSensitiveValues ? "Mostrar valores confidenciais" : "Ocultar valores do cliente"
+          }
+          aria-label={
+            hideSensitiveValues ? "Mostrar valores confidenciais" : "Ocultar valores do cliente"
+          }
+        >
+          {hideSensitiveValues ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </Button>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4 p-5 pt-0 pl-5">
         {!hasKit ? (
@@ -542,10 +562,14 @@ export function ProposalBusinessHeroCard({
                     health === "none" && "text-[var(--color-foreground)]"
                   )}
                 >
-                  {marginPct !== null ? `${marginPct.toFixed(1)}%` : "—"}
+                  {hideSensitiveValues
+                    ? "••••"
+                    : marginPct !== null
+                      ? `${marginPct.toFixed(1)}%`
+                      : "—"}
                 </p>
               </div>
-              {marginPct !== null ? (
+              {!hideSensitiveValues && marginPct !== null ? (
                 <div
                   className={cn(
                     "flex max-w-[14rem] items-start gap-1.5 rounded-md px-2 py-1 text-xs",
@@ -575,7 +599,13 @@ export function ProposalBusinessHeroCard({
                 <p className="text-[11px] font-medium text-[var(--color-muted-foreground)]">
                   Margem (regras)
                 </p>
-                {isEditingMargin ? (
+                {hideSensitiveValues ? (
+                  <div className="mt-1">
+                    <p className="text-lg font-semibold tabular-nums text-[var(--color-muted-foreground)]">
+                      R$ •••••
+                    </p>
+                  </div>
+                ) : isEditingMargin ? (
                   <div className="mt-2 space-y-2">
                     <CurrencyInput
                       id="margin-override"
@@ -637,7 +667,13 @@ export function ProposalBusinessHeroCard({
                 <p className="text-[11px] font-medium text-[var(--color-muted-foreground)]">
                   Mão de obra (regras)
                 </p>
-                {isEditingLabor ? (
+                {hideSensitiveValues ? (
+                  <div className="mt-1">
+                    <p className="text-lg font-semibold tabular-nums text-[var(--color-muted-foreground)]">
+                      R$ •••••
+                    </p>
+                  </div>
+                ) : isEditingLabor ? (
                   <div className="mt-2 space-y-2">
                     <CurrencyInput
                       id="labor-override"
@@ -700,7 +736,11 @@ export function ProposalBusinessHeroCard({
                   Custo equipamentos
                 </p>
                 <p className="mt-1 text-lg font-semibold tabular-nums">
-                  {equipmentCost !== null ? formatBRL(equipmentCost) : "—"}
+                  {hideSensitiveValues
+                    ? "R$ •••••"
+                    : equipmentCost !== null
+                      ? formatBRL(equipmentCost)
+                      : "—"}
                 </p>
               </div>
               <div className="sm:col-span-3">
@@ -712,27 +752,33 @@ export function ProposalBusinessHeroCard({
                 </div>
                 {remainderAfterEquipmentBrl !== null ? (
                   <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
-                    Após equipamentos ({formatBRL(equipmentCost ?? 0)}),{" "}
-                    <span className="font-medium text-[var(--color-foreground)]">
-                      {formatBRL(remainderAfterEquipmentBrl)}
-                    </span>{" "}
-                    correspondem a custos e margem do projeto (não equipamento).
-                    {hasRuleCostBreakdown &&
-                    (marginAppliedBrl !== null || laborAppliedBrl !== null) ? (
+                    {hideSensitiveValues ? (
+                      "Valores de margem e custos do projeto ocultados para exibição ao cliente."
+                    ) : (
                       <>
-                        {" "}
-                        {laborAppliedBrl !== null && marginAppliedBrl !== null
-                          ? `Neste snapshot: ${formatBRL(laborAppliedBrl)} mão de obra + ${formatBRL(marginAppliedBrl)} margem.`
-                          : laborAppliedBrl !== null
-                            ? `Neste snapshot: ${formatBRL(laborAppliedBrl)} em mão de obra.`
-                            : `Neste snapshot: ${formatBRL(marginAppliedBrl!)} em margem.`}
+                        Após equipamentos ({formatBRL(equipmentCost ?? 0)}),{" "}
+                        <span className="font-medium text-[var(--color-foreground)]">
+                          {formatBRL(remainderAfterEquipmentBrl)}
+                        </span>{" "}
+                        correspondem a custos e margem do projeto (não equipamento).
+                        {hasRuleCostBreakdown &&
+                        (marginAppliedBrl !== null || laborAppliedBrl !== null) ? (
+                          <>
+                            {" "}
+                            {laborAppliedBrl !== null && marginAppliedBrl !== null
+                              ? `Neste snapshot: ${formatBRL(laborAppliedBrl)} mão de obra + ${formatBRL(marginAppliedBrl)} margem.`
+                              : laborAppliedBrl !== null
+                                ? `Neste snapshot: ${formatBRL(laborAppliedBrl)} em mão de obra.`
+                                : `Neste snapshot: ${formatBRL(marginAppliedBrl!)} em margem.`}
+                          </>
+                        ) : null}
                       </>
-                    ) : null}
+                    )}
                   </p>
                 ) : null}
               </div>
             </div>
-            {activeHealth ? (
+            {activeHealth && !hideSensitiveValues ? (
               <p className="text-[11px] font-medium text-[var(--color-muted-foreground)]">
                 {marginHealthLabel[activeHealth]}
               </p>
