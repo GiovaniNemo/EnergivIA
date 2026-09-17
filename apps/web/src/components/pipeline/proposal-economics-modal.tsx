@@ -1739,39 +1739,6 @@ export const ProposalEconomicsModal = forwardRef<
     setProposalError(null);
     resetProposalForm();
 
-    try {
-      getLead(currentOrganizationId, deal.leadId)
-        .then(async (detail) => {
-          if (detail.energyBills && detail.energyBills.length > 0) {
-            const latestBill = detail.energyBills[0];
-            if (latestBill?.extractedData) {
-              const extObj = latestBill.extractedData as Record<string, unknown>;
-              const rawDataObj =
-                extObj.rawData && typeof extObj.rawData === "object"
-                  ? (extObj.rawData as Record<string, unknown>)
-                  : undefined;
-              const directCid = String(
-                extObj.cidade || extObj.city || rawDataObj?.cidade || rawDataObj?.city || ""
-              ).trim();
-              const directUf = String(
-                extObj.uf || extObj.state || rawDataObj?.uf || rawDataObj?.state || ""
-              )
-                .trim()
-                .toUpperCase();
-              const rawLoc =
-                resolveBillLocationString(rawDataObj) || resolveBillLocationString(extObj);
-              const locationToParse = directCid && directUf ? `${directCid}/${directUf}` : rawLoc;
-              if (locationToParse) {
-                const states =
-                  geoStates.length > 0 ? geoStates : await listGeoStates(currentOrganizationId);
-                void applyGeoFromBillLocation(currentOrganizationId, locationToParse, states);
-              }
-            }
-          }
-        })
-        .catch(() => {});
-    } catch {}
-
     if (opts?.existingSimulation && !opts.forceStudyModal) {
       const gen = buildGeneratedProposalFromSimulation(deal, opts.existingSimulation);
       if (gen) {
