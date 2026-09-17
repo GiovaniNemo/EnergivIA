@@ -42,7 +42,6 @@ import {
   ProposalBusinessHeroCard,
   ProposalCollapsibleProducts,
   ProposalCollapsibleTechnical,
-  ProposalConversionHint,
   ProposalEquipmentSummaryCard,
   ProposalInternalHeader,
   ProposalSalesHeroCard,
@@ -848,8 +847,6 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
       ) : null}
 
       <ProposalScenarioActions pipelineHref="/pipeline" financingModeLabel={financingModeLabel} />
-
-      <ProposalConversionHint />
 
       {!hasEquipmentBreakdown ? (
         <>

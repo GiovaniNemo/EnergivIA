@@ -170,6 +170,8 @@ export function ProposalInternalHeader({
               cliente vê só o link público.
             </p>
           </div>
+
+          <ProposalConversionHint />
         </div>
 
         <div className="flex w-full flex-col gap-3 lg:max-w-lg lg:shrink-0">
@@ -919,11 +921,11 @@ export function ProposalCollapsibleTechnical({
 
 export function ProposalConversionHint(): JSX.Element {
   return (
-    <div className="flex gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/10 p-4">
-      <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" aria-hidden />
+    <div className="flex max-w-xl gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/10 p-3.5 sm:p-4">
+      <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden />
       <div className="min-w-0 text-sm">
         <p className="font-medium text-[var(--color-foreground)]">Dica de conversão</p>
-        <p className="mt-1 text-xs leading-relaxed text-[var(--color-muted-foreground)]">
+        <p className="mt-0.5 text-xs leading-relaxed text-[var(--color-muted-foreground)]">
           Quem envia o link no mesmo dia da reunião costuma receber retorno mais rápido. Combine o
           envio com um follow-up em 48h.
         </p>
