@@ -3561,7 +3561,7 @@ export const ProposalEconomicsModal = forwardRef<
 
                             <div className="mt-1.5 space-y-0.5">
                               <div className="flex items-center gap-1 flex-wrap">
-                                <span className="tabular-nums text-emerald-600 dark:text-emerald-400 font-bold text-xs sm:text-sm">
+                                <span className="tabular-nums text-amber-500 dark:text-amber-400 font-bold text-xs sm:text-sm">
                                   {optimisticModuleQty ?? proposalKitResult.modules.quantity}×
                                 </span>
                                 <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium">
@@ -3587,7 +3587,7 @@ export const ProposalEconomicsModal = forwardRef<
                                 }
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[0.65rem] sm:text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:underline font-medium"
+                                className="text-[0.65rem] sm:text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 hover:underline font-medium"
                               >
                                 Datasheet
                               </a>
@@ -3769,7 +3769,13 @@ export const ProposalEconomicsModal = forwardRef<
                                 <span className="min-w-0 flex-1">
                                   <div className="flex flex-wrap items-center gap-1.5">
                                     {extractPowerBadge(alt.product_name) ? (
-                                      <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30">
+                                      <span
+                                        className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold ${
+                                          kitSwapCategory === "module"
+                                            ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                                            : "bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30"
+                                        }`}
+                                      >
                                         <Zap className="h-3 w-3 shrink-0" />
                                         {extractPowerBadge(alt.product_name)}
                                       </span>
