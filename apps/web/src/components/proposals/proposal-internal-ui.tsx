@@ -1,10 +1,12 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
   ArrowLeft,
+  Check,
+  CheckCircle2,
   ChevronDown,
   Copy,
   ExternalLink,
@@ -13,6 +15,7 @@ import {
   Lightbulb,
   LineChart,
   Loader2,
+  MoreVertical,
   Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -92,8 +95,8 @@ export function ProposalInternalHeader({
   onSendToClient,
   onCloseProposal,
   publicProposalPath,
-  templateEditorUrl,
-  canEditTemplate,
+  templateEditorUrl: _templateEditorUrl,
+  canEditTemplate: _canEditTemplate,
   onCopyPublicLink,
   copyState,
   onExportPdf,
@@ -109,6 +112,30 @@ export function ProposalInternalHeader({
   previewLayoutHref,
   templateError,
 }: ProposalInternalHeaderProps): JSX.Element {
+  const [isActionsOpen, setIsActionsOpen] = useState(false);
+  const actionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isActionsOpen) return;
+    function handleClickOutside(event: MouseEvent): void {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (actionsRef.current?.contains(target)) return;
+      setIsActionsOpen(false);
+    }
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Escape") {
+        setIsActionsOpen(false);
+      }
+    }
+    window.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isActionsOpen]);
+
   return (
     <header className="space-y-5 border-b border-[var(--color-border)] pb-8">
       <Link
@@ -147,89 +174,117 @@ export function ProposalInternalHeader({
         </div>
 
         <div className="flex w-full flex-col gap-3 lg:max-w-md lg:shrink-0">
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex items-center gap-2">
             <Button
               type="button"
               size="lg"
-              className="h-12 w-full sm:flex-1 gap-2 bg-emerald-600 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 hover:bg-emerald-700"
+              className="h-11 flex-1 gap-2 bg-emerald-600 text-xs sm:text-sm font-semibold text-white shadow-md shadow-emerald-950/20 hover:bg-emerald-500 transition-all active:scale-[0.98]"
               onClick={onSendToClient}
             >
               <Send className="h-4 w-4 shrink-0" />
-              Enviar proposta
+              <span>Enviar proposta</span>
             </Button>
             <Button
               type="button"
               size="lg"
-              className="h-12 w-full sm:flex-1 gap-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-500 dark:hover:bg-emerald-950/50 text-sm font-semibold shadow-sm"
-              variant="outline"
+              className="h-11 flex-1 gap-2 bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-800/90 dark:hover:bg-emerald-700/90 text-xs sm:text-sm font-semibold text-white border border-emerald-600/30 dark:border-emerald-700/60 shadow-md shadow-emerald-950/20 transition-all active:scale-[0.98]"
               onClick={onCloseProposal}
             >
-              Fechar proposta
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>Fechar proposta</span>
             </Button>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-            <a
-              href={publicProposalPath}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(outlineSmLinkClass, "gap-2")}
-            >
-              <ExternalLink className="h-4 w-4 shrink-0" />
-              Ver proposta do cliente
-            </a>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={onCopyPublicLink}
-            >
-              <Copy className="h-4 w-4 shrink-0" />
-              {copyState === "done"
-                ? "Link copiado!"
-                : copyState === "err"
-                  ? "Erro ao copiar"
-                  : "Copiar link"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              disabled={pdfLoading}
-              onClick={onExportPdf}
-            >
-              {pdfLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <FileText className="h-4 w-4 shrink-0" />
-              )}
-              Exportar PDF
-            </Button>
-            {canEditTemplate && templateEditorUrl ? (
-              <Link
-                href={templateEditorUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(outlineSmLinkClass, "gap-2")}
+
+            <div className="relative" ref={actionsRef}>
+              <Button
+                type="button"
+                variant="outline"
+                aria-label="Mais ações da proposta"
+                aria-expanded={isActionsOpen}
+                className="h-11 w-11 shrink-0 p-0 border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] hover:bg-[var(--color-accent)] hover:text-emerald-500 transition-colors shadow-sm"
+                onClick={() => setIsActionsOpen((prev) => !prev)}
               >
-                <ExternalLink className="h-4 w-4 shrink-0" />
-                Editar layout
-              </Link>
-            ) : null}
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+
+              {isActionsOpen && (
+                <div className="absolute right-0 top-12 z-50 w-56 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-1.5 shadow-xl shadow-black/25 animate-in fade-in zoom-in-95">
+                  <a
+                    href={publicProposalPath}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setIsActionsOpen(false)}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-[var(--color-foreground)] transition hover:bg-[var(--color-accent)]"
+                  >
+                    <ExternalLink className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                    <span>Ver proposta do cliente</span>
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onCopyPublicLink();
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-[var(--color-foreground)] transition hover:bg-[var(--color-accent)]"
+                  >
+                    {copyState === "done" ? (
+                      <>
+                        <Check className="h-4 w-4 text-emerald-500" />
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                          Link copiado!
+                        </span>
+                      </>
+                    ) : copyState === "err" ? (
+                      <>
+                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                        <span className="font-semibold text-red-500">Erro ao copiar</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                        <span>Copiar link</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={pdfLoading}
+                    onClick={() => {
+                      onExportPdf();
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-[var(--color-foreground)] transition hover:bg-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {pdfLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
+                        <span>Gerando PDF...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                        <span>Exportar PDF</span>
+                      </>
+                    )}
+                  </button>
+
+                  {showSentPdfLink && sentPdfUrl ? (
+                    <a
+                      href={sentPdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setIsActionsOpen(false)}
+                      className="mt-1 flex w-full items-center gap-2.5 border-t border-[var(--color-border)]/60 pt-2 rounded-lg px-3 py-2 text-xs font-medium text-[var(--color-foreground)] transition hover:bg-[var(--color-accent)]"
+                    >
+                      <ExternalLink className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                      <span>Abrir PDF já enviado</span>
+                    </a>
+                  ) : null}
+                </div>
+              )}
+            </div>
           </div>
-          {showSentPdfLink && sentPdfUrl ? (
-            <a
-              href={sentPdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={outlineSmLinkClass}
-            >
-              <ExternalLink className="h-4 w-4 shrink-0" />
-              Abrir PDF já enviado
-            </a>
-          ) : null}
-          {pdfError ? <p className="text-sm text-red-600 dark:text-red-400">{pdfError}</p> : null}
+
+          {pdfError ? <p className="text-xs text-red-600 dark:text-red-400">{pdfError}</p> : null}
 
           {/* Seleção do Layout no Topo (coluna direita, abaixo dos botões) */}
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-sm space-y-2">
