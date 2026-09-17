@@ -45,7 +45,6 @@ import {
   ProposalEquipmentSummaryCard,
   ProposalInternalHeader,
   ProposalSalesHeroCard,
-  ProposalScenarioActions,
 } from "@/components/proposals/proposal-internal-ui";
 import { ProposalEquipmentEditorCard } from "@/components/proposals/proposal-equipment-editor-card";
 
@@ -518,7 +517,6 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
 
   const financingLabel =
     simIn.financingType === "FINANCED" ? "Simulação financiada" : "Simulação à vista";
-  const financingModeLabel = simIn.financingType === "FINANCED" ? "Financiada" : "À vista";
 
   const marginHealth = getMarginHealth(marginPct);
 
@@ -845,8 +843,6 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
           ) : null}
         </section>
       ) : null}
-
-      <ProposalScenarioActions pipelineHref="/pipeline" financingModeLabel={financingModeLabel} />
 
       {!hasEquipmentBreakdown ? (
         <>
