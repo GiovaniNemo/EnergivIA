@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   Check,
-  CheckCircle2,
   ChevronDown,
   Copy,
   ExternalLink,
@@ -173,34 +172,34 @@ export function ProposalInternalHeader({
           </div>
         </div>
 
-        <div className="flex w-full flex-col gap-3 lg:max-w-md lg:shrink-0">
+        <div className="flex w-full flex-col gap-3 lg:max-w-lg lg:shrink-0">
           <div className="flex items-center gap-2">
             <Button
               type="button"
               size="lg"
-              className="h-11 flex-1 gap-2 bg-emerald-600 text-xs sm:text-sm font-semibold text-white shadow-md shadow-emerald-950/20 hover:bg-emerald-500 transition-all active:scale-[0.98]"
+              className="h-12 flex-1 gap-2 bg-emerald-600 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 hover:bg-emerald-700 whitespace-nowrap"
               onClick={onSendToClient}
             >
               <Send className="h-4 w-4 shrink-0" />
-              <span>Enviar proposta</span>
+              Enviar proposta
             </Button>
             <Button
               type="button"
               size="lg"
-              className="h-11 flex-1 gap-2 bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-800/90 dark:hover:bg-emerald-700/90 text-xs sm:text-sm font-semibold text-white border border-emerald-600/30 dark:border-emerald-700/60 shadow-md shadow-emerald-950/20 transition-all active:scale-[0.98]"
+              className="h-12 flex-1 gap-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-500 dark:hover:bg-emerald-950/50 text-sm font-semibold shadow-sm whitespace-nowrap"
+              variant="outline"
               onClick={onCloseProposal}
             >
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span>Fechar proposta</span>
+              Fechar proposta
             </Button>
 
-            <div className="relative" ref={actionsRef}>
+            <div className="relative shrink-0" ref={actionsRef}>
               <Button
                 type="button"
                 variant="outline"
                 aria-label="Mais ações da proposta"
                 aria-expanded={isActionsOpen}
-                className="h-11 w-11 shrink-0 p-0 border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] hover:bg-[var(--color-accent)] hover:text-emerald-500 transition-colors shadow-sm"
+                className="h-12 w-12 shrink-0 p-0 border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] hover:bg-[var(--color-accent)] hover:text-emerald-500 transition-colors shadow-sm"
                 onClick={() => setIsActionsOpen((prev) => !prev)}
               >
                 <MoreVertical className="h-4 w-4" />
