@@ -177,7 +177,12 @@ export function ProposalInternalHeader({
             <Button
               type="button"
               size="lg"
-              className="h-12 flex-1 gap-2 bg-emerald-600 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 hover:bg-emerald-700 whitespace-nowrap"
+              className="h-12 flex-1 gap-2 !bg-emerald-600 text-sm font-semibold !text-white shadow-md shadow-emerald-950/25 hover:!bg-emerald-700 whitespace-nowrap"
+              sx={{
+                bgcolor: "#059669 !important",
+                color: "#ffffff !important",
+                "&:hover": { bgcolor: "#047857 !important" },
+              }}
               onClick={onSendToClient}
             >
               <Send className="h-4 w-4 shrink-0" />
