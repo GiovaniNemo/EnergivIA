@@ -144,6 +144,10 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
   const [marginOverrideDraft, setMarginOverrideDraft] = useState<number | null>(null);
   const [marginOverrideSaving, setMarginOverrideSaving] = useState(false);
 
+  const [isEditingMarginPct, setIsEditingMarginPct] = useState(false);
+  const [marginPctDraft, setMarginPctDraft] = useState<number | null>(null);
+  const [marginPctSaving, setMarginPctSaving] = useState(false);
+
   const [isEditingLabor, setIsEditingLabor] = useState(false);
   const [laborOverrideDraft, setLaborOverrideDraft] = useState<number | null>(null);
   const [laborOverrideSaving, setLaborOverrideSaving] = useState(false);
@@ -220,6 +224,13 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
           ? (remainderAgg / quotedSale) * 100
           : null
       : null;
+
+  const nonMarginBaseCost = useMemo(() => {
+    if (!hasEquipmentBreakdown) return null;
+    const margin = marginAppliedFromRules ?? remainderAgg ?? 0;
+    const base = quotedSale - margin;
+    return base > 0 ? base : null;
+  }, [hasEquipmentBreakdown, marginAppliedFromRules, remainderAgg, quotedSale]);
 
   const productLineCount = integrator?.kitItems.length ?? 0;
   const componentFallback = proposal
@@ -423,6 +434,32 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
     }
   }
 
+  async function saveMarginPctOverride(): Promise<void> {
+    if (!currentOrganizationId || !proposal || marginPctDraft == null || nonMarginBaseCost == null)
+      return;
+    if (marginPctDraft < 0 || marginPctDraft >= 100) {
+      alert("A porcentagem de margem deve estar entre 0% e 99%.");
+      return;
+    }
+    const p = marginPctDraft / 100;
+    const targetMarginBrl = Math.round(((nonMarginBaseCost * p) / (1 - p)) * 100) / 100;
+    setMarginPctSaving(true);
+    try {
+      const { publicToken } = await updateProposalMarginOverride(
+        currentOrganizationId,
+        proposal.id,
+        targetMarginBrl
+      );
+      setRegeneratedPublicUrl(`${window.location.origin}/proposta/${publicToken}`);
+      setIsEditingMarginPct(false);
+      await reload();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Não foi possível salvar a margem.");
+    } finally {
+      setMarginPctSaving(false);
+    }
+  }
+
   async function saveLaborOverride(): Promise<void> {
     if (!currentOrganizationId || !proposal || laborOverrideDraft == null) return;
     setLaborOverrideSaving(true);
@@ -594,6 +631,7 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
             health={marginHealth}
             isEditingMargin={isEditingMargin}
             onEditMarginClick={() => {
+              setIsEditingMarginPct(false);
               setMarginOverrideDraft(marginAppliedFromRules ?? 0);
               setIsEditingMargin(true);
             }}
@@ -602,8 +640,22 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
             marginOverrideSaving={marginOverrideSaving}
             onSaveMarginOverride={() => void saveMarginOverride()}
             onCancelMarginEdit={() => setIsEditingMargin(false)}
+            isEditingMarginPct={isEditingMarginPct}
+            onEditMarginPctClick={() => {
+              setIsEditingMargin(false);
+              setIsEditingLabor(false);
+              setMarginPctDraft(marginPct !== null ? Math.round(marginPct * 10) / 10 : 20);
+              setIsEditingMarginPct(true);
+            }}
+            marginPctDraft={marginPctDraft}
+            onMarginPctDraftChange={setMarginPctDraft}
+            marginPctSaving={marginPctSaving}
+            onSaveMarginPct={() => void saveMarginPctOverride()}
+            onCancelMarginPctEdit={() => setIsEditingMarginPct(false)}
+            nonMarginBaseCost={nonMarginBaseCost}
             isEditingLabor={isEditingLabor}
             onEditLaborClick={() => {
+              setIsEditingMarginPct(false);
               setLaborOverrideDraft(laborAppliedFromRules ?? 0);
               setIsEditingLabor(true);
             }}

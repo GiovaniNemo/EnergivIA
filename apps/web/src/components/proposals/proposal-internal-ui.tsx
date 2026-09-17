@@ -459,6 +459,14 @@ export type ProposalBusinessHeroProps = {
   marginOverrideSaving?: boolean;
   onSaveMarginOverride?: () => void;
   onCancelMarginEdit?: () => void;
+  isEditingMarginPct?: boolean;
+  onEditMarginPctClick?: () => void;
+  marginPctDraft?: number | null;
+  onMarginPctDraftChange?: (val: number | null) => void;
+  marginPctSaving?: boolean;
+  onSaveMarginPct?: () => void;
+  onCancelMarginPctEdit?: () => void;
+  nonMarginBaseCost?: number | null;
   isEditingLabor?: boolean;
   onEditLaborClick?: () => void;
   laborOverrideDraft?: number | null;
@@ -485,6 +493,14 @@ export function ProposalBusinessHeroCard({
   marginOverrideSaving,
   onSaveMarginOverride,
   onCancelMarginEdit,
+  isEditingMarginPct,
+  onEditMarginPctClick,
+  marginPctDraft,
+  onMarginPctDraftChange,
+  marginPctSaving,
+  onSaveMarginPct,
+  onCancelMarginPctEdit,
+  nonMarginBaseCost,
   isEditingLabor,
   onEditLaborClick,
   laborOverrideDraft,
@@ -495,6 +511,20 @@ export function ProposalBusinessHeroCard({
 }: ProposalBusinessHeroProps): JSX.Element {
   const [hideSensitiveValues, setHideSensitiveValues] = useState(false);
   const activeHealth = health === "none" ? null : health;
+
+  const previewMarginBrl =
+    nonMarginBaseCost != null &&
+    marginPctDraft != null &&
+    marginPctDraft >= 0 &&
+    marginPctDraft < 100
+      ? Math.round(
+          ((nonMarginBaseCost * (marginPctDraft / 100)) / (1 - marginPctDraft / 100)) * 100
+        ) / 100
+      : null;
+  const previewSaleBrl =
+    nonMarginBaseCost != null && previewMarginBrl != null
+      ? Math.round((nonMarginBaseCost + previewMarginBrl) * 100) / 100
+      : null;
 
   return (
     <Card
@@ -550,24 +580,110 @@ export function ProposalBusinessHeroCard({
           <>
             <div className="flex flex-wrap items-end justify-between gap-2 border-b border-[var(--color-border)]/70 pb-3">
               <div>
-                <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  Margem bruta
-                </p>
-                <p
-                  className={cn(
-                    "mt-0.5 text-3xl font-bold tabular-nums sm:text-4xl",
-                    health === "good" && "text-emerald-600 dark:text-emerald-400",
-                    health === "warn" && "text-amber-600 dark:text-amber-400",
-                    health === "bad" && "text-red-600 dark:text-red-400",
-                    health === "none" && "text-[var(--color-foreground)]"
-                  )}
-                >
-                  {hideSensitiveValues
-                    ? "••••"
-                    : marginPct !== null
-                      ? `${marginPct.toFixed(1)}%`
-                      : "—"}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                    Margem bruta
+                  </p>
+                  {!hideSensitiveValues &&
+                  !isEditingMarginPct &&
+                  marginPct !== null &&
+                  onEditMarginPctClick ? (
+                    <button
+                      type="button"
+                      onClick={onEditMarginPctClick}
+                      className="rounded-md bg-[var(--color-accent)] p-1 text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+                      title="Editar porcentagem de margem"
+                    >
+                      <svg
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                        />
+                      </svg>
+                    </button>
+                  ) : null}
+                </div>
+
+                {isEditingMarginPct ? (
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="relative w-28">
+                        <input
+                          id="margin-pct-override-input"
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="99"
+                          value={marginPctDraft ?? ""}
+                          onChange={(e) => {
+                            const val = e.target.value === "" ? null : parseFloat(e.target.value);
+                            onMarginPctDraftChange?.(val);
+                          }}
+                          className="h-8 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1 pr-6 text-base font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+                          placeholder="20"
+                          autoFocus
+                        />
+                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-[var(--color-muted-foreground)]">
+                          %
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="h-8 px-3 text-xs"
+                        disabled={
+                          marginPctSaving ||
+                          marginPctDraft == null ||
+                          marginPctDraft < 0 ||
+                          marginPctDraft >= 100
+                        }
+                        onClick={onSaveMarginPct}
+                      >
+                        {marginPctSaving ? "..." : "Salvar"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-3 text-xs"
+                        disabled={marginPctSaving}
+                        onClick={onCancelMarginPctEdit}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                    {previewMarginBrl !== null ? (
+                      <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                        Equivale a{" "}
+                        <span className="font-semibold text-[var(--color-foreground)]">
+                          {formatBRL(previewMarginBrl)}
+                        </span>{" "}
+                        de margem (venda: {formatBRL(previewSaleBrl)})
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p
+                    className={cn(
+                      "mt-0.5 text-3xl font-bold tabular-nums sm:text-4xl",
+                      health === "good" && "text-emerald-600 dark:text-emerald-400",
+                      health === "warn" && "text-amber-600 dark:text-amber-400",
+                      health === "bad" && "text-red-600 dark:text-red-400",
+                      health === "none" && "text-[var(--color-foreground)]"
+                    )}
+                  >
+                    {hideSensitiveValues
+                      ? "••••"
+                      : marginPct !== null
+                        ? `${marginPct.toFixed(1)}%`
+                        : "—"}
+                  </p>
+                )}
               </div>
               {!hideSensitiveValues && marginPct !== null ? (
                 <div
