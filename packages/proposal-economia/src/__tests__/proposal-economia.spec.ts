@@ -68,10 +68,9 @@ describe("Proposal Economia - Financial & Cost Suite", () => {
       expect(res.monthlyConsumptionKwh).toBe(600);
       // compensavel = valorConta * 0.85 = 540 * 0.85 = 459
       expect(res.economiaMensal).toBeCloseTo(459, 2);
-      // geracaoNecessaria = 600 * 1.2 = 720
       // geracaoBase = 140 * 1 = 140
-      // tamanhoSistema = 720 / 140 = 5.1428... kW
-      expect(res.tamanhoSistema).toBeCloseTo(5.14, 1);
+      // tamanhoSistema = 600 / 140 = 4.2857... kW
+      expect(res.tamanhoSistema).toBeCloseTo(4.29, 1);
       // valorSistema = tamanhoSistema * 5000
       expect(res.valorSistema).toBeCloseTo(res.tamanhoSistema * 5000, 2);
       // payback = valorSistema / (economiaMensal * 12)
@@ -79,7 +78,17 @@ describe("Proposal Economia - Financial & Cost Suite", () => {
       expect(res.payback).toBeCloseTo(res.valorSistema / annualSavings, 2);
     });
 
-    it("should fallback to 350 kWh default when neither consumo nor valorConta are provided", () => {
+    it("should size directly by systemKw without fabricating consumption when none is provided", () => {
+      const res = simulateProposal({
+        systemKw: 5.5,
+        roofType: "fibromadeira",
+      });
+      expect(res.tamanhoSistema).toBe(5.5);
+      expect(res.monthlyConsumptionKwh).toBeUndefined();
+      expect(res.valorSistema).toBe(5.5 * 5000);
+    });
+
+    it("should fallback to 350 kWh default when neither consumo nor valorConta are provided in consumption mode", () => {
       const res = simulateProposal({});
       expect(res.monthlyConsumptionKwh).toBe(350);
       expect(res.valorSistema).toBeGreaterThan(0);

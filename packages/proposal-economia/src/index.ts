@@ -47,7 +47,7 @@ export interface QuickEconomiaSimulationResult {
   valorSistema: number;
   payback: number;
   tamanhoSistema: number;
-  monthlyConsumptionKwh: number;
+  monthlyConsumptionKwh?: number;
 }
 
 export function parseExtractedNumber(value: unknown): number {
@@ -242,20 +242,27 @@ export function simulateProposal(
   input: QuickEconomiaSimulationInput
 ): QuickEconomiaSimulationResult {
   const { consumo, valorConta, tarifa, irradiacao, roofType = "ceramic" } = input;
+  const isDirectPower = Boolean(input.systemKw && input.systemKw > 0);
   let consumoFinal = consumo;
-  if (!consumoFinal && valorConta) {
+  if (!consumoFinal && valorConta && !isDirectPower) {
     consumoFinal = valorConta / 0.8;
   }
 
   const safeConsumption = consumoFinal && consumoFinal > 0 ? consumoFinal : 350;
   const tarifaFinal =
     tarifa || (valorConta && safeConsumption ? valorConta / safeConsumption : 0.8) || 0.8;
-  const compensavel = valorConta ? valorConta * 0.85 : safeConsumption * tarifaFinal;
-  const geracaoNecessaria = safeConsumption * 1.2;
   const roofF = ROOF_SOLAR_FACTOR[roofType] ?? 1;
   const geracaoBase = Math.max(40, (irradiacao || 140) * roofF);
-  const tamanhoSistema =
-    input.systemKw && input.systemKw > 0 ? input.systemKw : geracaoNecessaria / geracaoBase;
+
+  // Se dimensionado diretamente por kWp, usa a potência informada sem inflar
+  const tamanhoSistema = isDirectPower ? input.systemKw! : safeConsumption / geracaoBase;
+
+  const compensavel = valorConta
+    ? valorConta * 0.85
+    : isDirectPower
+      ? tamanhoSistema * geracaoBase * tarifaFinal * 0.85
+      : safeConsumption * tarifaFinal;
+
   const valorSistema = tamanhoSistema * 5000;
   const economiaMensal = compensavel;
   const economiaAnual = economiaMensal * 12;
@@ -266,7 +273,7 @@ export function simulateProposal(
     valorSistema,
     payback,
     tamanhoSistema,
-    monthlyConsumptionKwh: safeConsumption,
+    monthlyConsumptionKwh: isDirectPower ? consumo : safeConsumption,
   };
 }
 
@@ -395,7 +402,10 @@ export function quickResultToPersistedSimulationDraft(
   quick: QuickEconomiaSimulationResult,
   opts?: { sizingExtras?: Record<string, unknown>; solarResource?: unknown }
 ): PersistedSimulationInputDraft {
-  const monthlyKwh = Math.max(1, Math.round(quick.monthlyConsumptionKwh));
+  const monthlyKwh =
+    quick.monthlyConsumptionKwh && quick.monthlyConsumptionKwh > 0
+      ? Math.max(1, Math.round(quick.monthlyConsumptionKwh))
+      : Math.round(quick.tamanhoSistema * 130);
   const energyPrice =
     monthlyKwh > 0 && quick.economiaMensal > 0
       ? Math.min(2.5, Math.max(0.25, quick.economiaMensal / monthlyKwh))

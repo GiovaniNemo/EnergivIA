@@ -174,7 +174,7 @@ type GeneratedProposal = {
   estimateNote?: string;
   tamanhoSistemaKw: number;
   roofType: RoofType;
-  monthlyConsumptionKwh: number;
+  monthlyConsumptionKwh?: number;
 };
 
 type ProposalFieldErrors = {
@@ -2608,8 +2608,6 @@ export const ProposalEconomicsModal = forwardRef<
                     }
                     if (hasBillInput && !hasConta) {
                       fieldErrors.valorConta = "Informe um valor de conta valido.";
-                    } else if (!hasConta) {
-                      fieldErrors.valorConta = "Informe o valor da conta para estimar a economia.";
                     }
                   } else {
                     if (hasConsumptionInput && !hasConsumo) {
@@ -2727,12 +2725,21 @@ export const ProposalEconomicsModal = forwardRef<
                     Consumo
                   </p>
                   <p className="text-base sm:text-2xl font-bold tabular-nums text-[var(--color-foreground)]">
-                    {Math.round(generatedProposal.monthlyConsumptionKwh ?? 0).toLocaleString(
-                      "pt-BR"
-                    )}{" "}
-                    <span className="text-[0.65rem] sm:text-sm font-normal text-[var(--color-muted-foreground)] block sm:inline">
-                      kWh/mês
-                    </span>
+                    {generatedProposal.monthlyConsumptionKwh &&
+                    generatedProposal.monthlyConsumptionKwh > 0 ? (
+                      <>
+                        {Math.round(generatedProposal.monthlyConsumptionKwh).toLocaleString(
+                          "pt-BR"
+                        )}{" "}
+                        <span className="text-[0.65rem] sm:text-sm font-normal text-[var(--color-muted-foreground)] block sm:inline">
+                          kWh/mês
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-sm sm:text-lg font-medium text-[var(--color-muted-foreground)]">
+                        Não informado
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="space-y-0.5 sm:space-y-1">
@@ -2740,13 +2747,13 @@ export const ProposalEconomicsModal = forwardRef<
                     Potência
                   </p>
                   <p className="text-base sm:text-2xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
-                    {clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0)?.toLocaleString(
-                      "pt-BR",
-                      {
-                        minimumFractionDigits: 1,
-                        maximumFractionDigits: 2,
-                      }
-                    ) ?? "0"}{" "}
+                    {(quotingMode === "kwp_rate" && selectedKwpTier?.systemKwp
+                      ? selectedKwpTier.systemKwp
+                      : clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0)
+                    )?.toLocaleString("pt-BR", {
+                      minimumFractionDigits: 1,
+                      maximumFractionDigits: 2,
+                    }) ?? "0"}{" "}
                     <span className="text-[0.65rem] sm:text-sm font-normal text-[var(--color-muted-foreground)] block sm:inline">
                       kWp
                     </span>
@@ -2758,8 +2765,12 @@ export const ProposalEconomicsModal = forwardRef<
                   </p>
                   <p className="text-base sm:text-2xl font-bold tabular-nums text-[var(--color-foreground)]">
                     ~
-                    {Math.round(
-                      (clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0) ?? 0) * 130
+                    {(quotingMode === "kwp_rate" &&
+                    selectedKwpTier?.estimatedMonthlyGenerationKwh != null
+                      ? selectedKwpTier.estimatedMonthlyGenerationKwh
+                      : Math.round(
+                          (clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0) ?? 0) * 130
+                        )
                     ).toLocaleString("pt-BR")}{" "}
                     <span className="text-[0.65rem] sm:text-sm font-normal text-[var(--color-muted-foreground)] block sm:inline">
                       kWh/mês

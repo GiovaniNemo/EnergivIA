@@ -89,7 +89,7 @@ export function generateKwpRateTiers({
   kwp,
   ratePerKwp,
   roofType,
-  monthlyConsumption,
+  monthlyConsumption: _monthlyConsumption,
   cidade: _cidade,
   estado: _estado,
 }: GenerateKwpRateTiersParams): KwpRateKitTier[] {
@@ -99,10 +99,8 @@ export function generateKwpRateTiers({
   // Regra fundamental: mínimo de 4 módulos para qualquer cotação
   const moduleQty = Math.max(4, Math.round((safeKwp * 1000) / modulePowerW));
   const realSystemKwp = Math.round(((moduleQty * modulePowerW) / 1000) * 100) / 100;
-  const estGenPerKwp = 135; // média nacional kWh/mês por kWp
-  const estGeneration = Math.round(
-    monthlyConsumption && monthlyConsumption > 0 ? monthlyConsumption : realSystemKwp * estGenPerKwp
-  );
+  const estGenPerKwp = 130; // média nacional kWh/mês por kWp
+  const estGeneration = Math.round(realSystemKwp * estGenPerKwp);
 
   const roof = normalizeRoofDescription(roofType);
   const invPower = getStandardInverterPower(realSystemKwp);
