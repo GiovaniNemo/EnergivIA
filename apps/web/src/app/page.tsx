@@ -75,7 +75,7 @@ export default function HomePage(): JSX.Element {
                 height={136}
                 className="h-12 w-auto object-contain sm:h-14"
                 priority
-                unoptimized
+                sizes="(max-width: 640px) 160px, 200px"
               />
             </Link>
             <nav className="hidden sm:flex items-center gap-1 text-sm text-slate-700">
@@ -480,7 +480,7 @@ export default function HomePage(): JSX.Element {
                   width={480}
                   height={136}
                   className="h-12 w-auto object-contain sm:h-14"
-                  unoptimized
+                  sizes="(max-width: 640px) 160px, 200px"
                 />
               </Link>
               <nav className="flex flex-wrap items-center justify-center gap-5 text-sm">

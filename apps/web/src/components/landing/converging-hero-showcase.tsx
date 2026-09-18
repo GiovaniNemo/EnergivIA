@@ -18,13 +18,13 @@ export function ConvergingHeroShowcase() {
           className="relative z-0"
         >
           <Image
-            src="/landing/demo.png"
+            src="/landing/demo.webp"
             alt="Demonstração do painel da EnergivIA"
             width={1080}
             height={675}
             className="h-auto w-full object-contain drop-shadow-2xl"
             priority
-            unoptimized
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1080px"
           />
         </motion.div>
 
