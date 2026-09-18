@@ -71,7 +71,7 @@ export function HowItWorksTabs(): JSX.Element {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-3 rounded-3xl border border-slate-800 bg-slate-900 p-2 sm:grid-cols-2">
+        <div className="mt-10 grid gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-2 sm:grid-cols-2 backdrop-blur-md">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -80,10 +80,10 @@ export function HowItWorksTabs(): JSX.Element {
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={[
-                  "rounded-xl px-4 py-3 text-left transition-all",
+                  "rounded-xl px-5 py-3.5 text-left transition-all duration-200",
                   isActive
-                    ? "bg-gradient-to-r from-emerald-400 to-sky-400 text-slate-950 shadow-md"
-                    : "bg-transparent text-slate-300 hover:bg-slate-800",
+                    ? "bg-emerald-400 text-slate-950 font-bold shadow-[0_0_25px_rgba(52,211,153,0.3)] ring-1 ring-emerald-300"
+                    : "bg-transparent text-slate-400 hover:bg-slate-800/60 hover:text-slate-200",
                 ].join(" ")}
                 aria-pressed={isActive}
               >
@@ -91,7 +91,7 @@ export function HowItWorksTabs(): JSX.Element {
                 <p
                   className={[
                     "mt-1 text-xs",
-                    isActive ? "text-slate-900/90" : "text-slate-400",
+                    isActive ? "text-slate-900 font-medium" : "text-slate-500",
                   ].join(" ")}
                 >
                   {tab.description}

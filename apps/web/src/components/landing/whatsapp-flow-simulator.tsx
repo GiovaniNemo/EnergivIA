@@ -1,21 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   CheckCheck,
   ExternalLink,
   FileText,
   MoreVertical,
+  Mouse,
   Pause,
   Phone,
   Play,
   RotateCcw,
   Send,
-  Sparkles,
   Video,
   Zap,
 } from "lucide-react";
+import { WaterReflectionCanvas } from "./water-reflection-canvas";
 
 interface Milestone {
   id: number;
@@ -162,6 +163,8 @@ export function WhatsappFlowSimulator(): JSX.Element {
   const [timeMs, setTimeMs] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [speed, setSpeed] = useState<number>(1);
+  const [waterRippleCounter, setWaterRippleCounter] = useState<number>(0);
+  const [glassGlare, setGlassGlare] = useState<{ x: number; y: number }>({ x: 45, y: 25 });
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const lastTimeRef = useRef<number | null>(null);
@@ -181,7 +184,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
         setTimeMs((prev) => {
           const next = prev + delta * speed;
           if (next >= TOTAL_CYCLE_MS) {
-            return 0; // Seamless loop back to beginning
+            return 0; // Loop back
           }
           return next;
         });
@@ -198,6 +201,15 @@ export function WhatsappFlowSimulator(): JSX.Element {
   const visibleMessages = useMemo(() => {
     return SCHEDULED_MESSAGES.filter((m) => timeMs >= m.showAt);
   }, [timeMs]);
+
+  // Trigger water ripple whenever new message appears
+  const prevMsgLength = useRef(visibleMessages.length);
+  useEffect(() => {
+    if (visibleMessages.length !== prevMsgLength.current) {
+      prevMsgLength.current = visibleMessages.length;
+      setWaterRippleCounter((c) => c + 1);
+    }
+  }, [visibleMessages.length]);
 
   // Active bot typing indicator
   const activeBotTyping = useMemo(() => {
@@ -224,7 +236,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
     return 0;
   }, [timeMs]);
 
-  // Continuous fluid progress for each milestone (0% to 100%)
+  // Continuous progress for each milestone (0% to 100%)
   const milestoneProgresses = useMemo(() => {
     return MILESTONES.map((m) => {
       if (timeMs <= m.startTime) return 0;
@@ -233,7 +245,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
     });
   }, [timeMs]);
 
-  // Smooth scroll to bottom whenever visible message count changes or typing starts/stops
+  // Smooth scroll to bottom on message updates
   const prevMsgCountRef = useRef(0);
   const prevTypingRef = useRef<string | null>(null);
 
@@ -254,10 +266,25 @@ export function WhatsappFlowSimulator(): JSX.Element {
     }
   }, [visibleMessages.length, activeBotTyping]);
 
+  // Mouse wheel scrubber to scrub through the entire conversation
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    // Only scrub if scrolling vertically
+    if (Math.abs(e.deltaY) > 2) {
+      e.preventDefault();
+      const delta = e.deltaY * 5.5;
+      setTimeMs((prev) => {
+        const next = Math.max(0, Math.min(TOTAL_CYCLE_MS - 50, prev + delta));
+        return next;
+      });
+      setWaterRippleCounter((c) => c + 1);
+    }
+  };
+
   const handleSelectMilestone = (idx: number) => {
     setTimeMs(MILESTONES[idx].startTime);
     lastTimeRef.current = null;
     setIsPlaying(true);
+    setWaterRippleCounter((c) => c + 1);
   };
 
   const handleTogglePlay = () => {
@@ -268,76 +295,128 @@ export function WhatsappFlowSimulator(): JSX.Element {
     setTimeMs(0);
     lastTimeRef.current = null;
     setIsPlaying(true);
+    setWaterRippleCounter((c) => c + 1);
+  };
+
+  const handlePhoneMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setGlassGlare({ x, y });
   };
 
   return (
-    <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12 py-4">
-      {/* SMARTPHONE MOCKUP */}
-      <div className="relative w-full max-w-[360px] sm:max-w-[400px] select-none">
-        {/* Ambient Glow */}
-        <div className="absolute -inset-2 rounded-[52px] bg-gradient-to-r from-emerald-500/20 via-teal-500/15 to-sky-500/20 blur-xl -z-10 opacity-70 animate-pulse" />
+    <div
+      onWheel={handleWheel}
+      className="relative flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-14 py-8 select-none"
+    >
+      {/* ------------------------------------------------------------- */}
+      {/* WATER CAUSTICS & REFLECTION PLATFORM LAYER                    */}
+      {/* ------------------------------------------------------------- */}
+      <WaterReflectionCanvas triggerRipple={waterRippleCounter} className="rounded-3xl" />
 
-        {/* Device Shell */}
-        <div className="relative rounded-[46px] border-[7px] border-slate-800 bg-slate-950 p-2 shadow-2xl shadow-black/80 ring-1 ring-slate-700/50">
-          {/* Inner Screen */}
-          <div className="relative flex h-[600px] sm:h-[640px] w-full flex-col overflow-hidden rounded-[36px] bg-[#0b141a] text-slate-100 font-sans">
-            {/* Top Status Bar */}
-            <div className="relative z-30 flex items-center justify-between bg-[#1f2c34] px-6 pt-2 pb-1 text-[11px] text-slate-300 font-medium">
+      {/* ------------------------------------------------------------- */}
+      {/* REALISTIC TITANIUM SMARTPHONE                                 */}
+      {/* ------------------------------------------------------------- */}
+      <div
+        onMouseMove={handlePhoneMouseMove}
+        className="relative group w-full max-w-[370px] sm:max-w-[410px] shrink-0"
+      >
+        {/* PHYSICAL HARDWARE SIDE BUTTONS */}
+        {/* Left: Action Button & Volume Rockers */}
+        <div className="absolute -left-[14px] top-[115px] h-[30px] w-[5px] rounded-l-md bg-gradient-to-r from-[#2c323c] to-[#1a1e24] shadow-md border-l border-white/20" />
+        <div className="absolute -left-[14px] top-[160px] h-[50px] w-[5px] rounded-l-md bg-gradient-to-r from-[#2c323c] to-[#1a1e24] shadow-md border-l border-white/20" />
+        <div className="absolute -left-[14px] top-[220px] h-[50px] w-[5px] rounded-l-md bg-gradient-to-r from-[#2c323c] to-[#1a1e24] shadow-md border-l border-white/20" />
+        {/* Right: Power / Side Button */}
+        <div className="absolute -right-[14px] top-[165px] h-[75px] w-[5px] rounded-r-md bg-gradient-to-l from-[#2c323c] to-[#1a1e24] shadow-md border-r border-white/20" />
+
+        {/* REALISTIC MIRROR REFLECTION ON THE GROUND/PLATFORM */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-[140px] left-1/2 -translate-x-1/2 w-[340px] sm:w-[380px] h-[140px] overflow-hidden opacity-30 blur-[2px]"
+          style={{
+            transform: "scaleY(-1)",
+            maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 85%)",
+            WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 85%)",
+          }}
+        >
+          <div className="rounded-[48px] border-[10px] border-[#1e2329] bg-[#0b141a] p-2 h-[260px] w-full">
+            <div className="h-full w-full rounded-[38px] bg-[#1f2c34] opacity-80" />
+          </div>
+        </div>
+
+        {/* TITANIUM BEZEL CHASSIS */}
+        <div className="relative rounded-[52px] border-[10px] border-[#1d2229] bg-[#0d1117] p-2 shadow-[0_30px_90px_rgba(0,0,0,0.9),0_10px_30px_rgba(0,0,0,0.8)] ring-1 ring-white/15">
+          {/* Subtle antenna band micro-notches */}
+          <div className="absolute -top-[10px] left-[55px] h-[2px] w-[4px] bg-slate-600" />
+          <div className="absolute -top-[10px] right-[55px] h-[2px] w-[4px] bg-slate-600" />
+          <div className="absolute -bottom-[10px] left-[55px] h-[2px] w-[4px] bg-slate-600" />
+          <div className="absolute -bottom-[10px] right-[55px] h-[2px] w-[4px] bg-slate-600" />
+
+          {/* INNER SCREEN DISPLAY (OLED Black) */}
+          <div className="relative flex h-[620px] sm:h-[660px] w-full flex-col overflow-hidden rounded-[40px] bg-[#060b0e] text-slate-100 font-sans shadow-inner">
+            {/* REALISTIC GLASS SPECULAR GLARE (Moves with mouse) */}
+            <div
+              className="pointer-events-none absolute inset-0 z-40 transition-opacity duration-300 opacity-60"
+              style={{
+                background: `linear-gradient(${115 + (glassGlare.x - 50) * 0.15}deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 28%, transparent 48%, rgba(255,255,255,0.03) 75%, transparent 100%)`,
+              }}
+            />
+
+            {/* DYNAMIC ISLAND & STATUS BAR */}
+            <div className="relative z-30 flex items-center justify-between bg-[#1f2c34] px-7 pt-2.5 pb-1.5 text-[11px] text-slate-300 font-medium">
               <span>16:56</span>
-              <div className="h-4 w-20 rounded-full bg-black/60 shadow-inner" />
+
+              {/* Dynamic Island with Camera Optics */}
+              <div className="relative flex h-5 w-24 items-center justify-center rounded-full bg-black shadow-[inset_0_1px_2px_rgba(255,255,255,0.15)]">
+                {/* Micro Earphone Speaker Slit */}
+                <div className="absolute left-3 h-1 w-5 rounded-full bg-[#1c1c1e]" />
+                {/* Front Camera Lens with antireflection purple/blue ring */}
+                <div className="absolute right-3.5 flex h-3 w-3 items-center justify-center rounded-full bg-[#08080a] ring-1 ring-white/10">
+                  <div className="h-1.5 w-1.5 rounded-full bg-[#0a1829]" />
+                </div>
+              </div>
+
               <div className="flex items-center gap-1.5 text-[10px]">
-                <span>5G</span>
-                <div className="h-2 w-4 rounded-sm border border-slate-400 p-[1px]">
+                <span className="font-semibold">5G</span>
+                <div className="h-2 w-4 rounded-sm border border-slate-300 p-[1px]">
                   <div className="h-full w-3/4 rounded-[1px] bg-emerald-400" />
                 </div>
               </div>
             </div>
 
-            {/* WhatsApp Header */}
-            <div className="relative z-20 flex items-center justify-between border-b border-slate-800 bg-[#1f2c34] px-3 py-2.5 shadow-md">
+            {/* WhatsApp Header (Solid Obsidian Clean, No Gradient) */}
+            <div className="relative z-20 flex items-center justify-between border-b border-white/[0.08] bg-[#1f2c34] px-3.5 py-2.5 shadow-sm">
               <div className="flex items-center gap-2">
-                <ArrowLeft className="h-4 w-4 text-slate-300 cursor-pointer" />
+                <ArrowLeft className="h-4 w-4 text-slate-300 hover:text-white transition cursor-pointer" />
                 <div className="relative">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b from-sky-400 via-cyan-500 to-emerald-500 p-0.5 shadow-md overflow-hidden">
-                    <div className="flex h-full w-full items-center justify-center rounded-full bg-slate-950 text-cyan-400">
-                      <svg
-                        className="h-6 w-6"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <rect x="3" y="11" width="18" height="10" rx="2" />
-                        <circle cx="12" cy="5" r="2" />
-                        <path d="M12 7v4" />
-                        <line x1="8" y1="16" x2="8" y2="16" />
-                        <line x1="16" y1="16" x2="16" y2="16" />
-                      </svg>
+                  {/* Clean avatar with emerald active ring */}
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-950 p-0.5 border border-emerald-400/40 shadow-sm overflow-hidden">
+                    <div className="flex h-full w-full items-center justify-center rounded-full bg-[#111827] text-emerald-400 font-bold text-xs">
+                      ⚡
                     </div>
                   </div>
-                  <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-[#1f2c34] bg-emerald-500" />
+                  <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#1f2c34] bg-emerald-400" />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-semibold text-white">EnergivIA</span>
+                    <span className="text-sm font-bold text-white">EnergivIA</span>
                   </div>
-                  <p className="text-[10px] text-emerald-400">online</p>
+                  <p className="text-[10px] text-emerald-400 font-medium">online agora</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 text-slate-300 pr-1">
-                <Video className="h-4 w-4 hover:text-white cursor-pointer" />
-                <Phone className="h-4 w-4 hover:text-white cursor-pointer" />
-                <MoreVertical className="h-4 w-4 hover:text-white cursor-pointer" />
+                <Video className="h-4 w-4 hover:text-white transition cursor-pointer" />
+                <Phone className="h-4 w-4 hover:text-white transition cursor-pointer" />
+                <MoreVertical className="h-4 w-4 hover:text-white transition cursor-pointer" />
               </div>
             </div>
 
             {/* Chat Messages Flow */}
             <div
               ref={chatContainerRef}
-              className="relative flex-1 space-y-2.5 overflow-y-auto p-2.5 text-[11.5px] sm:text-xs scroll-smooth scrollbar-thin scrollbar-thumb-slate-800"
+              className="relative flex-1 space-y-2.5 overflow-y-auto p-3 text-[11.5px] sm:text-xs scroll-smooth scrollbar-thin scrollbar-thumb-slate-800"
               style={{
                 backgroundImage: `radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)`,
                 backgroundSize: "16px 16px",
@@ -345,7 +424,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
             >
               {/* Date Pill */}
               <div className="flex justify-center my-1">
-                <span className="rounded-md bg-[#182229] px-2.5 py-0.5 text-[10px] text-slate-400 shadow-sm">
+                <span className="rounded-md bg-[#182229] px-2.5 py-0.5 text-[10px] text-slate-400 border border-white/5 shadow-sm">
                   Hoje
                 </span>
               </div>
@@ -356,9 +435,9 @@ export function WhatsappFlowSimulator(): JSX.Element {
                   return (
                     <div
                       key={msg.id}
-                      className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out"
+                      className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out"
                     >
-                      <div className="max-w-[85%] rounded-xl rounded-tr-none bg-[#005c4b] px-3 py-1.5 text-slate-100 shadow">
+                      <div className="max-w-[85%] rounded-xl rounded-tr-none bg-[#005c4b] px-3 py-1.5 text-slate-100 shadow-md">
                         <p className="leading-snug">{msg.text}</p>
                         <div className="mt-0.5 flex items-center justify-end gap-1 text-[9px] text-emerald-200/80">
                           <span>{msg.time}</span>
@@ -373,10 +452,10 @@ export function WhatsappFlowSimulator(): JSX.Element {
                   return (
                     <div
                       key={msg.id}
-                      className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out"
+                      className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out"
                     >
-                      <div className="max-w-[85%] rounded-xl rounded-tr-none bg-[#005c4b] p-2 text-slate-100 shadow">
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-950/70 p-1.5 border border-emerald-500/30">
+                      <div className="max-w-[85%] rounded-xl rounded-tr-none bg-[#005c4b] p-2 text-slate-100 shadow-md">
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-950/80 p-2 border border-emerald-500/20">
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-500/20 text-rose-400 font-bold text-[10px]">
                             <FileText className="h-5 w-5" />
                           </div>
@@ -396,13 +475,13 @@ export function WhatsappFlowSimulator(): JSX.Element {
                   );
                 }
 
-                // BOT MESSAGES
+                // BOT MESSAGES (Clean solid dark surface, no gradient)
                 return (
                   <div
                     key={msg.id}
-                    className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out"
+                    className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out"
                   >
-                    <div className="max-w-[92%] rounded-xl rounded-tl-none bg-[#202c33] p-2.5 text-slate-200 shadow border border-slate-800">
+                    <div className="max-w-[92%] rounded-xl rounded-tl-none bg-[#202c33] p-2.5 text-slate-200 shadow border border-white/5">
                       {msg.kind === "welcome" && (
                         <div>
                           <p className="leading-snug">
@@ -445,79 +524,77 @@ export function WhatsappFlowSimulator(): JSX.Element {
 
                       {msg.kind === "ocr_result" && (
                         <div>
-                          <p className="text-emerald-400 font-medium">
+                          <p className="text-emerald-400 font-semibold">
                             Legal, dados extraídos com precisão!
                           </p>
-                          <p className="mt-1 text-[11px] leading-snug">
-                            Consumo médio de <b>257 kWh/mês</b> em <b>Maringá/PR</b> (baseado no
-                            histórico de 5 meses da fatura).
-                            <br />
-                            Padrão de rede identificado: <b>Trifásico</b>
-                          </p>
-
-                          <div className="mt-2 space-y-0.5 text-[10.5px]">
-                            <p className="font-semibold text-white">Qual a estrutura do telhado?</p>
-                            <p>1️⃣ Cerâmica (Colonial)</p>
-                            <p>2️⃣ Fibrocimento</p>
-                            <p>3️⃣ Metálico</p>
-                            <p>4️⃣ Solo</p>
-                            <p>5️⃣ Laje</p>
-                            <p>6️⃣ Fibrometal</p>
-                            <p>7️⃣ Sem estrutura</p>
+                          <div className="mt-1.5 space-y-1 rounded-lg bg-slate-950/70 p-2 text-[10.5px] border border-white/5">
+                            <p className="flex justify-between">
+                              <span className="text-slate-400">Concessionária:</span>
+                              <span className="font-bold text-white">COPEL</span>
+                            </p>
+                            <p className="flex justify-between">
+                              <span className="text-slate-400">Consumo Médio:</span>
+                              <span className="font-bold text-emerald-400">257 kWh/mês</span>
+                            </p>
+                            <p className="flex justify-between">
+                              <span className="text-slate-400">Tipo de Ligação:</span>
+                              <span className="font-bold text-white">Bifásico</span>
+                            </p>
+                            <p className="flex justify-between">
+                              <span className="text-slate-400">Gasto Atual:</span>
+                              <span className="font-bold text-rose-400">R$ 282,70/mês</span>
+                            </p>
                           </div>
-                          <p className="mt-1.5 text-[9.5px] italic text-slate-400">
-                            (Responda com o número da opção)
+                          <p className="mt-1.5 leading-snug">
+                            Qual é o tipo de estrutura de fixação do telhado?
                           </p>
+                          <div className="mt-1 space-y-0.5 text-[10.5px] text-slate-300">
+                            <p>1️⃣ Telha Cerâmica / Fibrocimento</p>
+                            <p>2️⃣ Telha Metálica / Trapezoidal</p>
+                            <p>3️⃣ Solo / Laje plana</p>
+                          </div>
                         </div>
                       )}
 
                       {msg.kind === "kit_dynamis" && (
                         <div>
-                          <p className="leading-snug">
-                            Excelente! Seguem as melhores opções de kits dimensionados para o
-                            consumo de <b>257 kWh/mês</b>:
+                          <p className="text-emerald-400 font-semibold">
+                            Encontrei o kit ideal para atender 100% do consumo:
                           </p>
-
-                          {/* Clean Kit Card - Dynamis & Price */}
-                          <div className="mt-2 rounded-xl bg-slate-950/70 p-2.5 border border-emerald-500/30">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-white text-xs">
-                                1️⃣ Distribuidor: Dynamis
-                              </span>
-                              <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400">
-                                R$ 5.159,23
-                              </span>
+                          <div className="mt-1.5 rounded-lg bg-slate-950/70 p-2 text-[10.5px] border border-emerald-500/20">
+                            <p className="font-bold text-white">Kit Dynamis 3,15 kWp</p>
+                            <p className="text-[9.5px] text-slate-400">
+                              6x Módulos 580W N-Type + Inversor 3kW Híbrido
+                            </p>
+                            <div className="mt-1.5 flex items-center justify-between border-t border-white/10 pt-1">
+                              <span className="text-slate-400">Geração estimada:</span>
+                              <span className="font-bold text-emerald-400">315 kWh/mês</span>
                             </div>
-                            <div className="mt-2 grid grid-cols-2 gap-1.5 text-[10px] text-slate-300">
-                              <div className="rounded bg-slate-900 p-1.5">
-                                <span className="text-slate-400 block text-[9px]">Potência:</span>
-                                <span className="font-semibold text-white">3,15 kWp</span>
-                              </div>
-                              <div className="rounded bg-slate-900 p-1.5">
-                                <span className="text-slate-400 block text-[9px]">
-                                  Geração Média:
-                                </span>
-                                <span className="font-semibold text-emerald-400">332 kWh/mês</span>
-                              </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">Custo do Kit:</span>
+                              <span className="font-bold text-white">R$ 6.840,00</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">Valor Sugerido Venda:</span>
+                              <span className="font-bold text-emerald-400">R$ 11.900,00</span>
                             </div>
                           </div>
-
-                          <p className="mt-2 text-[10.5px] text-slate-300">
-                            Qual opção você prefere para o seu cliente?{" "}
-                            <span className="text-[9.5px] italic text-slate-400">
-                              (Responda com o número)
-                            </span>
+                          <p className="mt-2 leading-snug">
+                            Deseja gerar a proposta com esse kit Dynamis?
                           </p>
+                          <div className="mt-1 space-y-0.5 text-[10.5px] text-slate-300">
+                            <p>1️⃣ Sim, usar este kit</p>
+                            <p>2️⃣ Ver outra opção de distribuidor</p>
+                            <p>3️⃣ Ajustar margem de lucro</p>
+                          </div>
                         </div>
                       )}
 
                       {msg.kind === "ask_name" && (
                         <div>
                           <p className="leading-snug">
-                            Ótima escolha! Kit selecionado com sucesso. ☀️
-                          </p>
-                          <p className="mt-1 text-[11px] text-slate-300">
-                            Qual o nome do cliente final para registrarmos no seu CRM?
+                            Excelente! Qual o <b>nome do cliente</b> para inserirmos na capa da
+                            proposta?
                           </p>
                         </div>
                       )}
@@ -525,75 +602,63 @@ export function WhatsappFlowSimulator(): JSX.Element {
                       {msg.kind === "ask_phone" && (
                         <div>
                           <p className="leading-snug">
-                            Certo, vou registrar o cliente Marcelo. E qual o WhatsApp dele com DDD?
+                            Obrigado! Qual o <b>WhatsApp do cliente</b> para envio e acompanhamento
+                            no CRM?
                           </p>
                         </div>
                       )}
 
                       {msg.kind === "ask_template" && (
                         <div>
-                          <p className="leading-snug">Cliente Marcelo anotado com sucesso! 👤✨</p>
-                          <p className="mt-1.5 font-semibold text-white">
-                            Qual modelo de proposta comercial você deseja usar para o seu cliente?
+                          <p className="leading-snug">
+                            Qual modelo de proposta deseja gerar para o <b>Marcelo</b>?
                           </p>
-                          <p className="mt-1 text-[11px] text-emerald-300">
-                            1️⃣ Template de Proposta Padrão EnergivIA
-                          </p>
-                          <p className="mt-1 text-[9.5px] italic text-slate-400">
-                            (Responda com o número da opção desejada)
-                          </p>
+                          <div className="mt-1.5 space-y-0.5 text-[10.5px] text-slate-300">
+                            <p>1️⃣ Modelo Comercial Padrão (6 páginas)</p>
+                            <p>2️⃣ Modelo Executivo Resumido (2 páginas)</p>
+                            <p>3️⃣ Modelo Completo com Financiamento</p>
+                          </div>
                         </div>
                       )}
 
                       {msg.kind === "final_proposal" && (
-                        <div>
-                          <p className="leading-snug">
-                            Perfeito! Proposta comercial gerada com sucesso para o cliente{" "}
-                            <b>Marcelo</b>! 📋✅
+                        <div className="space-y-2">
+                          <p className="font-bold text-emerald-400">
+                            Prontinho! Proposta gerada com sucesso em 42 segundos! 🚀
                           </p>
 
-                          <div className="mt-2 space-y-1 rounded-lg bg-slate-950/70 p-2 text-[11px] text-slate-300 border border-slate-800">
-                            <div className="flex justify-between">
-                              <span>☀️ Potência:</span>
-                              <span className="font-semibold text-white">3,15 kWp</span>
+                          {/* Proposal Card in WhatsApp */}
+                          <div className="rounded-xl border border-emerald-500/40 bg-slate-950 p-2.5 shadow-md">
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                                <FileText className="h-6 w-6" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-bold text-white text-[11px]">
+                                  Proposta_Solar_Marcelo_Santana.pdf
+                                </p>
+                                <p className="text-[9.5px] text-slate-400">
+                                  3,15 kWp • Economia de R$ 74.800 em 25 anos
+                                </p>
+                              </div>
                             </div>
-                            <div className="flex justify-between">
-                              <span>🏢 Distribuidor:</span>
-                              <span className="font-semibold text-emerald-400">Dynamis</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>🎨 Modelo:</span>
-                              <span className="font-medium text-slate-300">Padrão EnergivIA</span>
-                            </div>
-                            <div className="flex justify-between border-t border-slate-800 pt-1 text-emerald-400 font-bold">
-                              <span>💰 Valor Total:</span>
-                              <span>R$ 8.324,04</span>
+
+                            <div className="mt-2.5 flex items-center justify-between border-t border-white/10 pt-2 text-[10px]">
+                              <span className="text-slate-400">Payback: 2,7 anos</span>
+                              <span className="flex items-center gap-1 font-bold text-emerald-400">
+                                Abrir Proposta <ExternalLink className="h-3 w-3" />
+                              </span>
                             </div>
                           </div>
 
-                          {/* Proposal Card with Pretty Link */}
-                          <div className="mt-2 rounded-xl bg-gradient-to-r from-emerald-950/90 to-slate-900 p-2.5 border border-emerald-500/50 shadow-md">
-                            <p className="text-[10px] text-slate-400">
-                              📄 Acesse a Proposta Pronta no link:
-                            </p>
-                            <p className="mt-0.5 font-mono text-[11px] font-bold text-emerald-300 truncate">
-                              app.energivias.com.br/proposta/marcelo-solar
-                            </p>
-
-                            <div className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500 py-1.5 text-slate-950 font-bold text-xs shadow hover:bg-emerald-400 transition">
-                              <ExternalLink className="h-3.5 w-3.5" />
-                              <span>Visualizar Proposta Comercial</span>
-                            </div>
-                          </div>
-
-                          <p className="mt-2 text-[10px] text-slate-300">
-                            Ela já está disponível no seu painel CRM da EnergivIA. Posso te ajudar
-                            com mais algum orçamento hoje?
+                          <p className="text-[10px] text-slate-300">
+                            O cliente também já recebeu o link interativo no WhatsApp dele e a
+                            oportunidade foi criada no seu CRM!
                           </p>
                         </div>
                       )}
 
-                      <div className="mt-1 flex justify-end text-[9px] text-slate-400">
+                      <div className="mt-1 flex items-center justify-end text-[9px] text-slate-400">
                         <span>{msg.time}</span>
                       </div>
                     </div>
@@ -617,8 +682,8 @@ export function WhatsappFlowSimulator(): JSX.Element {
             </div>
 
             {/* Simulated WhatsApp Chat Input Bar */}
-            <div className="relative z-20 flex items-center gap-2 bg-[#1f2c34] px-3 py-2 border-t border-slate-800 text-slate-400">
-              <div className="flex-1 min-h-[34px] flex items-center rounded-full bg-[#2a3942] px-3.5 py-1 text-xs">
+            <div className="relative z-20 flex items-center gap-2 bg-[#1f2c34] px-3.5 py-2.5 border-t border-white/[0.08] text-slate-400">
+              <div className="flex-1 min-h-[36px] flex items-center rounded-full bg-[#2a3942] px-3.5 py-1 text-xs">
                 {activeInputDraft ? (
                   <span className="text-white font-medium flex items-center gap-0.5">
                     {activeInputDraft}
@@ -628,7 +693,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                   <span className="text-slate-400">Mensagem...</span>
                 )}
               </div>
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-slate-950 transition">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-slate-950 transition shadow-sm">
                 {activeInputDraft ? (
                   <Send className="h-4 w-4 fill-slate-950 animate-in scale-90" />
                 ) : (
@@ -639,8 +704,8 @@ export function WhatsappFlowSimulator(): JSX.Element {
           </div>
         </div>
 
-        {/* Floating Player Controls */}
-        <div className="mt-3 flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/90 px-4 py-2 text-xs text-slate-300 backdrop-blur-sm">
+        {/* Floating Player Controls with Interactive Wheel Cue */}
+        <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/10 bg-slate-900/90 px-4 py-2.5 text-xs text-slate-300 backdrop-blur-md shadow-lg">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -662,19 +727,19 @@ export function WhatsappFlowSimulator(): JSX.Element {
             >
               <RotateCcw className="h-3.5 w-3.5" />
             </button>
-            <span className="text-[11px] text-slate-400">
-              {isPlaying ? "Simulação ao vivo" : "Pausado"}
+            <span className="text-[11px] text-slate-400 font-mono">
+              {isPlaying ? "Simulação ao vivo" : "Pausado (Scroll ativo)"}
             </span>
           </div>
 
-          <div className="flex items-center gap-1 text-[11px]">
+          <div className="flex items-center gap-1.5 text-[11px]">
             <span className="text-slate-400">Velocidade:</span>
             {[1, 1.5].map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => setSpeed(s)}
-                className={`rounded px-1.5 py-0.5 font-medium transition ${
+                className={`rounded px-2 py-0.5 font-medium transition ${
                   speed === s
                     ? "bg-emerald-400 text-slate-950 font-bold"
                     : "text-slate-400 hover:text-slate-200"
@@ -687,38 +752,50 @@ export function WhatsappFlowSimulator(): JSX.Element {
         </div>
       </div>
 
-      {/* INTERACTIVE CONTROLS & EXPLANATION PANEL */}
-      <div className="w-full max-w-lg space-y-4">
+      {/* ------------------------------------------------------------- */}
+      {/* INTERACTIVE CONTROLS & EXPLANATION PANEL                      */}
+      {/* ------------------------------------------------------------- */}
+      <div className="w-full max-w-lg space-y-5 z-10">
         <div>
-          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
-            <Sparkles className="h-3 w-3" /> Conversa em Tempo Real
-          </span>
-          <h3 className="mt-2 text-2xl font-bold text-white tracking-tight">
+          <div className="flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Conversa em Tempo Real
+            </span>
+
+            {/* Mouse Scroll Interactive Cue */}
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-800/80 px-3 py-1 text-[11px] font-mono text-emerald-400 shadow-sm">
+              <Mouse className="h-3.5 w-3.5 animate-bounce" />
+              <span>Role o mouse para avançar</span>
+            </div>
+          </div>
+
+          <h3 className="mt-3 text-2xl sm:text-3xl font-bold text-white tracking-tight">
             Veja a troca de mensagens na prática
           </h3>
-          <p className="mt-1 text-sm text-slate-400">
-            Acompanhe o diálogo dinâmico: o cliente chama, a IA responde instantaneamente, analisa a
-            fatura e monta a proposta completa em poucos segundos.
+          <p className="mt-1.5 text-sm text-slate-400 leading-relaxed">
+            Role o mouse para navegar no diálogo ou acompanhe em tempo real: o cliente chama, a IA
+            extrai a fatura e entrega a proposta pronta em poucos segundos.
           </p>
         </div>
 
-        {/* Stories-like 60fps Continuous Fluid Progress Bars */}
-        <div className="grid grid-cols-5 gap-1.5 pt-1">
+        {/* Clean Solid Progress Bars (No generic gradients) */}
+        <div className="grid grid-cols-5 gap-2 pt-1">
           {MILESTONES.map((m, idx) => {
             const isCurrent = activeMilestoneIndex === idx;
             const pct = milestoneProgresses[idx];
             return (
-              <div key={m.id} className="space-y-1">
+              <div key={m.id} className="space-y-1.5">
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
                   <div
-                    className="h-full bg-gradient-to-r from-emerald-400 to-sky-400 will-change-[width]"
+                    className="h-full bg-emerald-400 will-change-[width] transition-all duration-75"
                     style={{
                       width: `${pct}%`,
                     }}
                   />
                 </div>
                 <p
-                  className={`text-[10px] font-semibold text-center truncate transition-colors duration-200 ${
+                  className={`text-[10.5px] font-mono text-center truncate transition-colors duration-200 ${
                     isCurrent ? "text-emerald-400 font-bold" : "text-slate-500"
                   }`}
                 >
@@ -729,8 +806,8 @@ export function WhatsappFlowSimulator(): JSX.Element {
           })}
         </div>
 
-        {/* Clickable Step Cards */}
-        <div className="space-y-2">
+        {/* Clickable Step Cards (Clean modern style, no rainbow gradients) */}
+        <div className="space-y-2.5">
           {MILESTONES.map((m, idx) => {
             const isCurrent = activeMilestoneIndex === idx;
             return (
@@ -738,25 +815,25 @@ export function WhatsappFlowSimulator(): JSX.Element {
                 key={m.id}
                 type="button"
                 onClick={() => handleSelectMilestone(idx)}
-                className={`w-full text-left rounded-2xl border p-3 transition-all duration-200 ${
+                className={`w-full text-left rounded-2xl border p-3.5 transition-all duration-200 ${
                   isCurrent
-                    ? "border-emerald-500/50 bg-gradient-to-r from-slate-900 to-slate-800/80 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/20"
-                    : "border-slate-800 bg-slate-900/40 text-slate-400 hover:border-slate-700 hover:bg-slate-900"
+                    ? "border-emerald-500/50 bg-slate-900 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/30"
+                    : "border-slate-800/80 bg-slate-900/40 text-slate-400 hover:border-slate-700 hover:bg-slate-900/80 hover:text-slate-200"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     <span
-                      className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                      className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold transition-colors ${
                         isCurrent
-                          ? "bg-emerald-400 text-slate-950 shadow-sm"
+                          ? "bg-emerald-400 text-slate-950 font-bold"
                           : "bg-slate-800 text-slate-400"
                       }`}
                     >
                       {idx + 1}
                     </span>
                     <span
-                      className={`text-xs sm:text-sm font-semibold transition-colors ${
+                      className={`text-sm font-semibold transition-colors ${
                         isCurrent ? "text-white" : "text-slate-300"
                       }`}
                     >
@@ -765,35 +842,19 @@ export function WhatsappFlowSimulator(): JSX.Element {
                   </div>
 
                   {isCurrent && (
-                    <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-mono text-emerald-400 border border-emerald-500/30">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
                       Ao vivo
                     </span>
                   )}
                 </div>
 
-                <p className="mt-1 pl-7 text-[11px] text-slate-400 leading-relaxed">
+                <p className="mt-1.5 text-xs text-slate-400 pl-8 leading-relaxed">
                   {m.description}
                 </p>
               </button>
             );
           })}
-        </div>
-
-        {/* Key Highlights */}
-        <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-3 text-center">
-          <div>
-            <p className="text-lg font-bold text-white">100%</p>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Automatizado</p>
-          </div>
-          <div className="border-x border-slate-800">
-            <p className="text-lg font-bold text-emerald-400">Dynamis</p>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Kits Integrados</p>
-          </div>
-          <div>
-            <p className="text-lg font-bold text-sky-400">&lt; 1 min</p>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider">PDF Gerado</p>
-          </div>
         </div>
       </div>
     </div>
