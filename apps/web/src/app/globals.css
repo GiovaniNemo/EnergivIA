@@ -55,6 +55,23 @@
     transform: translateY(-8px);
   }
 }
+
+@keyframes laserScan {
+  0% {
+    top: 5%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: 92%;
+    opacity: 0;
+  }
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

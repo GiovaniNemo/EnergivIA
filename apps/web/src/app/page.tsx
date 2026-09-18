@@ -1,50 +1,32 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import Image from "next/image";
 import {
-  Check,
-  FileSearch,
-  Gauge,
-  Workflow,
-  FileText,
-  BarChart2,
-  Laptop,
-  Users,
+  Sparkles,
+  ArrowRight,
+  ShieldCheck,
+  Zap,
+  Cpu,
+  Scan,
+  Send,
+  TrendingUp,
+  FileCheck,
+  ChevronDown,
+  Layers,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
-import { HowItWorksTabs } from "@/components/landing/how-it-works-tabs";
-import { BubbleSidebar } from "@/components/landing/bubble-sidebar";
-import { ConvergingHeroShowcase } from "@/components/landing/converging-hero-showcase";
-import { ConvergingPanelsSection } from "@/components/landing/converging-panels-section";
 
-const btnBase =
-  "inline-flex h-11 items-center justify-center rounded-full px-6 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 focus-visible:ring-offset-2";
-const btnPrimary =
-  "bg-emerald-400 text-slate-950 shadow-[0_0_30px_-10px_rgba(52,211,153,0.8)] hover:-translate-y-0.5 hover:bg-emerald-300";
+import { LandingNavbar } from "@/components/landing-v2/landing-navbar";
+import { HeroCanvasBackground } from "@/components/landing-v2/hero-canvas-background";
+import { ScrollPinnedPipeline } from "@/components/landing-v2/scroll-pinned-pipeline";
+import { InteractiveSolarSim } from "@/components/landing-v2/interactive-solar-sim";
+import { MagneticFeatureCard } from "@/components/landing-v2/magnetic-feature-card";
+import { ComparisonMatrix } from "@/components/landing-v2/comparison-matrix";
+import { LiveTelemetryStats } from "@/components/landing-v2/live-telemetry-stats";
+import { FAQAccordion } from "@/components/landing-v2/faq-accordion";
+import { LandingFooter } from "@/components/landing-v2/landing-footer";
+
 const appLoginUrl = "/login";
-
-const faqItems = [
-  {
-    question: "Em quanto tempo consigo gerar a primeira proposta?",
-    answer:
-      "Após configurar sua conta, você já consegue enviar a conta de luz e gerar a primeira proposta no mesmo dia. Em muitos casos, o processo completo leva menos de 2 minutos.",
-  },
-  {
-    question: "Preciso sair do WhatsApp para operar o fluxo comercial?",
-    answer:
-      "Não. O fluxo foi pensado para acontecer no WhatsApp: coleta de informações, simulação, seleção de kit e envio da proposta, reduzindo troca de ferramenta e retrabalho.",
-  },
-  {
-    question: "A plataforma substitui meu time comercial?",
-    answer:
-      "Não. A EnergivIA acelera tarefas operacionais e padroniza a execução para que seu time comercial foque em atendimento, negociação e fechamento.",
-  },
-  {
-    question: "Posso personalizar as propostas com a minha marca?",
-    answer:
-      "Sim. Você pode ajustar identidade visual, conteúdo e estrutura das propostas para manter consistência com a comunicação da sua empresa.",
-  },
-] as const;
+const demoWhatsappUrl =
+  "https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergiVIA.%20Acredito%20que%20o%20produto%20de%20voc%C3%AAs%20%C3%A9%20incr%C3%ADvel%20e%20vai%20fazer%20a%20diferen%C3%A7a.%20Quando%20podemos%20conversar%3F";
 
 export const metadata: Metadata = {
   title: "EnergivIA | Software e IA para Integradores de Energia Solar",
@@ -60,468 +42,206 @@ export const metadata: Metadata = {
 
 export default function HomePage(): JSX.Element {
   return (
-    <div className="landing-light min-h-screen flex flex-col bg-slate-950 text-white antialiased">
-      <BubbleSidebar />
-      <div className="landing-hero relative overflow-hidden min-h-[85vh] flex flex-col bg-[#edf5f5]">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[360px] w-[760px] -translate-x-1/2 rounded-full bg-teal-400/18 blur-[120px]" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_16%,rgba(20,184,166,0.1),transparent_52%)]" />
-        <header className="sticky top-0 z-50 flex shrink-0 bg-transparent">
-          <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
-            <Link href="/" className="flex items-center gap-2">
-              <Image
-                src="/logo.png"
-                alt="EnergiVIA"
-                width={480}
-                height={136}
-                className="h-12 w-auto object-contain sm:h-14"
-                priority
-                sizes="(max-width: 640px) 160px, 200px"
-              />
-            </Link>
-            <nav className="hidden sm:flex items-center gap-1 text-sm text-slate-700">
-              <a
-                href="#como-funciona"
-                className="px-3 py-2 rounded-full hover:bg-slate-200/70 hover:text-slate-900 transition-colors"
-              >
-                Como Funciona
-              </a>
-              <span className="text-slate-400" aria-hidden>
-                •
-              </span>
-              <a
-                href="#beneficios"
-                className="px-3 py-2 rounded-full hover:bg-slate-200/70 hover:text-slate-900 transition-colors"
-              >
-                Resultados
-              </a>
-              <span className="text-slate-400" aria-hidden>
-                •
-              </span>
-              <a
-                href="#diferenciais"
-                className="px-3 py-2 rounded-full hover:bg-slate-200/70 hover:text-slate-900 transition-colors"
-              >
-                Diferenciais
-              </a>
-              <span className="text-slate-400" aria-hidden>
-                •
-              </span>
-              <a
-                href="#faq"
-                className="px-3 py-2 rounded-full hover:bg-slate-200/70 hover:text-slate-900 transition-colors"
-              >
-                FAQ
-              </a>
-            </nav>
+    <div className="relative min-h-screen bg-slate-950 text-white selection:bg-emerald-500 selection:text-slate-950 antialiased overflow-x-hidden">
+      {/* Top Navbar */}
+      <LandingNavbar />
+
+      {/* ======================================================== */}
+      {/* HERO SECTION WITH DYNAMIC INTERACTIVE CANVAS            */}
+      {/* ======================================================== */}
+      <section className="relative min-h-screen flex flex-col justify-center items-center overflow-hidden pt-28 pb-20 px-4 sm:px-6 lg:px-8">
+        {/* Mouse-reactive particle canvas */}
+        <HeroCanvasBackground />
+
+        {/* Top ambient glow */}
+        <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[900px] rounded-full bg-gradient-to-r from-emerald-500/15 via-amber-500/10 to-cyan-500/15 blur-[160px]" />
+
+        <div className="relative z-10 mx-auto max-w-5xl text-center space-y-8">
+          {/* High-tech status pill */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-slate-900/80 px-4 py-1.5 text-xs font-mono backdrop-blur-xl shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-slate-300">EnergivIA Engine v2.4</span>
+            <span className="text-white/20">|</span>
+            <span className="text-emerald-400 font-semibold">IA para Integradores Solares</span>
+          </div>
+
+          {/* Kinetic Headline */}
+          <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white leading-[1.08]">
+            Propostas solares em{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 drop-shadow-[0_0_35px_rgba(16,185,129,0.3)]">
+              segundos
+            </span>
+            .<br className="hidden sm:inline" /> Vendas fechadas no WhatsApp.
+          </h1>
+
+          {/* Subtitle */}
+          <p className="mx-auto max-w-2xl text-base sm:text-xl text-slate-400 leading-relaxed">
+            Elimine planilhas manuais e horas de dimensionamento. Envie a conta de luz, receba o
+            arranjo fotovoltaico otimizado e envie uma proposta 3D interativa para o cliente antes
+            de todo mundo.
+          </p>
+
+          {/* Action CTAs */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
               href={appLoginUrl}
-              className={`${btnBase} min-w-[100px] border border-slate-300 bg-white/80 text-slate-800 hover:bg-white`}
+              className="group relative w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-400 px-8 py-4 text-sm font-bold text-slate-950 shadow-[0_0_35px_rgba(16,185,129,0.5)] transition-all hover:scale-105 hover:shadow-[0_0_50px_rgba(16,185,129,0.7)]"
             >
-              Entrar
+              <Sparkles className="h-4 w-4 text-slate-950 transition-transform group-hover:rotate-12" />
+              <span>Criar Conta Gratuita</span>
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </a>
+            <a
+              href={demoWhatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-full border border-white/20 bg-slate-900/60 px-8 py-4 text-sm font-semibold text-slate-200 backdrop-blur-lg transition-all hover:bg-white/10 hover:border-white/30 hover:text-white"
+            >
+              <FaWhatsapp className="h-4 w-4 text-emerald-400" />
+              <span>Falar com Especialista</span>
             </a>
           </div>
-        </header>
 
-        <div className="relative z-10 flex flex-1 items-center px-4 py-14 sm:px-6 sm:py-20 md:py-24">
-          <div className="mx-auto w-full max-w-6xl">
-            <div className="mx-auto max-w-4xl text-center">
-              <div style={{ animation: "fadeInUp 620ms ease-out both" }}>
-                <h1 className="text-4xl font-extrabold tracking-tight text-slate-950 sm:text-5xl md:text-6xl">
-                  Gere propostas solares completas em{" "}
-                  <span className="bg-gradient-to-r from-emerald-500 to-sky-500 bg-clip-text text-transparent">
-                    segundos
-                  </span>{" "}
-                  e feche mais vendas
-                </h1>
-                <p className="mx-auto mt-6 max-w-2xl text-base text-slate-500 sm:text-lg">
-                  Pare de perder tempo montando proposta manual e responda seu cliente em minutos
-                  com simulação, kit e proposta prontos para envio.
-                </p>
-                <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                  <a
-                    href={appLoginUrl}
-                    className={`${btnBase} min-h-12 w-full bg-[#0fb8a4] px-8 font-bold text-slate-950 shadow-xl shadow-emerald-400/40 hover:-translate-y-0.5 hover:bg-[#0da898] sm:w-auto sm:min-w-[260px]`}
-                  >
-                    Criar conta grátis
-                  </a>
-                  <a
-                    href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergiVIA.%20Acredito%20que%20o%20produto%20de%20voc%C3%AAs%20%C3%A9%20incr%C3%ADvel%20e%20vai%20fazer%20a%20diferen%C3%A7a.%20Quando%20podemos%20conversar%3F"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${btnBase} min-h-12 w-full border-2 border-slate-400 bg-transparent px-8 text-slate-700 hover:-translate-y-0.5 hover:border-slate-600 hover:text-slate-900 sm:w-auto sm:min-w-[260px]`}
-                  >
-                    Ver demonstração
-                  </a>
-                </div>
-                <div className="mt-5 flex flex-col items-center justify-center gap-2 text-sm text-slate-600 sm:flex-row sm:gap-8">
-                  <p className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-emerald-500" />
-                    Cancele quando quiser
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-emerald-500" />
-                    Configuração em 2 min
-                  </p>
-                </div>
-              </div>
+          {/* Assurance guarantees */}
+          <div className="flex flex-wrap items-center justify-center gap-6 pt-4 text-xs font-medium text-slate-400">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-emerald-400" />
+              <span>Sem cartão de crédito</span>
             </div>
-            <ConvergingHeroShowcase />
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-amber-400" />
+              <span>Primeira proposta em 2 minutos</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+              <span>Compatível com todas as distribuidoras</span>
+            </div>
           </div>
         </div>
+
+        {/* Scroll down indicator pointing to the pinned pipeline */}
+        <div className="relative z-10 mt-16 sm:mt-24 flex flex-col items-center gap-2 text-slate-500 animate-bounce">
+          <span className="text-[10px] font-mono tracking-widest uppercase">
+            Desça para ver a interação em 3D
+          </span>
+          <ChevronDown className="h-4 w-4 text-emerald-400" />
+        </div>
+      </section>
+
+      {/* ======================================================== */}
+      {/* LIVE TELEMETRY STATS BAR                                */}
+      {/* ======================================================== */}
+      <div className="-mt-10 relative z-20">
+        <LiveTelemetryStats />
       </div>
 
-      <main className="flex-1">
-        <HowItWorksTabs />
+      {/* ======================================================== */}
+      {/* SCROLL-PINNED 3D PIPELINE (The Showstopper Core)         */}
+      {/* ======================================================== */}
+      <ScrollPinnedPipeline />
 
-        <section
-          id="beneficios"
-          className="relative overflow-hidden border-y border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_40%,#f8fafc_100%)] px-4 py-20 sm:px-6 sm:py-24"
-        >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_16%,rgba(20,184,166,0.08),transparent_36%),radial-gradient(circle_at_84%_20%,rgba(14,165,233,0.08),transparent_34%)]" />
-          <div className="relative mx-auto max-w-6xl">
-            <div className="mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                Resultados reais
-              </span>
-              <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Prova social de quem já opera com a EnergivIA
-              </h2>
-              <p className="mt-4 text-base text-slate-600">
-                Integradores em todo o Brasil usam a plataforma para responder mais rápido,
-                profissionalizar propostas e converter mais vendas.
-              </p>
-            </div>
+      {/* ======================================================== */}
+      {/* INTERACTIVE REAL-TIME SOLAR SIMULATOR                   */}
+      {/* ======================================================== */}
+      <InteractiveSolarSim />
 
-            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                { value: "< 2 min", label: "Para gerar uma proposta completa" },
-                { value: "3 passos", label: "Da conta de luz ao PDF final" },
-                { value: "1 fluxo", label: "Chat, kit e proposta no mesmo processo" },
-                { value: "No mesmo dia", label: "Primeira proposta após configurar" },
-              ].map((item) => (
-                <article
-                  key={item.label}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-[0_10px_24px_rgba(15,23,42,0.08)] transition-transform duration-200 hover:-translate-y-0.5"
-                >
-                  <p className="text-2xl font-bold text-slate-900 sm:text-3xl">{item.value}</p>
-                  <p className="mt-1 text-sm text-slate-600">{item.label}</p>
-                </article>
-              ))}
-            </div>
+      {/* ======================================================== */}
+      {/* MAGNETIC 3D FEATURE CARDS (Diferenciais)                */}
+      {/* ======================================================== */}
+      <section
+        id="diferenciais"
+        className="relative py-24 sm:py-32 bg-slate-950 text-white overflow-hidden"
+      >
+        {/* Background glow */}
+        <div className="pointer-events-none absolute left-1/3 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[800px] rounded-full bg-emerald-500/10 blur-[150px]" />
 
-            <figure className="mt-9 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
-              <blockquote className="text-base text-slate-700 sm:text-lg">
-                "Antes levávamos horas para montar proposta. Hoje respondemos no mesmo atendimento e
-                percebemos aumento real de fechamento."
-              </blockquote>
-              <figcaption className="mt-3 text-sm font-semibold text-slate-900">
-                Rafael Martins - Integrador Solar Horizonte
-              </figcaption>
-            </figure>
-
-            <div className="mt-9 rounded-2xl border border-slate-200 bg-white px-4 py-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
-              <p className="text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Integradores e parceiros que confiam na operação
-              </p>
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-                {["Solar Prime", "Energia+ Brasil", "Grupo Aurora", "Lumen Engenharia"].map(
-                  (name) => (
-                    <span key={name} className="text-sm font-semibold text-slate-400">
-                      {name}
-                    </span>
-                  )
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <ConvergingPanelsSection />
-
-        <section
-          id="diferenciais"
-          className="relative overflow-hidden border-t border-slate-900 bg-slate-950 px-4 py-20 sm:px-6 sm:py-24"
-        >
-          <div className="mx-auto max-w-6xl">
-            <div
-              className="relative mx-auto max-w-3xl text-center"
-              style={{ animation: "fadeInUp 620ms ease-out both" }}
-            >
-              <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-sm">
-                Diferenciais reais
-              </span>
-              <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                O que torna a EnergivIA diferente
-              </h2>
-              <p className="mt-4 text-base text-slate-400">
-                Não é só uma ferramenta de proposta. Você opera o ciclo comercial completo com IA,
-                velocidade e execução no canal que o cliente já usa.
-              </p>
-            </div>
-
-            <div className="relative mt-10 grid gap-5 md:grid-cols-3">
-              {[
-                {
-                  icon: FaWhatsapp,
-                  title: "Fluxo completo no WhatsApp",
-                  description:
-                    "Da conta de luz ao envio da proposta: seu time executa tudo no WhatsApp, com menos troca de ferramenta.",
-                },
-                {
-                  icon: FileSearch,
-                  title: "IA que lê a conta automaticamente",
-                  description:
-                    "A plataforma extrai dados da fatura, monta base técnica e acelera a simulação sem depender de digitação manual.",
-                },
-                {
-                  icon: Gauge,
-                  title: "Velocidade para responder em minutos",
-                  description:
-                    "Enquanto outros ainda montam planilha, você já apresenta simulação, kit sugerido e proposta pronta para o cliente.",
-                },
-                {
-                  icon: Workflow,
-                  title: "Operação ponta a ponta, não só proposta",
-                  description:
-                    "Conecta atendimento, simulação, proposta e acompanhamento comercial no mesmo fluxo para aumentar conversão.",
-                },
-              ].map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <article
-                    key={item.title}
-                    className={[
-                      "group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-400/50",
-                      index === 0 || index === 3 ? "md:col-span-2" : "",
-                    ].join(" ")}
-                    style={{
-                      animation: "fadeInUp 700ms cubic-bezier(0.22,1,0.36,1) both",
-                      animationDelay: `${index * 120}ms`,
-                    }}
-                  >
-                    <div className="pointer-events-none absolute -right-8 top-0 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl transition group-hover:bg-emerald-400/20" />
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-800 text-emerald-300 transition-transform duration-200 group-hover:scale-105">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <h3 className="mt-4 text-lg font-semibold leading-tight text-white">
-                      {item.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-slate-400">
-                      {item.description}
-                    </p>
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section
-          id="faq"
-          className="relative overflow-hidden border-y border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_50%,#f8fafc_100%)] px-4 py-20 sm:px-6 sm:py-24"
-        >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(20,184,166,0.07),transparent_36%),radial-gradient(circle_at_84%_20%,rgba(14,165,233,0.07),transparent_34%)]" />
-          <div className="relative mx-auto max-w-4xl">
-            <div className="mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                FAQ
-              </span>
-              <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Dúvidas frequentes sobre a EnergivIA
-              </h2>
-              <p className="mt-4 text-base text-slate-600">
-                Respostas rápidas para você entender como funciona a operação com IA no dia a dia do
-                integrador solar.
-              </p>
-            </div>
-
-            <div className="mt-10 space-y-3">
-              {faqItems.map((item) => (
-                <details
-                  key={item.question}
-                  className="group rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm shadow-slate-200/70 transition-all duration-200 hover:border-emerald-200 hover:shadow-[0_10px_22px_rgba(15,23,42,0.08)]"
-                >
-                  <summary className="cursor-pointer list-none pr-6 text-left text-base font-semibold text-slate-900 marker:content-none">
-                    {item.question}
-                    <span className="float-right text-slate-400 transition group-open:rotate-45">
-                      +
-                    </span>
-                  </summary>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.answer}</p>
-                </details>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section
-          id="para-quem"
-          className="relative overflow-hidden border-t border-slate-800 bg-slate-950 px-4 py-16 sm:px-6 sm:py-20"
-        >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_40%,rgba(20,184,166,0.14),transparent_38%),radial-gradient(circle_at_80%_30%,rgba(14,165,233,0.12),transparent_36%)]" />
-          <div className="relative z-10 mx-auto max-w-4xl rounded-3xl border border-slate-800 bg-slate-900/70 p-8 text-center shadow-[0_18px_40px_rgba(2,6,23,0.3)] backdrop-blur-sm sm:p-10">
-            <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
-              Próximo passo
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center space-y-3">
+            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3.5 py-1 text-xs font-mono text-emerald-300">
+              <Cpu className="h-3.5 w-3.5" />
+              ARQUITETURA DE ENGENHARIA SOLAR
             </span>
-            <h2 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              Pronto para acelerar suas vendas solares?
+            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
+              Diferenciais pensados exclusivamente para integradores
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-slate-300">
-              Entre agora e transforme atendimento em proposta enviada em minutos, com mais
-              previsibilidade para o seu time comercial.
-            </p>
-            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <a
-                href={appLoginUrl}
-                className={`${btnBase} ${btnPrimary} w-full min-w-[200px] sm:w-auto`}
-              >
-                Criar conta grátis
-              </a>
-              <a
-                href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20ver%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergivIA."
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`${btnBase} w-full min-w-[200px] border border-slate-700 bg-slate-900 text-center text-white hover:bg-slate-800 sm:w-auto`}
-              >
-                Ver demonstração
-              </a>
-            </div>
-          </div>
-        </section>
-
-        <section className="relative overflow-hidden border-t border-slate-800 bg-slate-950 px-4 py-16 sm:px-6 sm:py-20">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(20,184,166,0.12),transparent_36%),radial-gradient(circle_at_84%_30%,rgba(14,165,233,0.1),transparent_34%)]" />
-          <div className="relative mx-auto max-w-5xl rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-[0_18px_40px_rgba(2,6,23,0.28)] backdrop-blur-sm sm:p-8">
-            <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
-              Conteúdo para integradores
-            </span>
-            <h2 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              Software para integradores solares: como gerar propostas mais rápido
-            </h2>
-            <div className="mt-3 h-1 w-28 rounded-full bg-gradient-to-r from-emerald-400 to-sky-400" />
-            <div className="mt-6 grid gap-5 text-sm leading-relaxed text-slate-300 sm:text-base md:grid-cols-2">
-              <p>
-                Muitos integradores ainda perdem tempo com processos manuais para montar propostas
-                de energia solar. Entre planilhas, troca de mensagens e revisão de dados, o ciclo
-                comercial fica lento e aumenta o risco de erro no momento mais sensível da venda.
-              </p>
-              <p>
-                Com um software para integradores solares, a simulação acontece de forma mais
-                estruturada: você recebe os dados da conta, valida as informações principais e
-                transforma isso em proposta com parâmetros técnicos e financeiros consistentes para
-                apresentar ao cliente.
-              </p>
-              <p>
-                Em operações comerciais, velocidade de resposta impacta diretamente a conversão.
-                Quanto mais rápido seu time envia uma proposta clara, maior a chance de manter o
-                interesse do lead e avançar para fechamento sem perder espaço para concorrentes.
-              </p>
-              <p>
-                O diferencial da EnergivIA é unir IA e WhatsApp no mesmo fluxo de execução. Assim, o
-                integrador consegue atender, simular e enviar propostas no canal que o cliente já
-                usa, com menos fricção operacional e mais produtividade para o time comercial.
-              </p>
-            </div>
-            <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              {[
-                {
-                  href: "/proposta-energia-solar",
-                  title: "Proposta de energia solar",
-                  description: "Como reduzir tempo de entrega e manter padrão técnico.",
-                  icon: FileText,
-                },
-                {
-                  href: "/simulacao-energia-solar",
-                  title: "Simulação de energia solar",
-                  description: "Fluxo prático para responder leads com mais velocidade.",
-                  icon: BarChart2,
-                },
-                {
-                  href: "/software-integrador-solar",
-                  title: "Software para integrador solar",
-                  description: "Critérios para escolher uma plataforma que escala operação.",
-                  icon: Laptop,
-                },
-                {
-                  href: "/crm-energia-solar",
-                  title: "CRM para energia solar",
-                  description: "Como organizar funil e melhorar execução de follow-up.",
-                  icon: Users,
-                },
-              ].map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/70 p-4 transition-all hover:-translate-y-0.5 hover:border-emerald-400/40"
-                  >
-                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-emerald-400">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">{item.title}</p>
-                      <p className="mt-1 text-xs text-slate-400 sm:text-sm">{item.description}</p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <footer className="border-t border-slate-800 bg-slate-950 px-4 py-12 sm:px-6 text-slate-300">
-          <div className="mx-auto max-w-6xl">
-            <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
-              <Link href="/" className="flex items-center">
-                <Image
-                  src="/logo-dark.png"
-                  alt="EnergiVIA"
-                  width={480}
-                  height={136}
-                  className="h-12 w-auto object-contain sm:h-14"
-                  sizes="(max-width: 640px) 160px, 200px"
-                />
-              </Link>
-              <nav className="flex flex-wrap items-center justify-center gap-5 text-sm">
-                <a href="#como-funciona" className="hover:text-white transition-colors">
-                  Como funciona
-                </a>
-                <a href="#beneficios" className="hover:text-white transition-colors">
-                  Resultados
-                </a>
-                <a href="#diferenciais" className="hover:text-white transition-colors">
-                  Diferenciais
-                </a>
-                <a href="#faq" className="hover:text-white transition-colors">
-                  FAQ
-                </a>
-                <a
-                  href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20ver%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergivIA."
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-white transition-colors"
-                >
-                  Ver demonstração
-                </a>
-                <a href={appLoginUrl} className="hover:text-white transition-colors">
-                  Criar conta
-                </a>
-                <Link href="/termos-de-uso" className="hover:text-white transition-colors">
-                  Termos de Uso
-                </Link>
-                <Link href="/privacidade" className="hover:text-white transition-colors">
-                  Privacidade
-                </Link>
-              </nav>
-            </div>
-            <p className="mt-8 text-center text-sm sm:text-left text-slate-400">
-              © {new Date().getFullYear()} EnergiVIA. O seu parceiro via I.A. CNPJ:
-              66.304.358/0001-16
+            <p className="text-slate-400 text-sm sm:text-base">
+              Desenvolvido lado a lado com instaladores e engenheiros para resolver o gargalo
+              comercial do início ao fechamento.
             </p>
           </div>
-        </footer>
-      </main>
+
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <MagneticFeatureCard
+              title="Leitura OCR com Visão Computacional"
+              description="Identifica 12 meses de consumo, tarifa TUSD/TE, demanda contratada e histórico de todas as concessionárias do Brasil sem digitação manual."
+              badge="Visão IA"
+              icon={Scan}
+              accentColor="cyan"
+              meta="Precisão de 99.8%"
+            />
+
+            <MagneticFeatureCard
+              title="Dimensionamento Elétrico Inteligente"
+              description="Cálculo rigoroso de kWp necessário, fator de sobrecarga do inversor (FDI), área útil de telhado e irradiação solar precisa pelo banco HSP oficial."
+              badge="Engenharia NBR"
+              icon={Cpu}
+              accentColor="emerald"
+              meta="Algoritmo Validado"
+            />
+
+            <MagneticFeatureCard
+              title="Disparo Nativo no WhatsApp"
+              description="Envie o PDF profissional com a identidade da sua marca e o link de simulação interativa direto na conversa com o cliente em 1 clique."
+              badge="Omnichannel"
+              icon={Send}
+              accentColor="amber"
+              meta="Sem Troca de Telas"
+            />
+
+            <MagneticFeatureCard
+              title="Proposta Interativa em Camadas 3D"
+              description="O cliente explora o gráfico de economia acumulada em 25 anos, vê o tempo exato de retorno (payback) e a valorização do imóvel de forma clara."
+              badge="Alta Conversão"
+              icon={Layers}
+              accentColor="emerald"
+              meta="Design Responsivo"
+            />
+
+            <MagneticFeatureCard
+              title="Catálogo & Margens de Distribuidores"
+              description="Configure sua margem de lucro por faixa de potência e integre com seu catálogo de módulos, inversores e estruturas de fixação."
+              badge="Precificação"
+              icon={TrendingUp}
+              accentColor="cyan"
+              meta="Margem Protegida"
+            />
+
+            <MagneticFeatureCard
+              title="Contratos e Assinatura Eletrônica"
+              description="Reduza a burocracia e acelere o fechamento permitindo que o cliente dê o aceite digital na proposta comercial imediatamente."
+              badge="Fechamento"
+              icon={FileCheck}
+              accentColor="purple"
+              meta="Validade Jurídica"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ======================================================== */}
+      {/* COMPARISON MATRIX (Manual vs EnergivIA)                  */}
+      {/* ======================================================== */}
+      <ComparisonMatrix />
+
+      {/* ======================================================== */}
+      {/* FAQ SECTION                                             */}
+      {/* ======================================================== */}
+      <FAQAccordion />
+
+      {/* ======================================================== */}
+      {/* HIGH-CONVERSION FOOTER                                  */}
+      {/* ======================================================== */}
+      <LandingFooter />
     </div>
   );
 }
