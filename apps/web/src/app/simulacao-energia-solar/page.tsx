@@ -2,7 +2,15 @@ import type { Metadata } from "next";
 import { SeoIntentPage } from "@/components/landing/seo-intent-page";
 
 export const metadata: Metadata = {
-  title: "EnergivIA",
+  title: "Simulação de Energia Solar | Cálculos Fotovoltaicos com IA",
+  description:
+    "Faça simulações fotovoltaicas precisas a partir da conta de luz em instantes, dimensione sistemas solares e gere estimativas de payback com a EnergivIA.",
+  openGraph: {
+    title: "Simulação de Energia Solar | EnergivIA",
+    description:
+      "Transforme dados da fatura em dimensionamentos solares completos e propostas de alto impacto em segundos.",
+    images: ["/og/og-image-1200x630.jpg"],
+  },
 };
 
 export default function SimulacaoEnergiaSolarPage(): JSX.Element {

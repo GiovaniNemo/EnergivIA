@@ -2,7 +2,15 @@ import type { Metadata } from "next";
 import { SeoIntentPage } from "@/components/landing/seo-intent-page";
 
 export const metadata: Metadata = {
-  title: "EnergivIA",
+  title: "Software para Integrador Solar | Automação e Inteligência Artificial",
+  description:
+    "Descubra o software definitivo para integradores solares: automação de orçamentos, CRM integrado e geração instantânea de propostas com IA.",
+  openGraph: {
+    title: "Software para Integrador Solar | EnergivIA",
+    description:
+      "Acelere o atendimento, organize sua operação e aumente sua taxa de fechamento com a EnergivIA.",
+    images: ["/og/og-image-1200x630.jpg"],
+  },
 };
 
 export default function SoftwareIntegradorSolarPage(): JSX.Element {

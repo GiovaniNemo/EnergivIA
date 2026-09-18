@@ -2,7 +2,15 @@ import type { Metadata } from "next";
 import { SeoIntentPage } from "@/components/landing/seo-intent-page";
 
 export const metadata: Metadata = {
-  title: "EnergivIA",
+  title: "CRM para Energia Solar | Gestão de Funil e Vendas",
+  description:
+    "Organize o funil de vendas da sua empresa de energia solar, atenda leads mais rápido e integre simulações e propostas em um só lugar com a EnergivIA.",
+  openGraph: {
+    title: "CRM para Energia Solar | EnergivIA",
+    description:
+      "Organize seu funil comercial solar, acelere o atendimento e converta mais orçamentos com a EnergivIA.",
+    images: ["/og/og-image-1200x630.jpg"],
+  },
 };
 
 export default function CrmEnergiaSolarPage(): JSX.Element {

@@ -2,7 +2,15 @@ import type { Metadata } from "next";
 import { SeoIntentPage } from "@/components/landing/seo-intent-page";
 
 export const metadata: Metadata = {
-  title: "EnergivIA",
+  title: "Gerador de Proposta de Energia Solar | Orçamentos em Segundos",
+  description:
+    "Crie propostas comerciais de energia solar interativas e em PDF com cálculos fotovoltaicos automáticos, link no WhatsApp e alta taxa de conversão.",
+  openGraph: {
+    title: "Gerador de Proposta de Energia Solar | EnergivIA",
+    description:
+      "Apresente orçamentos solares modernos e profissionais aos seus clientes em poucos cliques.",
+    images: ["/og/og-image-1200x630.jpg"],
+  },
 };
 
 export default function PropostaEnergiaSolarPage(): JSX.Element {
