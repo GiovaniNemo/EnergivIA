@@ -7,7 +7,7 @@ import { FileText, MessageCircle, Zap } from "lucide-react";
 export function ConvergingHeroShowcase() {
   return (
     <div className="relative mx-auto mt-8 w-full max-w-[1240px]">
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-1/3 bg-gradient-to-t from-[#f3f8f8] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-1/3 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
 
       <div className="relative flex items-center justify-center">
         {/* Painel Principal (Dashboard) */}
