@@ -204,7 +204,7 @@ export function HeroCanvasBackground(): JSX.Element {
       // -------------------------------------------------------------
       // 2. SHOOTING STARS (Estrelas Cadentes Ocasionais)
       // -------------------------------------------------------------
-      if (tick % 360 === 0 && Math.random() > 0.3) {
+      if (tick % 240 === 0) {
         const inactive = shootingStars.find((st) => !st.active);
         if (inactive) spawnShootingStar(inactive);
       }
