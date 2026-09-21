@@ -173,22 +173,68 @@ export default function HomePage(): JSX.Element {
                 minutos.
               </p>
 
-              {/* Action Buttons */}
-              <div className="mt-8 flex flex-col items-center justify-center gap-3.5 sm:flex-row">
-                <a
-                  href={appLoginUrl}
-                  className={`${btnBase} min-h-12 w-full bg-[#0fb8a4] hover:bg-[#0da898] px-8 font-bold text-slate-950 shadow-lg shadow-emerald-950/40 hover:-translate-y-0.5 transition-all sm:w-auto sm:min-w-[240px]`}
-                >
-                  Criar conta grátis
-                </a>
-                <a
-                  href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergiVIA."
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`${btnBase} min-h-12 w-full border-t border-r border-amber-200/50 border-b border-l border-amber-400/25 bg-gradient-to-bl from-amber-400/18 via-amber-400/8 to-transparent px-8 font-semibold text-amber-100 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-400/25 sm:w-auto sm:min-w-[240px] transition-all shadow-[0_4px_20px_rgba(245,158,11,0.1)]`}
-                >
-                  Ver demonstração
-                </a>
+              {/* Action Buttons with Realistic Glass Reflection & Solar Sheen */}
+              <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                {/* Primary Button - Emerald Glass with Upper Specular Reflection & Moving Glint */}
+                <div className="relative w-full sm:w-auto">
+                  {/* Subtle Mirrored Ground Glow */}
+                  <div
+                    className="pointer-events-none absolute -bottom-2.5 inset-x-6 h-3 rounded-full bg-gradient-to-b from-emerald-400/35 to-transparent blur-[6px]"
+                    aria-hidden="true"
+                  />
+                  <a
+                    href={appLoginUrl}
+                    className={`${btnBase} relative group overflow-hidden min-h-12 w-full sm:w-auto sm:min-w-[240px] px-8 font-bold text-slate-950 bg-gradient-to-b from-[#14c7b2] via-[#0fb8a4] to-[#0ba391] border-t border-r border-emerald-100/80 border-b border-l border-emerald-600/30 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.75),inset_0_-2px_4px_rgba(0,0,0,0.3),0_12px_28px_-6px_rgba(15,184,164,0.5)] hover:-translate-y-0.5 hover:shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.9),0_16px_32px_-6px_rgba(15,184,164,0.6)] transition-all`}
+                  >
+                    {/* Upper Curved Glass Specular Reflection */}
+                    <span
+                      className="pointer-events-none absolute top-0 inset-x-2 h-[48%] rounded-t-full bg-gradient-to-b from-white/45 via-white/20 to-transparent"
+                      aria-hidden="true"
+                    />
+
+                    {/* Animated Solar Sheen / Glint */}
+                    <span
+                      className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-[-22deg] animate-solar-reflection"
+                      aria-hidden="true"
+                    />
+
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                      Criar conta grátis
+                    </span>
+                  </a>
+                </div>
+
+                {/* Secondary Button - Smoked Solar Glass with Sun Rim Reflection */}
+                <div className="relative w-full sm:w-auto">
+                  {/* Subtle Mirrored Ground Glow */}
+                  <div
+                    className="pointer-events-none absolute -bottom-2.5 inset-x-6 h-3 rounded-full bg-gradient-to-b from-amber-400/25 to-transparent blur-[6px]"
+                    aria-hidden="true"
+                  />
+                  <a
+                    href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergiVIA."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${btnBase} relative group overflow-hidden min-h-12 w-full sm:w-auto sm:min-w-[240px] px-8 font-semibold text-amber-100 bg-gradient-to-b from-amber-400/20 via-slate-900/80 to-[#0c1424]/90 backdrop-blur-md border-t border-r border-amber-200/85 border-b border-l border-amber-400/30 shadow-[inset_0_1.5px_1px_rgba(254,243,199,0.7),inset_0_-2px_4px_rgba(0,0,0,0.5),0_10px_25px_-6px_rgba(245,158,11,0.22)] hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-[inset_0_1.5px_1px_rgba(254,243,199,0.9),0_14px_30px_-6px_rgba(245,158,11,0.3)] transition-all`}
+                  >
+                    {/* Upper Curved Glass Specular Reflection */}
+                    <span
+                      className="pointer-events-none absolute top-0 inset-x-2 h-[48%] rounded-t-full bg-gradient-to-b from-amber-100/35 via-amber-200/15 to-transparent"
+                      aria-hidden="true"
+                    />
+
+                    {/* Animated Solar Sheen / Glint (Staggered timing) */}
+                    <span
+                      className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-amber-200/40 to-transparent skew-x-[-22deg] animate-solar-reflection"
+                      style={{ animationDelay: "2.2s" }}
+                      aria-hidden="true"
+                    />
+
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                      Ver demonstração
+                    </span>
+                  </a>
+                </div>
               </div>
 
               {/* Fast Value Indicators */}

@@ -532,3 +532,28 @@
 .animate-radar-ping {
   animation: radarPing 2s ease-in-out infinite;
 }
+
+/* Realistic Solar Glass Button Reflection */
+@keyframes solarReflectionSweep {
+  0% {
+    transform: translateX(-180%) skewX(-22deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(260%) skewX(-22deg);
+    opacity: 0;
+  }
+}
+
+.animate-solar-reflection {
+  animation: solarReflectionSweep 4.5s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
