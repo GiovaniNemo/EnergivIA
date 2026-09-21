@@ -69,7 +69,25 @@ export default function HomePage(): JSX.Element {
       {/* HERO SECTION                                                  */}
       {/* ------------------------------------------------------------- */}
       <div className="landing-hero relative overflow-hidden min-h-[92vh] flex flex-col bg-[#03060c] text-white">
-        {/* Native 4K Ultra-Crisp Starry Sky Canvas with Shooting Stars & Sun God Rays */}
+        {/* Background Image from public/landing */}
+        <div
+          className="pointer-events-none absolute inset-0 z-0 select-none overflow-hidden"
+          aria-hidden="true"
+        >
+          <Image
+            src="/landing/hero-space-bg.jpg"
+            alt="Céu estrelado de fundo"
+            fill
+            priority
+            sizes="100vw"
+            quality={95}
+            className="object-cover object-center"
+          />
+          {/* Subtle atmospheric vignette blending into page background */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#03060c]/30 via-transparent to-[#03060c]" />
+        </div>
+
+        {/* Native High-Definition Canvas with Twinkling Stars, Shooting Stars & Sun Rays */}
         <HeroCanvasBackground />
 
         {/* Soft Solar Lens Flare Bloom from Top-Right (Desaturated, soft champagne-gold daylight) */}
