@@ -18,6 +18,7 @@ interface PanelCardProps {
   panel: PanelData;
   smoothProgress: MotionValue<number>;
   opacity: MotionValue<number>;
+  scale?: MotionValue<number>;
 }
 
 const panels: PanelData[] = [
@@ -67,18 +68,18 @@ function PanelCard({ panel, smoothProgress, opacity }: PanelCardProps) {
   return (
     <motion.article
       style={{ x, y, rotate, opacity }}
-      className={`group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl transition-all duration-300 hover:border-emerald-500/50 ${panel.className}`}
+      className={`group relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 transition-all duration-300 hover:border-emerald-300 hover:shadow-2xl ${panel.className}`}
     >
-      <div className="relative h-[380px] sm:h-[410px] w-full overflow-hidden bg-slate-950 p-2.5 sm:p-3 pb-20 sm:pb-24">
+      <div className="relative h-[380px] sm:h-[410px] w-full overflow-hidden bg-slate-100/50 p-2.5 sm:p-3 pb-20 sm:pb-24">
         <div className="h-full w-full transition-transform duration-500 ease-out group-hover:scale-[1.02]">
           <MockProposalPreview type={panel.mockType} clientName={panel.clientName} />
         </div>
-        <div className="pointer-events-none absolute inset-0 rounded-3xl shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] group-hover:shadow-[inset_0_0_24px_rgba(16,185,129,0.15)] transition-shadow duration-500" />
+        <div className="pointer-events-none absolute inset-0 rounded-3xl shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)] transition-shadow duration-500" />
       </div>
 
-      <div className="pointer-events-none absolute bottom-0 left-0 w-full p-5 sm:p-7 z-30 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent">
-        <h3 className="text-xl font-bold text-white sm:text-2xl">{panel.title}</h3>
-        <p className="mt-1 text-xs font-semibold tracking-widest text-emerald-400 uppercase">
+      <div className="pointer-events-none absolute bottom-0 left-0 w-full p-5 sm:p-7 z-30 bg-gradient-to-t from-white via-white/95 to-transparent">
+        <h3 className="text-xl font-bold text-slate-900 sm:text-2xl">{panel.title}</h3>
+        <p className="mt-1 text-xs font-bold tracking-widest text-emerald-700 uppercase">
           {panel.badge}
         </p>
       </div>
@@ -106,17 +107,20 @@ export function ConvergingPanelsSection() {
     <section
       id="cenarios"
       ref={containerRef}
-      className="relative overflow-hidden border-y border-slate-800 bg-[#060B11] px-4 py-24 sm:px-6 sm:py-32"
+      className="relative overflow-hidden border-y border-slate-200 bg-slate-50/70 px-4 py-24 sm:px-6 sm:py-32"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(20,184,166,0.1),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(16,185,129,0.05),transparent_60%)]" />
 
       <div className="relative mx-auto max-w-6xl">
         <div className="mx-auto max-w-3xl text-center mb-16">
           <motion.div style={{ opacity, y: useTransform(smoothProgress, [0, 1], [50, 0]) }}>
-            <h2 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              Flexibilidade total
+            </span>
+            <h2 className="mt-4 text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
               Cenários Ilimitados
             </h2>
-            <p className="mt-6 text-lg text-slate-400">
+            <p className="mt-6 text-lg text-slate-600">
               Da residência à usina de investimento, nossas soluções se adaptam a qualquer modelo de
               negócio com performance excepcional.
             </p>
