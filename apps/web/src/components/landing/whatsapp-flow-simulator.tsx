@@ -200,15 +200,6 @@ export function WhatsappFlowSimulator(): JSX.Element {
     return SCHEDULED_MESSAGES.filter((m) => timeMs >= m.showAt);
   }, [timeMs]);
 
-  // Trigger water ripple whenever new message appears
-  const prevMsgLength = useRef(visibleMessages.length);
-  useEffect(() => {
-    if (visibleMessages.length !== prevMsgLength.current) {
-      prevMsgLength.current = visibleMessages.length;
-      setWaterRippleCounter((c) => c + 1);
-    }
-  }, [visibleMessages.length]);
-
   // Active bot typing indicator
   const activeBotTyping = useMemo(() => {
     const span = BOT_TYPING_SPANS.find((s) => timeMs >= s.start && timeMs < s.end);
