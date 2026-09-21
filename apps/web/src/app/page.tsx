@@ -10,6 +10,9 @@ import {
   BarChart2,
   Laptop,
   Users,
+  Sun,
+  Zap,
+  TrendingUp,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { HowItWorksTabs } from "@/components/landing/how-it-works-tabs";
@@ -19,9 +22,7 @@ import { ConvergingPanelsSection } from "@/components/landing/converging-panels-
 import { HeroCanvasBackground } from "@/components/landing/hero-canvas-background";
 
 const btnBase =
-  "inline-flex h-11 items-center justify-center rounded-full px-6 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 focus-visible:ring-offset-2";
-const btnPrimary =
-  "bg-emerald-400 text-slate-950 shadow-[0_0_30px_-10px_rgba(52,211,153,0.8)] hover:-translate-y-0.5 hover:bg-emerald-300";
+  "inline-flex h-11 items-center justify-center rounded-full px-6 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 focus-visible:ring-offset-2";
 const appLoginUrl = "/login";
 
 const faqItems = [
@@ -61,17 +62,21 @@ export const metadata: Metadata = {
 
 export default function HomePage(): JSX.Element {
   return (
-    <div className="landing-light min-h-screen flex flex-col bg-slate-950 text-white antialiased">
+    <div className="landing-page min-h-screen flex flex-col bg-[#070A10] text-white antialiased selection:bg-amber-400/20 selection:text-amber-200">
       <BubbleSidebar />
-      <div className="landing-hero relative overflow-hidden min-h-[85vh] flex flex-col bg-slate-950 text-white">
-        {/* Animated interactive particle canvas background */}
+
+      {/* ------------------------------------------------------------- */}
+      {/* HERO SECTION                                                  */}
+      {/* ------------------------------------------------------------- */}
+      <div className="landing-hero relative overflow-hidden min-h-[90vh] flex flex-col bg-gradient-to-b from-[#0A0E17] via-[#080B12] to-[#070A10] text-white">
+        {/* Clean interactive solar photon dust */}
         <HeroCanvasBackground />
 
-        {/* Ambient radial lighting */}
-        <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[450px] w-[850px] rounded-full bg-gradient-to-r from-emerald-500/15 via-amber-500/10 to-cyan-500/15 blur-[150px]" />
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[360px] w-[760px] -translate-x-1/2 rounded-full bg-teal-400/10 blur-[120px]" />
+        {/* Natural Sunbeam Top Lighting (Solar warm sunlight, no neon blur) */}
+        <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-[380px] w-[860px] rounded-full bg-gradient-to-b from-amber-400/12 via-emerald-400/5 to-transparent blur-[110px]" />
 
-        <header className="sticky top-0 z-50 flex shrink-0 bg-transparent">
+        {/* Header */}
+        <header className="sticky top-0 z-50 flex shrink-0 border-b border-slate-800/60 bg-[#0A0E17]/80 backdrop-blur-xl">
           <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
             <Link href="/" className="flex items-center gap-2">
               <Image
@@ -79,98 +84,124 @@ export default function HomePage(): JSX.Element {
                 alt="EnergiVIA"
                 width={480}
                 height={136}
-                className="h-12 w-auto object-contain sm:h-14"
+                className="h-11 w-auto object-contain sm:h-12"
                 priority
                 sizes="(max-width: 640px) 160px, 200px"
               />
             </Link>
-            <nav className="hidden sm:flex items-center gap-1 text-sm text-slate-300">
+            <nav className="hidden sm:flex items-center gap-1 text-sm font-medium text-slate-300">
               <a
                 href="#como-funciona"
-                className="px-3 py-2 rounded-full hover:bg-white/10 hover:text-white transition-colors"
+                className="px-3.5 py-1.5 rounded-full hover:bg-white/10 hover:text-white transition-colors"
               >
                 Como Funciona
               </a>
-              <span className="text-slate-500" aria-hidden>
+              <span className="text-slate-600" aria-hidden>
                 •
               </span>
               <a
                 href="#beneficios"
-                className="px-3 py-2 rounded-full hover:bg-white/10 hover:text-white transition-colors"
+                className="px-3.5 py-1.5 rounded-full hover:bg-white/10 hover:text-white transition-colors"
               >
                 Resultados
               </a>
-              <span className="text-slate-500" aria-hidden>
+              <span className="text-slate-600" aria-hidden>
+                •
+              </span>
+              <a
+                href="#cenarios"
+                className="px-3.5 py-1.5 rounded-full hover:bg-white/10 hover:text-white transition-colors"
+              >
+                Cenários
+              </a>
+              <span className="text-slate-600" aria-hidden>
                 •
               </span>
               <a
                 href="#diferenciais"
-                className="px-3 py-2 rounded-full hover:bg-white/10 hover:text-white transition-colors"
+                className="px-3.5 py-1.5 rounded-full hover:bg-white/10 hover:text-white transition-colors"
               >
                 Diferenciais
               </a>
-              <span className="text-slate-500" aria-hidden>
+              <span className="text-slate-600" aria-hidden>
                 •
               </span>
               <a
                 href="#faq"
-                className="px-3 py-2 rounded-full hover:bg-white/10 hover:text-white transition-colors"
+                className="px-3.5 py-1.5 rounded-full hover:bg-white/10 hover:text-white transition-colors"
               >
                 FAQ
               </a>
             </nav>
             <a
               href={appLoginUrl}
-              className={`${btnBase} min-w-[100px] border border-white/20 bg-white/5 text-white hover:bg-white/10 transition-colors`}
+              className={`${btnBase} min-w-[100px] border border-slate-700 bg-slate-900/80 text-white hover:border-slate-500 hover:bg-slate-800 transition-colors shadow-sm`}
             >
               Entrar
             </a>
           </div>
         </header>
 
-        <div className="relative z-10 flex flex-1 items-center px-4 py-14 sm:px-6 sm:py-20 md:py-24">
+        {/* Hero Title & CTA Area */}
+        <div className="relative z-10 flex flex-1 items-center px-4 pt-12 pb-16 sm:px-6 sm:pt-16 sm:pb-20 md:pt-20">
           <div className="mx-auto w-full max-w-6xl">
             <div className="mx-auto max-w-4xl text-center">
-              <div style={{ animation: "fadeInUp 620ms ease-out both" }}>
-                <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl">
-                  Gere propostas solares completas em{" "}
-                  <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-sky-400 bg-clip-text text-transparent">
-                    segundos
-                  </span>{" "}
-                  e feche mais vendas
-                </h1>
-                <p className="mx-auto mt-6 max-w-2xl text-base text-slate-300 sm:text-lg">
-                  Pare de perder tempo montando proposta manual e responda seu cliente em minutos
-                  com simulação, kit e proposta prontos para envio.
-                </p>
-                <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                  <a
-                    href={appLoginUrl}
-                    className={`${btnBase} min-h-12 w-full bg-[#0fb8a4] px-8 font-bold text-slate-950 shadow-xl shadow-emerald-400/40 hover:-translate-y-0.5 hover:bg-[#0da898] sm:w-auto sm:min-w-[260px]`}
-                  >
-                    Criar conta grátis
-                  </a>
-                  <a
-                    href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergiVIA.%20Acredito%20que%20o%20produto%20de%20voc%C3%AAs%20%C3%A9%20incr%C3%ADvel%20e%20vai%20fazer%20a%20diferen%C3%A7a.%20Quando%20podemos%20conversar%3F"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${btnBase} min-h-12 w-full border-2 border-white/30 bg-white/5 px-8 text-white hover:-translate-y-0.5 hover:border-white/60 hover:bg-white/10 sm:w-auto sm:min-w-[260px]`}
-                  >
-                    Ver demonstração
-                  </a>
-                </div>
-                <div className="mt-5 flex flex-col items-center justify-center gap-2 text-sm text-slate-400 sm:flex-row sm:gap-8">
-                  <p className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-emerald-400" />
-                    Cancele quando quiser
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-emerald-400" />
-                    Configuração em 2 min
-                  </p>
-                </div>
+              {/* Solar Eyebrow Badge */}
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-300">
+                <Sun className="h-3.5 w-3.5 text-amber-400" />
+                <span>Inteligência Artificial & Motor Solar</span>
+              </div>
+
+              <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl leading-[1.12]">
+                Gere propostas solares completas em{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300">
+                  segundos
+                </span>{" "}
+                e feche mais vendas
+              </h1>
+
+              <p className="mx-auto mt-6 max-w-2xl text-base text-slate-300 sm:text-lg leading-relaxed">
+                Pare de perder tempo com planilhas e propostas manuais. Receba a conta de luz,
+                simule a usina ideal com IA e entregue a proposta comercial pronta no WhatsApp em 2
+                minutos.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="mt-8 flex flex-col items-center justify-center gap-3.5 sm:flex-row">
+                <a
+                  href={appLoginUrl}
+                  className={`${btnBase} min-h-12 w-full bg-emerald-500 px-8 font-bold text-slate-950 shadow-lg shadow-black/40 hover:-translate-y-0.5 hover:bg-emerald-400 transition-all sm:w-auto sm:min-w-[240px]`}
+                >
+                  Criar conta grátis
+                </a>
+                <a
+                  href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergiVIA."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${btnBase} min-h-12 w-full border border-amber-400/40 bg-amber-400/10 px-8 font-semibold text-amber-200 hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-400/20 sm:w-auto sm:min-w-[240px] transition-all`}
+                >
+                  Ver demonstração
+                </a>
+              </div>
+
+              {/* Fast Value Indicators */}
+              <div className="mt-7 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs text-slate-400">
+                <span className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1">
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  Sem troca de ferramentas
+                </span>
+                <span className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1">
+                  <Sun className="h-3.5 w-3.5 text-amber-400" />
+                  Simulação fotovoltaica em 10s
+                </span>
+                <span className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1">
+                  <Zap className="h-3.5 w-3.5 text-emerald-400" />
+                  Operação 100% no WhatsApp
+                </span>
               </div>
             </div>
+
+            {/* Interactive Dynamic Product Showcase with 3D Scroll Perspective */}
             <ConvergingHeroShowcase />
           </div>
         </div>
@@ -179,20 +210,23 @@ export default function HomePage(): JSX.Element {
       <main className="flex-1">
         <HowItWorksTabs />
 
+        {/* ------------------------------------------------------------- */}
+        {/* BENEFÍCIOS / RESULTADOS                                       */}
+        {/* ------------------------------------------------------------- */}
         <section
           id="beneficios"
-          className="relative overflow-hidden border-y border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_40%,#f8fafc_100%)] px-4 py-20 sm:px-6 sm:py-24"
+          className="relative overflow-hidden border-y border-slate-800 bg-gradient-to-b from-[#090D15] via-[#0C121E] to-[#090D15] px-4 py-20 sm:px-6 sm:py-24"
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_16%,rgba(20,184,166,0.08),transparent_36%),radial-gradient(circle_at_84%_20%,rgba(14,165,233,0.08),transparent_34%)]" />
           <div className="relative mx-auto max-w-6xl">
             <div className="mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                Resultados reais
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-300">
+                <TrendingUp className="h-3.5 w-3.5 text-amber-400" />
+                Resultados comprovados
               </span>
-              <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Prova social de quem já opera com a EnergivIA
+              <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                Impacto real na operação de integradores solares
               </h2>
-              <p className="mt-4 text-base text-slate-600">
+              <p className="mt-4 text-base text-slate-300">
                 Integradores em todo o Brasil usam a plataforma para responder mais rápido,
                 profissionalizar propostas e converter mais vendas.
               </p>
@@ -200,33 +234,51 @@ export default function HomePage(): JSX.Element {
 
             <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[
-                { value: "< 2 min", label: "Para gerar uma proposta completa" },
-                { value: "3 passos", label: "Da conta de luz ao PDF final" },
-                { value: "1 fluxo", label: "Chat, kit e proposta no mesmo processo" },
-                { value: "No mesmo dia", label: "Primeira proposta após configurar" },
+                {
+                  value: "< 2 min",
+                  label: "Para gerar uma proposta completa",
+                  accent: "text-amber-300",
+                },
+                {
+                  value: "3 passos",
+                  label: "Da conta de luz ao PDF final",
+                  accent: "text-emerald-400",
+                },
+                {
+                  value: "1 fluxo",
+                  label: "Chat, kit e proposta no mesmo canal",
+                  accent: "text-amber-300",
+                },
+                {
+                  value: "No mesmo dia",
+                  label: "Primeira proposta após configurar",
+                  accent: "text-emerald-400",
+                },
               ].map((item) => (
                 <article
                   key={item.label}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-[0_10px_24px_rgba(15,23,42,0.08)] transition-transform duration-200 hover:-translate-y-0.5"
+                  className="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 text-center shadow-lg transition-transform duration-200 hover:-translate-y-0.5 hover:border-slate-700"
                 >
-                  <p className="text-2xl font-bold text-slate-900 sm:text-3xl">{item.value}</p>
-                  <p className="mt-1 text-sm text-slate-600">{item.label}</p>
+                  <p className={`text-3xl font-extrabold sm:text-4xl ${item.accent}`}>
+                    {item.value}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-300">{item.label}</p>
                 </article>
               ))}
             </div>
 
-            <figure className="mt-9 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
-              <blockquote className="text-base text-slate-700 sm:text-lg">
+            <figure className="mt-9 rounded-2xl border border-slate-800 bg-slate-900/80 p-6 text-center shadow-lg">
+              <blockquote className="text-base text-slate-200 sm:text-lg">
                 "Antes levávamos horas para montar proposta. Hoje respondemos no mesmo atendimento e
                 percebemos aumento real de fechamento."
               </blockquote>
-              <figcaption className="mt-3 text-sm font-semibold text-slate-900">
-                Rafael Martins - Integrador Solar Horizonte
+              <figcaption className="mt-3 text-sm font-semibold text-amber-300">
+                Rafael Martins — Integrador Solar Horizonte
               </figcaption>
             </figure>
 
-            <div className="mt-9 rounded-2xl border border-slate-200 bg-white px-4 py-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
-              <p className="text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="mt-9 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-5 shadow-sm">
+              <p className="text-center text-xs font-semibold uppercase tracking-wide text-slate-400">
                 Integradores e parceiros que confiam na operação
               </p>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
@@ -244,22 +296,23 @@ export default function HomePage(): JSX.Element {
 
         <ConvergingPanelsSection />
 
+        {/* ------------------------------------------------------------- */}
+        {/* DIFERENCIAIS                                                  */}
+        {/* ------------------------------------------------------------- */}
         <section
           id="diferenciais"
-          className="relative overflow-hidden border-t border-slate-900 bg-slate-950 px-4 py-20 sm:px-6 sm:py-24"
+          className="relative overflow-hidden border-t border-slate-800 bg-[#080C14] px-4 py-20 sm:px-6 sm:py-24"
         >
           <div className="mx-auto max-w-6xl">
-            <div
-              className="relative mx-auto max-w-3xl text-center"
-              style={{ animation: "fadeInUp 620ms ease-out both" }}
-            >
-              <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-sm">
+            <div className="relative mx-auto max-w-3xl text-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-300">
+                <Zap className="h-3.5 w-3.5 text-amber-400" />
                 Diferenciais reais
               </span>
               <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
                 O que torna a EnergivIA diferente
               </h2>
-              <p className="mt-4 text-base text-slate-400">
+              <p className="mt-4 text-base text-slate-300">
                 Não é só uma ferramenta de proposta. Você opera o ciclo comercial completo com IA,
                 velocidade e execução no canal que o cliente já usa.
               </p>
@@ -272,24 +325,28 @@ export default function HomePage(): JSX.Element {
                   title: "Fluxo completo no WhatsApp",
                   description:
                     "Da conta de luz ao envio da proposta: seu time executa tudo no WhatsApp, com menos troca de ferramenta.",
+                  accent: "text-emerald-400 bg-emerald-500/10",
                 },
                 {
                   icon: FileSearch,
                   title: "IA que lê a conta automaticamente",
                   description:
                     "A plataforma extrai dados da fatura, monta base técnica e acelera a simulação sem depender de digitação manual.",
+                  accent: "text-amber-400 bg-amber-400/10",
                 },
                 {
                   icon: Gauge,
                   title: "Velocidade para responder em minutos",
                   description:
                     "Enquanto outros ainda montam planilha, você já apresenta simulação, kit sugerido e proposta pronta para o cliente.",
+                  accent: "text-emerald-400 bg-emerald-500/10",
                 },
                 {
                   icon: Workflow,
                   title: "Operação ponta a ponta, não só proposta",
                   description:
                     "Conecta atendimento, simulação, proposta e acompanhamento comercial no mesmo fluxo para aumentar conversão.",
+                  accent: "text-amber-400 bg-amber-400/10",
                 },
               ].map((item, index) => {
                 const Icon = item.icon;
@@ -297,22 +354,19 @@ export default function HomePage(): JSX.Element {
                   <article
                     key={item.title}
                     className={[
-                      "group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-400/50",
+                      "group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/90 p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-700",
                       index === 0 || index === 3 ? "md:col-span-2" : "",
                     ].join(" ")}
-                    style={{
-                      animation: "fadeInUp 700ms cubic-bezier(0.22,1,0.36,1) both",
-                      animationDelay: `${index * 120}ms`,
-                    }}
                   >
-                    <div className="pointer-events-none absolute -right-8 top-0 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl transition group-hover:bg-emerald-400/20" />
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-800 text-emerald-300 transition-transform duration-200 group-hover:scale-105">
+                    <div
+                      className={`flex h-12 w-12 items-center justify-center rounded-xl ${item.accent} transition-transform duration-200 group-hover:scale-105`}
+                    >
                       <Icon className="h-5 w-5" />
                     </div>
                     <h3 className="mt-4 text-lg font-semibold leading-tight text-white">
                       {item.title}
                     </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-slate-400">
+                    <p className="mt-2 text-sm leading-relaxed text-slate-300">
                       {item.description}
                     </p>
                   </article>
@@ -322,20 +376,22 @@ export default function HomePage(): JSX.Element {
           </div>
         </section>
 
+        {/* ------------------------------------------------------------- */}
+        {/* FAQ                                                           */}
+        {/* ------------------------------------------------------------- */}
         <section
           id="faq"
-          className="relative overflow-hidden border-y border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_50%,#f8fafc_100%)] px-4 py-20 sm:px-6 sm:py-24"
+          className="relative overflow-hidden border-y border-slate-800 bg-[#090D16] px-4 py-20 sm:px-6 sm:py-24"
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(20,184,166,0.07),transparent_36%),radial-gradient(circle_at_84%_20%,rgba(14,165,233,0.07),transparent_34%)]" />
           <div className="relative mx-auto max-w-4xl">
             <div className="mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-800/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-300">
                 FAQ
               </span>
-              <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
                 Dúvidas frequentes sobre a EnergivIA
               </h2>
-              <p className="mt-4 text-base text-slate-600">
+              <p className="mt-4 text-base text-slate-300">
                 Respostas rápidas para você entender como funciona a operação com IA no dia a dia do
                 integrador solar.
               </p>
@@ -345,28 +401,31 @@ export default function HomePage(): JSX.Element {
               {faqItems.map((item) => (
                 <details
                   key={item.question}
-                  className="group rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm shadow-slate-200/70 transition-all duration-200 hover:border-emerald-200 hover:shadow-[0_10px_22px_rgba(15,23,42,0.08)]"
+                  className="group rounded-2xl border border-slate-800 bg-slate-900/80 px-5 py-4 shadow-sm transition-all duration-200 hover:border-slate-700"
                 >
-                  <summary className="cursor-pointer list-none pr-6 text-left text-base font-semibold text-slate-900 marker:content-none">
+                  <summary className="cursor-pointer list-none pr-6 text-left text-base font-semibold text-white marker:content-none">
                     {item.question}
                     <span className="float-right text-slate-400 transition group-open:rotate-45">
                       +
                     </span>
                   </summary>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.answer}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-300">{item.answer}</p>
                 </details>
               ))}
             </div>
           </div>
         </section>
 
+        {/* ------------------------------------------------------------- */}
+        {/* PRÓXIMO PASSO (CTA)                                          */}
+        {/* ------------------------------------------------------------- */}
         <section
           id="para-quem"
-          className="relative overflow-hidden border-t border-slate-800 bg-slate-950 px-4 py-16 sm:px-6 sm:py-20"
+          className="relative overflow-hidden border-t border-slate-800 bg-[#070A10] px-4 py-16 sm:px-6 sm:py-20"
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_40%,rgba(20,184,166,0.14),transparent_38%),radial-gradient(circle_at_80%_30%,rgba(14,165,233,0.12),transparent_36%)]" />
-          <div className="relative z-10 mx-auto max-w-4xl rounded-3xl border border-slate-800 bg-slate-900/70 p-8 text-center shadow-[0_18px_40px_rgba(2,6,23,0.3)] backdrop-blur-sm sm:p-10">
-            <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
+          <div className="relative z-10 mx-auto max-w-4xl rounded-3xl border border-slate-800 bg-[#0D1424] p-8 text-center shadow-2xl sm:p-10">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-300">
+              <Sun className="h-3.5 w-3.5 text-amber-400" />
               Próximo passo
             </span>
             <h2 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl">
@@ -379,7 +438,7 @@ export default function HomePage(): JSX.Element {
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <a
                 href={appLoginUrl}
-                className={`${btnBase} ${btnPrimary} w-full min-w-[200px] sm:w-auto`}
+                className={`${btnBase} bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold w-full min-w-[200px] sm:w-auto shadow-lg transition-all`}
               >
                 Criar conta grátis
               </a>
@@ -387,7 +446,7 @@ export default function HomePage(): JSX.Element {
                 href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20ver%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergivIA."
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`${btnBase} w-full min-w-[200px] border border-slate-700 bg-slate-900 text-center text-white hover:bg-slate-800 sm:w-auto`}
+                className={`${btnBase} w-full min-w-[200px] border border-amber-400/40 bg-amber-400/10 text-center text-amber-200 hover:bg-amber-400/20 sm:w-auto transition-all`}
               >
                 Ver demonstração
               </a>
@@ -395,16 +454,18 @@ export default function HomePage(): JSX.Element {
           </div>
         </section>
 
-        <section className="relative overflow-hidden border-t border-slate-800 bg-slate-950 px-4 py-16 sm:px-6 sm:py-20">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(20,184,166,0.12),transparent_36%),radial-gradient(circle_at_84%_30%,rgba(14,165,233,0.1),transparent_34%)]" />
-          <div className="relative mx-auto max-w-5xl rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-[0_18px_40px_rgba(2,6,23,0.28)] backdrop-blur-sm sm:p-8">
-            <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
+        {/* ------------------------------------------------------------- */}
+        {/* SEO ARTICLES & LINKS                                          */}
+        {/* ------------------------------------------------------------- */}
+        <section className="relative overflow-hidden border-t border-slate-800 bg-[#080B12] px-4 py-16 sm:px-6 sm:py-20">
+          <div className="relative mx-auto max-w-5xl rounded-3xl border border-slate-800 bg-slate-900/60 p-6 shadow-sm sm:p-8">
+            <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-800/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-300">
               Conteúdo para integradores
             </span>
             <h2 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl">
               Software para integradores solares: como gerar propostas mais rápido
             </h2>
-            <div className="mt-3 h-1 w-28 rounded-full bg-gradient-to-r from-emerald-400 to-sky-400" />
+            <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-emerald-400 to-amber-400" />
             <div className="mt-6 grid gap-5 text-sm leading-relaxed text-slate-300 sm:text-base md:grid-cols-2">
               <p>
                 Muitos integradores ainda perdem tempo com processos manuais para montar propostas
@@ -460,9 +521,9 @@ export default function HomePage(): JSX.Element {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/70 p-4 transition-all hover:-translate-y-0.5 hover:border-emerald-400/40"
+                    className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/70 p-4 transition-all hover:-translate-y-0.5 hover:border-slate-700"
                   >
-                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-emerald-400">
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-amber-300">
                       <Icon className="h-4 w-4" />
                     </div>
                     <div>
@@ -476,7 +537,10 @@ export default function HomePage(): JSX.Element {
           </div>
         </section>
 
-        <footer className="border-t border-slate-800 bg-slate-950 px-4 py-12 sm:px-6 text-slate-300">
+        {/* ------------------------------------------------------------- */}
+        {/* FOOTER                                                        */}
+        {/* ------------------------------------------------------------- */}
+        <footer className="border-t border-slate-800 bg-[#070A10] px-4 py-12 sm:px-6 text-slate-300">
           <div className="mx-auto max-w-6xl">
             <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
               <Link href="/" className="flex items-center">
@@ -485,7 +549,7 @@ export default function HomePage(): JSX.Element {
                   alt="EnergiVIA"
                   width={480}
                   height={136}
-                  className="h-12 w-auto object-contain sm:h-14"
+                  className="h-11 w-auto object-contain sm:h-12"
                   sizes="(max-width: 640px) 160px, 200px"
                 />
               </Link>
@@ -495,6 +559,9 @@ export default function HomePage(): JSX.Element {
                 </a>
                 <a href="#beneficios" className="hover:text-white transition-colors">
                   Resultados
+                </a>
+                <a href="#cenarios" className="hover:text-white transition-colors">
+                  Cenários
                 </a>
                 <a href="#diferenciais" className="hover:text-white transition-colors">
                   Diferenciais
