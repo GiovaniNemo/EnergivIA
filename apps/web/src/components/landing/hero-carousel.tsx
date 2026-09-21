@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, useMotionValue, useAnimation, PanInfo } from "framer-motion";
-import { ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const SLIDES = [
   { id: 1, title: "Painel em Tempo Real", desc: "Acompanhe todo o seu funil de ponta a ponta." },
@@ -86,16 +86,20 @@ export function HeroCarousel() {
                       : "border-slate-800/50 bg-slate-950/50 opacity-40 scale-[0.92]"
                   } backdrop-blur-xl flex flex-col items-center justify-center`}
                 >
-                  {/* Image Placeholder Icon */}
-                  <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">
-                    <div className="w-20 h-20 mb-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 flex items-center justify-center shadow-inner">
-                      <ImageIcon className="w-10 h-10 text-slate-500" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-white mb-3">{slide.title}</h3>
-                    <p className="text-slate-400 max-w-md">{slide.desc}</p>
+                  {/* Slide Content */}
+                  <div className="flex flex-col items-center justify-start p-8 text-center w-full h-full relative z-10">
+                    <h3 className="text-2xl font-bold text-white mb-2">{slide.title}</h3>
+                    <p className="text-slate-400 max-w-md mb-8">{slide.desc}</p>
 
-                    <div className="mt-8 px-4 py-2 rounded-full border border-slate-700/50 bg-slate-800/30 text-xs font-mono text-slate-500 uppercase tracking-widest">
-                      Placeholder Visual {slide.id}
+                    {/* Demo Image Showcase */}
+                    <div className="relative w-full flex-1 rounded-xl overflow-hidden border border-slate-700/50 shadow-2xl">
+                      {/* Sub-glass effect for the image container */}
+                      <div className="absolute inset-0 bg-slate-900/40 mix-blend-overlay z-10 pointer-events-none" />
+                      <img
+                        src="/landing/demo.png"
+                        alt={`Demonstração - ${slide.title}`}
+                        className="w-full h-full object-cover object-top"
+                      />
                     </div>
                   </div>
 
