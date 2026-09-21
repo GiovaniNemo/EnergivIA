@@ -26,3 +26,26 @@ export function AnimatedHeroEyebrow({ children }: { children: ReactNode }) {
     </motion.div>
   );
 }
+
+export function AnimatedHeroImageWrapper({ children }: { children: ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 1.2, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      className="w-full"
+    >
+      <motion.div
+        animate={{ y: [0, -15, 0] }}
+        transition={{
+          duration: 8,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="w-full relative"
+      >
+        {children}
+      </motion.div>
+    </motion.div>
+  );
+}

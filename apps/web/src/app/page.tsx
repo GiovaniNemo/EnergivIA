@@ -22,6 +22,7 @@ import { AnimatedHeroText } from "@/components/landing/animated-hero-text";
 import {
   AnimatedHeroContainer,
   AnimatedHeroEyebrow,
+  AnimatedHeroImageWrapper,
 } from "@/components/landing/animated-hero-elements";
 
 const btnBase =
@@ -253,16 +254,18 @@ export default function HomePage(): JSX.Element {
               </AnimatedHeroContainer>
             </div>
 
-            {/* Static Hero Image Showcase */}
-            <div className="relative mx-auto mt-16 w-full max-w-[1400px] px-4 sm:mt-24 sm:px-6">
-              <Image
-                src="/landing/demo.png"
-                alt="Painel de Oportunidades & Vendas EnergiVIA"
-                width={2400}
-                height={1200}
-                className="w-full h-auto object-contain drop-shadow-[0_25px_50px_rgba(0,0,0,0.5)]"
-                priority
-              />
+            {/* Animated Hero Image Showcase */}
+            <div className="relative mx-auto mt-16 w-full max-w-[1800px] px-2 sm:mt-24 sm:px-4 md:px-8 lg:px-12">
+              <AnimatedHeroImageWrapper>
+                <Image
+                  src="/landing/demo.png"
+                  alt="Painel de Oportunidades & Vendas EnergiVIA"
+                  width={2400}
+                  height={1200}
+                  className="w-full h-auto object-contain drop-shadow-[0_30px_60px_rgba(0,0,0,0.6)]"
+                  priority
+                />
+              </AnimatedHeroImageWrapper>
             </div>
           </div>
         </div>
