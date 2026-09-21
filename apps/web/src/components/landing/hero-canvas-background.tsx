@@ -11,7 +11,7 @@ interface SolarPhoton {
   alpha: number;
   baseAlpha: number;
   pulseSpeed: number;
-  hue: number;
+  pulseOffset: number;
 }
 
 export function HeroCanvasBackground(): JSX.Element {
@@ -31,10 +31,10 @@ export function HeroCanvasBackground(): JSX.Element {
     let targetScrollY = window.scrollY;
 
     const mouse = {
-      x: width * 0.8,
-      y: height * 0.15,
-      targetX: width * 0.8,
-      targetY: height * 0.15,
+      x: width * 0.85,
+      y: height * 0.1,
+      targetX: width * 0.85,
+      targetY: height * 0.1,
     };
 
     const handleResize = () => {
@@ -58,29 +58,29 @@ export function HeroCanvasBackground(): JSX.Element {
     window.addEventListener("scroll", handleScroll, { passive: true });
 
     // Solar photon dust motes drifting across light beams
-    const photonCount = Math.min(50, Math.floor((width * height) / 24000));
+    const photonCount = Math.min(55, Math.floor((width * height) / 22000));
     const photons: SolarPhoton[] = Array.from({ length: photonCount }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
-      vx: (Math.random() - 0.6) * 0.4, // Natural drift towards bottom-left
-      vy: Math.random() * 0.35 + 0.1,
-      size: Math.random() * 1.8 + 0.7,
-      alpha: Math.random() * 0.4 + 0.1,
-      baseAlpha: Math.random() * 0.35 + 0.15,
-      pulseSpeed: Math.random() * 0.02 + 0.01,
-      hue: Math.random() > 0.3 ? 42 : 160, // 42 = soft champagne gold, 160 = subtle emerald
+      vx: (Math.random() - 0.65) * 0.35, // Natural drift towards bottom-left
+      vy: Math.random() * 0.3 + 0.1,
+      size: Math.random() * 2 + 0.6,
+      alpha: Math.random() * 0.35 + 0.1,
+      baseAlpha: Math.random() * 0.3 + 0.15,
+      pulseSpeed: Math.random() * 0.025 + 0.01,
+      pulseOffset: Math.random() * Math.PI * 2,
     }));
 
     let tick = 0;
 
-    // Angular definitions for God Rays (volumetric sunbeams from top-right)
-    const rayConfigs = [
-      { angleOffset: 0.28, width: 0.14, speed: 0.0006, intensity: 0.065 },
-      { angleOffset: 0.48, width: 0.22, speed: 0.0004, intensity: 0.085 },
-      { angleOffset: 0.72, width: 0.18, speed: 0.0007, intensity: 0.075 },
-      { angleOffset: 0.95, width: 0.25, speed: 0.0005, intensity: 0.09 },
-      { angleOffset: 1.22, width: 0.16, speed: 0.0008, intensity: 0.06 },
-      { angleOffset: 1.45, width: 0.2, speed: 0.0004, intensity: 0.05 },
+    // Organic volumetric sunbeams configuration (spread out realistically)
+    const rays = [
+      { baseAngle: 0.72, spread: 0.22, speed: 0.0005, intensity: 0.11 },
+      { baseAngle: 0.88, spread: 0.34, speed: 0.0003, intensity: 0.14 },
+      { baseAngle: 1.05, spread: 0.26, speed: 0.0006, intensity: 0.12 },
+      { baseAngle: 1.22, spread: 0.38, speed: 0.0004, intensity: 0.15 },
+      { baseAngle: 1.42, spread: 0.28, speed: 0.0007, intensity: 0.1 },
+      { baseAngle: 1.62, spread: 0.32, speed: 0.0004, intensity: 0.08 },
     ];
 
     const render = () => {
@@ -96,44 +96,56 @@ export function HeroCanvasBackground(): JSX.Element {
       ctx.clearRect(0, 0, width, height);
 
       // -------------------------------------------------------------
-      // 1. DYNAMIC SUN POSITION (Top-Right with Parallax & Mouse Shift)
+      // 1. DYNAMIC SUN POSITION (Top-Right anchored with organic depth)
       // -------------------------------------------------------------
-      // Sun position stays anchored at top-right, shifting subtly with scroll
-      const sunParallaxY = -40 + scrollY * 0.28;
-      const sunMouseOffset = (mouse.x - width * 0.8) * 0.03;
-      const sunX = width - 40 + sunMouseOffset;
+      // Sun center position in viewport coordinates
+      const sunParallaxY = -35 + scrollY * 0.24;
+      const sunMouseX = (mouse.x - width * 0.85) * 0.04;
+      const sunX = width - 35 + sunMouseX;
       const sunY = sunParallaxY;
 
-      // Base radius scaled to viewport
-      const sunMaxRadius = Math.max(width * 0.85, 750);
+      const sunMaxRadius = Math.max(width * 0.9, 850);
 
       // -------------------------------------------------------------
-      // 2. WARM SOLAR GOD RAYS (Volumetric Beams of Light)
+      // 2. SOFT ATMOSPHERIC SUNSHINE WASH (Global Warm Light)
       // -------------------------------------------------------------
-      // Less saturated: champagne warm gold (rgba(254, 240, 138, ...)) and soft amber
-      const rayOriginAngle = Math.PI * 0.75; // Pointing diagonally down-left
+      const ambientLight = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, sunMaxRadius * 1.3);
+      ambientLight.addColorStop(0, "rgba(255, 252, 235, 0.22)"); // Warm morning sunlight
+      ambientLight.addColorStop(0.18, "rgba(254, 240, 138, 0.12)"); // Soft golden daylight
+      ambientLight.addColorStop(0.4, "rgba(245, 158, 11, 0.05)"); // Amber atmosphere
+      ambientLight.addColorStop(0.7, "rgba(16, 185, 129, 0.015)"); // Emerald undertone
+      ambientLight.addColorStop(1, "transparent");
 
-      rayConfigs.forEach((ray, index) => {
-        const dynamicAngle =
-          rayOriginAngle +
-          ray.angleOffset +
-          Math.sin(tick * ray.speed + index) * 0.04 -
-          scrollY * 0.0004;
+      ctx.fillStyle = ambientLight;
+      ctx.fillRect(0, 0, width, height);
 
-        const rayReach = sunMaxRadius * 1.25;
-        const halfW = ray.width * 0.5;
+      // -------------------------------------------------------------
+      // 3. REALISTIC VOLUMETRIC GOD RAYS (Additive Light Beams)
+      // -------------------------------------------------------------
+      // Using 'screen' blending for natural, photorealistic light scattering
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
 
-        const x1 = sunX + Math.cos(dynamicAngle - halfW) * rayReach;
-        const y1 = sunY + Math.sin(dynamicAngle - halfW) * rayReach;
-        const x2 = sunX + Math.cos(dynamicAngle + halfW) * rayReach;
-        const y2 = sunY + Math.sin(dynamicAngle + halfW) * rayReach;
+      rays.forEach((ray, i) => {
+        const rayAngle =
+          Math.PI * 0.72 +
+          ray.baseAngle +
+          Math.sin(tick * ray.speed + i * 1.5) * 0.05 -
+          scrollY * 0.00035;
 
-        // Radial beam gradient
-        const beamGrad = ctx.createRadialGradient(sunX, sunY, 30, sunX, sunY, rayReach);
-        // Soft, desaturated, elegant sunlight
-        beamGrad.addColorStop(0, `rgba(254, 243, 199, ${ray.intensity * 1.3})`); // Champagne white-gold
-        beamGrad.addColorStop(0.3, `rgba(251, 191, 36, ${ray.intensity * 0.75})`); // Soft golden amber
-        beamGrad.addColorStop(0.7, `rgba(245, 158, 11, ${ray.intensity * 0.25})`);
+        const rayDist = sunMaxRadius * 1.35;
+        const halfSpread = ray.spread * 0.5;
+
+        const x1 = sunX + Math.cos(rayAngle - halfSpread) * rayDist;
+        const y1 = sunY + Math.sin(rayAngle - halfSpread) * rayDist;
+        const x2 = sunX + Math.cos(rayAngle + halfSpread) * rayDist;
+        const y2 = sunY + Math.sin(rayAngle + halfSpread) * rayDist;
+
+        const beamGrad = ctx.createRadialGradient(sunX, sunY, 40, sunX, sunY, rayDist);
+        // Soft, desaturated, real optical sunlight falloff
+        beamGrad.addColorStop(0, `rgba(255, 250, 220, ${ray.intensity * 1.4})`);
+        beamGrad.addColorStop(0.25, `rgba(254, 243, 199, ${ray.intensity * 0.9})`);
+        beamGrad.addColorStop(0.6, `rgba(251, 191, 36, ${ray.intensity * 0.35})`);
         beamGrad.addColorStop(1, "transparent");
 
         ctx.beginPath();
@@ -146,86 +158,143 @@ export function HeroCanvasBackground(): JSX.Element {
       });
 
       // -------------------------------------------------------------
-      // 3. SOLAR RADIANCE CORE (Natural Sun Glow at Top Right)
+      // 4. ANAMORPHIC OPTICAL LENS STREAK (Cinematic Sun Glare)
       // -------------------------------------------------------------
-      const coreGrad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunMaxRadius);
-      // Soft champagne core, fading smoothly across the canvas
-      coreGrad.addColorStop(0, "rgba(255, 255, 255, 0.85)"); // Intense sun core
-      coreGrad.addColorStop(0.04, "rgba(254, 243, 199, 0.5)"); // Warm solar corona
-      coreGrad.addColorStop(0.12, "rgba(252, 211, 77, 0.22)"); // Soft golden daylight
-      coreGrad.addColorStop(0.28, "rgba(245, 158, 11, 0.09)"); // Atmospheric warm amber
-      coreGrad.addColorStop(0.55, "rgba(16, 185, 129, 0.025)"); // Subtle platform emerald undertone
-      coreGrad.addColorStop(1, "transparent");
+      // Horizontal/diagonal flare streak passing through the sun disc
+      const streakLength = Math.max(width * 0.55, 500);
+      const streakAngle = Math.PI * 0.88; // Angled down-left along ray path
 
-      ctx.fillStyle = coreGrad;
-      ctx.fillRect(0, 0, width, height);
+      const sx1 = sunX - Math.cos(streakAngle) * streakLength * 0.4;
+      const sy1 = sunY - Math.sin(streakAngle) * streakLength * 0.4;
+      const sx2 = sunX + Math.cos(streakAngle) * streakLength;
+      const sy2 = sunY + Math.sin(streakAngle) * streakLength;
+
+      const streakGrad = ctx.createLinearGradient(sx1, sy1, sx2, sy2);
+      streakGrad.addColorStop(0, "transparent");
+      streakGrad.addColorStop(0.25, "rgba(255, 255, 255, 0.45)");
+      streakGrad.addColorStop(0.32, "rgba(254, 243, 199, 0.65)");
+      streakGrad.addColorStop(0.4, "rgba(251, 191, 36, 0.3)");
+      streakGrad.addColorStop(0.7, "rgba(245, 158, 11, 0.08)");
+      streakGrad.addColorStop(1, "transparent");
+
+      ctx.beginPath();
+      ctx.moveTo(sx1, sy1);
+      ctx.lineTo(sx2, sy2);
+      ctx.lineWidth = 14;
+      ctx.strokeStyle = streakGrad;
+      ctx.stroke();
+
+      // Thin sharp core streak line
+      ctx.beginPath();
+      ctx.moveTo(sx1, sy1);
+      ctx.lineTo(sx2, sy2);
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+      ctx.stroke();
+
+      ctx.restore(); // Restore normal composite operation
 
       // -------------------------------------------------------------
-      // 4. OPTICAL LENS FLARE DISCS (Subtle cinematic camera flare)
+      // 5. BRILLIANT SOLAR DISC & CORONA (Realistic Sun Core)
       // -------------------------------------------------------------
-      // Optical axis connects sun (top-right) to center-left
-      const targetPointX = width * 0.35;
-      const targetPointY = height * 0.65;
+      // Multi-layered corona
+      const corona = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 320);
+      corona.addColorStop(0, "rgba(255, 255, 255, 0.95)"); // Pure white-hot sun core
+      corona.addColorStop(0.06, "rgba(255, 253, 230, 0.85)"); // White-gold inner corona
+      corona.addColorStop(0.18, "rgba(254, 243, 199, 0.45)"); // Champagne solar glow
+      corona.addColorStop(0.45, "rgba(252, 211, 77, 0.18)"); // Warm daylight amber
+      corona.addColorStop(0.8, "rgba(245, 158, 11, 0.04)");
+      corona.addColorStop(1, "transparent");
+
+      ctx.fillStyle = corona;
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, 320, 0, Math.PI * 2);
+      ctx.fill();
+
+      // -------------------------------------------------------------
+      // 6. DIFFRACTION SPIKES (Natural Optical Sun Flare Starburst)
+      // -------------------------------------------------------------
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+
+      const spikeLengths = [180, 140, 110, 160, 95, 130];
+      const baseSpikeAngle = Math.PI * 0.75;
+
+      spikeLengths.forEach((len, idx) => {
+        const ang = baseSpikeAngle + (idx - 2.5) * 0.28 + Math.sin(tick * 0.01 + idx) * 0.02;
+        const px = sunX + Math.cos(ang) * len;
+        const py = sunY + Math.sin(ang) * len;
+
+        const spikeGrad = ctx.createLinearGradient(sunX, sunY, px, py);
+        spikeGrad.addColorStop(0, "rgba(255, 255, 255, 0.7)");
+        spikeGrad.addColorStop(0.3, "rgba(254, 243, 199, 0.4)");
+        spikeGrad.addColorStop(1, "transparent");
+
+        ctx.beginPath();
+        ctx.moveTo(sunX, sunY);
+        ctx.lineTo(px, py);
+        ctx.lineWidth = 1.8;
+        ctx.strokeStyle = spikeGrad;
+        ctx.stroke();
+      });
+
+      ctx.restore();
+
+      // -------------------------------------------------------------
+      // 7. LENS FLARE GHOST DISCS (Along Optical Axis to Center-Left)
+      // -------------------------------------------------------------
+      const targetPointX = width * 0.4;
+      const targetPointY = height * 0.6;
       const axisDx = targetPointX - sunX;
       const axisDy = targetPointY - sunY;
 
-      // 3 soft, desaturated lens flare discs that shift smoothly with scroll
-      const flares = [
-        { progress: 0.25, radius: 45, alpha: 0.08, r: 254, g: 240, b: 138 },
-        { progress: 0.45, radius: 95, alpha: 0.05, r: 251, g: 191, b: 36 },
-        { progress: 0.72, radius: 60, alpha: 0.04, r: 16, g: 185, b: 129 },
+      const flareGhosts = [
+        { progress: 0.22, radius: 35, alpha: 0.09, r: 255, g: 250, b: 220 },
+        { progress: 0.42, radius: 75, alpha: 0.06, r: 254, g: 240, b: 138 },
+        { progress: 0.68, radius: 50, alpha: 0.04, r: 251, g: 191, b: 36 },
       ];
 
-      flares.forEach((flare) => {
-        // Subtle floating movement and parallax
-        const flareOffset = Math.sin(tick * 0.015 + flare.progress * 10) * 8;
-        const fx = sunX + axisDx * flare.progress + flareOffset;
-        const fy = sunY + axisDy * flare.progress - scrollY * 0.15;
+      flareGhosts.forEach((ghost) => {
+        const gx = sunX + axisDx * ghost.progress;
+        const gy = sunY + axisDy * ghost.progress - scrollY * 0.12;
 
-        const flareGrad = ctx.createRadialGradient(fx, fy, 0, fx, fy, flare.radius);
-        flareGrad.addColorStop(0, `rgba(${flare.r}, ${flare.g}, ${flare.b}, ${flare.alpha * 1.5})`);
-        flareGrad.addColorStop(
-          0.6,
-          `rgba(${flare.r}, ${flare.g}, ${flare.b}, ${flare.alpha * 0.5})`
+        const ghostGrad = ctx.createRadialGradient(gx, gy, 0, gx, gy, ghost.radius);
+        ghostGrad.addColorStop(0, `rgba(${ghost.r}, ${ghost.g}, ${ghost.b}, ${ghost.alpha * 1.6})`);
+        ghostGrad.addColorStop(
+          0.7,
+          `rgba(${ghost.r}, ${ghost.g}, ${ghost.b}, ${ghost.alpha * 0.5})`
         );
-        flareGrad.addColorStop(1, "transparent");
+        ghostGrad.addColorStop(1, "transparent");
 
         ctx.beginPath();
-        ctx.arc(fx, fy, flare.radius, 0, Math.PI * 2);
-        ctx.fillStyle = flareGrad;
+        ctx.arc(gx, gy, ghost.radius, 0, Math.PI * 2);
+        ctx.fillStyle = ghostGrad;
         ctx.fill();
       });
 
       // -------------------------------------------------------------
-      // 5. SOLAR DUST PHOTONS (Motes drifting through the light)
+      // 8. SOLAR DUST PHOTONS (Motes Illuminating Through the Light)
       // -------------------------------------------------------------
       photons.forEach((p) => {
-        // Natural gentle drift
         p.x += p.vx;
         p.y += p.vy;
 
-        // Wrap around borders
         if (p.x < 0) p.x = width;
         if (p.x > width) p.x = 0;
         if (p.y < 0) p.y = height;
         if (p.y > height) p.y = 0;
 
-        // Pulsate opacity softly
-        const pulse = Math.sin(tick * p.pulseSpeed + p.x);
+        const pulse = Math.sin(tick * p.pulseSpeed + p.pulseOffset);
         p.alpha = p.baseAlpha + pulse * 0.12;
 
-        // Increased brightness when inside sunbeam zone
+        // Photons brighten dynamically when inside the sunbeam cone
         const distToSun = Math.hypot(p.x - sunX, p.y - sunY);
-        const sunbeamFactor = Math.max(0, 1 - distToSun / (sunMaxRadius * 0.9));
-        const finalAlpha = Math.min(0.7, p.alpha + sunbeamFactor * 0.25);
+        const sunbeamFactor = Math.max(0, 1 - distToSun / (sunMaxRadius * 0.95));
+        const finalAlpha = Math.min(0.75, p.alpha + sunbeamFactor * 0.3);
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        if (p.hue === 42) {
-          ctx.fillStyle = `rgba(254, 240, 138, ${finalAlpha})`; // Warm golden photon
-        } else {
-          ctx.fillStyle = `rgba(110, 231, 183, ${finalAlpha * 0.8})`; // Energy emerald photon
-        }
+        ctx.fillStyle = `rgba(254, 243, 199, ${finalAlpha})`; // Warm sunlight photon
         ctx.fill();
       });
 
