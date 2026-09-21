@@ -62,20 +62,14 @@ export const metadata: Metadata = {
 
 export default function HomePage(): JSX.Element {
   return (
-    <div className="landing-page min-h-screen flex flex-col bg-[#090e17] text-white antialiased selection:bg-amber-400/20 selection:text-amber-200">
+    <div className="landing-page min-h-screen flex flex-col bg-[#050811] text-white antialiased selection:bg-amber-400/20 selection:text-amber-200">
       <BubbleSidebar />
 
       {/* ------------------------------------------------------------- */}
       {/* HERO SECTION                                                  */}
       {/* ------------------------------------------------------------- */}
-      <div className="landing-hero relative overflow-hidden min-h-[92vh] flex flex-col bg-gradient-to-b from-[#0e1726] via-[#0b121e] to-[#090e17] text-white">
-        {/* Subtle architectural solar grid pattern */}
-        <div
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_70%_50%_at_50%_20%,#000_60%,transparent_100%)] opacity-35"
-          aria-hidden="true"
-        />
-
-        {/* Clean interactive solar photon dust and dynamic God Rays */}
+      <div className="landing-hero relative overflow-hidden min-h-[92vh] flex flex-col bg-gradient-to-b from-[#070c18] via-[#050912] to-[#04060b] text-white">
+        {/* Interactive Starry Sky Canvas with Sun God Rays & Lens Flare */}
         <HeroCanvasBackground />
 
         {/* Soft Solar Lens Flare Bloom from Top-Right (Desaturated, soft champagne-gold daylight) */}
