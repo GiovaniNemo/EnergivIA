@@ -62,21 +62,27 @@ export const metadata: Metadata = {
 
 export default function HomePage(): JSX.Element {
   return (
-    <div className="landing-page min-h-screen flex flex-col bg-[#070A10] text-white antialiased selection:bg-amber-400/20 selection:text-amber-200">
+    <div className="landing-page min-h-screen flex flex-col bg-[#090e17] text-white antialiased selection:bg-amber-400/20 selection:text-amber-200">
       <BubbleSidebar />
 
       {/* ------------------------------------------------------------- */}
       {/* HERO SECTION                                                  */}
       {/* ------------------------------------------------------------- */}
-      <div className="landing-hero relative overflow-hidden min-h-[90vh] flex flex-col bg-gradient-to-b from-[#0A0E17] via-[#080B12] to-[#070A10] text-white">
+      <div className="landing-hero relative overflow-hidden min-h-[92vh] flex flex-col bg-gradient-to-b from-[#0e1726] via-[#0b121e] to-[#090e17] text-white">
+        {/* Subtle architectural solar grid pattern */}
+        <div
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_70%_50%_at_50%_20%,#000_60%,transparent_100%)] opacity-35"
+          aria-hidden="true"
+        />
+
         {/* Clean interactive solar photon dust */}
         <HeroCanvasBackground />
 
         {/* Natural Sunbeam Top Lighting (Solar warm sunlight, no neon blur) */}
-        <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-[380px] w-[860px] rounded-full bg-gradient-to-b from-amber-400/12 via-emerald-400/5 to-transparent blur-[110px]" />
+        <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-[420px] w-[960px] rounded-full bg-gradient-to-b from-amber-400/18 via-emerald-400/6 to-transparent blur-[120px]" />
 
         {/* Header */}
-        <header className="sticky top-0 z-50 flex shrink-0 border-b border-slate-800/60 bg-[#0A0E17]/80 backdrop-blur-xl">
+        <header className="sticky top-0 z-50 flex shrink-0 border-b border-slate-800/80 bg-[#0e1726]/85 backdrop-blur-xl">
           <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
             <Link href="/" className="flex items-center gap-2">
               <Image
@@ -147,14 +153,14 @@ export default function HomePage(): JSX.Element {
           <div className="mx-auto w-full max-w-6xl">
             <div className="mx-auto max-w-4xl text-center">
               {/* Solar Eyebrow Badge */}
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-300">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-300">
                 <Sun className="h-3.5 w-3.5 text-amber-400" />
-                <span>Inteligência Artificial & Motor Solar</span>
+                <span>Inteligência Artificial & Motor Fotovoltaico</span>
               </div>
 
               <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl leading-[1.12]">
                 Gere propostas solares completas em{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-300 to-emerald-400">
                   segundos
                 </span>{" "}
                 e feche mais vendas
@@ -170,7 +176,7 @@ export default function HomePage(): JSX.Element {
               <div className="mt-8 flex flex-col items-center justify-center gap-3.5 sm:flex-row">
                 <a
                   href={appLoginUrl}
-                  className={`${btnBase} min-h-12 w-full bg-emerald-500 px-8 font-bold text-slate-950 shadow-lg shadow-black/40 hover:-translate-y-0.5 hover:bg-emerald-400 transition-all sm:w-auto sm:min-w-[240px]`}
+                  className={`${btnBase} min-h-12 w-full bg-[#0fb8a4] hover:bg-[#0da898] px-8 font-bold text-slate-950 shadow-lg shadow-emerald-950/40 hover:-translate-y-0.5 transition-all sm:w-auto sm:min-w-[240px]`}
                 >
                   Criar conta grátis
                 </a>
@@ -178,7 +184,7 @@ export default function HomePage(): JSX.Element {
                   href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergiVIA."
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`${btnBase} min-h-12 w-full border border-amber-400/40 bg-amber-400/10 px-8 font-semibold text-amber-200 hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-400/20 sm:w-auto sm:min-w-[240px] transition-all`}
+                  className={`${btnBase} min-h-12 w-full border border-amber-400/50 bg-amber-400/10 px-8 font-semibold text-amber-200 hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-400/20 sm:w-auto sm:min-w-[240px] transition-all`}
                 >
                   Ver demonstração
                 </a>
