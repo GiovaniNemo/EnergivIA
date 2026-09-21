@@ -7,7 +7,7 @@ import { FileText, MessageCircle, Zap } from "lucide-react";
 export function ConvergingHeroShowcase() {
   return (
     <div className="relative mx-auto mt-8 w-full max-w-[1240px]">
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-1/3 bg-gradient-to-t from-white via-white/50 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-1/3 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
 
       <div className="relative flex items-center justify-center">
         {/* Painel Principal (Dashboard) */}
@@ -22,7 +22,7 @@ export function ConvergingHeroShowcase() {
             alt="Demonstração do painel da EnergivIA"
             width={1080}
             height={675}
-            className="h-auto w-full object-contain drop-shadow-xl"
+            className="h-auto w-full object-contain drop-shadow-2xl"
             priority
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1080px"
           />
@@ -33,7 +33,7 @@ export function ConvergingHeroShowcase() {
           initial={{ opacity: 0, x: -100, y: -60, rotate: -15 }}
           animate={{ opacity: 1, x: 0, y: 0, rotate: -6 }}
           transition={{ type: "spring", stiffness: 100, damping: 15, delay: 0.6 }}
-          className="absolute -left-4 top-1/4 z-20 flex items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/95 p-3 shadow-lg shadow-slate-200/60 backdrop-blur-md sm:left-4 sm:p-4"
+          className="absolute -left-4 top-1/4 z-20 flex items-center gap-3 rounded-2xl border border-slate-200/50 bg-white/90 p-3 shadow-xl backdrop-blur-md sm:left-4 sm:p-4"
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
             <Zap className="h-5 w-5" />
@@ -49,7 +49,7 @@ export function ConvergingHeroShowcase() {
           initial={{ opacity: 0, x: 100, y: -40, rotate: 15 }}
           animate={{ opacity: 1, x: 0, y: 0, rotate: 6 }}
           transition={{ type: "spring", stiffness: 100, damping: 15, delay: 0.8 }}
-          className="absolute -right-2 top-1/3 z-20 flex items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/95 p-3 shadow-lg shadow-slate-200/60 backdrop-blur-md sm:right-8 sm:p-4"
+          className="absolute -right-2 top-1/3 z-20 flex items-center gap-3 rounded-2xl border border-slate-200/50 bg-white/90 p-3 shadow-xl backdrop-blur-md sm:right-8 sm:p-4"
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
             <MessageCircle className="h-5 w-5" />
@@ -65,7 +65,7 @@ export function ConvergingHeroShowcase() {
           initial={{ opacity: 0, x: 80, y: 80, rotate: 20 }}
           animate={{ opacity: 1, x: 0, y: 0, rotate: -4 }}
           transition={{ type: "spring", stiffness: 100, damping: 15, delay: 1 }}
-          className="absolute -right-4 bottom-1/4 z-20 flex items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/95 p-3 shadow-lg shadow-slate-200/60 backdrop-blur-md sm:right-12 sm:p-4"
+          className="absolute -right-4 bottom-1/4 z-20 flex items-center gap-3 rounded-2xl border border-slate-200/50 bg-white/90 p-3 shadow-xl backdrop-blur-md sm:right-12 sm:p-4"
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
             <FileText className="h-5 w-5" />
