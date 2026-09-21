@@ -97,7 +97,7 @@ export function ConvergingHeroShowcase() {
           y,
           transformStyle: "preserve-3d",
         }}
-        className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-700/70 bg-[#0d1626]/95 p-1 sm:p-2 shadow-[0_25px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl"
+        className="relative overflow-hidden rounded-2xl sm:rounded-3xl border-t border-r border-amber-300/35 border-b border-l border-slate-700/60 bg-[#0d1626]/95 p-1 sm:p-2 shadow-[0_25px_60px_rgba(0,0,0,0.7),-10px_-10px_40px_rgba(251,191,36,0.06)] backdrop-blur-xl"
       >
         {/* Top Browser Bar */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 bg-[#09101d] px-4 py-2.5 rounded-t-xl sm:rounded-t-2xl">

@@ -75,11 +75,18 @@ export default function HomePage(): JSX.Element {
           aria-hidden="true"
         />
 
-        {/* Clean interactive solar photon dust */}
+        {/* Clean interactive solar photon dust and dynamic God Rays */}
         <HeroCanvasBackground />
 
-        {/* Natural Sunbeam Top Lighting (Solar warm sunlight, no neon blur) */}
-        <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-[420px] w-[960px] rounded-full bg-gradient-to-b from-amber-400/18 via-emerald-400/6 to-transparent blur-[120px]" />
+        {/* Soft Solar Lens Flare Bloom from Top-Right (Desaturated, soft champagne-gold daylight) */}
+        <div
+          className="pointer-events-none absolute -top-24 -right-24 h-[550px] w-[650px] rounded-full bg-gradient-to-bl from-amber-200/20 via-amber-400/10 to-transparent blur-[130px]"
+          aria-hidden="true"
+        />
+        <div
+          className="pointer-events-none absolute top-16 right-1/4 h-[320px] w-[450px] rounded-full bg-gradient-to-b from-amber-300/8 via-emerald-400/3 to-transparent blur-[110px]"
+          aria-hidden="true"
+        />
 
         {/* Header */}
         <header className="sticky top-0 z-50 flex shrink-0 border-b border-slate-800/80 bg-[#0e1726]/85 backdrop-blur-xl">
@@ -152,15 +159,15 @@ export default function HomePage(): JSX.Element {
         <div className="relative z-10 flex flex-1 items-center px-4 pt-12 pb-16 sm:px-6 sm:pt-16 sm:pb-20 md:pt-20">
           <div className="mx-auto w-full max-w-6xl">
             <div className="mx-auto max-w-4xl text-center">
-              {/* Solar Eyebrow Badge */}
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-300">
-                <Sun className="h-3.5 w-3.5 text-amber-400" />
+              {/* Solar Eyebrow Badge with sun-dappled border */}
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border-t border-r border-amber-300/40 border-b border-l border-amber-400/25 bg-gradient-to-r from-amber-400/10 via-amber-400/15 to-amber-200/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-200 shadow-[0_2px_15px_rgba(251,191,36,0.1)]">
+                <Sun className="h-3.5 w-3.5 text-amber-300" />
                 <span>Inteligência Artificial & Motor Fotovoltaico</span>
               </div>
 
               <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl leading-[1.12]">
                 Gere propostas solares completas em{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-300 to-emerald-400">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-emerald-300 drop-shadow-[0_2px_14px_rgba(251,191,36,0.15)]">
                   segundos
                 </span>{" "}
                 e feche mais vendas
@@ -184,7 +191,7 @@ export default function HomePage(): JSX.Element {
                   href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergiVIA."
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`${btnBase} min-h-12 w-full border border-amber-400/50 bg-amber-400/10 px-8 font-semibold text-amber-200 hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-400/20 sm:w-auto sm:min-w-[240px] transition-all`}
+                  className={`${btnBase} min-h-12 w-full border-t border-r border-amber-200/50 border-b border-l border-amber-400/25 bg-gradient-to-bl from-amber-400/18 via-amber-400/8 to-transparent px-8 font-semibold text-amber-100 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-400/25 sm:w-auto sm:min-w-[240px] transition-all shadow-[0_4px_20px_rgba(245,158,11,0.1)]`}
                 >
                   Ver demonstração
                 </a>
