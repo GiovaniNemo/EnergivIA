@@ -3109,15 +3109,19 @@ export const ProposalEconomicsModal = forwardRef<
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-3 shrink-0 rounded-xl bg-emerald-500/10 border border-emerald-500/40 px-3 py-2 shadow-[0_0_20px_rgba(16,185,129,0.15)] transition-all hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] relative overflow-hidden group">
+                      {/* Subtle animated shine effect */}
+                      <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-emerald-400/10 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
+
                       <Label
                         htmlFor="kwp-rate-input"
-                        className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] whitespace-nowrap"
+                        className="text-xs sm:text-sm font-bold text-emerald-400 whitespace-nowrap flex items-center gap-1.5"
                       >
+                        <Sparkles className="w-3.5 h-3.5" />
                         Taxa R$/kWp:
                       </Label>
                       <div className="relative w-36">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[var(--color-muted-foreground)] font-medium">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-emerald-500/80 font-bold">
                           R$
                         </span>
                         <Input
@@ -3129,7 +3133,7 @@ export const ProposalEconomicsModal = forwardRef<
                           onChange={(e) =>
                             setKwpRateValue(Math.max(0, parseFloat(e.target.value) || 0))
                           }
-                          className="pl-8 h-10 font-bold text-sm border-[var(--color-border)] focus-visible:ring-emerald-500"
+                          className="pl-8 h-10 font-extrabold text-base border-emerald-500/50 bg-emerald-950/40 text-emerald-300 focus-visible:ring-emerald-400 focus-visible:border-emerald-400 shadow-inner"
                           placeholder="2800"
                         />
                       </div>
