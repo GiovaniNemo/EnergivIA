@@ -41,7 +41,7 @@ export function HeroCarousel() {
   // Animate the container to the active slide index
   useEffect(() => {
     controls.start({
-      x: `calc(-${currentIndex * 100}% - ${currentIndex * 1.5}rem)`,
+      x: `-${currentIndex * 100}%`,
       transition: { type: "spring", stiffness: 200, damping: 25 },
     });
   }, [currentIndex, controls]);
@@ -61,9 +61,9 @@ export function HeroCarousel() {
   return (
     <div className="relative w-full max-w-6xl mx-auto px-4 sm:px-6 py-12">
       {/* Carousel Viewport */}
-      <div className="overflow-hidden rounded-3xl">
+      <div className="overflow-hidden rounded-3xl w-full">
         <motion.div
-          className="flex gap-6 cursor-grab active:cursor-grabbing"
+          className="flex cursor-grab active:cursor-grabbing"
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={0.2}
@@ -75,32 +75,36 @@ export function HeroCarousel() {
             const isActive = index === currentIndex;
 
             return (
-              <motion.div
+              <div
                 key={slide.id}
-                className={`relative shrink-0 w-full sm:w-[85%] md:w-[75%] lg:w-[65%] h-[400px] sm:h-[500px] md:h-[600px] rounded-3xl border transition-all duration-500 overflow-hidden ${
-                  isActive
-                    ? "border-amber-400/30 bg-gradient-to-br from-slate-900/80 via-[#0c1424]/90 to-[#050811]/95 shadow-[0_0_50px_-12px_rgba(251,191,36,0.15)]"
-                    : "border-slate-800/50 bg-slate-950/50 opacity-50 scale-[0.97]"
-                } backdrop-blur-xl flex flex-col items-center justify-center`}
+                className="w-full shrink-0 flex items-center justify-center px-2 sm:px-0"
               >
-                {/* Image Placeholder Icon */}
-                <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">
-                  <div className="w-20 h-20 mb-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 flex items-center justify-center shadow-inner">
-                    <ImageIcon className="w-10 h-10 text-slate-500" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-3">{slide.title}</h3>
-                  <p className="text-slate-400 max-w-md">{slide.desc}</p>
+                <motion.div
+                  className={`relative w-full sm:w-[90%] md:w-[80%] lg:w-[75%] h-[400px] sm:h-[500px] md:h-[600px] rounded-3xl border transition-all duration-500 overflow-hidden ${
+                    isActive
+                      ? "border-amber-400/30 bg-gradient-to-br from-slate-900/80 via-[#0c1424]/90 to-[#050811]/95 shadow-[0_0_50px_-12px_rgba(251,191,36,0.15)]"
+                      : "border-slate-800/50 bg-slate-950/50 opacity-40 scale-[0.92]"
+                  } backdrop-blur-xl flex flex-col items-center justify-center`}
+                >
+                  {/* Image Placeholder Icon */}
+                  <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">
+                    <div className="w-20 h-20 mb-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 flex items-center justify-center shadow-inner">
+                      <ImageIcon className="w-10 h-10 text-slate-500" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-3">{slide.title}</h3>
+                    <p className="text-slate-400 max-w-md">{slide.desc}</p>
 
-                  <div className="mt-8 px-4 py-2 rounded-full border border-slate-700/50 bg-slate-800/30 text-xs font-mono text-slate-500 uppercase tracking-widest">
-                    Placeholder Visual {slide.id}
+                    <div className="mt-8 px-4 py-2 rounded-full border border-slate-700/50 bg-slate-800/30 text-xs font-mono text-slate-500 uppercase tracking-widest">
+                      Placeholder Visual {slide.id}
+                    </div>
                   </div>
-                </div>
 
-                {/* Subtle Glint Effect on Active Slide */}
-                {isActive && (
-                  <div className="pointer-events-none absolute inset-0 rounded-3xl border-t border-r border-amber-200/20" />
-                )}
-              </motion.div>
+                  {/* Subtle Glint Effect on Active Slide */}
+                  {isActive && (
+                    <div className="pointer-events-none absolute inset-0 rounded-3xl border-t border-r border-amber-200/20" />
+                  )}
+                </motion.div>
+              </div>
             );
           })}
         </motion.div>
