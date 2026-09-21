@@ -11,6 +11,7 @@ interface Star {
   twinkleOffset: number;
   color: string;
   depth: number;
+  hasSparkle: boolean;
 }
 
 interface ShootingStar {
@@ -44,8 +45,21 @@ export function HeroCanvasBackground(): JSX.Element {
     if (!ctx) return;
 
     let animationFrameId: number;
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    const setupCanvasResolution = () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    setupCanvasResolution();
 
     let scrollY = window.scrollY;
     let targetScrollY = window.scrollY;
@@ -57,10 +71,61 @@ export function HeroCanvasBackground(): JSX.Element {
       targetY: height * 0.1,
     };
 
+    // -------------------------------------------------------------
+    // DENSE 4K RETINA STARFIELD GENERATION (Idêntico ao padrão da imagem)
+    // -------------------------------------------------------------
+    let stars: Star[] = [];
+    const starColors = [
+      "rgba(255, 255, 255, ", // Pure white
+      "rgba(255, 255, 255, ", // Pure white
+      "rgba(224, 242, 254, ", // Soft diamond icy blue
+      "rgba(254, 243, 199, ", // Warm celestial starlight
+      "rgba(240, 249, 255, ", // Crisp silver
+    ];
+
+    const initStars = () => {
+      // Density matching the user's high-definition astronomy reference image (~450-600 stars)
+      const starCount = Math.min(550, Math.floor((width * height) / 3200));
+      stars = Array.from({ length: starCount }, () => {
+        const rand = Math.random();
+        let size: number;
+        let baseAlpha: number;
+        let hasSparkle = false;
+
+        if (rand < 0.7) {
+          // 70% micro-stars: ultra-sharp pinpoints
+          size = Math.random() * 0.55 + 0.4;
+          baseAlpha = Math.random() * 0.65 + 0.25;
+        } else if (rand < 0.92) {
+          // 22% medium stars
+          size = Math.random() * 0.65 + 0.95;
+          baseAlpha = Math.random() * 0.45 + 0.45;
+        } else {
+          // 8% bright anchor stars with subtle optical cross-diffraction
+          size = Math.random() * 0.7 + 1.5;
+          baseAlpha = Math.random() * 0.25 + 0.75;
+          hasSparkle = true;
+        }
+
+        return {
+          x: Math.random() * width,
+          y: Math.random() * height,
+          size,
+          baseAlpha,
+          twinkleSpeed: Math.random() * 0.035 + 0.01,
+          twinkleOffset: Math.random() * Math.PI * 2,
+          color: starColors[Math.floor(Math.random() * starColors.length)],
+          depth: Math.random() * 0.7 + 0.25, // Depth layer for 3D parallax scroll
+          hasSparkle,
+        };
+      });
+    };
+
+    initStars();
+
     const handleResize = () => {
       if (!canvas) return;
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
+      setupCanvasResolution();
       initStars();
     };
 
@@ -78,34 +143,7 @@ export function HeroCanvasBackground(): JSX.Element {
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
     window.addEventListener("scroll", handleScroll, { passive: true });
 
-    // -------------------------------------------------------------
-    // STARFIELD GENERATION (Céu Estrelado Realista)
-    // -------------------------------------------------------------
-    let stars: Star[] = [];
-    const starColors = [
-      "rgba(255, 255, 255, ", // Pure white star
-      "rgba(224, 242, 254, ", // Soft diamond blue star
-      "rgba(254, 243, 199, ", // Warm celestial gold star
-      "rgba(240, 249, 255, ", // Crisp silver star
-    ];
-
-    const initStars = () => {
-      const starCount = Math.min(180, Math.floor((width * height) / 9000));
-      stars = Array.from({ length: starCount }, () => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        size: Math.random() * 1.5 + 0.5,
-        baseAlpha: Math.random() * 0.6 + 0.25,
-        twinkleSpeed: Math.random() * 0.03 + 0.01,
-        twinkleOffset: Math.random() * Math.PI * 2,
-        color: starColors[Math.floor(Math.random() * starColors.length)],
-        depth: Math.random() * 0.7 + 0.3, // Depth for 3D parallax scroll
-      }));
-    };
-
-    initStars();
-
-    // Occasional subtle shooting stars (estrelas cadentes)
+    // Shooting stars (estrelas cadentes)
     const shootingStars: ShootingStar[] = [
       { x: 0, y: 0, length: 0, speed: 0, angle: 0, alpha: 0, active: false },
       { x: 0, y: 0, length: 0, speed: 0, angle: 0, alpha: 0, active: false },
@@ -113,10 +151,10 @@ export function HeroCanvasBackground(): JSX.Element {
 
     const spawnShootingStar = (star: ShootingStar) => {
       star.x = Math.random() * (width * 0.65);
-      star.y = Math.random() * (height * 0.4);
-      star.length = Math.random() * 80 + 50;
+      star.y = Math.random() * (height * 0.45);
+      star.length = Math.random() * 90 + 55;
       star.speed = Math.random() * 8 + 7;
-      star.angle = Math.PI * (0.2 + Math.random() * 0.1); // Diagonally downwards
+      star.angle = Math.PI * (0.22 + Math.random() * 0.1);
       star.alpha = 1;
       star.active = true;
     };
@@ -149,16 +187,13 @@ export function HeroCanvasBackground(): JSX.Element {
     const render = () => {
       tick++;
 
-      // Smooth scroll interpolation
       scrollY += (targetScrollY - scrollY) * 0.08;
-
-      // Smooth mouse interaction
       mouse.x += (mouse.targetX - mouse.x) * 0.03;
       mouse.y += (mouse.targetY - mouse.y) * 0.03;
 
       ctx.clearRect(0, 0, width, height);
 
-      // Sun position anchored at top-right
+      // Sun position anchored at top-right with scroll parallax
       const sunParallaxY = -40 + scrollY * 0.26;
       const sunMouseOffset = (mouse.x - width * 0.85) * 0.03;
       const sunX = width - 40 + sunMouseOffset;
@@ -166,43 +201,43 @@ export function HeroCanvasBackground(): JSX.Element {
       const sunMaxRadius = Math.max(width * 0.85, 750);
 
       // -------------------------------------------------------------
-      // 1. RENDER STARRY SKY (Céu Estrelado com Parallax e Cintilação)
+      // 1. DENSE HIGH-DEFINITION STARFIELD (4K Retina Sharpness)
       // -------------------------------------------------------------
       stars.forEach((s) => {
-        // Vertical parallax scroll based on star's depth
+        // 3D vertical parallax scroll based on depth
         const drawY = (s.y - scrollY * s.depth * 0.35 + height * 5) % height;
 
-        // Twinkling animation
+        // Realistic organic twinkle
         const twinkle = Math.sin(tick * s.twinkleSpeed + s.twinkleOffset);
-        const starAlpha = s.baseAlpha * (0.65 + 0.35 * twinkle);
+        const currentAlpha = s.baseAlpha * (0.7 + 0.3 * twinkle);
 
-        // Natural wash-out near the sun (sunrise overpowers stars nearby)
+        // Natural wash-out near the sunrise (stars fade naturally as they approach sun)
         const distToSun = Math.hypot(s.x - sunX, drawY - sunY);
-        const washOut = Math.min(1, Math.max(0.05, (distToSun - 180) / 450));
-        const finalAlpha = starAlpha * washOut;
+        const washOut = Math.min(1, Math.max(0.05, (distToSun - 190) / 460));
+        const finalAlpha = currentAlpha * washOut;
 
-        if (finalAlpha > 0.03) {
+        if (finalAlpha > 0.02) {
           ctx.beginPath();
           ctx.arc(s.x, drawY, s.size, 0, Math.PI * 2);
           ctx.fillStyle = `${s.color}${finalAlpha})`;
           ctx.fill();
 
-          // Subtle star cross-sparkle for prominent stars
-          if (s.size > 1.3 && finalAlpha > 0.45) {
-            ctx.strokeStyle = `${s.color}${finalAlpha * 0.4})`;
-            ctx.lineWidth = 0.5;
+          // Subtle optical cross-sparkle for prominent bright stars
+          if (s.hasSparkle && finalAlpha > 0.5) {
+            ctx.strokeStyle = `${s.color}${finalAlpha * 0.35})`;
+            ctx.lineWidth = 0.6;
             ctx.beginPath();
-            ctx.moveTo(s.x - s.size * 2.2, drawY);
-            ctx.lineTo(s.x + s.size * 2.2, drawY);
-            ctx.moveTo(s.x, drawY - s.size * 2.2);
-            ctx.lineTo(s.x, drawY + s.size * 2.2);
+            ctx.moveTo(s.x - s.size * 2.4, drawY);
+            ctx.lineTo(s.x + s.size * 2.4, drawY);
+            ctx.moveTo(s.x, drawY - s.size * 2.4);
+            ctx.lineTo(s.x, drawY + s.size * 2.4);
             ctx.stroke();
           }
         }
       });
 
       // -------------------------------------------------------------
-      // 2. SHOOTING STARS (Estrelas Cadentes Ocasionais)
+      // 2. SHOOTING STARS (Estrelas Cadentes a cada ~4 segundos)
       // -------------------------------------------------------------
       if (tick % 240 === 0) {
         const inactive = shootingStars.find((st) => !st.active);
@@ -225,21 +260,21 @@ export function HeroCanvasBackground(): JSX.Element {
 
         const meteorGrad = ctx.createLinearGradient(tailX, tailY, st.x, st.y);
         meteorGrad.addColorStop(0, "transparent");
-        meteorGrad.addColorStop(0.7, `rgba(224, 242, 254, ${st.alpha * 0.4})`);
-        meteorGrad.addColorStop(1, `rgba(255, 255, 255, ${st.alpha * 0.9})`);
+        meteorGrad.addColorStop(0.7, `rgba(224, 242, 254, ${st.alpha * 0.45})`);
+        meteorGrad.addColorStop(1, `rgba(255, 255, 255, ${st.alpha * 0.95})`);
 
         ctx.beginPath();
         ctx.moveTo(tailX, tailY);
         ctx.lineTo(st.x, st.y);
-        ctx.lineWidth = 1.4;
+        ctx.lineWidth = 1.5;
         ctx.strokeStyle = meteorGrad;
         ctx.stroke();
       });
 
       // -------------------------------------------------------------
-      // 3. WARM SOLAR GOD RAYS (Mantendo os feixes de sol do topo)
+      // 3. WARM SOLAR GOD RAYS (Mantendo os feixes solares do topo)
       // -------------------------------------------------------------
-      const rayOriginAngle = Math.PI * 0.75; // Diagonally down-left towards content
+      const rayOriginAngle = Math.PI * 0.75;
 
       rayConfigs.forEach((ray, index) => {
         const dynamicAngle =
@@ -272,13 +307,13 @@ export function HeroCanvasBackground(): JSX.Element {
       });
 
       // -------------------------------------------------------------
-      // 4. SOLAR RADIANCE CORE (Mantendo a corona solar suave)
+      // 4. SOLAR RADIANCE CORE (Mantendo a corona solar de luz)
       // -------------------------------------------------------------
       const coreGrad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunMaxRadius);
-      coreGrad.addColorStop(0, "rgba(255, 255, 255, 0.85)"); // Core incandescente
-      coreGrad.addColorStop(0.04, "rgba(254, 243, 199, 0.48)"); // Corona quente
-      coreGrad.addColorStop(0.12, "rgba(252, 211, 77, 0.2)"); // Luz solar dourada
-      coreGrad.addColorStop(0.28, "rgba(245, 158, 11, 0.08)"); // Âmbar atmosférico
+      coreGrad.addColorStop(0, "rgba(255, 255, 255, 0.85)");
+      coreGrad.addColorStop(0.04, "rgba(254, 243, 199, 0.48)");
+      coreGrad.addColorStop(0.12, "rgba(252, 211, 77, 0.2)");
+      coreGrad.addColorStop(0.28, "rgba(245, 158, 11, 0.08)");
       coreGrad.addColorStop(0.55, "rgba(16, 185, 129, 0.02)");
       coreGrad.addColorStop(1, "transparent");
 
@@ -286,7 +321,7 @@ export function HeroCanvasBackground(): JSX.Element {
       ctx.fillRect(0, 0, width, height);
 
       // -------------------------------------------------------------
-      // 5. OPTICAL LENS FLARE DISCS (Discos de luz ao longo do eixo)
+      // 5. OPTICAL LENS FLARE DISCS
       // -------------------------------------------------------------
       const targetPointX = width * 0.35;
       const targetPointY = height * 0.65;
@@ -319,7 +354,7 @@ export function HeroCanvasBackground(): JSX.Element {
       });
 
       // -------------------------------------------------------------
-      // 6. SOLAR DUST PHOTONS (Poeira estelar e solar flutuante)
+      // 6. SOLAR DUST PHOTONS
       // -------------------------------------------------------------
       photons.forEach((p) => {
         p.x += p.vx;

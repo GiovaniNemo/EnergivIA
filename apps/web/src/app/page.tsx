@@ -69,13 +69,7 @@ export default function HomePage(): JSX.Element {
       {/* HERO SECTION                                                  */}
       {/* ------------------------------------------------------------- */}
       <div className="landing-hero relative overflow-hidden min-h-[92vh] flex flex-col bg-[#03060c] text-white">
-        {/* Authentic Starry Sky Background Image */}
-        <div
-          className="pointer-events-none absolute inset-0 bg-[url('/landing/starry-sky.png')] bg-cover bg-center bg-no-repeat opacity-85"
-          aria-hidden="true"
-        />
-
-        {/* Interactive Starry Sky Canvas (twinkling stars + shooting stars + sun God Rays & lens flare) */}
+        {/* Native 4K Ultra-Crisp Starry Sky Canvas with Shooting Stars & Sun God Rays */}
         <HeroCanvasBackground />
 
         {/* Soft Solar Lens Flare Bloom from Top-Right (Desaturated, soft champagne-gold daylight) */}
