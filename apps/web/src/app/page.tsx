@@ -17,7 +17,7 @@ import {
 import { FaWhatsapp } from "react-icons/fa";
 import { HowItWorksTabs } from "@/components/landing/how-it-works-tabs";
 import { BubbleSidebar } from "@/components/landing/bubble-sidebar";
-import { ConvergingHeroShowcase } from "@/components/landing/converging-hero-showcase";
+import { HeroCarousel } from "@/components/landing/hero-carousel";
 import { ConvergingPanelsSection } from "@/components/landing/converging-panels-section";
 import { HeroCanvasBackground } from "@/components/landing/hero-canvas-background";
 import { AnimatedHeroText } from "@/components/landing/animated-hero-text";
@@ -258,7 +258,7 @@ export default function HomePage(): JSX.Element {
             </div>
 
             {/* Interactive Dynamic Product Showcase with 3D Scroll Perspective */}
-            <ConvergingHeroShowcase />
+            <HeroCarousel />
           </div>
         </div>
       </div>
