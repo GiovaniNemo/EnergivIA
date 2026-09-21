@@ -16,8 +16,6 @@ import {
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { HowItWorksTabs } from "@/components/landing/how-it-works-tabs";
-import { BubbleSidebar } from "@/components/landing/bubble-sidebar";
-import { HeroCarousel } from "@/components/landing/hero-carousel";
 import { ConvergingPanelsSection } from "@/components/landing/converging-panels-section";
 import { HeroCanvasBackground } from "@/components/landing/hero-canvas-background";
 import { AnimatedHeroText } from "@/components/landing/animated-hero-text";
@@ -68,8 +66,6 @@ export const metadata: Metadata = {
 export default function HomePage(): JSX.Element {
   return (
     <div className="landing-page min-h-screen flex flex-col bg-[#050811] text-white antialiased selection:bg-amber-400/20 selection:text-amber-200">
-      <BubbleSidebar />
-
       {/* ------------------------------------------------------------- */}
       {/* HERO SECTION                                                  */}
       {/* ------------------------------------------------------------- */}
@@ -257,8 +253,21 @@ export default function HomePage(): JSX.Element {
               </AnimatedHeroContainer>
             </div>
 
-            {/* Interactive Dynamic Product Showcase with 3D Scroll Perspective */}
-            <HeroCarousel />
+            {/* Static Hero Image Showcase */}
+            <div className="relative mx-auto mt-16 max-w-5xl rounded-2xl border border-slate-800/60 bg-slate-900/50 p-2 shadow-2xl shadow-emerald-900/20 backdrop-blur-sm sm:mt-24 sm:p-4">
+              <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+                <Image
+                  src="/landing/demo.png"
+                  alt="Painel de Oportunidades & Vendas EnergiVIA"
+                  width={2400}
+                  height={1200}
+                  className="w-full h-auto object-cover"
+                  priority
+                />
+              </div>
+              {/* Subtle top reflection */}
+              <div className="pointer-events-none absolute inset-0 rounded-2xl border-t border-white/10" />
+            </div>
           </div>
         </div>
       </div>
