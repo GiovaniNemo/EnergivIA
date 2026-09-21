@@ -72,37 +72,37 @@ export function HeroCanvasBackground(): JSX.Element {
     };
 
     // -------------------------------------------------------------
-    // DENSE 4K RETINA STARFIELD GENERATION (Idêntico ao padrão da imagem)
+    // DENSE 4K RETINA STARFIELD GENERATION (Deep Infinite Cosmos)
     // -------------------------------------------------------------
     let stars: Star[] = [];
     const starColors = [
-      "rgba(255, 255, 255, ", // Pure white
-      "rgba(255, 255, 255, ", // Pure white
-      "rgba(224, 242, 254, ", // Soft diamond icy blue
-      "rgba(254, 243, 199, ", // Warm celestial starlight
-      "rgba(240, 249, 255, ", // Crisp silver
+      "rgba(255, 255, 255, ", // Pure diamond white
+      "rgba(255, 255, 255, ", // Pure diamond white
+      "rgba(235, 245, 255, ", // Crisp glacial starlight
+      "rgba(255, 248, 235, ", // Warm celestial pearl
+      "rgba(245, 250, 255, ", // High-magnitude Sirius silver
     ];
 
     const initStars = () => {
-      // Density matching the user's high-definition astronomy reference image (~450-600 stars)
-      const starCount = Math.min(550, Math.floor((width * height) / 3200));
+      // High-density stellar field with pure deep black contrast (~600-750 stars)
+      const starCount = Math.min(720, Math.floor((width * height) / 2500));
       stars = Array.from({ length: starCount }, () => {
         const rand = Math.random();
         let size: number;
         let baseAlpha: number;
         let hasSparkle = false;
 
-        if (rand < 0.7) {
-          // 70% micro-stars: ultra-sharp pinpoints
-          size = Math.random() * 0.55 + 0.4;
-          baseAlpha = Math.random() * 0.65 + 0.25;
-        } else if (rand < 0.92) {
-          // 22% medium stars
-          size = Math.random() * 0.65 + 0.95;
-          baseAlpha = Math.random() * 0.45 + 0.45;
+        if (rand < 0.68) {
+          // 68% micro-stars: sharp sub-pixel stardust of deep infinity
+          size = Math.random() * 0.5 + 0.35;
+          baseAlpha = Math.random() * 0.7 + 0.25;
+        } else if (rand < 0.91) {
+          // 23% medium starlight with organic harmonic pulsation
+          size = Math.random() * 0.6 + 0.9;
+          baseAlpha = Math.random() * 0.45 + 0.5;
         } else {
-          // 8% bright anchor stars with subtle optical cross-diffraction
-          size = Math.random() * 0.7 + 1.5;
+          // 9% prominent stellar beacons with subtle optical diffraction
+          size = Math.random() * 0.75 + 1.55;
           baseAlpha = Math.random() * 0.25 + 0.75;
           hasSparkle = true;
         }
@@ -112,10 +112,10 @@ export function HeroCanvasBackground(): JSX.Element {
           y: Math.random() * height,
           size,
           baseAlpha,
-          twinkleSpeed: Math.random() * 0.035 + 0.01,
+          twinkleSpeed: Math.random() * 0.03 + 0.008,
           twinkleOffset: Math.random() * Math.PI * 2,
           color: starColors[Math.floor(Math.random() * starColors.length)],
-          depth: Math.random() * 0.7 + 0.25, // Depth layer for 3D parallax scroll
+          depth: Math.random() * 0.75 + 0.25, // Multi-plane 3D parallax scroll depth
           hasSparkle,
         };
       });
@@ -192,6 +192,27 @@ export function HeroCanvasBackground(): JSX.Element {
       mouse.y += (mouse.targetY - mouse.y) * 0.03;
 
       ctx.clearRect(0, 0, width, height);
+
+      // -------------------------------------------------------------
+      // 0. PURE INTENSE BLACK COSMOS WITH SUBTLE INTERSTELLAR DEPTH
+      // -------------------------------------------------------------
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, width, height);
+
+      // Ultra-subtle deep stardust cloud (preserves absolute black while adding organic realism)
+      const cosmicDust = ctx.createRadialGradient(
+        width * 0.3,
+        height * 0.45,
+        50,
+        width * 0.3,
+        height * 0.45,
+        width * 0.7
+      );
+      cosmicDust.addColorStop(0, "rgba(5, 10, 22, 0.4)");
+      cosmicDust.addColorStop(0.5, "rgba(2, 5, 12, 0.15)");
+      cosmicDust.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = cosmicDust;
+      ctx.fillRect(0, 0, width, height);
 
       // Sun position anchored at top-right with scroll parallax
       const sunParallaxY = -40 + scrollY * 0.26;
