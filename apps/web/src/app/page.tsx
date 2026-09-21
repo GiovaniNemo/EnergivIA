@@ -254,19 +254,15 @@ export default function HomePage(): JSX.Element {
             </div>
 
             {/* Static Hero Image Showcase */}
-            <div className="relative mx-auto mt-16 max-w-5xl rounded-2xl border border-slate-800/60 bg-slate-900/50 p-2 shadow-2xl shadow-emerald-900/20 backdrop-blur-sm sm:mt-24 sm:p-4">
-              <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
-                <Image
-                  src="/landing/demo.png"
-                  alt="Painel de Oportunidades & Vendas EnergiVIA"
-                  width={2400}
-                  height={1200}
-                  className="w-full h-auto object-cover"
-                  priority
-                />
-              </div>
-              {/* Subtle top reflection */}
-              <div className="pointer-events-none absolute inset-0 rounded-2xl border-t border-white/10" />
+            <div className="relative mx-auto mt-16 w-full max-w-[1400px] px-4 sm:mt-24 sm:px-6">
+              <Image
+                src="/landing/demo.png"
+                alt="Painel de Oportunidades & Vendas EnergiVIA"
+                width={2400}
+                height={1200}
+                className="w-full h-auto object-contain drop-shadow-[0_25px_50px_rgba(0,0,0,0.5)]"
+                priority
+              />
             </div>
           </div>
         </div>
