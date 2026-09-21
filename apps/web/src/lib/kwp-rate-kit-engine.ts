@@ -152,13 +152,20 @@ export function generateKwpRateTiers({
   ];
 
   return tierConfigs.map((cfg) => {
-    // Nas 3 opções, o valor do projeto respeita a taxa de R$/kWp informada pelo integrador
-    const totalPrice = Math.round(realSystemKwp * safeRate);
-    const ratePerKwpEffective = safeRate;
+    // Para manter a margem do integrador intacta, assumimos que no pacote Custo-Benefício
+    // (materialCostFactor = 1.0) o equipamento representa 55% da taxa base informada.
+    const baseEquipmentRate = safeRate * 0.55;
+    const baseMarginAndServices = safeRate - baseEquipmentRate; // O integrador não perde isso
 
-    // O que varia entre as opções é a composição e custo dos materiais:
-    // Base de equipamentos representa cerca de 55% do valor total do projeto:
-    const baseEquipmentBudget = totalPrice * 0.55 * cfg.materialCostFactor;
+    // Custo de equipamento ajustado para o tier atual
+    const tierEquipmentRate = baseEquipmentRate * cfg.materialCostFactor;
+
+    // A taxa efetiva soma o novo custo de equipamento com a margem preservada
+    const ratePerKwpEffective = Math.round(tierEquipmentRate + baseMarginAndServices);
+    const totalPrice = Math.round(realSystemKwp * ratePerKwpEffective);
+
+    // O budget base de equipamentos para calcular módulos, inversor, etc
+    const baseEquipmentBudget = Math.round(realSystemKwp * tierEquipmentRate);
 
     const modTotal = Math.round(baseEquipmentBudget * 0.5);
     const invTotal = Math.round(baseEquipmentBudget * 0.36);
