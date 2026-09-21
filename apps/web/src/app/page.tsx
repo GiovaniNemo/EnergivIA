@@ -20,6 +20,11 @@ import { BubbleSidebar } from "@/components/landing/bubble-sidebar";
 import { ConvergingHeroShowcase } from "@/components/landing/converging-hero-showcase";
 import { ConvergingPanelsSection } from "@/components/landing/converging-panels-section";
 import { HeroCanvasBackground } from "@/components/landing/hero-canvas-background";
+import { AnimatedHeroText } from "@/components/landing/animated-hero-text";
+import {
+  AnimatedHeroContainer,
+  AnimatedHeroEyebrow,
+} from "@/components/landing/animated-hero-elements";
 
 const btnBase =
   "inline-flex h-11 items-center justify-center rounded-full px-6 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 focus-visible:ring-offset-2";
@@ -154,104 +159,102 @@ export default function HomePage(): JSX.Element {
           <div className="mx-auto w-full max-w-6xl">
             <div className="mx-auto max-w-4xl text-center">
               {/* Solar Eyebrow Badge with sun-dappled border */}
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border-t border-r border-amber-300/40 border-b border-l border-amber-400/25 bg-gradient-to-r from-amber-400/10 via-amber-400/15 to-amber-200/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-200 shadow-[0_2px_15px_rgba(251,191,36,0.1)]">
-                <Sun className="h-3.5 w-3.5 text-amber-300" />
-                <span>Inteligência Artificial & Motor Fotovoltaico</span>
-              </div>
+              <AnimatedHeroEyebrow>
+                <div className="mb-6 inline-flex items-center gap-2 rounded-full border-t border-r border-amber-300/40 border-b border-l border-amber-400/25 bg-gradient-to-r from-amber-400/10 via-amber-400/15 to-amber-200/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-200 shadow-[0_2px_15px_rgba(251,191,36,0.1)]">
+                  <Sun className="h-3.5 w-3.5 text-amber-300" />
+                  <span>Inteligência Artificial & Motor Fotovoltaico</span>
+                </div>
+              </AnimatedHeroEyebrow>
 
-              <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl leading-[1.12]">
-                Gere propostas solares completas em{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-emerald-300 drop-shadow-[0_2px_14px_rgba(251,191,36,0.15)]">
-                  segundos
-                </span>{" "}
-                e feche mais vendas
-              </h1>
+              <AnimatedHeroText />
 
-              <p className="mx-auto mt-6 max-w-2xl text-base text-slate-300 sm:text-lg leading-relaxed">
-                Pare de perder tempo com planilhas e propostas manuais. Receba a conta de luz,
-                simule a usina ideal com IA e entregue a proposta comercial pronta no WhatsApp em 2
-                minutos.
-              </p>
+              <AnimatedHeroContainer>
+                <p className="mx-auto mt-6 max-w-2xl text-base text-slate-300 sm:text-lg leading-relaxed">
+                  Pare de perder tempo com planilhas e propostas manuais. Receba a conta de luz,
+                  simule a usina ideal com IA e entregue a proposta comercial pronta no WhatsApp em
+                  2 minutos.
+                </p>
 
-              {/* Action Buttons with Realistic Glass Reflection & Solar Sheen */}
-              <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-                {/* Primary Button - Emerald Glass with Upper Specular Reflection & Moving Glint */}
-                <div className="relative w-full sm:w-auto">
-                  {/* Subtle Mirrored Ground Glow */}
-                  <div
-                    className="pointer-events-none absolute -bottom-2.5 inset-x-6 h-3 rounded-full bg-gradient-to-b from-emerald-400/35 to-transparent blur-[6px]"
-                    aria-hidden="true"
-                  />
-                  <a
-                    href={appLoginUrl}
-                    className={`${btnBase} relative group overflow-hidden min-h-12 w-full sm:w-auto sm:min-w-[240px] px-8 font-bold text-slate-950 bg-gradient-to-b from-[#14c7b2] via-[#0fb8a4] to-[#0ba391] border-t border-r border-emerald-100/80 border-b border-l border-emerald-600/30 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.75),inset_0_-2px_4px_rgba(0,0,0,0.3),0_12px_28px_-6px_rgba(15,184,164,0.5)] hover:-translate-y-0.5 hover:shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.9),0_16px_32px_-6px_rgba(15,184,164,0.6)] transition-all`}
-                  >
-                    {/* Upper Curved Glass Specular Reflection */}
-                    <span
-                      className="pointer-events-none absolute top-0 inset-x-2 h-[48%] rounded-t-full bg-gradient-to-b from-white/45 via-white/20 to-transparent"
+                {/* Action Buttons with Realistic Glass Reflection & Solar Sheen */}
+                <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                  {/* Primary Button - Emerald Glass with Upper Specular Reflection & Moving Glint */}
+                  <div className="relative w-full sm:w-auto">
+                    {/* Subtle Mirrored Ground Glow */}
+                    <div
+                      className="pointer-events-none absolute -bottom-2.5 inset-x-6 h-3 rounded-full bg-gradient-to-b from-emerald-400/35 to-transparent blur-[6px]"
                       aria-hidden="true"
                     />
+                    <a
+                      href={appLoginUrl}
+                      className={`${btnBase} relative group overflow-hidden min-h-12 w-full sm:w-auto sm:min-w-[240px] px-8 font-bold text-slate-950 bg-gradient-to-b from-[#14c7b2] via-[#0fb8a4] to-[#0ba391] border-t border-r border-emerald-100/80 border-b border-l border-emerald-600/30 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.75),inset_0_-2px_4px_rgba(0,0,0,0.3),0_12px_28px_-6px_rgba(15,184,164,0.5)] hover:-translate-y-0.5 hover:shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.9),0_16px_32px_-6px_rgba(15,184,164,0.6)] transition-all`}
+                    >
+                      {/* Upper Curved Glass Specular Reflection */}
+                      <span
+                        className="pointer-events-none absolute top-0 inset-x-2 h-[48%] rounded-t-full bg-gradient-to-b from-white/45 via-white/20 to-transparent"
+                        aria-hidden="true"
+                      />
 
-                    {/* Animated Solar Sheen / Glint */}
-                    <span
-                      className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-[-22deg] animate-solar-reflection"
+                      {/* Animated Solar Sheen / Glint */}
+                      <span
+                        className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-[-22deg] animate-solar-reflection"
+                        aria-hidden="true"
+                      />
+
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        Criar conta grátis
+                      </span>
+                    </a>
+                  </div>
+
+                  {/* Secondary Button - Smoked Solar Glass with Sun Rim Reflection */}
+                  <div className="relative w-full sm:w-auto">
+                    {/* Subtle Mirrored Ground Glow */}
+                    <div
+                      className="pointer-events-none absolute -bottom-2.5 inset-x-6 h-3 rounded-full bg-gradient-to-b from-amber-400/25 to-transparent blur-[6px]"
                       aria-hidden="true"
                     />
+                    <a
+                      href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergiVIA."
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`${btnBase} relative group overflow-hidden min-h-12 w-full sm:w-auto sm:min-w-[240px] px-8 font-semibold text-amber-100 bg-gradient-to-b from-amber-400/20 via-slate-900/80 to-[#0c1424]/90 backdrop-blur-md border-t border-r border-amber-200/85 border-b border-l border-amber-400/30 shadow-[inset_0_1.5px_1px_rgba(254,243,199,0.7),inset_0_-2px_4px_rgba(0,0,0,0.5),0_10px_25px_-6px_rgba(245,158,11,0.22)] hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-[inset_0_1.5px_1px_rgba(254,243,199,0.9),0_14px_30px_-6px_rgba(245,158,11,0.3)] transition-all`}
+                    >
+                      {/* Upper Curved Glass Specular Reflection */}
+                      <span
+                        className="pointer-events-none absolute top-0 inset-x-2 h-[48%] rounded-t-full bg-gradient-to-b from-amber-100/35 via-amber-200/15 to-transparent"
+                        aria-hidden="true"
+                      />
 
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      Criar conta grátis
-                    </span>
-                  </a>
+                      {/* Animated Solar Sheen / Glint (Staggered timing) */}
+                      <span
+                        className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-amber-200/40 to-transparent skew-x-[-22deg] animate-solar-reflection"
+                        style={{ animationDelay: "2.2s" }}
+                        aria-hidden="true"
+                      />
+
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        Ver demonstração
+                      </span>
+                    </a>
+                  </div>
                 </div>
 
-                {/* Secondary Button - Smoked Solar Glass with Sun Rim Reflection */}
-                <div className="relative w-full sm:w-auto">
-                  {/* Subtle Mirrored Ground Glow */}
-                  <div
-                    className="pointer-events-none absolute -bottom-2.5 inset-x-6 h-3 rounded-full bg-gradient-to-b from-amber-400/25 to-transparent blur-[6px]"
-                    aria-hidden="true"
-                  />
-                  <a
-                    href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergiVIA."
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${btnBase} relative group overflow-hidden min-h-12 w-full sm:w-auto sm:min-w-[240px] px-8 font-semibold text-amber-100 bg-gradient-to-b from-amber-400/20 via-slate-900/80 to-[#0c1424]/90 backdrop-blur-md border-t border-r border-amber-200/85 border-b border-l border-amber-400/30 shadow-[inset_0_1.5px_1px_rgba(254,243,199,0.7),inset_0_-2px_4px_rgba(0,0,0,0.5),0_10px_25px_-6px_rgba(245,158,11,0.22)] hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-[inset_0_1.5px_1px_rgba(254,243,199,0.9),0_14px_30px_-6px_rgba(245,158,11,0.3)] transition-all`}
-                  >
-                    {/* Upper Curved Glass Specular Reflection */}
-                    <span
-                      className="pointer-events-none absolute top-0 inset-x-2 h-[48%] rounded-t-full bg-gradient-to-b from-amber-100/35 via-amber-200/15 to-transparent"
-                      aria-hidden="true"
-                    />
-
-                    {/* Animated Solar Sheen / Glint (Staggered timing) */}
-                    <span
-                      className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-amber-200/40 to-transparent skew-x-[-22deg] animate-solar-reflection"
-                      style={{ animationDelay: "2.2s" }}
-                      aria-hidden="true"
-                    />
-
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      Ver demonstração
-                    </span>
-                  </a>
+                {/* Fast Value Indicators */}
+                <div className="mt-7 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs text-slate-400">
+                  <span className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1">
+                    <Check className="h-3.5 w-3.5 text-emerald-400" />
+                    Sem troca de ferramentas
+                  </span>
+                  <span className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1">
+                    <Sun className="h-3.5 w-3.5 text-amber-400" />
+                    Simulação fotovoltaica em 10s
+                  </span>
+                  <span className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1">
+                    <Zap className="h-3.5 w-3.5 text-emerald-400" />
+                    Operação 100% no WhatsApp
+                  </span>
                 </div>
-              </div>
-
-              {/* Fast Value Indicators */}
-              <div className="mt-7 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs text-slate-400">
-                <span className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1">
-                  <Check className="h-3.5 w-3.5 text-emerald-400" />
-                  Sem troca de ferramentas
-                </span>
-                <span className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1">
-                  <Sun className="h-3.5 w-3.5 text-amber-400" />
-                  Simulação fotovoltaica em 10s
-                </span>
-                <span className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1">
-                  <Zap className="h-3.5 w-3.5 text-emerald-400" />
-                  Operação 100% no WhatsApp
-                </span>
-              </div>
+              </AnimatedHeroContainer>
             </div>
 
             {/* Interactive Dynamic Product Showcase with 3D Scroll Perspective */}
