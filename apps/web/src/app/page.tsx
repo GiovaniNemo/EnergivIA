@@ -80,11 +80,11 @@ export default function HomePage(): JSX.Element {
 
         {/* Soft Solar Lens Flare Bloom from Top-Right (Desaturated, soft champagne-gold daylight) */}
         <div
-          className="pointer-events-none absolute -top-16 -right-16 h-[720px] w-[880px] bg-[radial-gradient(ellipse_at_top_right,rgba(255,252,235,0.22)_0%,rgba(254,243,199,0.14)_25%,rgba(251,191,36,0.06)_50%,transparent_72%)] blur-2xl"
+          className="pointer-events-none absolute -top-24 -right-24 h-[550px] w-[650px] rounded-full bg-gradient-to-bl from-amber-200/20 via-amber-400/10 to-transparent blur-[130px]"
           aria-hidden="true"
         />
         <div
-          className="pointer-events-none absolute top-12 right-1/4 h-[380px] w-[520px] rounded-full bg-gradient-to-b from-amber-200/10 via-emerald-400/3 to-transparent blur-[110px]"
+          className="pointer-events-none absolute top-16 right-1/4 h-[320px] w-[450px] rounded-full bg-gradient-to-b from-amber-300/8 via-emerald-400/3 to-transparent blur-[110px]"
           aria-hidden="true"
         />
 
@@ -160,36 +160,30 @@ export default function HomePage(): JSX.Element {
           <div className="mx-auto w-full max-w-6xl">
             <div className="mx-auto max-w-4xl text-center">
               {/* Solar Eyebrow Badge with sun-dappled border */}
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border-t border-r border-amber-200/60 border-b border-l border-amber-400/25 bg-gradient-to-r from-amber-400/10 via-amber-300/15 to-amber-200/25 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-100 shadow-[0_2px_20px_rgba(251,191,36,0.16)]">
-                <Sun className="h-3.5 w-3.5 text-amber-300 animate-pulse" />
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border-t border-r border-amber-300/40 border-b border-l border-amber-400/25 bg-gradient-to-r from-amber-400/10 via-amber-400/15 to-amber-200/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-200 shadow-[0_2px_15px_rgba(251,191,36,0.1)]">
+                <Sun className="h-3.5 w-3.5 text-amber-300" />
                 <span>Inteligência Artificial & Motor Fotovoltaico</span>
               </div>
 
-              {/* Main Headline - Illuminated by the Sun from Top-Right */}
-              <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl leading-[1.12] drop-shadow-[-3px_4px_18px_rgba(251,191,36,0.16)]">
-                <span className="text-transparent bg-clip-text bg-gradient-to-br from-amber-100 via-white to-slate-200">
-                  Gere propostas solares completas em
-                </span>{" "}
-                <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-300 drop-shadow-[0_0_24px_rgba(252,211,77,0.38)]">
+              <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl leading-[1.12]">
+                Gere propostas solares completas em{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-emerald-300 drop-shadow-[0_2px_14px_rgba(251,191,36,0.15)]">
                   segundos
                 </span>{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-bl from-amber-100 via-white to-slate-200">
-                  e feche mais vendas
-                </span>
+                e feche mais vendas
               </h1>
 
-              {/* Subtitle with soft sunlight wash */}
-              <p className="mx-auto mt-6 max-w-2xl text-base sm:text-lg leading-relaxed text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-200 to-slate-300">
+              <p className="mx-auto mt-6 max-w-2xl text-base text-slate-300 sm:text-lg leading-relaxed">
                 Pare de perder tempo com planilhas e propostas manuais. Receba a conta de luz,
                 simule a usina ideal com IA e entregue a proposta comercial pronta no WhatsApp em 2
                 minutos.
               </p>
 
-              {/* Action Buttons - Sunlight Catching Top-Right Edges */}
+              {/* Action Buttons */}
               <div className="mt-8 flex flex-col items-center justify-center gap-3.5 sm:flex-row">
                 <a
                   href={appLoginUrl}
-                  className={`${btnBase} min-h-12 w-full border-t border-r border-emerald-200/50 bg-[#0fb8a4] hover:bg-[#0da898] px-8 font-bold text-slate-950 shadow-[0_10px_28px_rgba(15,184,164,0.35),0_0_15px_rgba(254,243,199,0.15)] hover:-translate-y-0.5 transition-all sm:w-auto sm:min-w-[240px]`}
+                  className={`${btnBase} min-h-12 w-full bg-[#0fb8a4] hover:bg-[#0da898] px-8 font-bold text-slate-950 shadow-lg shadow-emerald-950/40 hover:-translate-y-0.5 transition-all sm:w-auto sm:min-w-[240px]`}
                 >
                   Criar conta grátis
                 </a>
@@ -197,23 +191,23 @@ export default function HomePage(): JSX.Element {
                   href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergiVIA."
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`${btnBase} min-h-12 w-full border-t border-r border-amber-200/70 border-b border-l border-amber-400/30 bg-gradient-to-bl from-amber-300/25 via-amber-400/12 to-slate-900/50 px-8 font-semibold text-amber-100 hover:-translate-y-0.5 hover:border-amber-200 hover:bg-amber-400/25 sm:w-auto sm:min-w-[240px] transition-all shadow-[0_6px_25px_rgba(245,158,11,0.18)]`}
+                  className={`${btnBase} min-h-12 w-full border-t border-r border-amber-200/50 border-b border-l border-amber-400/25 bg-gradient-to-bl from-amber-400/18 via-amber-400/8 to-transparent px-8 font-semibold text-amber-100 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-400/25 sm:w-auto sm:min-w-[240px] transition-all shadow-[0_4px_20px_rgba(245,158,11,0.1)]`}
                 >
                   Ver demonstração
                 </a>
               </div>
 
-              {/* Fast Value Indicators with subtle sun rim light */}
+              {/* Fast Value Indicators */}
               <div className="mt-7 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs text-slate-400">
-                <span className="flex items-center gap-1.5 rounded-full border-t border-r border-amber-300/30 border-b border-l border-slate-800 bg-slate-900/80 px-3.5 py-1 text-slate-300 shadow-sm">
+                <span className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1">
                   <Check className="h-3.5 w-3.5 text-emerald-400" />
                   Sem troca de ferramentas
                 </span>
-                <span className="flex items-center gap-1.5 rounded-full border-t border-r border-amber-300/40 border-b border-l border-slate-800 bg-slate-900/80 px-3.5 py-1 text-slate-300 shadow-sm">
+                <span className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1">
                   <Sun className="h-3.5 w-3.5 text-amber-400" />
                   Simulação fotovoltaica em 10s
                 </span>
-                <span className="flex items-center gap-1.5 rounded-full border-t border-r border-amber-300/30 border-b border-l border-slate-800 bg-slate-900/80 px-3.5 py-1 text-slate-300 shadow-sm">
+                <span className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1">
                   <Zap className="h-3.5 w-3.5 text-emerald-400" />
                   Operação 100% no WhatsApp
                 </span>
