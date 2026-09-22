@@ -349,7 +349,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
             {/* Chat Messages Flow (Authentic WhatsApp light wallpaper and colors) */}
             <div
               ref={chatContainerRef}
-              className="relative flex-1 space-y-2.5 overflow-y-auto p-3 text-sm scroll-smooth scrollbar-thin scrollbar-thumb-slate-200 bg-[#efeae2]/50 bg-blend-multiply"
+              className="relative flex-1 space-y-2.5 overflow-y-auto p-3 text-sm scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden bg-[#efeae2]/50 bg-blend-multiply"
               style={{
                 backgroundImage: `radial-gradient(#0000000a 1px, transparent 1px)`,
                 backgroundSize: "16px 16px",
