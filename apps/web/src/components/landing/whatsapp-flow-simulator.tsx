@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   CheckCheck,
@@ -22,8 +23,8 @@ interface Milestone {
   title: string;
   tag: string;
   description: string;
-  startTime: number;
-  endTime: number;
+  stepStartIndex: number;
+  stepEndIndex: number;
 }
 
 const MILESTONES: Milestone[] = [
@@ -32,48 +33,45 @@ const MILESTONES: Milestone[] = [
     title: "Início & Menu Interativo",
     tag: "Passo 1",
     description: "O cliente manda 'Boa tarde' e o bot apresenta as opções comerciais.",
-    startTime: 0,
-    endTime: 6000,
+    stepStartIndex: 0,
+    stepEndIndex: 3,
   },
   {
     id: 1,
     title: "Leitura da Fatura de Energia",
     tag: "Passo 2",
     description: "Envio do PDF da fatura e extração por IA do consumo (257 kWh/mês) e telhado.",
-    startTime: 6000,
-    endTime: 11800,
+    stepStartIndex: 4,
+    stepEndIndex: 6,
   },
   {
     id: 2,
     title: "Seleção do Kit Dynamis",
     tag: "Passo 3",
     description: "Cálculo da potência (3,15 kWp), preço do kit Dynamis e escolha do integrador.",
-    startTime: 11800,
-    endTime: 17800,
+    stepStartIndex: 7,
+    stepEndIndex: 8,
   },
   {
     id: 3,
     title: "Dados do Cliente no CRM",
     tag: "Passo 4",
     description: "Coleta do nome (Marcelo), WhatsApp fictício e template desejado.",
-    startTime: 17800,
-    endTime: 25200,
+    stepStartIndex: 9,
+    stepEndIndex: 14,
   },
   {
     id: 4,
     title: "Proposta Pronta com Link",
     tag: "Passo 5",
     description: "Entrega do link elegante da proposta pronto para enviar ao cliente.",
-    startTime: 25200,
-    endTime: 35000,
+    stepStartIndex: 15,
+    stepEndIndex: 15,
   },
 ];
 
-const TOTAL_CYCLE_MS = 35000;
-
-interface ScheduledMessage {
+interface ChatMessage {
   id: string;
-  showAt: number;
   type: "user" | "user_doc" | "bot";
   text?: string;
   title?: string;
@@ -90,186 +88,316 @@ interface ScheduledMessage {
   time: string;
 }
 
-const SCHEDULED_MESSAGES: ScheduledMessage[] = [
-  // Passo 1
-  { id: "m1", showAt: 600, type: "user", text: "Boa tarde", time: "09:41" },
-  { id: "m2", showAt: 1700, type: "bot", kind: "welcome", time: "09:41" },
-  { id: "m3", showAt: 3700, type: "user", text: "1", time: "09:42" },
-  { id: "m4", showAt: 4700, type: "bot", kind: "ask_bill", time: "09:42" },
+interface StepConfig {
+  milestoneId: number;
+  message: ChatMessage;
+  userDraft?: string;
+  draftDurationMs?: number;
+  botTypingLabel?: string;
+  botTypingDurationMs?: number;
+  readPauseMs: number;
+}
 
-  // Passo 2
+const FLOW_STEPS: StepConfig[] = [
+  // Passo 1: Início
   {
-    id: "m5",
-    showAt: 6800,
-    type: "user_doc",
-    title: "Fatura_de_Energia.pdf",
-    subtitle: "1 página • 480 kB • PDF",
-    time: "09:42",
+    milestoneId: 0,
+    userDraft: "Boa tarde",
+    draftDurationMs: 450,
+    message: { id: "m1", type: "user", text: "Boa tarde", time: "09:41" },
+    readPauseMs: 400,
   },
-  { id: "m6", showAt: 8400, type: "bot", kind: "ocr_result", time: "09:42" },
-  { id: "m7", showAt: 10700, type: "user", text: "2", time: "09:42" },
+  {
+    milestoneId: 0,
+    botTypingLabel: "EnergivIA está digitando...",
+    botTypingDurationMs: 700,
+    message: { id: "m2", type: "bot", kind: "welcome", time: "09:41" },
+    readPauseMs: 1400,
+  },
+  {
+    milestoneId: 0,
+    userDraft: "1",
+    draftDurationMs: 300,
+    message: { id: "m3", type: "user", text: "1", time: "09:42" },
+    readPauseMs: 350,
+  },
+  {
+    milestoneId: 0,
+    botTypingLabel: "EnergivIA está digitando...",
+    botTypingDurationMs: 600,
+    message: { id: "m4", type: "bot", kind: "ask_bill", time: "09:42" },
+    readPauseMs: 900,
+  },
 
-  // Passo 3
-  { id: "m8", showAt: 13200, type: "bot", kind: "kit_dynamis", time: "09:43" },
-  { id: "m9", showAt: 15500, type: "user", text: "1", time: "09:43" },
-  { id: "m10", showAt: 16500, type: "bot", kind: "ask_name", time: "09:43" },
+  // Passo 2: Fatura & OCR
+  {
+    milestoneId: 1,
+    message: {
+      id: "m5",
+      type: "user_doc",
+      title: "Fatura_de_Energia.pdf",
+      subtitle: "1 página • 480 kB • PDF",
+      time: "09:42",
+    },
+    readPauseMs: 500,
+  },
+  {
+    milestoneId: 1,
+    botTypingLabel: "EnergivIA analisando fatura com IA...",
+    botTypingDurationMs: 1100,
+    message: { id: "m6", type: "bot", kind: "ocr_result", time: "09:42" },
+    readPauseMs: 1500,
+  },
+  {
+    milestoneId: 1,
+    userDraft: "2",
+    draftDurationMs: 300,
+    message: { id: "m7", type: "user", text: "2", time: "09:42" },
+    readPauseMs: 400,
+  },
 
-  // Passo 4
-  { id: "m11", showAt: 18400, type: "user", text: "Marcelo", time: "09:43" },
-  { id: "m12", showAt: 19400, type: "bot", kind: "ask_phone", time: "09:43" },
-  { id: "m13", showAt: 21600, type: "user", text: "(44) 99888-0000", time: "09:44" },
-  { id: "m14", showAt: 22600, type: "bot", kind: "ask_template", time: "09:44" },
-  { id: "m15", showAt: 24300, type: "user", text: "1", time: "09:44" },
+  // Passo 3: Kit Dynamis
+  {
+    milestoneId: 2,
+    botTypingLabel: "EnergivIA calculando melhor kit solar...",
+    botTypingDurationMs: 1100,
+    message: { id: "m8", type: "bot", kind: "kit_dynamis", time: "09:43" },
+    readPauseMs: 1600,
+  },
+  {
+    milestoneId: 2,
+    userDraft: "1",
+    draftDurationMs: 300,
+    message: { id: "m9", type: "user", text: "1", time: "09:43" },
+    readPauseMs: 350,
+  },
 
-  // Passo 5
-  { id: "m16", showAt: 26800, type: "bot", kind: "final_proposal", time: "09:45" },
-];
+  // Passo 4: Dados no CRM
+  {
+    milestoneId: 3,
+    botTypingLabel: "EnergivIA está digitando...",
+    botTypingDurationMs: 550,
+    message: { id: "m10", type: "bot", kind: "ask_name", time: "09:43" },
+    readPauseMs: 800,
+  },
+  {
+    milestoneId: 3,
+    userDraft: "Marcelo",
+    draftDurationMs: 400,
+    message: { id: "m11", type: "user", text: "Marcelo", time: "09:43" },
+    readPauseMs: 400,
+  },
+  {
+    milestoneId: 3,
+    botTypingLabel: "EnergivIA está digitando...",
+    botTypingDurationMs: 550,
+    message: { id: "m12", type: "bot", kind: "ask_phone", time: "09:43" },
+    readPauseMs: 800,
+  },
+  {
+    milestoneId: 3,
+    userDraft: "(44) 99888-0000",
+    draftDurationMs: 450,
+    message: { id: "m13", type: "user", text: "(44) 99888-0000", time: "09:44" },
+    readPauseMs: 400,
+  },
+  {
+    milestoneId: 3,
+    botTypingLabel: "EnergivIA está digitando...",
+    botTypingDurationMs: 550,
+    message: { id: "m14", type: "bot", kind: "ask_template", time: "09:44" },
+    readPauseMs: 900,
+  },
+  {
+    milestoneId: 3,
+    userDraft: "1",
+    draftDurationMs: 300,
+    message: { id: "m15", type: "user", text: "1", time: "09:44" },
+    readPauseMs: 350,
+  },
 
-interface TypingSpan {
-  start: number;
-  end: number;
-  label: string;
-}
-
-const BOT_TYPING_SPANS: TypingSpan[] = [
-  { start: 600, end: 1700, label: "EnergivIA está digitando..." },
-  { start: 3700, end: 4700, label: "EnergivIA está digitando..." },
-  { start: 6800, end: 8400, label: "EnergivIA analisando fatura com IA..." },
-  { start: 11800, end: 13200, label: "EnergivIA calculando melhor kit solar..." },
-  { start: 15500, end: 16500, label: "EnergivIA está digitando..." },
-  { start: 18400, end: 19400, label: "EnergivIA está digitando..." },
-  { start: 21600, end: 22600, label: "EnergivIA está digitando..." },
-  { start: 25200, end: 26800, label: "EnergivIA gerando proposta em PDF..." },
-];
-
-interface InputDraftSpan {
-  start: number;
-  end: number;
-  fullText: string;
-}
-
-const USER_INPUT_DRAFTS: InputDraftSpan[] = [
-  { start: 0, end: 600, fullText: "Boa tarde" },
-  { start: 3200, end: 3700, fullText: "1" },
-  { start: 10200, end: 10700, fullText: "2" },
-  { start: 15000, end: 15500, fullText: "1" },
-  { start: 17800, end: 18400, fullText: "Marcelo" },
-  { start: 20600, end: 21600, fullText: "(44) 99888-0000" },
-  { start: 23800, end: 24300, fullText: "1" },
+  // Passo 5: Proposta Final
+  {
+    milestoneId: 4,
+    botTypingLabel: "EnergivIA gerando proposta em PDF...",
+    botTypingDurationMs: 1200,
+    message: { id: "m16", type: "bot", kind: "final_proposal", time: "09:45" },
+    readPauseMs: 4500,
+  },
 ];
 
 export function WhatsappFlowSimulator(): JSX.Element {
-  const [timeMs, setTimeMs] = useState<number>(0);
+  // Current step index (0 to FLOW_STEPS.length - 1)
+  const [stepIndex, setStepIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [speed, setSpeed] = useState<number>(1);
 
+  // Micro-states for user typing draft & bot typing label
+  const [activeInputDraft, setActiveInputDraft] = useState<string>("");
+  const [activeBotTyping, setActiveBotTyping] = useState<string | null>(null);
+
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const lastTimeRef = useRef<number | null>(null);
+  const scrollAnchorRef = useRef<HTMLDivElement>(null);
+  const isTransitioningRef = useRef<boolean>(false);
 
-  // High-precision smooth animation loop (60fps)
-  useEffect(() => {
-    if (!isPlaying) {
-      lastTimeRef.current = null;
-      return;
-    }
-
-    let animFrameId: number;
-
-    const tick = (now: number) => {
-      if (lastTimeRef.current !== null) {
-        const delta = now - lastTimeRef.current;
-        setTimeMs((prev) => {
-          const next = prev + delta * speed;
-          if (next >= TOTAL_CYCLE_MS) {
-            return 0; // Loop back
-          }
-          return next;
-        });
-      }
-      lastTimeRef.current = now;
-      animFrameId = requestAnimationFrame(tick);
-    };
-
-    animFrameId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(animFrameId);
-  }, [isPlaying, speed]);
-
-  // Messages visible at current time
+  // Visible messages up to current step
   const visibleMessages = useMemo(() => {
-    return SCHEDULED_MESSAGES.filter((m) => timeMs >= m.showAt);
-  }, [timeMs]);
+    return FLOW_STEPS.slice(0, stepIndex + 1).map((s) => s.message);
+  }, [stepIndex]);
 
-  // Active bot typing indicator
-  const activeBotTyping = useMemo(() => {
-    const span = BOT_TYPING_SPANS.find((s) => timeMs >= s.start && timeMs < s.end);
-    return span ? span.label : null;
-  }, [timeMs]);
-
-  // Active user text in input draft bar
-  const activeInputDraft = useMemo(() => {
-    const span = USER_INPUT_DRAFTS.find((s) => timeMs >= s.start && timeMs < s.end);
-    if (!span) return "";
-    const progress = (timeMs - span.start) / (span.end - span.start);
-    const charsToShow = Math.max(1, Math.floor(progress * span.fullText.length));
-    return span.fullText.slice(0, charsToShow);
-  }, [timeMs]);
-
-  // Active milestone index
+  // Current milestone
   const activeMilestoneIndex = useMemo(() => {
-    for (let i = MILESTONES.length - 1; i >= 0; i--) {
-      if (timeMs >= MILESTONES[i].startTime) {
-        return i;
-      }
-    }
-    return 0;
-  }, [timeMs]);
+    return FLOW_STEPS[stepIndex]?.milestoneId ?? 0;
+  }, [stepIndex]);
 
-  // Continuous progress for each milestone (0% to 100%)
+  // Milestone Progresses (0 to 100)
   const milestoneProgresses = useMemo(() => {
     return MILESTONES.map((m) => {
-      if (timeMs <= m.startTime) return 0;
-      if (timeMs >= m.endTime) return 100;
-      return ((timeMs - m.startTime) / (m.endTime - m.startTime)) * 100;
+      if (stepIndex > m.stepEndIndex) return 100;
+      if (stepIndex < m.stepStartIndex) return 0;
+      const count = m.stepEndIndex - m.stepStartIndex + 1;
+      const progressInM = stepIndex - m.stepStartIndex + 1;
+      return Math.round((progressInM / count) * 100);
     });
-  }, [timeMs]);
+  }, [stepIndex]);
 
-  // Smooth scroll to bottom on message updates
-  const prevMsgCountRef = useRef(0);
-  const prevTypingRef = useRef<string | null>(null);
+  // Smooth scroll into view when messages change
+  const scrollToBottom = useCallback(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, []);
 
   useEffect(() => {
-    if (
-      visibleMessages.length !== prevMsgCountRef.current ||
-      activeBotTyping !== prevTypingRef.current
-    ) {
-      prevMsgCountRef.current = visibleMessages.length;
-      prevTypingRef.current = activeBotTyping;
+    const timer = setTimeout(() => {
+      scrollToBottom();
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [visibleMessages.length, activeBotTyping, scrollToBottom]);
 
-      if (chatContainerRef.current) {
-        chatContainerRef.current.scrollTo({
-          top: chatContainerRef.current.scrollHeight,
-          behavior: "smooth",
+  // Execution engine: Drives the flow step by step smoothly without high-frequency re-renders
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    let isCancelled = false;
+    const currentStep = FLOW_STEPS[stepIndex];
+    if (!currentStep) return;
+
+    const timeoutIds: ReturnType<typeof setTimeout>[] = [];
+
+    const runStep = async () => {
+      // 1. If step has user draft, simulate user typing in input field
+      if (currentStep.userDraft) {
+        const text = currentStep.userDraft;
+        const totalDuration = (currentStep.draftDurationMs || 400) / speed;
+        const charInterval = Math.max(30, totalDuration / text.length);
+
+        for (let i = 1; i <= text.length; i++) {
+          await new Promise<void>((resolve) => {
+            const id = setTimeout(() => {
+              if (!isCancelled) {
+                setActiveInputDraft(text.slice(0, i));
+              }
+              resolve();
+            }, charInterval);
+            timeoutIds.push(id);
+          });
+          if (isCancelled) return;
+        }
+
+        // Slight pause before sending
+        await new Promise<void>((resolve) => {
+          const id = setTimeout(() => {
+            if (!isCancelled) {
+              setActiveInputDraft("");
+            }
+            resolve();
+          }, 120 / speed);
+          timeoutIds.push(id);
         });
+        if (isCancelled) return;
       }
-    }
-  }, [visibleMessages.length, activeBotTyping]);
 
-  // Mouse wheel scrubber to scrub through the entire conversation
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (Math.abs(e.deltaY) > 2) {
-      e.preventDefault();
-      const delta = e.deltaY * 5.5;
-      setTimeMs((prev) => {
-        const next = Math.max(0, Math.min(TOTAL_CYCLE_MS - 50, prev + delta));
-        return next;
+      // 2. Wait for read pause of the current message
+      const pauseDuration = currentStep.readPauseMs / speed;
+
+      await new Promise<void>((resolve) => {
+        const id = setTimeout(resolve, pauseDuration);
+        timeoutIds.push(id);
       });
+      if (isCancelled) return;
+
+      // 3. Move to next step or loop back to start
+      const nextIndex = stepIndex + 1;
+      if (nextIndex >= FLOW_STEPS.length) {
+        // Reset to beginning
+        setActiveInputDraft("");
+        setActiveBotTyping(null);
+        setStepIndex(0);
+        return;
+      }
+
+      const nextStep = FLOW_STEPS[nextIndex];
+
+      // 4. If next step has bot typing, display typing indicator before revealing message
+      if (nextStep.botTypingLabel) {
+        setActiveBotTyping(nextStep.botTypingLabel);
+        const typingDuration = (nextStep.botTypingDurationMs || 800) / speed;
+
+        await new Promise<void>((resolve) => {
+          const id = setTimeout(() => {
+            if (!isCancelled) {
+              setActiveBotTyping(null);
+              setStepIndex(nextIndex);
+            }
+            resolve();
+          }, typingDuration);
+          timeoutIds.push(id);
+        });
+      } else {
+        setStepIndex(nextIndex);
+      }
+    };
+
+    runStep();
+
+    return () => {
+      isCancelled = true;
+      timeoutIds.forEach(clearTimeout);
+    };
+  }, [stepIndex, isPlaying, speed]);
+
+  // Scrubbing via mouse wheel
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (Math.abs(e.deltaY) > 15 && !isTransitioningRef.current) {
+      isTransitioningRef.current = true;
+      setTimeout(() => {
+        isTransitioningRef.current = false;
+      }, 250);
+
+      if (e.deltaY > 0) {
+        // Scroll forward
+        setStepIndex((prev) => Math.min(FLOW_STEPS.length - 1, prev + 1));
+      } else {
+        // Scroll backward
+        setStepIndex((prev) => Math.max(0, prev - 1));
+      }
+      setActiveInputDraft("");
+      setActiveBotTyping(null);
     }
   };
 
   const handleSelectMilestone = (idx: number) => {
-    setTimeMs(MILESTONES[idx].startTime);
-    lastTimeRef.current = null;
-    setIsPlaying(true);
+    const targetMilestone = MILESTONES[idx];
+    if (targetMilestone) {
+      setActiveInputDraft("");
+      setActiveBotTyping(null);
+      setStepIndex(targetMilestone.stepStartIndex);
+      setIsPlaying(true);
+    }
   };
 
   const handleTogglePlay = () => {
@@ -277,8 +405,9 @@ export function WhatsappFlowSimulator(): JSX.Element {
   };
 
   const handleReset = () => {
-    setTimeMs(0);
-    lastTimeRef.current = null;
+    setActiveInputDraft("");
+    setActiveBotTyping(null);
+    setStepIndex(0);
     setIsPlaying(true);
   };
 
@@ -297,9 +426,9 @@ export function WhatsappFlowSimulator(): JSX.Element {
           <div className="pointer-events-none absolute inset-x-5 bottom-2 top-8 rounded-[48px] shadow-[0_28px_60px_-15px_rgba(0,0,0,0.85),0_12px_28px_-8px_rgba(0,0,0,0.6)]" />
 
           {/* SCREEN LAYER (Precisely aligned within the transparent cutout of iphone-mockup.png) */}
-          <div className="absolute inset-y-[2.4%] left-[5.43%] right-[6.0%] rounded-[36px] overflow-hidden bg-[#f0f2f5] flex flex-col z-10 font-sans shadow-inner select-none">
+          <div className="absolute inset-y-[2.4%] left-[5.43%] right-[6.0%] rounded-[36px] overflow-hidden bg-[#efeae2]/50 flex flex-col z-10 font-sans shadow-inner select-none">
             {/* iOS Status Bar */}
-            <div className="relative z-20 flex items-center justify-between bg-white px-5 pt-2.5 pb-1 text-[13px] text-[#111b21] font-semibold select-none">
+            <div className="relative z-20 flex items-center justify-between bg-white px-5 pt-2.5 pb-1 text-[13px] text-black font-extrabold select-none">
               {/* Left of notch: Time */}
               <span className="tracking-tight pl-0.5">9:41</span>
 
@@ -307,18 +436,18 @@ export function WhatsappFlowSimulator(): JSX.Element {
               <div className="w-28 h-4 pointer-events-none" />
 
               {/* Right of notch: Cellular Signal, Wifi, Battery */}
-              <div className="flex items-center gap-1.5 text-[#111b21] pr-0.5">
+              <div className="flex items-center gap-1.5 text-black pr-0.5">
                 <div className="flex items-end gap-[1.5px] h-2.5">
-                  <span className="w-[2px] h-1 bg-[#111b21] rounded-[0.5px]" />
-                  <span className="w-[2px] h-1.5 bg-[#111b21] rounded-[0.5px]" />
-                  <span className="w-[2px] h-2 bg-[#111b21] rounded-[0.5px]" />
-                  <span className="w-[2px] h-2.5 bg-[#111b21] rounded-[0.5px]" />
+                  <span className="w-[2px] h-1 bg-black rounded-[0.5px]" />
+                  <span className="w-[2px] h-1.5 bg-black rounded-[0.5px]" />
+                  <span className="w-[2px] h-2 bg-black rounded-[0.5px]" />
+                  <span className="w-[2px] h-2.5 bg-black rounded-[0.5px]" />
                 </div>
                 <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                   <path d="M12 3c-4.97 0-9.47 2.02-12.73 5.27l1.41 1.41C3.32 6.94 7.42 5.08 12 5.08s8.68 1.86 11.32 4.6l1.41-1.41C21.47 5.02 16.97 3 12 3zm0 4.17c-3.82 0-7.28 1.55-9.79 4.06l1.41 1.41C5.83 10.43 8.73 9.25 12 9.25s6.17 1.18 8.38 3.39l1.41-1.41C19.28 8.72 15.82 7.17 12 7.17zm0 4.16c-2.67 0-5.09 1.08-6.85 2.84l1.41 1.41C7.8 14.34 9.77 13.5 12 13.5s4.2 0.84 5.44 2.08l1.41-1.41C17.09 12.41 14.67 11.33 12 11.33zm0 4.17c-1.52 0-2.9.62-3.9 1.62L12 21.04l3.9-3.92c-1-1-2.38-1.62-3.9-1.62z" />
                 </svg>
-                <div className="h-2.5 w-5 rounded-[3px] border border-[#111b21] p-[1px] flex items-center">
-                  <div className="h-full w-4/5 rounded-[1.5px] bg-[#111b21]" />
+                <div className="h-2.5 w-5 rounded-[3px] border border-black p-[1px] flex items-center">
+                  <div className="h-full w-4/5 rounded-[1.5px] bg-black" />
                 </div>
               </div>
             </div>
@@ -326,27 +455,29 @@ export function WhatsappFlowSimulator(): JSX.Element {
             {/* WhatsApp iOS Header */}
             <div className="relative z-20 flex items-center justify-between border-b border-[#e5e5ea] bg-white px-3.5 py-2 shadow-xs">
               <div className="flex items-center gap-2">
-                <ArrowLeft className="h-4 w-4 text-[#007aff] hover:opacity-80 transition cursor-pointer" />
+                <ArrowLeft className="h-4 w-4 text-black hover:opacity-75 transition cursor-pointer" />
                 <div className="relative">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#070b14] ring-1 ring-slate-200 overflow-hidden shadow-xs">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#070b14] ring-1 ring-slate-300 overflow-hidden shadow-xs">
                     <span className="text-cyan-400 font-bold text-xs">⚡</span>
                   </div>
                   <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#25d366]" />
                 </div>
                 <div className="leading-tight">
-                  <span className="text-[14px] font-semibold text-[#111b21] block">EnergivIA</span>
-                  <p className="text-[11px] text-[#008069] font-medium">online agora</p>
+                  <span className="text-[14.5px] font-black text-black block tracking-tight">
+                    EnergivIA
+                  </span>
+                  <p className="text-[11px] text-emerald-700 font-bold">online agora</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3.5 text-[#007aff] pr-1">
-                <Video className="h-4 w-4 cursor-pointer opacity-90 hover:opacity-100" />
-                <Phone className="h-3.5 w-3.5 cursor-pointer opacity-90 hover:opacity-100" />
-                <MoreVertical className="h-4 w-4 text-[#54656f] cursor-pointer" />
+              <div className="flex items-center gap-3.5 text-black pr-1">
+                <Video className="h-4 w-4 cursor-pointer hover:opacity-70 transition" />
+                <Phone className="h-3.5 w-3.5 cursor-pointer hover:opacity-70 transition" />
+                <MoreVertical className="h-4 w-4 cursor-pointer hover:opacity-70 transition" />
               </div>
             </div>
 
-            {/* Chat Messages Flow (Authentic WhatsApp light wallpaper and colors) */}
+            {/* Chat Messages Flow with authentic light background & 100% black text */}
             <div
               ref={chatContainerRef}
               className="relative flex-1 space-y-2.5 overflow-y-auto p-3 text-sm scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden bg-[#efeae2]/50 bg-blend-multiply"
@@ -357,295 +488,372 @@ export function WhatsappFlowSimulator(): JSX.Element {
             >
               {/* Date Pill */}
               <div className="flex justify-center my-0.5">
-                <span className="rounded-lg bg-white/95 px-2.5 py-0.5 text-[11px] text-[#54656f] font-medium shadow-2xs border border-black/[0.04]">
+                <span className="rounded-lg bg-white/95 px-2.5 py-0.5 text-[11px] text-black font-bold shadow-2xs border border-black/10">
                   Hoje
                 </span>
               </div>
 
-              {/* RENDER DYNAMIC MESSAGES */}
-              {visibleMessages.map((msg) => {
-                if (msg.type === "user") {
+              {/* RENDER DYNAMIC MESSAGES WITH FRAMER MOTION SPRINGS */}
+              <AnimatePresence initial={false}>
+                {visibleMessages.map((msg) => {
+                  if (msg.type === "user") {
+                    return (
+                      <motion.div
+                        key={msg.id}
+                        initial={{ opacity: 0, y: 16, scale: 0.94 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 420,
+                          damping: 26,
+                        }}
+                        className="flex justify-end"
+                      >
+                        <div className="max-w-[85%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] border border-emerald-300/70 px-3.5 py-1.5 text-black shadow-xs">
+                          <p className="text-[14px] leading-relaxed font-bold text-black">
+                            {msg.text}
+                          </p>
+                          <div className="mt-0.5 flex items-center justify-end gap-1 text-[11px] text-black font-semibold">
+                            <span>{msg.time}</span>
+                            <CheckCheck className="h-3.5 w-3.5 text-[#0284c7]" />
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  }
+
+                  if (msg.type === "user_doc") {
+                    return (
+                      <motion.div
+                        key={msg.id}
+                        initial={{ opacity: 0, y: 16, scale: 0.94 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 420,
+                          damping: 26,
+                        }}
+                        className="flex justify-end"
+                      >
+                        <div className="max-w-[88%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] border border-emerald-300/70 p-2 text-black shadow-xs">
+                          <div className="flex items-center gap-2.5 rounded-xl bg-white p-2.5 border border-emerald-300/80 shadow-2xs">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-700 font-bold border border-rose-200">
+                              <FileText className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-black text-black text-[13.5px]">
+                                {msg.title}
+                              </p>
+                              <p className="text-[11.5px] text-black font-bold mt-0.5">
+                                {msg.subtitle}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-black font-semibold">
+                            <span>{msg.time}</span>
+                            <CheckCheck className="h-3.5 w-3.5 text-[#0284c7]" />
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  }
+
+                  // BOT MESSAGES: 100% BLACK TEXT, HIGH CONTRAST, BEAUTIFUL CARDS
                   return (
-                    <div
+                    <motion.div
                       key={msg.id}
-                      className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out"
+                      initial={{ opacity: 0, y: 18, scale: 0.94 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 25,
+                      }}
+                      className="flex justify-start"
                     >
-                      <div className="max-w-[85%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] border border-emerald-200/40 px-3 py-1.5 text-[#111b21] shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]">
-                        <p className="text-[14px] leading-relaxed font-normal">{msg.text}</p>
-                        <div className="mt-0.5 flex items-center justify-end gap-1 text-[11px] text-[#667781]">
-                          <span>{msg.time}</span>
-                          <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (msg.type === "user_doc") {
-                  return (
-                    <div
-                      key={msg.id}
-                      className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out"
-                    >
-                      <div className="max-w-[88%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] border border-emerald-200/40 p-2 text-[#111b21] shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]">
-                        <div className="flex items-center gap-2.5 rounded-xl bg-white p-2 border border-emerald-200/60 shadow-2xs">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-500 font-bold">
-                            <FileText className="h-5 w-5" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-semibold text-[#111b21] text-[13px]">
-                              {msg.title}
-                            </p>
-                            <p className="text-[11px] text-[#667781] mt-0.5">{msg.subtitle}</p>
-                          </div>
-                        </div>
-                        <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-[#667781]">
-                          <span>{msg.time}</span>
-                          <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-
-                // BOT MESSAGES (WhatsApp received white bubble)
-                return (
-                  <div
-                    key={msg.id}
-                    className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out"
-                  >
-                    <div className="max-w-[94%] rounded-2xl rounded-tl-xs bg-white border border-black/[0.04] p-3 text-[#111b21] shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] space-y-2">
-                      {msg.kind === "welcome" && (
-                        <div className="text-[13.5px] leading-relaxed space-y-1.5 text-[#111b21]">
-                          <p>
-                            Boa tarde Giovani! Tudo bem?
-                            <br />
-                            Sou seu assistente de dimensionamento e vendas da <b>EnergivIA</b>.
-                          </p>
-                          <p>Como posso ajudar você a gerar orçamentos e propostas solares hoje?</p>
-                          <div className="mt-1.5 space-y-1 rounded-xl bg-[#f7f8fa] p-2.5 border border-slate-200/70 text-[12.5px] text-[#111b21]">
-                            <p className="font-semibold text-[#111b21]">
-                              Escolha uma opção digitando o número:
-                            </p>
-                            <p>[1] Enviar fatura de energia (PDF ou foto)</p>
-                            <p>[2] Simular por consumo mensal (ex: 450 kWh)</p>
-                            <p>[3] Simular por potência de pico (ex: 5 kWp)</p>
-                            <p>[4] Simular por quantidade de placas</p>
-                            <p>[5] Dúvidas sobre kits e preços</p>
-                          </div>
-                          <p className="text-[11px] text-[#667781] italic">
-                            (Ou me envie diretamente a conta de luz)
-                          </p>
-                        </div>
-                      )}
-
-                      {msg.kind === "ask_bill" && (
-                        <div className="text-[13.5px] leading-relaxed space-y-1 text-[#111b21]">
-                          <p>
-                            Perfeito! Envie o arquivo em <b>PDF</b> ou a <b>foto da conta de luz</b>{" "}
-                            do seu cliente por aqui mesmo.
-                          </p>
-                          <p className="text-[12px] text-[#667781]">
-                            Nossa inteligência artificial vai extrair automaticamente todos os dados
-                            de consumo e histórico!
-                          </p>
-                        </div>
-                      )}
-
-                      {msg.kind === "ocr_result" && (
-                        <div className="text-[13.5px] leading-relaxed space-y-2 text-[#111b21]">
-                          <p className="text-[#008069] font-bold text-[13px]">
-                            Legal, dados extraídos com precisão!
-                          </p>
-                          <div className="space-y-1 rounded-xl bg-[#f7f8fa] p-2.5 border border-slate-200/70 text-[12.5px]">
-                            <p className="flex justify-between">
-                              <span className="text-[#667781]">Concessionária:</span>
-                              <span className="font-semibold text-[#111b21]">Copel (PR)</span>
-                            </p>
-                            <p className="flex justify-between">
-                              <span className="text-[#667781]">Consumo Médio:</span>
-                              <span className="font-semibold text-[#111b21]">257 kWh/mês</span>
-                            </p>
-                            <p className="flex justify-between">
-                              <span className="text-[#667781]">Tipo de Ligação:</span>
-                              <span className="font-semibold text-[#111b21]">
-                                Monofásico (127V)
+                      <div className="max-w-[95%] rounded-2xl rounded-tl-xs bg-white border border-slate-200 p-3.5 text-black shadow-sm space-y-2">
+                        {msg.kind === "welcome" && (
+                          <div className="text-[13.5px] leading-relaxed space-y-2 text-black font-medium">
+                            <p className="font-bold text-black">
+                              Boa tarde Giovani! Tudo bem?
+                              <br />
+                              <span className="font-semibold text-black">
+                                Sou seu assistente de dimensionamento e vendas da{" "}
+                                <b className="font-black text-black">EnergivIA</b>.
                               </span>
                             </p>
-                            <p className="flex justify-between">
-                              <span className="text-[#667781]">Potência Estimada:</span>
-                              <span className="font-semibold text-[#008069]">3,15 kWp</span>
+                            <p className="font-bold text-black">
+                              Como posso ajudar você a gerar orçamentos e propostas solares hoje?
+                            </p>
+                            <div className="mt-1.5 space-y-1.5 rounded-xl bg-slate-50 p-3 border border-slate-300 text-[12.5px] text-black shadow-2xs">
+                              <p className="font-black text-black text-[13px]">
+                                Escolha uma opção digitando o número:
+                              </p>
+                              <p className="font-bold text-black">
+                                [1] Enviar fatura de energia (PDF ou foto)
+                              </p>
+                              <p className="font-bold text-black">
+                                [2] Simular por consumo mensal (ex: 450 kWh)
+                              </p>
+                              <p className="font-bold text-black">
+                                [3] Simular por potência de pico (ex: 5 kWp)
+                              </p>
+                              <p className="font-bold text-black">
+                                [4] Simular por quantidade de placas
+                              </p>
+                              <p className="font-bold text-black">
+                                [5] Dúvidas sobre kits e preços
+                              </p>
+                            </div>
+                            <p className="text-[11.5px] text-black font-bold italic">
+                              (Ou me envie diretamente a conta de luz)
                             </p>
                           </div>
-                          <p className="text-[12px] text-[#667781]">
-                            Qual o tipo de telhado para fixação dos módulos?
-                          </p>
-                          <div className="space-y-1 rounded-xl bg-[#f7f8fa] p-2 border border-slate-200/70 text-[12px]">
-                            <p>[1] Fibrocimento / Metálico</p>
-                            <p className="font-semibold text-[#008069]">[2] Cerâmico (Colonial)</p>
-                            <p>[3] Solo / Carport</p>
-                          </div>
-                        </div>
-                      )}
+                        )}
 
-                      {msg.kind === "kit_dynamis" && (
-                        <div className="text-[13.5px] leading-relaxed space-y-2 text-[#111b21]">
-                          <p className="font-bold text-[#008069] text-[13px]">
-                            Kit Dynamis Selecionado com Sucesso!
-                          </p>
-                          <div className="rounded-xl border border-emerald-300/80 bg-[#f7f8fa] p-2.5 space-y-1.5 text-[12.5px]">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-[#008069] uppercase tracking-wide">
-                                Kit Solar Dynamis 3,15 kWp
-                              </span>
-                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                                Em Estoque
-                              </span>
-                            </div>
-                            <p className="text-xs text-[#111b21]">
-                              • 5x Módulos 630W N-Type TopCon
-                              <br />• 1x Inversor Micro/String 3kW Monofásico
+                        {msg.kind === "ask_bill" && (
+                          <div className="text-[13.5px] leading-relaxed space-y-1.5 text-black">
+                            <p className="font-bold text-black">
+                              Perfeito! Envie o arquivo em <b className="font-black">PDF</b> ou a{" "}
+                              <b className="font-black">foto da conta de luz</b> do seu cliente por
+                              aqui mesmo.
                             </p>
-                            <div className="border-t border-slate-200 pt-1.5 flex justify-between items-center text-xs">
-                              <span className="text-[#667781]">Custo Distribuidor:</span>
-                              <span className="font-bold text-[#111b21]">R$ 4.290,00</span>
-                            </div>
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-[#667781]">Margem Sugerida (35%):</span>
-                              <span className="font-bold text-[#008069]">R$ 6.600,00</span>
-                            </div>
-                          </div>
-                          <p className="text-[12px] text-[#667781]">
-                            Deseja aplicar essa margem de 35% na proposta comercial?
-                          </p>
-                          <div className="space-y-1 rounded-xl bg-[#f7f8fa] p-2 border border-slate-200/70 text-[12px]">
-                            <p className="font-semibold text-[#008069]">[1] Sim, avançar com 35%</p>
-                            <p>[2] Ajustar valor final manualmente</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {msg.kind === "ask_name" && (
-                        <div className="text-[13.5px] leading-relaxed space-y-1 text-[#111b21]">
-                          <p>Excelente margem definida!</p>
-                          <p>
-                            Qual o <b>nome do cliente</b> para personalizar a proposta?
-                          </p>
-                        </div>
-                      )}
-
-                      {msg.kind === "ask_phone" && (
-                        <div className="text-[13.5px] leading-relaxed space-y-1 text-[#111b21]">
-                          <p>
-                            Prazer, Marcelo! Qual o <b>WhatsApp com DDD</b> dele para registro no
-                            CRM?
-                          </p>
-                        </div>
-                      )}
-
-                      {msg.kind === "ask_template" && (
-                        <div className="text-[13.5px] leading-relaxed space-y-2 text-[#111b21]">
-                          <p>Contato cadastrado no CRM!</p>
-                          <p>
-                            Qual <b>modelo de proposta</b> você deseja gerar?
-                          </p>
-                          <div className="space-y-1 rounded-xl bg-[#f7f8fa] p-2.5 border border-slate-200/70 text-[12.5px]">
-                            <p className="font-semibold text-[#008069]">
-                              [1] Modelo Premium Executivo (Gráficos + Payback)
+                            <p className="text-[12.5px] text-black font-semibold">
+                              Nossa inteligência artificial vai extrair automaticamente todos os
+                              dados de consumo e histórico!
                             </p>
-                            <p>[2] Modelo Express Resumido (1 Página)</p>
-                            <p>[3] Modelo Técnico Detalhado</p>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {msg.kind === "final_proposal" && (
-                        <div className="text-[13.5px] leading-relaxed space-y-2 text-[#111b21]">
-                          <p className="font-bold text-[#008069] text-[13px]">
-                            Proposta Gerada com Sucesso em 12 Segundos!
-                          </p>
+                        {msg.kind === "ocr_result" && (
+                          <div className="text-[13.5px] leading-relaxed space-y-2 text-black">
+                            <p className="text-black font-black text-[13.5px] flex items-center gap-1.5">
+                              <span className="inline-block w-2 h-2 rounded-full bg-emerald-600" />
+                              Legal, dados extraídos com precisão!
+                            </p>
+                            <div className="space-y-1 rounded-xl bg-slate-50 p-2.5 border border-slate-300 text-[12.5px]">
+                              <p className="flex justify-between">
+                                <span className="text-black font-bold">Concessionária:</span>
+                                <span className="font-black text-black">Copel (PR)</span>
+                              </p>
+                              <p className="flex justify-between">
+                                <span className="text-black font-bold">Consumo Médio:</span>
+                                <span className="font-black text-black">257 kWh/mês</span>
+                              </p>
+                              <p className="flex justify-between">
+                                <span className="text-black font-bold">Tipo de Ligação:</span>
+                                <span className="font-black text-black">Monofásico (127V)</span>
+                              </p>
+                              <p className="flex justify-between">
+                                <span className="text-black font-bold">Potência Estimada:</span>
+                                <span className="font-black text-black">3,15 kWp</span>
+                              </p>
+                            </div>
+                            <p className="text-[12.5px] text-black font-black">
+                              Qual o tipo de telhado para fixação dos módulos?
+                            </p>
+                            <div className="space-y-1 rounded-xl bg-slate-50 p-2 border border-slate-300 text-[12.5px]">
+                              <p className="font-bold text-black">[1] Fibrocimento / Metálico</p>
+                              <p className="font-black text-black bg-emerald-100/90 border border-emerald-500 rounded-md px-2 py-0.5">
+                                [2] Cerâmico (Colonial)
+                              </p>
+                              <p className="font-bold text-black">[3] Solo / Carport</p>
+                            </div>
+                          </div>
+                        )}
 
-                          {/* Proposal Card in WhatsApp */}
-                          <div className="rounded-xl border border-emerald-300 bg-[#f7f8fa] p-2.5 shadow-2xs">
-                            <div className="flex items-center gap-2.5">
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200">
-                                <FileText className="h-5 w-5" />
+                        {msg.kind === "kit_dynamis" && (
+                          <div className="text-[13.5px] leading-relaxed space-y-2 text-black">
+                            <p className="font-black text-black text-[13.5px] flex items-center gap-1.5">
+                              <span className="inline-block w-2 h-2 rounded-full bg-emerald-600" />
+                              Kit Dynamis Selecionado com Sucesso!
+                            </p>
+                            <div className="rounded-xl border border-emerald-400 bg-emerald-50/50 p-2.5 space-y-1.5 text-[12.5px]">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-black text-black uppercase tracking-wide">
+                                  Kit Solar Dynamis 3,15 kWp
+                                </span>
+                                <span className="rounded-full bg-emerald-700 px-2.5 py-0.5 text-[10px] font-extrabold text-white">
+                                  Em Estoque
+                                </span>
                               </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate font-bold text-[#111b21] text-[13px]">
-                                  Proposta_Solar_Marcelo_Santana.pdf
-                                </p>
-                                <p className="text-[11px] text-[#667781] mt-0.5">
-                                  3,15 kWp • Economia de R$ 74.800 em 25 anos
-                                </p>
+                              <p className="text-xs text-black font-bold">
+                                • 5x Módulos 630W N-Type TopCon
+                                <br />• 1x Inversor Micro/String 3kW Monofásico
+                              </p>
+                              <div className="border-t border-slate-300 pt-1.5 flex justify-between items-center text-xs">
+                                <span className="text-black font-bold">Custo Distribuidor:</span>
+                                <span className="font-black text-black">R$ 4.290,00</span>
+                              </div>
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-black font-extrabold">
+                                  Margem Sugerida (35%):
+                                </span>
+                                <span className="font-black text-black text-[13.5px]">
+                                  R$ 6.600,00
+                                </span>
                               </div>
                             </div>
-
-                            <div className="mt-2.5 flex items-center justify-between border-t border-slate-200/60 pt-2 text-[11.5px]">
-                              <span className="text-[#667781] font-medium">Payback: 2,7 anos</span>
-                              <span className="flex items-center gap-1 font-bold text-[#008069] hover:underline">
-                                Abrir Proposta <ExternalLink className="h-3 w-3" />
-                              </span>
+                            <p className="text-[12.5px] text-black font-black">
+                              Deseja aplicar essa margem de 35% na proposta comercial?
+                            </p>
+                            <div className="space-y-1 rounded-xl bg-slate-50 p-2 border border-slate-300 text-[12.5px]">
+                              <p className="font-black text-black bg-emerald-100/90 border border-emerald-500 rounded-md px-2 py-0.5">
+                                [1] Sim, avançar com 35%
+                              </p>
+                              <p className="font-bold text-black">
+                                [2] Ajustar valor final manualmente
+                              </p>
                             </div>
                           </div>
+                        )}
 
-                          <p className="text-[11.5px] text-[#667781] leading-relaxed">
-                            O cliente também já recebeu o link interativo no WhatsApp dele e a
-                            oportunidade foi criada no seu CRM!
-                          </p>
+                        {msg.kind === "ask_name" && (
+                          <div className="text-[13.5px] leading-relaxed space-y-1.5 text-black">
+                            <p className="font-black text-black">Excelente margem definida!</p>
+                            <p className="font-bold text-black">
+                              Qual o <b className="font-black">nome do cliente</b> para personalizar
+                              a proposta?
+                            </p>
+                          </div>
+                        )}
+
+                        {msg.kind === "ask_phone" && (
+                          <div className="text-[13.5px] leading-relaxed space-y-1.5 text-black">
+                            <p className="font-black text-black">Prazer, Marcelo!</p>
+                            <p className="font-bold text-black">
+                              Qual o <b className="font-black">WhatsApp com DDD</b> dele para
+                              registro no CRM?
+                            </p>
+                          </div>
+                        )}
+
+                        {msg.kind === "ask_template" && (
+                          <div className="text-[13.5px] leading-relaxed space-y-2 text-black">
+                            <p className="font-black text-black">Contato cadastrado no CRM!</p>
+                            <p className="font-bold text-black">
+                              Qual <b className="font-black">modelo de proposta</b> você deseja
+                              gerar?
+                            </p>
+                            <div className="space-y-1 rounded-xl bg-slate-50 p-2.5 border border-slate-300 text-[12.5px]">
+                              <p className="font-black text-black bg-emerald-100/90 border border-emerald-500 rounded-md px-2 py-0.5">
+                                [1] Modelo Premium Executivo (Gráficos + Payback)
+                              </p>
+                              <p className="font-bold text-black">
+                                [2] Modelo Express Resumido (1 Página)
+                              </p>
+                              <p className="font-bold text-black">[3] Modelo Técnico Detalhado</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {msg.kind === "final_proposal" && (
+                          <div className="text-[13.5px] leading-relaxed space-y-2 text-black">
+                            <p className="font-black text-black text-[13.5px] flex items-center gap-1.5">
+                              <span className="inline-block w-2 h-2 rounded-full bg-emerald-600" />
+                              Proposta Gerada com Sucesso em 12 Segundos!
+                            </p>
+
+                            {/* Proposal Card in WhatsApp */}
+                            <div className="rounded-xl border border-emerald-400 bg-slate-50 p-2.5 shadow-2xs space-y-2">
+                              <div className="flex items-center gap-2.5">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                  <FileText className="h-5 w-5" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate font-black text-black text-[13px]">
+                                    Proposta_Solar_Marcelo_Santana.pdf
+                                  </p>
+                                  <p className="text-[11.5px] text-black font-bold mt-0.5">
+                                    3,15 kWp • Economia de R$ 74.800 em 25 anos
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="mt-2 flex items-center justify-between border-t border-slate-300 pt-2 text-[12px]">
+                                <span className="text-black font-black">Payback: 2,7 anos</span>
+                                <span className="flex items-center gap-1 font-black bg-emerald-600 text-white px-2.5 py-1 rounded-md text-[11.5px] shadow-xs">
+                                  Abrir Proposta <ExternalLink className="h-3 w-3" />
+                                </span>
+                              </div>
+                            </div>
+
+                            <p className="text-[12px] text-black font-bold leading-relaxed">
+                              O cliente também já recebeu o link interativo no WhatsApp dele e a
+                              oportunidade foi criada no seu CRM!
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="mt-0.5 flex items-center justify-end text-[11px] text-black font-semibold">
+                          <span>{msg.time}</span>
                         </div>
-                      )}
-
-                      <div className="mt-0.5 flex items-center justify-end text-[11px] text-[#667781]">
-                        <span>{msg.time}</span>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
 
               {/* LIVE TYPING INDICATOR */}
-              {activeBotTyping && (
-                <div className="flex items-center gap-2 text-[#54656f] text-xs py-0.5 animate-in fade-in slide-in-from-bottom-1 duration-200 ease-out">
-                  <div className="flex gap-1.5 rounded-full bg-white px-2.5 py-1.5 border border-black/[0.04] shadow-2xs">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#00a884] animate-bounce" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#00a884] animate-bounce [animation-delay:150ms]" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#00a884] animate-bounce [animation-delay:300ms]" />
-                  </div>
-                  <span className="text-[11.5px] text-[#008069] animate-pulse font-medium">
-                    {activeBotTyping}
-                  </span>
-                </div>
-              )}
+              <AnimatePresence>
+                {activeBotTyping && (
+                  <motion.div
+                    key="typing-pill"
+                    initial={{ opacity: 0, y: 12, scale: 0.92 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.92 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-center gap-2 text-black text-xs py-1"
+                  >
+                    <div className="flex gap-1.5 rounded-full bg-white px-3 py-1.5 border border-slate-300 shadow-xs">
+                      <span className="h-2 w-2 rounded-full bg-emerald-600 animate-bounce" />
+                      <span className="h-2 w-2 rounded-full bg-emerald-600 animate-bounce [animation-delay:150ms]" />
+                      <span className="h-2 w-2 rounded-full bg-emerald-600 animate-bounce [animation-delay:300ms]" />
+                    </div>
+                    <span className="text-[12px] text-black font-black animate-pulse">
+                      {activeBotTyping}
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Invisible anchor for smooth scrolling */}
+              <div ref={scrollAnchorRef} className="h-1 w-full" />
             </div>
 
             {/* WhatsApp iOS Input Bar */}
             <div className="relative z-20 flex items-center gap-2 bg-[#f0f2f5] px-3 py-2 border-t border-[#e5e5ea] text-slate-400">
-              <button type="button" className="text-[#007aff] hover:opacity-80 transition px-1">
-                <span className="text-xl font-light leading-none">+</span>
+              <button type="button" className="text-black hover:opacity-75 transition px-1">
+                <span className="text-xl font-bold leading-none">+</span>
               </button>
-              <div className="flex-1 min-h-[34px] flex items-center rounded-full bg-white px-3.5 py-1 text-[13px] text-[#111b21] border border-[#e5e5ea] shadow-2xs">
+              <div className="flex-1 min-h-[34px] flex items-center rounded-full bg-white px-3.5 py-1 text-[13px] text-black border border-slate-300 shadow-2xs">
                 {activeInputDraft ? (
-                  <span className="text-[#111b21] font-normal flex items-center gap-0.5">
+                  <span className="text-black font-extrabold flex items-center gap-0.5">
                     {activeInputDraft}
-                    <span className="inline-block w-1.5 h-3.5 bg-[#00a884] animate-pulse" />
+                    <span className="inline-block w-1.5 h-3.5 bg-emerald-600 animate-pulse" />
                   </span>
                 ) : (
-                  <span className="text-[#8696a0]">Mensagem</span>
+                  <span className="text-neutral-500 font-semibold">Mensagem</span>
                 )}
               </div>
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#00a884] text-white shadow-xs hover:bg-[#008069] transition">
+              <motion.div
+                animate={
+                  activeInputDraft ? { scale: [1, 1.15, 1], rotate: [0, 5, 0] } : { scale: 1 }
+                }
+                transition={{ duration: 0.3 }}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xs hover:bg-emerald-700 transition"
+              >
                 {activeInputDraft ? (
                   <Send className="h-3.5 w-3.5 fill-white" />
                 ) : (
                   <Zap className="h-3.5 w-3.5 fill-white" />
                 )}
-              </div>
+              </motion.div>
             </div>
 
             {/* iOS Home Indicator Bar */}
             <div className="bg-[#f0f2f5] pb-1.5 pt-0.5 flex justify-center">
-              <div className="w-28 h-1 bg-black/25 rounded-full" />
+              <div className="w-28 h-1 bg-black/35 rounded-full" />
             </div>
           </div>
 
@@ -742,7 +950,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
               <div key={m.id} className="space-y-1.5">
                 <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800/80 border border-white/5">
                   <div
-                    className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 will-change-[width] transition-all duration-75 shadow-[0_0_10px_rgba(56,189,248,0.5)]"
+                    className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 will-change-[width] transition-all duration-300 shadow-[0_0_10px_rgba(56,189,248,0.5)]"
                     style={{
                       width: `${pct}%`,
                     }}
