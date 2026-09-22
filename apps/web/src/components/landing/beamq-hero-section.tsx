@@ -7,44 +7,6 @@ import { motion } from "framer-motion";
 
 const appLoginUrl = "/login";
 
-const line1Words = ["Acelere", "suas", "vendas", "solares."];
-
-const line2Group1 = [
-  { text: "Gere", gradient: "from-[#38bdf8] to-[#4fa8fa]" },
-  { text: "propostas", gradient: "from-[#4fa8fa] to-[#60a5fa]" },
-];
-
-const line2Group2 = [
-  { text: "em", gradient: "from-[#6366f1] to-[#8b5cf6]" },
-  { text: "segundos.", gradient: "from-[#8b5cf6] to-[#a855f7]" },
-];
-
-const headingContainer = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.055,
-      delayChildren: 0.04,
-    },
-  },
-};
-
-const wordVariants = {
-  hidden: {
-    opacity: 0,
-    y: 18,
-  },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.4,
-      ease: [0.16, 1, 0.3, 1],
-    },
-  },
-};
-
 export function BeamqHeroSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -176,55 +138,40 @@ export function BeamqHeroSection() {
             </motion.div>
 
             {/* Main H1 Heading */}
-            <motion.h1
-              variants={headingContainer}
-              initial="hidden"
-              animate="show"
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-[4.75rem] font-bold tracking-tight leading-[1.18] mb-6 drop-shadow-[0_4px_30px_rgba(0,0,0,0.95)]"
-            >
-              <span className="block text-white font-light mb-3">
-                {line1Words.map((word) => (
-                  <motion.span
-                    key={word}
-                    variants={wordVariants}
-                    className="inline-block mr-[0.28em] last:mr-0 will-change-transform"
-                  >
-                    {word}
-                  </motion.span>
-                ))}
-              </span>
-              <span className="inline-block pt-1 pb-4">
-                <span className="inline-block mr-[0.28em]">
-                  {line2Group1.map((item) => (
-                    <motion.span
-                      key={item.text}
-                      variants={wordVariants}
-                      className={`inline-block mr-[0.25em] last:mr-0 text-transparent bg-clip-text bg-gradient-to-r ${item.gradient} drop-shadow-[0_0_25px_rgba(56,189,248,0.35)] will-change-transform`}
-                    >
-                      {item.text}
-                    </motion.span>
-                  ))}
-                </span>
-                <span className="inline-block">
-                  {line2Group2.map((item) => (
-                    <motion.span
-                      key={item.text}
-                      variants={wordVariants}
-                      className={`inline-block mr-[0.25em] last:mr-0 text-transparent bg-clip-text bg-gradient-to-r ${item.gradient} drop-shadow-[0_0_25px_rgba(56,189,248,0.35)] will-change-transform`}
-                    >
-                      {item.text}
-                    </motion.span>
-                  ))}
-                </span>
-              </span>
-            </motion.h1>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[4.75rem] font-bold tracking-tight leading-[1.28] sm:leading-[1.24] mb-6 drop-shadow-[0_4px_30px_rgba(0,0,0,0.95)] overflow-visible">
+              <motion.span
+                initial={{ opacity: 0, y: 22 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.7,
+                  delay: 0.1,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+                className="block text-white font-light mb-3 will-change-transform"
+              >
+                Acelere suas vendas solares.
+              </motion.span>
+              <motion.span
+                initial={{ opacity: 0, y: 22 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.75,
+                  delay: 0.3,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+                className="inline-block pt-1 pb-6 sm:pb-8 px-2 text-transparent bg-clip-text bg-gradient-to-r from-[#38bdf8] via-[#60a5fa] to-[#a855f7] drop-shadow-[0_0_25px_rgba(56,189,248,0.45)] will-change-transform"
+              >
+                <span className="inline-block">Gere propostas</span>{" "}
+                <span className="inline-block">em segundos.</span>
+              </motion.span>
+            </h1>
 
             {/* Subtitle */}
             <motion.p
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.42, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-4 max-w-2xl text-lg sm:text-xl text-white/90 font-light leading-relaxed drop-shadow-md"
+              transition={{ duration: 0.7, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-2 max-w-2xl text-lg sm:text-xl text-white/90 font-light leading-relaxed drop-shadow-md"
             >
               Pare de perder tempo com planilhas e propostas manuais. Receba a conta de luz, simule
               a usina ideal com IA e entregue a proposta comercial pronta no WhatsApp em 2 minutos.
@@ -232,9 +179,9 @@ export function BeamqHeroSection() {
 
             {/* Primary Action Buttons */}
             <motion.div
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.52, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.7, delay: 0.65, ease: [0.16, 1, 0.3, 1] }}
               className="mt-12 flex flex-col sm:flex-row items-center gap-5 w-full sm:w-auto"
             >
               {/* White Primary Button */}
