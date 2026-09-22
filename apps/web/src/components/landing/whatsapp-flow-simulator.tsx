@@ -98,35 +98,36 @@ interface StepConfig {
   readPauseMs: number;
 }
 
+// Relaxed, comfortable human-speed pacing so everything is easy to read
 const FLOW_STEPS: StepConfig[] = [
   // Passo 1: Início
   {
     milestoneId: 0,
     userDraft: "Boa tarde",
-    draftDurationMs: 450,
+    draftDurationMs: 750,
     message: { id: "m1", type: "user", text: "Boa tarde", time: "09:41" },
-    readPauseMs: 400,
+    readPauseMs: 1200,
   },
   {
     milestoneId: 0,
     botTypingLabel: "EnergivIA está digitando...",
-    botTypingDurationMs: 700,
+    botTypingDurationMs: 1600,
     message: { id: "m2", type: "bot", kind: "welcome", time: "09:41" },
-    readPauseMs: 1400,
+    readPauseMs: 4500, // Dá tempo para ler o menu completo com 5 opções
   },
   {
     milestoneId: 0,
     userDraft: "1",
-    draftDurationMs: 300,
+    draftDurationMs: 500,
     message: { id: "m3", type: "user", text: "1", time: "09:42" },
-    readPauseMs: 350,
+    readPauseMs: 1000,
   },
   {
     milestoneId: 0,
     botTypingLabel: "EnergivIA está digitando...",
-    botTypingDurationMs: 600,
+    botTypingDurationMs: 1300,
     message: { id: "m4", type: "bot", kind: "ask_bill", time: "09:42" },
-    readPauseMs: 900,
+    readPauseMs: 3200, // Dá tempo para ler o pedido da fatura
   },
 
   // Passo 2: Fatura & OCR
@@ -139,100 +140,98 @@ const FLOW_STEPS: StepConfig[] = [
       subtitle: "1 página • 480 kB • PDF",
       time: "09:42",
     },
-    readPauseMs: 500,
+    readPauseMs: 1400,
   },
   {
     milestoneId: 1,
     botTypingLabel: "EnergivIA analisando fatura com IA...",
-    botTypingDurationMs: 1100,
+    botTypingDurationMs: 2400, // Simula IA lendo o documento
     message: { id: "m6", type: "bot", kind: "ocr_result", time: "09:42" },
-    readPauseMs: 1500,
+    readPauseMs: 5500, // Dá tempo para ler Copel, 257 kWh, 3,15 kWp e os telhados
   },
   {
     milestoneId: 1,
     userDraft: "2",
-    draftDurationMs: 300,
+    draftDurationMs: 500,
     message: { id: "m7", type: "user", text: "2", time: "09:42" },
-    readPauseMs: 400,
+    readPauseMs: 1000,
   },
 
   // Passo 3: Kit Dynamis
   {
     milestoneId: 2,
     botTypingLabel: "EnergivIA calculando melhor kit solar...",
-    botTypingDurationMs: 1100,
+    botTypingDurationMs: 2400, // Simula motor solar calculando
     message: { id: "m8", type: "bot", kind: "kit_dynamis", time: "09:43" },
-    readPauseMs: 1600,
+    readPauseMs: 6000, // Dá tempo para ver Kit Dynamis, módulos, inversor, custo e margem
   },
   {
     milestoneId: 2,
     userDraft: "1",
-    draftDurationMs: 300,
+    draftDurationMs: 500,
     message: { id: "m9", type: "user", text: "1", time: "09:43" },
-    readPauseMs: 350,
+    readPauseMs: 1000,
   },
 
   // Passo 4: Dados no CRM
   {
     milestoneId: 3,
     botTypingLabel: "EnergivIA está digitando...",
-    botTypingDurationMs: 550,
+    botTypingDurationMs: 1200,
     message: { id: "m10", type: "bot", kind: "ask_name", time: "09:43" },
-    readPauseMs: 800,
+    readPauseMs: 2500,
   },
   {
     milestoneId: 3,
     userDraft: "Marcelo",
-    draftDurationMs: 400,
+    draftDurationMs: 750,
     message: { id: "m11", type: "user", text: "Marcelo", time: "09:43" },
-    readPauseMs: 400,
+    readPauseMs: 1000,
   },
   {
     milestoneId: 3,
     botTypingLabel: "EnergivIA está digitando...",
-    botTypingDurationMs: 550,
+    botTypingDurationMs: 1200,
     message: { id: "m12", type: "bot", kind: "ask_phone", time: "09:43" },
-    readPauseMs: 800,
+    readPauseMs: 2500,
   },
   {
     milestoneId: 3,
     userDraft: "(44) 99888-0000",
-    draftDurationMs: 450,
+    draftDurationMs: 850,
     message: { id: "m13", type: "user", text: "(44) 99888-0000", time: "09:44" },
-    readPauseMs: 400,
+    readPauseMs: 1200,
   },
   {
     milestoneId: 3,
     botTypingLabel: "EnergivIA está digitando...",
-    botTypingDurationMs: 550,
+    botTypingDurationMs: 1200,
     message: { id: "m14", type: "bot", kind: "ask_template", time: "09:44" },
-    readPauseMs: 900,
+    readPauseMs: 3500, // Dá tempo para ler os 3 modelos de proposta
   },
   {
     milestoneId: 3,
     userDraft: "1",
-    draftDurationMs: 300,
+    draftDurationMs: 500,
     message: { id: "m15", type: "user", text: "1", time: "09:44" },
-    readPauseMs: 350,
+    readPauseMs: 1000,
   },
 
   // Passo 5: Proposta Final
   {
     milestoneId: 4,
     botTypingLabel: "EnergivIA gerando proposta em PDF...",
-    botTypingDurationMs: 1200,
+    botTypingDurationMs: 2600, // Simula renderização do PDF
     message: { id: "m16", type: "bot", kind: "final_proposal", time: "09:45" },
-    readPauseMs: 4500,
+    readPauseMs: 8500, // 8.5s para contemplar a proposta final, payback e CRM
   },
 ];
 
 export function WhatsappFlowSimulator(): JSX.Element {
-  // Current step index (0 to FLOW_STEPS.length - 1)
   const [stepIndex, setStepIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [speed, setSpeed] = useState<number>(1);
 
-  // Micro-states for user typing draft & bot typing label
   const [activeInputDraft, setActiveInputDraft] = useState<string>("");
   const [activeBotTyping, setActiveBotTyping] = useState<string | null>(null);
 
@@ -274,11 +273,11 @@ export function WhatsappFlowSimulator(): JSX.Element {
   useEffect(() => {
     const timer = setTimeout(() => {
       scrollToBottom();
-    }, 60);
+    }, 70);
     return () => clearTimeout(timer);
   }, [visibleMessages.length, activeBotTyping, scrollToBottom]);
 
-  // Execution engine: Drives the flow step by step smoothly without high-frequency re-renders
+  // Execution engine: Drives the flow with natural human reading pauses
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -292,8 +291,8 @@ export function WhatsappFlowSimulator(): JSX.Element {
       // 1. If step has user draft, simulate user typing in input field
       if (currentStep.userDraft) {
         const text = currentStep.userDraft;
-        const totalDuration = (currentStep.draftDurationMs || 400) / speed;
-        const charInterval = Math.max(30, totalDuration / text.length);
+        const totalDuration = (currentStep.draftDurationMs || 600) / speed;
+        const charInterval = Math.max(40, totalDuration / text.length);
 
         for (let i = 1; i <= text.length; i++) {
           await new Promise<void>((resolve) => {
@@ -308,20 +307,20 @@ export function WhatsappFlowSimulator(): JSX.Element {
           if (isCancelled) return;
         }
 
-        // Slight pause before sending
+        // Slight natural pause before pressing send
         await new Promise<void>((resolve) => {
           const id = setTimeout(() => {
             if (!isCancelled) {
               setActiveInputDraft("");
             }
             resolve();
-          }, 120 / speed);
+          }, 250 / speed);
           timeoutIds.push(id);
         });
         if (isCancelled) return;
       }
 
-      // 2. Wait for read pause of the current message
+      // 2. Wait for generous reading pause of the current message
       const pauseDuration = currentStep.readPauseMs / speed;
 
       await new Promise<void>((resolve) => {
@@ -333,7 +332,6 @@ export function WhatsappFlowSimulator(): JSX.Element {
       // 3. Move to next step or loop back to start
       const nextIndex = stepIndex + 1;
       if (nextIndex >= FLOW_STEPS.length) {
-        // Reset to beginning
         setActiveInputDraft("");
         setActiveBotTyping(null);
         setStepIndex(0);
@@ -345,7 +343,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
       // 4. If next step has bot typing, display typing indicator before revealing message
       if (nextStep.botTypingLabel) {
         setActiveBotTyping(nextStep.botTypingLabel);
-        const typingDuration = (nextStep.botTypingDurationMs || 800) / speed;
+        const typingDuration = (nextStep.botTypingDurationMs || 1500) / speed;
 
         await new Promise<void>((resolve) => {
           const id = setTimeout(() => {
@@ -379,10 +377,8 @@ export function WhatsappFlowSimulator(): JSX.Element {
       }, 250);
 
       if (e.deltaY > 0) {
-        // Scroll forward
         setStepIndex((prev) => Math.min(FLOW_STEPS.length - 1, prev + 1));
       } else {
-        // Scroll backward
         setStepIndex((prev) => Math.max(0, prev - 1));
       }
       setActiveInputDraft("");
@@ -417,7 +413,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
       className="relative flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-16 py-6 select-none"
     >
       {/* ------------------------------------------------------------- */}
-      {/* ELEGANT PHOTOREALISTIC IPHONE (MATCHING USER PNG MOCKUP)      */}
+      {/* ELEGANT PHOTOREALISTIC IPHONE (PURE WHITE BACKGROUND)         */}
       {/* ------------------------------------------------------------- */}
       <div className="relative flex flex-col items-center w-full max-w-[360px] sm:max-w-[380px] shrink-0">
         {/* PHYSICAL PHONE SHELL CONTAINER */}
@@ -425,8 +421,8 @@ export function WhatsappFlowSimulator(): JSX.Element {
           {/* Soft, Diffused Realistic Shadow casting below the iPhone */}
           <div className="pointer-events-none absolute inset-x-5 bottom-2 top-8 rounded-[48px] shadow-[0_28px_60px_-15px_rgba(0,0,0,0.85),0_12px_28px_-8px_rgba(0,0,0,0.6)]" />
 
-          {/* SCREEN LAYER (Precisely aligned within the transparent cutout of iphone-mockup.png) */}
-          <div className="absolute inset-y-[2.4%] left-[5.43%] right-[6.0%] rounded-[36px] overflow-hidden bg-[#efeae2]/50 flex flex-col z-10 font-sans shadow-inner select-none">
+          {/* SCREEN LAYER: PURE WHITE BACKGROUND (#FFFFFF) */}
+          <div className="absolute inset-y-[2.4%] left-[5.43%] right-[6.0%] rounded-[36px] overflow-hidden bg-white flex flex-col z-10 font-sans shadow-inner select-none">
             {/* iOS Status Bar */}
             <div className="relative z-20 flex items-center justify-between bg-white px-5 pt-2.5 pb-1 text-[13px] text-black font-extrabold select-none">
               {/* Left of notch: Time */}
@@ -452,12 +448,12 @@ export function WhatsappFlowSimulator(): JSX.Element {
               </div>
             </div>
 
-            {/* WhatsApp iOS Header */}
-            <div className="relative z-20 flex items-center justify-between border-b border-[#e5e5ea] bg-white px-3.5 py-2 shadow-xs">
+            {/* WhatsApp iOS Clean Header */}
+            <div className="relative z-20 flex items-center justify-between border-b border-slate-100 bg-white px-3.5 py-2 shadow-xs">
               <div className="flex items-center gap-2">
                 <ArrowLeft className="h-4 w-4 text-black hover:opacity-75 transition cursor-pointer" />
                 <div className="relative">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#070b14] ring-1 ring-slate-300 overflow-hidden shadow-xs">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#070b14] ring-1 ring-slate-200 overflow-hidden shadow-xs">
                     <span className="text-cyan-400 font-bold text-xs">⚡</span>
                   </div>
                   <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#25d366]" />
@@ -477,18 +473,14 @@ export function WhatsappFlowSimulator(): JSX.Element {
               </div>
             </div>
 
-            {/* Chat Messages Flow with authentic light background & 100% black text */}
+            {/* Chat Messages Flow with PURE WHITE background & 100% black text */}
             <div
               ref={chatContainerRef}
-              className="relative flex-1 space-y-2.5 overflow-y-auto p-3 text-sm scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden bg-[#efeae2]/50 bg-blend-multiply"
-              style={{
-                backgroundImage: `radial-gradient(#0000000a 1px, transparent 1px)`,
-                backgroundSize: "16px 16px",
-              }}
+              className="relative flex-1 space-y-3 overflow-y-auto p-3 text-sm scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden bg-white"
             >
               {/* Date Pill */}
               <div className="flex justify-center my-0.5">
-                <span className="rounded-lg bg-white/95 px-2.5 py-0.5 text-[11px] text-black font-bold shadow-2xs border border-black/10">
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] text-black font-bold shadow-2xs border border-slate-200">
                   Hoje
                 </span>
               </div>
@@ -509,7 +501,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                         }}
                         className="flex justify-end"
                       >
-                        <div className="max-w-[85%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] border border-emerald-300/70 px-3.5 py-1.5 text-black shadow-xs">
+                        <div className="max-w-[85%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] border border-emerald-300/80 px-3.5 py-2 text-black shadow-xs">
                           <p className="text-[14px] leading-relaxed font-bold text-black">
                             {msg.text}
                           </p>
@@ -535,7 +527,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                         }}
                         className="flex justify-end"
                       >
-                        <div className="max-w-[88%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] border border-emerald-300/70 p-2 text-black shadow-xs">
+                        <div className="max-w-[88%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] border border-emerald-300/80 p-2.5 text-black shadow-xs">
                           <div className="flex items-center gap-2.5 rounded-xl bg-white p-2.5 border border-emerald-300/80 shadow-2xs">
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-700 font-bold border border-rose-200">
                               <FileText className="h-5 w-5" />
@@ -558,7 +550,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                     );
                   }
 
-                  // BOT MESSAGES: 100% BLACK TEXT, HIGH CONTRAST, BEAUTIFUL CARDS
+                  // BOT MESSAGES: CLASSIC WHATSAPP LIGHT GRAY BUBBLE ON PURE WHITE SCREEN
                   return (
                     <motion.div
                       key={msg.id}
@@ -571,7 +563,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                       }}
                       className="flex justify-start"
                     >
-                      <div className="max-w-[95%] rounded-2xl rounded-tl-xs bg-white border border-slate-200 p-3.5 text-black shadow-sm space-y-2">
+                      <div className="max-w-[95%] rounded-2xl rounded-tl-xs bg-[#f0f2f5] border border-slate-200/80 p-3.5 text-black shadow-xs space-y-2.5">
                         {msg.kind === "welcome" && (
                           <div className="text-[13.5px] leading-relaxed space-y-2 text-black font-medium">
                             <p className="font-bold text-black">
@@ -585,7 +577,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                             <p className="font-bold text-black">
                               Como posso ajudar você a gerar orçamentos e propostas solares hoje?
                             </p>
-                            <div className="mt-1.5 space-y-1.5 rounded-xl bg-slate-50 p-3 border border-slate-300 text-[12.5px] text-black shadow-2xs">
+                            <div className="mt-1.5 space-y-1.5 rounded-xl bg-white p-3 border border-slate-200 text-[12.5px] text-black shadow-2xs">
                               <p className="font-black text-black text-[13px]">
                                 Escolha uma opção digitando o número:
                               </p>
@@ -631,7 +623,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                               <span className="inline-block w-2 h-2 rounded-full bg-emerald-600" />
                               Legal, dados extraídos com precisão!
                             </p>
-                            <div className="space-y-1 rounded-xl bg-slate-50 p-2.5 border border-slate-300 text-[12.5px]">
+                            <div className="space-y-1 rounded-xl bg-white p-2.5 border border-slate-200 text-[12.5px] shadow-2xs">
                               <p className="flex justify-between">
                                 <span className="text-black font-bold">Concessionária:</span>
                                 <span className="font-black text-black">Copel (PR)</span>
@@ -652,7 +644,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                             <p className="text-[12.5px] text-black font-black">
                               Qual o tipo de telhado para fixação dos módulos?
                             </p>
-                            <div className="space-y-1 rounded-xl bg-slate-50 p-2 border border-slate-300 text-[12.5px]">
+                            <div className="space-y-1 rounded-xl bg-white p-2 border border-slate-200 text-[12.5px] shadow-2xs">
                               <p className="font-bold text-black">[1] Fibrocimento / Metálico</p>
                               <p className="font-black text-black bg-emerald-100/90 border border-emerald-500 rounded-md px-2 py-0.5">
                                 [2] Cerâmico (Colonial)
@@ -668,7 +660,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                               <span className="inline-block w-2 h-2 rounded-full bg-emerald-600" />
                               Kit Dynamis Selecionado com Sucesso!
                             </p>
-                            <div className="rounded-xl border border-emerald-400 bg-emerald-50/50 p-2.5 space-y-1.5 text-[12.5px]">
+                            <div className="rounded-xl border border-emerald-400 bg-white p-3 space-y-2 shadow-2xs">
                               <div className="flex items-center justify-between">
                                 <span className="text-xs font-black text-black uppercase tracking-wide">
                                   Kit Solar Dynamis 3,15 kWp
@@ -681,7 +673,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                                 • 5x Módulos 630W N-Type TopCon
                                 <br />• 1x Inversor Micro/String 3kW Monofásico
                               </p>
-                              <div className="border-t border-slate-300 pt-1.5 flex justify-between items-center text-xs">
+                              <div className="border-t border-slate-200 pt-1.5 flex justify-between items-center text-xs">
                                 <span className="text-black font-bold">Custo Distribuidor:</span>
                                 <span className="font-black text-black">R$ 4.290,00</span>
                               </div>
@@ -697,7 +689,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                             <p className="text-[12.5px] text-black font-black">
                               Deseja aplicar essa margem de 35% na proposta comercial?
                             </p>
-                            <div className="space-y-1 rounded-xl bg-slate-50 p-2 border border-slate-300 text-[12.5px]">
+                            <div className="space-y-1 rounded-xl bg-white p-2 border border-slate-200 text-[12.5px] shadow-2xs">
                               <p className="font-black text-black bg-emerald-100/90 border border-emerald-500 rounded-md px-2 py-0.5">
                                 [1] Sim, avançar com 35%
                               </p>
@@ -735,7 +727,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                               Qual <b className="font-black">modelo de proposta</b> você deseja
                               gerar?
                             </p>
-                            <div className="space-y-1 rounded-xl bg-slate-50 p-2.5 border border-slate-300 text-[12.5px]">
+                            <div className="space-y-1 rounded-xl bg-white p-2.5 border border-slate-200 text-[12.5px] shadow-2xs">
                               <p className="font-black text-black bg-emerald-100/90 border border-emerald-500 rounded-md px-2 py-0.5">
                                 [1] Modelo Premium Executivo (Gráficos + Payback)
                               </p>
@@ -755,7 +747,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                             </p>
 
                             {/* Proposal Card in WhatsApp */}
-                            <div className="rounded-xl border border-emerald-400 bg-slate-50 p-2.5 shadow-2xs space-y-2">
+                            <div className="rounded-xl border border-emerald-400 bg-white p-3 shadow-2xs space-y-2">
                               <div className="flex items-center gap-2.5">
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300">
                                   <FileText className="h-5 w-5" />
@@ -770,7 +762,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                                 </div>
                               </div>
 
-                              <div className="mt-2 flex items-center justify-between border-t border-slate-300 pt-2 text-[12px]">
+                              <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2 text-[12px]">
                                 <span className="text-black font-black">Payback: 2,7 anos</span>
                                 <span className="flex items-center gap-1 font-black bg-emerald-600 text-white px-2.5 py-1 rounded-md text-[11.5px] shadow-xs">
                                   Abrir Proposta <ExternalLink className="h-3 w-3" />
