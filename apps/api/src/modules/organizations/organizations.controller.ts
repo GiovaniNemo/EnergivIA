@@ -8,7 +8,9 @@ import {
   Param,
   UseGuards,
   Inject,
+  Req,
 } from "@nestjs/common";
+import type { Request } from "express";
 import { OrganizationsService } from "./organizations.service";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -25,8 +27,21 @@ export class OrganizationsController {
   constructor(@Inject(OrganizationsService) private readonly organizations: OrganizationsService) {}
 
   @Post()
-  create(@CurrentUser() user: JwtPayload, @Body() dto: CreateOrganizationDto) {
-    return this.organizations.create(user.sub, dto);
+  create(@CurrentUser() user: JwtPayload, @Body() dto: CreateOrganizationDto, @Req() req: Request) {
+    const rawIp =
+      (req.headers["x-forwarded-for"] as string) ||
+      (req.headers["x-real-ip"] as string) ||
+      req.socket?.remoteAddress ||
+      req.ip ||
+      "";
+    const ip = rawIp.split(",")[0]?.trim() || undefined;
+    const userAgent = (req.headers["user-agent"] as string) || undefined;
+    return this.organizations.create(user.sub, dto, { ip, userAgent });
+  }
+
+  @Get(":id/terms-acceptance")
+  getTermsAcceptance(@Param("id") id: string, @CurrentUser() user: JwtPayload) {
+    return this.organizations.getTermsAcceptance(id, user.sub);
   }
 
   @Get()

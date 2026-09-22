@@ -154,6 +154,36 @@ export async function uploadUserAvatar(file: File): Promise<string> {
   return presigned.fileUrl;
 }
 
+export interface TermsAcceptanceData {
+  termsAccepted: boolean;
+  termsAcceptedAt: string | null;
+  termsVersion: string | null;
+  currentAcceptance: {
+    acceptedAt: string;
+    userId?: string;
+    userEmail?: string;
+    userName?: string;
+    ip?: string;
+    userAgent?: string;
+    version?: string;
+    statement?: string;
+  } | null;
+  auditLogs: Array<{
+    id: string;
+    organizationId: string;
+    userId: string | null;
+    userName: string | null;
+    userEmail: string | null;
+    termsVersion: string;
+    termsType: string;
+    acceptedAt: string;
+    ipAddress: string | null;
+    userAgent: string | null;
+    channel: string;
+    documentSnapshot: string | null;
+  }>;
+}
+
 export async function createOrganization(data: {
   name: string;
   logoUrl?: string;
@@ -171,11 +201,23 @@ export async function createOrganization(data: {
   templateTone?: string;
   referralSource?: string;
   referredBy?: string;
+  termsAccepted?: boolean;
+  termsAcceptedAt?: string;
+  termsVersion?: string;
 }): Promise<Organization> {
   const res = await apiProxy("POST", "/organizations", data);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message ?? "Falha ao criar organização.");
+  }
+  return res.json();
+}
+
+export async function getTermsAcceptance(organizationId: string): Promise<TermsAcceptanceData> {
+  const res = await apiProxy("GET", `/organizations/${organizationId}/terms-acceptance`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message ?? "Falha ao buscar registro de aceite dos termos.");
   }
   return res.json();
 }

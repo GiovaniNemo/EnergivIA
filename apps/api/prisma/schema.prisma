@@ -46,6 +46,7 @@ model Tenant {
   subscription          Subscription?
   aiUsageLogs           AiUsageLog[]
   feedbacks             PlatformFeedback[]
+  termsAcceptances      TermsAcceptanceLog[]
 
   @@index([slug])
   @@index([deletedAt])
@@ -158,6 +159,7 @@ model User {
   stockMovements    StockMovement[]
   aiUsageLogs       AiUsageLog[]
   feedbacks         PlatformFeedback[]
+  termsAcceptances  TermsAcceptanceLog[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -1440,4 +1442,31 @@ model PlatformFeedback {
   @@index([createdAt])
   @@map("platform_feedbacks")
 }
+
+model TermsAcceptanceLog {
+  id               String   @id @default(cuid())
+  organizationId   String   @map("organization_id")
+  userId           String?  @map("user_id")
+  userName         String?  @map("user_name")
+  userEmail        String?  @map("user_email")
+  termsVersion     String   @default("2026-09-22-v1") @map("terms_version")
+  termsType        String   @default("TERMS_OF_USE_AND_TECHNICAL_RESPONSIBILITY") @map("terms_type")
+  acceptedAt       DateTime @default(now()) @map("accepted_at")
+  ipAddress        String?  @map("ip_address")
+  userAgent        String?  @map("user_agent")
+  channel          String   @default("WEB_ONBOARDING")
+  documentSnapshot String?  @map("document_snapshot") @db.Text
+  metadata         Json?
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  organization Tenant @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([acceptedAt])
+  @@index([termsVersion])
+  @@map("terms_acceptance_logs")
+}
+
 

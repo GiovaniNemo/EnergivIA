@@ -401,10 +401,14 @@ export default function CreateOrganizationPage() {
     setError(null);
     setLoading(true);
     try {
+      const termsAcceptedAt = new Date().toISOString();
       const organization = await createOrganization({
         name: name.trim(),
         logoUrl: logoUrl || undefined,
         cnpj: cnpj.trim() || undefined,
+        termsAccepted: true,
+        termsAcceptedAt,
+        termsVersion: "2026-09-22-v1",
         templateRegion: cityState.trim() || undefined,
         referralSource: (selectedSourceOption?.label ?? selectedReferralSource.trim()) || undefined,
         referredBy: referredBy.trim() || undefined,

@@ -204,13 +204,17 @@ export class OrganizationsService {
     }
   }
 
-  async create(userId: string, dto: CreateOrganizationDto) {
+  async create(
+    userId: string,
+    dto: CreateOrganizationDto,
+    clientInfo?: { ip?: string; userAgent?: string }
+  ) {
     await this.validateCnpjAuthorization(userId, dto.cnpj);
 
     // Bloqueia criação de múltiplas organizações para usuários no plano gratuito / Start
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { role: true, email: true },
+      select: { role: true, email: true, name: true },
     });
     const roleStr = String(user?.role || "").toUpperCase();
     const isPrivileged = roleStr === "ADMIN" || roleStr === "PLATFORM";
@@ -253,6 +257,11 @@ export class OrganizationsService {
       }
     }
 
+    const acceptedAtDate = dto.termsAcceptedAt ? new Date(dto.termsAcceptedAt) : new Date();
+    const termsVersion = dto.termsVersion?.trim() || "2026-09-22-v1";
+    const termsStatement =
+      "Declaro que li e concordo com os Termos de Uso da ENERGIVIA LTDA (CNPJ 66.304.358/0001-16) e com a Política de Privacidade. Entendo que o sistema utiliza Inteligência Artificial que está sujeita a imprecisões e erros de leitura. Assumo total responsabilidade pela conferência técnica minuciosa dos dados e pela emissão de ART/TRT sobre toda e qualquer proposta gerada pela plataforma ou pelo WhatsApp.";
+
     const slug = await this.generateUniqueOrganizationSlug(dto.name);
     const templateSettings = buildTemplateSettings(dto);
     const org = await this.prisma.tenant.create({
@@ -272,10 +281,45 @@ export class OrganizationsService {
           ...templateSettings,
           referralSource: dto.referralSource?.trim() || null,
           referredBy: dto.referredBy?.trim() || null,
+          termsAccepted: dto.termsAccepted ?? true,
+          termsAcceptedAt: acceptedAtDate.toISOString(),
+          termsVersion,
+          termsAcceptanceLog: {
+            acceptedAt: acceptedAtDate.toISOString(),
+            userId,
+            userEmail: user?.email ?? null,
+            userName: user?.name ?? null,
+            ip: clientInfo?.ip ?? null,
+            userAgent: clientInfo?.userAgent ?? null,
+            version: termsVersion,
+            statement: termsStatement,
+          },
         },
         createdById: userId,
       },
     });
+
+    // Registra auditoria na tabela oficial de termos de aceite
+    await this.prisma.termsAcceptanceLog.create({
+      data: {
+        organizationId: org.id,
+        userId,
+        userName: user?.name ?? null,
+        userEmail: user?.email ?? null,
+        termsVersion,
+        termsType: "TERMS_OF_USE_AND_TECHNICAL_RESPONSIBILITY",
+        acceptedAt: acceptedAtDate,
+        ipAddress: clientInfo?.ip ?? null,
+        userAgent: clientInfo?.userAgent ?? null,
+        channel: "WEB_ONBOARDING",
+        documentSnapshot: termsStatement,
+        metadata: {
+          organizationName: dto.name,
+          cnpj: dto.cnpj ?? null,
+        },
+      },
+    });
+
     await this.prisma.organizationMember.create({
       data: {
         organizationId: org.id,
@@ -302,6 +346,112 @@ export class OrganizationsService {
       referralSource: readOptionalSetting(org.settings, "referralSource"),
       referredBy: readOptionalSetting(org.settings, "referredBy"),
     };
+  }
+
+  async getTermsAcceptance(organizationId: string, userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    const isPrivileged = user?.role === "ADMIN" || user?.role === "PLATFORM";
+
+    if (!isPrivileged) {
+      const member = await this.prisma.organizationMember.findFirst({
+        where: {
+          organizationId,
+          userId,
+          status: InvitationStatus.ACCEPTED,
+        },
+      });
+      if (!member) {
+        throw new ForbiddenException("Você não possui permissão para acessar esta organização.");
+      }
+    }
+
+    const logs = await this.prisma.termsAcceptanceLog.findMany({
+      where: { organizationId },
+      orderBy: { acceptedAt: "desc" },
+    });
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: organizationId },
+      select: { settings: true },
+    });
+
+    const settingsObj = (tenant?.settings as Record<string, unknown>) || {};
+
+    return {
+      termsAccepted: Boolean(settingsObj.termsAccepted),
+      termsAcceptedAt: settingsObj.termsAcceptedAt || null,
+      termsVersion: settingsObj.termsVersion || null,
+      currentAcceptance: settingsObj.termsAcceptanceLog || null,
+      auditLogs: logs,
+    };
+  }
+
+  async logTermsAcceptance(params: {
+    organizationId: string;
+    userId?: string;
+    userName?: string;
+    userEmail?: string;
+    termsVersion?: string;
+    termsType?: string;
+    acceptedAt?: Date;
+    ipAddress?: string;
+    userAgent?: string;
+    channel?: string;
+    documentSnapshot?: string;
+    metadata?: Prisma.InputJsonValue;
+  }) {
+    const acceptedAt = params.acceptedAt || new Date();
+    const termsVersion = params.termsVersion || "2026-09-22-v1";
+
+    const log = await this.prisma.termsAcceptanceLog.create({
+      data: {
+        organizationId: params.organizationId,
+        userId: params.userId,
+        userName: params.userName,
+        userEmail: params.userEmail,
+        termsVersion,
+        termsType: params.termsType || "TERMS_OF_USE_AND_TECHNICAL_RESPONSIBILITY",
+        acceptedAt,
+        ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+        channel: params.channel || "WEB_ONBOARDING",
+        documentSnapshot: params.documentSnapshot,
+        metadata: params.metadata,
+      },
+    });
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: params.organizationId },
+      select: { settings: true },
+    });
+
+    const prevSettings = (tenant?.settings as Record<string, unknown>) || {};
+    await this.prisma.tenant.update({
+      where: { id: params.organizationId },
+      data: {
+        settings: {
+          ...prevSettings,
+          termsAccepted: true,
+          termsAcceptedAt: acceptedAt.toISOString(),
+          termsVersion,
+          termsAcceptanceLog: {
+            acceptedAt: acceptedAt.toISOString(),
+            userId: params.userId ?? null,
+            userEmail: params.userEmail ?? null,
+            userName: params.userName ?? null,
+            ip: params.ipAddress ?? null,
+            userAgent: params.userAgent ?? null,
+            version: termsVersion,
+            statement: params.documentSnapshot ?? null,
+          },
+        },
+      },
+    });
+
+    return log;
   }
 
   async findAllForUser(userId: string) {
