@@ -46,9 +46,10 @@ const MILESTONES: Milestone[] = [
   },
   {
     id: 2,
-    title: "Seleção do Kit Dynamis",
+    title: "Seleção do Kit Distribuidor",
     tag: "Passo 3",
-    description: "Cálculo da potência (3,15 kWp), preço do kit Dynamis e escolha do integrador.",
+    description:
+      "Cálculo da potência (3,15 kWp), preço do kit Distribuidor e escolha do integrador.",
     stepStartIndex: 7,
     stepEndIndex: 8,
   },
@@ -80,7 +81,7 @@ interface ChatMessage {
     | "welcome"
     | "ask_bill"
     | "ocr_result"
-    | "kit_dynamis"
+    | "kit_distribuidor"
     | "ask_name"
     | "ask_phone"
     | "ask_template"
@@ -157,12 +158,12 @@ const FLOW_STEPS: StepConfig[] = [
     readPauseMs: 1000,
   },
 
-  // Passo 3: Kit Dynamis
+  // Passo 3: Kit Distribuidor
   {
     milestoneId: 2,
     botTypingLabel: "EnergivIA calculando melhor kit solar...",
     botTypingDurationMs: 2400,
-    message: { id: "m8", type: "bot", kind: "kit_dynamis", time: "09:43" },
+    message: { id: "m8", type: "bot", kind: "kit_distribuidor", time: "09:43" },
     readPauseMs: 6000,
   },
   {
@@ -648,15 +649,15 @@ export function WhatsappFlowSimulator(): JSX.Element {
                           </div>
                         )}
 
-                        {msg.kind === "kit_dynamis" && (
+                        {msg.kind === "kit_distribuidor" && (
                           <div className="text-[15px] leading-[21px] space-y-2 text-black font-normal">
                             <p className="font-semibold text-black">
-                              Kit Dynamis Selecionado com Sucesso:
+                              Kit Distribuidor Selecionado com Sucesso:
                             </p>
                             <div className="rounded-xl border border-emerald-300/80 bg-emerald-50/40 p-2.5 space-y-1 text-[13.5px]">
                               <div className="flex items-center justify-between">
                                 <span className="font-bold text-black text-xs uppercase tracking-wide">
-                                  Kit Solar Dynamis 3,15 kWp
+                                  Kit Solar Distribuidor 3,15 kWp
                                 </span>
                                 <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
                                   Em Estoque
