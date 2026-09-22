@@ -16,7 +16,6 @@ import {
 import {
   ArrowDown,
   Check,
-  Download,
   FileText,
   Filter,
   MessageSquare,
@@ -438,13 +437,6 @@ export default function DashboardPage(): JSX.Element {
           </p>
         </div>
         <div className="flex gap-2">
-          <button
-            type="button"
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-transparent px-3.5 text-sm font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-          >
-            <Download className="h-4 w-4" aria-hidden />
-            Exportar
-          </button>
           <button
             type="button"
             onClick={() => setNewProposalOpen(true)}
