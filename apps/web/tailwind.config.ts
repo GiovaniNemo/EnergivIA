@@ -6,6 +6,9 @@ const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}", "../../packages/ui/src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
+      fontFamily: {
+        "plus-jakarta": ["var(--font-plus-jakarta)", "sans-serif"],
+      },
       keyframes: {
         shimmer: {
           "0%": { backgroundPosition: "200% 0" },

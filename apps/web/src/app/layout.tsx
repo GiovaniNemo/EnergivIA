@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import * as Sentry from "@sentry/nextjs";
-import { Inter, Montserrat, Open_Sans, Roboto } from "next/font/google";
+import { Inter, Montserrat, Open_Sans, Roboto, Plus_Jakarta_Sans } from "next/font/google";
 import { Auth0Provider } from "@auth0/nextjs-auth0/client";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
@@ -24,6 +24,11 @@ const montserrat = Montserrat({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
   variable: "--font-montserrat",
+});
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-plus-jakarta",
 });
 
 export function generateMetadata(): Metadata {
@@ -119,7 +124,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body
-        className={`${inter.variable} ${roboto.variable} ${openSans.variable} ${montserrat.variable} font-sans antialiased min-h-screen flex flex-col bg-[var(--color-background)] text-[var(--color-foreground)]`}
+        className={`${inter.variable} ${roboto.variable} ${openSans.variable} ${montserrat.variable} ${plusJakarta.variable} font-sans antialiased min-h-screen flex flex-col bg-[var(--color-background)] text-[var(--color-foreground)]`}
       >
         <div className="flex min-h-screen flex-1 flex-col">
           <GoogleAnalytics />
