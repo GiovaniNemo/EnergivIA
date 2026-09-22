@@ -1055,7 +1055,7 @@ export default function CreateOrganizationPage() {
                       </div>
                     </div>
 
-                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-3.5 space-y-2">
+                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-3.5 space-y-2.5">
                       <label className="flex items-start gap-3 cursor-pointer select-none">
                         <input
                           type="checkbox"
@@ -1064,9 +1064,9 @@ export default function CreateOrganizationPage() {
                             setTermsAccepted(e.target.checked);
                             if (error) setError(null);
                           }}
-                          className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-[#0f6b86] focus:ring-[#0f6b86] cursor-pointer"
+                          className="mt-1 h-4 w-4 shrink-0 rounded border-zinc-300 text-[#0f6b86] focus:ring-[#0f6b86] cursor-pointer"
                         />
-                        <span className="text-xs text-zinc-700 leading-snug">
+                        <span className="text-xs text-zinc-700 leading-relaxed">
                           Declaro que li e concordo com os{" "}
                           <button
                             type="button"
@@ -1074,25 +1074,29 @@ export default function CreateOrganizationPage() {
                               e.preventDefault();
                               setTermsModalOpen(true);
                             }}
-                            className="font-semibold text-[#0A4A63] underline hover:text-[#1f7f9b] transition-colors"
+                            className="font-semibold text-[#0A4A63] underline hover:text-[#1f7f9b] transition-colors inline"
                           >
-                            Termos de Uso e Isenção Técnica
+                            Termos de Uso
                           </button>{" "}
-                          e com a{" "}
+                          da <strong>ENERGIVIA LTDA</strong> (CNPJ 66.304.358/0001-16) e com a{" "}
                           <Link
                             href="/privacidade"
                             target="_blank"
-                            className="font-semibold text-[#0A4A63] underline hover:text-[#1f7f9b] transition-colors"
+                            className="font-semibold text-[#0A4A63] underline hover:text-[#1f7f9b] transition-colors inline"
                           >
                             Política de Privacidade
                           </Link>
-                          .
+                          . Entendo que o sistema utiliza Inteligência Artificial que está sujeita a
+                          imprecisões e erros de leitura. Assumo total responsabilidade pela
+                          conferência técnica minuciosa dos dados e pela emissão de ART/TRT sobre
+                          toda e qualquer proposta gerada pela plataforma ou pelo WhatsApp.
                         </span>
                       </label>
 
                       <div className="flex items-center justify-between pt-1 border-t border-zinc-100 text-[11px] text-zinc-500">
                         <span className="flex items-center gap-1 text-emerald-700 font-medium">
-                          <ShieldCheck className="h-3.5 w-3.5" /> Conformidade LGPD e Marco Civil
+                          <ShieldCheck className="h-3.5 w-3.5" /> Conformidade LGPD, CDC e Marco
+                          Civil
                         </span>
                         <button
                           type="button"
@@ -1146,14 +1150,13 @@ export default function CreateOrganizationPage() {
           <DialogHeader className="space-y-1 border-b border-zinc-200 pb-4">
             <div className="flex items-center gap-2 text-xs font-semibold text-[#1f7f9b]">
               <Scale className="h-4 w-4" />
-              Documento Oficial EnergivIA
+              Documento Jurídico Oficial - EnergivIA
             </div>
             <DialogTitle className="text-xl font-bold text-zinc-900">
-              Termos de Uso e Isenção de Responsabilidade Técnica
+              Termos e Condições Gerais de Uso e Responsabilidade Técnica
             </DialogTitle>
             <DialogDescription className="text-xs text-zinc-500">
-              Revisado em conformidade com o Marco Civil da Internet (Lei 12.965/14) e LGPD (Lei
-              13.709/18).
+              ENERGIVIA LTDA (CNPJ 66.304.358/0001-16) - Sede em Maringá-PR.
             </DialogDescription>
           </DialogHeader>
 
@@ -1164,16 +1167,16 @@ export default function CreateOrganizationPage() {
                 <ShieldAlert className="h-5 w-5 shrink-0 text-amber-700 mt-0.5" />
                 <div>
                   <p className="font-bold text-amber-900">
-                    Aviso Importante: Inteligência Artificial e Responsabilidade do Integrador
+                    Aviso Importante: Inteligência Artificial e Responsabilidade de Engenharia
+                    (Cláusula Crítica)
                   </p>
                   <p className="mt-1 leading-relaxed text-amber-900">
-                    A EnergivIA é uma ferramenta de suporte comercial e estimativas preliminares.{" "}
-                    <strong>
-                      Todo e qualquer dimensionamento gerado por IA deve ser obrigatoriamente
-                      revisado por técnico ou engenheiro habilitado (CREA/CFT)
-                    </strong>{" "}
-                    mediante vistoria técnica presencial no imóvel antes da instalação e homologação
-                    perante a concessionária de energia.
+                    As simulações, dimensionamentos de kits e orçamentos gerados pela ENERGIVIA LTDA
+                    são exclusivamente estimativas computacionais preliminares. Esta plataforma não
+                    substitui a vistoria técnica presencial, a análise estrutural do telhado, o
+                    projeto elétrico detalhado e, sob nenhuma hipótese, supre a necessidade de
+                    emissão de Anotação de Responsabilidade Técnica (ART) ou Termo de
+                    Responsabilidade Técnica (TRT) por engenheiro ou técnico legalmente habilitado.
                   </p>
                 </div>
               </div>
@@ -1181,50 +1184,97 @@ export default function CreateOrganizationPage() {
 
             <section className="space-y-1.5">
               <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
-                <FileText className="h-4 w-4 text-[#1f7f9b]" /> 1. Objeto e Escopo
+                <Building2 className="h-4 w-4 text-[#1f7f9b]" /> 1. Qualificação e Natureza do
+                Serviço
               </h4>
               <p>
-                A plataforma <strong>EnergivIA</strong> disponibiliza software para automação de
-                propostas comerciais, leitura inteligente de contas de luz e estimativas financeiras
-                para o mercado de energia solar. A EnergivIA não executa projetos elétricos
-                executivos e não emite ART/TRT.
+                A ENERGIVIA LTDA, pessoa jurídica de direito privado inscrita no CNPJ/MF sob o nº
+                66.304.358/0001-16, com sede em Maringá-PR, fornece um ecossistema de inteligência
+                comercial e dimensionamento fotovoltaico, acessível nativamente via WhatsApp e pela
+                plataforma web www.energivia.com.br. O sistema atua exclusivamente como um software
+                como serviço (SaaS) facilitador comercial.
               </p>
             </section>
 
             <section className="space-y-1.5">
               <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
-                <Zap className="h-4 w-4 text-[#1f7f9b]" /> 2. Estimativas por Inteligência
-                Artificial
+                <Zap className="h-4 w-4 text-[#1f7f9b]" /> 2. Limitações da Inteligência Artificial
+                e Isenção de Erros
               </h4>
               <p>
-                Os cálculos de irradiação (HSP), quantidade de painéis, inversores e economia
-                estimada são simulações matemáticas. Variações de sombreamento, orientação de
-                telhado, cabeamento ou mudanças tarifárias da distribuidora (Lei 14.300/22) podem
-                gerar divergências em relação à geração real.
+                Nossos serviços utilizam modelos de Inteligência Artificial (IA) e Visão
+                Computacional para automação de atendimento, leitura de faturas (OCR) e cálculos de
+                dimensionamento. Softwares baseados em IA são experimentais e estão sujeitos a
+                falhas de leitura, alucinações de dados e imprecisões sistêmicas. A plataforma não
+                garante a exatidão milimétrica e incondicional das informações extraídas ou dos
+                cálculos gerados, cabendo ao Integrador a conferência absoluta de cada variável.
               </p>
             </section>
 
             <section className="space-y-1.5">
               <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
-                <Building2 className="h-4 w-4 text-[#1f7f9b]" /> 3. Responsabilidade do Integrador
+                <ShieldAlert className="h-4 w-4 text-amber-600" /> 3. Isenção de Responsabilidade de
+                Engenharia
               </h4>
               <p>
-                O Integrador é o único e exclusivo responsável por: (i) inspecionar fisicamente o
-                imóvel e a estrutura do telhado/padrão de energia; (ii) verificar a compatibilidade
-                e segurança dos equipamentos; (iii) emitir a devida ART/TRT por engenheiro
-                responsável; e (iv) aprovar o parecer de acesso na concessionária.
+                As simulações geradas pela ENERGIVIA LTDA são exclusivamente estimativas
+                preliminares. Não substitui vistoria presencial, análise estrutural ou projeto
+                elétrico executivo, nem supre a necessidade de recolhimento de ART/TRT perante
+                CREA/CFT e distribuidoras de energia.
               </p>
             </section>
 
             <section className="space-y-1.5">
               <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
-                <ShieldCheck className="h-4 w-4 text-[#1f7f9b]" /> 4. Privacidade de Dados (LGPD)
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" /> 4. Dever de Validação
+                Exclusivo do Integrador
               </h4>
               <p>
-                O Integrador atua como Controlador dos dados e faturas de seus clientes finais
-                inseridos na plataforma, declarando possuir autorização legal para o envio. A
-                EnergivIA atua como Operadora técnica dos dados com criptografia e isolamento
+                É de responsabilidade integral e inalienável do Integrador revisar e validar todos
+                os dados antes de qualquer venda ou submissão à concessionária, incluindo: (a)
+                histórico de consumo e tipo de conexão da rede; (b) limites térmicos e elétricos dos
+                equipamentos recomendados, respeitando o limite de sobrecarga (Overload), a tensão
+                máxima da string (Voc) corrigida pela temperatura local, e a corrente de
+                curto-circuito (Isc) e operacional (Imp) suportada pelas entradas MPPT dos
+                inversores.
+              </p>
+            </section>
+
+            <section className="space-y-1.5">
+              <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
+                <AlertTriangle className="h-4 w-4 text-amber-600" /> 5. Limitação de
+                Responsabilidade e Indenizações
+              </h4>
+              <p>
+                A ENERGIVIA LTDA está isenta de responsabilidade civil, técnica, material ou moral
+                por sub/sobredimensionamento, perdas financeiras, queima de equipamentos, perda de
+                garantias de fabricantes, lucros cessantes, recusa de homologação ou não atingimento
+                de geração prometida ao cliente final.
+              </p>
+            </section>
+
+            <section className="space-y-1.5">
+              <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
+                <ShieldCheck className="h-4 w-4 text-[#1f7f9b]" /> 6. Cadeia de Fornecimento e Dados
+                Pessoais (CDC e LGPD)
+              </h4>
+              <p>
+                A ENERGIVIA LTDA não vende equipamentos, não mantém estoque e não realiza logística,
+                sendo isenta de solidariedade por vícios ou atrasos de distribuidores terceiros
+                (Art. 18, CDC). Na LGPD, o Integrador atua como Controlador dos dados do cliente
+                final (faturas e contatos), e a EnergivIA como Operadora técnica com ambiente
                 seguro.
+              </p>
+            </section>
+
+            <section className="space-y-1.5">
+              <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
+                <Scale className="h-4 w-4 text-[#1f7f9b]" /> 7. Foro e Aceite
+              </h4>
+              <p>
+                Ao concluir o cadastro pelo site ou iniciar o uso via WhatsApp, o Integrador firma
+                sua concordância integral com estes termos. Fica eleito o foro da Comarca de
+                Maringá, Estado do Paraná.
               </p>
             </section>
           </div>

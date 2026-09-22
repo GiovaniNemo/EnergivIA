@@ -6,15 +6,17 @@ import {
   ShieldAlert,
   CheckCircle2,
   Scale,
-  FileText,
   Cpu,
   AlertTriangle,
+  Building2,
+  Layers,
+  Zap,
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Termos de Uso e Isenção de Responsabilidade | EnergivIA",
+  title: "Termos e Condições de Uso e Responsabilidade Técnica | EnergivIA",
   description:
-    "Termos e Condições de Uso, Isenção de Responsabilidade Técnica e Diretrizes da Plataforma EnergivIA.",
+    "Termos e Condições Gerais de Uso, Isenção de Responsabilidade Técnica, Limitações de IA e Diretrizes da Plataforma EnergivIA.",
 };
 
 export default function TermsOfUsePage(): JSX.Element {
@@ -59,17 +61,23 @@ export default function TermsOfUsePage(): JSX.Element {
             <Scale className="h-3.5 w-3.5" />
             Documento Jurídico Oficial
           </span>
-          <span className="text-xs text-slate-500">Última atualização: 03 de Setembro de 2026</span>
+          <span className="text-xs text-slate-500">Última atualização: Setembro de 2026</span>
         </div>
 
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
-          Termos de Uso e Isenção de Responsabilidade Técnica
+          Termos e Condições Gerais de Uso e Responsabilidade Técnica
         </h1>
-        <p className="mt-3 text-base text-slate-600 dark:text-slate-300">
-          Por favor, leia atentamente estes Termos e Condições antes de utilizar a plataforma{" "}
-          <strong>EnergivIA</strong>. Ao cadastrar-se ou utilizar quaisquer de nossos serviços, você
-          declara ciência e concordância irrestrita com todas as cláusulas aqui estipuladas.
-        </p>
+
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5 text-sm leading-relaxed text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+          <p className="font-semibold text-slate-900 dark:text-white">
+            Bem-vindo(a) à ENERGIVIA LTDA.
+          </p>
+          <p className="mt-2">
+            Ao se cadastrar e utilizar os nossos serviços, o usuário (doravante
+            &quot;Integrador&quot;) concorda expressamente com as regras abaixo, que delimitam a
+            responsabilidade técnica, civil e comercial da plataforma.
+          </p>
+        </div>
 
         {/* Destaque de Isenção Técnica / IA */}
         <div className="my-8 rounded-2xl border-2 border-amber-500/30 bg-amber-500/5 p-5 sm:p-6 dark:border-amber-500/40">
@@ -79,21 +87,20 @@ export default function TermsOfUsePage(): JSX.Element {
             </div>
             <div className="space-y-2">
               <h2 className="text-lg font-bold text-amber-950 dark:text-amber-200">
-                Aviso Importante: Inteligência Artificial e Responsabilidade Técnica
+                Aviso Importante: Inteligência Artificial e Isenção de Responsabilidade de
+                Engenharia (Cláusula Crítica)
               </h2>
               <p className="text-sm leading-relaxed text-amber-900 dark:text-amber-300">
-                A EnergivIA é uma ferramenta de apoio comercial e simulação preliminar.{" "}
-                <strong>
-                  Todos os cálculos de geração, dimensionamento, potência de inversores, quantidade
-                  de módulos e retornos financeiros gerados por algoritmos ou inteligência
-                  artificial possuem caráter meramente estimativo.
-                </strong>
+                As simulações, dimensionamentos de kits e orçamentos gerados pela{" "}
+                <strong>ENERGIVIA LTDA</strong> são exclusivamente estimativas computacionais
+                preliminares com finalidade de apoio comercial.
               </p>
               <p className="text-sm font-semibold leading-relaxed text-amber-950 dark:text-amber-100">
-                É dever e responsabilidade exclusiva do Integrador/Empresa Contratante realizar a
-                vistoria técnica presencial no imóvel, validar a integridade estrutural e elétrica,
-                e submeter o projeto à aprovação de engenheiro ou técnico habilitado com respectiva
-                ART/TRT perante o CREA/CFT e a Concessionária de Energia local.
+                Esta plataforma não substitui a vistoria técnica presencial, a análise estrutural do
+                telhado, o projeto elétrico detalhado e, sob nenhuma hipótese, supre a necessidade
+                de emissão de Anotação de Responsabilidade Técnica (ART) ou Termo de
+                Responsabilidade Técnica (TRT) por um engenheiro ou técnico legalmente habilitado
+                junto ao CREA/CFT e à concessionária local.
               </p>
             </div>
           </div>
@@ -104,20 +111,24 @@ export default function TermsOfUsePage(): JSX.Element {
           {/* Seção 1 */}
           <section className="space-y-3">
             <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white">
-              <FileText className="h-5 w-5 text-[#1f7f9b]" />
-              1. Objeto e Natureza da Plataforma
+              <Building2 className="h-5 w-5 text-[#1f7f9b]" />
+              1. Qualificação e Natureza do Serviço
             </h2>
             <p>
-              1.1. A <strong>EnergivIA</strong> é uma plataforma de Software como Serviço (SaaS)
-              desenvolvida para auxiliar integradores solares na automação comercial, leitura
-              digital de faturas de energia elétrica, elaboração ágil de propostas comerciais e
-              gestão de leads.
-            </p>
-            <p>
-              1.2. A EnergivIA <strong>NÃO</strong> presta serviços de engenharia executiva,
-              instalação física, consultoria jurídica ou homologação de projetos elétricos perante
-              as distribuidoras de energia. A plataforma é estritamente um instrumento tecnológico
-              facilitador de vendas.
+              A <strong>ENERGIVIA LTDA</strong>, pessoa jurídica de direito privado inscrita no
+              CNPJ/MF sob o nº <strong>66.304.358/0001-16</strong>, com sede em Maringá-PR, fornece
+              um ecossistema de inteligência comercial e dimensionamento fotovoltaico, acessível
+              nativamente via WhatsApp e pela plataforma web{" "}
+              <a
+                href="https://www.energivia.com.br"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-[#1f7f9b] hover:underline"
+              >
+                www.energivia.com.br
+              </a>
+              . O sistema atua exclusivamente como um software como serviço (SaaS) facilitador
+              comercial.
             </p>
           </section>
 
@@ -125,130 +136,147 @@ export default function TermsOfUsePage(): JSX.Element {
           <section className="space-y-3">
             <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white">
               <Cpu className="h-5 w-5 text-[#1f7f9b]" />
-              2. Cálculos por Inteligência Artificial e Estimativas
+              2. Limitações da Inteligência Artificial e Isenção de Erros
             </h2>
             <p>
-              2.1. As propostas geradas utilizam inteligência artificial, índices médios de
-              irradiação solar (HSP) e fórmulas matemáticas de engenharia solar simplificadas.
-              Fatores externos e imprevisíveis como:
+              Nossos serviços utilizam modelos de Inteligência Artificial (IA) e Visão Computacional
+              para automação de atendimento, leitura de faturas (OCR) e cálculos de dimensionamento.
             </p>
-            <ul className="list-inside list-disc space-y-1 pl-2 text-slate-600 dark:text-slate-400">
-              <li>Sombreamentos pontuais (árvores, prédios vizinhos, relevo local);</li>
-              <li>Inclinação e azimute real dos telhados;</li>
-              <li>Condições e perdas por cabeamento, temperatura ou sujeira nos módulos;</li>
-              <li>Flutuações climáticas sazonais atípicas;</li>
-              <li>
-                Mudanças tarifárias das distribuidoras ou enquadramentos da Lei 14.300/2022 (Fio B);
-              </li>
-            </ul>
-            <p>
-              podem gerar divergências entre a simulação preliminar e a geração solar real do
-              sistema após instalado.
-            </p>
+            <div className="space-y-2 pl-4 border-l-2 border-[#1f7f9b]/30">
+              <p>
+                <strong>2.1. Margem de Erro da Tecnologia:</strong> O Integrador declara estar
+                ciente de que softwares baseados em inteligência artificial são experimentais e
+                estão sujeitos a falhas de leitura, alucinações de dados e imprecisões sistêmicas.
+              </p>
+              <p>
+                <strong>2.2. Ausência de Garantia de Exatidão:</strong> A plataforma não garante a
+                exatidão milimétrica e incondicional das informações extraídas ou dos cálculos
+                gerados, cabendo ao Integrador a conferência absoluta de cada variável.
+              </p>
+            </div>
           </section>
 
           {/* Seção 3 */}
           <section className="space-y-3">
             <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
-              3. Responsabilidades Exclusivas do Integrador
+              <ShieldAlert className="h-5 w-5 text-amber-600" />
+              3. Isenção de Responsabilidade de Engenharia (Cláusula Crítica)
             </h2>
             <p>
-              3.1. Ao utilizar a EnergivIA, o{" "}
-              <strong>
-                Integrador assume integral responsabilidade civil, técnica e comercial perante seus
-                clientes finais
-              </strong>{" "}
-              por:
+              As simulações, dimensionamentos de kits e orçamentos gerados pela{" "}
+              <strong>ENERGIVIA LTDA</strong> são exclusivamente estimativas computacionais
+              preliminares.
             </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p className="font-semibold text-slate-900 dark:text-white">
-                  ✓ Vistoria Técnica Obrigatória
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Inspecionar presencialmente o local, estrutura física do telhado/solo e capacidade
-                  do padrão de entrada.
-                </p>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p className="font-semibold text-slate-900 dark:text-white">
-                  ✓ Validação de Equipamentos
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Conferir compatibilidade entre inversores, quantidade de strings, tensão de
-                  circuito aberto (Voc) e módulos.
-                </p>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p className="font-semibold text-slate-900 dark:text-white">
-                  ✓ ART / TRT de Engenharia
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Recolher a devida Anotação ou Termo de Responsabilidade Técnica por profissional
-                  habilitado (CREA/CFT).
-                </p>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p className="font-semibold text-slate-900 dark:text-white">
-                  ✓ Homologação na Concessionária
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Submeter parecer de acesso e cumprir os requisitos normativos da distribuidora de
-                  energia.
-                </p>
-              </div>
+            <div className="space-y-2 pl-4 border-l-2 border-amber-500/30">
+              <p>
+                <strong>3.1. Não Substituição Profissional:</strong> Esta plataforma não substitui a
+                vistoria técnica presencial, a análise estrutural do telhado, o projeto elétrico
+                detalhado e, sob nenhuma hipótese, supre a necessidade de emissão de Anotação de
+                Responsabilidade Técnica (ART) ou Termo de Responsabilidade Técnica (TRT) por um
+                engenheiro ou técnico legalmente habilitado.
+              </p>
             </div>
-            <p className="mt-2">
-              3.2. A EnergivIA está expressamente isenta de qualquer responsabilidade ou
-              solidariedade passiva decorrente de falhas de instalação, erros de dimensionamento não
-              revisados pelo integrador, sinistros elétricos, recusa de parecer de acesso ou
-              disputas de garantia entre o integrador e o consumidor final.
-            </p>
           </section>
 
           {/* Seção 4 */}
           <section className="space-y-3">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-              4. Uso Adequado e Segurança da Informação
+            <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white">
+              <Zap className="h-5 w-5 text-[#1f7f9b]" />
+              4. Dever de Validação Exclusivo do Integrador
             </h2>
             <p>
-              4.1. O Integrador compromete-se a utilizar a plataforma estritamente para os fins
-              previstos, sendo proibida a inserção de documentos forjados, simulações fraudulentas,
-              ataques de força bruta, extração não autorizada de dados (scraping) ou engenharia
-              reversa.
+              É de responsabilidade integral e inalienável do Integrador revisar e validar todos os
+              dados gerados pela inteligência artificial antes de qualquer formalização de venda
+              junto ao cliente final ou submissão à concessionária, incluindo obrigatoriamente:
             </p>
-            <p>
-              4.2. Cada conta é de uso exclusivo da empresa contratante e de seus colaboradores
-              autorizados, sendo o Integrador responsável pelo sigilo de suas credenciais.
-            </p>
+            <div className="grid gap-3 sm:grid-cols-2 pt-2">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  Histórico de Consumo e Conexão
+                </p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  A exatidão da leitura do histórico de consumo e do tipo de conexão da rede
+                  elétrica (monofásico, bifásico ou trifásico).
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  Limites Térmicos e Elétricos
+                </p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Respeitar rigorosamente o limite de sobrecarga (Overload), a tensão máxima da
+                  string (Voc) corrigida pela temperatura local, e a corrente de curto-circuito
+                  (Isc) e operacional (Imp) suportada pelas entradas MPPT dos inversores.
+                </p>
+              </div>
+            </div>
           </section>
 
           {/* Seção 5 */}
           <section className="space-y-3">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-              5. Privacidade e Proteção de Dados (LGPD)
+            <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              5. Limitação de Responsabilidade e Indenizações
             </h2>
             <p>
-              5.1. Em observância à Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018):
+              A <strong>ENERGIVIA LTDA</strong> está isenta de qualquer responsabilidade civil,
+              técnica, material ou moral decorrente de subdimensionamento ou sobredimensionamento de
+              usinas fotovoltaicas.
             </p>
             <p>
-              - O <strong>Integrador atua na qualidade de CONTROLADOR</strong> dos dados pessoais e
-              faturas de seus clientes finais inseridas no sistema, declarando possuir consentimento
-              ou base legal legítima para o tratamento;
-              <br />- A <strong>EnergivIA atua como OPERADORA</strong>, executando o processamento
-              computacional seguro com a finalidade exclusiva de prestar as funcionalidades
-              contratadas.
+              Não nos responsabilizamos por perdas financeiras, queima de equipamentos, perda de
+              garantias de fabricantes, lucros cessantes (&quot;vendas perdidas&quot;), recusa de
+              homologação em concessionárias ou não atingimento da geração de energia prometida ao
+              cliente final, decorrentes de projetos executados com ou sem a conferência técnica por
+              parte do Integrador.
             </p>
           </section>
 
           {/* Seção 6 */}
           <section className="space-y-3">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">6. Foro de Eleição</h2>
+            <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white">
+              <Layers className="h-5 w-5 text-[#1f7f9b]" />
+              6. Cadeia de Fornecimento e Dados Pessoais (CDC e LGPD)
+            </h2>
+            <div className="space-y-3 pl-4 border-l-2 border-[#1f7f9b]/30">
+              <p>
+                <strong>6.1. Sem Vínculo Mercantil:</strong> A ENERGIVIA LTDA não vende
+                equipamentos, não mantém estoque e não realiza logística, sendo isenta de
+                solidariedade por vícios, garantias físicas ou atrasos de entrega de distribuidores
+                terceiros (Art. 18, CDC).
+              </p>
+              <p>
+                <strong>6.2. LGPD (Lei nº 13.709/2018):</strong> O Integrador atua como Controlador
+                dos dados do cliente final inseridos no sistema (faturas, contatos), garantindo que
+                possui o devido consentimento para tráfego dessas informações via WhatsApp e na
+                plataforma web. A EnergivIA atua como Operadora técnica, aplicando diretrizes de
+                segurança e isolamento dos dados.
+              </p>
+            </div>
+          </section>
+
+          {/* Seção 7 */}
+          <section className="space-y-3">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white">
+              <Scale className="h-5 w-5 text-[#1f7f9b]" />
+              7. Foro e Aceite
+            </h2>
             <p>
-              6.1. Fica eleito o Foro da Comarca de Maringá, Estado do Paraná, com exclusão de
-              qualquer outro por mais privilegiado que seja, para dirimir eventuais litígios
-              oriundos deste instrumento.
+              Ao concluir o cadastro pelo site{" "}
+              <a
+                href="https://www.energivia.com.br"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-[#1f7f9b] hover:underline"
+              >
+                www.energivia.com.br
+              </a>{" "}
+              ou iniciar o uso do ecossistema via WhatsApp, o Integrador firma eletronicamente sua
+              concordância integral com estes termos. Fica eleito o foro da Comarca de Maringá,
+              Estado do Paraná, para dirimir quaisquer controvérsias.
             </p>
           </section>
         </div>
@@ -257,8 +285,8 @@ export default function TermsOfUsePage(): JSX.Element {
         <div className="mt-14 border-t border-slate-200 pt-8 dark:border-slate-800">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
             <p className="text-xs text-slate-500">
-              © {new Date().getFullYear()} EnergivIA Tecnologia Ltda. CNPJ: 66.304.358/0001-16.
-              Todos os direitos reservados.
+              © {new Date().getFullYear()} ENERGIVIA LTDA. CNPJ: 66.304.358/0001-16. Sede em
+              Maringá-PR. Todos os direitos reservados.
             </p>
             <Link
               href="/"
