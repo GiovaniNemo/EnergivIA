@@ -11,12 +11,12 @@ import {
   Users,
   Sun,
   Zap,
-  TrendingUp,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { HowItWorksTabs } from "@/components/landing/how-it-works-tabs";
 import { ConvergingPanelsSection } from "@/components/landing/converging-panels-section";
 import { BeamqHeroSection } from "@/components/landing/beamq-hero-section";
+import { ImpactResultsSection } from "@/components/landing/impact-results-section";
 
 const appLoginUrl = "/login";
 
@@ -67,91 +67,9 @@ export default function HomePage(): JSX.Element {
         <HowItWorksTabs />
 
         {/* ------------------------------------------------------------- */}
-        {/* BENEFÍCIOS / RESULTADOS                                       */}
+        {/* BENEFÍCIOS / RESULTADOS COM ANIMAÇÃO                          */}
         {/* ------------------------------------------------------------- */}
-        <section
-          id="beneficios"
-          className="relative overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24"
-        >
-          <div className="relative mx-auto max-w-6xl">
-            <div className="mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
-                <TrendingUp className="h-3.5 w-3.5 text-cyan-400" />
-                Resultados comprovados
-              </span>
-              <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
-                Impacto real na operação de integradores solares
-              </h2>
-              <p className="mt-4 text-base sm:text-lg text-slate-400 font-light">
-                Integradores em todo o Brasil usam a plataforma para responder mais rápido,
-                profissionalizar propostas e converter mais vendas.
-              </p>
-            </div>
-
-            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                {
-                  value: "< 2 min",
-                  label: "Para gerar uma proposta completa",
-                  accent: "text-cyan-300",
-                },
-                {
-                  value: "3 passos",
-                  label: "Da conta de luz ao PDF final",
-                  accent: "text-blue-400",
-                },
-                {
-                  value: "1 fluxo",
-                  label: "Chat, kit e proposta no mesmo canal",
-                  accent: "text-cyan-300",
-                },
-                {
-                  value: "No mesmo dia",
-                  label: "Primeira proposta após configurar",
-                  accent: "text-blue-400",
-                },
-              ].map((item) => (
-                <article
-                  key={item.label}
-                  className="rounded-2xl border border-white/10 bg-[#070b14]/80 p-6 text-center shadow-xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-cyan-500/40 hover:shadow-[0_0_25px_rgba(56,189,248,0.12)]"
-                >
-                  <p className={`text-3xl font-extrabold sm:text-4xl ${item.accent}`}>
-                    {item.value}
-                  </p>
-                  <p className="mt-2 text-sm text-slate-300 font-light">{item.label}</p>
-                </article>
-              ))}
-            </div>
-
-            <figure className="mt-10 rounded-2xl border border-white/10 bg-[#070b14]/70 p-8 text-center shadow-xl backdrop-blur-md">
-              <blockquote className="text-base text-slate-200 sm:text-lg font-light leading-relaxed">
-                "Antes levávamos horas para montar proposta. Hoje respondemos no mesmo atendimento e
-                percebemos aumento real de fechamento."
-              </blockquote>
-              <figcaption className="mt-4 text-sm font-semibold text-cyan-300">
-                Rafael Martins — Integrador Solar Horizonte
-              </figcaption>
-            </figure>
-
-            <div className="mt-8 rounded-2xl border border-white/5 bg-white/[0.02] px-6 py-5">
-              <p className="text-center text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Integradores e parceiros que confiam na operação
-              </p>
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-x-10 gap-y-3">
-                {["Solar Prime", "Energia+ Brasil", "Grupo Aurora", "Lumen Engenharia"].map(
-                  (name) => (
-                    <span
-                      key={name}
-                      className="text-sm font-semibold text-slate-400 hover:text-slate-200 transition-colors"
-                    >
-                      {name}
-                    </span>
-                  )
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
+        <ImpactResultsSection />
 
         <ConvergingPanelsSection />
 
