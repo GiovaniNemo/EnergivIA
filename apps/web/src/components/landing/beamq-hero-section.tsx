@@ -7,79 +7,36 @@ import { Menu, X } from "lucide-react";
 const appLoginUrl = "/login";
 
 export function BeamqHeroSection() {
-  const video1Ref = useRef<HTMLVideoElement>(null);
-  const video2Ref = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeVideo, setActiveVideo] = useState(1);
 
-  // Dual Video Seamless Crossfade Mechanism
   useEffect(() => {
-    const v1 = video1Ref.current;
-    const v2 = video2Ref.current;
-    if (!v1 || !v2) return;
-
-    const crossfadeDuration = 2; // seconds
-
-    const handleTimeUpdate = () => {
-      const currentVideo = activeVideo === 1 ? v1 : v2;
-      const nextVideo = activeVideo === 1 ? v2 : v1;
-
-      if (
-        currentVideo.duration &&
-        currentVideo.duration - currentVideo.currentTime <= crossfadeDuration
-      ) {
-        if (nextVideo.paused) {
-          nextVideo.currentTime = 0;
-          nextVideo.play().catch((e) => console.log("Play interrupted", e));
-          setActiveVideo(activeVideo === 1 ? 2 : 1);
-        }
-      }
-    };
-
-    v1.addEventListener("timeupdate", handleTimeUpdate);
-    v2.addEventListener("timeupdate", handleTimeUpdate);
-
-    // Initial play
-    v1.play().catch((e) => console.log("Auto-play prevented", e));
-
-    return () => {
-      v1.removeEventListener("timeupdate", handleTimeUpdate);
-      v2.removeEventListener("timeupdate", handleTimeUpdate);
-    };
-  }, [activeVideo]);
+    const video = videoRef.current;
+    if (video) {
+      video.play().catch(() => {
+        // Fallback if autoplay is restricted
+      });
+    }
+  }, []);
 
   return (
     <section className="relative min-h-[100vh] w-full bg-[#02040a] text-white overflow-hidden font-plus-jakarta selection:bg-[#38bdf8]/30 selection:text-white">
-      {/* Background Media System */}
-      <div
-        className="absolute inset-0 z-0 pointer-events-none"
-        style={{
-          maskImage:
-            "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 100%)",
-          WebkitMaskImage:
-            "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 100%)",
-        }}
-      >
+      {/* Background Media System - Hardware-accelerated fluid video with smooth blending */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <video
-          ref={video1Ref}
-          className={`absolute inset-0 w-full h-full object-cover object-center scale-105 transition-opacity duration-2000 ${activeVideo === 1 ? "opacity-80" : "opacity-0"}`}
+          ref={videoRef}
+          className="absolute inset-0 w-full h-full object-cover object-center opacity-85 will-change-transform"
           src="https://strvid.nyc3.cdn.digitaloceanspaces.com/motionsite/blue-light-glow.mp4"
+          autoPlay
+          loop
           muted
           playsInline
           preload="auto"
         />
-        <video
-          ref={video2Ref}
-          className={`absolute inset-0 w-full h-full object-cover object-center scale-105 transition-opacity duration-2000 ${activeVideo === 2 ? "opacity-80" : "opacity-0"}`}
-          src="https://strvid.nyc3.cdn.digitaloceanspaces.com/motionsite/blue-light-glow.mp4"
-          muted
-          playsInline
-          preload="auto"
-        />
+        {/* Hardware-accelerated gradient overlays for seamless atmospheric blend */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#02040a]/75 via-transparent to-[#02040a]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,#02040a_85%)]" />
       </div>
-
-      {/* Top Gradient Overlay */}
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/70 via-black/35 to-transparent pointer-events-none" />
 
       {/* Navigation Header */}
       <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-black/20 backdrop-blur-md border-b border-white/5">
@@ -166,7 +123,7 @@ export function BeamqHeroSection() {
       {/* Hero Content Section */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-[100vh] px-6 pt-24 pb-12">
         <div className="max-w-7xl mx-auto w-full flex flex-col items-center">
-          <div className="max-w-4xl text-center mx-auto flex flex-col items-center">
+          <div className="max-w-5xl text-center mx-auto flex flex-col items-center">
             {/* Tagline Badge */}
             <div className="inline-flex items-center px-4 py-1.5 mb-8 rounded-full border border-cyan-500/30 bg-cyan-950/30 backdrop-blur-sm shadow-[0_0_15px_rgba(56,189,248,0.2)]">
               <span className="text-[#38bdf8] text-xs sm:text-sm font-bold uppercase tracking-[0.3em]">
@@ -175,15 +132,16 @@ export function BeamqHeroSection() {
             </div>
 
             {/* Main H1 Heading */}
-            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tight leading-[1.1] mb-6 drop-shadow-[0_4px_30px_rgba(0,0,0,0.95)]">
-              <span className="block text-white font-light mb-2">Acelere suas vendas solares.</span>
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#38bdf8] via-[#3b82f6] to-[#8b5cf6] drop-shadow-[0_0_15px_rgba(56,189,248,0.5)]">
-                Gere propostas em segundos.
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[4.75rem] font-bold tracking-tight leading-[1.18] mb-6 drop-shadow-[0_4px_30px_rgba(0,0,0,0.95)]">
+              <span className="block text-white font-light mb-3">Acelere suas vendas solares.</span>
+              <span className="inline-block pt-1 pb-4 text-transparent bg-clip-text bg-gradient-to-r from-[#38bdf8] via-[#60a5fa] to-[#a855f7] drop-shadow-[0_0_25px_rgba(56,189,248,0.45)]">
+                <span className="inline-block">Gere propostas</span>{" "}
+                <span className="inline-block">em segundos.</span>
               </span>
             </h1>
 
             {/* Subtitle */}
-            <p className="mt-6 max-w-2xl text-lg sm:text-xl text-white/90 font-light leading-relaxed drop-shadow-md">
+            <p className="mt-4 max-w-2xl text-lg sm:text-xl text-white/90 font-light leading-relaxed drop-shadow-md">
               Pare de perder tempo com planilhas e propostas manuais. Receba a conta de luz, simule
               a usina ideal com IA e entregue a proposta comercial pronta no WhatsApp em 2 minutos.
             </p>
