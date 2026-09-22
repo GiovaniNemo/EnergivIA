@@ -288,91 +288,76 @@ export function WhatsappFlowSimulator(): JSX.Element {
       className="relative flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-16 py-6 select-none"
     >
       {/* ------------------------------------------------------------- */}
-      {/* ELEGANT PHOTOREALISTIC IPHONE (MATCHING USER REFERENCE IMAGE) */}
+      {/* ELEGANT PHOTOREALISTIC IPHONE (MATCHING USER PNG MOCKUP)      */}
       {/* ------------------------------------------------------------- */}
-      <div className="relative group w-full max-w-[420px] sm:max-w-[440px] shrink-0">
-        {/* Soft, Diffused Realistic Shadow casting to bottom-right */}
-        <div className="pointer-events-none absolute -inset-2 rounded-[56px] shadow-[24px_30px_70px_rgba(0,0,0,0.85),8px_12px_24px_rgba(0,0,0,0.6)]" />
+      <div className="relative flex flex-col items-center w-full max-w-[360px] sm:max-w-[380px] shrink-0">
+        {/* PHYSICAL PHONE SHELL CONTAINER */}
+        <div className="relative group w-full aspect-[350/708] shrink-0 select-none">
+          {/* Soft, Diffused Realistic Shadow casting below the iPhone */}
+          <div className="pointer-events-none absolute inset-x-5 bottom-2 top-8 rounded-[48px] shadow-[0_28px_60px_-15px_rgba(0,0,0,0.85),0_12px_28px_-8px_rgba(0,0,0,0.6)]" />
 
-        {/* PRECISION DARK TITANIUM CHASSIS FRAME */}
-        <div className="relative rounded-[52px] border-[4px] border-[#1e232c] bg-[#12161f] p-2 ring-1 ring-white/20">
-          {/* Subtle flush physical button contours */}
-          {/* Left Buttons: Action + Volume Up / Down */}
-          <div className="absolute -left-[5.5px] top-[115px] h-[26px] w-[2.5px] rounded-l-sm bg-[#2b323e]" />
-          <div className="absolute -left-[5.5px] top-[155px] h-[48px] w-[2.5px] rounded-l-sm bg-[#2b323e]" />
-          <div className="absolute -left-[5.5px] top-[215px] h-[48px] w-[2.5px] rounded-l-sm bg-[#2b323e]" />
-          {/* Right Button: Power */}
-          <div className="absolute -right-[5.5px] top-[165px] h-[72px] w-[2.5px] rounded-r-sm bg-[#2b323e]" />
+          {/* SCREEN LAYER (Precisely aligned within the transparent cutout of iphone-mockup.png) */}
+          <div className="absolute inset-y-[2.4%] left-[5.43%] right-[6.0%] rounded-[36px] overflow-hidden bg-[#f0f2f5] flex flex-col z-10 font-sans shadow-inner select-none">
+            {/* iOS Status Bar */}
+            <div className="relative z-20 flex items-center justify-between bg-white px-5 pt-2.5 pb-1 text-[13px] text-[#111b21] font-semibold select-none">
+              {/* Left of notch: Time */}
+              <span className="tracking-tight pl-0.5">9:41</span>
 
-          {/* INNER DISPLAY - PURE WHITE BACKGROUND (AS REQUESTED) */}
-          <div className="relative flex h-[640px] sm:h-[680px] w-full flex-col overflow-hidden rounded-[42px] bg-white text-slate-900 font-sans shadow-inner border border-slate-200/60">
-            {/* TOP STATUS BAR (MATCHING REFERENCE IMAGE: 9:41, Dynamic Island, Signals) */}
-            <div className="relative z-30 flex items-center justify-between bg-white px-7 pt-3.5 pb-2 text-[14px] text-slate-900 font-semibold select-none">
-              <span>9:41</span>
+              {/* Center: Notch spacing placeholder (notch is on overlay mockup at z-30) */}
+              <div className="w-28 h-4 pointer-events-none" />
 
-              {/* Dynamic Island Pill with Camera Optics */}
-              <div className="relative flex h-6 w-28 items-center justify-between rounded-full bg-black px-3 shadow-[0_2px_4px_rgba(0,0,0,0.15)]">
-                <div className="h-[3.5px] w-7 rounded-full bg-[#1c1c1e]" />
-                <div className="flex h-3 w-3 items-center justify-center rounded-full bg-[#08080a] ring-1 ring-white/10">
-                  <div className="h-1.5 w-1.5 rounded-full bg-[#0a1829]" />
+              {/* Right of notch: Cellular Signal, Wifi, Battery */}
+              <div className="flex items-center gap-1.5 text-[#111b21] pr-0.5">
+                <div className="flex items-end gap-[1.5px] h-2.5">
+                  <span className="w-[2px] h-1 bg-[#111b21] rounded-[0.5px]" />
+                  <span className="w-[2px] h-1.5 bg-[#111b21] rounded-[0.5px]" />
+                  <span className="w-[2px] h-2 bg-[#111b21] rounded-[0.5px]" />
+                  <span className="w-[2px] h-2.5 bg-[#111b21] rounded-[0.5px]" />
                 </div>
-              </div>
-
-              {/* Cellular Signal, Wifi, Battery (Matching iOS status layout) */}
-              <div className="flex items-center gap-1.5 text-slate-900">
-                {/* 4 Cellular Signal Bars */}
-                <div className="flex items-end gap-[1.5px] h-3">
-                  <span className="w-[2.5px] h-1.5 bg-slate-900 rounded-[0.5px]" />
-                  <span className="w-[2.5px] h-2 bg-slate-900 rounded-[0.5px]" />
-                  <span className="w-[2.5px] h-2.5 bg-slate-900 rounded-[0.5px]" />
-                  <span className="w-[2.5px] h-3 bg-slate-900 rounded-[0.5px]" />
-                </div>
-                {/* Wifi Icon */}
                 <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                   <path d="M12 3c-4.97 0-9.47 2.02-12.73 5.27l1.41 1.41C3.32 6.94 7.42 5.08 12 5.08s8.68 1.86 11.32 4.6l1.41-1.41C21.47 5.02 16.97 3 12 3zm0 4.17c-3.82 0-7.28 1.55-9.79 4.06l1.41 1.41C5.83 10.43 8.73 9.25 12 9.25s6.17 1.18 8.38 3.39l1.41-1.41C19.28 8.72 15.82 7.17 12 7.17zm0 4.16c-2.67 0-5.09 1.08-6.85 2.84l1.41 1.41C7.8 14.34 9.77 13.5 12 13.5s4.2 0.84 5.44 2.08l1.41-1.41C17.09 12.41 14.67 11.33 12 11.33zm0 4.17c-1.52 0-2.9.62-3.9 1.62L12 21.04l3.9-3.92c-1-1-2.38-1.62-3.9-1.62z" />
                 </svg>
-                {/* Battery with Full Charge Indicator */}
-                <div className="h-2.5 w-5 rounded-[3px] border border-slate-900 p-[1px] flex items-center">
-                  <div className="h-full w-4/5 rounded-[1.5px] bg-slate-900" />
+                <div className="h-2.5 w-5 rounded-[3px] border border-[#111b21] p-[1px] flex items-center">
+                  <div className="h-full w-4/5 rounded-[1.5px] bg-[#111b21]" />
                 </div>
               </div>
             </div>
 
-            {/* WhatsApp Clean iOS Header */}
-            <div className="relative z-20 flex items-center justify-between border-b border-slate-100 bg-white/95 px-4 py-2.5 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <ArrowLeft className="h-5 w-5 text-slate-700 hover:text-slate-900 transition cursor-pointer" />
+            {/* WhatsApp iOS Header */}
+            <div className="relative z-20 flex items-center justify-between border-b border-[#e5e5ea] bg-white px-3.5 py-2 shadow-xs">
+              <div className="flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4 text-[#007aff] hover:opacity-80 transition cursor-pointer" />
                 <div className="relative">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 shadow-sm overflow-hidden ring-1 ring-slate-200">
-                    <div className="flex h-full w-full items-center justify-center bg-[#070b14] text-cyan-400 font-bold text-xs">
-                      ⚡
-                    </div>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#070b14] ring-1 ring-slate-200 overflow-hidden shadow-xs">
+                    <span className="text-cyan-400 font-bold text-xs">⚡</span>
                   </div>
-                  <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
+                  <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#25d366]" />
                 </div>
-                <div>
-                  <span className="text-[15px] font-bold text-slate-900 block leading-tight">
-                    EnergivIA
-                  </span>
-                  <p className="text-xs text-emerald-600 font-medium">online agora</p>
+                <div className="leading-tight">
+                  <span className="text-[14px] font-semibold text-[#111b21] block">EnergivIA</span>
+                  <p className="text-[11px] text-[#008069] font-medium">online agora</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3.5 text-slate-600 pr-1">
-                <Video className="h-5 w-5 hover:text-slate-900 transition cursor-pointer" />
-                <Phone className="h-4 w-4 hover:text-slate-900 transition cursor-pointer" />
-                <MoreVertical className="h-5 w-5 hover:text-slate-900 transition cursor-pointer" />
+              <div className="flex items-center gap-3.5 text-[#007aff] pr-1">
+                <Video className="h-4 w-4 cursor-pointer opacity-90 hover:opacity-100" />
+                <Phone className="h-3.5 w-3.5 cursor-pointer opacity-90 hover:opacity-100" />
+                <MoreVertical className="h-4 w-4 text-[#54656f] cursor-pointer" />
               </div>
             </div>
 
-            {/* Chat Messages Flow (Light Background with maximum contrast) */}
+            {/* Chat Messages Flow (Authentic WhatsApp light wallpaper and colors) */}
             <div
               ref={chatContainerRef}
-              className="relative flex-1 space-y-3 overflow-y-auto p-3.5 text-sm scroll-smooth scrollbar-thin scrollbar-thumb-slate-200 bg-white"
+              className="relative flex-1 space-y-2.5 overflow-y-auto p-3 text-sm scroll-smooth scrollbar-thin scrollbar-thumb-slate-200 bg-[#efeae2]/50 bg-blend-multiply"
+              style={{
+                backgroundImage: `radial-gradient(#0000000a 1px, transparent 1px)`,
+                backgroundSize: "16px 16px",
+              }}
             >
               {/* Date Pill */}
-              <div className="flex justify-center my-1">
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-500 font-medium shadow-2xs">
+              <div className="flex justify-center my-0.5">
+                <span className="rounded-lg bg-white/95 px-2.5 py-0.5 text-[11px] text-[#54656f] font-medium shadow-2xs border border-black/[0.04]">
                   Hoje
                 </span>
               </div>
@@ -385,11 +370,11 @@ export function WhatsappFlowSimulator(): JSX.Element {
                       key={msg.id}
                       className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out"
                     >
-                      <div className="max-w-[85%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] border border-emerald-200/50 px-3.5 py-2 text-slate-900 shadow-xs">
-                        <p className="text-[14.5px] leading-relaxed font-normal">{msg.text}</p>
-                        <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-slate-500">
+                      <div className="max-w-[85%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] border border-emerald-200/40 px-3 py-1.5 text-[#111b21] shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]">
+                        <p className="text-[14px] leading-relaxed font-normal">{msg.text}</p>
+                        <div className="mt-0.5 flex items-center justify-end gap-1 text-[11px] text-[#667781]">
                           <span>{msg.time}</span>
-                          <CheckCheck className="h-3.5 w-3.5 text-sky-500" />
+                          <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" />
                         </div>
                       </div>
                     </div>
@@ -402,68 +387,65 @@ export function WhatsappFlowSimulator(): JSX.Element {
                       key={msg.id}
                       className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out"
                     >
-                      <div className="max-w-[88%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] border border-emerald-200/50 p-2.5 text-slate-900 shadow-xs">
-                        <div className="flex items-center gap-3 rounded-xl bg-white p-2.5 border border-emerald-200/60 shadow-2xs">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-500 font-bold">
+                      <div className="max-w-[88%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] border border-emerald-200/40 p-2 text-[#111b21] shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]">
+                        <div className="flex items-center gap-2.5 rounded-xl bg-white p-2 border border-emerald-200/60 shadow-2xs">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-500 font-bold">
                             <FileText className="h-5 w-5" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate font-semibold text-slate-900 text-sm">
+                            <p className="truncate font-semibold text-[#111b21] text-[13px]">
                               {msg.title}
                             </p>
-                            <p className="text-xs text-slate-500 mt-0.5">{msg.subtitle}</p>
+                            <p className="text-[11px] text-[#667781] mt-0.5">{msg.subtitle}</p>
                           </div>
                         </div>
-                        <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-slate-500">
+                        <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-[#667781]">
                           <span>{msg.time}</span>
-                          <CheckCheck className="h-3.5 w-3.5 text-sky-500" />
+                          <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" />
                         </div>
                       </div>
                     </div>
                   );
                 }
 
-                // BOT MESSAGES (Crisp, High Contrast Cards)
+                // BOT MESSAGES (WhatsApp received white bubble)
                 return (
                   <div
                     key={msg.id}
                     className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out"
                   >
-                    <div className="max-w-[94%] rounded-2xl rounded-tl-xs bg-[#f0f2f5] border border-slate-200/70 p-3.5 text-slate-900 shadow-xs space-y-2.5">
+                    <div className="max-w-[94%] rounded-2xl rounded-tl-xs bg-white border border-black/[0.04] p-3 text-[#111b21] shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] space-y-2">
                       {msg.kind === "welcome" && (
-                        <div className="text-[14px] leading-relaxed space-y-2 text-slate-800">
+                        <div className="text-[13.5px] leading-relaxed space-y-1.5 text-[#111b21]">
                           <p>
                             Boa tarde Giovani! Tudo bem?
                             <br />
-                            Sou seu assistente de vendas e dimensionamento da <b>EnergivIA</b>.
+                            Sou seu assistente de dimensionamento e vendas da <b>EnergivIA</b>.
                           </p>
-                          <p>
-                            Como posso ajudar você a gerar orçamentos e propostas para seus clientes
-                            hoje?
-                          </p>
-                          <div className="mt-2 space-y-1.5 rounded-xl bg-white p-3 border border-slate-200/80 text-[13px] text-slate-700 shadow-2xs">
-                            <p className="font-bold text-slate-900">
+                          <p>Como posso ajudar você a gerar orçamentos e propostas solares hoje?</p>
+                          <div className="mt-1.5 space-y-1 rounded-xl bg-[#f7f8fa] p-2.5 border border-slate-200/70 text-[12.5px] text-[#111b21]">
+                            <p className="font-semibold text-[#111b21]">
                               Escolha uma opção digitando o número:
                             </p>
                             <p>[1] Enviar fatura de energia (PDF ou foto)</p>
                             <p>[2] Simular por consumo mensal (ex: 450 kWh)</p>
                             <p>[3] Simular por potência de pico (ex: 5 kWp)</p>
-                            <p>[4] Simular por quantidade de placas (ex: 10 módulos)</p>
-                            <p>[5] Dúvidas sobre equipamentos e preços</p>
+                            <p>[4] Simular por quantidade de placas</p>
+                            <p>[5] Dúvidas sobre kits e preços</p>
                           </div>
-                          <p className="text-xs text-slate-500 italic">
-                            (Ou me envie diretamente a conta de luz em PDF/foto)
+                          <p className="text-[11px] text-[#667781] italic">
+                            (Ou me envie diretamente a conta de luz)
                           </p>
                         </div>
                       )}
 
                       {msg.kind === "ask_bill" && (
-                        <div className="text-[14px] leading-relaxed space-y-1 text-slate-800">
+                        <div className="text-[13.5px] leading-relaxed space-y-1 text-[#111b21]">
                           <p>
                             Perfeito! Envie o arquivo em <b>PDF</b> ou a <b>foto da conta de luz</b>{" "}
                             do seu cliente por aqui mesmo.
                           </p>
-                          <p className="text-xs text-slate-600">
+                          <p className="text-[12px] text-[#667781]">
                             Nossa inteligência artificial vai extrair automaticamente todos os dados
                             de consumo e histórico!
                           </p>
@@ -471,146 +453,150 @@ export function WhatsappFlowSimulator(): JSX.Element {
                       )}
 
                       {msg.kind === "ocr_result" && (
-                        <div className="text-[14px] leading-relaxed space-y-2 text-slate-800">
-                          <p className="text-emerald-700 font-bold">
+                        <div className="text-[13.5px] leading-relaxed space-y-2 text-[#111b21]">
+                          <p className="text-[#008069] font-bold text-[13px]">
                             Legal, dados extraídos com precisão!
                           </p>
-                          <div className="space-y-1.5 rounded-xl bg-white p-3 border border-slate-200 text-[13px] shadow-2xs">
+                          <div className="space-y-1 rounded-xl bg-[#f7f8fa] p-2.5 border border-slate-200/70 text-[12.5px]">
                             <p className="flex justify-between">
-                              <span className="text-slate-500">Concessionária:</span>
-                              <span className="font-bold text-slate-900">COPEL</span>
+                              <span className="text-[#667781]">Concessionária:</span>
+                              <span className="font-semibold text-[#111b21]">Copel (PR)</span>
                             </p>
                             <p className="flex justify-between">
-                              <span className="text-slate-500">Consumo Médio:</span>
-                              <span className="font-bold text-emerald-600">257 kWh/mês</span>
+                              <span className="text-[#667781]">Consumo Médio:</span>
+                              <span className="font-semibold text-[#111b21]">257 kWh/mês</span>
                             </p>
                             <p className="flex justify-between">
-                              <span className="text-slate-500">Tipo de Ligação:</span>
-                              <span className="font-bold text-slate-900">Bifásico</span>
+                              <span className="text-[#667781]">Tipo de Ligação:</span>
+                              <span className="font-semibold text-[#111b21]">
+                                Monofásico (127V)
+                              </span>
                             </p>
                             <p className="flex justify-between">
-                              <span className="text-slate-500">Gasto Atual:</span>
-                              <span className="font-bold text-rose-600">R$ 282,70/mês</span>
+                              <span className="text-[#667781]">Potência Estimada:</span>
+                              <span className="font-semibold text-[#008069]">3,15 kWp</span>
                             </p>
                           </div>
-                          <p className="font-medium text-slate-900">
-                            Qual é o tipo de estrutura de fixação do telhado?
+                          <p className="text-[12px] text-[#667781]">
+                            Qual o tipo de telhado para fixação dos módulos?
                           </p>
-                          <div className="space-y-1 text-[13px] text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs">
-                            <p>[1] Telha Cerâmica / Fibrocimento</p>
-                            <p>[2] Telha Metálica / Trapezoidal</p>
-                            <p>[3] Solo / Laje plana</p>
+                          <div className="space-y-1 rounded-xl bg-[#f7f8fa] p-2 border border-slate-200/70 text-[12px]">
+                            <p>[1] Fibrocimento / Metálico</p>
+                            <p className="font-semibold text-[#008069]">[2] Cerâmico (Colonial)</p>
+                            <p>[3] Solo / Carport</p>
                           </div>
                         </div>
                       )}
 
                       {msg.kind === "kit_dynamis" && (
-                        <div className="text-[14px] leading-relaxed space-y-2 text-slate-800">
-                          <p className="text-emerald-700 font-bold">
-                            Encontrei o kit ideal para atender 100% do consumo:
+                        <div className="text-[13.5px] leading-relaxed space-y-2 text-[#111b21]">
+                          <p className="font-bold text-[#008069] text-[13px]">
+                            Kit Dynamis Selecionado com Sucesso!
                           </p>
-                          <div className="rounded-xl bg-white p-3.5 border border-emerald-300 shadow-2xs space-y-1.5 text-[13px]">
-                            <p className="font-bold text-slate-900 text-[15px]">
-                              Kit Dynamis 3,15 kWp
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              6x Módulos 580W N-Type + Inversor 3kW Híbrido
-                            </p>
-                            <div className="flex items-center justify-between border-t border-slate-100 pt-1.5 mt-1.5">
-                              <span className="text-slate-500">Geração estimada:</span>
-                              <span className="font-bold text-emerald-600">315 kWh/mês</span>
-                            </div>
+                          <div className="rounded-xl border border-emerald-300/80 bg-[#f7f8fa] p-2.5 space-y-1.5 text-[12.5px]">
                             <div className="flex items-center justify-between">
-                              <span className="text-slate-500">Custo do Kit:</span>
-                              <span className="font-bold text-slate-900">R$ 6.840,00</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-slate-500">Valor Sugerido Venda:</span>
-                              <span className="font-extrabold text-emerald-700 text-sm">
-                                R$ 11.900,00
+                              <span className="text-xs font-bold text-[#008069] uppercase tracking-wide">
+                                Kit Solar Dynamis 3,15 kWp
+                              </span>
+                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                                Em Estoque
                               </span>
                             </div>
+                            <p className="text-xs text-[#111b21]">
+                              • 5x Módulos 630W N-Type TopCon
+                              <br />• 1x Inversor Micro/String 3kW Monofásico
+                            </p>
+                            <div className="border-t border-slate-200 pt-1.5 flex justify-between items-center text-xs">
+                              <span className="text-[#667781]">Custo Distribuidor:</span>
+                              <span className="font-bold text-[#111b21]">R$ 4.290,00</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-[#667781]">Margem Sugerida (35%):</span>
+                              <span className="font-bold text-[#008069]">R$ 6.600,00</span>
+                            </div>
                           </div>
-                          <p className="font-medium text-slate-900">
-                            Deseja gerar a proposta com esse kit Dynamis?
+                          <p className="text-[12px] text-[#667781]">
+                            Deseja aplicar essa margem de 35% na proposta comercial?
                           </p>
-                          <div className="space-y-1 text-[13px] text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs">
-                            <p>[1] Sim, usar este kit</p>
-                            <p>[2] Ver outra opção de distribuidor</p>
-                            <p>[3] Ajustar margem de lucro</p>
+                          <div className="space-y-1 rounded-xl bg-[#f7f8fa] p-2 border border-slate-200/70 text-[12px]">
+                            <p className="font-semibold text-[#008069]">[1] Sim, avançar com 35%</p>
+                            <p>[2] Ajustar valor final manualmente</p>
                           </div>
                         </div>
                       )}
 
                       {msg.kind === "ask_name" && (
-                        <div className="text-[14px] leading-relaxed text-slate-800">
+                        <div className="text-[13.5px] leading-relaxed space-y-1 text-[#111b21]">
+                          <p>Excelente margem definida!</p>
                           <p>
-                            Excelente! Qual o <b>nome do cliente</b> para inserirmos na capa da
-                            proposta?
+                            Qual o <b>nome do cliente</b> para personalizar a proposta?
                           </p>
                         </div>
                       )}
 
                       {msg.kind === "ask_phone" && (
-                        <div className="text-[14px] leading-relaxed text-slate-800">
+                        <div className="text-[13.5px] leading-relaxed space-y-1 text-[#111b21]">
                           <p>
-                            Obrigado! Qual o <b>WhatsApp do cliente</b> para envio e acompanhamento
-                            no CRM?
+                            Prazer, Marcelo! Qual o <b>WhatsApp com DDD</b> dele para registro no
+                            CRM?
                           </p>
                         </div>
                       )}
 
                       {msg.kind === "ask_template" && (
-                        <div className="text-[14px] leading-relaxed space-y-2 text-slate-800">
+                        <div className="text-[13.5px] leading-relaxed space-y-2 text-[#111b21]">
+                          <p>Contato cadastrado no CRM!</p>
                           <p>
-                            Qual modelo de proposta deseja gerar para o <b>Marcelo</b>?
+                            Qual <b>modelo de proposta</b> você deseja gerar?
                           </p>
-                          <div className="space-y-1 text-[13px] text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs">
-                            <p>[1] Modelo Comercial Padrão (6 páginas)</p>
-                            <p>[2] Modelo Executivo Resumido (2 páginas)</p>
-                            <p>[3] Modelo Completo com Financiamento</p>
+                          <div className="space-y-1 rounded-xl bg-[#f7f8fa] p-2.5 border border-slate-200/70 text-[12.5px]">
+                            <p className="font-semibold text-[#008069]">
+                              [1] Modelo Premium Executivo (Gráficos + Payback)
+                            </p>
+                            <p>[2] Modelo Express Resumido (1 Página)</p>
+                            <p>[3] Modelo Técnico Detalhado</p>
                           </div>
                         </div>
                       )}
 
                       {msg.kind === "final_proposal" && (
-                        <div className="space-y-2.5">
-                          <p className="font-bold text-emerald-700 text-[14.5px]">
-                            Prontinho! Proposta gerada com sucesso em 42 segundos!
+                        <div className="text-[13.5px] leading-relaxed space-y-2 text-[#111b21]">
+                          <p className="font-bold text-[#008069] text-[13px]">
+                            Proposta Gerada com Sucesso em 12 Segundos!
                           </p>
 
                           {/* Proposal Card in WhatsApp */}
-                          <div className="rounded-xl border border-emerald-300 bg-white p-3.5 shadow-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200">
-                                <FileText className="h-6 w-6" />
+                          <div className="rounded-xl border border-emerald-300 bg-[#f7f8fa] p-2.5 shadow-2xs">
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200">
+                                <FileText className="h-5 w-5" />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="truncate font-bold text-slate-900 text-sm">
+                                <p className="truncate font-bold text-[#111b21] text-[13px]">
                                   Proposta_Solar_Marcelo_Santana.pdf
                                 </p>
-                                <p className="text-xs text-slate-500 mt-0.5">
+                                <p className="text-[11px] text-[#667781] mt-0.5">
                                   3,15 kWp • Economia de R$ 74.800 em 25 anos
                                 </p>
                               </div>
                             </div>
 
-                            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-xs">
-                              <span className="text-slate-500 font-medium">Payback: 2,7 anos</span>
-                              <span className="flex items-center gap-1 font-bold text-emerald-600 hover:text-emerald-700">
-                                Abrir Proposta <ExternalLink className="h-3.5 w-3.5" />
+                            <div className="mt-2.5 flex items-center justify-between border-t border-slate-200/60 pt-2 text-[11.5px]">
+                              <span className="text-[#667781] font-medium">Payback: 2,7 anos</span>
+                              <span className="flex items-center gap-1 font-bold text-[#008069] hover:underline">
+                                Abrir Proposta <ExternalLink className="h-3 w-3" />
                               </span>
                             </div>
                           </div>
 
-                          <p className="text-xs text-slate-600 leading-relaxed">
+                          <p className="text-[11.5px] text-[#667781] leading-relaxed">
                             O cliente também já recebeu o link interativo no WhatsApp dele e a
                             oportunidade foi criada no seu CRM!
                           </p>
                         </div>
                       )}
 
-                      <div className="mt-1 flex items-center justify-end text-[11px] text-slate-400">
+                      <div className="mt-0.5 flex items-center justify-end text-[11px] text-[#667781]">
                         <span>{msg.time}</span>
                       </div>
                     </div>
@@ -620,49 +606,60 @@ export function WhatsappFlowSimulator(): JSX.Element {
 
               {/* LIVE TYPING INDICATOR */}
               {activeBotTyping && (
-                <div className="flex items-center gap-2.5 text-slate-500 text-xs py-1 animate-in fade-in slide-in-from-bottom-1 duration-200 ease-out">
-                  <div className="flex gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 border border-slate-200 shadow-2xs">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:150ms]" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:300ms]" />
+                <div className="flex items-center gap-2 text-[#54656f] text-xs py-0.5 animate-in fade-in slide-in-from-bottom-1 duration-200 ease-out">
+                  <div className="flex gap-1.5 rounded-full bg-white px-2.5 py-1.5 border border-black/[0.04] shadow-2xs">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#00a884] animate-bounce" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#00a884] animate-bounce [animation-delay:150ms]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#00a884] animate-bounce [animation-delay:300ms]" />
                   </div>
-                  <span className="text-xs text-slate-600 animate-pulse font-medium">
+                  <span className="text-[11.5px] text-[#008069] animate-pulse font-medium">
                     {activeBotTyping}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Simulated WhatsApp iOS Chat Input Bar */}
-            <div className="relative z-20 flex items-center gap-2.5 bg-white px-4 py-2.5 border-t border-slate-100 text-slate-400 shadow-xs">
-              <div className="flex-1 min-h-[40px] flex items-center rounded-full bg-slate-100 px-4 py-1.5 text-sm text-slate-900 border border-slate-200/50">
+            {/* WhatsApp iOS Input Bar */}
+            <div className="relative z-20 flex items-center gap-2 bg-[#f0f2f5] px-3 py-2 border-t border-[#e5e5ea] text-slate-400">
+              <button type="button" className="text-[#007aff] hover:opacity-80 transition px-1">
+                <span className="text-xl font-light leading-none">+</span>
+              </button>
+              <div className="flex-1 min-h-[34px] flex items-center rounded-full bg-white px-3.5 py-1 text-[13px] text-[#111b21] border border-[#e5e5ea] shadow-2xs">
                 {activeInputDraft ? (
-                  <span className="text-slate-900 font-medium flex items-center gap-0.5">
+                  <span className="text-[#111b21] font-normal flex items-center gap-0.5">
                     {activeInputDraft}
-                    <span className="inline-block w-1.5 h-4 bg-emerald-500 animate-pulse" />
+                    <span className="inline-block w-1.5 h-3.5 bg-[#00a884] animate-pulse" />
                   </span>
                 ) : (
-                  <span className="text-slate-400">Mensagem...</span>
+                  <span className="text-[#8696a0]">Mensagem</span>
                 )}
               </div>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white transition shadow-sm hover:bg-emerald-600">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#00a884] text-white shadow-xs hover:bg-[#008069] transition">
                 {activeInputDraft ? (
-                  <Send className="h-4 w-4 fill-white animate-in scale-90" />
+                  <Send className="h-3.5 w-3.5 fill-white" />
                 ) : (
-                  <Zap className="h-4 w-4 fill-white" />
+                  <Zap className="h-3.5 w-3.5 fill-white" />
                 )}
               </div>
             </div>
 
             {/* iOS Home Indicator Bar */}
-            <div className="bg-white pb-2 pt-1 flex justify-center">
-              <div className="w-32 h-1 bg-slate-300 rounded-full" />
+            <div className="bg-[#f0f2f5] pb-1.5 pt-0.5 flex justify-center">
+              <div className="w-28 h-1 bg-black/25 rounded-full" />
             </div>
           </div>
+
+          {/* PHOTOREALISTIC IPHONE 13 OVERLAY FRAME (From the user's PNG) */}
+          <img
+            src="/landing/iphone-mockup.png"
+            alt="iPhone 13 Mockup"
+            className="pointer-events-none absolute inset-0 h-full w-full object-fill z-30 select-none drop-shadow-md"
+            loading="eager"
+          />
         </div>
 
         {/* Minimalist Floating Player Controls Below Phone */}
-        <div className="mt-5 flex items-center justify-between rounded-full border border-white/10 bg-[#070b14]/90 px-5 py-2.5 text-xs text-slate-300 backdrop-blur-md shadow-xl">
+        <div className="mt-5 w-full flex items-center justify-between rounded-full border border-white/10 bg-[#070b14]/90 px-4 py-2 text-xs text-slate-300 backdrop-blur-md shadow-xl">
           <div className="flex items-center gap-2.5">
             <button
               type="button"
