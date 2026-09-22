@@ -18,8 +18,6 @@ import { HowItWorksTabs } from "@/components/landing/how-it-works-tabs";
 import { ConvergingPanelsSection } from "@/components/landing/converging-panels-section";
 import { BeamqHeroSection } from "@/components/landing/beamq-hero-section";
 
-const btnBase =
-  "inline-flex h-11 items-center justify-center rounded-full px-6 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 focus-visible:ring-offset-2";
 const appLoginUrl = "/login";
 
 const faqItems = [
@@ -59,7 +57,7 @@ export const metadata: Metadata = {
 
 export default function HomePage(): JSX.Element {
   return (
-    <div className="landing-page min-h-screen flex flex-col bg-[#050811] text-white antialiased selection:bg-amber-400/20 selection:text-amber-200">
+    <div className="landing-page min-h-screen flex flex-col bg-[#02040a] text-white antialiased font-plus-jakarta selection:bg-[#38bdf8]/30 selection:text-white">
       {/* ------------------------------------------------------------- */}
       {/* HERO SECTION                                                  */}
       {/* ------------------------------------------------------------- */}
@@ -73,76 +71,79 @@ export default function HomePage(): JSX.Element {
         {/* ------------------------------------------------------------- */}
         <section
           id="beneficios"
-          className="relative overflow-hidden border-y border-slate-800 bg-gradient-to-b from-[#090D15] via-[#0C121E] to-[#090D15] px-4 py-20 sm:px-6 sm:py-24"
+          className="relative overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24"
         >
           <div className="relative mx-auto max-w-6xl">
             <div className="mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-300">
-                <TrendingUp className="h-3.5 w-3.5 text-amber-400" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
+                <TrendingUp className="h-3.5 w-3.5 text-cyan-400" />
                 Resultados comprovados
               </span>
-              <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
                 Impacto real na operação de integradores solares
               </h2>
-              <p className="mt-4 text-base text-slate-300">
+              <p className="mt-4 text-base sm:text-lg text-slate-400 font-light">
                 Integradores em todo o Brasil usam a plataforma para responder mais rápido,
                 profissionalizar propostas e converter mais vendas.
               </p>
             </div>
 
-            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 {
                   value: "< 2 min",
                   label: "Para gerar uma proposta completa",
-                  accent: "text-amber-300",
+                  accent: "text-cyan-300",
                 },
                 {
                   value: "3 passos",
                   label: "Da conta de luz ao PDF final",
-                  accent: "text-emerald-400",
+                  accent: "text-blue-400",
                 },
                 {
                   value: "1 fluxo",
                   label: "Chat, kit e proposta no mesmo canal",
-                  accent: "text-amber-300",
+                  accent: "text-cyan-300",
                 },
                 {
                   value: "No mesmo dia",
                   label: "Primeira proposta após configurar",
-                  accent: "text-emerald-400",
+                  accent: "text-blue-400",
                 },
               ].map((item) => (
                 <article
                   key={item.label}
-                  className="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 text-center shadow-lg transition-transform duration-200 hover:-translate-y-0.5 hover:border-slate-700"
+                  className="rounded-2xl border border-white/10 bg-[#070b14]/80 p-6 text-center shadow-xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-cyan-500/40 hover:shadow-[0_0_25px_rgba(56,189,248,0.12)]"
                 >
                   <p className={`text-3xl font-extrabold sm:text-4xl ${item.accent}`}>
                     {item.value}
                   </p>
-                  <p className="mt-2 text-sm text-slate-300">{item.label}</p>
+                  <p className="mt-2 text-sm text-slate-300 font-light">{item.label}</p>
                 </article>
               ))}
             </div>
 
-            <figure className="mt-9 rounded-2xl border border-slate-800 bg-slate-900/80 p-6 text-center shadow-lg">
-              <blockquote className="text-base text-slate-200 sm:text-lg">
+            <figure className="mt-10 rounded-2xl border border-white/10 bg-[#070b14]/70 p-8 text-center shadow-xl backdrop-blur-md">
+              <blockquote className="text-base text-slate-200 sm:text-lg font-light leading-relaxed">
                 "Antes levávamos horas para montar proposta. Hoje respondemos no mesmo atendimento e
                 percebemos aumento real de fechamento."
               </blockquote>
-              <figcaption className="mt-3 text-sm font-semibold text-amber-300">
+              <figcaption className="mt-4 text-sm font-semibold text-cyan-300">
                 Rafael Martins — Integrador Solar Horizonte
               </figcaption>
             </figure>
 
-            <div className="mt-9 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-5 shadow-sm">
-              <p className="text-center text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <div className="mt-8 rounded-2xl border border-white/5 bg-white/[0.02] px-6 py-5">
+              <p className="text-center text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Integradores e parceiros que confiam na operação
               </p>
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-x-10 gap-y-3">
                 {["Solar Prime", "Energia+ Brasil", "Grupo Aurora", "Lumen Engenharia"].map(
                   (name) => (
-                    <span key={name} className="text-sm font-semibold text-slate-400">
+                    <span
+                      key={name}
+                      className="text-sm font-semibold text-slate-400 hover:text-slate-200 transition-colors"
+                    >
                       {name}
                     </span>
                   )
@@ -157,54 +158,57 @@ export default function HomePage(): JSX.Element {
         {/* ------------------------------------------------------------- */}
         {/* DIFERENCIAIS                                                  */}
         {/* ------------------------------------------------------------- */}
+        {/* ------------------------------------------------------------- */}
+        {/* DIFERENCIAIS                                                  */}
+        {/* ------------------------------------------------------------- */}
         <section
           id="diferenciais"
-          className="relative overflow-hidden border-t border-slate-800 bg-[#080C14] px-4 py-20 sm:px-6 sm:py-24"
+          className="relative overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24"
         >
           <div className="mx-auto max-w-6xl">
             <div className="relative mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-300">
-                <Zap className="h-3.5 w-3.5 text-amber-400" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
+                <Zap className="h-3.5 w-3.5 text-cyan-400" />
                 Diferenciais reais
               </span>
-              <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
                 O que torna a EnergivIA diferente
               </h2>
-              <p className="mt-4 text-base text-slate-300">
+              <p className="mt-4 text-base sm:text-lg text-slate-400 font-light">
                 Não é só uma ferramenta de proposta. Você opera o ciclo comercial completo com IA,
                 velocidade e execução no canal que o cliente já usa.
               </p>
             </div>
 
-            <div className="relative mt-10 grid gap-5 md:grid-cols-3">
+            <div className="relative mt-12 grid gap-5 md:grid-cols-3">
               {[
                 {
                   icon: FaWhatsapp,
                   title: "Fluxo completo no WhatsApp",
                   description:
                     "Da conta de luz ao envio da proposta: seu time executa tudo no WhatsApp, com menos troca de ferramenta.",
-                  accent: "text-emerald-400 bg-emerald-500/10",
+                  accent: "text-cyan-400 bg-cyan-950/40 border border-cyan-500/20",
                 },
                 {
                   icon: FileSearch,
                   title: "IA que lê a conta automaticamente",
                   description:
                     "A plataforma extrai dados da fatura, monta base técnica e acelera a simulação sem depender de digitação manual.",
-                  accent: "text-amber-400 bg-amber-400/10",
+                  accent: "text-blue-400 bg-blue-950/40 border border-blue-500/20",
                 },
                 {
                   icon: Gauge,
                   title: "Velocidade para responder em minutos",
                   description:
                     "Enquanto outros ainda montam planilha, você já apresenta simulação, kit sugerido e proposta pronta para o cliente.",
-                  accent: "text-emerald-400 bg-emerald-500/10",
+                  accent: "text-cyan-400 bg-cyan-950/40 border border-cyan-500/20",
                 },
                 {
                   icon: Workflow,
                   title: "Operação ponta a ponta, não só proposta",
                   description:
                     "Conecta atendimento, simulação, proposta e acompanhamento comercial no mesmo fluxo para aumentar conversão.",
-                  accent: "text-amber-400 bg-amber-400/10",
+                  accent: "text-blue-400 bg-blue-950/40 border border-blue-500/20",
                 },
               ].map((item, index) => {
                 const Icon = item.icon;
@@ -212,19 +216,19 @@ export default function HomePage(): JSX.Element {
                   <article
                     key={item.title}
                     className={[
-                      "group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/90 p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-700",
+                      "group relative overflow-hidden rounded-3xl border border-white/10 bg-[#070b14]/80 p-7 transition-all duration-300 hover:-translate-y-1 hover:border-cyan-500/40 hover:shadow-[0_0_30px_rgba(56,189,248,0.12)] backdrop-blur-md",
                       index === 0 || index === 3 ? "md:col-span-2" : "",
                     ].join(" ")}
                   >
                     <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-xl ${item.accent} transition-transform duration-200 group-hover:scale-105`}
+                      className={`flex h-12 w-12 items-center justify-center rounded-xl ${item.accent} transition-transform duration-200 group-hover:scale-105 shadow-sm`}
                     >
                       <Icon className="h-5 w-5" />
                     </div>
-                    <h3 className="mt-4 text-lg font-semibold leading-tight text-white">
+                    <h3 className="mt-5 text-lg font-semibold leading-tight text-white group-hover:text-cyan-300 transition-colors">
                       {item.title}
                     </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                    <p className="mt-2 text-sm leading-relaxed text-slate-400 font-light">
                       {item.description}
                     </p>
                   </article>
@@ -239,35 +243,37 @@ export default function HomePage(): JSX.Element {
         {/* ------------------------------------------------------------- */}
         <section
           id="faq"
-          className="relative overflow-hidden border-y border-slate-800 bg-[#090D16] px-4 py-20 sm:px-6 sm:py-24"
+          className="relative overflow-hidden border-y border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24"
         >
           <div className="relative mx-auto max-w-4xl">
             <div className="mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-800/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-300">
+              <span className="inline-flex items-center rounded-full border border-cyan-500/30 bg-cyan-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
                 FAQ
               </span>
-              <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
                 Dúvidas frequentes sobre a EnergivIA
               </h2>
-              <p className="mt-4 text-base text-slate-300">
+              <p className="mt-4 text-base sm:text-lg text-slate-400 font-light">
                 Respostas rápidas para você entender como funciona a operação com IA no dia a dia do
                 integrador solar.
               </p>
             </div>
 
-            <div className="mt-10 space-y-3">
+            <div className="mt-10 space-y-3.5">
               {faqItems.map((item) => (
                 <details
                   key={item.question}
-                  className="group rounded-2xl border border-slate-800 bg-slate-900/80 px-5 py-4 shadow-sm transition-all duration-200 hover:border-slate-700"
+                  className="group rounded-2xl border border-white/10 bg-[#070b14]/70 px-6 py-4 shadow-sm transition-all duration-200 hover:border-cyan-500/30 backdrop-blur-md"
                 >
-                  <summary className="cursor-pointer list-none pr-6 text-left text-base font-semibold text-white marker:content-none">
-                    {item.question}
-                    <span className="float-right text-slate-400 transition group-open:rotate-45">
+                  <summary className="cursor-pointer list-none pr-6 text-left text-base font-semibold text-white marker:content-none flex items-center justify-between">
+                    <span>{item.question}</span>
+                    <span className="text-cyan-400 transition-transform duration-200 group-open:rotate-45 text-xl font-light">
                       +
                     </span>
                   </summary>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-300">{item.answer}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-400 font-light">
+                    {item.answer}
+                  </p>
                 </details>
               ))}
             </div>
@@ -279,24 +285,24 @@ export default function HomePage(): JSX.Element {
         {/* ------------------------------------------------------------- */}
         <section
           id="para-quem"
-          className="relative overflow-hidden border-t border-slate-800 bg-[#070A10] px-4 py-16 sm:px-6 sm:py-20"
+          className="relative overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-16 sm:px-6 sm:py-24"
         >
-          <div className="relative z-10 mx-auto max-w-4xl rounded-3xl border border-slate-800 bg-[#0D1424] p-8 text-center shadow-2xl sm:p-10">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-300">
-              <Sun className="h-3.5 w-3.5 text-amber-400" />
+          <div className="relative z-10 mx-auto max-w-4xl rounded-3xl border border-cyan-500/30 bg-gradient-to-b from-[#0a1424] via-[#070b14] to-[#04060c] p-8 text-center shadow-[0_0_60px_rgba(56,189,248,0.12)] sm:p-12 backdrop-blur-xl">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-950/40 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
+              <Sun className="h-3.5 w-3.5 text-cyan-400" />
               Próximo passo
             </span>
-            <h2 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
               Pronto para acelerar suas vendas solares?
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-slate-300">
+            <p className="mx-auto mt-4 max-w-2xl text-slate-300 font-light text-base sm:text-lg">
               Entre agora e transforme atendimento em proposta enviada em minutos, com mais
               previsibilidade para o seu time comercial.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <a
                 href={appLoginUrl}
-                className={`${btnBase} bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold w-full min-w-[200px] sm:w-auto shadow-lg transition-all`}
+                className="w-full sm:w-auto bg-white text-black font-semibold rounded-full px-8 py-3.5 hover:scale-105 transition-transform duration-300 shadow-[0_0_25px_rgba(255,255,255,0.4)] text-[15px]"
               >
                 Criar conta grátis
               </a>
@@ -304,7 +310,7 @@ export default function HomePage(): JSX.Element {
                 href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20ver%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergivIA."
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`${btnBase} w-full min-w-[200px] border border-amber-400/40 bg-amber-400/10 text-center text-amber-200 hover:bg-amber-400/20 sm:w-auto transition-all`}
+                className="w-full sm:w-auto bg-white/10 backdrop-blur-md border border-white/20 text-white font-medium rounded-full px-8 py-3.5 hover:bg-white/20 transition-all duration-300 text-[15px]"
               >
                 Ver demonstração
               </a>
@@ -315,16 +321,16 @@ export default function HomePage(): JSX.Element {
         {/* ------------------------------------------------------------- */}
         {/* SEO ARTICLES & LINKS                                          */}
         {/* ------------------------------------------------------------- */}
-        <section className="relative overflow-hidden border-t border-slate-800 bg-[#080B12] px-4 py-16 sm:px-6 sm:py-20">
-          <div className="relative mx-auto max-w-5xl rounded-3xl border border-slate-800 bg-slate-900/60 p-6 shadow-sm sm:p-8">
-            <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-800/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-300">
+        <section className="relative overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-16 sm:px-6 sm:py-20">
+          <div className="relative mx-auto max-w-5xl rounded-3xl border border-white/10 bg-[#070b14]/70 p-6 shadow-xl sm:p-8 backdrop-blur-md">
+            <span className="inline-flex items-center rounded-full border border-cyan-500/30 bg-cyan-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
               Conteúdo para integradores
             </span>
             <h2 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl">
               Software para integradores solares: como gerar propostas mais rápido
             </h2>
-            <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-emerald-400 to-amber-400" />
-            <div className="mt-6 grid gap-5 text-sm leading-relaxed text-slate-300 sm:text-base md:grid-cols-2">
+            <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500" />
+            <div className="mt-6 grid gap-5 text-sm leading-relaxed text-slate-400 font-light sm:text-base md:grid-cols-2">
               <p>
                 Muitos integradores ainda perdem tempo com processos manuais para montar propostas
                 de energia solar. Entre planilhas, troca de mensagens e revisão de dados, o ciclo
@@ -379,14 +385,16 @@ export default function HomePage(): JSX.Element {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/70 p-4 transition-all hover:-translate-y-0.5 hover:border-slate-700"
+                    className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#03060c] p-4 transition-all hover:-translate-y-0.5 hover:border-cyan-500/40 hover:shadow-[0_0_20px_rgba(56,189,248,0.1)]"
                   >
-                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-amber-300">
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-950/50 border border-cyan-500/20 text-cyan-300">
                       <Icon className="h-4 w-4" />
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-white">{item.title}</p>
-                      <p className="mt-1 text-xs text-slate-400 sm:text-sm">{item.description}</p>
+                      <p className="mt-1 text-xs text-slate-400 sm:text-sm font-light">
+                        {item.description}
+                      </p>
                     </div>
                   </Link>
                 );
@@ -398,7 +406,7 @@ export default function HomePage(): JSX.Element {
         {/* ------------------------------------------------------------- */}
         {/* FOOTER                                                        */}
         {/* ------------------------------------------------------------- */}
-        <footer className="border-t border-slate-800 bg-[#070A10] px-4 py-12 sm:px-6 text-slate-300">
+        <footer className="border-t border-white/5 bg-[#02040a] px-4 py-12 sm:px-6 text-slate-400">
           <div className="mx-auto max-w-6xl">
             <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
               <Link href="/" className="flex items-center">
