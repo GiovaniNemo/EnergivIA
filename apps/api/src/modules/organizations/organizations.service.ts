@@ -353,7 +353,8 @@ export class OrganizationsService {
       where: { id: userId },
       select: { role: true },
     });
-    const isPrivileged = user?.role === "ADMIN" || user?.role === "PLATFORM";
+    const roleStr = String(user?.role || "").toUpperCase();
+    const isPrivileged = roleStr === "ADMIN" || roleStr === "PLATFORM";
 
     if (!isPrivileged) {
       const member = await this.prisma.organizationMember.findFirst({
@@ -381,10 +382,10 @@ export class OrganizationsService {
     const settingsObj = (tenant?.settings as Record<string, unknown>) || {};
 
     return {
-      termsAccepted: Boolean(settingsObj.termsAccepted),
-      termsAcceptedAt: settingsObj.termsAcceptedAt || null,
-      termsVersion: settingsObj.termsVersion || null,
-      currentAcceptance: settingsObj.termsAcceptanceLog || null,
+      termsAccepted: Boolean(settingsObj["termsAccepted"]),
+      termsAcceptedAt: (settingsObj["termsAcceptedAt"] as string) || null,
+      termsVersion: (settingsObj["termsVersion"] as string) || null,
+      currentAcceptance: settingsObj["termsAcceptanceLog"] || null,
       auditLogs: logs,
     };
   }
