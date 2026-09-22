@@ -39,7 +39,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
               {isFullscreenTemplateEditor ||
               isFullscreenBlueprintEditor ||
               isOnboardingOrganization ? (
-                <main className="flex-1 overflow-hidden bg-[var(--color-background)] p-0">
+                <main className="flex-1 h-full min-h-0 flex flex-col overflow-hidden bg-[var(--color-background)] p-0">
                   {children}
                 </main>
               ) : (
