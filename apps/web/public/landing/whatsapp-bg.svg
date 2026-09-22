@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="600" viewBox="0 0 360 600">
+  <rect width="100%" height="100%" fill="#efeae2"/>
+  <g fill="none" stroke="#000000" stroke-width="1.2" stroke-opacity="0.055" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Row 1 -->
+    <path d="M40 50 h16 a6 6 0 0 1 6 6 v8 a8 8 0 0 1 -8 8 h-6 a8 8 0 0 1 -8 -8 v-8 a6 6 0 0 1 6 -6 z"/>
+    <path d="M62 56 h5 a3 3 0 0 1 3 3 v3 a3 3 0 0 1 -3 3 h-5"/>
+    <path d="M140 45 h24 a8 8 0 0 1 8 8 v12 a8 8 0 0 1 -8 8 h-12 l-8 6 v-6 h-4 a8 8 0 0 1 -8 -8 v-12 a8 8 0 0 1 8 -8 z"/>
+    <circle cx="260" cy="55" r="14"/>
+    <path d="M260 47 v8 h5"/>
+    <!-- Row 2 -->
+    <circle cx="65" cy="150" r="10"/>
+    <path d="M50 162 a11 11 0 0 1 22 0 h11 a8 8 0 0 1 0 16 h-33 a8 8 0 0 1 0 -16 z"/>
+    <path d="M165 140 a12 12 0 0 1 18 15 l-2 4 h-14 l-2 -4 a12 12 0 0 1 0 -15 z"/>
+    <path d="M168 163 h12 m-9 3 h6"/>
+    <rect x="250" y="145" width="32" height="18" rx="5"/>
+    <path d="M257 154 h5 m-2.5 -2.5 v5"/>
+    <circle cx="272" cy="151" r="1.5" fill="#000" fill-opacity="0.055"/>
+    <circle cx="276" cy="156" r="1.5" fill="#000" fill-opacity="0.055"/>
+    <!-- Row 3 -->
+    <path d="M70 250 a7 7 0 0 0 -10 9 l10 10 l10 -10 a7 7 0 0 0 -10 -9 z"/>
+    <circle cx="160" cy="260" r="3.5"/>
+    <path d="M163.5 260 v-16 h12 v16"/>
+    <circle cx="172" cy="260" r="3.5"/>
+    <path d="M270 250 l-25 12 l8 -15 l-8 -3 z"/>
+    <!-- Row 4 -->
+    <rect x="45" y="350" width="24" height="18" rx="4"/>
+    <circle cx="57" cy="359" r="4"/>
+    <path d="M150 355 l2.5 5 l5.5 1 l-4 3.5 l1 5.5 l-5 -2.5 l-5 2.5 l1 -5.5 l-4 -3.5 l5.5 -1 z"/>
+    <circle cx="255" cy="360" r="12"/>
+    <path d="M248 360 h14 M255 353 v14"/>
+    <!-- Row 5 -->
+    <path d="M60 460 h20 a6 6 0 0 1 6 6 v10 a6 6 0 0 1 -6 6 h-20 a6 6 0 0 1 -6 -6 v-10 a6 6 0 0 1 6 -6 z"/>
+    <path d="M160 455 a9 9 0 0 0 -12 11 l12 13 l12 -13 a9 9 0 0 0 -12 -11 z"/>
+    <path d="M260 450 l-20 10 l6 -12 l-6 -2 z"/>
+    <!-- Row 6 -->
+    <circle cx="70" cy="550" r="12"/>
+    <path d="M70 543 v7 h4"/>
+    <path d="M170 540 h20 a8 8 0 0 1 8 8 v10 a8 8 0 0 1 -8 8 h-8 l-6 5 v-5 h-6 a8 8 0 0 1 -8 -8 v-10 a8 8 0 0 1 8 -8 z"/>
+    <rect x="250" y="540" width="24" height="16" rx="3"/>
+    <circle cx="262" cy="548" r="4"/>
+  </g>
+</svg>

@@ -98,13 +98,13 @@ interface StepConfig {
   readPauseMs: number;
 }
 
-// Relaxed, comfortable human-speed pacing so everything is easy to read
+// Pacing calibrated for natural, comfortable human reading
 const FLOW_STEPS: StepConfig[] = [
   // Passo 1: Início
   {
     milestoneId: 0,
     userDraft: "Boa tarde",
-    draftDurationMs: 750,
+    draftDurationMs: 700,
     message: { id: "m1", type: "user", text: "Boa tarde", time: "09:41" },
     readPauseMs: 1200,
   },
@@ -113,7 +113,7 @@ const FLOW_STEPS: StepConfig[] = [
     botTypingLabel: "EnergivIA está digitando...",
     botTypingDurationMs: 1600,
     message: { id: "m2", type: "bot", kind: "welcome", time: "09:41" },
-    readPauseMs: 4500, // Dá tempo para ler o menu completo com 5 opções
+    readPauseMs: 4500,
   },
   {
     milestoneId: 0,
@@ -127,7 +127,7 @@ const FLOW_STEPS: StepConfig[] = [
     botTypingLabel: "EnergivIA está digitando...",
     botTypingDurationMs: 1300,
     message: { id: "m4", type: "bot", kind: "ask_bill", time: "09:42" },
-    readPauseMs: 3200, // Dá tempo para ler o pedido da fatura
+    readPauseMs: 3200,
   },
 
   // Passo 2: Fatura & OCR
@@ -145,9 +145,9 @@ const FLOW_STEPS: StepConfig[] = [
   {
     milestoneId: 1,
     botTypingLabel: "EnergivIA analisando fatura com IA...",
-    botTypingDurationMs: 2400, // Simula IA lendo o documento
+    botTypingDurationMs: 2400,
     message: { id: "m6", type: "bot", kind: "ocr_result", time: "09:42" },
-    readPauseMs: 5500, // Dá tempo para ler Copel, 257 kWh, 3,15 kWp e os telhados
+    readPauseMs: 5500,
   },
   {
     milestoneId: 1,
@@ -161,9 +161,9 @@ const FLOW_STEPS: StepConfig[] = [
   {
     milestoneId: 2,
     botTypingLabel: "EnergivIA calculando melhor kit solar...",
-    botTypingDurationMs: 2400, // Simula motor solar calculando
+    botTypingDurationMs: 2400,
     message: { id: "m8", type: "bot", kind: "kit_dynamis", time: "09:43" },
-    readPauseMs: 6000, // Dá tempo para ver Kit Dynamis, módulos, inversor, custo e margem
+    readPauseMs: 6000,
   },
   {
     milestoneId: 2,
@@ -207,7 +207,7 @@ const FLOW_STEPS: StepConfig[] = [
     botTypingLabel: "EnergivIA está digitando...",
     botTypingDurationMs: 1200,
     message: { id: "m14", type: "bot", kind: "ask_template", time: "09:44" },
-    readPauseMs: 3500, // Dá tempo para ler os 3 modelos de proposta
+    readPauseMs: 3500,
   },
   {
     milestoneId: 3,
@@ -221,9 +221,9 @@ const FLOW_STEPS: StepConfig[] = [
   {
     milestoneId: 4,
     botTypingLabel: "EnergivIA gerando proposta em PDF...",
-    botTypingDurationMs: 2600, // Simula renderização do PDF
+    botTypingDurationMs: 2600,
     message: { id: "m16", type: "bot", kind: "final_proposal", time: "09:45" },
-    readPauseMs: 8500, // 8.5s para contemplar a proposta final, payback e CRM
+    readPauseMs: 8500,
   },
 ];
 
@@ -413,7 +413,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
       className="relative flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-16 py-6 select-none"
     >
       {/* ------------------------------------------------------------- */}
-      {/* ELEGANT PHOTOREALISTIC IPHONE (PURE WHITE BACKGROUND)         */}
+      {/* ELEGANT PHOTOREALISTIC IPHONE WITH AUTHENTIC WHATSAPP DESIGN  */}
       {/* ------------------------------------------------------------- */}
       <div className="relative flex flex-col items-center w-full max-w-[360px] sm:max-w-[380px] shrink-0">
         {/* PHYSICAL PHONE SHELL CONTAINER */}
@@ -421,10 +421,18 @@ export function WhatsappFlowSimulator(): JSX.Element {
           {/* Soft, Diffused Realistic Shadow casting below the iPhone */}
           <div className="pointer-events-none absolute inset-x-5 bottom-2 top-8 rounded-[48px] shadow-[0_28px_60px_-15px_rgba(0,0,0,0.85),0_12px_28px_-8px_rgba(0,0,0,0.6)]" />
 
-          {/* SCREEN LAYER: PURE WHITE BACKGROUND (#FFFFFF) */}
-          <div className="absolute inset-y-[2.4%] left-[5.43%] right-[6.0%] rounded-[36px] overflow-hidden bg-white flex flex-col z-10 font-sans shadow-inner select-none">
+          {/* SCREEN LAYER: AUTHENTIC WHATSAPP iOS DOODLE WALLPAPER */}
+          <div
+            className="absolute inset-y-[2.4%] left-[5.43%] right-[6.0%] rounded-[36px] overflow-hidden flex flex-col z-10 font-sans shadow-inner select-none"
+            style={{
+              backgroundColor: "#efeae2",
+              backgroundImage: "url('/landing/whatsapp-bg.svg')",
+              backgroundRepeat: "repeat",
+              backgroundSize: "360px 600px",
+            }}
+          >
             {/* iOS Status Bar */}
-            <div className="relative z-20 flex items-center justify-between bg-white px-5 pt-2.5 pb-1 text-[13px] text-black font-extrabold select-none">
+            <div className="relative z-20 flex items-center justify-between bg-[#f6f6f6]/95 backdrop-blur-sm px-5 pt-2.5 pb-1 text-[13px] text-black font-semibold select-none">
               {/* Left of notch: Time */}
               <span className="tracking-tight pl-0.5">9:41</span>
 
@@ -448,10 +456,10 @@ export function WhatsappFlowSimulator(): JSX.Element {
               </div>
             </div>
 
-            {/* WhatsApp iOS Clean Header */}
-            <div className="relative z-20 flex items-center justify-between border-b border-slate-100 bg-white px-3.5 py-2 shadow-xs">
+            {/* WhatsApp iOS Header (matching reference image) */}
+            <div className="relative z-20 flex items-center justify-between border-b border-[#e5e5ea] bg-[#f6f6f6]/95 backdrop-blur-sm px-3.5 py-2 shadow-xs">
               <div className="flex items-center gap-2">
-                <ArrowLeft className="h-4 w-4 text-black hover:opacity-75 transition cursor-pointer" />
+                <ArrowLeft className="h-5 w-5 text-[#007aff] hover:opacity-75 transition cursor-pointer" />
                 <div className="relative">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#070b14] ring-1 ring-slate-200 overflow-hidden shadow-xs">
                     <span className="text-cyan-400 font-bold text-xs">⚡</span>
@@ -459,28 +467,28 @@ export function WhatsappFlowSimulator(): JSX.Element {
                   <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#25d366]" />
                 </div>
                 <div className="leading-tight">
-                  <span className="text-[14.5px] font-black text-black block tracking-tight">
+                  <span className="text-[15.5px] font-semibold text-black block tracking-tight">
                     EnergivIA
                   </span>
-                  <p className="text-[11px] text-emerald-700 font-bold">online agora</p>
+                  <p className="text-[11px] text-[#8696a0] font-normal">online agora</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3.5 text-black pr-1">
-                <Video className="h-4 w-4 cursor-pointer hover:opacity-70 transition" />
-                <Phone className="h-3.5 w-3.5 cursor-pointer hover:opacity-70 transition" />
-                <MoreVertical className="h-4 w-4 cursor-pointer hover:opacity-70 transition" />
+              <div className="flex items-center gap-4 text-[#007aff] pr-1">
+                <Video className="h-5 w-5 cursor-pointer hover:opacity-75 transition" />
+                <Phone className="h-4.5 w-4.5 cursor-pointer hover:opacity-75 transition" />
+                <MoreVertical className="h-4 w-4 text-[#8696a0] cursor-pointer hover:opacity-75 transition" />
               </div>
             </div>
 
-            {/* Chat Messages Flow with PURE WHITE background & 100% black text */}
+            {/* Chat Messages Flow with authentic WhatsApp doodle background & exact bubble colors */}
             <div
               ref={chatContainerRef}
-              className="relative flex-1 space-y-3 overflow-y-auto p-3 text-sm scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden bg-white"
+              className="relative flex-1 space-y-2.5 overflow-y-auto p-3 text-sm scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             >
               {/* Date Pill */}
               <div className="flex justify-center my-0.5">
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] text-black font-bold shadow-2xs border border-slate-200">
+                <span className="rounded-lg bg-[#ffffff]/90 backdrop-blur-xs px-2.5 py-0.5 text-[11px] text-[#8696a0] font-medium shadow-2xs border border-black/[0.04]">
                   Hoje
                 </span>
               </div>
@@ -501,13 +509,14 @@ export function WhatsappFlowSimulator(): JSX.Element {
                         }}
                         className="flex justify-end"
                       >
-                        <div className="max-w-[85%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] border border-emerald-300/80 px-3.5 py-2 text-black shadow-xs">
-                          <p className="text-[14px] leading-relaxed font-bold text-black">
+                        {/* OUTGOING GREEN BUBBLE (#dcf8c6 - exact color from reference) */}
+                        <div className="relative max-w-[85%] rounded-[16px] rounded-tr-[4px] bg-[#dcf8c6] px-3.5 py-2 text-black shadow-[0_1px_1px_rgba(0,0,0,0.08)]">
+                          <p className="text-[15px] leading-[21px] font-normal text-black pr-14">
                             {msg.text}
                           </p>
-                          <div className="mt-0.5 flex items-center justify-end gap-1 text-[11px] text-black font-semibold">
+                          <div className="absolute bottom-1.5 right-2.5 flex items-center gap-1 text-[11px] text-[#8696a0] font-normal">
                             <span>{msg.time}</span>
-                            <CheckCheck className="h-3.5 w-3.5 text-[#0284c7]" />
+                            <CheckCheck className="h-3.5 w-3.5 text-[#34b7f1]" />
                           </div>
                         </div>
                       </motion.div>
@@ -527,30 +536,30 @@ export function WhatsappFlowSimulator(): JSX.Element {
                         }}
                         className="flex justify-end"
                       >
-                        <div className="max-w-[88%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] border border-emerald-300/80 p-2.5 text-black shadow-xs">
-                          <div className="flex items-center gap-2.5 rounded-xl bg-white p-2.5 border border-emerald-300/80 shadow-2xs">
+                        <div className="relative max-w-[88%] rounded-[16px] rounded-tr-[4px] bg-[#dcf8c6] p-2.5 text-black shadow-[0_1px_1px_rgba(0,0,0,0.08)]">
+                          <div className="flex items-center gap-2.5 rounded-xl bg-white/90 p-2.5 border border-[#dcf8c6] shadow-2xs">
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-700 font-bold border border-rose-200">
                               <FileText className="h-5 w-5" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate font-black text-black text-[13.5px]">
+                              <p className="truncate font-semibold text-black text-[14px]">
                                 {msg.title}
                               </p>
-                              <p className="text-[11.5px] text-black font-bold mt-0.5">
+                              <p className="text-[11.5px] text-[#8696a0] font-normal mt-0.5">
                                 {msg.subtitle}
                               </p>
                             </div>
                           </div>
-                          <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-black font-semibold">
+                          <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-[#8696a0] font-normal pr-1">
                             <span>{msg.time}</span>
-                            <CheckCheck className="h-3.5 w-3.5 text-[#0284c7]" />
+                            <CheckCheck className="h-3.5 w-3.5 text-[#34b7f1]" />
                           </div>
                         </div>
                       </motion.div>
                     );
                   }
 
-                  // BOT MESSAGES: CLASSIC WHATSAPP LIGHT GRAY BUBBLE ON PURE WHITE SCREEN
+                  // INCOMING WHITE BUBBLE (#ffffff - exact from reference)
                   return (
                     <motion.div
                       key={msg.id}
@@ -563,54 +572,40 @@ export function WhatsappFlowSimulator(): JSX.Element {
                       }}
                       className="flex justify-start"
                     >
-                      <div className="max-w-[95%] rounded-2xl rounded-tl-xs bg-[#f0f2f5] border border-slate-200/80 p-3.5 text-black shadow-xs space-y-2.5">
+                      <div className="relative max-w-[92%] rounded-[16px] rounded-tl-[4px] bg-white p-3.5 text-black shadow-[0_1px_1px_rgba(0,0,0,0.08)] space-y-2">
                         {msg.kind === "welcome" && (
-                          <div className="text-[13.5px] leading-relaxed space-y-2 text-black font-medium">
-                            <p className="font-bold text-black">
+                          <div className="text-[15px] leading-[21px] space-y-2 text-black font-normal">
+                            <p>
                               Boa tarde Giovani! Tudo bem?
                               <br />
-                              <span className="font-semibold text-black">
-                                Sou seu assistente de dimensionamento e vendas da{" "}
-                                <b className="font-black text-black">EnergivIA</b>.
-                              </span>
+                              Sou seu assistente de dimensionamento e vendas da <b>EnergivIA</b>.
                             </p>
-                            <p className="font-bold text-black">
+                            <p>
                               Como posso ajudar você a gerar orçamentos e propostas solares hoje?
                             </p>
-                            <div className="mt-1.5 space-y-1.5 rounded-xl bg-white p-3 border border-slate-200 text-[12.5px] text-black shadow-2xs">
-                              <p className="font-black text-black text-[13px]">
+                            <div className="mt-2 space-y-1.5 rounded-xl bg-[#f8f9fa] p-2.5 border border-slate-200/80 text-[13.5px] text-black">
+                              <p className="font-semibold text-black">
                                 Escolha uma opção digitando o número:
                               </p>
-                              <p className="font-bold text-black">
-                                [1] Enviar fatura de energia (PDF ou foto)
-                              </p>
-                              <p className="font-bold text-black">
-                                [2] Simular por consumo mensal (ex: 450 kWh)
-                              </p>
-                              <p className="font-bold text-black">
-                                [3] Simular por potência de pico (ex: 5 kWp)
-                              </p>
-                              <p className="font-bold text-black">
-                                [4] Simular por quantidade de placas
-                              </p>
-                              <p className="font-bold text-black">
-                                [5] Dúvidas sobre kits e preços
-                              </p>
+                              <p>[1] Enviar fatura de energia (PDF ou foto)</p>
+                              <p>[2] Simular por consumo mensal (ex: 450 kWh)</p>
+                              <p>[3] Simular por potência de pico (ex: 5 kWp)</p>
+                              <p>[4] Simular por quantidade de placas</p>
+                              <p>[5] Dúvidas sobre kits e preços</p>
                             </div>
-                            <p className="text-[11.5px] text-black font-bold italic">
+                            <p className="text-[12px] text-[#8696a0] italic">
                               (Ou me envie diretamente a conta de luz)
                             </p>
                           </div>
                         )}
 
                         {msg.kind === "ask_bill" && (
-                          <div className="text-[13.5px] leading-relaxed space-y-1.5 text-black">
-                            <p className="font-bold text-black">
-                              Perfeito! Envie o arquivo em <b className="font-black">PDF</b> ou a{" "}
-                              <b className="font-black">foto da conta de luz</b> do seu cliente por
-                              aqui mesmo.
+                          <div className="text-[15px] leading-[21px] space-y-1 text-black font-normal">
+                            <p>
+                              Perfeito! Envie o arquivo em <b>PDF</b> ou a{" "}
+                              <b>foto da conta de luz</b> do seu cliente por aqui mesmo.
                             </p>
-                            <p className="text-[12.5px] text-black font-semibold">
+                            <p className="text-[13px] text-[#8696a0]">
                               Nossa inteligência artificial vai extrair automaticamente todos os
                               dados de consumo e histórico!
                             </p>
@@ -618,166 +613,154 @@ export function WhatsappFlowSimulator(): JSX.Element {
                         )}
 
                         {msg.kind === "ocr_result" && (
-                          <div className="text-[13.5px] leading-relaxed space-y-2 text-black">
-                            <p className="text-black font-black text-[13.5px] flex items-center gap-1.5">
-                              <span className="inline-block w-2 h-2 rounded-full bg-emerald-600" />
-                              Legal, dados extraídos com precisão!
+                          <div className="text-[15px] leading-[21px] space-y-2 text-black font-normal">
+                            <p className="font-semibold text-black">
+                              Legal, dados extraídos com precisão:
                             </p>
-                            <div className="space-y-1 rounded-xl bg-white p-2.5 border border-slate-200 text-[12.5px] shadow-2xs">
+                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2.5 border border-slate-200/80 text-[13.5px]">
                               <p className="flex justify-between">
-                                <span className="text-black font-bold">Concessionária:</span>
-                                <span className="font-black text-black">Copel (PR)</span>
+                                <span className="text-black/80">Concessionária:</span>
+                                <span className="font-semibold text-black">Copel (PR)</span>
                               </p>
                               <p className="flex justify-between">
-                                <span className="text-black font-bold">Consumo Médio:</span>
-                                <span className="font-black text-black">257 kWh/mês</span>
+                                <span className="text-black/80">Consumo Médio:</span>
+                                <span className="font-semibold text-black">257 kWh/mês</span>
                               </p>
                               <p className="flex justify-between">
-                                <span className="text-black font-bold">Tipo de Ligação:</span>
-                                <span className="font-black text-black">Monofásico (127V)</span>
+                                <span className="text-black/80">Tipo de Ligação:</span>
+                                <span className="font-semibold text-black">Monofásico (127V)</span>
                               </p>
                               <p className="flex justify-between">
-                                <span className="text-black font-bold">Potência Estimada:</span>
-                                <span className="font-black text-black">3,15 kWp</span>
+                                <span className="text-black/80">Potência Estimada:</span>
+                                <span className="font-bold text-black">3,15 kWp</span>
                               </p>
                             </div>
-                            <p className="text-[12.5px] text-black font-black">
+                            <p className="text-[13.5px] font-medium text-black">
                               Qual o tipo de telhado para fixação dos módulos?
                             </p>
-                            <div className="space-y-1 rounded-xl bg-white p-2 border border-slate-200 text-[12.5px] shadow-2xs">
-                              <p className="font-bold text-black">[1] Fibrocimento / Metálico</p>
-                              <p className="font-black text-black bg-emerald-100/90 border border-emerald-500 rounded-md px-2 py-0.5">
+                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2 border border-slate-200/80 text-[13px]">
+                              <p>[1] Fibrocimento / Metálico</p>
+                              <p className="font-semibold text-black bg-emerald-100/90 border border-emerald-400 rounded-md px-2 py-0.5">
                                 [2] Cerâmico (Colonial)
                               </p>
-                              <p className="font-bold text-black">[3] Solo / Carport</p>
+                              <p>[3] Solo / Carport</p>
                             </div>
                           </div>
                         )}
 
                         {msg.kind === "kit_dynamis" && (
-                          <div className="text-[13.5px] leading-relaxed space-y-2 text-black">
-                            <p className="font-black text-black text-[13.5px] flex items-center gap-1.5">
-                              <span className="inline-block w-2 h-2 rounded-full bg-emerald-600" />
-                              Kit Dynamis Selecionado com Sucesso!
+                          <div className="text-[15px] leading-[21px] space-y-2 text-black font-normal">
+                            <p className="font-semibold text-black">
+                              Kit Dynamis Selecionado com Sucesso:
                             </p>
-                            <div className="rounded-xl border border-emerald-400 bg-white p-3 space-y-2 shadow-2xs">
+                            <div className="rounded-xl border border-emerald-300/80 bg-emerald-50/40 p-2.5 space-y-1 text-[13.5px]">
                               <div className="flex items-center justify-between">
-                                <span className="text-xs font-black text-black uppercase tracking-wide">
+                                <span className="font-bold text-black text-xs uppercase tracking-wide">
                                   Kit Solar Dynamis 3,15 kWp
                                 </span>
-                                <span className="rounded-full bg-emerald-700 px-2.5 py-0.5 text-[10px] font-extrabold text-white">
+                                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
                                   Em Estoque
                                 </span>
                               </div>
-                              <p className="text-xs text-black font-bold">
+                              <p className="text-xs text-black font-normal">
                                 • 5x Módulos 630W N-Type TopCon
                                 <br />• 1x Inversor Micro/String 3kW Monofásico
                               </p>
-                              <div className="border-t border-slate-200 pt-1.5 flex justify-between items-center text-xs">
-                                <span className="text-black font-bold">Custo Distribuidor:</span>
-                                <span className="font-black text-black">R$ 4.290,00</span>
+                              <div className="border-t border-slate-200 pt-1 flex justify-between items-center text-xs">
+                                <span className="text-black/80">Custo Distribuidor:</span>
+                                <span className="font-semibold text-black">R$ 4.290,00</span>
                               </div>
                               <div className="flex justify-between items-center text-xs">
-                                <span className="text-black font-extrabold">
+                                <span className="font-semibold text-black">
                                   Margem Sugerida (35%):
                                 </span>
-                                <span className="font-black text-black text-[13.5px]">
-                                  R$ 6.600,00
-                                </span>
+                                <span className="font-bold text-black">R$ 6.600,00</span>
                               </div>
                             </div>
-                            <p className="text-[12.5px] text-black font-black">
+                            <p className="text-[13.5px] font-medium text-black">
                               Deseja aplicar essa margem de 35% na proposta comercial?
                             </p>
-                            <div className="space-y-1 rounded-xl bg-white p-2 border border-slate-200 text-[12.5px] shadow-2xs">
-                              <p className="font-black text-black bg-emerald-100/90 border border-emerald-500 rounded-md px-2 py-0.5">
+                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2 border border-slate-200/80 text-[13px]">
+                              <p className="font-semibold text-black bg-emerald-100/90 border border-emerald-400 rounded-md px-2 py-0.5">
                                 [1] Sim, avançar com 35%
                               </p>
-                              <p className="font-bold text-black">
-                                [2] Ajustar valor final manualmente
-                              </p>
+                              <p>[2] Ajustar valor final manualmente</p>
                             </div>
                           </div>
                         )}
 
                         {msg.kind === "ask_name" && (
-                          <div className="text-[13.5px] leading-relaxed space-y-1.5 text-black">
-                            <p className="font-black text-black">Excelente margem definida!</p>
-                            <p className="font-bold text-black">
-                              Qual o <b className="font-black">nome do cliente</b> para personalizar
-                              a proposta?
+                          <div className="text-[15px] leading-[21px] space-y-1 text-black font-normal">
+                            <p>Excelente margem definida!</p>
+                            <p>
+                              Qual o <b>nome do cliente</b> para personalizar a proposta?
                             </p>
                           </div>
                         )}
 
                         {msg.kind === "ask_phone" && (
-                          <div className="text-[13.5px] leading-relaxed space-y-1.5 text-black">
-                            <p className="font-black text-black">Prazer, Marcelo!</p>
-                            <p className="font-bold text-black">
-                              Qual o <b className="font-black">WhatsApp com DDD</b> dele para
-                              registro no CRM?
+                          <div className="text-[15px] leading-[21px] space-y-1 text-black font-normal">
+                            <p>Prazer, Marcelo!</p>
+                            <p>
+                              Qual o <b>WhatsApp com DDD</b> dele para registro no CRM?
                             </p>
                           </div>
                         )}
 
                         {msg.kind === "ask_template" && (
-                          <div className="text-[13.5px] leading-relaxed space-y-2 text-black">
-                            <p className="font-black text-black">Contato cadastrado no CRM!</p>
-                            <p className="font-bold text-black">
-                              Qual <b className="font-black">modelo de proposta</b> você deseja
-                              gerar?
+                          <div className="text-[15px] leading-[21px] space-y-2 text-black font-normal">
+                            <p>Contato cadastrado no CRM!</p>
+                            <p>
+                              Qual <b>modelo de proposta</b> você deseja gerar?
                             </p>
-                            <div className="space-y-1 rounded-xl bg-white p-2.5 border border-slate-200 text-[12.5px] shadow-2xs">
-                              <p className="font-black text-black bg-emerald-100/90 border border-emerald-500 rounded-md px-2 py-0.5">
+                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2 border border-slate-200/80 text-[13px]">
+                              <p className="font-semibold text-black bg-emerald-100/90 border border-emerald-400 rounded-md px-2 py-0.5">
                                 [1] Modelo Premium Executivo (Gráficos + Payback)
                               </p>
-                              <p className="font-bold text-black">
-                                [2] Modelo Express Resumido (1 Página)
-                              </p>
-                              <p className="font-bold text-black">[3] Modelo Técnico Detalhado</p>
+                              <p>[2] Modelo Express Resumido (1 Página)</p>
+                              <p>[3] Modelo Técnico Detalhado</p>
                             </div>
                           </div>
                         )}
 
                         {msg.kind === "final_proposal" && (
-                          <div className="text-[13.5px] leading-relaxed space-y-2 text-black">
-                            <p className="font-black text-black text-[13.5px] flex items-center gap-1.5">
-                              <span className="inline-block w-2 h-2 rounded-full bg-emerald-600" />
+                          <div className="text-[15px] leading-[21px] space-y-2 text-black font-normal">
+                            <p className="font-semibold text-black">
                               Proposta Gerada com Sucesso em 12 Segundos!
                             </p>
 
                             {/* Proposal Card in WhatsApp */}
-                            <div className="rounded-xl border border-emerald-400 bg-white p-3 shadow-2xs space-y-2">
+                            <div className="rounded-xl border border-emerald-300 bg-[#f8f9fa] p-2.5 shadow-2xs space-y-2">
                               <div className="flex items-center gap-2.5">
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300">
                                   <FileText className="h-5 w-5" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <p className="truncate font-black text-black text-[13px]">
+                                  <p className="truncate font-semibold text-black text-[13.5px]">
                                     Proposta_Solar_Marcelo_Santana.pdf
                                   </p>
-                                  <p className="text-[11.5px] text-black font-bold mt-0.5">
+                                  <p className="text-[11.5px] text-[#8696a0] font-normal mt-0.5">
                                     3,15 kWp • Economia de R$ 74.800 em 25 anos
                                   </p>
                                 </div>
                               </div>
 
                               <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2 text-[12px]">
-                                <span className="text-black font-black">Payback: 2,7 anos</span>
-                                <span className="flex items-center gap-1 font-black bg-emerald-600 text-white px-2.5 py-1 rounded-md text-[11.5px] shadow-xs">
+                                <span className="text-black font-semibold">Payback: 2,7 anos</span>
+                                <span className="flex items-center gap-1 font-semibold bg-emerald-600 text-white px-2.5 py-1 rounded-md text-[11.5px] shadow-xs">
                                   Abrir Proposta <ExternalLink className="h-3 w-3" />
                                 </span>
                               </div>
                             </div>
 
-                            <p className="text-[12px] text-black font-bold leading-relaxed">
+                            <p className="text-[12px] text-[#8696a0] leading-relaxed">
                               O cliente também já recebeu o link interativo no WhatsApp dele e a
                               oportunidade foi criada no seu CRM!
                             </p>
                           </div>
                         )}
 
-                        <div className="mt-0.5 flex items-center justify-end text-[11px] text-black font-semibold">
+                        <div className="flex items-center justify-end text-[11px] text-[#8696a0] font-normal pt-0.5">
                           <span>{msg.time}</span>
                         </div>
                       </div>
@@ -797,12 +780,12 @@ export function WhatsappFlowSimulator(): JSX.Element {
                     transition={{ duration: 0.2 }}
                     className="flex items-center gap-2 text-black text-xs py-1"
                   >
-                    <div className="flex gap-1.5 rounded-full bg-white px-3 py-1.5 border border-slate-300 shadow-xs">
-                      <span className="h-2 w-2 rounded-full bg-emerald-600 animate-bounce" />
-                      <span className="h-2 w-2 rounded-full bg-emerald-600 animate-bounce [animation-delay:150ms]" />
-                      <span className="h-2 w-2 rounded-full bg-emerald-600 animate-bounce [animation-delay:300ms]" />
+                    <div className="flex gap-1.5 rounded-full bg-white px-3 py-1.5 shadow-[0_1px_1px_rgba(0,0,0,0.08)] border border-black/[0.04]">
+                      <span className="h-2 w-2 rounded-full bg-[#00a884] animate-bounce" />
+                      <span className="h-2 w-2 rounded-full bg-[#00a884] animate-bounce [animation-delay:150ms]" />
+                      <span className="h-2 w-2 rounded-full bg-[#00a884] animate-bounce [animation-delay:300ms]" />
                     </div>
-                    <span className="text-[12px] text-black font-black animate-pulse">
+                    <span className="text-[12px] text-[#8696a0] font-medium animate-pulse">
                       {activeBotTyping}
                     </span>
                   </motion.div>
@@ -813,19 +796,19 @@ export function WhatsappFlowSimulator(): JSX.Element {
               <div ref={scrollAnchorRef} className="h-1 w-full" />
             </div>
 
-            {/* WhatsApp iOS Input Bar */}
-            <div className="relative z-20 flex items-center gap-2 bg-[#f0f2f5] px-3 py-2 border-t border-[#e5e5ea] text-slate-400">
-              <button type="button" className="text-black hover:opacity-75 transition px-1">
-                <span className="text-xl font-bold leading-none">+</span>
+            {/* WhatsApp iOS Input Bar (matching reference image) */}
+            <div className="relative z-20 flex items-center gap-2 bg-[#f6f6f6] px-3 py-2 border-t border-[#e5e5ea] text-slate-400">
+              <button type="button" className="text-[#007aff] hover:opacity-75 transition px-1">
+                <span className="text-2xl font-light leading-none">+</span>
               </button>
-              <div className="flex-1 min-h-[34px] flex items-center rounded-full bg-white px-3.5 py-1 text-[13px] text-black border border-slate-300 shadow-2xs">
+              <div className="flex-1 min-h-[34px] flex items-center rounded-full bg-white px-3.5 py-1 text-[15px] text-black border border-[#e5e5ea] shadow-2xs">
                 {activeInputDraft ? (
-                  <span className="text-black font-extrabold flex items-center gap-0.5">
+                  <span className="text-black font-normal flex items-center gap-0.5">
                     {activeInputDraft}
-                    <span className="inline-block w-1.5 h-3.5 bg-emerald-600 animate-pulse" />
+                    <span className="inline-block w-1.5 h-3.5 bg-[#00a884] animate-pulse" />
                   </span>
                 ) : (
-                  <span className="text-neutral-500 font-semibold">Mensagem</span>
+                  <span className="text-[#8696a0] font-normal">Mensagem</span>
                 )}
               </div>
               <motion.div
@@ -833,7 +816,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                   activeInputDraft ? { scale: [1, 1.15, 1], rotate: [0, 5, 0] } : { scale: 1 }
                 }
                 transition={{ duration: 0.3 }}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xs hover:bg-emerald-700 transition"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#00a884] text-white shadow-xs hover:bg-[#008069] transition"
               >
                 {activeInputDraft ? (
                   <Send className="h-3.5 w-3.5 fill-white" />
@@ -844,8 +827,8 @@ export function WhatsappFlowSimulator(): JSX.Element {
             </div>
 
             {/* iOS Home Indicator Bar */}
-            <div className="bg-[#f0f2f5] pb-1.5 pt-0.5 flex justify-center">
-              <div className="w-28 h-1 bg-black/35 rounded-full" />
+            <div className="bg-[#f6f6f6] pb-1.5 pt-0.5 flex justify-center">
+              <div className="w-28 h-1 bg-black/25 rounded-full" />
             </div>
           </div>
 
