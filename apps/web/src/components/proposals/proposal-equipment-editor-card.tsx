@@ -5,10 +5,8 @@ import {
   AlertTriangle,
   Check,
   CheckCircle2,
-  Clock,
   Cpu,
   Loader2,
-  Package,
   Search,
   Sparkles,
   Sun,
@@ -586,112 +584,29 @@ export function ProposalEquipmentEditorCard({
               Ajuste itens ou quantidades do kit da proposta.
             </p>
 
-            {/* Modalidades de Cotação: Preço por kWp (Ativo) e Distribuidores Parceiros (Em Breve) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-0.5">
-              {/* Card 1: Preço por kWp (1º Lugar - Ativo) */}
-              <div className="relative rounded-xl border border-emerald-500 bg-emerald-500/[0.04] ring-1 ring-emerald-500 shadow-xs p-3.5 sm:p-4.5 flex flex-col justify-between text-left select-none">
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
-                        <Sparkles className="h-4 w-4" />
-                      </span>
-                      <span className="text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
-                        Preço por kWp
-                      </span>
-                      <span className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700 dark:text-emerald-300">
-                        Perfil do Integrador
-                      </span>
-                    </div>
-                    <span className="h-5 w-5 shrink-0 rounded-full border border-emerald-500 bg-emerald-500 text-white flex items-center justify-center">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                    </span>
-                  </div>
-
-                  <p className="text-[0.72rem] sm:text-xs text-[var(--color-muted-foreground)] leading-relaxed">
-                    Dimensionamento de equipamentos reais com orçamento comercial por R$/kWp da sua
-                    região, incluindo projeto completo e instalação.
-                  </p>
-
-                  <div className="space-y-1 pt-0.5 text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)]">
-                    <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      Dimensionamento automático de equipamentos reais
-                    </div>
-                    <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      Orçamento comercial flexível por R$/kWp
-                    </div>
-                    <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      Opções de kits: Standard, Elite e Premium
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-3.5 pt-2.5 border-t border-emerald-500/20 flex items-center justify-between">
-                  <span className="text-[0.68rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
-                    <Zap className="h-3.5 w-3.5 text-emerald-500" />
-                    Modalidade ativa na proposta
+            {/* Modalidade de Cotação: Preço por kWp (Compacto) */}
+            <div className="rounded-xl border border-emerald-500/35 bg-emerald-500/[0.04] p-3 select-none">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <Sparkles className="h-3.5 w-3.5" />
                   </span>
-                  <span className="text-[0.65rem] sm:text-xs font-medium text-emerald-700/80 dark:text-emerald-300/80">
-                    • Preço comercial por kWp
+                  <span className="text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
+                    Preço por kWp
+                  </span>
+                  <span className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700 dark:text-emerald-300">
+                    Perfil do Integrador
                   </span>
                 </div>
+                <span className="h-4.5 w-4.5 shrink-0 rounded-full border border-emerald-500 bg-emerald-500 text-white flex items-center justify-center">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                </span>
               </div>
 
-              {/* Card 2: Distribuidores Parceiros (Ao lado, meio escuro, Em Breve) */}
-              <div
-                className="relative rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-muted)]/15 dark:bg-zinc-900/50 p-3.5 sm:p-4.5 flex flex-col justify-between text-left select-none opacity-70 hover:opacity-80 transition-opacity"
-                title="Esta funcionalidade estará disponível em breve com estoque de múltiplos distribuidores integrados"
-              >
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-muted)]/30 text-[var(--color-muted-foreground)] shrink-0">
-                        <Package className="h-4 w-4" />
-                      </span>
-                      <span className="text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
-                        Distribuidores Parceiros
-                      </span>
-                    </div>
-                    <span className="rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[0.65rem] sm:text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1 shadow-xs">
-                      <Clock className="h-3 w-3" />
-                      Em Breve
-                    </span>
-                  </div>
-
-                  <p className="text-[0.72rem] sm:text-xs text-[var(--color-muted-foreground)] leading-relaxed">
-                    Cotação integrada diretamente com o estoque e catálogos em tempo real de
-                    distribuidores parceiros homologados.
-                  </p>
-
-                  <div className="space-y-1 pt-0.5 text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)]">
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]/50 shrink-0" />
-                      Estoque em tempo real por distribuidor parceiro
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]/50 shrink-0" />
-                      Cotação multicatálogo e comparação entre fornecedores
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]/50 shrink-0" />
-                      Cálculo automatizado de frete, impostos e prazo de envio
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-3.5 pt-2.5 border-t border-[var(--color-border)]/50 flex items-center justify-between">
-                  <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium flex items-center gap-1">
-                    <Warehouse className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
-                    Integração direta de distribuidores
-                  </span>
-                  <span className="text-[0.65rem] sm:text-xs font-semibold text-amber-600/90 dark:text-amber-400/90">
-                    Disponível em breve
-                  </span>
-                </div>
-              </div>
+              <p className="mt-2 text-xs text-[var(--color-muted-foreground)] leading-relaxed">
+                Dimensionamento de equipamentos reais com orçamento comercial por R$/kWp da sua
+                região, incluindo projeto completo e instalação.
+              </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
