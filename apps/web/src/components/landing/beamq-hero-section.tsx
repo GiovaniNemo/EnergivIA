@@ -22,12 +22,13 @@ export function BeamqHeroSection() {
   }, []);
 
   return (
-    <section className="relative min-h-[100vh] w-full bg-[#02040a] text-white overflow-hidden font-plus-jakarta selection:bg-[#38bdf8]/30 selection:text-white">
+    <section className="relative min-h-[100vh] w-full bg-[#02040a] text-white overflow-hidden font-plus-jakarta selection:bg-[#10b981]/30 selection:text-white">
       {/* Background Media System - Hardware-accelerated fluid video with smooth blending */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <video
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-cover object-center opacity-85 will-change-transform"
+          style={{ filter: "hue-rotate(65deg) saturate(1.15)" }}
           src="https://strvid.nyc3.cdn.digitaloceanspaces.com/motionsite/blue-light-glow.mp4"
           autoPlay
           loop
@@ -68,7 +69,7 @@ export function BeamqHeroSection() {
                 className="relative hover:text-white transition-colors duration-300 group"
               >
                 {item}
-                <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-gradient-to-r from-[#38bdf8] to-[#8b5cf6] transition-all duration-300 group-hover:w-full"></span>
+                <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-gradient-to-r from-[#10b981] to-[#84cc16] transition-all duration-300 group-hover:w-full"></span>
               </a>
             ))}
           </nav>
@@ -83,7 +84,7 @@ export function BeamqHeroSection() {
             </a>
             <a
               href={appLoginUrl}
-              className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-semibold text-white rounded-full bg-white/5 backdrop-blur-md border border-cyan-500/35 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(56,189,248,0.3)] hover:bg-white/10 transition-all"
+              className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-semibold text-white rounded-full bg-white/5 backdrop-blur-md border border-emerald-500/40 hover:border-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-500/10 transition-all"
             >
               Começar Agora &rarr;
             </a>
@@ -97,7 +98,7 @@ export function BeamqHeroSection() {
 
         {/* Mobile Navigation Drawer */}
         <div
-          className={`lg:hidden absolute top-full left-0 w-full bg-[#02040a]/95 backdrop-blur-xl border-b border-cyan-500/20 transition-all duration-300 overflow-hidden ${isMenuOpen ? "max-h-[400px] py-4" : "max-h-0 py-0 border-transparent"}`}
+          className={`lg:hidden absolute top-full left-0 w-full bg-[#02040a]/95 backdrop-blur-xl border-b border-emerald-500/20 transition-all duration-300 overflow-hidden ${isMenuOpen ? "max-h-[400px] py-4" : "max-h-0 py-0 border-transparent"}`}
         >
           <div className="flex flex-col px-6 gap-4">
             {["Como Funciona", "Resultados", "Cenários", "Diferenciais", "FAQ"].map((item) => (
@@ -119,7 +120,7 @@ export function BeamqHeroSection() {
               </a>
               <a
                 href={appLoginUrl}
-                className="text-center py-3 font-semibold text-[#02040a] bg-gradient-to-r from-[#38bdf8] to-[#3b82f6] rounded-lg"
+                className="text-center py-3 font-semibold text-[#02040a] bg-gradient-to-r from-[#10b981] to-[#059669] rounded-lg"
               >
                 Começar Agora
               </a>
@@ -137,9 +138,9 @@ export function BeamqHeroSection() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="inline-flex items-center px-4 py-1.5 mb-8 rounded-full border border-cyan-500/30 bg-cyan-950/30 backdrop-blur-sm shadow-[0_0_15px_rgba(56,189,248,0.2)]"
+              className="inline-flex items-center px-4 py-1.5 mb-8 rounded-full border border-emerald-500/30 bg-emerald-950/30 backdrop-blur-sm shadow-[0_0_15px_rgba(16,185,129,0.2)]"
             >
-              <span className="text-[#38bdf8] text-xs sm:text-sm font-bold uppercase tracking-[0.3em]">
+              <span className="text-[#10b981] text-xs sm:text-sm font-bold uppercase tracking-[0.3em]">
                 INTELIGENTE • SEGURO • ESCALÁVEL
               </span>
             </motion.div>
@@ -166,7 +167,7 @@ export function BeamqHeroSection() {
                   delay: 0.3,
                   ease: [0.16, 1, 0.3, 1],
                 }}
-                className="inline-block pt-1 pb-6 sm:pb-8 px-2 text-transparent bg-clip-text bg-gradient-to-r from-[#38bdf8] via-[#60a5fa] to-[#a855f7] drop-shadow-[0_0_25px_rgba(56,189,248,0.45)] will-change-transform"
+                className="inline-block pt-1 pb-6 sm:pb-8 px-2 text-transparent bg-clip-text bg-gradient-to-r from-[#10b981] via-[#2dd4bf] to-[#a3e635] drop-shadow-[0_0_25px_rgba(16,185,129,0.45)] will-change-transform"
               >
                 <span className="inline-block">Gere propostas</span>{" "}
                 <span className="inline-block">em segundos.</span>
@@ -213,7 +214,7 @@ export function BeamqHeroSection() {
 
       {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce z-10">
-        <div className="w-[1px] h-12 bg-gradient-to-b from-cyan-400 to-transparent"></div>
+        <div className="w-[1px] h-12 bg-gradient-to-b from-emerald-400 to-transparent"></div>
       </div>
     </section>
   );

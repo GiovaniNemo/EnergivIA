@@ -61,12 +61,12 @@ export function HowItWorksTabs(): JSX.Element {
       className="relative border-t border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24 overflow-hidden"
     >
       {/* Subtle ambient light glow */}
-      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-[radial-gradient(ellipse_at_top,rgba(56,189,248,0.07),transparent_70%)]" />
+      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.07),transparent_70%)]" />
 
       <div className="relative mx-auto max-w-6xl">
         <div className="text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center px-4 py-1.5 mb-4 rounded-full border border-cyan-500/30 bg-cyan-950/30 backdrop-blur-sm shadow-[0_0_15px_rgba(56,189,248,0.15)]">
-            <span className="text-[#38bdf8] text-xs font-bold uppercase tracking-[0.25em]">
+          <div className="inline-flex items-center px-4 py-1.5 mb-4 rounded-full border border-emerald-500/30 bg-emerald-950/30 backdrop-blur-sm shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+            <span className="text-[#10b981] text-xs font-bold uppercase tracking-[0.25em]">
               DEMONSTRAÇÃO INTERATIVA
             </span>
           </div>
@@ -91,13 +91,13 @@ export function HowItWorksTabs(): JSX.Element {
                 className={[
                   "rounded-xl px-5 py-4 text-left transition-all duration-300 relative overflow-hidden group",
                   isActive
-                    ? "border border-cyan-500/40 bg-gradient-to-r from-cyan-950/50 via-[#0a1424]/80 to-[#070b14]/80 shadow-[0_0_25px_rgba(56,189,248,0.15)] ring-1 ring-cyan-400/30"
+                    ? "border border-emerald-500/40 bg-gradient-to-r from-emerald-950/50 via-[#071914]/80 to-[#070b14]/80 shadow-[0_0_25px_rgba(16,185,129,0.15)] ring-1 ring-emerald-400/30"
                     : "border border-transparent bg-transparent text-slate-400 hover:bg-white/[0.03] hover:text-slate-200 hover:border-white/5",
                 ].join(" ")}
                 aria-pressed={isActive}
               >
                 {isActive && (
-                  <span className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#38bdf8] via-[#3b82f6] to-[#8b5cf6]" />
+                  <span className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#10b981] via-[#14b8a6] to-[#84cc16]" />
                 )}
                 <div className="flex items-center justify-between">
                   <p
@@ -106,7 +106,7 @@ export function HowItWorksTabs(): JSX.Element {
                     {tab.label}
                   </p>
                   {isActive && (
-                    <span className="flex h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(56,189,248,0.8)] animate-pulse" />
+                    <span className="flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse" />
                   )}
                 </div>
                 <p
@@ -122,10 +122,10 @@ export function HowItWorksTabs(): JSX.Element {
         </div>
 
         {/* Main Interactive Container */}
-        <div className="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-[#060a12]/90 backdrop-blur-2xl shadow-[0_20px_70px_rgba(0,0,0,0.9),0_0_40px_rgba(56,189,248,0.05)] ring-1 ring-cyan-500/10">
+        <div className="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-[#060a12]/90 backdrop-blur-2xl shadow-[0_20px_70px_rgba(0,0,0,0.9),0_0_40px_rgba(16,185,129,0.05)] ring-1 ring-emerald-500/10">
           <div className="flex items-center justify-between border-b border-white/10 bg-[#090e1a]/60 px-6 py-3.5 text-slate-200">
             <div className="flex items-center gap-2.5">
-              <span className="text-cyan-400">{tabIcon}</span>
+              <span className="text-emerald-400">{tabIcon}</span>
               <p className="text-sm font-semibold tracking-wide">
                 {tabs.find((tab) => tab.id === activeTab)?.label ?? "Demonstração"}
               </p>
@@ -157,7 +157,7 @@ function ProposalsDemoContent(): JSX.Element {
         {proposalPreviewItems.map((item) => (
           <article
             key={item.id}
-            className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#070b14]/80 shadow-xl transition-all duration-300 hover:border-cyan-500/40 hover:shadow-[0_0_25px_rgba(56,189,248,0.15)]"
+            className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#070b14]/80 shadow-xl transition-all duration-300 hover:border-emerald-500/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.15)]"
           >
             <div className="h-[290px] sm:h-[310px] w-full p-2.5 sm:p-3 bg-[#03060c]">
               <MockProposalPreview
@@ -167,7 +167,7 @@ function ProposalsDemoContent(): JSX.Element {
               />
             </div>
             <div className="border-t border-white/10 bg-[#090d18]/80 p-4">
-              <p className="text-sm font-semibold text-white group-hover:text-cyan-300 transition-colors">
+              <p className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors">
                 {item.title}
               </p>
               <p className="mt-0.5 text-xs text-slate-400">{item.subtitle}</p>

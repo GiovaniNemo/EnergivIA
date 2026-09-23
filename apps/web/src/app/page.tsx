@@ -57,7 +57,7 @@ export const metadata: Metadata = {
 
 export default function HomePage(): JSX.Element {
   return (
-    <div className="landing-page min-h-screen flex flex-col bg-[#02040a] text-white antialiased font-plus-jakarta selection:bg-[#38bdf8]/30 selection:text-white">
+    <div className="landing-page min-h-screen flex flex-col bg-[#02040a] text-white antialiased font-plus-jakarta selection:bg-[#10b981]/30 selection:text-white">
       {/* ------------------------------------------------------------- */}
       {/* HERO SECTION                                                  */}
       {/* ------------------------------------------------------------- */}
@@ -76,17 +76,14 @@ export default function HomePage(): JSX.Element {
         {/* ------------------------------------------------------------- */}
         {/* DIFERENCIAIS                                                  */}
         {/* ------------------------------------------------------------- */}
-        {/* ------------------------------------------------------------- */}
-        {/* DIFERENCIAIS                                                  */}
-        {/* ------------------------------------------------------------- */}
         <section
           id="diferenciais"
           className="relative overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24"
         >
           <div className="mx-auto max-w-6xl">
             <div className="relative mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
-                <Zap className="h-3.5 w-3.5 text-cyan-400" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                <Zap className="h-3.5 w-3.5 text-emerald-400" />
                 Diferenciais reais
               </span>
               <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
@@ -105,28 +102,28 @@ export default function HomePage(): JSX.Element {
                   title: "Fluxo completo no WhatsApp",
                   description:
                     "Da conta de luz ao envio da proposta: seu time executa tudo no WhatsApp, com menos troca de ferramenta.",
-                  accent: "text-cyan-400 bg-cyan-950/40 border border-cyan-500/20",
+                  accent: "text-emerald-400 bg-emerald-950/40 border border-emerald-500/20",
                 },
                 {
                   icon: FileSearch,
                   title: "IA que lê a conta automaticamente",
                   description:
                     "A plataforma extrai dados da fatura, monta base técnica e acelera a simulação sem depender de digitação manual.",
-                  accent: "text-blue-400 bg-blue-950/40 border border-blue-500/20",
+                  accent: "text-teal-400 bg-teal-950/40 border border-teal-500/20",
                 },
                 {
                   icon: Gauge,
                   title: "Velocidade para responder em minutos",
                   description:
                     "Enquanto outros ainda montam planilha, você já apresenta simulação, kit sugerido e proposta pronta para o cliente.",
-                  accent: "text-cyan-400 bg-cyan-950/40 border border-cyan-500/20",
+                  accent: "text-emerald-400 bg-emerald-950/40 border border-emerald-500/20",
                 },
                 {
                   icon: Workflow,
                   title: "Operação ponta a ponta, não só proposta",
                   description:
                     "Conecta atendimento, simulação, proposta e acompanhamento comercial no mesmo fluxo para aumentar conversão.",
-                  accent: "text-blue-400 bg-blue-950/40 border border-blue-500/20",
+                  accent: "text-teal-400 bg-teal-950/40 border border-teal-500/20",
                 },
               ].map((item, index) => {
                 const Icon = item.icon;
@@ -134,7 +131,7 @@ export default function HomePage(): JSX.Element {
                   <article
                     key={item.title}
                     className={[
-                      "group relative overflow-hidden rounded-3xl border border-white/10 bg-[#070b14]/80 p-7 transition-all duration-300 hover:-translate-y-1 hover:border-cyan-500/40 hover:shadow-[0_0_30px_rgba(56,189,248,0.12)] backdrop-blur-md",
+                      "group relative overflow-hidden rounded-3xl border border-white/10 bg-[#070b14]/80 p-7 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/40 hover:shadow-[0_0_30px_rgba(16,185,129,0.12)] backdrop-blur-md",
                       index === 0 || index === 3 ? "md:col-span-2" : "",
                     ].join(" ")}
                   >
@@ -143,7 +140,7 @@ export default function HomePage(): JSX.Element {
                     >
                       <Icon className="h-5 w-5" />
                     </div>
-                    <h3 className="mt-5 text-lg font-semibold leading-tight text-white group-hover:text-cyan-300 transition-colors">
+                    <h3 className="mt-5 text-lg font-semibold leading-tight text-white group-hover:text-emerald-300 transition-colors">
                       {item.title}
                     </h3>
                     <p className="mt-2 text-sm leading-relaxed text-slate-400 font-light">
@@ -165,7 +162,7 @@ export default function HomePage(): JSX.Element {
         >
           <div className="relative mx-auto max-w-4xl">
             <div className="mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center rounded-full border border-cyan-500/30 bg-cyan-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
+              <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
                 FAQ
               </span>
               <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
@@ -181,11 +178,11 @@ export default function HomePage(): JSX.Element {
               {faqItems.map((item) => (
                 <details
                   key={item.question}
-                  className="group rounded-2xl border border-white/10 bg-[#070b14]/70 px-6 py-4 shadow-sm transition-all duration-200 hover:border-cyan-500/30 backdrop-blur-md"
+                  className="group rounded-2xl border border-white/10 bg-[#070b14]/70 px-6 py-4 shadow-sm transition-all duration-200 hover:border-emerald-500/30 backdrop-blur-md"
                 >
                   <summary className="cursor-pointer list-none pr-6 text-left text-base font-semibold text-white marker:content-none flex items-center justify-between">
                     <span>{item.question}</span>
-                    <span className="text-cyan-400 transition-transform duration-200 group-open:rotate-45 text-xl font-light">
+                    <span className="text-emerald-400 transition-transform duration-200 group-open:rotate-45 text-xl font-light">
                       +
                     </span>
                   </summary>
@@ -205,9 +202,9 @@ export default function HomePage(): JSX.Element {
           id="para-quem"
           className="relative overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-16 sm:px-6 sm:py-24"
         >
-          <div className="relative z-10 mx-auto max-w-4xl rounded-3xl border border-cyan-500/30 bg-gradient-to-b from-[#0a1424] via-[#070b14] to-[#04060c] p-8 text-center shadow-[0_0_60px_rgba(56,189,248,0.12)] sm:p-12 backdrop-blur-xl">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-950/40 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
-              <Sun className="h-3.5 w-3.5 text-cyan-400" />
+          <div className="relative z-10 mx-auto max-w-4xl rounded-3xl border border-emerald-500/30 bg-gradient-to-b from-[#061c16] via-[#04120e] to-[#02040a] p-8 text-center shadow-[0_0_60px_rgba(16,185,129,0.12)] sm:p-12 backdrop-blur-xl">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/40 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+              <Sun className="h-3.5 w-3.5 text-emerald-400" />
               Próximo passo
             </span>
             <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
@@ -241,13 +238,13 @@ export default function HomePage(): JSX.Element {
         {/* ------------------------------------------------------------- */}
         <section className="relative overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-16 sm:px-6 sm:py-20">
           <div className="relative mx-auto max-w-5xl rounded-3xl border border-white/10 bg-[#070b14]/70 p-6 shadow-xl sm:p-8 backdrop-blur-md">
-            <span className="inline-flex items-center rounded-full border border-cyan-500/30 bg-cyan-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
+            <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
               Conteúdo para integradores
             </span>
             <h2 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl">
               Software para integradores solares: como gerar propostas mais rápido
             </h2>
-            <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500" />
+            <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-emerald-400 via-teal-500 to-lime-500" />
             <div className="mt-6 grid gap-5 text-sm leading-relaxed text-slate-400 font-light sm:text-base md:grid-cols-2">
               <p>
                 Muitos integradores ainda perdem tempo com processos manuais para montar propostas
@@ -303,9 +300,9 @@ export default function HomePage(): JSX.Element {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#03060c] p-4 transition-all hover:-translate-y-0.5 hover:border-cyan-500/40 hover:shadow-[0_0_20px_rgba(56,189,248,0.1)]"
+                    className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#03060c] p-4 transition-all hover:-translate-y-0.5 hover:border-emerald-500/40 hover:shadow-[0_0_20px_rgba(16,185,129,0.1)]"
                   >
-                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-950/50 border border-cyan-500/20 text-cyan-300">
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-950/50 border border-emerald-500/20 text-emerald-300">
                       <Icon className="h-4 w-4" />
                     </div>
                     <div>

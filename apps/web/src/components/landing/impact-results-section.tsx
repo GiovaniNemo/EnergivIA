@@ -32,7 +32,7 @@ const METRICS: MetricItem[] = [
     label: "Para gerar uma proposta completa",
     sublabel: "Extração por IA, dimensionamento e link comercial prontos.",
     icon: Clock,
-    accentColor: "from-cyan-400 to-blue-500",
+    accentColor: "from-emerald-400 to-teal-500",
     tag: "Agilidade Total",
   },
   {
@@ -41,7 +41,7 @@ const METRICS: MetricItem[] = [
     label: "Da conta de luz ao PDF final",
     sublabel: "Envio da fatura, validação do kit e geração da proposta.",
     icon: Layers,
-    accentColor: "from-blue-400 to-indigo-500",
+    accentColor: "from-teal-400 to-emerald-400",
     tag: "Sem Burocracia",
   },
   {
@@ -50,7 +50,7 @@ const METRICS: MetricItem[] = [
     label: "Chat, kit e proposta no mesmo canal",
     sublabel: "Tudo acontece diretamente no WhatsApp que o cliente usa.",
     icon: Workflow,
-    accentColor: "from-cyan-400 to-emerald-400",
+    accentColor: "from-emerald-400 to-lime-400",
     tag: "Integrado",
   },
   {
@@ -158,13 +158,13 @@ export function ImpactResultsSection(): JSX.Element {
       <div
         className="pointer-events-none absolute -inset-px opacity-25 transition-opacity duration-300"
         style={{
-          background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(56, 189, 248, 0.12), transparent 70%)`,
+          background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(16, 185, 129, 0.12), transparent 70%)`,
         }}
       />
 
       {/* Ambient background blur elements */}
-      <div className="pointer-events-none absolute top-1/4 -left-40 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-1/4 -right-40 h-96 w-96 rounded-full bg-blue-600/10 blur-3xl" />
+      <div className="pointer-events-none absolute top-1/4 -left-40 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-1/4 -right-40 h-96 w-96 rounded-full bg-teal-600/10 blur-3xl" />
 
       <div className="relative mx-auto max-w-6xl">
         {/* Section Header with Stagger Reveal */}
@@ -178,9 +178,9 @@ export function ImpactResultsSection(): JSX.Element {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-950/40 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.15)]"
+            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/40 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
           >
-            <TrendingUp className="h-3.5 w-3.5 text-cyan-400" />
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
             Resultados Comprovados
           </motion.span>
 
@@ -211,14 +211,14 @@ export function ImpactResultsSection(): JSX.Element {
                   y: -6,
                   transition: { duration: 0.2 },
                 }}
-                className="group relative flex flex-col justify-between rounded-2xl border border-white/10 bg-[#070b14]/80 p-6 shadow-xl backdrop-blur-md transition-all duration-300 hover:border-cyan-500/40 hover:shadow-[0_0_30px_rgba(56,189,248,0.15)]"
+                className="group relative flex flex-col justify-between rounded-2xl border border-white/10 bg-[#070b14]/80 p-6 shadow-xl backdrop-blur-md transition-all duration-300 hover:border-emerald-500/40 hover:shadow-[0_0_30px_rgba(16,185,129,0.15)]"
               >
                 {/* Subtle top glow highlight */}
-                <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
                 <div>
                   <div className="flex items-center justify-between">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10 text-cyan-400 transition-colors duration-300 group-hover:bg-cyan-500/10 group-hover:border-cyan-500/30">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10 text-emerald-400 transition-colors duration-300 group-hover:bg-emerald-500/10 group-hover:border-emerald-500/30">
                       <Icon className="h-5 w-5" />
                     </div>
                     <span className="rounded-full bg-white/5 px-2.5 py-0.5 text-[11px] font-mono text-slate-400 border border-white/5">
@@ -237,7 +237,7 @@ export function ImpactResultsSection(): JSX.Element {
                     >
                       {item.value}
                     </p>
-                    <h3 className="mt-2 text-base font-semibold text-white group-hover:text-cyan-300 transition-colors">
+                    <h3 className="mt-2 text-base font-semibold text-white group-hover:text-emerald-300 transition-colors">
                       {item.label}
                     </h3>
                   </motion.div>
@@ -259,11 +259,11 @@ export function ImpactResultsSection(): JSX.Element {
           className="relative mt-10 overflow-hidden rounded-2xl border border-white/10 bg-[#070b14]/70 p-8 shadow-xl backdrop-blur-md"
         >
           {/* Subtle background gradient accent */}
-          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-cyan-500/10 blur-2xl" />
+          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/10 blur-2xl" />
 
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-start gap-4 flex-1">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                 <Quote className="h-6 w-6" />
               </div>
 
@@ -280,7 +280,7 @@ export function ImpactResultsSection(): JSX.Element {
                       "{TESTIMONIALS[activeTestimonial].quote}"
                     </blockquote>
                     <figcaption className="mt-3 flex items-center gap-2 text-sm">
-                      <span className="font-semibold text-cyan-300">
+                      <span className="font-semibold text-emerald-300">
                         {TESTIMONIALS[activeTestimonial].author}
                       </span>
                       <span className="text-slate-500">•</span>
@@ -308,7 +308,7 @@ export function ImpactResultsSection(): JSX.Element {
                     }}
                     className={`h-1.5 rounded-full transition-all duration-300 ${
                       activeTestimonial === idx
-                        ? "w-6 bg-cyan-400"
+                        ? "w-6 bg-emerald-400"
                         : "w-1.5 bg-slate-700 hover:bg-slate-500"
                     }`}
                     aria-label={`Ver depoimento ${idx + 1}`}
@@ -344,7 +344,7 @@ export function ImpactResultsSection(): JSX.Element {
           className="mt-8 overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] py-5 px-4 backdrop-blur-xs"
         >
           <div className="flex items-center justify-center gap-2 mb-4">
-            <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" />
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
             <p className="text-center text-xs font-semibold uppercase tracking-wider text-slate-400">
               Integradores e parceiros que confiam na operação
             </p>
@@ -368,9 +368,9 @@ export function ImpactResultsSection(): JSX.Element {
               {[...PARTNERS, ...PARTNERS].map((name, i) => (
                 <span
                   key={`${name}-${i}`}
-                  className="flex items-center gap-2 text-sm font-semibold text-slate-400 transition-colors duration-200 hover:text-cyan-300 whitespace-nowrap cursor-default"
+                  className="flex items-center gap-2 text-sm font-semibold text-slate-400 transition-colors duration-200 hover:text-emerald-300 whitespace-nowrap cursor-default"
                 >
-                  <Sparkles className="h-3 w-3 text-cyan-500/50" />
+                  <Sparkles className="h-3 w-3 text-emerald-500/50" />
                   {name}
                 </span>
               ))}

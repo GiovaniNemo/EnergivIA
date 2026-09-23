@@ -463,7 +463,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                 <ArrowLeft className="h-5 w-5 text-[#007aff] hover:opacity-75 transition cursor-pointer" />
                 <div className="relative">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#070b14] ring-1 ring-slate-200 overflow-hidden shadow-xs">
-                    <span className="text-cyan-400 font-bold text-xs">⚡</span>
+                    <span className="text-emerald-400 font-bold text-xs">⚡</span>
                   </div>
                   <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#25d366]" />
                 </div>
@@ -848,19 +848,19 @@ export function WhatsappFlowSimulator(): JSX.Element {
             <button
               type="button"
               onClick={handleTogglePlay}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-100 hover:bg-white/10 hover:border-cyan-500/30 transition"
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-100 hover:bg-white/10 hover:border-emerald-500/30 transition"
               title={isPlaying ? "Pausar" : "Reproduzir"}
             >
               {isPlaying ? (
                 <Pause className="h-3.5 w-3.5" />
               ) : (
-                <Play className="h-3.5 w-3.5 fill-current text-cyan-400" />
+                <Play className="h-3.5 w-3.5 fill-current text-emerald-400" />
               )}
             </button>
             <button
               type="button"
               onClick={handleReset}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:border-cyan-500/30 transition"
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:border-emerald-500/30 transition"
               title="Reiniciar do começo"
             >
               <RotateCcw className="h-3.5 w-3.5" />
@@ -879,7 +879,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                 onClick={() => setSpeed(s)}
                 className={`rounded-full px-2.5 py-0.5 font-medium transition ${
                   speed === s
-                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-[0_0_10px_rgba(56,189,248,0.2)] font-bold"
+                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)] font-bold"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
@@ -896,14 +896,14 @@ export function WhatsappFlowSimulator(): JSX.Element {
       <div className="w-full max-w-lg space-y-6 z-10">
         <div>
           <div className="flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-950/40 px-3.5 py-1 text-xs font-semibold text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
-              <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-950/40 px-3.5 py-1 text-xs font-semibold text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               Conversa em Tempo Real
             </span>
 
             {/* Mouse Scroll Interactive Cue */}
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] backdrop-blur-sm px-3 py-1 text-xs font-mono text-cyan-400 shadow-sm">
-              <Mouse className="h-3.5 w-3.5 animate-bounce text-cyan-400" />
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] backdrop-blur-sm px-3 py-1 text-xs font-mono text-emerald-400 shadow-sm">
+              <Mouse className="h-3.5 w-3.5 animate-bounce text-emerald-400" />
               <span>Role o mouse para avançar</span>
             </div>
           </div>
@@ -926,7 +926,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
               <div key={m.id} className="space-y-1.5">
                 <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800/80 border border-white/5">
                   <div
-                    className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 will-change-[width] transition-all duration-300 shadow-[0_0_10px_rgba(56,189,248,0.5)]"
+                    className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 will-change-[width] transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
                     style={{
                       width: `${pct}%`,
                     }}
@@ -934,7 +934,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                 </div>
                 <p
                   className={`text-xs font-mono text-center truncate transition-colors duration-200 ${
-                    isCurrent ? "text-cyan-400 font-bold" : "text-slate-500"
+                    isCurrent ? "text-emerald-400 font-bold" : "text-slate-500"
                   }`}
                 >
                   {m.tag}
@@ -955,7 +955,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                 onClick={() => handleSelectMilestone(idx)}
                 className={`w-full text-left rounded-2xl border p-4 transition-all duration-300 ${
                   isCurrent
-                    ? "border-cyan-500/50 bg-gradient-to-r from-cyan-950/40 via-[#0a1424] to-[#070b14] shadow-[0_0_25px_rgba(56,189,248,0.15)] ring-1 ring-cyan-400/30"
+                    ? "border-emerald-500/50 bg-gradient-to-r from-emerald-950/40 via-[#071914] to-[#070b14] shadow-[0_0_25px_rgba(16,185,129,0.15)] ring-1 ring-emerald-400/30"
                     : "border-white/5 bg-white/[0.02] text-slate-400 hover:border-white/15 hover:bg-white/[0.04] hover:text-slate-200"
                 }`}
               >
@@ -964,7 +964,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                     <span
                       className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all ${
                         isCurrent
-                          ? "bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 shadow-[0_0_10px_rgba(56,189,248,0.4)]"
+                          ? "bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
                           : "bg-slate-800 text-slate-400"
                       }`}
                     >
@@ -980,8 +980,8 @@ export function WhatsappFlowSimulator(): JSX.Element {
                   </div>
 
                   {isCurrent && (
-                    <span className="flex items-center gap-1.5 rounded-full bg-cyan-950/60 px-2.5 py-0.5 text-xs font-mono text-cyan-300 border border-cyan-500/40 shadow-[0_0_10px_rgba(56,189,248,0.2)]">
-                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
+                    <span className="flex items-center gap-1.5 rounded-full bg-emerald-950/60 px-2.5 py-0.5 text-xs font-mono text-emerald-300 border border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
                       Ao vivo
                     </span>
                   )}
