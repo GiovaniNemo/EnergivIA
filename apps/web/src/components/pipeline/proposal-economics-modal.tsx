@@ -16,6 +16,7 @@ import { motion } from "framer-motion";
 import {
   CheckCircle2,
   ChevronDown,
+  Clock,
   Copy,
   Cpu,
   ExternalLink,
@@ -29,6 +30,7 @@ import {
   Upload,
   FileText,
   MessageCircle,
+  Warehouse,
   Zap,
   Bot,
   Info,
@@ -166,6 +168,10 @@ type ExtractedBillDataWithHistory = EnergyBillExtractedPayload & {
   currentMonthConsumptionKwh?: number | null;
   simulationMonthlyConsumptionKwh?: number | null;
 };
+
+function _kitItemsTotal(items: { quantity: number; unit_price?: number }[]): number {
+  return items.reduce((sum, item) => sum + item.quantity * (item.unit_price || 0), 0);
+}
 
 type GeneratedProposal = {
   id: string;
@@ -678,6 +684,7 @@ export const ProposalEconomicsModal = forwardRef<
   const [shareMenuAnchor, setShareMenuAnchor] = useState<HTMLElement | null>(null);
   const [proposalCreateLoading, setProposalCreateLoading] = useState(false);
   const [proposalCreateError, setProposalCreateError] = useState<string | null>(null);
+  const [_quotingMode, _setQuotingMode] = useState<"kwp_rate" | "distributor">("kwp_rate");
   const [kwpRateValue, setKwpRateValue] = useState<number>(2800);
 
   const [distributorTiers, setDistributorTiers] = useState<DistributorTierKit[] | null>(null);
@@ -2855,52 +2862,148 @@ export const ProposalEconomicsModal = forwardRef<
                 </p>
               ) : null}
 
-              {/* 2. Modo de Cotação: Preço por kWp */}
-              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.04] p-3 sm:p-5 shadow-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                        <Sparkles className="h-4 w-4" />
-                      </span>
-                      <h3 className="text-sm sm:text-base font-bold text-[var(--color-foreground)]">
-                        Modo de Cotação: Preço por kWp
-                      </h3>
-                      <span className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-0.5 text-[0.65rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                        Perfil do Integrador
+              {/* 2. Seletor de Modo de Cotação */}
+              <div className="space-y-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 sm:p-5 shadow-xs">
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-[var(--color-foreground)] flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-emerald-500" />
+                    Modo de Cotação da Proposta
+                  </h3>
+                  <p className="mt-0.5 text-xs sm:text-sm text-[var(--color-muted-foreground)]">
+                    Defina como você deseja estruturar o orçamento e os equipamentos para o cliente:
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-0.5">
+                  {/* Card 1: Preço por kWp (1º Lugar - Ativo) */}
+                  <div className="relative rounded-xl border border-emerald-500 bg-emerald-500/[0.04] ring-1 ring-emerald-500 shadow-xs p-3.5 sm:p-4.5 flex flex-col justify-between text-left select-none">
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                            <Sparkles className="h-4 w-4" />
+                          </span>
+                          <span className="text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
+                            Preço por kWp
+                          </span>
+                          <span className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700 dark:text-emerald-300">
+                            Perfil do Integrador
+                          </span>
+                        </div>
+                        <span className="h-5 w-5 shrink-0 rounded-full border border-emerald-500 bg-emerald-500 text-white flex items-center justify-center">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
+
+                      <p className="text-[0.72rem] sm:text-xs text-[var(--color-muted-foreground)] leading-relaxed">
+                        Dimensionamento de equipamentos reais com orçamento comercial por R$/kWp da
+                        sua região, incluindo projeto completo e instalação.
+                      </p>
+
+                      <div className="space-y-1 pt-0.5 text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)]">
+                        <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                          Dimensionamento automático de equipamentos reais
+                        </div>
+                        <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                          Orçamento comercial flexível por R$/kWp
+                        </div>
+                        <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                          Opções de kits: Standard, Elite e Premium
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3.5 pt-2.5 border-t border-emerald-500/20 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Label
+                          htmlFor="kwp-rate-input"
+                          className="text-xs font-semibold text-[var(--color-foreground)] whitespace-nowrap flex items-center gap-1"
+                        >
+                          <Zap className="w-3.5 h-3.5 text-emerald-500" />
+                          Taxa R$/kWp:
+                        </Label>
+                        <div className="relative w-28 sm:w-32">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--color-muted-foreground)] font-bold">
+                            R$
+                          </span>
+                          <Input
+                            id="kwp-rate-input"
+                            type="number"
+                            min={500}
+                            step={50}
+                            value={kwpRateValue}
+                            onChange={(e) =>
+                              setKwpRateValue(Math.max(0, parseFloat(e.target.value) || 0))
+                            }
+                            className="pl-8 h-8 font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 bg-[var(--color-background)]"
+                            placeholder="2800"
+                          />
+                        </div>
+                      </div>
+                      <span className="text-[0.65rem] sm:text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                        • Ativo na proposta
                       </span>
                     </div>
-                    <p className="text-xs sm:text-sm text-[var(--color-muted-foreground)]">
-                      Dimensionamento de equipamentos reais com orçamento comercial por R$/kWp da
-                      sua região, incluindo projeto completo e instalação.
-                    </p>
                   </div>
 
-                  {/* Input da Taxa R$/kWp */}
-                  <div className="flex items-center gap-2.5 shrink-0 rounded-xl bg-[var(--color-card)] border border-[var(--color-border)] px-3 py-2 shadow-xs">
-                    <Label
-                      htmlFor="kwp-rate-input"
-                      className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] whitespace-nowrap flex items-center gap-1.5"
-                    >
-                      <Zap className="w-3.5 h-3.5 text-emerald-500" />
-                      Taxa R$/kWp:
-                    </Label>
-                    <div className="relative w-32 sm:w-36">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--color-muted-foreground)] font-bold">
-                        R$
+                  {/* Card 2: Distribuidores Parceiros (Ao lado, meio escuro, Em Breve) */}
+                  <div
+                    className="relative rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-muted)]/15 dark:bg-zinc-900/50 p-3.5 sm:p-4.5 flex flex-col justify-between text-left select-none opacity-70 hover:opacity-80 transition-opacity"
+                    title="Esta funcionalidade estará disponível em breve com estoque de múltiplos distribuidores integrados"
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-muted)]/30 text-[var(--color-muted-foreground)] shrink-0">
+                            <Package className="h-4 w-4" />
+                          </span>
+                          <span className="text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
+                            Distribuidores Parceiros
+                          </span>
+                        </div>
+                        <span className="rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[0.65rem] sm:text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1 shadow-xs">
+                          <Clock className="h-3 w-3" />
+                          Em Breve
+                        </span>
+                      </div>
+
+                      <p className="text-[0.72rem] sm:text-xs text-[var(--color-muted-foreground)] leading-relaxed">
+                        Cotação integrada diretamente com o estoque e catálogos em tempo real de
+                        distribuidores parceiros homologados.
+                      </p>
+
+                      {/* Funcionalidades dos distribuidores parceiros */}
+                      <div className="space-y-1 pt-0.5 text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]/50 shrink-0" />
+                          Estoque em tempo real por distribuidor parceiro
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]/50 shrink-0" />
+                          Troca livre de módulos e inversores no estoque
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]/50 shrink-0" />
+                          Cotação multicatálogo e comparação entre fornecedores
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]/50 shrink-0" />
+                          Cálculo automatizado de frete, impostos e prazo de envio
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3.5 pt-2.5 border-t border-[var(--color-border)]/50 flex items-center justify-between">
+                      <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium flex items-center gap-1">
+                        <Warehouse className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
+                        Integração direta de distribuidores
                       </span>
-                      <Input
-                        id="kwp-rate-input"
-                        type="number"
-                        min={500}
-                        step={50}
-                        value={kwpRateValue}
-                        onChange={(e) =>
-                          setKwpRateValue(Math.max(0, parseFloat(e.target.value) || 0))
-                        }
-                        className="pl-8 h-9 font-bold text-sm sm:text-base text-emerald-600 dark:text-emerald-400"
-                        placeholder="2800"
-                      />
+                      <span className="text-[0.65rem] sm:text-xs font-semibold text-amber-600/90 dark:text-amber-400/90">
+                        Disponível em breve
+                      </span>
                     </div>
                   </div>
                 </div>
