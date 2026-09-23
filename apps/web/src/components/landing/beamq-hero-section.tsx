@@ -28,7 +28,7 @@ export function BeamqHeroSection() {
         <video
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-cover object-center opacity-85 will-change-transform"
-          style={{ filter: "hue-rotate(-125deg) saturate(1.3) contrast(1.18) brightness(0.95)" }}
+          style={{ filter: "hue-rotate(-95deg) saturate(1.15) contrast(1.2) brightness(0.98)" }}
           src="https://strvid.nyc3.cdn.digitaloceanspaces.com/motionsite/blue-light-glow.mp4"
           autoPlay
           loop
@@ -36,6 +36,9 @@ export function BeamqHeroSection() {
           playsInline
           preload="auto"
         />
+        {/* Pure White Vertical Laser Beam Core */}
+        <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[2px] bg-gradient-to-b from-transparent via-white to-transparent opacity-95 shadow-[0_0_8px_#ffffff,0_0_20px_rgba(255,255,255,0.9),0_0_35px_rgba(16,185,129,0.35)]" />
+
         {/* Hardware-accelerated gradient overlays for seamless atmospheric blend */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.12)_0%,transparent_65%)]" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#02040a]/75 via-transparent to-[#02040a]" />
