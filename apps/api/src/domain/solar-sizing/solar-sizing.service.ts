@@ -65,10 +65,11 @@ function computeStringConfiguration(
     const maxStringsPerMppt = Math.ceil(stringCount / (inv.mppt_count || 1));
     const maxCurrentOnOneMppt = mod.imp * maxStringsPerMppt;
     const currentOk = maxCurrentOnOneMppt <= inv.max_input_current;
+    const actualMps = Math.floor(moduleQuantity / stringCount);
     if (currentOk && ratioOk) {
       return {
         config: {
-          modules_per_string: mps,
+          modules_per_string: actualMps,
           string_count: stringCount,
           total_modules: moduleQuantity,
           dc_power_w: dcPower,

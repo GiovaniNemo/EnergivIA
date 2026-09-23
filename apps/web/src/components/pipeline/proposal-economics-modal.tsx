@@ -3363,6 +3363,10 @@ export const ProposalEconomicsModal = forwardRef<
                                       <strong className="text-[var(--color-foreground)] font-medium">
                                         Inversor:{" "}
                                       </strong>
+                                      {tier.kit_result?.inverter?.quantity &&
+                                      tier.kit_result.inverter.quantity > 1
+                                        ? `${tier.kit_result.inverter.quantity}x `
+                                        : ""}
                                       {tier.inverter_brand} ({tier.inverter_power_kw} kW)
                                     </p>
                                     <p>

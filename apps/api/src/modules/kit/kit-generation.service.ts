@@ -258,10 +258,21 @@ export class KitGenerationService {
       const moduleSpecs = built.sizingResult.module.specs as any;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const inverterSpecs = built.sizingResult.inverter.specs as any;
-      const invPowerKw =
-        Math.round(
-          ((inverterSpecs.nominal_power_w || inverterSpecs.max_dc_power || 3000) / 1000) * 10
-        ) / 10;
+      const invModelName =
+        built.kitItems[1]?.product_name || built.sizingResult.inverter.name || "";
+      let singleInvPowerKw = Number(inverterSpecs.nominal_power_w) / 1000;
+      if (!Number.isFinite(singleInvPowerKw) || singleInvPowerKw <= 0) {
+        const match = invModelName.match(/\b(\d+(?:[.,]\d+)?)\s*(?:kw|k)\b/i);
+        if (match) {
+          singleInvPowerKw = parseFloat(match[1].replace(",", "."));
+        } else if (inverterSpecs.max_dc_power) {
+          singleInvPowerKw =
+            Math.round((Number(inverterSpecs.max_dc_power) / 1.5 / 1000) * 10) / 10;
+        } else {
+          singleInvPowerKw = 3.0;
+        }
+      }
+      const invPowerKw = Math.round(singleInvPowerKw * 10) / 10;
 
       return {
         tier_id: tierId,
