@@ -3595,31 +3595,13 @@ export const ProposalEconomicsModal = forwardRef<
                       </div>
                     ) : null}
 
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="inline-flex items-baseline gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] px-3.5 py-2">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                          Potência dimensionada:
-                        </span>
-                        <span className="text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                          {(
-                            (optimisticModuleQty != null && proposalKitResult.modules.quantity > 0
-                              ? (proposalKitResult.system_power_kw /
-                                  proposalKitResult.modules.quantity) *
-                                optimisticModuleQty
-                              : proposalKitResult.system_power_kw) ?? 0
-                          ).toLocaleString("pt-BR", {
-                            minimumFractionDigits: 1,
-                            maximumFractionDigits: 2,
-                          })}{" "}
-                          kWp
-                        </span>
-                      </div>
-                      {isBelowMinModules && (
+                    {isBelowMinModules ? (
+                      <div className="flex flex-wrap items-center gap-3">
                         <span className="inline-flex items-center gap-1 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-300">
                           Ajustado ao mín. de 4 módulos ({activeModuleWatts}W)
                         </span>
-                      )}
-                    </div>
+                      </div>
+                    ) : null}
 
                     <div className="grid grid-cols-2 gap-2 sm:gap-3.5">
                       {/* Card Módulos */}
@@ -3886,15 +3868,7 @@ export const ProposalEconomicsModal = forwardRef<
                         ) : null}
                       </div>
                     ) : null}
-                    <div className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] px-3.5 py-2.5 text-xs text-[var(--color-muted-foreground)]">
-                      <span className="flex items-center gap-1.5 font-medium text-[var(--color-foreground)]">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                        Projeto completo com equipamentos dimensionados, montagem e homologação
-                      </span>
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency(activeCommercialPrice)}
-                      </span>
-                    </div>
+
                     {proposalKitResult.string_configuration ? (
                       <p className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-3.5 py-2.5 text-xs text-[var(--color-muted-foreground)]">
                         <span className="font-semibold text-[var(--color-foreground)]">
