@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useOrganization } from "../providers/organization-provider";
 import { Star, X, Sparkles, Send, CheckCircle2 } from "lucide-react";
 
@@ -22,7 +23,9 @@ const RATING_LABELS: Record<number, { title: string; color: string }> = {
 };
 
 export function FeedbackPromptCard() {
-  const { user } = useOrganization();
+  const pathname = usePathname();
+  const normalizedPath = (pathname ?? "").replace(/\/$/, "") || "/";
+  const { user, currentOrganization } = useOrganization();
   const [isOpen, setIsOpen] = useState(false);
   const [rating, setRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
@@ -40,6 +43,12 @@ export function FeedbackPromptCard() {
   }, [isOpen]);
 
   useEffect(() => {
+    // Durante onboarding ou se o usuário ainda não tiver organização ativa/entrado na plataforma, nunca exibir
+    if (normalizedPath === "/create-organization" || !currentOrganization?.id) {
+      setIsOpen(false);
+      return;
+    }
+
     // Ouvinte para abertura sob demanda disparada pela bolinha de Avaliação no Hub
     const handleOpen = () => {
       setIsOpen(true);
@@ -67,11 +76,13 @@ export function FeedbackPromptCard() {
     }
 
     // Regra de exibição automática ÚNICA (1 vez):
-    // 1. Integrador já contratou ou colocou um plano pago (!user?.isTrial)
+    // 1. Integrador já contratou ou colocou um plano pago comprovado (user?.isTrial === false)
     // 2. OU completou os 5 dias de cadastro/teste (trialDaysLeft === 0 ou trialExpired)
-    const hasPaidPlan = Boolean(!user?.isTrial && (user?.planTier || user?.planName));
+    const hasPaidPlan = Boolean(
+      user?.isTrial === false && user?.planTier && user?.planTier !== "TRIAL"
+    );
     const reachedFiveDays = Boolean(
-      user?.isTrial &&
+      user?.isTrial === true &&
       (user?.trialDaysLeft === 0 || user?.trialExpired || user?.isTrialProposalLimitReached)
     );
 
@@ -92,7 +103,7 @@ export function FeedbackPromptCard() {
     return () => {
       window.removeEventListener("open-feedback-prompt", handleOpen);
     };
-  }, [user]);
+  }, [user, currentOrganization?.id, normalizedPath]);
 
   const handleDismiss = () => {
     setIsOpen(false);
@@ -157,6 +168,10 @@ export function FeedbackPromptCard() {
   };
 
   const activeRating = hoverRating !== null ? hoverRating : rating;
+
+  if (normalizedPath === "/create-organization" || !currentOrganization?.id) {
+    return null;
+  }
 
   return (
     <>

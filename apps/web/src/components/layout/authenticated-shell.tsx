@@ -34,8 +34,8 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
           <ProposalStudyProvider>
             <div className="flex h-screen w-full flex-col overflow-hidden bg-[var(--color-background)]">
               <TrialLockOverlay />
-              <FeedbackPromptCard />
-              <EnergiviaFloatingHub />
+              {!isOnboardingOrganization && <FeedbackPromptCard />}
+              {!isOnboardingOrganization && <EnergiviaFloatingHub />}
               {isFullscreenTemplateEditor ||
               isFullscreenBlueprintEditor ||
               isOnboardingOrganization ? (

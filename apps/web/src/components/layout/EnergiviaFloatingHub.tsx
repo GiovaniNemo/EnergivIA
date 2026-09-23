@@ -5,10 +5,12 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot, Star, X } from "lucide-react";
+import { useOrganization } from "../providers/organization-provider";
 
 export function EnergiviaFloatingHub() {
   const pathname = usePathname();
   const normalizedPath = (pathname ?? "").replace(/\/$/, "") || "/";
+  const { currentOrganization } = useOrganization();
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -74,7 +76,7 @@ export function EnergiviaFloatingHub() {
     normalizedPath === "/create-organization" ||
     normalizedPath === "/chat";
 
-  if (isFullscreen) {
+  if (isFullscreen || !currentOrganization?.id) {
     return null;
   }
 
