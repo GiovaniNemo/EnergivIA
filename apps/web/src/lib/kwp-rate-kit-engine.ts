@@ -108,7 +108,7 @@ export function generateKwpRateTiers({
   const tierConfigs = [
     {
       id: "economic" as const,
-      name: "Econômico",
+      name: "Standard",
       badge: "Preço Mais Baixo",
       tagline: "Menor investimento em equipamentos com boa performance",
       description:
@@ -123,7 +123,7 @@ export function generateKwpRateTiers({
     },
     {
       id: "cost_benefit" as const,
-      name: "Custo-Benefício",
+      name: "Elite",
       badge: "Mais Vendido",
       tagline: "Melhor equilíbrio entre preço, tecnologia e durabilidade",
       description: "A linha mais procurada por integradores e clientes finais no Brasil.",

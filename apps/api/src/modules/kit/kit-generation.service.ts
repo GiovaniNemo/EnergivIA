@@ -285,14 +285,14 @@ export class KitGenerationService {
     const [economicTier, costBenefitTier, premiumTier] = await Promise.all([
       buildTierKit(
         "economic",
-        "Econômico",
+        "Standard",
         "Preço Mais Baixo",
         "Menor investimento em equipamentos com boa performance",
         economicBuilt
       ),
       buildTierKit(
         "cost_benefit",
-        "Custo-Benefício",
+        "Elite",
         "Mais Vendido",
         "Melhor equilíbrio entre preço, tecnologia e durabilidade",
         costBenefitBuilt

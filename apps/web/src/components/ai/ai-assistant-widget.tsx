@@ -268,7 +268,7 @@ export function AIAssistantWidget() {
         id: Date.now().toString(),
         role: "assistant",
         content:
-          "Excelente! ⚡ Na cotação por R$/kWp da sua região, montamos kits completos com materiais e mão de obra inclusos (Econômico, Custo-Benefício e Premium).\n\nQual é o consumo médio mensal (kWh) ou potência desejada (kWp), e qual valor você costuma cobrar por kWp instalado na sua região? (Ex: 500 kWh a R$ 2.800/kWp)",
+          "Excelente! ⚡ Na cotação por R$/kWp da sua região, montamos kits completos com materiais e mão de obra inclusos (Standard, Elite e Premium).\n\nQual é o consumo médio mensal (kWh) ou potência desejada (kWp), e qual valor você costuma cobrar por kWp instalado na sua região? (Ex: 500 kWh a R$ 2.800/kWp)",
       },
     ]);
   };

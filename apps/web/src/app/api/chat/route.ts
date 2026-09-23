@@ -170,6 +170,8 @@ function extractQuotedKitFromMessages(messages: any[]) {
 
     if (items.length > 0) {
       const isKwpRate =
+        text.includes("Standard") ||
+        text.includes("Elite") ||
         text.includes("Econômico") ||
         text.includes("Custo-Benefício") ||
         text.includes("Premium") ||
@@ -1441,7 +1443,7 @@ export async function POST(req: Request) {
         }),
         gerar_cotacao_por_kwp: tool({
           description:
-            "Gera 3 opções de kits solares completos (1 - Econômico, 2 - Custo-Benefício, 3 - Premium) usando o valor em R$/kWp instalado cobrado pelo integrador na região dele. Todos os materiais (Inversor, Módulos, Estrutura, Cabos, Conectores) e a mão de obra já estão 100% inclusos no valor total.",
+            "Gera 3 opções de kits solares completos (1 - Standard, 2 - Elite, 3 - Premium) usando o valor em R$/kWp instalado cobrado pelo integrador na região dele. Todos os materiais (Inversor, Módulos, Estrutura, Cabos, Conectores) e a mão de obra já estão 100% inclusos no valor total.",
           parameters: z.object({
             ratePerKwp: z
               .number()

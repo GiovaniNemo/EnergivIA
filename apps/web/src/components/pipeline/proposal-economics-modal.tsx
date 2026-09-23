@@ -1548,12 +1548,21 @@ export const ProposalEconomicsModal = forwardRef<
         } catch {}
       }
 
+      const selectedDistTierName = distributorTiers?.find(
+        (t) => t.tier_id === selectedDistributorTierId
+      )?.name;
+      const proposalNote = isKwp
+        ? `Cotação por R$/kWp (${selectedKwpTier?.name})`
+        : selectedDistTierName
+          ? `Catálogo Distribuidor (${selectedDistTierName})`
+          : generatedProposal.estimateNote;
+
       const renderedData = buildProposalIntegratorRenderedData(
         kitForProposal,
         isKwp && selectedKwpTier
           ? selectedKwpTier.totalPrice
           : Math.max(1000, Math.round(generatedProposal.valorSistema)),
-        isKwp ? `Cotação por R$/kWp (${selectedKwpTier?.name})` : generatedProposal.estimateNote,
+        proposalNote,
         {
           organizationRules: isKwp ? [] : organizationCostRules,
           systemKwp: sysKw,
@@ -3745,7 +3754,7 @@ export const ProposalEconomicsModal = forwardRef<
                     <div
                       className={`space-y-4 transition-opacity ${proposalKitLoading ? "pointer-events-none opacity-50" : ""}`}
                     >
-                      {/* 3 Cards de Kits do Distribuidor Real (Econômico, Custo-Benefício, Premium) */}
+                      {/* 3 Cards de Kits do Distribuidor Real (Standard, Elite, Premium) */}
                       {distributorTiersLoading &&
                       (!computedDistributorCards || computedDistributorCards.length === 0) ? (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">

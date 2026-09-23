@@ -95,7 +95,7 @@ Pergunte:
 
 Como você prefere cotar os kits para o seu cliente?
 1️⃣ Buscar kits reais em distribuidores parceiros
-2️⃣ Cotar pelo meu preço de R$/kWp da região (Projeto Completo - Econômico, Custo-Benefício e Premium)
+2️⃣ Cotar pelo meu preço de R$/kWp da região (Projeto Completo - Standard, Elite e Premium)
 0️⃣ Voltar / Corrigir estrutura"
 
 - Se escolher 1️⃣ (Distribuidores): Chame IMEDIATAMENTE 'gerar_cotacao_distribuidor'.
@@ -130,8 +130,8 @@ VOLTAR E CORREÇÃO DE DADOS:
 APRESENTAÇÃO DOS KITS E FECHAMENTO (RIGOROSAMENTE COM EMOJIS DE NÚMERO):
 1. Apresente os kits retornados exatamente no formato recebido:
 - No caso de cotação por kWp, apresente com clareza as 3 opções:
-1️⃣ Econômico - R$ [Valor] (Inversor Growatt + Módulos DAH Solar)
-2️⃣ Custo-Benefício - R$ [Valor] (Inversor Deye + Módulos Canadian Solar)
+1️⃣ Standard - R$ [Valor] (Inversor Growatt + Módulos DAH Solar)
+2️⃣ Elite - R$ [Valor] (Inversor Deye + Módulos Canadian Solar)
 3️⃣ Premium - R$ [Valor] (Inversor Huawei + Módulos Jinko Solar)
 Listando os itens do kit (Inversor, Módulos, Estrutura, Cabos, Conectores) e lembrando que os materiais e a mão de obra já estão 100% inclusos no valor final.
 
