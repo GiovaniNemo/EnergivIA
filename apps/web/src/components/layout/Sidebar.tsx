@@ -145,7 +145,7 @@ export function Sidebar(): JSX.Element {
           !open && "hidden md:flex",
           showDrawer ? "fixed inset-0 z-[90] w-full shadow-2xl flex" : "relative z-30"
         )}
-        style={showDrawer ? undefined : { width: collapsed ? "5rem" : "18rem" }}
+        style={showDrawer ? undefined : { width: collapsed ? "5rem" : "16rem" }}
       >
         {showDrawer ? (
           <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">

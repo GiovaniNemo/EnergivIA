@@ -176,7 +176,7 @@ export function Topbar() {
       <div
         className={cn(
           "hidden shrink-0 items-center border-r border-[var(--color-border)] h-full transition-[width] duration-200 md:flex",
-          collapsed ? "w-20 justify-center px-2" : "w-[18rem] justify-center px-2.5"
+          collapsed ? "w-20 justify-center px-2" : "w-[16rem] justify-center px-2.5"
         )}
       >
         <Link href="/painel" className="flex w-full h-full min-w-0 items-center justify-center">
