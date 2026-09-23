@@ -1,29 +1,17 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import {
-  AlertTriangle,
-  Check,
-  Cpu,
-  Loader2,
-  Search,
-  Sun,
-  Truck,
-  Warehouse,
-  Zap,
-} from "lucide-react";
+import { AlertTriangle, Check, Cpu, Loader2, Search, Sun, Warehouse, Zap } from "lucide-react";
 import {
   getProposalEquipment,
   getProposalItemsAvailability,
   listProposalDistributors,
   listProposalEquipmentOptions,
-  listProposalFreightRules,
   updateProposalKitItems,
   type ProposalDistributorAvailability,
   type ProposalEquipmentContext,
   type ProposalEquipmentOption,
 } from "@/lib/leads-api";
-import { BR_STATES } from "@/lib/br-states";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -95,9 +83,7 @@ export function ProposalEquipmentEditorCard({
   const [distributorSwitchLoading, setDistributorSwitchLoading] = useState(false);
   const [distributorSwitchError, setDistributorSwitchError] = useState<string | null>(null);
 
-  const [freightState, setFreightState] = useState<string>("");
-  const [freightRules, setFreightRules] = useState<Record<string, number>>({});
-  const [freightLoading, setFreightLoading] = useState(false);
+  const [freightState] = useState<string>("");
 
   const [qtyDrafts, setQtyDrafts] = useState<Record<string, string>>({});
   const [moduleQtyOverrides, setModuleQtyOverrides] = useState<Record<string, number>>({});
@@ -250,28 +236,6 @@ export function ProposalEquipmentEditorCard({
     [moduleQtyOverrides, qtyDrafts, lines, calculateLockedBosQty]
   );
 
-  useEffect(() => {
-    if (!distributorId) {
-      setFreightRules({});
-      return;
-    }
-    let cancelled = false;
-    setFreightLoading(true);
-    listProposalFreightRules(organizationId, proposalId, distributorId)
-      .then((rows) => {
-        if (!cancelled) setFreightRules(Object.fromEntries(rows.map((r) => [r.state, r.value])));
-      })
-      .catch(() => {
-        if (!cancelled) setFreightRules({});
-      })
-      .finally(() => {
-        if (!cancelled) setFreightLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [distributorId, organizationId, proposalId]);
-
   const swapLine = swapTargetIndex != null ? (lines[swapTargetIndex] ?? null) : null;
   const swapCategory = swapLine?.categoryName ?? null;
 
@@ -328,13 +292,7 @@ export function ProposalEquipmentEditorCard({
 
   const dirty =
     Boolean(ctx) &&
-    (distributorId !== ctx?.distributorId ||
-      lines.some((l) => l.changed) ||
-      hasQtyAdjustments ||
-      freightState !== (ctx?.freightState ?? ""));
-
-  const freightPreviewBrl = freightState ? (freightRules[freightState] ?? 0) : 0;
-  const freightHasRule = freightState ? freightRules[freightState] != null : false;
+    (distributorId !== ctx?.distributorId || lines.some((l) => l.changed) || hasQtyAdjustments);
 
   const moduleLineIndex = lines.findIndex((l) => roleOf(l.categoryName) === "module");
   const inverterLineIndex = lines.findIndex((l) => roleOf(l.categoryName) === "inverter");
@@ -1051,60 +1009,6 @@ export function ProposalEquipmentEditorCard({
               </table>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-3.5 py-3">
-              <div className="flex items-start gap-2.5">
-                <Truck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-muted-foreground)]" />
-                <div>
-                  <p className="text-sm font-medium text-[var(--color-foreground)]">
-                    Frete{" "}
-                    {freightLoading ? (
-                      <Loader2 className="ml-1 inline h-3.5 w-3.5 animate-spin text-[var(--color-muted-foreground)]" />
-                    ) : null}
-                  </p>
-                  <p className="mt-0.5 text-xs leading-snug text-[var(--color-muted-foreground)]">
-                    Regra por UF de destino da distribuidora — entra no valor final da proposta.
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <select
-                  value={freightState}
-                  aria-label="UF de destino do frete"
-                  onChange={(e) => setFreightState(e.target.value)}
-                  className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-2 text-sm text-[var(--color-foreground)]"
-                >
-                  <option value="">Sem frete</option>
-                  {BR_STATES.map((uf) => (
-                    <option key={uf} value={uf}>
-                      {uf}
-                    </option>
-                  ))}
-                </select>
-                {freightState ? (
-                  freightHasRule ? (
-                    <span className="text-sm font-semibold tabular-nums text-[var(--color-foreground)]">
-                      {formatBRL(freightPreviewBrl)}
-                    </span>
-                  ) : (
-                    <span
-                      className="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-300"
-                      title="Cadastre a regra de frete desta distribuidora para esta UF"
-                    >
-                      sem regra para {freightState} — R$ 0,00
-                    </span>
-                  )
-                ) : (
-                  <span className="text-xs text-[var(--color-muted-foreground)]">—</span>
-                )}
-                <span className="text-xs text-[var(--color-muted-foreground)]">
-                  Equipamentos + frete:{" "}
-                  <span className="font-semibold tabular-nums text-[var(--color-foreground)]">
-                    {formatBRL(Math.round((subtotal + freightPreviewBrl) * 100) / 100)}
-                  </span>
-                </span>
-              </div>
-            </div>
-
             {qtyResetNotice ? (
               <p className="rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-3 py-2 text-xs text-[var(--color-muted-foreground)]">
                 O kit foi reprecificado e os ajustes manuais de quantidade foram redefinidos para os
@@ -1118,37 +1022,38 @@ export function ProposalEquipmentEditorCard({
               </p>
             ) : null}
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-[var(--color-muted-foreground)]">
-                Salvar recalcula custos e margem pelas regras da empresa e{" "}
-                <span className="font-medium">invalida o link público anterior</span>.
-              </p>
-              <Button
-                type="button"
-                onClick={() => void save()}
-                disabled={
-                  saving ||
-                  !dirty ||
-                  lines.length === 0 ||
-                  !distributorId ||
-                  unavailableCount > 0 ||
-                  distributorSwitchLoading
-                }
-                className="bg-emerald-600 text-white hover:bg-emerald-700"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Salvando…
-                  </>
-                ) : (
-                  <>
-                    <Check className="mr-2 h-4 w-4" />
-                    Salvar e gerar novo link
-                  </>
-                )}
-              </Button>
-            </div>
+            {dirty ? (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-[var(--color-muted-foreground)]">
+                  Salvar recalcula custos e margem pelas regras da empresa e{" "}
+                  <span className="font-medium">invalida o link público anterior</span>.
+                </p>
+                <Button
+                  type="button"
+                  onClick={() => void save()}
+                  disabled={
+                    saving ||
+                    lines.length === 0 ||
+                    !distributorId ||
+                    unavailableCount > 0 ||
+                    distributorSwitchLoading
+                  }
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando…
+                    </>
+                  ) : (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      Salvar e gerar novo link
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : null}
           </>
         )}
       </div>

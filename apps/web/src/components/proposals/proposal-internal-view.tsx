@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Copy, LinkIcon, Zap } from "lucide-react";
+import { ArrowLeft, Copy, LinkIcon } from "lucide-react";
 import {
   getDefaultEssentialRulesForSeeding,
   PROJECT_COST_ESSENTIAL_LABOR_NAME,
@@ -41,7 +41,6 @@ import {
   getMarginHealth,
   ProposalBusinessHeroCard,
   ProposalCollapsibleProducts,
-  ProposalCollapsibleTechnical,
   ProposalEquipmentSummaryCard,
   ProposalInternalHeader,
   ProposalSalesHeroCard,
@@ -536,7 +535,6 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
   const paybackY = proposal.simulation.result.paybackYears;
   const simIn = proposal.simulation.input;
   const simRes = proposal.simulation.result;
-  const sizing = getSizingFromSimulation(proposal);
   const billSavingsPct = computeBillSavingsPct(proposal);
   const annualFirst =
     Array.isArray(simRes.annualSavings) && simRes.annualSavings.length > 0
@@ -740,13 +738,6 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
         ) : null}
       </section>
 
-      {integrator?.notes ? (
-        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100/90">
-          <span className="font-medium">Notas do kit: </span>
-          {integrator.notes}
-        </p>
-      ) : null}
-
       {isOwnerOrAdmin &&
       integrator?.sourceType !== "kwp_rate" &&
       integrator?.defaultEssentialCostNames &&
@@ -793,31 +784,6 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
             <p className="mt-2 text-xs text-red-600 dark:text-red-400">{costDefaultsError}</p>
           ) : null}
         </div>
-      ) : null}
-
-      {isOwnerOrAdmin &&
-      (integrator?.sourceType === "kwp_rate" ||
-        (!integrator?.projectCostLines?.length && integrator?.kitItems?.length)) ? (
-        <section
-          className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.05] p-4"
-          aria-label="Cotação por R$/kWp"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                <Zap className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                Cotação por R$/kWp
-              </span>
-              <span className="text-xs text-[var(--color-muted-foreground)]">
-                Preço fechado da região: equipamentos, materiais de instalação e mão de obra
-                diluídos no kit.
-              </span>
-            </div>
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-              {formatBRL(quotedSale)}
-            </span>
-          </div>
-        </section>
       ) : null}
 
       {isOwnerOrAdmin &&
@@ -927,31 +893,6 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
           </ProposalCollapsibleProducts>
         </>
       ) : null}
-
-      <ProposalCollapsibleTechnical>
-        {sizing ? (
-          <div className="grid gap-2 text-sm sm:grid-cols-2">
-            <p>
-              <span className="text-[var(--color-muted-foreground)]">Consumo mensal: </span>
-              <span className="font-medium">{sizing.input.monthlyConsumptionKwh} kWh</span>
-            </p>
-            <p>
-              <span className="text-[var(--color-muted-foreground)]">Potência recomendada: </span>
-              <span className="font-medium">{sizing.result.recommendedPowerKw} kWp</span>
-            </p>
-            <p className="sm:col-span-2">
-              <span className="text-[var(--color-muted-foreground)]">Produção estimada/mês: </span>
-              <span className="font-medium">
-                {Math.round(sizing.result.estimatedProductionKwhMonth)} kWh
-              </span>
-            </p>
-          </div>
-        ) : (
-          <p className="text-sm text-[var(--color-muted-foreground)]">
-            Não há consumo/dimensionamento embutido nesta simulação.
-          </p>
-        )}
-      </ProposalCollapsibleTechnical>
 
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
         <DialogContent muiMaxWidth={false} className="max-w-lg">
