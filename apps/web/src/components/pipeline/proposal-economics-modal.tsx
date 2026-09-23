@@ -74,11 +74,14 @@ import {
   renderFirstPdfPageToPng,
 } from "@/lib/bill-pdf-client";
 import type { Deal, DealStage } from "@/app/(authenticated)/pipeline/use-deals";
-import { listCostRules } from "@/lib/cost-rules-api";
+import { listCostRules, type CostRuleRow } from "@/lib/cost-rules-api";
 import {
+  generateDistributorTiers,
   generateKitWhatsAppPreview,
   listKitAlternatives,
   listKitSourceOptions,
+  type DistributorTierKit,
+  type GenerateKitRequest,
   type GenerateKitResult,
   type KitAlternativeOption,
   type KitCrossSourceAlternative,
@@ -710,6 +713,63 @@ export const ProposalEconomicsModal = forwardRef<
   const selectedKwpTier = useMemo(() => {
     return kwpRateTiers.find((t) => t.id === selectedKwpTierId) || kwpRateTiers[1];
   }, [kwpRateTiers, selectedKwpTierId]);
+
+  const [distributorTiers, setDistributorTiers] = useState<DistributorTierKit[] | null>(null);
+  const [selectedDistributorTierId, setSelectedDistributorTierId] = useState<
+    "economic" | "cost_benefit" | "premium"
+  >("cost_benefit");
+  const selectedDistributorTierIdRef = useRef(selectedDistributorTierId);
+  selectedDistributorTierIdRef.current = selectedDistributorTierId;
+  const [distributorTiersLoading, setDistributorTiersLoading] = useState(false);
+  const [orgCostRules, setOrgCostRules] = useState<CostRuleRow[]>([]);
+
+  useEffect(() => {
+    if (!currentOrganizationId || !proposalResultOpen) return;
+    let cancelled = false;
+    void listCostRules(currentOrganizationId)
+      .then((rules) => {
+        if (!cancelled) setOrgCostRules(rules);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [currentOrganizationId, proposalResultOpen]);
+
+  const computedDistributorCards = useMemo(() => {
+    if (!distributorTiers || distributorTiers.length === 0) return [];
+    return distributorTiers.map((tier) => {
+      const isSelected = selectedDistributorTierId === tier.tier_id;
+      const sysKw = tier.kit_result.system_power_kw;
+      const equipmentTotal = tier.equipment_total;
+
+      let commercialPrice = equipmentTotal;
+      if (orgCostRules.length > 0) {
+        const renderedData = buildProposalIntegratorRenderedData(
+          tier.kit_result,
+          Math.max(1000, Math.round(generatedProposal?.valorSistema ?? 0)),
+          generatedProposal?.estimateNote,
+          {
+            organizationRules: orgCostRules,
+            systemKwp: sysKw,
+            sourceType: tier.kit_result.own_stock_used ? "own_stock" : "distributor",
+          }
+        );
+        commercialPrice = Math.round(
+          (renderedData as { integrator: { quotedSaleBrl: number } }).integrator.quotedSaleBrl
+        );
+      }
+      const ratePerKwpEffective = Math.round(commercialPrice / Math.max(0.1, sysKw));
+
+      return {
+        ...tier,
+        isSelected,
+        commercialPrice,
+        commercialPriceFormatted: formatCurrency(commercialPrice),
+        ratePerKwpEffective,
+      };
+    });
+  }, [distributorTiers, selectedDistributorTierId, orgCostRules, generatedProposal]);
   useEffect(() => {
     if (!currentOrganizationId) return;
     let cancelled = false;
@@ -780,6 +840,8 @@ export const ProposalEconomicsModal = forwardRef<
       setKitAlternativesError(null);
       setKitQtyDrafts({});
       setKitQtyResetNotice(false);
+      setDistributorTiers(null);
+      setSelectedDistributorTierId("cost_benefit");
       return;
     }
     const kw = clampSystemKw(generatedProposal.tamanhoSistemaKw);
@@ -823,11 +885,12 @@ export const ProposalEconomicsModal = forwardRef<
     if (!proposalResultOpen || !proposalKitRequest) return;
     let cancelled = false;
     setProposalKitLoading(true);
+    setDistributorTiersLoading(true);
     setProposalKitError(null);
     void (async () => {
       try {
         const req = proposalKitRequest;
-        const reqPayload = {
+        const reqPayload: GenerateKitRequest = {
           system_kw: req.systemKw,
           roof_type: req.roof,
           ...(req.preferredBrand ? { preferred_brand: req.preferredBrand } : {}),
@@ -841,19 +904,46 @@ export const ProposalEconomicsModal = forwardRef<
             : {}),
           ...(req.stringBoxId ? { string_box_id: req.stringBoxId } : {}),
         };
-        const preview = await generateKitWhatsAppPreview(reqPayload);
+        const [previewRes, tiersRes] = await Promise.allSettled([
+          generateKitWhatsAppPreview(reqPayload),
+          generateDistributorTiers(reqPayload),
+        ]);
         if (cancelled) return;
-        setProposalKitResult(preview.json);
-        setProposalKitWhatsapp(preview.whatsapp_message);
+
+        if (tiersRes.status === "fulfilled" && tiersRes.value?.tiers?.length > 0) {
+          const tiers = tiersRes.value.tiers;
+          setDistributorTiers(tiers);
+          const currentId = selectedDistributorTierIdRef.current;
+          const matching = tiers.find((t) => t.tier_id === currentId) || tiers[1] || tiers[0];
+          if (matching) {
+            setProposalKitResult(matching.kit_result);
+          }
+        } else if (previewRes.status === "fulfilled") {
+          setProposalKitResult(previewRes.value.json);
+        }
+
+        if (previewRes.status === "fulfilled") {
+          setProposalKitWhatsapp(previewRes.value.whatsapp_message);
+        }
+
+        if (previewRes.status === "rejected" && tiersRes.status === "rejected") {
+          const err = previewRes.reason || tiersRes.reason;
+          throw err instanceof Error ? err : new Error(String(err));
+        }
+
         setOptimisticModuleQty(null);
       } catch (e) {
         if (cancelled) return;
         setProposalKitResult(null);
+        setDistributorTiers(null);
         setProposalKitWhatsapp(null);
         setOptimisticModuleQty(null);
         setProposalKitError(e instanceof Error ? e.message : "Não foi possível montar o kit.");
       } finally {
-        if (!cancelled) setProposalKitLoading(false);
+        if (!cancelled) {
+          setProposalKitLoading(false);
+          setDistributorTiersLoading(false);
+        }
       }
     })();
     return () => {
@@ -3655,6 +3745,139 @@ export const ProposalEconomicsModal = forwardRef<
                     <div
                       className={`space-y-4 transition-opacity ${proposalKitLoading ? "pointer-events-none opacity-50" : ""}`}
                     >
+                      {/* 3 Cards de Kits do Distribuidor Real (Econômico, Custo-Benefício, Premium) */}
+                      {distributorTiersLoading &&
+                      (!computedDistributorCards || computedDistributorCards.length === 0) ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+                          {[1, 2, 3].map((i) => (
+                            <div
+                              key={i}
+                              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4 animate-pulse space-y-3"
+                            >
+                              <div className="flex justify-between items-center">
+                                <div className="h-5 w-24 bg-[var(--color-muted)]/40 rounded-full" />
+                                <div className="h-4 w-20 bg-[var(--color-muted)]/30 rounded" />
+                              </div>
+                              <div className="h-7 w-32 bg-[var(--color-muted)]/40 rounded" />
+                              <div className="h-3 w-48 bg-[var(--color-muted)]/20 rounded" />
+                              <div className="pt-2 border-t border-[var(--color-border)]/40 space-y-1.5">
+                                <div className="h-3 w-36 bg-[var(--color-muted)]/30 rounded" />
+                                <div className="h-3 w-40 bg-[var(--color-muted)]/30 rounded" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : computedDistributorCards.length > 0 ? (
+                        <div className="space-y-2 pt-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-foreground)] flex items-center gap-1.5">
+                              <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                              Kits do Catálogo Real
+                            </h4>
+                            <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                              Selecione uma das 3 opções montadas com produtos reais
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                            {computedDistributorCards.map((tier) => {
+                              const isSelected = tier.isSelected;
+                              return (
+                                <div
+                                  key={tier.tier_id}
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={() => {
+                                    setSelectedDistributorTierId(tier.tier_id);
+                                    setProposalKitResult(tier.kit_result);
+                                    setOptimisticModuleQty(null);
+                                    setKitQtyDrafts({});
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.preventDefault();
+                                      setSelectedDistributorTierId(tier.tier_id);
+                                      setProposalKitResult(tier.kit_result);
+                                      setOptimisticModuleQty(null);
+                                      setKitQtyDrafts({});
+                                    }
+                                  }}
+                                  className={`cursor-pointer rounded-xl border p-4 transition-all flex flex-col justify-between text-left select-none ${
+                                    isSelected
+                                      ? "border-emerald-500 bg-emerald-500/[0.05] ring-1 ring-emerald-500 shadow-xs"
+                                      : "border-[var(--color-border)] bg-[var(--color-background)] hover:border-[var(--color-border)] hover:bg-[var(--color-muted)]/10"
+                                  }`}
+                                >
+                                  <div className="space-y-2.5">
+                                    <div className="flex items-center justify-between">
+                                      <span
+                                        className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                                          tier.tier_id === "economic"
+                                            ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+                                            : tier.tier_id === "cost_benefit"
+                                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                              : "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
+                                        }`}
+                                      >
+                                        {tier.name}
+                                      </span>
+                                      <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                                        {formatCurrency(tier.ratePerKwpEffective)}/kWp
+                                      </span>
+                                    </div>
+
+                                    <div>
+                                      <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                        {tier.commercialPriceFormatted}
+                                      </p>
+                                      <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
+                                        {tier.tagline}
+                                      </p>
+                                    </div>
+
+                                    <div className="pt-2.5 border-t border-[var(--color-border)]/60 text-xs space-y-1 text-[var(--color-muted-foreground)]">
+                                      <p>
+                                        <strong className="text-[var(--color-foreground)] font-medium">
+                                          Inversor:{" "}
+                                        </strong>
+                                        {tier.inverter_brand} ({tier.inverter_power_kw} kW)
+                                      </p>
+                                      <p>
+                                        <strong className="text-[var(--color-foreground)] font-medium">
+                                          Módulos:{" "}
+                                        </strong>
+                                        {tier.module_qty}x {tier.module_brand} (
+                                        {tier.module_power_w}W)
+                                      </p>
+                                      <p className="text-[11px] text-[var(--color-muted-foreground)]/80">
+                                        + Estrutura, cabos e conectores inclusos
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="pt-3 mt-3 border-t border-[var(--color-border)]/50 flex items-center justify-between">
+                                    <span className="text-xs text-[var(--color-muted-foreground)]">
+                                      Geração:{" "}
+                                      <strong className="text-[var(--color-foreground)]">
+                                        ~{tier.estimated_monthly_generation_kwh} kWh/mês
+                                      </strong>
+                                    </span>
+                                    <span
+                                      className={`h-5 w-5 rounded-full border flex items-center justify-center transition-colors ${
+                                        isSelected
+                                          ? "border-emerald-500 bg-emerald-500 text-white"
+                                          : "border-[var(--color-border)]"
+                                      }`}
+                                    >
+                                      {isSelected ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+
                       <div className="flex flex-wrap items-center gap-3">
                         <div className="inline-flex items-baseline gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] px-3.5 py-2">
                           <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">

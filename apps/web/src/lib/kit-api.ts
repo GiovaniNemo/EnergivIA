@@ -147,3 +147,40 @@ export async function generateKitWhatsAppPreview(
   }
   return res.json();
 }
+
+export interface DistributorTierKit {
+  tier_id: "economic" | "cost_benefit" | "premium";
+  name: string;
+  tagline: string;
+  badge: string;
+  kit_result: GenerateKitResult;
+  equipment_total: number;
+  rate_per_kwp: number;
+  inverter_brand: string;
+  inverter_model: string;
+  inverter_power_kw: number;
+  module_brand: string;
+  module_model: string;
+  module_qty: number;
+  module_power_w: number;
+  estimated_monthly_generation_kwh: number;
+}
+
+export interface DistributorTiersResult {
+  tiers: DistributorTierKit[];
+}
+
+export async function generateDistributorTiers(
+  body: GenerateKitRequest
+): Promise<DistributorTiersResult> {
+  const res = await fetch(`${getApiUrl()}/generate-kit/distributor-tiers`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(err.message ?? "Falha ao gerar tiers do distribuidor");
+  }
+  return res.json();
+}

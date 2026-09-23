@@ -11,6 +11,8 @@ import type {
   KitSourceOption,
   KitSourceOptionsResult,
   KitSwapCategory,
+  DistributorTierKit,
+  DistributorTiersResult,
 } from "./types";
 import { isStringSizingResult } from "../../domain/solar-sizing/types";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -71,6 +73,13 @@ export class KitGenerationService {
       );
     }
 
+    return this.persistKitResult(built, usedOwnStock);
+  }
+
+  private async persistKitResult(
+    built: BuiltKit,
+    usedOwnStock: boolean
+  ): Promise<GenerateKitResult> {
     const kit = await this.prisma.kit.create({
       data: { systemPowerKw: new Decimal(built.systemPowerKw) },
     });
@@ -98,6 +107,207 @@ export class KitGenerationService {
           }
         : undefined,
       kit_items: built.kitItems,
+    };
+  }
+
+  async generateDistributorTiers(
+    input: GenerateKitInput,
+    organizationId?: string
+  ): Promise<DistributorTiersResult> {
+    const roofType = input.roof_type || DEFAULT_ROOF_TYPE;
+    const wantStock = Boolean(input.stock_owner_org_id);
+    const source: KitProductSource =
+      wantStock && organizationId
+        ? { stockOwnerOrgId: organizationId }
+        : { supplierId: input.supplier_id, distributorId: input.supplier_id };
+
+    // 1. Build default base kit first as baseline
+    let baseBuilt: BuiltKit | null = null;
+    let usedOwnStock = false;
+
+    if (wantStock && organizationId) {
+      baseBuilt = await this.buildKit(input, roofType, { stockOwnerOrgId: organizationId });
+      if (baseBuilt) usedOwnStock = true;
+    }
+
+    if (!baseBuilt) {
+      baseBuilt = await this.buildKit(input, roofType, {
+        supplierId: input.supplier_id,
+        distributorId: input.supplier_id,
+      });
+    }
+
+    if (!baseBuilt) {
+      throw new BadRequestException(
+        "Não foi possível montar os kits: catálogo sem módulo/inversor compatível." +
+          (input.preferred_brand ? ` (marca "${input.preferred_brand}")` : "")
+      );
+    }
+
+    // 2. Fetch all modules and inverters for this source
+    const [allModules, allStringInverters, allMicroInverters, allHybridInverters] =
+      await Promise.all([
+        this.productRepo.findActiveModules(input.preferred_brand, source),
+        this.productRepo.findActiveStringInverters(source),
+        this.productRepo.findActiveMicroInverters(source),
+        this.productRepo.findActiveHybridInverters(source),
+      ]);
+
+    // Rank modules by price per watt (lowest price/W to highest)
+    const modulesWithPower = allModules.map((m) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const powerW = Number((m.specs as any)?.power_w) || 585;
+      const pricePerW = m.price / powerW;
+      return { module: m, powerW, pricePerW };
+    });
+    modulesWithPower.sort((a, b) => a.pricePerW - b.pricePerW);
+
+    const sortedString = [...allStringInverters].sort((a, b) => a.price - b.price);
+    const sortedMicro = [...allMicroInverters].sort((a, b) => a.price - b.price);
+    const sortedHybrid = [...allHybridInverters].sort((a, b) => a.price - b.price);
+
+    // Module candidates
+    const economicCandidateModule = modulesWithPower[0]?.module;
+    const premiumCandidateModule =
+      modulesWithPower.length > 1
+        ? modulesWithPower[modulesWithPower.length - 1]?.module
+        : modulesWithPower[0]?.module;
+    const costBenefitCandidateModule =
+      modulesWithPower.length > 2
+        ? modulesWithPower[Math.floor(modulesWithPower.length / 2)]?.module
+        : modulesWithPower[0]?.module;
+
+    // Helper to safely build or fallback
+    const tryBuild = async (pinned: {
+      moduleId?: string;
+      inverterId?: string;
+      inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
+    }): Promise<BuiltKit> => {
+      const trialInput: GenerateKitInput = {
+        ...input,
+        ...(pinned.moduleId ? { pinned_module_id: pinned.moduleId } : {}),
+        ...(pinned.inverterId ? { pinned_inverter_id: pinned.inverterId } : {}),
+        ...(pinned.inverterType ? { inverter_type: pinned.inverterType } : {}),
+      };
+      const res = await this.buildKit(trialInput, roofType, source);
+      return res || baseBuilt!;
+    };
+
+    // 3. Assemble Economic kit
+    let economicBuilt: BuiltKit | null = null;
+    if (economicCandidateModule) {
+      economicBuilt = await tryBuild({
+        moduleId: economicCandidateModule.id,
+        inverterId: sortedString[0]?.id,
+        inverterType: "string",
+      });
+    }
+    if (!economicBuilt) economicBuilt = baseBuilt;
+
+    // 4. Assemble Cost-Benefit kit (default balanced baseline)
+    let costBenefitBuilt: BuiltKit | null = null;
+    if (
+      costBenefitCandidateModule &&
+      costBenefitCandidateModule.id !== economicCandidateModule?.id
+    ) {
+      costBenefitBuilt = await tryBuild({
+        moduleId: costBenefitCandidateModule.id,
+      });
+    }
+    if (!costBenefitBuilt) costBenefitBuilt = baseBuilt;
+
+    // 5. Assemble Premium kit
+    let premiumBuilt: BuiltKit | null = null;
+    if (sortedMicro.length > 0) {
+      premiumBuilt = await tryBuild({
+        moduleId: premiumCandidateModule?.id,
+        inverterId: sortedMicro[0]?.id,
+        inverterType: "microinverter",
+      });
+    } else if (sortedHybrid.length > 0) {
+      premiumBuilt = await tryBuild({
+        moduleId: premiumCandidateModule?.id,
+        inverterId: sortedHybrid[0]?.id,
+        inverterType: "hybrid",
+      });
+    } else if (sortedString.length > 1) {
+      premiumBuilt = await tryBuild({
+        moduleId: premiumCandidateModule?.id,
+        inverterId: sortedString[sortedString.length - 1]?.id,
+      });
+    } else if (
+      premiumCandidateModule &&
+      premiumCandidateModule.id !== economicCandidateModule?.id
+    ) {
+      premiumBuilt = await tryBuild({
+        moduleId: premiumCandidateModule.id,
+      });
+    }
+    if (!premiumBuilt) premiumBuilt = baseBuilt;
+
+    const buildTierKit = async (
+      tierId: "economic" | "cost_benefit" | "premium",
+      name: string,
+      badge: string,
+      tagline: string,
+      built: BuiltKit
+    ): Promise<DistributorTierKit> => {
+      const kitResult = await this.persistKitResult(built, usedOwnStock);
+      const equipmentTotal = kitItemsTotal(built.kitItems);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const moduleSpecs = built.sizingResult.module.specs as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const inverterSpecs = built.sizingResult.inverter.specs as any;
+      const invPowerKw =
+        Math.round(
+          ((inverterSpecs.nominal_power_w || inverterSpecs.max_dc_power || 3000) / 1000) * 10
+        ) / 10;
+
+      return {
+        tier_id: tierId,
+        name,
+        badge,
+        tagline,
+        kit_result: kitResult,
+        equipment_total: equipmentTotal,
+        rate_per_kwp: Math.round(equipmentTotal / Math.max(0.1, built.systemPowerKw)),
+        inverter_brand: built.kitItems[1]?.brand_name || built.sizingResult.inverter.brandName,
+        inverter_model: built.kitItems[1]?.product_name || built.sizingResult.inverter.name,
+        inverter_power_kw: invPowerKw,
+        module_brand: built.kitItems[0]?.brand_name || built.sizingResult.module.brandName,
+        module_model: built.kitItems[0]?.product_name || built.sizingResult.module.name,
+        module_qty: built.kitItems[0]?.quantity || built.sizingResult.module_quantity,
+        module_power_w: Number(moduleSpecs.power_w) || 585,
+        estimated_monthly_generation_kwh: Math.round(built.systemPowerKw * 130),
+      };
+    };
+
+    const [economicTier, costBenefitTier, premiumTier] = await Promise.all([
+      buildTierKit(
+        "economic",
+        "Econômico",
+        "Preço Mais Baixo",
+        "Menor investimento em equipamentos com boa performance",
+        economicBuilt
+      ),
+      buildTierKit(
+        "cost_benefit",
+        "Custo-Benefício",
+        "Mais Vendido",
+        "Melhor equilíbrio entre preço, tecnologia e durabilidade",
+        costBenefitBuilt
+      ),
+      buildTierKit(
+        "premium",
+        "Premium",
+        "Alta Eficiência",
+        "Tecnologia de ponta, marcas Tier 1 globais e garantia estendida",
+        premiumBuilt
+      ),
+    ]);
+
+    return {
+      tiers: [economicTier, costBenefitTier, premiumTier],
     };
   }
 
