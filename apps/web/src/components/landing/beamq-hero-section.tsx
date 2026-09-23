@@ -41,19 +41,19 @@ export function BeamqHeroSection() {
       </div>
 
       {/* Navigation Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-black/20 backdrop-blur-md border-b border-white/5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 lg:px-12 py-5">
+      <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-black/40 backdrop-blur-md border-b border-white/5">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 lg:px-12 py-3 sm:py-4">
           {/* Brand Logo */}
           <Link
             href="/"
-            className="flex items-center gap-2 relative group transition-opacity hover:opacity-90"
+            className="flex items-center gap-2 relative group transition-opacity hover:opacity-95"
           >
             <Image
               src="/logo-dark.png"
               alt="EnergivIA"
               width={480}
               height={136}
-              className="h-10 sm:h-11 w-auto object-contain"
+              className="h-14 sm:h-16 md:h-20 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
               priority
               unoptimized
             />

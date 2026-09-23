@@ -333,8 +333,8 @@ export default function HomePage(): JSX.Element {
                   alt="EnergiVIA"
                   width={480}
                   height={136}
-                  className="h-11 w-auto object-contain sm:h-12"
-                  sizes="(max-width: 640px) 160px, 200px"
+                  className="h-12 w-auto object-contain sm:h-14"
+                  sizes="(max-width: 640px) 180px, 240px"
                 />
               </Link>
               <nav className="flex flex-wrap items-center justify-center gap-5 text-sm">
