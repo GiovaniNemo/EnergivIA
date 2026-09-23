@@ -1,14 +1,23 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Check, Cpu, Loader2, Search, Sun, Warehouse, Zap } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  Clock,
+  Cpu,
+  Loader2,
+  Package,
+  Search,
+  Sparkles,
+  Sun,
+  Warehouse,
+  Zap,
+} from "lucide-react";
 import {
   getProposalEquipment,
-  getProposalItemsAvailability,
-  listProposalDistributors,
   listProposalEquipmentOptions,
   updateProposalKitItems,
-  type ProposalDistributorAvailability,
   type ProposalEquipmentContext,
   type ProposalEquipmentOption,
 } from "@/lib/leads-api";
@@ -77,12 +86,8 @@ export function ProposalEquipmentEditorCard({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [ctx, setCtx] = useState<ProposalEquipmentContext | null>(null);
-  const [distributors, setDistributors] = useState<ProposalDistributorAvailability[]>([]);
   const [lines, setLines] = useState<EditableLine[]>([]);
   const [distributorId, setDistributorId] = useState<string | null>(null);
-  const [distributorSwitchLoading, setDistributorSwitchLoading] = useState(false);
-  const [distributorSwitchError, setDistributorSwitchError] = useState<string | null>(null);
-
   const [freightState] = useState<string>("");
 
   const [qtyDrafts, setQtyDrafts] = useState<Record<string, string>>({});
@@ -103,14 +108,9 @@ export function ProposalEquipmentEditorCard({
     setLoadError(null);
     setSwapTargetIndex(null);
     setSaveError(null);
-    setDistributorSwitchError(null);
     try {
-      const [data, dists] = await Promise.all([
-        getProposalEquipment(organizationId, proposalId),
-        listProposalDistributors(organizationId, proposalId),
-      ]);
+      const data = await getProposalEquipment(organizationId, proposalId);
       setCtx(data);
-      setDistributors(dists);
       setLines(
         data.items.map((i) => ({
           productId: i.productId,
@@ -299,14 +299,6 @@ export function ProposalEquipmentEditorCard({
   const moduleLine = moduleLineIndex >= 0 ? lines[moduleLineIndex]! : null;
   const inverterLine = inverterLineIndex >= 0 ? lines[inverterLineIndex]! : null;
 
-  const displayPowerKw = (() => {
-    const base = ctx?.systemPowerKw ?? null;
-    if (base == null || base <= 0) return null;
-    if (!moduleLine || moduleLine.quantity <= 0) return base;
-    const perModuleKw = base / moduleLine.quantity;
-    return Math.round(perModuleKw * effectiveQty(moduleLine) * 100) / 100;
-  })();
-
   const { minAllowedModules, maxAllowedModules } = useMemo(() => {
     let min = 4;
     let max = Infinity;
@@ -338,44 +330,6 @@ export function ProposalEquipmentEditorCard({
     }
     return { minAllowedModules: min, maxAllowedModules: max };
   }, [moduleLine, inverterLine]);
-
-  async function changeDistributor(nextId: string): Promise<void> {
-    if (!nextId || nextId === distributorId) return;
-    setDistributorSwitchError(null);
-    setDistributorSwitchLoading(true);
-    setSwapTargetIndex(null);
-    try {
-      const availability = await getProposalItemsAvailability(organizationId, proposalId, nextId);
-      const availabilityByProduct = new Map(availability.rows.map((r) => [r.productId, r]));
-      setLines((prev) =>
-        prev.map((l) => {
-          const row = availabilityByProduct.get(l.productId);
-          if (!row) return { ...l, unavailable: true };
-          if (row.available && row.unitPrice != null) {
-            return {
-              ...l,
-              unavailable: false,
-              unitPrice: row.unitPrice,
-              changed: row.unitPrice !== l.unitPrice ? true : l.changed,
-            };
-          }
-          return { ...l, unavailable: true };
-        })
-      );
-      if (Object.keys(qtyDrafts).length > 0 || Object.keys(moduleQtyOverrides).length > 0) {
-        setQtyDrafts({});
-        setModuleQtyOverrides({});
-        setQtyResetNotice(true);
-      }
-      setDistributorId(nextId);
-    } catch (e) {
-      setDistributorSwitchError(
-        e instanceof Error ? e.message : "Não foi possível trocar o distribuidor."
-      );
-    } finally {
-      setDistributorSwitchLoading(false);
-    }
-  }
 
   function adjustModuleQuantity(line: EditableLine, delta: number): void {
     setQtyResetNotice(false);
@@ -612,11 +566,10 @@ export function ProposalEquipmentEditorCard({
                 <Warehouse className="h-3 w-3" />
                 Meu estoque
               </span>
-            ) : ctx ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-violet-500/20 bg-violet-500/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
-                {distributors.find((d) => d.id === distributorId)?.name ??
-                  ctx.distributorName ??
-                  "Distribuidor"}
+            ) : !dirty ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                <Sparkles className="h-3 w-3" />
+                Preço por kWp
               </span>
             ) : null}
           </div>
@@ -628,91 +581,117 @@ export function ProposalEquipmentEditorCard({
           <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
         ) : !ctx ? null : (
           <>
-            {ctx.sourceType === "own_stock" && !dirty ? (
-              <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-sm font-medium text-emerald-800 dark:text-emerald-200">
-                <Warehouse className="h-4 w-4" />
-                Origem atual: Meu estoque — kit montado 100% do seu estoque próprio. Trocar para um
-                distribuidor abaixo reprecifica o kit inteiro.
-              </div>
-            ) : null}
-            <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-3.5 py-3">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-foreground)]">
-                  Distribuidor do kit
-                </p>
-                <p className="mt-0.5 text-xs leading-snug text-[var(--color-muted-foreground)]">
-                  Todos os equipamentos vêm de um único distribuidor — trocar reprecifica o kit
-                  inteiro; itens sem oferta ficam marcados para substituição.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {distributors.map((d) => {
-                  const selected = d.id === distributorId;
-                  return (
-                    <button
-                      key={d.id}
-                      type="button"
-                      disabled={distributorSwitchLoading}
-                      title={
-                        d.hasAllItems
-                          ? `${d.name}: todos os ${d.totalCount} itens disponíveis`
-                          : `${d.name}: ${d.matchedCount} de ${d.totalCount} itens — os demais precisam ser substituídos`
-                      }
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${
-                        selected
-                          ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
-                          : "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
-                      } ${distributorSwitchLoading ? "opacity-60" : ""}`}
-                      onClick={() => void changeDistributor(d.id)}
-                    >
-                      {d.name}
-                      {d.hasAllItems && d.total != null ? (
-                        <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-                          {formatBRL(d.total)}
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:text-amber-300">
-                          {d.matchedCount}/{d.totalCount} itens
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-                {distributorSwitchLoading ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Reprecificando…
-                  </span>
-                ) : null}
-              </div>
-              {distributorSwitchError ? (
-                <p className="text-xs text-red-600 dark:text-red-400">{distributorSwitchError}</p>
-              ) : null}
-              {unavailableCount > 0 ? (
-                <p className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-800 dark:text-amber-200">
-                  <AlertTriangle className="h-4 w-4" />
-                  {unavailableCount} item(ns) sem oferta neste distribuidor — substitua ou remova
-                  antes de salvar.
-                </p>
-              ) : null}
-            </div>
+            <p className="-mt-1 mb-2 text-xs text-[var(--color-muted-foreground)]">
+              Ajuste itens ou quantidades do kit da proposta.
+            </p>
 
-            {displayPowerKw != null ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="inline-flex items-baseline gap-2 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-500/12 to-emerald-600/5 px-4 py-2.5">
-                  <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                    Potência dimensionada
+            {/* Modalidades de Cotação: Preço por kWp (Ativo) e Distribuidores Parceiros (Em Breve) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-0.5">
+              {/* Card 1: Preço por kWp (1º Lugar - Ativo) */}
+              <div className="relative rounded-xl border border-emerald-500 bg-emerald-500/[0.04] ring-1 ring-emerald-500 shadow-xs p-3.5 sm:p-4.5 flex flex-col justify-between text-left select-none">
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                        <Sparkles className="h-4 w-4" />
+                      </span>
+                      <span className="text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
+                        Preço por kWp
+                      </span>
+                      <span className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700 dark:text-emerald-300">
+                        Perfil do Integrador
+                      </span>
+                    </div>
+                    <span className="h-5 w-5 shrink-0 rounded-full border border-emerald-500 bg-emerald-500 text-white flex items-center justify-center">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    </span>
+                  </div>
+
+                  <p className="text-[0.72rem] sm:text-xs text-[var(--color-muted-foreground)] leading-relaxed">
+                    Dimensionamento de equipamentos reais com orçamento comercial por R$/kWp da sua
+                    região, incluindo projeto completo e instalação.
+                  </p>
+
+                  <div className="space-y-1 pt-0.5 text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)]">
+                    <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                      Dimensionamento automático de equipamentos reais
+                    </div>
+                    <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                      Orçamento comercial flexível por R$/kWp
+                    </div>
+                    <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                      Opções de kits: Standard, Elite e Premium
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3.5 pt-2.5 border-t border-emerald-500/20 flex items-center justify-between">
+                  <span className="text-[0.68rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                    <Zap className="h-3.5 w-3.5 text-emerald-500" />
+                    Modalidade ativa na proposta
                   </span>
-                  <span className="text-xl font-bold tabular-nums tracking-tight text-emerald-700 dark:text-emerald-300">
-                    {displayPowerKw.toLocaleString("pt-BR", {
-                      minimumFractionDigits: 1,
-                      maximumFractionDigits: 2,
-                    })}{" "}
-                    <span className="text-base font-semibold">kWp</span>
+                  <span className="text-[0.65rem] sm:text-xs font-medium text-emerald-700/80 dark:text-emerald-300/80">
+                    • Preço comercial por kWp
                   </span>
                 </div>
               </div>
-            ) : null}
+
+              {/* Card 2: Distribuidores Parceiros (Ao lado, meio escuro, Em Breve) */}
+              <div
+                className="relative rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-muted)]/15 dark:bg-zinc-900/50 p-3.5 sm:p-4.5 flex flex-col justify-between text-left select-none opacity-70 hover:opacity-80 transition-opacity"
+                title="Esta funcionalidade estará disponível em breve com estoque de múltiplos distribuidores integrados"
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-muted)]/30 text-[var(--color-muted-foreground)] shrink-0">
+                        <Package className="h-4 w-4" />
+                      </span>
+                      <span className="text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
+                        Distribuidores Parceiros
+                      </span>
+                    </div>
+                    <span className="rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[0.65rem] sm:text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1 shadow-xs">
+                      <Clock className="h-3 w-3" />
+                      Em Breve
+                    </span>
+                  </div>
+
+                  <p className="text-[0.72rem] sm:text-xs text-[var(--color-muted-foreground)] leading-relaxed">
+                    Cotação integrada diretamente com o estoque e catálogos em tempo real de
+                    distribuidores parceiros homologados.
+                  </p>
+
+                  <div className="space-y-1 pt-0.5 text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)]">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]/50 shrink-0" />
+                      Estoque em tempo real por distribuidor parceiro
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]/50 shrink-0" />
+                      Cotação multicatálogo e comparação entre fornecedores
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]/50 shrink-0" />
+                      Cálculo automatizado de frete, impostos e prazo de envio
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3.5 pt-2.5 border-t border-[var(--color-border)]/50 flex items-center justify-between">
+                  <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium flex items-center gap-1">
+                    <Warehouse className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
+                    Integração direta de distribuidores
+                  </span>
+                  <span className="text-[0.65rem] sm:text-xs font-semibold text-amber-600/90 dark:text-amber-400/90">
+                    Disponível em breve
+                  </span>
+                </div>
+              </div>
+            </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               {moduleLine ? (
@@ -1031,13 +1010,7 @@ export function ProposalEquipmentEditorCard({
                 <Button
                   type="button"
                   onClick={() => void save()}
-                  disabled={
-                    saving ||
-                    lines.length === 0 ||
-                    !distributorId ||
-                    unavailableCount > 0 ||
-                    distributorSwitchLoading
-                  }
+                  disabled={saving || lines.length === 0 || !distributorId || unavailableCount > 0}
                   className="bg-emerald-600 text-white hover:bg-emerald-700"
                 >
                   {saving ? (
