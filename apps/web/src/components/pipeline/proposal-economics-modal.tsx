@@ -3831,8 +3831,11 @@ export const ProposalEconomicsModal = forwardRef<
                             <th className="py-2 px-1 sm:p-3 text-center sm:text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-14 sm:w-20">
                               Qtd
                             </th>
-                            <th className="py-2 px-2 sm:p-3 text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-28 sm:w-36">
-                              Escopo
+                            <th className="hidden sm:table-cell p-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                              Un.
+                            </th>
+                            <th className="py-2 px-2 sm:p-3 text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-28 sm:w-32">
+                              Total
                             </th>
                           </tr>
                         </thead>
@@ -3986,24 +3989,44 @@ export const ProposalEconomicsModal = forwardRef<
                                     </span>
                                   )}
                                 </td>
-                                <td className="py-2 px-2 sm:p-3 text-right font-medium text-[var(--color-foreground)] text-[0.72rem] sm:text-xs whitespace-nowrap">
-                                  <span className="inline-flex items-center rounded-md bg-emerald-500/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-300 font-semibold text-[0.65rem] sm:text-xs">
-                                    Incluso no projeto
-                                  </span>
+                                <td className="hidden sm:table-cell p-3 text-right tabular-nums text-[var(--color-muted-foreground)]">
+                                  {formatCurrency(item.unit_price)}
+                                </td>
+                                <td className="py-2 px-2 sm:p-3 text-right font-semibold tabular-nums text-[var(--color-foreground)] text-[0.72rem] sm:text-sm whitespace-nowrap">
+                                  {formatCurrency(qty * (item.unit_price ?? 0))}
                                 </td>
                               </tr>
                             );
                           })}
                         </tbody>
                         <tfoot>
+                          <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/15">
+                            <td
+                              colSpan={2}
+                              className="py-2 px-2 sm:p-3 text-left sm:text-right text-[0.7rem] sm:text-xs font-semibold text-[var(--color-muted-foreground)]"
+                            >
+                              Total dos equipamentos
+                            </td>
+                            <td className="hidden sm:table-cell" />
+                            <td className="hidden sm:table-cell" />
+                            <td className="py-2 px-2 sm:p-3 text-right text-xs sm:text-sm font-semibold tabular-nums text-[var(--color-foreground)] whitespace-nowrap">
+                              {formatCurrency(
+                                proposalKitResult.kit_items.reduce(
+                                  (sum, i) => sum + effectiveKitQty(i) * (i.unit_price || 0),
+                                  0
+                                )
+                              )}
+                            </td>
+                          </tr>
                           <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/25">
                             <td
                               colSpan={2}
-                              className="py-2 px-2 sm:p-3 text-left sm:text-right text-[0.7rem] sm:text-xs font-semibold text-[var(--color-foreground)]"
+                              className="py-2 px-2 sm:p-3 text-left sm:text-right text-[0.7rem] sm:text-xs font-bold text-[var(--color-foreground)]"
                             >
                               Total do Projeto ({activeDistributorCard?.name ?? "Padrão"} ·{" "}
                               {formatCurrency(activeRatePerKwp)}/kWp)
                             </td>
+                            <td className="hidden sm:table-cell" />
                             <td className="hidden sm:table-cell" />
                             <td className="py-2 px-2 sm:p-3 text-right text-xs sm:text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                               {formatCurrency(activeCommercialPrice)}
