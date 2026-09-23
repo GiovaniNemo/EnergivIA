@@ -2916,35 +2916,13 @@ export const ProposalEconomicsModal = forwardRef<
                       </div>
                     </div>
 
-                    <div className="mt-3.5 pt-2.5 border-t border-emerald-500/20 flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <Label
-                          htmlFor="kwp-rate-input"
-                          className="text-xs font-semibold text-[var(--color-foreground)] whitespace-nowrap flex items-center gap-1"
-                        >
-                          <Zap className="w-3.5 h-3.5 text-emerald-500" />
-                          Taxa R$/kWp:
-                        </Label>
-                        <div className="relative w-28 sm:w-32">
-                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--color-muted-foreground)] font-bold">
-                            R$
-                          </span>
-                          <Input
-                            id="kwp-rate-input"
-                            type="number"
-                            min={500}
-                            step={50}
-                            value={kwpRateValue}
-                            onChange={(e) =>
-                              setKwpRateValue(Math.max(0, parseFloat(e.target.value) || 0))
-                            }
-                            className="pl-8 h-8 font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 bg-[var(--color-background)]"
-                            placeholder="2800"
-                          />
-                        </div>
-                      </div>
-                      <span className="text-[0.65rem] sm:text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                        • Ativo na proposta
+                    <div className="mt-3.5 pt-2.5 border-t border-emerald-500/20 flex items-center justify-between">
+                      <span className="text-[0.68rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                        <Zap className="h-3.5 w-3.5 text-emerald-500" />
+                        Modalidade ativa na proposta
+                      </span>
+                      <span className="text-[0.65rem] sm:text-xs font-medium text-emerald-700/80 dark:text-emerald-300/80">
+                        • Preço comercial por kWp
                       </span>
                     </div>
                   </div>
@@ -2980,10 +2958,6 @@ export const ProposalEconomicsModal = forwardRef<
                         <div className="flex items-center gap-1.5">
                           <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]/50 shrink-0" />
                           Estoque em tempo real por distribuidor parceiro
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]/50 shrink-0" />
-                          Troca livre de módulos e inversores no estoque
                         </div>
                         <div className="flex items-center gap-1.5">
                           <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]/50 shrink-0" />
@@ -3396,14 +3370,44 @@ export const ProposalEconomicsModal = forwardRef<
                       </div>
                     ) : computedDistributorCards.length > 0 ? (
                       <div className="space-y-2 pt-1">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-foreground)] flex items-center gap-1.5">
-                            <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
-                            Opções de Kits por Preço por kWp
-                          </h4>
-                          <span className="text-[11px] text-[var(--color-muted-foreground)]">
-                            3 configurações montadas com equipamentos do seu catálogo
-                          </span>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div>
+                            <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-foreground)] flex items-center gap-1.5">
+                              <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                              Opções de Kits por Preço por kWp
+                            </h4>
+                            <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                              3 configurações montadas com equipamentos do seu catálogo
+                            </span>
+                          </div>
+
+                          {/* Ajuste de Preço R$/kWp */}
+                          <div className="flex items-center gap-2.5 shrink-0 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] px-3 py-1.5 shadow-xs">
+                            <Label
+                              htmlFor="kwp-rate-input"
+                              className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] whitespace-nowrap flex items-center gap-1.5"
+                            >
+                              <Zap className="w-3.5 h-3.5 text-emerald-500" />
+                              Preço R$/kWp:
+                            </Label>
+                            <div className="relative w-28 sm:w-32">
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--color-muted-foreground)] font-bold">
+                                R$
+                              </span>
+                              <Input
+                                id="kwp-rate-input"
+                                type="number"
+                                min={500}
+                                step={50}
+                                value={kwpRateValue}
+                                onChange={(e) =>
+                                  setKwpRateValue(Math.max(0, parseFloat(e.target.value) || 0))
+                                }
+                                className="pl-8 h-8 font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 bg-[var(--color-card)]"
+                                placeholder="2800"
+                              />
+                            </div>
+                          </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                           {computedDistributorCards.map((tier) => {
