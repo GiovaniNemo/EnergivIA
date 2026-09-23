@@ -3222,20 +3222,6 @@ export const ProposalEconomicsModal = forwardRef<
                             <strong>4 módulos</strong> em série para atingir a faixa de tensão
                             mínima de operação (tensão de partida do inversor / MPPT).
                           </p>
-                          <p className="leading-relaxed text-[0.72rem] sm:text-xs font-medium text-amber-900 dark:text-amber-100 pt-0.5">
-                            💡 <strong>Dica para o integrador:</strong> Com módulos de{" "}
-                            <strong>{activeModuleWatts}W</strong>, o mínimo de 4 módulos totaliza{" "}
-                            <strong>
-                              {adjustedKw.toLocaleString("pt-BR", {
-                                minimumFractionDigits: 1,
-                                maximumFractionDigits: 2,
-                              })}{" "}
-                              kWp
-                            </strong>
-                            . Caso deseje uma potência final menor e mais próxima do cálculo, você
-                            pode selecionar módulos de menor potência (ex: 450W ou 550W) nas opções
-                            abaixo.
-                          </p>
                         </div>
                       </div>
                     </div>
