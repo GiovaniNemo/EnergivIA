@@ -577,6 +577,28 @@ export const ProposalEconomicsModal = forwardRef<
   const [isUploadDragActive, setIsUploadDragActive] = useState(false);
   const billFileInputRef = useRef<HTMLInputElement | null>(null);
   const lastLoadedStateIdRef = useRef<string | null>(null);
+  const roofTypeContainerRef = useRef<HTMLDivElement | null>(null);
+  const roofTypeInputRef = useRef<HTMLInputElement | null>(null);
+
+  const scrollToRoofTypeField = useCallback(() => {
+    if (typeof window === "undefined") return;
+    requestAnimationFrame(() => {
+      roofTypeContainerRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      setTimeout(() => {
+        roofTypeInputRef.current?.focus();
+      }, 150);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (proposalFieldErrors.roofType) {
+      scrollToRoofTypeField();
+    }
+  }, [proposalFieldErrors.roofType, scrollToRoofTypeField]);
+
   const [proposalKitRequest, setProposalKitRequest] = useState<ProposalKitRequest | null>(null);
   const [proposalKitDraft, setProposalKitDraft] = useState<ProposalKitDraft>({
     systemKw: "5",
@@ -2579,8 +2601,15 @@ export const ProposalEconomicsModal = forwardRef<
                         />
                       </div>
                     </div>
-                    <div className="grid gap-1.5 sm:max-w-md">
-                      <Label>
+                    <div
+                      ref={roofTypeContainerRef}
+                      className={`grid gap-1.5 sm:max-w-md scroll-mt-8 transition-all duration-300 ${
+                        proposalFieldErrors.roofType
+                          ? "rounded-xl p-2 ring-2 ring-red-500/50 bg-red-500/5 dark:bg-red-500/10"
+                          : ""
+                      }`}
+                    >
+                      <Label className="flex items-center gap-1 font-medium">
                         Tipo de telhado{" "}
                         <span className="text-red-600 dark:text-red-400" aria-hidden>
                           *
@@ -2608,6 +2637,7 @@ export const ProposalEconomicsModal = forwardRef<
                         renderInput={(params) => (
                           <TextField
                             {...params}
+                            inputRef={roofTypeInputRef}
                             size="small"
                             placeholder="Selecione o tipo de telhado"
                             error={Boolean(proposalFieldErrors.roofType)}
@@ -2697,6 +2727,9 @@ export const ProposalEconomicsModal = forwardRef<
                     fieldErrors.roofType
                   ) {
                     setProposalFieldErrors(fieldErrors);
+                    if (fieldErrors.roofType) {
+                      scrollToRoofTypeField();
+                    }
                     return;
                   }
                   setProposalFieldErrors({});
