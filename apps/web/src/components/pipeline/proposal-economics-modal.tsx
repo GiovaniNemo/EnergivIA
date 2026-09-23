@@ -32,6 +32,7 @@ import {
   Warehouse,
   Zap,
   Bot,
+  Info,
 } from "lucide-react";
 import { buildSystemDealTitle } from "@/components/lead-detail/lead-detail-utils";
 import { Button } from "@/components/ui/button";
@@ -1838,6 +1839,29 @@ export const ProposalEconomicsModal = forwardRef<
       ? (supplierOptions.find((s) => s.supplier_id === kitDraftSource.id)?.supplier_name ?? null)
       : null;
 
+  // Cálculos de Potência Calculada vs. Potência Ajustada (mínimo técnico de 4 módulos)
+  const calculatedKw =
+    generatedProposal?.tamanhoSistemaKw ?? (parseFloat(proposalKitDraft.systemKw) || 0);
+
+  const catalogModuleW =
+    proposalKitResult && proposalKitResult.modules.quantity > 0
+      ? Math.round((proposalKitResult.system_power_kw / proposalKitResult.modules.quantity) * 1000)
+      : 630;
+
+  const activeModuleWatts = quotingMode === "kwp_rate" ? 585 : catalogModuleW;
+
+  const theoreticalModuleQty =
+    activeModuleWatts > 0 ? Math.round((calculatedKw * 1000) / activeModuleWatts) : 0;
+
+  // A função de potência ajustada só entra quando o kwp calculado não bate a quantidade mínima de 4 módulos:
+  const isBelowMinModules = theoreticalModuleQty < 4 && calculatedKw > 0;
+
+  const adjustedKw = isBelowMinModules
+    ? quotingMode === "kwp_rate" && selectedKwpTier
+      ? selectedKwpTier.systemKwp
+      : (proposalKitResult?.system_power_kw ?? Number(((4 * activeModuleWatts) / 1000).toFixed(2)))
+    : calculatedKw;
+
   if (!currentOrganizationId) {
     return null;
   }
@@ -2744,12 +2768,14 @@ export const ProposalEconomicsModal = forwardRef<
                 </div>
                 <div className="space-y-0.5 sm:space-y-1">
                   <p className="text-[0.65rem] sm:text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                    Potência
+                    {isBelowMinModules ? "Potência (Ajustada)" : "Potência"}
                   </p>
                   <p className="text-base sm:text-2xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
-                    {(quotingMode === "kwp_rate" && selectedKwpTier?.systemKwp
-                      ? selectedKwpTier.systemKwp
-                      : clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0)
+                    {(isBelowMinModules
+                      ? adjustedKw
+                      : quotingMode === "kwp_rate" && selectedKwpTier?.systemKwp
+                        ? selectedKwpTier.systemKwp
+                        : clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0)
                     )?.toLocaleString("pt-BR", {
                       minimumFractionDigits: 1,
                       maximumFractionDigits: 2,
@@ -2758,6 +2784,16 @@ export const ProposalEconomicsModal = forwardRef<
                       kWp
                     </span>
                   </p>
+                  {isBelowMinModules && (
+                    <p className="text-[0.65rem] text-[var(--color-muted-foreground)] leading-tight">
+                      Calculada:{" "}
+                      {calculatedKw.toLocaleString("pt-BR", {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      kWp (mín. 4 mods)
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-0.5 sm:space-y-1">
                   <p className="text-[0.65rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
@@ -2909,25 +2945,87 @@ export const ProposalEconomicsModal = forwardRef<
                     </div>
                   </div>
 
-                  <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-                    <div className="space-y-1.5">
-                      <Label
-                        htmlFor="proposal-kit-kw"
-                        className="text-xs font-semibold text-[var(--color-foreground)]"
-                      >
-                        Potência do sistema (kWp)
-                      </Label>
-                      <Input
-                        id="proposal-kit-kw"
-                        type="text"
-                        inputMode="decimal"
-                        className="h-11 border-[var(--color-border)] bg-[var(--color-background)] font-medium tabular-nums focus-visible:ring-emerald-500"
-                        value={proposalKitDraft.systemKw}
-                        onChange={(e) =>
-                          setProposalKitDraft((d) => ({ ...d, systemKw: e.target.value }))
-                        }
-                      />
-                    </div>
+                  <div
+                    className={`grid gap-3.5 sm:grid-cols-2 ${
+                      isBelowMinModules ? "lg:grid-cols-4" : "lg:grid-cols-3"
+                    }`}
+                  >
+                    {isBelowMinModules ? (
+                      <>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-1">
+                            <Label
+                              htmlFor="proposal-kit-kw"
+                              className="text-xs font-semibold text-[var(--color-foreground)]"
+                            >
+                              Potência Calculada (kWp)
+                            </Label>
+                            <span className="text-[0.65rem] font-medium text-[var(--color-muted-foreground)]">
+                              Teórico ({theoreticalModuleQty}{" "}
+                              {theoreticalModuleQty === 1 ? "mód." : "móds."})
+                            </span>
+                          </div>
+                          <Input
+                            id="proposal-kit-kw"
+                            type="text"
+                            inputMode="decimal"
+                            className="h-11 border-[var(--color-border)] bg-[var(--color-background)] font-medium tabular-nums focus-visible:ring-emerald-500"
+                            value={proposalKitDraft.systemKw}
+                            onChange={(e) =>
+                              setProposalKitDraft((d) => ({ ...d, systemKw: e.target.value }))
+                            }
+                          />
+                          <p className="text-[0.68rem] text-[var(--color-muted-foreground)]">
+                            Baseada no consumo/fatura.
+                          </p>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-1">
+                            <Label className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              Potência Ajustada (kWp)
+                            </Label>
+                            <span className="inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[0.65rem] font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                              Mín. 4 módulos
+                            </span>
+                          </div>
+                          <div className="flex h-11 items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-500/[0.06] px-3.5 font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+                            <span>
+                              {adjustedKw.toLocaleString("pt-BR", {
+                                minimumFractionDigits: 1,
+                                maximumFractionDigits: 2,
+                              })}{" "}
+                              kWp
+                            </span>
+                            <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                              4× {activeModuleWatts}W
+                            </span>
+                          </div>
+                          <p className="text-[0.68rem] text-emerald-600/90 dark:text-emerald-400/90">
+                            Mínimo operacional do kit/inversor.
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="proposal-kit-kw"
+                          className="text-xs font-semibold text-[var(--color-foreground)]"
+                        >
+                          Potência do sistema (kWp)
+                        </Label>
+                        <Input
+                          id="proposal-kit-kw"
+                          type="text"
+                          inputMode="decimal"
+                          className="h-11 border-[var(--color-border)] bg-[var(--color-background)] font-medium tabular-nums focus-visible:ring-emerald-500"
+                          value={proposalKitDraft.systemKw}
+                          onChange={(e) =>
+                            setProposalKitDraft((d) => ({ ...d, systemKw: e.target.value }))
+                          }
+                        />
+                      </div>
+                    )}
                     <div className="space-y-1.5">
                       <Label
                         htmlFor="proposal-kit-roof"
@@ -3092,6 +3190,56 @@ export const ProposalEconomicsModal = forwardRef<
                       </Select>
                     </div>
                   </div>
+
+                  {isBelowMinModules && (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.08] p-3 sm:p-4 text-xs">
+                      <div className="flex items-start gap-2.5">
+                        <Info className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                        <div className="space-y-1 text-amber-900 dark:text-amber-200">
+                          <p className="font-semibold text-xs sm:text-sm">
+                            Por que a potência foi ajustada para{" "}
+                            {adjustedKw.toLocaleString("pt-BR", {
+                              minimumFractionDigits: 1,
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                            kWp?
+                          </p>
+                          <p className="leading-relaxed text-[0.72rem] sm:text-xs text-amber-800/90 dark:text-amber-300/90">
+                            A potência calculada pelo consumo é de{" "}
+                            <strong>
+                              {calculatedKw.toLocaleString("pt-BR", {
+                                minimumFractionDigits: 1,
+                                maximumFractionDigits: 2,
+                              })}{" "}
+                              kWp
+                            </strong>
+                            , o que exigiria apenas{" "}
+                            <strong>
+                              {theoreticalModuleQty}{" "}
+                              {theoreticalModuleQty === 1 ? "módulo" : "módulos"}
+                            </strong>
+                            . No entanto, os inversores solares e a plataforma exigem no mínimo{" "}
+                            <strong>4 módulos</strong> em série para atingir a faixa de tensão
+                            mínima de operação (tensão de partida do inversor / MPPT).
+                          </p>
+                          <p className="leading-relaxed text-[0.72rem] sm:text-xs font-medium text-amber-900 dark:text-amber-100 pt-0.5">
+                            💡 <strong>Dica para o integrador:</strong> Com módulos de{" "}
+                            <strong>{activeModuleWatts}W</strong>, o mínimo de 4 módulos totaliza{" "}
+                            <strong>
+                              {adjustedKw.toLocaleString("pt-BR", {
+                                minimumFractionDigits: 1,
+                                maximumFractionDigits: 2,
+                              })}{" "}
+                              kWp
+                            </strong>
+                            . Caso deseje uma potência final menor e mais próxima do cálculo, você
+                            pode selecionar módulos de menor potência (ex: 450W ou 550W) nas opções
+                            abaixo.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3540,6 +3688,11 @@ export const ProposalEconomicsModal = forwardRef<
                             kWp
                           </span>
                         </div>
+                        {isBelowMinModules && (
+                          <span className="inline-flex items-center gap-1 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-300">
+                            Ajustado ao mín. de 4 módulos ({activeModuleWatts}W)
+                          </span>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 sm:gap-3.5">
