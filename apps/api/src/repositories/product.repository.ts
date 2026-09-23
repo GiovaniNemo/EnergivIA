@@ -54,9 +54,9 @@ export class ProductRepository {
   private async getStockProductIds(orgId: string): Promise<string[]> {
     const rows = await this.prisma.stockItem.findMany({
       where: { organizationId: orgId },
-      select: { productId: true, quantity: true, reservedQuantity: true },
+      select: { productId: true },
     });
-    return rows.filter((r) => r.quantity - r.reservedQuantity > 0).map((r) => r.productId);
+    return rows.map((r) => r.productId);
   }
 
   async getStockAvailability(orgId: string, productIds: string[]): Promise<Map<string, number>> {
@@ -77,13 +77,11 @@ export class ProductRepository {
     if (productIds.length === 0) return new Map();
     const rows = await this.prisma.stockItem.findMany({
       where: { organizationId: orgId, productId: { in: productIds } },
-      select: { productId: true, unitCost: true, quantity: true, reservedQuantity: true },
+      select: { productId: true, unitCost: true },
     });
     const map = new Map<string, { price: number }>();
     for (const r of rows) {
-      if (r.quantity - r.reservedQuantity > 0) {
-        map.set(r.productId, { price: r.unitCost.toNumber() });
-      }
+      map.set(r.productId, { price: r.unitCost.toNumber() });
     }
     return map;
   }
@@ -96,7 +94,7 @@ export class ProductRepository {
         : [];
       const distOffers = source.distributorId
         ? await this.prisma.distributorProduct.findMany({
-            where: { distributorId: source.distributorId, stockQuantity: { gt: 0 } },
+            where: { distributorId: source.distributorId },
             select: { productId: true },
           })
         : [];
@@ -130,7 +128,6 @@ export class ProductRepository {
             where: {
               distributorId: source.distributorId,
               productId: { in: productIds },
-              stockQuantity: { gt: 0 },
             },
           })
         : [];
@@ -168,8 +165,7 @@ export class ProductRepository {
       else if (offerSup) bestPrice = offerSup.price;
       else if (distPrice !== null) bestPrice = distPrice;
 
-      if (bestPrice !== null)
-        withPrice.push({ ...item, price: bestPrice } as T & { price: number });
+      withPrice.push({ ...item, price: bestPrice ?? 0 } as T & { price: number });
     }
     return withPrice;
   }
