@@ -28,7 +28,7 @@ export function BeamqHeroSection() {
         <video
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-cover object-center opacity-85 will-change-transform"
-          style={{ filter: "hue-rotate(65deg) saturate(1.15)" }}
+          style={{ filter: "hue-rotate(-125deg) saturate(1.3) contrast(1.18) brightness(0.95)" }}
           src="https://strvid.nyc3.cdn.digitaloceanspaces.com/motionsite/blue-light-glow.mp4"
           autoPlay
           loop
@@ -37,6 +37,7 @@ export function BeamqHeroSection() {
           preload="auto"
         />
         {/* Hardware-accelerated gradient overlays for seamless atmospheric blend */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.12)_0%,transparent_65%)]" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#02040a]/75 via-transparent to-[#02040a]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,#02040a_85%)]" />
       </div>
