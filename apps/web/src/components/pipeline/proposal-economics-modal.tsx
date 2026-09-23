@@ -661,7 +661,7 @@ export const ProposalEconomicsModal = forwardRef<
     }
   }, [stringBoxOptions, proposalKitDraft.stringBoxId]);
   const [kitSourceOptions, setKitSourceOptions] = useState<KitSourceOption[] | null>(null);
-  const [_kitSourceLoading, setKitSourceLoading] = useState(false);
+  const [kitSourceLoading, setKitSourceLoading] = useState(false);
   const autoSourceAppliedRef = useRef(false);
   const [kitSwapCategory, setKitSwapCategory] = useState<KitSwapCategory | null>(null);
   const [kitAlternatives, setKitAlternatives] = useState<KitAlternativeOption[] | null>(null);
@@ -1850,7 +1850,7 @@ export const ProposalEconomicsModal = forwardRef<
   }
 
   const kitDraftSource = proposalKitDraft.source;
-  const _ownStockOption = kitSourceOptions?.find((s) => s.type === "own_stock") ?? null;
+  const ownStockOption = kitSourceOptions?.find((s) => s.type === "own_stock") ?? null;
   const supplierOptions = (kitSourceOptions ?? []).filter(
     (s): s is KitSourceOption & { supplier_id: string } =>
       s.type === "supplier" && typeof s.supplier_id === "string"
@@ -3295,29 +3295,111 @@ export const ProposalEconomicsModal = forwardRef<
                       </span>
                     ) : null}
                   </h3>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                    <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
-                    Perfil do Integrador
-                  </span>
+                  {proposalKitResult?.own_stock_used || kitDraftSource.kind === "own" ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                      <Warehouse className="h-3.5 w-3.5 text-emerald-500" />
+                      Meu estoque
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                      <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                      Perfil do Integrador
+                    </span>
+                  )}
                 </div>
 
-                {/* Origem do Kit: Perfil do Integrador */}
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] p-3 sm:p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-foreground)]">
-                          Origem do kit:
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                          Perfil do Integrador
-                        </span>
-                      </div>
-                      <p className="text-xs text-[var(--color-muted-foreground)]">
-                        Equipamentos compatíveis selecionados automaticamente a partir do catálogo
-                        global com base no dimensionamento da sua proposta.
+                {/* Seletor de Origem do Kit */}
+                <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/15 p-3.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-foreground)]">
+                        Origem do kit
+                      </p>
+                      <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
+                        Selecione a fonte dos equipamentos para montar o kit da proposta:
                       </p>
                     </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {kitSourceLoading && !kitSourceOptions ? (
+                      <span className="inline-flex animate-pulse items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3.5 py-1.5 text-xs text-[var(--color-muted-foreground)]">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Verificando estoque…
+                      </span>
+                    ) : null}
+
+                    {/* Opção 1: Perfil do Integrador (Catálogo Global) */}
+                    <button
+                      type="button"
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs sm:text-sm transition cursor-pointer ${
+                        kitDraftSource.kind !== "own"
+                          ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
+                          : "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
+                      }`}
+                      onClick={() =>
+                        setProposalKitDraft((d) => ({
+                          ...d,
+                          source: { kind: "auto" },
+                          pins: {},
+                        }))
+                      }
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                      Perfil do Integrador
+                    </button>
+
+                    {/* Opção 2: Meu Estoque */}
+                    {ownStockOption ? (
+                      <button
+                        type="button"
+                        disabled={!ownStockOption.available}
+                        title={
+                          ownStockOption.available
+                            ? "Montar o kit 100% com itens do seu estoque cadastrado"
+                            : "Seu estoque cadastrado ainda não cobre todos os equipamentos necessários para esta configuração"
+                        }
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs sm:text-sm transition ${
+                          kitDraftSource.kind === "own"
+                            ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
+                            : ownStockOption.available
+                              ? "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300 cursor-pointer"
+                              : "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-muted-foreground)] opacity-60"
+                        }`}
+                        onClick={() =>
+                          setProposalKitDraft((d) => ({
+                            ...d,
+                            source: { kind: "own" },
+                            pins: {},
+                          }))
+                        }
+                      >
+                        <Warehouse className="h-3.5 w-3.5" />
+                        Meu estoque
+                        {ownStockOption.available && ownStockOption.total != null ? (
+                          <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+                            ({formatCurrency(ownStockOption.total)})
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:text-amber-300">
+                            cobre {ownStockOption.covered_categories ?? 0}/
+                            {ownStockOption.required_categories ?? 5}
+                          </span>
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        title="Cadastre produtos no seu estoque para cotar a partir dos seus próprios itens"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-background)] px-3.5 py-1.5 text-xs sm:text-sm text-[var(--color-muted-foreground)] opacity-60 cursor-not-allowed"
+                      >
+                        <Warehouse className="h-3.5 w-3.5" />
+                        Meu estoque
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:text-amber-300">
+                          Sem itens cadastrados
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
