@@ -263,7 +263,7 @@ export class KitGenerationService {
       let singleInvPowerKw = Number(inverterSpecs.nominal_power_w) / 1000;
       if (!Number.isFinite(singleInvPowerKw) || singleInvPowerKw <= 0) {
         const match = invModelName.match(/\b(\d+(?:[.,]\d+)?)\s*(?:kw|k)\b/i);
-        if (match) {
+        if (match && match[1]) {
           singleInvPowerKw = parseFloat(match[1].replace(",", "."));
         } else if (inverterSpecs.max_dc_power) {
           singleInvPowerKw =
