@@ -113,6 +113,7 @@ export class DistributorsService {
     return this.prisma.distributor.update({
       where: { id },
       data: {
+        ...(dto.active !== undefined && { active: dto.active }),
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.cnpj !== undefined && { cnpj: dto.cnpj }),
         ...(dto.email !== undefined && { email: dto.email }),
@@ -284,6 +285,7 @@ export class DistributorsService {
       leadTimeDays?: number | null;
       minimumOrderQuantity?: number;
       lastPriceUpdate?: Date;
+      active?: boolean;
     } = {};
     if (dto.distributor_sku !== undefined) data.distributorSku = dto.distributor_sku;
     if (dto.price !== undefined) {
@@ -294,6 +296,7 @@ export class DistributorsService {
     if (dto.lead_time_days !== undefined) data.leadTimeDays = dto.lead_time_days;
     if (dto.minimum_order_quantity !== undefined)
       data.minimumOrderQuantity = dto.minimum_order_quantity;
+    if (dto.active !== undefined) data.active = dto.active;
 
     return this.prisma.distributorProduct.update({
       where: { id },
@@ -304,6 +307,17 @@ export class DistributorsService {
   async removeDistributorProduct(id: string): Promise<void> {
     await this.prisma.distributorProduct.findUniqueOrThrow({ where: { id } });
     await this.prisma.distributorProduct.delete({ where: { id } });
+  }
+
+  async bulkUpdateDistributorProductsActive(
+    distributorId: string,
+    ids: string[],
+    active: boolean
+  ): Promise<{ count: number }> {
+    return this.prisma.distributorProduct.updateMany({
+      where: { distributorId, id: { in: ids } },
+      data: { active },
+    });
   }
 
   async bulkUpsertDistributorProducts(

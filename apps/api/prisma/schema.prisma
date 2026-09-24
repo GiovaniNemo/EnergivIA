@@ -686,6 +686,7 @@ model Distributor {
   website   String?
   city      String?
   state     String?
+  active    Boolean  @default(true)
   apiCredentials Json?
   integrationProvider String?
   createdAt DateTime @default(now())
@@ -696,6 +697,7 @@ model Distributor {
 
   @@index([name])
   @@index([cnpj])
+  @@index([active])
 }
 
 model FreightRule {
@@ -726,6 +728,7 @@ model DistributorProduct {
   stockQuantity       Int      @default(0) @map("stock_quantity")
   leadTimeDays        Int?     @map("lead_time_days")
   minimumOrderQuantity Int     @default(1) @map("minimum_order_quantity")
+  active              Boolean  @default(true)
   lastPriceUpdate     DateTime? @map("last_price_update")
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -737,6 +740,7 @@ model DistributorProduct {
   @@index([distributorId])
   @@index([productId])
   @@index([distributorId, productId])
+  @@index([active])
 }
 
 enum CompatibilityType {

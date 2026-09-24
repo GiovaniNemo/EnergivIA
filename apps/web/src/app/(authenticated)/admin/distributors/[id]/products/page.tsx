@@ -29,6 +29,7 @@ import {
   Menu,
   FormControlLabel,
   Checkbox,
+  Switch,
   Tooltip,
   InputAdornment,
   CircularProgress,
@@ -52,6 +53,7 @@ import {
   updateDistributorProduct,
   deleteDistributorProduct,
   uploadDistributorSpreadsheet,
+  bulkUpdateDistributorProductsActive,
   type DistributorProduct,
 } from "@/lib/admin-api";
 import { useForm, Controller } from "react-hook-form";
@@ -141,6 +143,7 @@ export default function DistributorInventoryPage(): JSX.Element {
   const [specsProductId, setSpecsProductId] = useState<string | null>(null);
   const [inlinePrice, setInlinePrice] = useState<{ id: string; value: string } | null>(null);
   const [inlineStock, setInlineStock] = useState<{ id: string; value: string } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [importFeedback, setImportFeedback] = useState<{
     severity: "success" | "warning" | "error";
     message: string;
@@ -158,7 +161,8 @@ export default function DistributorInventoryPage(): JSX.Element {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch]);
+    setSelectedIds([]);
+  }, [debouncedSearch, categoryId]);
 
   const persistOptionalColumns = (next: Record<OptionalColumnId, boolean>) => {
     setOptionalColumns(next);
@@ -173,7 +177,7 @@ export default function DistributorInventoryPage(): JSX.Element {
 
   const visibleColCount = useMemo(
     () =>
-      6 +
+      8 +
       (optionalColumns.sku ? 1 : 0) +
       (optionalColumns.leadTime ? 1 : 0) +
       (optionalColumns.moq ? 1 : 0) +
@@ -244,6 +248,7 @@ export default function DistributorInventoryPage(): JSX.Element {
         distributor_sku?: string;
         lead_time_days?: number;
         minimum_order_quantity?: number;
+        active?: boolean;
       };
     }) => updateDistributorProduct(dpId, data),
     onSuccess: () => {
@@ -251,6 +256,46 @@ export default function DistributorInventoryPage(): JSX.Element {
       setEditingRow(null);
       setInlinePrice(null);
       setInlineStock(null);
+    },
+  });
+
+  const bulkActiveMutation = useMutation({
+    mutationFn: ({ ids, active }: { ids: string[]; active: boolean }) =>
+      bulkUpdateDistributorProductsActive(id, ids, active),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "distributors", id, "products"] });
+      setSelectedIds([]);
+      setImportFeedback({
+        severity: "success",
+        message: `${variables.ids.length} produto(s) ${variables.active ? "ativado(s)" : "pausado(s)"} para cotação com sucesso.`,
+      });
+    },
+    onError: (err: Error) => {
+      setImportFeedback({
+        severity: "error",
+        message: "Erro ao atualizar itens selecionados: " + err.message,
+      });
+    },
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((dpId) => deleteDistributorProduct(dpId)));
+    },
+    onSuccess: (_, ids) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "distributors", id, "products"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
+      setSelectedIds([]);
+      setImportFeedback({
+        severity: "success",
+        message: `${ids.length} produto(s) excluído(s) do catálogo deste fornecedor.`,
+      });
+    },
+    onError: (err: Error) => {
+      setImportFeedback({
+        severity: "error",
+        message: "Erro ao excluir itens selecionados: " + err.message,
+      });
     },
   });
 
@@ -335,18 +380,49 @@ export default function DistributorInventoryPage(): JSX.Element {
 
   return (
     <Box>
-      <Box display="flex" alignItems="center" gap={1} mb={2} sx={{ py: 0.5 }}>
-        <IconButton
-          size="small"
-          onClick={() => router.push("/admin/distribuidores")}
-          aria-label="Voltar"
-        >
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h2" sx={{ fontSize: "1.125rem", fontWeight: 600 }}>
-          Estoque · {distributor?.name ?? "…"}
-        </Typography>
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        flexWrap="wrap"
+        gap={1}
+        mb={2}
+        sx={{ py: 0.5 }}
+      >
+        <Box display="flex" alignItems="center" gap={1}>
+          <IconButton
+            size="small"
+            onClick={() => router.push("/admin/distribuidores")}
+            aria-label="Voltar"
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h2" sx={{ fontSize: "1.125rem", fontWeight: 600 }}>
+            Estoque · {distributor?.name ?? "…"}
+          </Typography>
+        </Box>
+        {distributor && (
+          <Chip
+            size="small"
+            label={
+              distributor.active !== false
+                ? "Fornecedor Ativo para Cotações"
+                : "Fornecedor Pausado nas Cotações"
+            }
+            color={distributor.active !== false ? "success" : "default"}
+            variant={distributor.active !== false ? "filled" : "outlined"}
+            sx={{ fontWeight: 600 }}
+          />
+        )}
       </Box>
+
+      {distributor?.active === false && (
+        <Alert severity="warning" variant="outlined" sx={{ mb: 2, borderRadius: 2 }}>
+          Este fornecedor está atualmente <strong>pausado</strong> para cotações gerais na lista de
+          parceiros. Os itens abaixo não serão incluídos nas cotações automáticas enquanto o status
+          do fornecedor estiver pausado.
+        </Alert>
+      )}
 
       <Paper variant="outlined" sx={{ overflow: "hidden" }}>
         <Stack
@@ -519,12 +595,113 @@ export default function DistributorInventoryPage(): JSX.Element {
           </Box>
         </Menu>
 
+        {selectedIds.length > 0 && (
+          <Paper
+            variant="outlined"
+            sx={{
+              mx: 2,
+              mb: 2,
+              p: 1.5,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              bgcolor: (theme) =>
+                theme.palette.mode === "dark" ? "rgba(2, 136, 209, 0.12)" : "info.50",
+              borderColor: "info.main",
+              borderRadius: 2,
+              flexWrap: "wrap",
+              gap: 1.5,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Chip
+                label={`${selectedIds.length} selecionado(s)`}
+                color="info"
+                size="small"
+                sx={{ fontWeight: 600 }}
+              />
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                Ações em lote para os itens selecionados:
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                disabled={bulkActiveMutation.isPending}
+                onClick={() => bulkActiveMutation.mutate({ ids: selectedIds, active: true })}
+                sx={{ textTransform: "none", fontWeight: 600 }}
+              >
+                Ativar nas Cotações
+              </Button>
+              <Button
+                variant="outlined"
+                color="inherit"
+                size="small"
+                disabled={bulkActiveMutation.isPending}
+                onClick={() => bulkActiveMutation.mutate({ ids: selectedIds, active: false })}
+                sx={{ textTransform: "none", fontWeight: 600 }}
+              >
+                Pausar nas Cotações
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                disabled={bulkDeleteMutation.isPending}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Excluir definitivamente ${selectedIds.length} produto(s) deste fornecedor?`
+                    )
+                  ) {
+                    bulkDeleteMutation.mutate(selectedIds);
+                  }
+                }}
+                sx={{ textTransform: "none", fontWeight: 600 }}
+              >
+                Excluir Selecionados
+              </Button>
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => setSelectedIds([])}
+                sx={{ textTransform: "none", color: "text.secondary" }}
+              >
+                Limpar seleção
+              </Button>
+            </Stack>
+          </Paper>
+        )}
+
         <TableContainer
           sx={{ overflowX: "auto", maxHeight: { xs: "none", md: "min(70vh, 720px)" } }}
         >
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    size="small"
+                    indeterminate={
+                      selectedIds.length > 0 &&
+                      Boolean(inventory?.data?.length) &&
+                      selectedIds.length < (inventory?.data?.length ?? 0)
+                    }
+                    checked={
+                      Boolean(inventory?.data?.length) &&
+                      inventory!.data.every((r) => selectedIds.includes(r.id))
+                    }
+                    onChange={(e) => {
+                      if (e.target.checked && inventory?.data) {
+                        setSelectedIds(inventory.data.map((r) => r.id));
+                      } else {
+                        setSelectedIds([]);
+                      }
+                    }}
+                  />
+                </TableCell>
                 <TableCell>Produto</TableCell>
                 <TableCell>Marca</TableCell>
                 <TableCell>Tipo</TableCell>
@@ -537,6 +714,7 @@ export default function DistributorInventoryPage(): JSX.Element {
                 {optionalColumns.moq ? <TableCell align="right">MOQ</TableCell> : null}
                 {optionalColumns.bestPrice ? <TableCell>Melhor preço</TableCell> : null}
                 {optionalColumns.lastUpdate ? <TableCell>Últ. atualização</TableCell> : null}
+                <TableCell align="center">Status nas Cotações</TableCell>
                 <TableCell align="right">Ações</TableCell>
               </TableRow>
             </TableHead>
@@ -556,184 +734,242 @@ export default function DistributorInventoryPage(): JSX.Element {
                   </TableCell>
                 </TableRow>
               ) : (
-                inventory.data.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    hover
-                    sx={{ "&:last-child td, &:last-child th": { borderBottom: 0 } }}
-                  >
-                    <TableCell sx={{ maxWidth: 320 }}>
-                      <Box
-                        onClick={() => setSpecsProductId(row.product.id)}
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1.2,
-                          minWidth: 0,
-                          cursor: "pointer",
-                          "&:hover .product-name-text": {
-                            color: "primary.main",
-                            textDecoration: "underline",
-                          },
-                        }}
-                      >
-                        <Avatar
-                          src={row.product.imageUrl ?? row.product.brand.imageUrl ?? undefined}
-                          alt={row.product.name}
-                          variant="rounded"
-                          sx={{ width: 32, height: 32, fontSize: "0.75rem", flexShrink: 0 }}
-                        >
-                          {row.product.name.slice(0, 1).toUpperCase()}
-                        </Avatar>
-                        <Tooltip
-                          title={`Ver ficha técnica de: ${row.product.name}`}
-                          placement="top-start"
-                        >
-                          <Typography
-                            className="product-name-text"
-                            variant="body2"
-                            sx={{ fontWeight: 600, transition: "color 0.2s ease" }}
-                            noWrap
-                          >
-                            {row.product.name}
-                          </Typography>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                    <TableCell>{row.product.brand.name}</TableCell>
-                    <TableCell>{formatCategoryLabel(row.product.category.name)}</TableCell>
-                    {optionalColumns.sku ? (
-                      <TableCell>
-                        {row.distributorSku ? row.distributorSku : <EmptyCell />}
+                inventory.data.map((row) => {
+                  const isItemActive = row.active !== false;
+
+                  return (
+                    <TableRow
+                      key={row.id}
+                      hover
+                      selected={selectedIds.includes(row.id)}
+                      sx={{
+                        "&:last-child td, &:last-child th": { borderBottom: 0 },
+                        opacity: isItemActive ? 1 : 0.65,
+                        transition: "opacity 0.2s ease",
+                      }}
+                    >
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          size="small"
+                          checked={selectedIds.includes(row.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIds((prev) => [...prev, row.id]);
+                            } else {
+                              setSelectedIds((prev) => prev.filter((i) => i !== row.id));
+                            }
+                          }}
+                        />
                       </TableCell>
-                    ) : null}
-                    <TableCell align="right">
-                      {inlinePrice?.id === row.id ? (
-                        <TextField
-                          size="small"
-                          type="number"
-                          value={inlinePrice.value}
-                          onChange={(e) => setInlinePrice({ id: row.id, value: e.target.value })}
-                          onBlur={() => saveInlinePrice(row)}
-                          onKeyDown={(e) => e.key === "Enter" && saveInlinePrice(row)}
-                          inputProps={{ min: 0, step: 0.01 }}
-                          sx={{ width: 100 }}
-                          autoFocus
-                        />
-                      ) : (
+                      <TableCell sx={{ maxWidth: 320 }}>
                         <Box
-                          component="span"
-                          onClick={() => setInlinePrice({ id: row.id, value: String(row.price) })}
-                          sx={{ cursor: "pointer", textDecoration: "underline" }}
+                          onClick={() => setSpecsProductId(row.product.id)}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1.2,
+                            minWidth: 0,
+                            cursor: "pointer",
+                            "&:hover .product-name-text": {
+                              color: "primary.main",
+                              textDecoration: "underline",
+                            },
+                          }}
                         >
-                          {formatCurrency(row.price)}
+                          <Avatar
+                            src={row.product.imageUrl ?? row.product.brand.imageUrl ?? undefined}
+                            alt={row.product.name}
+                            variant="rounded"
+                            sx={{ width: 32, height: 32, fontSize: "0.75rem", flexShrink: 0 }}
+                          >
+                            {row.product.name.slice(0, 1).toUpperCase()}
+                          </Avatar>
+                          <Tooltip
+                            title={`Ver ficha técnica de: ${row.product.name}`}
+                            placement="top-start"
+                          >
+                            <Typography
+                              className="product-name-text"
+                              variant="body2"
+                              sx={{ fontWeight: 600, transition: "color 0.2s ease" }}
+                              noWrap
+                            >
+                              {row.product.name}
+                            </Typography>
+                          </Tooltip>
                         </Box>
-                      )}
-                    </TableCell>
-                    <TableCell align="right">
-                      {inlineStock?.id === row.id ? (
-                        <TextField
-                          size="small"
-                          type="number"
-                          value={inlineStock.value}
-                          onChange={(e) => setInlineStock({ id: row.id, value: e.target.value })}
-                          onBlur={() => saveInlinePrice(row)}
-                          onKeyDown={(e) => e.key === "Enter" && saveInlinePrice(row)}
-                          inputProps={{ min: 0, step: 1 }}
-                          sx={{ width: 80 }}
-                          autoFocus
-                        />
-                      ) : (
-                        <Box
-                          component="span"
-                          onClick={() =>
-                            setInlineStock({ id: row.id, value: String(row.stockQuantity) })
-                          }
-                          sx={{ cursor: "pointer", textDecoration: "underline" }}
-                        >
-                          {row.stockQuantity}
-                        </Box>
-                      )}
-                    </TableCell>
-                    {optionalColumns.leadTime ? (
+                      </TableCell>
+                      <TableCell>{row.product.brand.name}</TableCell>
+                      <TableCell>{formatCategoryLabel(row.product.category.name)}</TableCell>
+                      {optionalColumns.sku ? (
+                        <TableCell>
+                          {row.distributorSku ? row.distributorSku : <EmptyCell />}
+                        </TableCell>
+                      ) : null}
                       <TableCell align="right">
-                        {row.leadTimeDays != null ? row.leadTimeDays : <EmptyCell />}
-                      </TableCell>
-                    ) : null}
-                    {optionalColumns.moq ? (
-                      <TableCell align="right">{row.minimumOrderQuantity}</TableCell>
-                    ) : null}
-                    {optionalColumns.bestPrice ? (
-                      <TableCell>
-                        {row.isCheapestOffer ? (
-                          <Chip label="Sim" size="small" color="success" variant="outlined" />
-                        ) : (
-                          <Chip
-                            label="Não"
+                        {inlinePrice?.id === row.id ? (
+                          <TextField
                             size="small"
-                            variant="outlined"
-                            sx={{ color: "text.secondary", borderColor: "divider" }}
+                            type="number"
+                            value={inlinePrice.value}
+                            onChange={(e) => setInlinePrice({ id: row.id, value: e.target.value })}
+                            onBlur={() => saveInlinePrice(row)}
+                            onKeyDown={(e) => e.key === "Enter" && saveInlinePrice(row)}
+                            inputProps={{ min: 0, step: 0.01 }}
+                            sx={{ width: 100 }}
+                            autoFocus
                           />
-                        )}
-                      </TableCell>
-                    ) : null}
-                    {optionalColumns.lastUpdate ? (
-                      <TableCell>
-                        {row.lastPriceUpdate || row.updatedAt ? (
-                          formatDate(row.lastPriceUpdate ?? row.updatedAt)
                         ) : (
-                          <EmptyCell />
+                          <Box
+                            component="span"
+                            onClick={() => setInlinePrice({ id: row.id, value: String(row.price) })}
+                            sx={{ cursor: "pointer", textDecoration: "underline" }}
+                          >
+                            {formatCurrency(row.price)}
+                          </Box>
                         )}
                       </TableCell>
-                    ) : null}
-                    <TableCell align="right">
-                      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
-                        <Tooltip title="Ficha Técnica & Especificações">
-                          <IconButton
+                      <TableCell align="right">
+                        {inlineStock?.id === row.id ? (
+                          <TextField
                             size="small"
-                            color="primary"
-                            onClick={() => setSpecsProductId(row.product.id)}
-                            aria-label="Ficha Técnica"
+                            type="number"
+                            value={inlineStock.value}
+                            onChange={(e) => setInlineStock({ id: row.id, value: e.target.value })}
+                            onBlur={() => saveInlinePrice(row)}
+                            onKeyDown={(e) => e.key === "Enter" && saveInlinePrice(row)}
+                            inputProps={{ min: 0, step: 1 }}
+                            sx={{ width: 80 }}
+                            autoFocus
+                          />
+                        ) : (
+                          <Box
+                            component="span"
+                            onClick={() =>
+                              setInlineStock({ id: row.id, value: String(row.stockQuantity) })
+                            }
+                            sx={{ cursor: "pointer", textDecoration: "underline" }}
                           >
-                            <DescriptionOutlinedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Editar oferta">
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setEditingRow(row);
-                              form.reset({
-                                product_id: row.product.id,
-                                distributor_sku: row.distributorSku ?? "",
-                                price: row.price,
-                                stock_quantity: row.stockQuantity,
-                                lead_time_days: row.leadTimeDays ?? undefined,
-                                minimum_order_quantity: row.minimumOrderQuantity,
-                              });
-                            }}
-                            aria-label="Editar"
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Remover do fornecedor">
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              if (window.confirm("Remover este produto do fornecedor?")) {
-                                deleteMutation.mutate(row.id);
+                            {row.stockQuantity}
+                          </Box>
+                        )}
+                      </TableCell>
+                      {optionalColumns.leadTime ? (
+                        <TableCell align="right">
+                          {row.leadTimeDays != null ? row.leadTimeDays : <EmptyCell />}
+                        </TableCell>
+                      ) : null}
+                      {optionalColumns.moq ? (
+                        <TableCell align="right">{row.minimumOrderQuantity}</TableCell>
+                      ) : null}
+                      {optionalColumns.bestPrice ? (
+                        <TableCell>
+                          {row.isCheapestOffer ? (
+                            <Chip label="Sim" size="small" color="success" variant="outlined" />
+                          ) : (
+                            <Chip
+                              label="Não"
+                              size="small"
+                              variant="outlined"
+                              sx={{ color: "text.secondary", borderColor: "divider" }}
+                            />
+                          )}
+                        </TableCell>
+                      ) : null}
+                      {optionalColumns.lastUpdate ? (
+                        <TableCell>
+                          {row.lastPriceUpdate || row.updatedAt ? (
+                            formatDate(row.lastPriceUpdate ?? row.updatedAt)
+                          ) : (
+                            <EmptyCell />
+                          )}
+                        </TableCell>
+                      ) : null}
+                      <TableCell align="center">
+                        <Tooltip
+                          title={
+                            isItemActive
+                              ? "Ativo para cotações (será ofertado para integradores)"
+                              : "Pausado (não aparecerá nas cotações ou propostas)"
+                          }
+                        >
+                          <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+                            <Switch
+                              size="small"
+                              checked={isItemActive}
+                              disabled={updateMutation.isPending}
+                              onChange={(e) =>
+                                updateMutation.mutate({
+                                  dpId: row.id,
+                                  data: { active: e.target.checked },
+                                })
                               }
-                            }}
-                            aria-label="Excluir"
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
+                              color="success"
+                            />
+                            <Chip
+                              size="small"
+                              label={isItemActive ? "Ativo" : "Pausado"}
+                              color={isItemActive ? "success" : "default"}
+                              variant={isItemActive ? "filled" : "outlined"}
+                              sx={{
+                                fontWeight: 600,
+                                fontSize: "0.72rem",
+                                height: 22,
+                                minWidth: 56,
+                              }}
+                            />
+                          </Box>
                         </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                      <TableCell align="right">
+                        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
+                          <Tooltip title="Ficha Técnica & Especificações">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => setSpecsProductId(row.product.id)}
+                              aria-label="Ficha Técnica"
+                            >
+                              <DescriptionOutlinedIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Editar oferta">
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setEditingRow(row);
+                                form.reset({
+                                  product_id: row.product.id,
+                                  distributor_sku: row.distributorSku ?? "",
+                                  price: row.price,
+                                  stock_quantity: row.stockQuantity,
+                                  lead_time_days: row.leadTimeDays ?? undefined,
+                                  minimum_order_quantity: row.minimumOrderQuantity,
+                                });
+                              }}
+                              aria-label="Editar"
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Remover do fornecedor">
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                if (window.confirm("Remover este produto do fornecedor?")) {
+                                  deleteMutation.mutate(row.id);
+                                }
+                              }}
+                              aria-label="Excluir"
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

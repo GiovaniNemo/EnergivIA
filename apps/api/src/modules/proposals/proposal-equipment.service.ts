@@ -123,7 +123,11 @@ export class ProposalEquipmentService {
   private async findDistributorsWithAllProducts(productIds: string[]) {
     if (productIds.length === 0) return [];
     const rows = await this.prisma.distributorProduct.findMany({
-      where: { productId: { in: productIds } },
+      where: {
+        productId: { in: productIds },
+        active: true,
+        distributor: { active: true },
+      },
       select: { distributorId: true, productId: true },
     });
     const countByDist = new Map<string, Set<string>>();
@@ -137,7 +141,7 @@ export class ProposalEquipmentService {
     }
     if (eligibleIds.length === 0) return [];
     const distributors = await this.prisma.distributor.findMany({
-      where: { id: { in: eligibleIds } },
+      where: { id: { in: eligibleIds }, active: true },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     });
@@ -186,7 +190,12 @@ export class ProposalEquipmentService {
     let pricesByProduct = new Map<string, number>();
     if (chosenId && chosenId !== integrator.distributorId) {
       const offers = await this.prisma.distributorProduct.findMany({
-        where: { distributorId: chosenId, productId: { in: productIds } },
+        where: {
+          distributorId: chosenId,
+          productId: { in: productIds },
+          active: true,
+          distributor: { active: true },
+        },
         select: { productId: true, price: true },
       });
       pricesByProduct = new Map(offers.map((o) => [o.productId, Number(o.price)]));
@@ -225,6 +234,8 @@ export class ProposalEquipmentService {
       const extraProducts = await this.prisma.distributorProduct.findMany({
         where: {
           distributorId: chosenId,
+          active: true,
+          distributor: { active: true },
           product: { active: true, category: { name: "structure_kit" } },
         },
         include: { product: { include: { brand: true, category: true } } },
@@ -426,6 +437,8 @@ export class ProposalEquipmentService {
     }
     const where: Prisma.DistributorProductWhereInput = {
       distributorId,
+      active: true,
+      distributor: { active: true },
       product: productWhere,
     };
 

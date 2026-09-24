@@ -236,6 +236,7 @@ export interface Distributor {
   website: string | null;
   city: string | null;
   state: string | null;
+  active?: boolean;
   apiCredentials?: Record<string, unknown>;
   integrationProvider?: string | null;
   createdAt?: string;
@@ -279,6 +280,7 @@ export interface DistributorProduct {
   stockQuantity: number;
   leadTimeDays: number | null;
   minimumOrderQuantity: number;
+  active?: boolean;
   lastPriceUpdate: string | null;
   updatedAt: string;
   isCheapestOffer?: boolean;
@@ -393,6 +395,7 @@ export async function updateDistributor(
     website?: string;
     city?: string;
     state?: string;
+    active?: boolean;
   }
 ): Promise<Distributor> {
   const res = await fetch(`${getApiUrl()}/distributors/${id}`, {
@@ -465,6 +468,7 @@ export async function addDistributorProduct(
 export async function updateDistributorProduct(
   id: string,
   data: {
+    active?: boolean;
     distributor_sku?: string;
     price?: number;
     stock_quantity?: number;
@@ -491,6 +495,23 @@ export async function deleteDistributorProduct(id: string): Promise<void> {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message ?? "Falha ao excluir produto do distribuidor.");
   }
+}
+
+export async function bulkUpdateDistributorProductsActive(
+  distributorId: string,
+  ids: string[],
+  active: boolean
+): Promise<{ count: number }> {
+  const res = await fetch(`${getApiUrl()}/distributor-products/bulk-active/${distributorId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids, active }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message ?? "Falha ao atualizar status dos produtos.");
+  }
+  return res.json();
 }
 
 export async function fetchDistributorsByProduct(

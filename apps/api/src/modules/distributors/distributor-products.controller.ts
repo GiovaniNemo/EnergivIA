@@ -15,4 +15,16 @@ export class DistributorProductsController {
   remove(@Param("id", ParseUUIDPipe) id: string) {
     return this.distributorsService.removeDistributorProduct(id);
   }
+
+  @Put("bulk-active/:distributorId")
+  bulkUpdateActive(
+    @Param("distributorId", ParseUUIDPipe) distributorId: string,
+    @Body() body: { ids: string[]; active: boolean }
+  ) {
+    return this.distributorsService.bulkUpdateDistributorProductsActive(
+      distributorId,
+      body.ids,
+      Boolean(body.active)
+    );
+  }
 }

@@ -101,6 +101,10 @@ export class BrandsService {
     // 2. Marcas com produtos de distribuidor ativos
     const distProds = await this.prisma.distributorProduct.findMany({
       where: {
+        active: true,
+        distributor: {
+          active: true,
+        },
         product: {
           active: true,
         },

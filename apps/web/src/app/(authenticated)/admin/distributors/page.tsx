@@ -32,6 +32,7 @@ import {
   Grid,
   InputAdornment,
   Divider,
+  Switch,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -76,6 +77,17 @@ export default function AdminDistributorsPage(): JSX.Element {
     mutationFn: deleteDistributor,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
+    },
+  });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) =>
+      updateDistributor(id, { active }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
+    },
+    onError: (err: Error) => {
+      alert("Erro ao alterar status do fornecedor: " + err.message);
     },
   });
 
@@ -430,6 +442,9 @@ export default function AdminDistributorsPage(): JSX.Element {
                 <TableCell align="center" sx={{ fontWeight: 600 }}>
                   Itens Vinculados
                 </TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>
+                  Status nas Cotações
+                </TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600 }}>
                   Ações
                 </TableCell>
@@ -439,7 +454,7 @@ export default function AdminDistributorsPage(): JSX.Element {
               {isLoading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     sx={{ py: 6, textAlign: "center", color: "text.secondary" }}
                   >
                     Carregando fornecedores…
@@ -447,7 +462,7 @@ export default function AdminDistributorsPage(): JSX.Element {
                 </TableRow>
               ) : filteredDistributors.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} sx={{ py: 6, textAlign: "center" }}>
+                  <TableCell colSpan={7} sx={{ py: 6, textAlign: "center" }}>
                     <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                       <LocalShippingOutlinedIcon
                         sx={{ fontSize: 48, color: "action.disabled", mb: 1 }}
@@ -474,12 +489,17 @@ export default function AdminDistributorsPage(): JSX.Element {
                 filteredDistributors.map((d) => {
                   const itemCount = d._count?.distributorProducts ?? 0;
                   const isApiActive = Boolean(d.integrationProvider);
+                  const isCotacaoActive = d.active !== false;
 
                   return (
                     <TableRow
                       key={d.id}
                       hover
-                      sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+                      sx={{
+                        "&:last-child td, &:last-child th": { border: 0 },
+                        opacity: isCotacaoActive ? 1 : 0.72,
+                        transition: "opacity 0.2s ease",
+                      }}
                     >
                       <TableCell>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
@@ -553,6 +573,41 @@ export default function AdminDistributorsPage(): JSX.Element {
                             onDelete={() => router.push(`/admin/distribuidores/${d.id}/products`)}
                             sx={{ cursor: "pointer", fontWeight: 600 }}
                           />
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Tooltip
+                          title={
+                            isCotacaoActive
+                              ? "Ativo nas cotações (produtos deste fornecedor são considerados no dimensionamento e propostas)"
+                              : "Pausado (produtos deste fornecedor NÃO aparecerão em cotações ou propostas)"
+                          }
+                        >
+                          <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+                            <Switch
+                              size="small"
+                              checked={isCotacaoActive}
+                              disabled={toggleActiveMutation.isPending}
+                              onChange={(e) =>
+                                toggleActiveMutation.mutate({
+                                  id: d.id,
+                                  active: e.target.checked,
+                                })
+                              }
+                              color="success"
+                            />
+                            <Chip
+                              size="small"
+                              label={isCotacaoActive ? "Ativo" : "Pausado"}
+                              color={isCotacaoActive ? "success" : "default"}
+                              variant={isCotacaoActive ? "filled" : "outlined"}
+                              sx={{
+                                fontWeight: 600,
+                                fontSize: "0.75rem",
+                                minWidth: 64,
+                              }}
+                            />
+                          </Box>
                         </Tooltip>
                       </TableCell>
                       <TableCell align="right">

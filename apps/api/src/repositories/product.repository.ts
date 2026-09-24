@@ -94,7 +94,11 @@ export class ProductRepository {
         : [];
       const distOffers = source.distributorId
         ? await this.prisma.distributorProduct.findMany({
-            where: { distributorId: source.distributorId },
+            where: {
+              distributorId: source.distributorId,
+              active: true,
+              distributor: { active: true },
+            },
             select: { productId: true },
           })
         : [];
@@ -128,6 +132,8 @@ export class ProductRepository {
             where: {
               distributorId: source.distributorId,
               productId: { in: productIds },
+              active: true,
+              distributor: { active: true },
             },
           })
         : [];
@@ -154,7 +160,11 @@ export class ProductRepository {
     for (const item of items) {
       const offerSup = await this.supplierProductRepo.getCheapestOffer(item.id);
       const offerDistRow = await this.prisma.distributorProduct.findFirst({
-        where: { productId: item.id },
+        where: {
+          productId: item.id,
+          active: true,
+          distributor: { active: true },
+        },
         orderBy: { price: "asc" },
       });
 

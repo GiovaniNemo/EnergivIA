@@ -1,6 +1,10 @@
-import { IsString, IsNumber, IsOptional, Min } from "class-validator";
+import { IsString, IsNumber, IsOptional, Min, IsBoolean } from "class-validator";
 
 export class UpdateDistributorProductDto {
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+
   @IsOptional()
   @IsString()
   distributor_sku?: string;
