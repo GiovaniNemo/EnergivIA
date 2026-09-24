@@ -737,10 +737,7 @@ export const ProposalEconomicsModal = forwardRef<
       const isSelected = selectedDistributorTierId === tier.tier_id;
       const sysKw = tier.kit_result.system_power_kw;
 
-      const tierFactor =
-        tier.tier_id === "economic" ? 0.95 : tier.tier_id === "premium" ? 1.1 : 1.0;
-
-      const ratePerKwpEffective = Math.round(baseRate * tierFactor);
+      const ratePerKwpEffective = baseRate;
       const commercialPrice = Math.round(sysKw * ratePerKwpEffective);
 
       return {
@@ -764,17 +761,116 @@ export const ProposalEconomicsModal = forwardRef<
   const activeRatePerKwp =
     activeDistributorCard?.ratePerKwpEffective ?? Math.round(kwpRateValue || 2800);
   const activeCommercialPrice = useMemo(() => {
-    const sysKw =
+    let sysKw =
       proposalKitResult?.system_power_kw ??
       activeDistributorCard?.kit_result.system_power_kw ??
       (generatedProposal?.tamanhoSistemaKw || 3.0);
+    if (
+      proposalKitResult &&
+      optimisticModuleQty != null &&
+      proposalKitResult.modules.quantity > 0
+    ) {
+      const perModKw = proposalKitResult.system_power_kw / proposalKitResult.modules.quantity;
+      sysKw = Math.round(optimisticModuleQty * perModKw * 100) / 100;
+    }
     return Math.round(sysKw * activeRatePerKwp);
   }, [
-    proposalKitResult?.system_power_kw,
+    proposalKitResult,
+    optimisticModuleQty,
     activeDistributorCard,
     generatedProposal?.tamanhoSistemaKw,
     activeRatePerKwp,
   ]);
+
+  const effectiveKitQty = useCallback(
+    (item: { product_id: string; quantity: number }): number => {
+      if (
+        proposalKitResult &&
+        item.product_id === proposalKitResult.modules.product_id &&
+        optimisticModuleQty != null
+      ) {
+        return optimisticModuleQty;
+      }
+      const raw = kitQtyDrafts[item.product_id];
+      if (raw == null) return item.quantity;
+      const parsed = parseInt(raw, 10);
+      return Number.isFinite(parsed) && parsed >= 1 ? parsed : item.quantity;
+    },
+    [kitQtyDrafts, optimisticModuleQty, proposalKitResult]
+  );
+
+  const distributedKitItems = useMemo(() => {
+    if (!proposalKitResult?.kit_items || proposalKitResult.kit_items.length === 0) return [];
+    const items = proposalKitResult.kit_items;
+    const targetTotal = activeCommercialPrice;
+
+    // Proporção relativa por preço de catálogo ou por peso de categoria industrial
+    const hasCatalogPrices = items.some((i) => (i.unit_price ?? 0) > 0);
+    const rawWeights = items.map((item) => {
+      const qty = effectiveKitQty(item);
+      if (hasCatalogPrices && (item.unit_price ?? 0) > 0) {
+        return Math.max(0.01, qty * item.unit_price);
+      }
+      const isMod = item.product_id === proposalKitResult.modules.product_id;
+      const isInv = item.product_id === proposalKitResult.inverter.product_id;
+      const isStr =
+        (item as unknown as { category_name?: string }).category_name === "structure_kit" ||
+        (item as unknown as { category_name?: string }).category_name === "profile" ||
+        item.product_name.toUpperCase().includes("ESTRUTURA") ||
+        item.product_name.toUpperCase().includes("PERFIL");
+      if (isMod) return 0.48;
+      if (isInv) return 0.35;
+      if (isStr) return 0.1;
+      return 0.07;
+    });
+
+    const totalWeight = rawWeights.reduce((s, w) => s + w, 0) || 1;
+
+    let allocatedTotal = 0;
+    const distributed = items.map((item, idx) => {
+      const qty = effectiveKitQty(item);
+      const weight = rawWeights[idx] ?? 1;
+      const ratio = weight / totalWeight;
+      const unroundedItemTotal = targetTotal * ratio;
+      const unitPrice = Math.max(
+        0.01,
+        Math.round((unroundedItemTotal / Math.max(1, qty)) * 100) / 100
+      );
+      const lineTotal = Math.round(unitPrice * qty * 100) / 100;
+      allocatedTotal += lineTotal;
+      return {
+        ...item,
+        effectiveQty: qty,
+        distributedUnitPrice: unitPrice,
+        distributedLineTotal: lineTotal,
+      };
+    });
+
+    // Ajusta qualquer resíduo de centavos no inversor ou primeiro item
+    const diff = Math.round((targetTotal - allocatedTotal) * 100) / 100;
+    if (diff !== 0 && distributed.length > 0) {
+      const invIdx = distributed.findIndex(
+        (i) => i.product_id === proposalKitResult.inverter.product_id
+      );
+      const targetIdx = invIdx >= 0 ? invIdx : 0;
+      const targetItem = distributed[targetIdx];
+      if (targetItem) {
+        const newLineTotal = Math.round((targetItem.distributedLineTotal + diff) * 100) / 100;
+        const newUnitPrice = Math.max(
+          0.01,
+          Math.round((newLineTotal / Math.max(1, targetItem.effectiveQty)) * 100) / 100
+        );
+        distributed[targetIdx] = {
+          ...targetItem,
+          effectiveQty: targetItem.effectiveQty,
+          distributedUnitPrice: newUnitPrice,
+          distributedLineTotal: Math.round(newUnitPrice * targetItem.effectiveQty * 100) / 100,
+        };
+      }
+    }
+
+    return distributed;
+  }, [proposalKitResult, activeCommercialPrice, effectiveKitQty]);
   useEffect(() => {
     if (!currentOrganizationId) return;
     let cancelled = false;
@@ -1501,11 +1597,11 @@ export const ProposalEconomicsModal = forwardRef<
       if (proposalKitResult) {
         kitForProposal = {
           ...proposalKitResult,
-          kit_items: proposalKitResult.kit_items.map((item) => {
-            const raw = kitQtyDraftsRef.current[item.product_id];
-            const parsed = raw != null ? parseInt(raw, 10) : NaN;
-            return Number.isFinite(parsed) && parsed >= 1 ? { ...item, quantity: parsed } : item;
-          }),
+          kit_items: distributedKitItems.map((item) => ({
+            ...item,
+            quantity: item.effectiveQty,
+            unit_price: item.distributedUnitPrice,
+          })),
         };
       }
 
@@ -1832,32 +1928,6 @@ export const ProposalEconomicsModal = forwardRef<
       await handleCreateProposalClickRef.current(deal, { existingSimulation: simulation });
     },
   }));
-
-  const effectiveKitQty = useCallback(
-    (item: { product_id: string; quantity: number }): number => {
-      if (
-        proposalKitResult &&
-        item.product_id === proposalKitResult.modules.product_id &&
-        optimisticModuleQty != null
-      ) {
-        return optimisticModuleQty;
-      }
-      const raw = kitQtyDrafts[item.product_id];
-      if (raw == null) return item.quantity;
-      const parsed = parseInt(raw, 10);
-      return Number.isFinite(parsed) && parsed >= 1 ? parsed : item.quantity;
-    },
-    [kitQtyDrafts, optimisticModuleQty, proposalKitResult]
-  );
-
-  const _effectiveKitItems = useMemo(
-    () =>
-      (proposalKitResult?.kit_items ?? []).map((item) => ({
-        ...item,
-        quantity: effectiveKitQty(item),
-      })),
-    [proposalKitResult, effectiveKitQty]
-  );
 
   function adjustModuleQuantity(deltaQty: number): void {
     if (!proposalKitResult) return;
@@ -3849,12 +3919,12 @@ export const ProposalEconomicsModal = forwardRef<
                           </tr>
                         </thead>
                         <tbody>
-                          {proposalKitResult.kit_items.map((item, idx) => {
+                          {distributedKitItems.map((item, idx) => {
                             const isModuleRow =
                               item.product_id === proposalKitResult.modules.product_id;
                             const isInverterRow =
                               item.product_id === proposalKitResult.inverter.product_id;
-                            const qty = effectiveKitQty(item);
+                            const qty = item.effectiveQty;
                             const hasDraft = kitQtyDrafts[item.product_id] != null;
                             const isAdjusted = hasDraft && qty !== item.quantity;
                             const belowCalculated = isAdjusted && qty < item.quantity;
@@ -3999,45 +4069,27 @@ export const ProposalEconomicsModal = forwardRef<
                                   )}
                                 </td>
                                 <td className="hidden sm:table-cell p-3 text-right tabular-nums text-[var(--color-muted-foreground)]">
-                                  {formatCurrency(item.unit_price)}
+                                  {formatCurrency(item.distributedUnitPrice)}
                                 </td>
                                 <td className="py-2 px-2 sm:p-3 text-right font-semibold tabular-nums text-[var(--color-foreground)] text-[0.72rem] sm:text-sm whitespace-nowrap">
-                                  {formatCurrency(qty * (item.unit_price ?? 0))}
+                                  {formatCurrency(item.distributedLineTotal)}
                                 </td>
                               </tr>
                             );
                           })}
                         </tbody>
                         <tfoot>
-                          <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/15">
+                          <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/20">
                             <td
                               colSpan={2}
-                              className="py-2 px-2 sm:p-3 text-left sm:text-right text-[0.7rem] sm:text-xs font-semibold text-[var(--color-muted-foreground)]"
-                            >
-                              Total dos equipamentos
-                            </td>
-                            <td className="hidden sm:table-cell" />
-                            <td className="hidden sm:table-cell" />
-                            <td className="py-2 px-2 sm:p-3 text-right text-xs sm:text-sm font-semibold tabular-nums text-[var(--color-foreground)] whitespace-nowrap">
-                              {formatCurrency(
-                                proposalKitResult.kit_items.reduce(
-                                  (sum, i) => sum + effectiveKitQty(i) * (i.unit_price || 0),
-                                  0
-                                )
-                              )}
-                            </td>
-                          </tr>
-                          <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/25">
-                            <td
-                              colSpan={2}
-                              className="py-2 px-2 sm:p-3 text-left sm:text-right text-[0.7rem] sm:text-xs font-bold text-[var(--color-foreground)]"
+                              className="py-2.5 px-2 sm:p-3 text-left sm:text-right text-[0.72rem] sm:text-xs font-bold text-[var(--color-foreground)]"
                             >
                               Total do Projeto ({activeDistributorCard?.name ?? "Padrão"} ·{" "}
                               {formatCurrency(activeRatePerKwp)}/kWp)
                             </td>
                             <td className="hidden sm:table-cell" />
                             <td className="hidden sm:table-cell" />
-                            <td className="py-2 px-2 sm:p-3 text-right text-xs sm:text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                            <td className="py-2.5 px-2 sm:p-3 text-right text-xs sm:text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                               {formatCurrency(activeCommercialPrice)}
                             </td>
                           </tr>
