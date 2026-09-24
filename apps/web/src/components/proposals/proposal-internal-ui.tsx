@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   Check,
-  CheckCircle2,
   ChevronDown,
   Copy,
   ExternalLink,
@@ -958,21 +957,11 @@ export function ProposalKwpRateBusinessCard({
         </Button>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4 p-5 pt-0 pl-5">
-        <div className="flex flex-wrap items-end justify-between gap-2 border-b border-[var(--color-border)]/70 pb-3">
-          <div>
-            <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
-              Preço por kWp
-            </p>
-            <p className="mt-0.5 text-3xl font-bold tabular-nums sm:text-4xl text-emerald-600 dark:text-emerald-400">
-              {hideSensitiveValues ? "••••" : `${formatBRL(ratePerKwp)}/kWp`}
-            </p>
-          </div>
-          <div className="flex max-w-[15rem] items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 text-xs text-emerald-700 dark:text-emerald-300">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-            <span className="font-medium leading-tight">
-              Preço fechado ao cliente. Sem regras ou margem duplicada.
-            </span>
-          </div>
+        <div className="border-b border-[var(--color-border)]/70 pb-3">
+          <p className="text-xs font-medium text-[var(--color-muted-foreground)]">Preço por kWp</p>
+          <p className="mt-0.5 text-3xl font-bold tabular-nums sm:text-4xl text-emerald-600 dark:text-emerald-400">
+            {hideSensitiveValues ? "••••" : `${formatBRL(ratePerKwp)}/kWp`}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
