@@ -3674,28 +3674,12 @@ export const ProposalEconomicsModal = forwardRef<
                                         : ""}
                                       {tier.inverter_brand} ({tier.inverter_power_kw} kW)
                                     </p>
-                                    <p className="flex items-center flex-wrap gap-1">
+                                    <p>
                                       <strong className="text-[var(--color-foreground)] font-medium">
                                         Módulos:{" "}
                                       </strong>
-                                      <span>
-                                        {tier.module_qty}x {tier.module_brand} (
-                                        {tier.module_power_w}
-                                        W)
-                                      </span>
-                                      {(tier.module_is_tier_1 ||
-                                        (
-                                          tier.kit_result?.modules as unknown as {
-                                            is_tier_1?: boolean;
-                                          }
-                                        )?.is_tier_1) && (
-                                        <img
-                                          src="/badges/tier1.jpeg"
-                                          alt="Tier 1"
-                                          title="Módulo certificado Tier 1 (BloombergNEF)"
-                                          className="h-4 w-auto object-contain rounded-xs shadow-xs inline-block ml-0.5"
-                                        />
-                                      )}
+                                      {tier.module_qty}x {tier.module_brand} ({tier.module_power_w}
+                                      W)
                                     </p>
                                     <p className="text-[11px] text-[var(--color-muted-foreground)]/80">
                                       + Estrutura, cabos e conectores inclusos
@@ -3748,12 +3732,22 @@ export const ProposalEconomicsModal = forwardRef<
                                 Módulos
                               </span>
                             </div>
-                            {extractPowerBadge(proposalKitResult.modules.product_name) ? (
-                              <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 shrink-0">
-                                <Zap className="h-3 w-3 shrink-0" />
-                                {extractPowerBadge(proposalKitResult.modules.product_name)}
-                              </span>
-                            ) : null}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {proposalKitResult.modules.is_tier_1 ? (
+                                <img
+                                  src="/badges/tier1.jpeg"
+                                  alt="Tier 1 Bloomberg"
+                                  title="Módulo certificado Tier 1 (BloombergNEF)"
+                                  className="h-7 sm:h-8 w-auto object-contain rounded-md shadow-xs border border-emerald-500/20"
+                                />
+                              ) : null}
+                              {extractPowerBadge(proposalKitResult.modules.product_name) ? (
+                                <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 shrink-0">
+                                  <Zap className="h-3 w-3 shrink-0" />
+                                  {extractPowerBadge(proposalKitResult.modules.product_name)}
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
 
                           <div className="mt-1.5 space-y-0.5">
@@ -3764,14 +3758,6 @@ export const ProposalEconomicsModal = forwardRef<
                               <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium">
                                 {proposalKitResult.modules.brand_name}
                               </span>
-                              {proposalKitResult.modules.is_tier_1 ? (
-                                <img
-                                  src="/badges/tier1.jpeg"
-                                  alt="Selo Tier 1"
-                                  title="Módulo certificado Tier 1 (BloombergNEF)"
-                                  className="h-4 sm:h-4.5 w-auto object-contain rounded-xs shadow-xs inline-block ml-0.5"
-                                />
-                              ) : null}
                             </div>
                             <p className="text-[0.7rem] sm:text-xs font-semibold leading-snug text-[var(--color-foreground)] break-words">
                               {proposalKitResult.modules.product_name}
@@ -3991,14 +3977,6 @@ export const ProposalEconomicsModal = forwardRef<
                                       {extractPowerBadge(alt.product_name)}
                                     </span>
                                   ) : null}
-                                  {kitSwapCategory === "module" && alt.is_tier_1 ? (
-                                    <img
-                                      src="/badges/tier1.jpeg"
-                                      alt="Tier 1"
-                                      title="Módulo certificado Tier 1 (BloombergNEF)"
-                                      className="h-3.5 sm:h-4 w-auto object-contain rounded-xs shadow-xs shrink-0"
-                                    />
-                                  ) : null}
                                   <span className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] leading-snug break-words">
                                     {alt.brand_name ? `${alt.brand_name} ` : ""}
                                     {alt.product_name}
@@ -4087,16 +4065,8 @@ export const ProposalEconomicsModal = forwardRef<
                               >
                                 <td className="py-2 px-2 sm:p-3 font-medium text-[var(--color-foreground)]">
                                   <div className="min-w-0">
-                                    <p className="text-[0.7rem] sm:text-xs font-semibold leading-tight break-words text-[var(--color-foreground)] flex items-center gap-1.5">
-                                      <span>{item.product_name}</span>
-                                      {isModuleRow && proposalKitResult.modules.is_tier_1 ? (
-                                        <img
-                                          src="/badges/tier1.jpeg"
-                                          alt="Tier 1"
-                                          title="Módulo certificado Tier 1 (BloombergNEF)"
-                                          className="h-3.5 w-auto object-contain rounded-xs shrink-0"
-                                        />
-                                      ) : null}
+                                    <p className="text-[0.7rem] sm:text-xs font-semibold leading-tight break-words text-[var(--color-foreground)]">
+                                      {item.product_name}
                                     </p>
                                     {item.brand_name ? (
                                       <p className="text-[0.62rem] sm:hidden text-[var(--color-muted-foreground)] font-normal mt-0.5 break-words">
