@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
@@ -125,12 +125,23 @@ export default function AdminProductsPage(): JSX.Element {
   const {
     data: productsData,
     isLoading,
+    isPlaceholderData,
     isError,
     error,
   } = useQuery({
     queryKey: ["admin", "products", params],
     queryFn: () => fetchProducts(params),
+    placeholderData: keepPreviousData,
   });
+
+  const rowCountRef = useRef(productsData?.total ?? 0);
+  useEffect(() => {
+    if (productsData?.total !== undefined) {
+      rowCountRef.current = productsData.total;
+    }
+  }, [productsData?.total]);
+
+  const totalRowCount = productsData?.total ?? rowCountRef.current ?? 0;
 
   const { data: brands = [] } = useQuery({
     queryKey: ["admin", "brands"],
@@ -273,7 +284,10 @@ export default function AdminProductsPage(): JSX.Element {
             <Tooltip title="Editar Produto">
               <IconButton
                 size="small"
-                onClick={() => router.push(`/admin/produtos/${cellParams.row.id}`)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/admin/produtos/${cellParams.row.id}`);
+                }}
                 aria-label="Editar"
               >
                 <EditIcon fontSize="small" />
@@ -283,7 +297,10 @@ export default function AdminProductsPage(): JSX.Element {
               <Tooltip title="Desativar">
                 <IconButton
                   size="small"
-                  onClick={() => deactivateMutation.mutate({ id: cellParams.row.id })}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deactivateMutation.mutate({ id: cellParams.row.id });
+                  }}
                   aria-label="Desativar"
                 >
                   <VisibilityOffIcon fontSize="small" />
@@ -293,7 +310,8 @@ export default function AdminProductsPage(): JSX.Element {
             <Tooltip title="Excluir">
               <IconButton
                 size="small"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (
                     window.confirm(`Deseja realmente excluir o produto "${cellParams.row.name}"?`)
                   ) {
@@ -527,7 +545,7 @@ export default function AdminProductsPage(): JSX.Element {
 
         <Box
           sx={{
-            height: 600,
+            height: 640,
             width: "100%",
             minHeight: 450,
             "& .MuiDataGrid-root": { border: "none" },
@@ -542,39 +560,84 @@ export default function AdminProductsPage(): JSX.Element {
               letterSpacing: "0.05em",
               color: theme.palette.text.secondary,
             }),
+            "& .MuiDataGrid-row": {
+              cursor: "pointer",
+              transition: "background-color 0.15s ease",
+            },
             "& .MuiDataGrid-row:hover": {
               backgroundColor: alpha("#0d9488", 0.08),
             },
             "& .MuiDataGrid-cell": (theme) => ({
               borderBottom: `1px solid ${alpha(theme.palette.divider, 0.6)}`,
             }),
+            "& .MuiDataGrid-footerContainer": (theme) => ({
+              borderTop: `1px solid ${theme.palette.divider}`,
+              minHeight: 52,
+            }),
+            "& .MuiTablePagination-root": {
+              color: "text.primary",
+            },
+            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
+              fontSize: "0.85rem",
+              fontWeight: 500,
+            },
+            "& .MuiTablePagination-actions": {
+              "& .MuiIconButton-root": {
+                p: 1,
+                borderRadius: 1.5,
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
+                  color: "primary.main",
+                },
+              },
+            },
           }}
         >
           <DataGrid
             rows={productsData?.data ?? []}
             columns={columns}
-            loading={isLoading}
-            rowCount={productsData?.total ?? 0}
+            loading={isLoading && !isPlaceholderData}
+            rowCount={totalRowCount}
             paginationMode="server"
             rowHeight={68}
             paginationModel={{
-              page: (params.page ?? 1) - 1,
+              page: Math.max(0, (params.page ?? 1) - 1),
               pageSize: params.pageSize ?? 25,
             }}
-            onPaginationModelChange={(model) =>
-              setParams((prev) => ({
-                ...prev,
-                page: model.page + 1,
-                pageSize: model.pageSize,
-              }))
-            }
-            onRowDoubleClick={(rowParams) => router.push(`/admin/produtos/${rowParams.row.id}`)}
-            pageSizeOptions={[10, 25, 50]}
+            onPaginationModelChange={(model) => {
+              const targetPage = model.page + 1;
+              if (targetPage !== params.page || model.pageSize !== params.pageSize) {
+                setParams((prev) => ({
+                  ...prev,
+                  page: targetPage,
+                  pageSize: model.pageSize,
+                }));
+              }
+            }}
+            onRowClick={(rowParams, event) => {
+              const target = event.target as HTMLElement;
+              if (
+                target.closest("button") ||
+                target.closest("a") ||
+                target.closest(".MuiIconButton-root") ||
+                target.closest(".MuiChip-root")
+              ) {
+                return;
+              }
+              router.push(`/admin/produtos/${rowParams.row.id}`);
+            }}
+            pageSizeOptions={[25, 50, 100, 200]}
             disableRowSelectionOnClick
             getRowId={(row) => row.id}
             localeText={{
               noRowsLabel: "Nenhum produto cadastrado.",
               noResultsOverlayLabel: "Nenhum resultado encontrado.",
+              MuiTablePagination: {
+                labelRowsPerPage: "Itens por página:",
+                labelDisplayedRows: ({ from, to, count }) =>
+                  `${from}–${to} de ${count !== -1 ? count : `mais de ${to}`}`,
+              },
             }}
             slots={{
               noRowsOverlay: () =>
