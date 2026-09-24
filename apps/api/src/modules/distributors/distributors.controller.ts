@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -43,7 +44,25 @@ export class DistributorsController {
     if (!file) {
       throw new Error("Arquivo não fornecido.");
     }
-    return this.spreadsheetImportService.importSpreadsheet(id, file.buffer);
+    return this.spreadsheetImportService.importSpreadsheet(id, file.buffer, file.originalname);
+  }
+
+  @Get(":id/import-logs/latest")
+  getLatestImportLog(@Param("id", ParseUUIDPipe) id: string) {
+    return this.spreadsheetImportService.getLatestImportLog(id);
+  }
+
+  @Patch("import-logs/:logId/dismiss-generic/:productId")
+  dismissGenericInLog(
+    @Param("logId", ParseUUIDPipe) logId: string,
+    @Param("productId", ParseUUIDPipe) productId: string
+  ) {
+    return this.spreadsheetImportService.dismissGenericInLog(logId, productId);
+  }
+
+  @Patch("products/:id/brand")
+  updateProductBrand(@Param("id", ParseUUIDPipe) id: string, @Body() body: { brandId: string }) {
+    return this.spreadsheetImportService.updateProductBrand(id, body.brandId);
   }
 
   @Get()

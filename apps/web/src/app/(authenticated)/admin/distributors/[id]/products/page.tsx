@@ -43,7 +43,9 @@ import SyncIcon from "@mui/icons-material/Sync";
 import SearchIcon from "@mui/icons-material/Search";
 import ViewColumnIcon from "@mui/icons-material/ViewColumn";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import AssessmentOutlinedIcon from "@mui/icons-material/AssessmentOutlined";
 import { ProductSpecsDialog } from "@/components/admin/products/ProductSpecsDialog";
+import { ImportAuditModal } from "@/components/admin/distributors/ImportAuditModal";
 import {
   fetchDistributor,
   fetchDistributorProducts,
@@ -55,6 +57,7 @@ import {
   uploadDistributorSpreadsheet,
   bulkUpdateDistributorProductsActive,
   type DistributorProduct,
+  type DistributorImportLog,
 } from "@/lib/admin-api";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -307,6 +310,10 @@ export default function DistributorInventoryPage(): JSX.Element {
     },
   });
 
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [auditLogData, setAuditLogData] = useState<DistributorImportLog | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+
   const uploadSpreadsheetMutation = useMutation({
     mutationFn: (file: File) => uploadDistributorSpreadsheet(id, file),
     onSuccess: (result) => {
@@ -317,6 +324,19 @@ export default function DistributorInventoryPage(): JSX.Element {
         severity: "success",
         message: result.message,
       });
+      if (result.summary && result.details) {
+        setAuditLogData({
+          id: result.logId || id,
+          distributorId: id,
+          fileName: uploadedFileName,
+          summary: result.summary,
+          details: result.details,
+          createdAt: new Date().toISOString(),
+        });
+      } else {
+        setAuditLogData(null);
+      }
+      setAuditModalOpen(true);
     },
     onError: (err: Error) => {
       setImportFeedback({
@@ -329,6 +349,7 @@ export default function DistributorInventoryPage(): JSX.Element {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setUploadedFileName(file.name);
     uploadSpreadsheetMutation.mutate(file);
     e.target.value = "";
   };
@@ -501,6 +522,22 @@ export default function DistributorInventoryPage(): JSX.Element {
                 {uploadSpreadsheetMutation.isPending
                   ? "Importando Planilha..."
                   : "Importar Planilha / CSV"}
+              </Button>
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<AssessmentOutlinedIcon />}
+                onClick={() => {
+                  setAuditLogData(null);
+                  setAuditModalOpen(true);
+                }}
+                sx={{
+                  whiteSpace: "nowrap",
+                  textTransform: "none",
+                  fontWeight: 600,
+                }}
+              >
+                Auditoria da Importação
               </Button>
             </Stack>
             <input
@@ -1316,6 +1353,21 @@ export default function DistributorInventoryPage(): JSX.Element {
           queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
         }}
         defaultTab={1}
+      />
+
+      <ImportAuditModal
+        open={auditModalOpen}
+        onClose={() => {
+          setAuditModalOpen(false);
+          setAuditLogData(null);
+        }}
+        distributorId={id}
+        distributorName={distributor?.name}
+        initialLog={auditLogData}
+        onBrandUpdated={() => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "distributors", id, "products"] });
+          queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
+        }}
       />
     </Box>
   );

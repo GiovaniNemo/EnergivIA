@@ -694,6 +694,7 @@ model Distributor {
 
   distributorProducts DistributorProduct[]
   freightRules        FreightRule[]
+  importLogs          DistributorImportLog[]
 
   @@index([name])
   @@index([cnpj])
@@ -741,6 +742,21 @@ model DistributorProduct {
   @@index([productId])
   @@index([distributorId, productId])
   @@index([active])
+}
+
+model DistributorImportLog {
+  id            String   @id @default(uuid())
+  distributorId String   @map("distributor_id")
+  fileName      String?  @map("file_name")
+  summary       Json     @map("summary")
+  details       Json     @map("details")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  distributor   Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+
+  @@index([distributorId])
+  @@index([createdAt])
+  @@map("distributor_import_logs")
 }
 
 enum CompatibilityType {

@@ -49,6 +49,7 @@ import TableChartOutlinedIcon from "@mui/icons-material/TableChartOutlined";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import AssessmentOutlinedIcon from "@mui/icons-material/AssessmentOutlined";
 import {
   fetchDistributors,
   deleteDistributor,
@@ -56,7 +57,9 @@ import {
   syncDistributorCatalog,
   uploadDistributorSpreadsheet,
   type Distributor,
+  type DistributorImportLog,
 } from "@/lib/admin-api";
+import { ImportAuditModal } from "@/components/admin/distributors/ImportAuditModal";
 
 export default function AdminDistributorsPage(): JSX.Element {
   const router = useRouter();
@@ -150,6 +153,12 @@ export default function AdminDistributorsPage(): JSX.Element {
   };
 
   const [uploading, setUploading] = useState<string | null>(null);
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [auditDistributor, setAuditDistributor] = useState<{ id: string; name: string } | null>(
+    null
+  );
+  const [auditLogData, setAuditLogData] = useState<DistributorImportLog | null>(null);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, id: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -157,8 +166,22 @@ export default function AdminDistributorsPage(): JSX.Element {
     try {
       setUploading(id);
       const res = await uploadDistributorSpreadsheet(id, file);
-      alert(res.message);
       queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
+      const currentDist = distributors.find((d) => d.id === id);
+      setAuditDistributor({ id, name: currentDist?.name || "Fornecedor" });
+      if (res.summary && res.details) {
+        setAuditLogData({
+          id: res.logId || id,
+          distributorId: id,
+          fileName: file.name,
+          summary: res.summary,
+          details: res.details,
+          createdAt: new Date().toISOString(),
+        });
+      } else {
+        setAuditLogData(null);
+      }
+      setAuditModalOpen(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Desconhecido";
       alert("Erro ao enviar planilha: " + msg);
@@ -276,6 +299,19 @@ export default function AdminDistributorsPage(): JSX.Element {
                 handleFileUpload(e, d.id);
               }}
             />
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              setAuditDistributor({ id: d.id, name: d.name });
+              setAuditLogData(null);
+              setAuditModalOpen(true);
+            }}
+          >
+            <ListItemIcon>
+              <AssessmentOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Relatório da Última Importação</ListItemText>
           </MenuItem>
           <Divider />
           <MenuItem
@@ -681,6 +717,23 @@ export default function AdminDistributorsPage(): JSX.Element {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {auditDistributor && (
+        <ImportAuditModal
+          open={auditModalOpen}
+          onClose={() => {
+            setAuditModalOpen(false);
+            setAuditDistributor(null);
+            setAuditLogData(null);
+          }}
+          distributorId={auditDistributor.id}
+          distributorName={auditDistributor.name}
+          initialLog={auditLogData}
+          onBrandUpdated={() => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
+          }}
+        />
+      )}
     </Box>
   );
 }

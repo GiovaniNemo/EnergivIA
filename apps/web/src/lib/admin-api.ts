@@ -255,10 +255,91 @@ export async function syncDistributorCatalog(
   return res.json();
 }
 
+export interface ImportLogSummary {
+  itemsProcessed: number;
+  itemsCreated: number;
+  itemsUpdated: number;
+  priceChangesCount: number;
+  outOfStockCount: number;
+  brandReviewCount: number;
+  missingSpecsCount: number;
+  criticalSpecsCount: number;
+  freightImportCount: number;
+}
+
+export interface ImportPriceChange {
+  productId: string;
+  productName: string;
+  categoryName: string;
+  sku: string | null;
+  oldPrice: number;
+  newPrice: number;
+  diff: number;
+  diffPercent: number;
+  oldStock: number;
+  newStock: number;
+}
+
+export interface ImportOutOfStockItem {
+  productId: string;
+  productName: string;
+  categoryName: string;
+  sku: string | null;
+  oldPrice: number;
+  oldStock: number;
+  reason: "zero_stock" | "removed_from_sheet";
+}
+
+export interface ImportBrandReviewItem {
+  productId: string;
+  productName: string;
+  categoryName: string;
+  sku: string | null;
+  currentBrandName: string;
+  isNew: boolean;
+  price: number;
+  stock: number;
+}
+
+export interface ImportMissingSpecsItem {
+  productId: string;
+  productName: string;
+  sku: string | null;
+  brand: string;
+  category: string;
+  missingFields: string[];
+  isCritical: boolean;
+}
+
+export interface ImportLogDetails {
+  priceChanges: ImportPriceChange[];
+  outOfStockItems: ImportOutOfStockItem[];
+  brandReviewItems: ImportBrandReviewItem[];
+  missingSpecsItems: ImportMissingSpecsItem[];
+  dismissedGenericIds?: string[];
+}
+
+export interface DistributorImportLog {
+  id: string;
+  distributorId: string;
+  fileName: string | null;
+  summary: ImportLogSummary;
+  details: ImportLogDetails;
+  createdAt: string;
+}
+
+export interface ImportSpreadsheetResponse {
+  success: boolean;
+  message: string;
+  logId?: string;
+  summary?: ImportLogSummary;
+  details?: ImportLogDetails;
+}
+
 export async function uploadDistributorSpreadsheet(
   id: string,
   file: File
-): Promise<{ success: boolean; message: string }> {
+): Promise<ImportSpreadsheetResponse> {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -270,6 +351,41 @@ export async function uploadDistributorSpreadsheet(
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message ?? "Falha ao importar planilha.");
   }
+  return res.json();
+}
+
+export async function fetchLatestImportLog(
+  distributorId: string
+): Promise<DistributorImportLog | null> {
+  const res = await fetch(`${getApiUrl()}/distributors/${distributorId}/import-logs/latest`);
+  if (!res.ok) {
+    if (res.status === 404) return null;
+    throw new Error("Falha ao carregar relatório da importação.");
+  }
+  return res.json();
+}
+
+export async function dismissGenericInLog(
+  logId: string,
+  productId: string
+): Promise<DistributorImportLog> {
+  const res = await fetch(
+    `${getApiUrl()}/distributors/import-logs/${logId}/dismiss-generic/${productId}`,
+    {
+      method: "PATCH",
+    }
+  );
+  if (!res.ok) throw new Error("Falha ao dispensar produto genérico.");
+  return res.json();
+}
+
+export async function updateProductBrand(productId: string, brandId: string): Promise<Product> {
+  const res = await fetch(`${getApiUrl()}/distributors/products/${productId}/brand`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ brandId }),
+  });
+  if (!res.ok) throw new Error("Falha ao atualizar marca do produto.");
   return res.json();
 }
 
