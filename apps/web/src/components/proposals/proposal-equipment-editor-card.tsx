@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState, type JSX } from "react";
 import {
   AlertTriangle,
   Check,
@@ -87,7 +87,7 @@ export function ProposalEquipmentEditorCard({
   const [ctx, setCtx] = useState<ProposalEquipmentContext | null>(null);
   const [lines, setLines] = useState<EditableLine[]>([]);
   const [distributorId, setDistributorId] = useState<string | null>(null);
-  const [freightState] = useState<string>("");
+  const [freightState, setFreightState] = useState<string>("");
 
   const [qtyDrafts, setQtyDrafts] = useState<Record<string, string>>({});
   const [moduleQtyOverrides, setModuleQtyOverrides] = useState<Record<string, number>>({});
