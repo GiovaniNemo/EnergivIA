@@ -94,6 +94,18 @@ export class KitGenerationService {
       );
     }
 
+    if (!built && input.preferred_brand) {
+      // Fallback: Tenta novamente com outras marcas ativas disponíveis para não deixar o cliente sem cotação
+      const fallbackInput = { ...input, preferred_brand: undefined };
+      built = await this.buildKit(
+        fallbackInput,
+        roofType,
+        { supplierId: input.supplier_id, distributorId: input.supplier_id },
+        preferredModuleBrands,
+        preferredInverterBrands
+      );
+    }
+
     if (!built) {
       throw new BadRequestException(
         wantStock
@@ -197,6 +209,18 @@ export class KitGenerationService {
       );
     }
 
+    if (!baseBuilt && input.preferred_brand) {
+      // Fallback: se a marca solicitada não fechou o kit base, tenta sem a restrição para garantir os tiers
+      const fallbackInput = { ...input, preferred_brand: undefined };
+      baseBuilt = await this.buildKit(
+        fallbackInput,
+        roofType,
+        { supplierId: input.supplier_id, distributorId: input.supplier_id },
+        preferredModuleBrands,
+        preferredInverterBrands
+      );
+    }
+
     if (!baseBuilt) {
       throw new BadRequestException(
         "Não foi possível montar os kits: catálogo sem módulo/inversor compatível." +
@@ -204,10 +228,10 @@ export class KitGenerationService {
       );
     }
 
-    // 2. Fetch all modules and inverters for this source
+    // 2. Fetch all modules and inverters for this source (traz todos para permitir fallback suave)
     const [allModules, allStringInverters, allMicroInverters, allHybridInverters] =
       await Promise.all([
-        this.productRepo.findActiveModules(input.preferred_brand, source),
+        this.productRepo.findActiveModules(undefined, source),
         this.productRepo.findActiveStringInverters(source),
         this.productRepo.findActiveMicroInverters(source),
         this.productRepo.findActiveHybridInverters(source),
@@ -223,10 +247,23 @@ export class KitGenerationService {
     modulesWithPower.sort((a, b) => {
       const aBrand = (a.module.brandName || "").toLowerCase().trim();
       const bBrand = (b.module.brandName || "").toLowerCase().trim();
+
+      // 1ª prioridade: marca solicitada explicitamente na simulação
+      if (input.preferred_brand) {
+        const prefLower = input.preferred_brand.toLowerCase().trim();
+        const aExact = aBrand === prefLower;
+        const bExact = bBrand === prefLower;
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+      }
+
+      // 2ª prioridade: marcas preferidas configuradas no perfil do integrador
       const aPref = preferredModuleBrands.includes(aBrand);
       const bPref = preferredModuleBrands.includes(bBrand);
       if (aPref && !bPref) return -1;
       if (!aPref && bPref) return 1;
+
+      // 3ª prioridade: menor preço por Watt
       return a.pricePerW - b.pricePerW;
     });
 
@@ -725,7 +762,7 @@ export class KitGenerationService {
       allHybridInverters,
       allOffGridInverters,
     ] = await Promise.all([
-      this.productRepo.findActiveModules(input.preferred_brand, source),
+      this.productRepo.findActiveModules(undefined, source),
       this.productRepo.findActiveStringInverters(source),
       this.productRepo.findActiveMicroInverters(source),
       this.productRepo.findActiveHybridInverters(source),
@@ -738,12 +775,20 @@ export class KitGenerationService {
     const matchesPref = (brand: string, prefs: string[]) =>
       prefs.length === 0 || prefs.some((p) => brand.toLowerCase().includes(p.toLowerCase()));
 
-    // Prioritize modules by preferred brands if not explicitly pinned or filtered
-    if (!input.preferred_brand && !input.pinned_module_id && preferredModuleBrands.length > 0) {
+    // Prioritize modules: 1º marca solicitada, 2º marcas preferidas da organização, 3º melhor preço
+    if (!input.pinned_module_id) {
       modules.sort((a, b) => {
-        const aPref = matchesPref(a.brandName, preferredModuleBrands) ? 1 : 0;
-        const bPref = matchesPref(b.brandName, preferredModuleBrands) ? 1 : 0;
-        if (aPref !== bPref) return bPref - aPref;
+        if (input.preferred_brand) {
+          const prefLower = input.preferred_brand.toLowerCase().trim();
+          const aExact = a.brandName.toLowerCase().trim() === prefLower ? 1 : 0;
+          const bExact = b.brandName.toLowerCase().trim() === prefLower ? 1 : 0;
+          if (aExact !== bExact) return bExact - aExact;
+        }
+        if (preferredModuleBrands.length > 0) {
+          const aPref = matchesPref(a.brandName, preferredModuleBrands) ? 1 : 0;
+          const bPref = matchesPref(b.brandName, preferredModuleBrands) ? 1 : 0;
+          if (aPref !== bPref) return bPref - aPref;
+        }
         return (Number(a.price) || 0) - (Number(b.price) || 0);
       });
     }
