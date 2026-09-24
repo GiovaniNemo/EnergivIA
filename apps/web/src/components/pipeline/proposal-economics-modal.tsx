@@ -3735,7 +3735,7 @@ export const ProposalEconomicsModal = forwardRef<
                             <div className="flex items-center gap-1.5 shrink-0">
                               {proposalKitResult.modules.is_tier_1 ? (
                                 <img
-                                  src="/badges/tier1.jpeg"
+                                  src="/badges/tier1.png"
                                   alt="Tier 1 Bloomberg"
                                   title="Módulo certificado Tier 1 (BloombergNEF)"
                                   className="h-7 sm:h-8 w-auto object-contain rounded-md shadow-xs border border-emerald-500/20"

@@ -60,7 +60,7 @@ export function SpecsModuleForm(): JSX.Element {
             <Box display="flex" alignItems="center" gap={1.5}>
               <Box
                 component="img"
-                src="/badges/tier1.jpeg"
+                src="/badges/tier1.png"
                 alt="Selo Tier 1"
                 sx={{
                   height: 38,
