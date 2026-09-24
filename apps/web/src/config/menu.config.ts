@@ -15,7 +15,6 @@ import {
   Palette,
   ChartColumn,
   LayoutTemplate,
-  Wallet,
   Boxes,
   HandCoins,
   Banknote,
@@ -100,14 +99,6 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: Building2,
     path: "/configuracoes/organizacao",
     section: "management",
-    requiresRole: "admin",
-  },
-  {
-    label: "Custos do projeto",
-    icon: Wallet,
-    path: "/configuracoes/custos-projeto",
-    section: "management",
-    tooltip: "Regras de custo (fixo, % ou por kWp) e faixas de potência",
     requiresRole: "admin",
   },
   {
