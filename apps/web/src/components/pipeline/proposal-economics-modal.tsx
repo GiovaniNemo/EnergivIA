@@ -78,6 +78,10 @@ import {
 } from "@/lib/bill-pdf-client";
 import type { Deal, DealStage } from "@/app/(authenticated)/pipeline/use-deals";
 import { useOrganization } from "@/components/providers/organization-provider";
+import {
+  getDistributorAvailableBrands,
+  type DistributorAvailableBrands,
+} from "@/lib/organizations-api";
 import { listCostRules, type CostRuleRow } from "@/lib/cost-rules-api";
 import {
   generateDistributorTiers,
@@ -118,11 +122,6 @@ const ROOF_TYPE_SELECT_OPTIONS: { value: RoofType; label: string }[] = [
   { value: "ground", label: "Solo" },
   { value: "laje", label: "Laje" },
   { value: "none", label: "Sem estrutura" },
-];
-
-const MODULE_BRAND_SELECT_OPTIONS: { value: string; label: string }[] = [
-  { value: "", label: "Melhor custo (qualquer marca)" },
-  { value: "__custom__", label: "Outra (digitar)" },
 ];
 
 function clampSystemKw(kw: number): number {
@@ -728,6 +727,92 @@ export const ProposalEconomicsModal = forwardRef<
   selectedDistributorTierIdRef.current = selectedDistributorTierId;
   const [distributorTiersLoading, setDistributorTiersLoading] = useState(false);
   const [_orgCostRules, setOrgCostRules] = useState<CostRuleRow[]>([]);
+  const [distributorBrands, setDistributorBrands] = useState<DistributorAvailableBrands>({
+    modules: [],
+    inverters: [],
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    getDistributorAvailableBrands()
+      .then((res) => {
+        if (!cancelled && res) {
+          setDistributorBrands(res);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const moduleBrandOptions = useMemo(() => {
+    const preferred = currentOrganization?.preferredModuleBrands ?? [];
+    const allDistributor = distributorBrands.modules ?? [];
+
+    const options: { value: string; label: string; isPreferred?: boolean }[] = [
+      { value: "", label: "Melhor custo (qualquer marca)" },
+    ];
+
+    preferred.forEach((brand) => {
+      options.push({
+        value: brand,
+        label: `${brand} (Preferência)`,
+        isPreferred: true,
+      });
+    });
+
+    allDistributor.forEach((brand) => {
+      if (!preferred.some((p) => p.toLowerCase() === brand.toLowerCase())) {
+        options.push({
+          value: brand,
+          label: brand,
+        });
+      }
+    });
+
+    options.push({ value: "__custom__", label: "Outra (digitar)" });
+    return options;
+  }, [currentOrganization?.preferredModuleBrands, distributorBrands.modules]);
+
+  const displayedAlternatives = useMemo(() => {
+    if (!kitAlternatives) return null;
+    const preferredList =
+      kitSwapCategory === "module"
+        ? (currentOrganization?.preferredModuleBrands ?? [])
+        : (currentOrganization?.preferredInverterBrands ?? []);
+
+    const matchesPref = (brand: string) =>
+      preferredList.some((p) => brand && brand.toLowerCase().includes(p.toLowerCase()));
+
+    const currentId =
+      kitSwapCategory === "module"
+        ? proposalKitResult?.modules?.product_id
+        : proposalKitResult?.inverter?.product_id;
+
+    return [...kitAlternatives].sort((a, b) => {
+      const aIsCurrent = a.product_id === currentId ? 1 : 0;
+      const bIsCurrent = b.product_id === currentId ? 1 : 0;
+      if (aIsCurrent !== bIsCurrent) return bIsCurrent - aIsCurrent;
+
+      const aComp = a.compatible ? 1 : 0;
+      const bComp = b.compatible ? 1 : 0;
+      if (aComp !== bComp) return bComp - aComp;
+
+      const aPref = matchesPref(a.brand_name) ? 1 : 0;
+      const bPref = matchesPref(b.brand_name) ? 1 : 0;
+      if (aPref !== bPref) return bPref - aPref;
+
+      return (Number(a.unit_price) || 0) - (Number(b.unit_price) || 0);
+    });
+  }, [
+    kitAlternatives,
+    kitSwapCategory,
+    currentOrganization?.preferredModuleBrands,
+    currentOrganization?.preferredInverterBrands,
+    proposalKitResult?.modules?.product_id,
+    proposalKitResult?.inverter?.product_id,
+  ]);
 
   useEffect(() => {
     if (!currentOrganizationId || !proposalResultOpen) return;
@@ -3154,7 +3239,7 @@ export const ProposalEconomicsModal = forwardRef<
                           }))
                         }
                       >
-                        {MODULE_BRAND_SELECT_OPTIONS.map((o) => (
+                        {moduleBrandOptions.map((o) => (
                           <option key={o.value || "any"} value={o.value}>
                             {o.label}
                           </option>
@@ -3814,12 +3899,21 @@ export const ProposalEconomicsModal = forwardRef<
                             {kitAlternativesError}
                           </p>
                         ) : null}
-                        {kitAlternatives?.map((alt) => {
+                        {displayedAlternatives?.map((alt) => {
                           const currentId =
                             kitSwapCategory === "module"
                               ? proposalKitResult.modules.product_id
                               : proposalKitResult.inverter.product_id;
                           const isCurrent = alt.product_id === currentId;
+                          const preferredList =
+                            kitSwapCategory === "module"
+                              ? (currentOrganization?.preferredModuleBrands ?? [])
+                              : (currentOrganization?.preferredInverterBrands ?? []);
+                          const isPreferred =
+                            Boolean(alt.brand_name) &&
+                            preferredList.some((p) =>
+                              alt.brand_name.toLowerCase().includes(p.toLowerCase())
+                            );
                           return (
                             <button
                               key={alt.product_id}
@@ -3881,6 +3975,10 @@ export const ProposalEconomicsModal = forwardRef<
                                     <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[0.62rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                                       atual
                                     </span>
+                                  ) : isPreferred ? (
+                                    <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[0.62rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                      Preferência
+                                    </span>
                                   ) : null}
                                 </div>
                                 <span className="mt-0.5 block text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)] leading-tight break-words">
@@ -3892,7 +3990,7 @@ export const ProposalEconomicsModal = forwardRef<
                             </button>
                           );
                         })}
-                        {kitAlternatives && kitAlternatives.length === 0 ? (
+                        {displayedAlternatives && displayedAlternatives.length === 0 ? (
                           <p className="px-3.5 py-3 text-xs text-[var(--color-muted-foreground)]">
                             Nenhuma alternativa encontrada para esta categoria.
                           </p>

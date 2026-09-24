@@ -11,6 +11,7 @@ export interface SolarSizingInput {
   system_kw: number;
   preferred_module_brand?: string;
   preferred_module_id?: string;
+  preferred_inverter_brands?: string[];
   modules: ProductWithSpecs<ModuleSpec>[];
   stringInverters: ProductWithSpecs<StringInverterSpec>[];
   microInverters: ProductWithSpecs<MicroInverterSpec>[];
@@ -18,7 +19,8 @@ export interface SolarSizingInput {
 
 function selectMicroInverter(
   microInverters: ProductWithSpecs<MicroInverterSpec>[],
-  module: ProductWithSpecs<ModuleSpec>
+  module: ProductWithSpecs<ModuleSpec>,
+  preferredInverterBrands?: string[]
 ): ProductWithSpecs<MicroInverterSpec> | null {
   const compatible = microInverters.filter(
     (m) =>
@@ -28,7 +30,18 @@ function selectMicroInverter(
       module.specs.power_w >= m.specs.min_module_power
   );
   if (compatible.length === 0) return null;
-  compatible.sort((a, b) => a.specs.max_module_power - b.specs.max_module_power);
+  const prefs = preferredInverterBrands ?? [];
+  const matchesPref = (brand: string) =>
+    prefs.length === 0 || prefs.some((p) => brand.toLowerCase().includes(p.toLowerCase()));
+
+  compatible.sort((a, b) => {
+    if (prefs.length > 0) {
+      const aPref = matchesPref(a.brandName) ? 1 : 0;
+      const bPref = matchesPref(b.brandName) ? 1 : 0;
+      if (aPref !== bPref) return bPref - aPref;
+    }
+    return a.specs.max_module_power - b.specs.max_module_power;
+  });
   return compatible[0] ?? null;
 }
 
@@ -121,11 +134,23 @@ export function sizeSolarSystem(input: SolarSizingInput): SizingResult | null {
   // Prevenir menos de 4 módulos (mínimo técnico e comercial para string e micro)
   if (moduleQuantity < 4) moduleQuantity = 4;
 
-  // Encontra todos os inversores adequados baseados na potência solicitada, ordenados por menor potência max DC
+  // Encontra todos os inversores adequados baseados na potência solicitada, priorizando marcas preferidas
   const candidateInverters = input.stringInverters.filter(
     (inv) => inv.specs.max_dc_power >= systemPowerW
   );
-  candidateInverters.sort((a, b) => a.specs.max_dc_power - b.specs.max_dc_power);
+  const preferredInvBrands = input.preferred_inverter_brands ?? [];
+  const matchesInv = (brand: string) =>
+    preferredInvBrands.length === 0 ||
+    preferredInvBrands.some((p) => brand.toLowerCase().includes(p.toLowerCase()));
+
+  candidateInverters.sort((a, b) => {
+    if (preferredInvBrands.length > 0) {
+      const aPref = matchesInv(a.brandName) ? 1 : 0;
+      const bPref = matchesInv(b.brandName) ? 1 : 0;
+      if (aPref !== bPref) return bPref - aPref;
+    }
+    return a.specs.max_dc_power - b.specs.max_dc_power;
+  });
 
   // 1. Tenta encontrar o menor inversor onde a configuração seja 100% válida (incluindo o ratio e limite de potência)
   for (const stringInverter of candidateInverters) {
@@ -173,7 +198,11 @@ export function sizeSolarSystem(input: SolarSizingInput): SizingResult | null {
     }
   }
 
-  const microInverter = selectMicroInverter(input.microInverters, module);
+  const microInverter = selectMicroInverter(
+    input.microInverters,
+    module,
+    input.preferred_inverter_brands
+  );
   if (microInverter) {
     const channels = microInverter.specs.channels;
     const microQuantity = Math.ceil(moduleQuantity / channels);

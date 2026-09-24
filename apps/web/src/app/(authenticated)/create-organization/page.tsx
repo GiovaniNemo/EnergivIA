@@ -580,7 +580,7 @@ export default function CreateOrganizationPage() {
   return (
     <section className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-[var(--color-background)]">
       <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden lg:flex-row">
-        <aside className="hidden w-[380px] shrink-0 flex-col justify-between overflow-y-auto border-r border-white/10 bg-[linear-gradient(135deg,#08324F_0%,#0A4A63_45%,#0FD3B4_115%)] px-7 py-8 lg:flex xl:w-[420px] xl:px-8 xl:py-10">
+        <aside className="hidden w-[380px] shrink-0 flex-col justify-between overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden border-r border-white/10 bg-[linear-gradient(135deg,#08324F_0%,#0A4A63_45%,#0FD3B4_115%)] px-7 py-8 lg:flex xl:w-[420px] xl:px-8 xl:py-10">
           <div className="flex flex-1 flex-col justify-center space-y-6">
             <Link
               href="/?landing=1"
@@ -676,7 +676,7 @@ export default function CreateOrganizationPage() {
           </div>
         </aside>
 
-        <main className="relative flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-[var(--color-background)]">
+        <main className="relative flex h-full min-h-0 flex-1 flex-col overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden bg-[var(--color-background)]">
           <div className="w-full border-b border-[var(--color-border)] bg-[var(--color-card)]/50 px-6 py-3">
             <div className="mx-auto flex max-w-[760px] items-center justify-end">
               <a

@@ -42,25 +42,56 @@ export class KitGenerationService {
     private readonly prisma: PrismaService
   ) {}
 
-  async generateSolarKit(input: GenerateKitInput): Promise<GenerateKitResult> {
+  async generateSolarKit(
+    input: GenerateKitInput,
+    organizationId?: string
+  ): Promise<GenerateKitResult> {
     const roofType = input.roof_type || DEFAULT_ROOF_TYPE;
     const wantStock = Boolean(input.stock_owner_org_id);
+
+    let preferredModuleBrands: string[] = [];
+    let preferredInverterBrands: string[] = [];
+    const orgToLoad = organizationId || input.stock_owner_org_id;
+    if (orgToLoad) {
+      const tenant = await this.prisma.tenant.findUnique({
+        where: { id: orgToLoad },
+        select: { settings: true },
+      });
+      const settings = (tenant?.settings as Record<string, unknown>) || {};
+      if (Array.isArray(settings["preferredModuleBrands"])) {
+        preferredModuleBrands = (settings["preferredModuleBrands"] as string[])
+          .map((s) => String(s).toLowerCase().trim())
+          .filter(Boolean);
+      }
+      if (Array.isArray(settings["preferredInverterBrands"])) {
+        preferredInverterBrands = (settings["preferredInverterBrands"] as string[])
+          .map((s) => String(s).toLowerCase().trim())
+          .filter(Boolean);
+      }
+    }
 
     let built: BuiltKit | null = null;
     let usedOwnStock = false;
 
     if (wantStock && input.stock_owner_org_id) {
-      built = await this.buildKit(input, roofType, {
-        stockOwnerOrgId: input.stock_owner_org_id,
-      });
+      built = await this.buildKit(
+        input,
+        roofType,
+        { stockOwnerOrgId: input.stock_owner_org_id },
+        preferredModuleBrands,
+        preferredInverterBrands
+      );
       if (built) usedOwnStock = true;
     }
 
     if (!built) {
-      built = await this.buildKit(input, roofType, {
-        supplierId: input.supplier_id,
-        distributorId: input.supplier_id,
-      });
+      built = await this.buildKit(
+        input,
+        roofType,
+        { supplierId: input.supplier_id, distributorId: input.supplier_id },
+        preferredModuleBrands,
+        preferredInverterBrands
+      );
     }
 
     if (!built) {
@@ -121,20 +152,49 @@ export class KitGenerationService {
         ? { stockOwnerOrgId: organizationId }
         : { supplierId: input.supplier_id, distributorId: input.supplier_id };
 
+    let preferredModuleBrands: string[] = [];
+    let preferredInverterBrands: string[] = [];
+    if (organizationId) {
+      const tenant = await this.prisma.tenant.findUnique({
+        where: { id: organizationId },
+        select: { settings: true },
+      });
+      const settings = (tenant?.settings as Record<string, unknown>) || {};
+      if (Array.isArray(settings["preferredModuleBrands"])) {
+        preferredModuleBrands = (settings["preferredModuleBrands"] as string[])
+          .map((s) => String(s).toLowerCase().trim())
+          .filter(Boolean);
+      }
+      if (Array.isArray(settings["preferredInverterBrands"])) {
+        preferredInverterBrands = (settings["preferredInverterBrands"] as string[])
+          .map((s) => String(s).toLowerCase().trim())
+          .filter(Boolean);
+      }
+    }
+
     // 1. Build default base kit first as baseline
     let baseBuilt: BuiltKit | null = null;
     let usedOwnStock = false;
 
     if (wantStock && organizationId) {
-      baseBuilt = await this.buildKit(input, roofType, { stockOwnerOrgId: organizationId });
+      baseBuilt = await this.buildKit(
+        input,
+        roofType,
+        { stockOwnerOrgId: organizationId },
+        preferredModuleBrands,
+        preferredInverterBrands
+      );
       if (baseBuilt) usedOwnStock = true;
     }
 
     if (!baseBuilt) {
-      baseBuilt = await this.buildKit(input, roofType, {
-        supplierId: input.supplier_id,
-        distributorId: input.supplier_id,
-      });
+      baseBuilt = await this.buildKit(
+        input,
+        roofType,
+        { supplierId: input.supplier_id, distributorId: input.supplier_id },
+        preferredModuleBrands,
+        preferredInverterBrands
+      );
     }
 
     if (!baseBuilt) {
@@ -153,18 +213,38 @@ export class KitGenerationService {
         this.productRepo.findActiveHybridInverters(source),
       ]);
 
-    // Rank modules by price per watt (lowest price/W to highest)
+    // Rank modules by price per watt, prioritizing preferred brands first
     const modulesWithPower = allModules.map((m) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const powerW = Number((m.specs as any)?.power_w) || 585;
       const pricePerW = m.price / powerW;
       return { module: m, powerW, pricePerW };
     });
-    modulesWithPower.sort((a, b) => a.pricePerW - b.pricePerW);
+    modulesWithPower.sort((a, b) => {
+      const aBrand = (a.module.brandName || "").toLowerCase().trim();
+      const bBrand = (b.module.brandName || "").toLowerCase().trim();
+      const aPref = preferredModuleBrands.includes(aBrand);
+      const bPref = preferredModuleBrands.includes(bBrand);
+      if (aPref && !bPref) return -1;
+      if (!aPref && bPref) return 1;
+      return a.pricePerW - b.pricePerW;
+    });
 
-    const sortedString = [...allStringInverters].sort((a, b) => a.price - b.price);
-    const sortedMicro = [...allMicroInverters].sort((a, b) => a.price - b.price);
-    const sortedHybrid = [...allHybridInverters].sort((a, b) => a.price - b.price);
+    const sortInverters = <T extends { brandName: string; price: number }>(inverters: T[]): T[] => {
+      return [...inverters].sort((a, b) => {
+        const aBrand = (a.brandName || "").toLowerCase().trim();
+        const bBrand = (b.brandName || "").toLowerCase().trim();
+        const aPref = preferredInverterBrands.includes(aBrand);
+        const bPref = preferredInverterBrands.includes(bBrand);
+        if (aPref && !bPref) return -1;
+        if (!aPref && bPref) return 1;
+        return a.price - b.price;
+      });
+    };
+
+    const sortedString = sortInverters(allStringInverters);
+    const sortedMicro = sortInverters(allMicroInverters);
+    const sortedHybrid = sortInverters(allHybridInverters);
 
     // Module candidates
     const economicCandidateModule = modulesWithPower[0]?.module;
@@ -189,7 +269,13 @@ export class KitGenerationService {
         ...(pinned.inverterId ? { pinned_inverter_id: pinned.inverterId } : {}),
         ...(pinned.inverterType ? { inverter_type: pinned.inverterType } : {}),
       };
-      const res = await this.buildKit(trialInput, roofType, source);
+      const res = await this.buildKit(
+        trialInput,
+        roofType,
+        source,
+        preferredModuleBrands,
+        preferredInverterBrands
+      );
       return res || baseBuilt!;
     };
 
@@ -432,8 +518,29 @@ export class KitGenerationService {
       })
     );
 
+    let preferredBrands: string[] = [];
+    if (opts?.organizationId) {
+      const tenant = await this.prisma.tenant.findUnique({
+        where: { id: opts.organizationId },
+        select: { settings: true },
+      });
+      const settings = (tenant?.settings as Record<string, unknown>) || {};
+      const key = category === "module" ? "preferredModuleBrands" : "preferredInverterBrands";
+      if (Array.isArray(settings[key])) {
+        preferredBrands = (settings[key] as string[])
+          .map((s) => String(s).toLowerCase().trim())
+          .filter(Boolean);
+      }
+    }
+
     alternatives.sort((a, b) => {
       if (a.compatible !== b.compatible) return a.compatible ? -1 : 1;
+      const aBrand = (a.brand_name || "").toLowerCase().trim();
+      const bBrand = (b.brand_name || "").toLowerCase().trim();
+      const aPref = preferredBrands.includes(aBrand);
+      const bPref = preferredBrands.includes(bBrand);
+      if (aPref && !bPref) return -1;
+      if (!aPref && bPref) return 1;
       return (a.kit_total ?? Number.MAX_SAFE_INTEGER) - (b.kit_total ?? Number.MAX_SAFE_INTEGER);
     });
 
@@ -607,7 +714,9 @@ export class KitGenerationService {
   private async buildKit(
     input: GenerateKitInput,
     roofType: string,
-    source: KitProductSource
+    source: KitProductSource,
+    preferredModuleBrands: string[] = [],
+    preferredInverterBrands: string[] = []
   ): Promise<BuiltKit | null> {
     const [
       allModules,
@@ -625,6 +734,19 @@ export class KitGenerationService {
     const modules = input.pinned_module_id
       ? allModules.filter((m) => m.id === input.pinned_module_id)
       : allModules;
+
+    const matchesPref = (brand: string, prefs: string[]) =>
+      prefs.length === 0 || prefs.some((p) => brand.toLowerCase().includes(p.toLowerCase()));
+
+    // Prioritize modules by preferred brands if not explicitly pinned or filtered
+    if (!input.preferred_brand && !input.pinned_module_id && preferredModuleBrands.length > 0) {
+      modules.sort((a, b) => {
+        const aPref = matchesPref(a.brandName, preferredModuleBrands) ? 1 : 0;
+        const bPref = matchesPref(b.brandName, preferredModuleBrands) ? 1 : 0;
+        if (aPref !== bPref) return bPref - aPref;
+        return (Number(a.price) || 0) - (Number(b.price) || 0);
+      });
+    }
 
     // Convert hybrid and offgrid inverters to compatible string inverter specs for sizing engine
     const adaptedHybridInverters = allHybridInverters.map((h) => ({
@@ -756,6 +878,7 @@ export class KitGenerationService {
     const sizingResult = sizeSolarSystem({
       system_kw: input.system_kw,
       preferred_module_brand: input.preferred_brand,
+      preferred_inverter_brands: preferredInverterBrands,
       modules,
       stringInverters,
       microInverters,

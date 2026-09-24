@@ -59,6 +59,46 @@ export class BrandsService {
   }
 
   async getDistributorAvailable(): Promise<{ modules: string[]; inverters: string[] }> {
+    const isGeneric = (name: string) => {
+      const lower = name.toLowerCase().trim();
+      return (
+        lower === "genérico" || lower === "generico" || lower === "genérica" || lower === "generica"
+      );
+    };
+
+    const isStructureBrand = (name: string) => {
+      const lower = name.toLowerCase().trim();
+      return ["romagnole", "solar group", "pratyc"].includes(lower);
+    };
+
+    const modulesSet = new Set<string>();
+    const invertersSet = new Set<string>();
+
+    // 1. Marcas cadastradas no Brand com categorias configuradas
+    const allBrands = await this.prisma.brand.findMany({
+      select: {
+        name: true,
+        categories: true,
+      },
+    });
+
+    for (const b of allBrands) {
+      const brandName = b.name?.trim();
+      if (!brandName || isGeneric(brandName) || isStructureBrand(brandName)) continue;
+      const cats = (b.categories || []).map((c) => c.toLowerCase().trim());
+      if (cats.includes("module")) {
+        modulesSet.add(brandName);
+      }
+      if (
+        cats.includes("inverter") ||
+        cats.includes("microinverter") ||
+        cats.includes("hybrid_inverter")
+      ) {
+        invertersSet.add(brandName);
+      }
+    }
+
+    // 2. Marcas com produtos de distribuidor ativos
     const distProds = await this.prisma.distributorProduct.findMany({
       where: {
         product: {
@@ -75,20 +115,10 @@ export class BrandsService {
       },
     });
 
-    const isGeneric = (name: string) => {
-      const lower = name.toLowerCase().trim();
-      return (
-        lower === "genérico" || lower === "generico" || lower === "genérica" || lower === "generica"
-      );
-    };
-
-    const modulesSet = new Set<string>();
-    const invertersSet = new Set<string>();
-
     for (const dp of distProds) {
       const brandName = dp.product?.brand?.name?.trim();
       const cat = dp.product?.category?.name?.trim().toLowerCase();
-      if (!brandName || isGeneric(brandName)) continue;
+      if (!brandName || isGeneric(brandName) || isStructureBrand(brandName)) continue;
 
       if (cat === "module") {
         modulesSet.add(brandName);
@@ -97,6 +127,7 @@ export class BrandsService {
       }
     }
 
+    // 3. Fallback se necessário para produtos ativos gerais
     if (modulesSet.size === 0 || invertersSet.size === 0) {
       const activeProds = await this.prisma.product.findMany({
         where: { active: true },
@@ -108,7 +139,7 @@ export class BrandsService {
       for (const p of activeProds) {
         const brandName = p.brand?.name?.trim();
         const cat = p.category?.name?.trim().toLowerCase();
-        if (!brandName || isGeneric(brandName)) continue;
+        if (!brandName || isGeneric(brandName) || isStructureBrand(brandName)) continue;
         if (cat === "module") modulesSet.add(brandName);
         else if (cat === "inverter" || cat === "microinverter" || cat === "hybrid_inverter")
           invertersSet.add(brandName);
