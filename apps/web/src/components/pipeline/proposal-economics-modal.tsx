@@ -3257,33 +3257,31 @@ export const ProposalEconomicsModal = forwardRef<
                   )}
                 </div>
 
-                {/* Seletor de Origem do Kit */}
-                <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/15 p-3.5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-foreground)]">
-                        Origem do kit
-                      </p>
-                      <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-                        Selecione a fonte dos equipamentos para montar o kit da proposta:
-                      </p>
-                    </div>
+                {/* Seletor de Origem do Kit (Segmented Control Minimalista) */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1 pb-1">
+                  <div>
+                    <span className="text-xs font-semibold text-[var(--color-foreground)] flex items-center gap-1.5">
+                      Origem dos Equipamentos
+                      {kitSourceLoading && !kitSourceOptions ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-normal text-[var(--color-muted-foreground)]">
+                          <Loader2 className="h-3 w-3 animate-spin text-emerald-500" />
+                          Verificando…
+                        </span>
+                      ) : null}
+                    </span>
+                    <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                      Escolha a fonte dos itens para o dimensionamento:
+                    </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    {kitSourceLoading && !kitSourceOptions ? (
-                      <span className="inline-flex animate-pulse items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3.5 py-1.5 text-xs text-[var(--color-muted-foreground)]">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Verificando estoque…
-                      </span>
-                    ) : null}
 
-                    {/* Opção 1: Perfil do Integrador (Catálogo Global) */}
+                  <div className="inline-flex items-center p-1 rounded-xl bg-[var(--color-muted)]/20 border border-[var(--color-border)]/60 gap-1 self-start sm:self-auto">
+                    {/* Opção 1: Perfil do Integrador */}
                     <button
                       type="button"
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs sm:text-sm transition cursor-pointer ${
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
                         kitDraftSource.kind !== "own"
-                          ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
-                          : "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
+                          ? "bg-[var(--color-card)] text-emerald-600 dark:text-emerald-400 font-semibold shadow-xs border border-emerald-500/20"
+                          : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
                       }`}
                       onClick={() =>
                         setProposalKitDraft((d) => ({
@@ -3307,12 +3305,12 @@ export const ProposalEconomicsModal = forwardRef<
                             ? "Montar o kit 100% com itens do seu estoque cadastrado"
                             : "Seu estoque cadastrado ainda não cobre todos os equipamentos necessários para esta configuração"
                         }
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs sm:text-sm transition ${
+                        className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                           kitDraftSource.kind === "own"
-                            ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
+                            ? "bg-[var(--color-card)] text-emerald-600 dark:text-emerald-400 font-semibold shadow-xs border border-emerald-500/20"
                             : ownStockOption.available
-                              ? "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300 cursor-pointer"
-                              : "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-muted-foreground)] opacity-60"
+                              ? "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] cursor-pointer"
+                              : "text-[var(--color-muted-foreground)]/50 cursor-not-allowed"
                         }`}
                         onClick={() =>
                           setProposalKitDraft((d) => ({
@@ -3325,12 +3323,12 @@ export const ProposalEconomicsModal = forwardRef<
                         <Warehouse className="h-3.5 w-3.5" />
                         Meu estoque
                         {ownStockOption.available && ownStockOption.total != null ? (
-                          <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+                          <span className="text-[11px] opacity-80">
                             ({formatCurrency(ownStockOption.total)})
                           </span>
                         ) : (
-                          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:text-amber-300">
-                            cobre {ownStockOption.covered_categories ?? 0}/
+                          <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[0.62rem] font-semibold text-amber-600 dark:text-amber-400">
+                            {ownStockOption.covered_categories ?? 0}/
                             {ownStockOption.required_categories ?? 5}
                           </span>
                         )}
@@ -3339,14 +3337,11 @@ export const ProposalEconomicsModal = forwardRef<
                       <button
                         type="button"
                         disabled
-                        title="Cadastre produtos no seu estoque para cotar a partir dos seus próprios itens"
-                        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-background)] px-3.5 py-1.5 text-xs sm:text-sm text-[var(--color-muted-foreground)] opacity-60 cursor-not-allowed"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--color-muted-foreground)]/50 cursor-not-allowed"
                       >
                         <Warehouse className="h-3.5 w-3.5" />
                         Meu estoque
-                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:text-amber-300">
-                          Sem itens cadastrados
-                        </span>
+                        <span className="text-[0.62rem] opacity-60">(Vazio)</span>
                       </button>
                     )}
                   </div>
@@ -3400,29 +3395,26 @@ export const ProposalEconomicsModal = forwardRef<
                         ))}
                       </div>
                     ) : computedDistributorCards.length > 0 ? (
-                      <div className="space-y-2 pt-1">
+                      <div className="space-y-3 pt-1">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <div>
-                            <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-foreground)] flex items-center gap-1.5">
+                            <h4 className="text-xs sm:text-sm font-bold text-[var(--color-foreground)] flex items-center gap-1.5">
                               <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
-                              Opções de Kits por Preço por kWp
+                              Opções de Kits Dimensionados
                             </h4>
-                            <span className="text-[11px] text-[var(--color-muted-foreground)]">
-                              3 configurações montadas com equipamentos do seu catálogo
-                            </span>
+                            <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                              Configurações balanceadas para a potência ideal do cliente
+                            </p>
                           </div>
 
-                          {/* Ajuste de Preço R$/kWp */}
-                          <div className="flex items-center gap-2.5 shrink-0 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] px-3 py-1.5 shadow-xs">
-                            <Label
-                              htmlFor="kwp-rate-input"
-                              className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] whitespace-nowrap flex items-center gap-1.5"
-                            >
+                          {/* Ajuste de Preço R$/kWp Minimalista */}
+                          <div className="flex items-center gap-2 shrink-0 rounded-xl bg-[var(--color-muted)]/15 border border-[var(--color-border)]/80 px-2.5 py-1">
+                            <span className="text-xs font-medium text-[var(--color-muted-foreground)] flex items-center gap-1">
                               <Zap className="w-3.5 h-3.5 text-emerald-500" />
                               Preço R$/kWp:
-                            </Label>
-                            <div className="relative w-28 sm:w-32">
-                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--color-muted-foreground)] font-bold">
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs font-bold text-[var(--color-muted-foreground)]">
                                 R$
                               </span>
                               <Input
@@ -3434,13 +3426,15 @@ export const ProposalEconomicsModal = forwardRef<
                                 onChange={(e) =>
                                   setKwpRateValue(Math.max(0, parseFloat(e.target.value) || 0))
                                 }
-                                className="pl-8 h-8 font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 bg-[var(--color-card)]"
+                                className="h-7 w-20 px-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-[var(--color-card)] text-right border-[var(--color-border)]/70 focus:border-emerald-500"
                                 placeholder="2800"
                               />
                             </div>
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+
+                        {/* Cards dos Tiers - Design Minimalista e Executivo */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           {computedDistributorCards.map((tier) => {
                             const isSelected = tier.isSelected;
                             return (
@@ -3463,16 +3457,16 @@ export const ProposalEconomicsModal = forwardRef<
                                     setKitQtyDrafts({});
                                   }
                                 }}
-                                className={`cursor-pointer rounded-xl border p-4 transition-all flex flex-col justify-between text-left select-none ${
+                                className={`cursor-pointer rounded-xl border p-3.5 transition-all flex flex-col justify-between text-left select-none relative ${
                                   isSelected
-                                    ? "border-emerald-500 bg-emerald-500/[0.05] ring-1 ring-emerald-500 shadow-xs"
-                                    : "border-[var(--color-border)] bg-[var(--color-background)] hover:border-[var(--color-border)] hover:bg-[var(--color-muted)]/10"
+                                    ? "border-emerald-500/50 bg-emerald-500/[0.04] ring-1 ring-emerald-500/30 shadow-xs"
+                                    : "border-[var(--color-border)]/70 bg-[var(--color-card)] hover:border-[var(--color-border)] hover:bg-[var(--color-muted)]/10"
                                 }`}
                               >
-                                <div className="space-y-2.5">
+                                <div className="space-y-2">
                                   <div className="flex items-center justify-between">
                                     <span
-                                      className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                                      className={`text-[0.7rem] font-semibold px-2 py-0.5 rounded-full ${
                                         tier.tier_id === "economic"
                                           ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
                                           : tier.tier_id === "cost_benefit"
@@ -3482,59 +3476,66 @@ export const ProposalEconomicsModal = forwardRef<
                                     >
                                       {tier.name}
                                     </span>
-                                    <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                                    <span className="text-[11px] font-medium text-[var(--color-muted-foreground)]">
                                       {formatCurrency(tier.ratePerKwpEffective)}/kWp
                                     </span>
                                   </div>
 
                                   <div>
-                                    <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                    <p
+                                      className={`text-lg sm:text-xl font-bold tabular-nums tracking-tight ${
+                                        isSelected
+                                          ? "text-emerald-600 dark:text-emerald-400"
+                                          : "text-[var(--color-foreground)]"
+                                      }`}
+                                    >
                                       {tier.commercialPriceFormatted}
                                     </p>
-                                    <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
+                                    <p className="text-[11px] text-[var(--color-muted-foreground)] mt-0.5 line-clamp-1 leading-snug">
                                       {tier.tagline}
                                     </p>
                                   </div>
 
-                                  <div className="pt-2.5 border-t border-[var(--color-border)]/60 text-xs space-y-1 text-[var(--color-muted-foreground)]">
-                                    <p>
-                                      <strong className="text-[var(--color-foreground)] font-medium">
+                                  {/* Resumo Técnico dos Equipamentos */}
+                                  <div className="pt-2 text-xs space-y-1 text-[var(--color-muted-foreground)]">
+                                    <p className="truncate">
+                                      <span className="text-[var(--color-foreground)] font-medium">
                                         Inversor:{" "}
-                                      </strong>
+                                      </span>
                                       {tier.kit_result?.inverter?.quantity &&
                                       tier.kit_result.inverter.quantity > 1
                                         ? `${tier.kit_result.inverter.quantity}x `
                                         : ""}
                                       {tier.inverter_brand} ({tier.inverter_power_kw} kW)
                                     </p>
-                                    <p>
-                                      <strong className="text-[var(--color-foreground)] font-medium">
+                                    <p className="truncate">
+                                      <span className="text-[var(--color-foreground)] font-medium">
                                         Módulos:{" "}
-                                      </strong>
+                                      </span>
                                       {tier.module_qty}x {tier.module_brand} ({tier.module_power_w}
                                       W)
                                     </p>
                                     <p className="text-[11px] text-[var(--color-muted-foreground)]/80">
-                                      + Estrutura, cabos e conectores inclusos
+                                      + Infraestrutura completa inclusa
                                     </p>
                                   </div>
                                 </div>
 
-                                <div className="pt-3 mt-3 border-t border-[var(--color-border)]/50 flex items-center justify-between">
-                                  <span className="text-xs text-[var(--color-muted-foreground)]">
+                                <div className="pt-2.5 mt-2.5 border-t border-[var(--color-border)]/40 flex items-center justify-between">
+                                  <span className="text-[11px] text-[var(--color-muted-foreground)]">
                                     Geração:{" "}
-                                    <strong className="text-[var(--color-foreground)]">
+                                    <strong className="text-[var(--color-foreground)] font-medium">
                                       ~{tier.estimated_monthly_generation_kwh} kWh/mês
                                     </strong>
                                   </span>
                                   <span
-                                    className={`h-5 w-5 rounded-full border flex items-center justify-center transition-colors ${
+                                    className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center transition-colors ${
                                       isSelected
                                         ? "border-emerald-500 bg-emerald-500 text-white"
                                         : "border-[var(--color-border)]"
                                     }`}
                                   >
-                                    {isSelected ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
+                                    {isSelected ? <CheckCircle2 className="h-3 w-3" /> : null}
                                   </span>
                                 </div>
                               </div>
@@ -3546,62 +3547,67 @@ export const ProposalEconomicsModal = forwardRef<
 
                     {isBelowMinModules ? (
                       <div className="flex flex-wrap items-center gap-3">
-                        <span className="inline-flex items-center gap-1 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-300">
+                        <span className="inline-flex items-center gap-1 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
                           Ajustado ao mín. de 4 módulos ({activeModuleWatts}W)
                         </span>
                       </div>
                     ) : null}
 
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3.5">
+                    {/* Destaque Compacto: Módulos & Inversor com Strings integradas */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {/* Card Módulos */}
-                      <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-2.5 sm:p-3.5 shadow-xs">
+                      <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-card)] p-3 shadow-xs">
                         <div>
                           <div className="flex items-center justify-between gap-1.5">
                             <div className="flex items-center gap-1.5 min-w-0">
-                              <div className="flex h-5 w-5 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
                                 <Sun className="h-3.5 w-3.5" />
                               </div>
-                              <span className="text-[0.7rem] sm:text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)] truncate">
-                                Módulos
+                              <span className="text-xs font-bold text-[var(--color-foreground)] truncate">
+                                Módulos Solares
                               </span>
                             </div>
                             {extractPowerBadge(proposalKitResult.modules.product_name) ? (
-                              <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 shrink-0">
+                              <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 shrink-0">
                                 <Zap className="h-3 w-3 shrink-0" />
                                 {extractPowerBadge(proposalKitResult.modules.product_name)}
                               </span>
                             ) : null}
                           </div>
 
-                          <div className="mt-1.5 space-y-0.5">
-                            <div className="flex items-center gap-1 flex-wrap">
-                              <span className="tabular-nums text-amber-500 dark:text-amber-400 font-bold text-xs sm:text-sm">
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="tabular-nums text-amber-600 dark:text-amber-400 font-bold text-xs sm:text-sm">
                                 {optimisticModuleQty ?? proposalKitResult.modules.quantity}×
                               </span>
-                              <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium">
+                              <span className="text-xs font-semibold text-[var(--color-foreground)]">
                                 {proposalKitResult.modules.brand_name}
                               </span>
                             </div>
-                            <p className="text-[0.7rem] sm:text-xs font-semibold leading-snug text-[var(--color-foreground)] break-words">
+                            <p className="text-xs text-[var(--color-muted-foreground)] leading-snug line-clamp-2">
                               {proposalKitResult.modules.product_name}
                             </p>
+                            {proposalKitResult.string_configuration ? (
+                              <p className="text-[11px] text-[var(--color-muted-foreground)] font-medium pt-0.5">
+                                Arranjo: {proposalKitResult.string_configuration.string_count}{" "}
+                                strings de{" "}
+                                {proposalKitResult.string_configuration.modules_per_string} módulos
+                              </p>
+                            ) : null}
                           </div>
                         </div>
 
-                        <div className="mt-2.5 pt-1.5 border-t border-[var(--color-border)]/50 flex items-center justify-between gap-1">
+                        <div className="mt-3 pt-2 border-t border-[var(--color-border)]/40 flex items-center justify-between gap-1">
                           {(proposalKitResult.modules as unknown as { datasheet_url?: string })
                             .datasheet_url ? (
                             <a
                               href={
-                                (
-                                  proposalKitResult.modules as unknown as {
-                                    datasheet_url?: string;
-                                  }
-                                ).datasheet_url
+                                (proposalKitResult.modules as unknown as { datasheet_url?: string })
+                                  .datasheet_url
                               }
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[0.65rem] sm:text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 hover:underline font-medium"
+                              className="text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 hover:underline font-medium"
                             >
                               Datasheet
                             </a>
@@ -3611,7 +3617,7 @@ export const ProposalEconomicsModal = forwardRef<
                           <Button
                             type="button"
                             variant="outline"
-                            className="h-6 sm:h-7 shrink-0 rounded-md px-2 text-[0.68rem] sm:text-xs font-semibold"
+                            className="h-6.5 shrink-0 rounded-md px-2.5 text-xs font-medium"
                             onClick={() =>
                               setKitSwapCategory((c) => (c === "module" ? null : "module"))
                             }
@@ -3622,41 +3628,41 @@ export const ProposalEconomicsModal = forwardRef<
                       </div>
 
                       {/* Card Inversor */}
-                      <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-2.5 sm:p-3.5 shadow-xs">
+                      <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-card)] p-3 shadow-xs">
                         <div>
                           <div className="flex items-center justify-between gap-1.5">
                             <div className="flex items-center gap-1.5 min-w-0">
-                              <div className="flex h-5 w-5 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-md bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-violet-500/10 text-violet-600 dark:text-violet-400">
                                 <Cpu className="h-3.5 w-3.5" />
                               </div>
-                              <span className="text-[0.7rem] sm:text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)] truncate">
-                                Inversor
+                              <span className="text-xs font-bold text-[var(--color-foreground)] truncate">
+                                Inversor Solar
                               </span>
                             </div>
                             {extractPowerBadge(proposalKitResult.inverter.product_name) ? (
-                              <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30 shrink-0">
+                              <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] font-bold bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 shrink-0">
                                 <Zap className="h-3 w-3 shrink-0" />
                                 {extractPowerBadge(proposalKitResult.inverter.product_name)}
                               </span>
                             ) : null}
                           </div>
 
-                          <div className="mt-1.5 space-y-0.5">
-                            <div className="flex items-center gap-1 flex-wrap">
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="tabular-nums text-violet-600 dark:text-violet-400 font-bold text-xs sm:text-sm">
                                 {proposalKitResult.inverter.quantity}×
                               </span>
-                              <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium">
+                              <span className="text-xs font-semibold text-[var(--color-foreground)]">
                                 {proposalKitResult.inverter.brand_name}
                               </span>
                             </div>
-                            <p className="text-[0.7rem] sm:text-xs font-semibold leading-snug text-[var(--color-foreground)] break-words">
+                            <p className="text-xs text-[var(--color-muted-foreground)] leading-snug line-clamp-2">
                               {proposalKitResult.inverter.product_name}
                             </p>
                           </div>
                         </div>
 
-                        <div className="mt-2.5 pt-1.5 border-t border-[var(--color-border)]/50 flex items-center justify-between gap-1">
+                        <div className="mt-3 pt-2 border-t border-[var(--color-border)]/40 flex items-center justify-between gap-1">
                           {(proposalKitResult.inverter as unknown as { datasheet_url?: string })
                             .datasheet_url ? (
                             <a
@@ -3669,7 +3675,7 @@ export const ProposalEconomicsModal = forwardRef<
                               }
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[0.65rem] sm:text-xs text-violet-600 hover:text-violet-700 dark:text-violet-400 hover:underline font-medium"
+                              className="text-xs text-violet-600 hover:text-violet-700 dark:text-violet-400 hover:underline font-medium"
                             >
                               Datasheet
                             </a>
@@ -3679,7 +3685,7 @@ export const ProposalEconomicsModal = forwardRef<
                           <Button
                             type="button"
                             variant="outline"
-                            className="h-6 sm:h-7 shrink-0 rounded-md px-2 text-[0.68rem] sm:text-xs font-semibold"
+                            className="h-6.5 shrink-0 rounded-md px-2.5 text-xs font-medium"
                             onClick={() =>
                               setKitSwapCategory((c) => (c === "inverter" ? null : "inverter"))
                             }
@@ -3818,38 +3824,30 @@ export const ProposalEconomicsModal = forwardRef<
                       </div>
                     ) : null}
 
-                    {proposalKitResult.string_configuration ? (
-                      <p className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-3.5 py-2.5 text-xs text-[var(--color-muted-foreground)]">
-                        <span className="font-semibold text-[var(--color-foreground)]">
-                          Strings:
-                        </span>{" "}
-                        {proposalKitResult.string_configuration.string_count} strings de{" "}
-                        {proposalKitResult.string_configuration.modules_per_string} módulos
-                      </p>
-                    ) : null}
-                    <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] shadow-xs">
+                    {/* Tabela de Itens do Kit - Estilo Minimalista e Limpo */}
+                    <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-card)] shadow-xs">
                       <table className="w-full text-xs sm:text-sm">
                         <thead>
-                          <tr className="border-b border-[var(--color-border)] bg-[var(--color-muted)]/20">
-                            <th className="py-2 px-2 sm:p-3 text-left text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                          <tr className="border-b border-[var(--color-border)]/60 bg-[var(--color-muted)]/10">
+                            <th className="py-2.5 px-3 text-left text-[0.7rem] font-semibold text-[var(--color-muted-foreground)]">
                               Item
                             </th>
-                            <th className="hidden sm:table-cell p-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                            <th className="hidden sm:table-cell py-2.5 px-3 text-left text-[0.7rem] font-semibold text-[var(--color-muted-foreground)]">
                               Marca
                             </th>
-                            <th className="py-2 px-1 sm:p-3 text-center sm:text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-14 sm:w-20">
+                            <th className="py-2.5 px-2 sm:px-3 text-center sm:text-right text-[0.7rem] font-semibold text-[var(--color-muted-foreground)] w-16 sm:w-20">
                               Qtd
                             </th>
-                            <th className="hidden sm:table-cell p-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                              Un.
+                            <th className="hidden sm:table-cell py-2.5 px-3 text-right text-[0.7rem] font-semibold text-[var(--color-muted-foreground)]">
+                              Unitário
                             </th>
-                            <th className="py-2 px-2 sm:p-3 text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-28 sm:w-32">
+                            <th className="py-2.5 px-3 text-right text-[0.7rem] font-semibold text-[var(--color-muted-foreground)] w-28 sm:w-32">
                               Total
                             </th>
                           </tr>
                         </thead>
-                        <tbody>
-                          {proposalKitResult.kit_items.map((item, idx) => {
+                        <tbody className="divide-y divide-[var(--color-border)]/40">
+                          {proposalKitResult.kit_items.map((item) => {
                             const isModuleRow =
                               item.product_id === proposalKitResult.modules.product_id;
                             const isInverterRow =
@@ -3869,27 +3867,25 @@ export const ProposalEconomicsModal = forwardRef<
                             return (
                               <tr
                                 key={item.product_id}
-                                className={`border-b border-[var(--color-border)]/80 transition-colors last:border-0 hover:bg-emerald-500/[0.04] ${
-                                  idx % 2 === 1 ? "bg-[var(--color-muted)]/15" : ""
-                                }`}
+                                className="transition-colors hover:bg-[var(--color-muted)]/15"
                               >
-                                <td className="py-2 px-2 sm:p-3 font-medium text-[var(--color-foreground)]">
+                                <td className="py-2.5 px-3 font-medium text-[var(--color-foreground)]">
                                   <div className="min-w-0">
-                                    <p className="text-[0.7rem] sm:text-xs font-semibold leading-tight break-words text-[var(--color-foreground)]">
+                                    <p className="text-xs font-medium leading-snug break-words text-[var(--color-foreground)]">
                                       {item.product_name}
                                     </p>
                                     {item.brand_name ? (
-                                      <p className="text-[0.62rem] sm:hidden text-[var(--color-muted-foreground)] font-normal mt-0.5 break-words">
+                                      <p className="text-[11px] sm:hidden text-[var(--color-muted-foreground)] font-normal mt-0.5 break-words">
                                         {item.brand_name}
                                       </p>
                                     ) : null}
                                     {isAdjusted ? (
-                                      <span className="mt-0.5 block text-[0.62rem] sm:text-xs font-normal text-[var(--color-muted-foreground)]">
+                                      <span className="mt-0.5 block text-[11px] font-normal text-[var(--color-muted-foreground)]">
                                         calculado: {item.quantity}
                                         {" · "}
                                         <button
                                           type="button"
-                                          className="text-emerald-700 hover:underline dark:text-emerald-300 font-medium"
+                                          className="text-emerald-700 hover:underline dark:text-emerald-300 font-medium cursor-pointer"
                                           onClick={() =>
                                             setKitQtyDrafts((prev) => {
                                               const next = { ...prev };
@@ -3903,17 +3899,17 @@ export const ProposalEconomicsModal = forwardRef<
                                         {belowCalculated ? (
                                           <span className="text-red-600 font-semibold dark:text-red-400">
                                             {" "}
-                                            · abaixo do calculado
+                                            · abaixo do dimensionamento
                                           </span>
                                         ) : null}
                                       </span>
                                     ) : null}
                                   </div>
                                 </td>
-                                <td className="hidden sm:table-cell p-3 text-[var(--color-muted-foreground)]">
+                                <td className="hidden sm:table-cell py-2.5 px-3 text-xs text-[var(--color-muted-foreground)]">
                                   {item.brand_name || "—"}
                                 </td>
-                                <td className="py-2 px-1 sm:p-3 text-center sm:text-right tabular-nums text-[var(--color-foreground)] whitespace-nowrap">
+                                <td className="py-2.5 px-2 sm:px-3 text-center sm:text-right tabular-nums text-[var(--color-foreground)] whitespace-nowrap">
                                   {isModuleRow ? (
                                     <span className="inline-flex items-center gap-1 sm:gap-1.5 justify-center sm:justify-end">
                                       <button
@@ -3925,18 +3921,18 @@ export const ProposalEconomicsModal = forwardRef<
                                             ? "Mínimo permitido: 4 módulos"
                                             : "Um módulo a menos"
                                         }
-                                        className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:bg-transparent"
+                                        className="flex h-5 w-5 sm:h-5.5 sm:w-5.5 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:bg-transparent"
                                         onClick={() => adjustModuleQuantity(-1)}
                                       >
                                         −
                                       </button>
-                                      <span className="min-w-[1.6ch] sm:min-w-[2.2ch] text-center font-bold text-xs sm:text-sm">
+                                      <span className="min-w-[1.6ch] sm:min-w-[2ch] text-center font-bold text-xs">
                                         {qty}
                                       </span>
                                       <button
                                         type="button"
                                         aria-label="Um módulo a mais"
-                                        className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
+                                        className="flex h-5 w-5 sm:h-5.5 sm:w-5.5 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
                                         onClick={() => adjustModuleQuantity(1)}
                                       >
                                         +
@@ -3945,7 +3941,7 @@ export const ProposalEconomicsModal = forwardRef<
                                   ) : isInverterRow || isLockedBos ? (
                                     <span
                                       title="Quantidade definida pelo dimensionamento"
-                                      className="cursor-help underline decoration-dotted underline-offset-2 font-medium text-xs sm:text-sm"
+                                      className="cursor-help underline decoration-dotted underline-offset-2 font-medium text-xs text-[var(--color-foreground)]"
                                     >
                                       {item.quantity}
                                     </span>
@@ -3954,7 +3950,7 @@ export const ProposalEconomicsModal = forwardRef<
                                       <button
                                         type="button"
                                         aria-label={`Diminuir quantidade de ${item.product_name}`}
-                                        className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10 disabled:opacity-30 disabled:pointer-events-none"
+                                        className="flex h-5 w-5 sm:h-5.5 sm:w-5.5 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10 disabled:opacity-30 disabled:pointer-events-none"
                                         disabled={qty <= 1}
                                         onClick={() => {
                                           setKitQtyResetNotice(false);
@@ -3972,13 +3968,13 @@ export const ProposalEconomicsModal = forwardRef<
                                       >
                                         −
                                       </button>
-                                      <span className="min-w-[1.6ch] sm:min-w-[2.2ch] text-center font-bold text-xs sm:text-sm">
+                                      <span className="min-w-[1.6ch] sm:min-w-[2ch] text-center font-bold text-xs">
                                         {qty}
                                       </span>
                                       <button
                                         type="button"
                                         aria-label={`Aumentar quantidade de ${item.product_name}`}
-                                        className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
+                                        className="flex h-5 w-5 sm:h-5.5 sm:w-5.5 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
                                         onClick={() => {
                                           setKitQtyResetNotice(false);
                                           const nextQty = qty + 1;
@@ -3998,10 +3994,10 @@ export const ProposalEconomicsModal = forwardRef<
                                     </span>
                                   )}
                                 </td>
-                                <td className="hidden sm:table-cell p-3 text-right tabular-nums text-[var(--color-muted-foreground)]">
+                                <td className="hidden sm:table-cell py-2.5 px-3 text-right tabular-nums text-xs text-[var(--color-muted-foreground)]">
                                   {formatCurrency(item.unit_price)}
                                 </td>
-                                <td className="py-2 px-2 sm:p-3 text-right font-semibold tabular-nums text-[var(--color-foreground)] text-[0.72rem] sm:text-sm whitespace-nowrap">
+                                <td className="py-2.5 px-3 text-right font-medium tabular-nums text-[var(--color-foreground)] text-xs whitespace-nowrap">
                                   {formatCurrency(qty * (item.unit_price ?? 0))}
                                 </td>
                               </tr>
@@ -4009,16 +4005,16 @@ export const ProposalEconomicsModal = forwardRef<
                           })}
                         </tbody>
                         <tfoot>
-                          <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/15">
+                          <tr className="border-t border-[var(--color-border)]/60 bg-[var(--color-muted)]/10">
                             <td
                               colSpan={2}
-                              className="py-2 px-2 sm:p-3 text-left sm:text-right text-[0.7rem] sm:text-xs font-semibold text-[var(--color-muted-foreground)]"
+                              className="py-2.5 px-3 text-left sm:text-right text-xs font-medium text-[var(--color-muted-foreground)]"
                             >
                               Total dos equipamentos
                             </td>
                             <td className="hidden sm:table-cell" />
                             <td className="hidden sm:table-cell" />
-                            <td className="py-2 px-2 sm:p-3 text-right text-xs sm:text-sm font-semibold tabular-nums text-[var(--color-foreground)] whitespace-nowrap">
+                            <td className="py-2.5 px-3 text-right text-xs font-semibold tabular-nums text-[var(--color-foreground)] whitespace-nowrap">
                               {formatCurrency(
                                 proposalKitResult.kit_items.reduce(
                                   (sum, i) => sum + effectiveKitQty(i) * (i.unit_price || 0),
@@ -4027,17 +4023,17 @@ export const ProposalEconomicsModal = forwardRef<
                               )}
                             </td>
                           </tr>
-                          <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/25">
+                          <tr className="border-t border-[var(--color-border)]/80 bg-emerald-500/[0.03]">
                             <td
                               colSpan={2}
-                              className="py-2 px-2 sm:p-3 text-left sm:text-right text-[0.7rem] sm:text-xs font-bold text-[var(--color-foreground)]"
+                              className="py-2.5 px-3 text-left sm:text-right text-xs font-bold text-[var(--color-foreground)]"
                             >
                               Total do Projeto ({activeDistributorCard?.name ?? "Padrão"} ·{" "}
                               {formatCurrency(activeRatePerKwp)}/kWp)
                             </td>
                             <td className="hidden sm:table-cell" />
                             <td className="hidden sm:table-cell" />
-                            <td className="py-2 px-2 sm:p-3 text-right text-xs sm:text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                            <td className="py-2.5 px-3 text-right text-sm sm:text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                               {formatCurrency(activeCommercialPrice)}
                             </td>
                           </tr>
