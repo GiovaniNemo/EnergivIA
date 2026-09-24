@@ -75,6 +75,7 @@ export const specsModuleSchema = z.object({
   max_system_voltage: positiveNumber,
   width_mm: positiveNumber,
   height_mm: positiveNumber,
+  is_tier_1: z.boolean().optional(),
 });
 
 export const gridTopologyOptions = [

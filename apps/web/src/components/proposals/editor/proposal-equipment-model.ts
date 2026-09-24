@@ -27,6 +27,7 @@ export interface ProposalEquipmentItem {
   specs: ProposalEquipmentSpec[];
   categoryName?: string;
   datasheetUrl?: string | null;
+  isTier1?: boolean;
 }
 
 export const PROPOSAL_EQUIPMENT_SPEC_SLOTS = 4;
@@ -380,6 +381,7 @@ export function proposalEquipmentItemFromProduct(
     subtitle: product.name,
     categoryName: cat,
     specs: buildEquipmentDisplaySpecs(cat, product.specs as Record<string, unknown>, quantity),
+    isTier1: cat === "module" && Boolean((product.specs as Record<string, unknown>)?.is_tier_1),
   };
 }
 
@@ -444,6 +446,7 @@ export function parseProposalEquipmentItems(raw: unknown): ProposalEquipmentItem
       subtitle: String(o["subtitle"] ?? "").trim(),
       categoryName,
       specs,
+      isTier1: typeof o["isTier1"] === "boolean" ? o["isTier1"] : undefined,
     };
   });
 }
@@ -620,6 +623,13 @@ export function buildEquipmentItemFromKitLine(
     specs = inferSpecsFromProductDetails(cat, rawName, quantity);
   }
 
+  const isTier1 =
+    cat === "module" &&
+    (Boolean(line.specs?.["is_tier_1"]) ||
+      rawName.toLowerCase().includes("tier 1") ||
+      rawName.toLowerCase().includes("tier-1") ||
+      rawName.toLowerCase().includes("tier1"));
+
   return {
     id: line.productId ? `eq-kit-${line.productId}-${index}` : `eq-kit-${index}`,
     productId: line.productId ?? "",
@@ -628,6 +638,7 @@ export function buildEquipmentItemFromKitLine(
     subtitle,
     categoryName: cat || undefined,
     specs,
+    isTier1,
   };
 }
 

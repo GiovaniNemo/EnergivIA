@@ -722,7 +722,20 @@ export function ProposalEquipmentEditorCard({
                           }`}
                         >
                           <td className="p-3 font-medium text-[var(--color-foreground)]">
-                            {line.productName}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span>{line.productName}</span>
+                              {role === "module" &&
+                              Boolean(
+                                (line.specs as Record<string, unknown> | undefined)?.is_tier_1
+                              ) ? (
+                                <img
+                                  src="/badges/tier1.jpeg"
+                                  alt="Tier 1"
+                                  title="Módulo certificado Tier 1 (BloombergNEF)"
+                                  className="h-3.5 sm:h-4 w-auto object-contain rounded-xs shadow-xs shrink-0"
+                                />
+                              ) : null}
+                            </div>
                             {line.unavailable ? (
                               <span className="mt-0.5 block text-[0.7rem] font-normal">
                                 <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-red-700 dark:text-red-300">

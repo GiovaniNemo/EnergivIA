@@ -138,7 +138,11 @@ export class KitGenerationService {
       kit_id: kit.id,
       system_power_kw: built.systemPowerKw,
       own_stock_used: usedOwnStock,
-      modules: built.kitItems[0]!,
+      modules: {
+        ...built.kitItems[0]!,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        is_tier_1: Boolean((built.sizingResult.module.specs as any)?.is_tier_1),
+      },
       inverter: built.kitItems[1]!,
       string_configuration: isStringSizingResult(built.sizingResult)
         ? {
@@ -412,6 +416,7 @@ export class KitGenerationService {
         module_model: built.kitItems[0]?.product_name || built.sizingResult.module.name,
         module_qty: built.kitItems[0]?.quantity || built.sizingResult.module_quantity,
         module_power_w: Number(moduleSpecs.power_w) || 585,
+        module_is_tier_1: Boolean(moduleSpecs?.is_tier_1),
         estimated_monthly_generation_kwh: Math.round(built.systemPowerKw * 130),
       };
     };
@@ -701,6 +706,8 @@ export class KitGenerationService {
     const stringSummary = isStringSizingResult(built.sizingResult)
       ? `${built.sizingResult.string_configuration.string_count} strings de ${built.sizingResult.string_configuration.modules_per_string} módulos`
       : `${built.kitItems[0]!.quantity} módulos com microinversor`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const moduleSpecs = built.sizingResult.module.specs as any;
     return {
       product_id: candidate.id,
       product_name: candidate.name,
@@ -712,6 +719,7 @@ export class KitGenerationService {
       system_power_kw: built.systemPowerKw,
       string_summary: stringSummary,
       datasheet_url: candidate.datasheetUrl,
+      is_tier_1: category === "module" ? Boolean(moduleSpecs?.is_tier_1) : undefined,
     };
   }
 

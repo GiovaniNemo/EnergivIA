@@ -162,9 +162,10 @@ interface ProductSpecs {
   mppt_count?: number;
   max_modules?: number;
   type?: string;
+  is_tier_1?: boolean;
 }
 
-function extractSpecs(productName: string, category: string): ProductSpecs {
+function extractSpecs(productName: string, category: string, brandName?: string): ProductSpecs {
   const specs: ProductSpecs = {};
   const norm = productName.toUpperCase();
 
@@ -172,6 +173,16 @@ function extractSpecs(productName: string, category: string): ProductSpecs {
     const m = norm.match(/(\d{2,4})\s*W\b/);
     if (m && m[1]) {
       specs.power_w = parseInt(m[1], 10);
+    }
+    // Auto-detecta Tier 1 para marcas de topo da BloombergNEF ou mencao explicita no produto
+    const combined = `${productName} ${brandName || ""}`.toLowerCase();
+    const isTier1Brand =
+      /canadian|longi|jinko|ja solar|trina|risen|astronergy|chint|byd|dah solar|osda/i.test(
+        combined
+      );
+    const hasTier1Text = /tier\s*1/i.test(combined);
+    if (isTier1Brand || hasTier1Text) {
+      specs.is_tier_1 = true;
     }
   } else if (category === "inverter" || category === "microinverter") {
     const kwMatch = norm.match(/(\d+(?:[.,]\d+)?)\s*KW\b/);
@@ -445,7 +456,7 @@ export class SpreadsheetImportService {
         estoqueIndex !== -1 && row[estoqueIndex] != null ? parseStock(row[estoqueIndex]) : 999;
 
       const catName = extractCategory(produtoStr, currentBannerSection);
-      const specs = extractSpecs(produtoStr, catName);
+      const specs = extractSpecs(produtoStr, catName, resolvedBrand);
 
       // --- Operações no Banco de Dados ---
 

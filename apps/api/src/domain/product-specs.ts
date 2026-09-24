@@ -8,6 +8,8 @@ export interface ModuleSpec {
   max_system_voltage: number;
   width_mm: number;
   height_mm: number;
+  warranty_years?: number;
+  is_tier_1?: boolean;
 }
 
 export type GridTopology = "mono_220" | "biphasic_127_220" | "tri_220" | "tri_380" | "mono_127";

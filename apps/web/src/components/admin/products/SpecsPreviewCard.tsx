@@ -28,7 +28,9 @@ export function SpecsPreviewCard({ categoryName }: SpecsPreviewCardProps): JSX.E
     const warranty = specs["warranty_years"];
     const voc = specs["voc"];
     const imp = specs["imp"];
+    const isTier1 = specs["is_tier_1"];
     if (power != null) lines.push(`${power}W`);
+    if (isTier1) lines.push("Selo Tier 1 (BloombergNEF)");
     if (warranty != null) lines.push(`Garantia: ${warranty} anos`);
     if (voc != null) lines.push(`Voc: ${voc}V`);
     if (imp != null) lines.push(`Imp: ${imp}A`);

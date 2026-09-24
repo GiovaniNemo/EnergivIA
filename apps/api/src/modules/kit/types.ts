@@ -25,6 +25,7 @@ export interface KitAlternativeOption {
   system_power_kw?: number;
   string_summary?: string;
   datasheet_url?: string | null;
+  is_tier_1?: boolean;
 }
 
 export interface KitCrossSourceAlternative extends KitAlternativeOption {
@@ -83,6 +84,7 @@ export interface GenerateKitResult {
     quantity: number;
     unit_price: number;
     datasheet_url?: string | null;
+    is_tier_1?: boolean;
   };
   inverter: {
     product_id: string;
@@ -111,6 +113,7 @@ export interface DistributorTierKit {
   module_model: string;
   module_qty: number;
   module_power_w: number;
+  module_is_tier_1?: boolean;
   estimated_monthly_generation_kwh: number;
 }
 

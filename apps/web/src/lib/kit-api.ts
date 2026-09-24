@@ -23,6 +23,7 @@ export interface KitAlternativeOption {
   brand_name: string;
   unit_price: number;
   compatible: boolean;
+  is_tier_1?: boolean;
   reason?: string;
   quantity?: number;
   kit_total?: number;
@@ -84,6 +85,7 @@ export interface GenerateKitResult {
     brand_name: string;
     quantity: number;
     unit_price: number;
+    is_tier_1?: boolean;
   };
   inverter: {
     product_id: string;
@@ -163,6 +165,7 @@ export interface DistributorTierKit {
   module_model: string;
   module_qty: number;
   module_power_w: number;
+  module_is_tier_1?: boolean;
   estimated_monthly_generation_kwh: number;
 }
 
