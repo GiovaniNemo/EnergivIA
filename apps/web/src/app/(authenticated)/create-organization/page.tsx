@@ -979,29 +979,29 @@ export default function CreateOrganizationPage() {
                 >
                   <div className="space-y-4 pt-1.5">
                     {/* Card Preço por kWp */}
-                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm space-y-3">
-                      <div className="flex items-center justify-between gap-2">
+                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 sm:p-5 shadow-sm space-y-3.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
                         <div className="flex items-center gap-2.5">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1f7f9b]/10 text-[#0A4A63]">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1f7f9b]/15 text-[#1f7f9b] dark:text-[#38bdf8]">
                             <Zap className="h-4 w-4" />
                           </span>
                           <div>
-                            <h3 className="text-sm font-semibold text-zinc-900">
+                            <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-50">
                               Preço Padrão de Venda por kWp
                             </h3>
-                            <p className="text-xs text-zinc-500">
+                            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal">
                               Valor base praticado pela sua empresa na sua região
                             </p>
                           </div>
                         </div>
-                        <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200">
+                        <span className="self-start sm:self-auto rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
                           Padrão: R$ 2.800/kWp
                         </span>
                       </div>
 
-                      <div className="space-y-2 pt-1">
+                      <div className="space-y-2.5 pt-1">
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-500">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-500 dark:text-zinc-400">
                             R$
                           </span>
                           <input
@@ -1015,16 +1015,16 @@ export default function CreateOrganizationPage() {
                               setDefaultKwpRate(isNaN(val) ? 2800 : val);
                             }}
                             placeholder="2800"
-                            className="w-full rounded-lg border border-zinc-300 bg-white py-2.5 pl-10 pr-16 text-sm font-medium text-zinc-900 shadow-sm focus:border-[#1f7f9b] focus:outline-none focus:ring-1 focus:ring-[#1f7f9b]"
+                            className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-2.5 pl-10 pr-16 text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 shadow-sm focus:border-[#1f7f9b] focus:outline-none focus:ring-2 focus:ring-[#1f7f9b]/25"
                           />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-zinc-500">
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
                             / kWp
                           </span>
                         </div>
 
                         {/* Presets rápidos */}
                         <div className="flex flex-wrap items-center gap-2 pt-1">
-                          <span className="text-xs text-zinc-500 font-medium">
+                          <span className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 font-medium">
                             Valores rápidos:
                           </span>
                           {[2500, 2800, 3000, 3300, 3600].map((rate) => (
@@ -1032,17 +1032,17 @@ export default function CreateOrganizationPage() {
                               key={rate}
                               type="button"
                               onClick={() => setDefaultKwpRate(rate)}
-                              className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                              className={`rounded-lg px-2.5 py-1 text-xs sm:text-sm font-semibold transition cursor-pointer ${
                                 defaultKwpRate === rate
-                                  ? "bg-[#1f7f9b] text-white shadow-sm"
-                                  : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                                  ? "bg-[#1f7f9b] text-white border border-[#1f7f9b] shadow-sm font-bold"
+                                  : "bg-zinc-100 dark:bg-zinc-800/90 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700"
                               }`}
                             >
                               R$ {rate.toLocaleString("pt-BR")}
                             </button>
                           ))}
                         </div>
-                        <p className="text-[11.5px] leading-relaxed text-zinc-500">
+                        <p className="text-xs sm:text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
                           Este valor servirá como sugestão inicial automática para precificar suas
                           propostas e kits solares. Você pode ajustar pontualmente em cada proposta
                           ou alterar nas configurações.
@@ -1051,22 +1051,22 @@ export default function CreateOrganizationPage() {
                     </div>
 
                     {/* Card Marcas de Módulos */}
-                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm space-y-3">
-                      <div className="flex items-center justify-between gap-2">
+                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 sm:p-5 shadow-sm space-y-3.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
                         <div className="flex items-center gap-2.5">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
                             <Sun className="h-4 w-4" />
                           </span>
                           <div>
-                            <h3 className="text-sm font-semibold text-zinc-900">
+                            <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-50">
                               Preferência de Marcas de Módulos
                             </h3>
-                            <p className="text-xs text-zinc-500">
+                            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal">
                               Marcas ativas no catálogo do distribuidor
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => {
@@ -1076,7 +1076,7 @@ export default function CreateOrganizationPage() {
                                 setSelectedModuleBrands([...availableBrands.modules]);
                               }
                             }}
-                            className="text-[11px] font-semibold text-[#1f7f9b] hover:underline cursor-pointer"
+                            className="text-xs sm:text-sm font-semibold text-[#1f7f9b] dark:text-[#38bdf8] hover:underline cursor-pointer"
                           >
                             {selectedModuleBrands.length === availableBrands.modules.length
                               ? "Limpar"
@@ -1086,12 +1086,12 @@ export default function CreateOrganizationPage() {
                       </div>
 
                       {loadingBrands ? (
-                        <div className="flex items-center gap-2 py-3 text-xs text-zinc-500">
+                        <div className="flex items-center gap-2 py-3 text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
                           <Loader2 className="h-4 w-4 animate-spin text-[#1f7f9b]" />
                           Carregando marcas ativas do distribuidor...
                         </div>
                       ) : availableBrands.modules.length === 0 ? (
-                        <p className="py-2 text-xs text-zinc-500 italic">
+                        <p className="py-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 italic">
                           Todas as marcas homologadas do distribuidor serão cotadas por padrão.
                         </p>
                       ) : (
@@ -1109,16 +1109,16 @@ export default function CreateOrganizationPage() {
                                       : [...prev, brand]
                                   );
                                 }}
-                                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
+                                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs sm:text-sm font-medium transition cursor-pointer ${
                                   isSelected
-                                    ? "border-[#1f7f9b] bg-[#1f7f9b]/10 text-[#0A4A63] shadow-sm font-semibold"
-                                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
+                                    ? "border-[#1f7f9b] bg-[#1f7f9b]/15 dark:bg-[#1f7f9b]/25 text-[#0A4A63] dark:text-[#38bdf8] shadow-xs font-semibold ring-1 ring-[#1f7f9b]/40"
+                                    : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 text-zinc-800 dark:text-zinc-200 hover:border-[#1f7f9b]/60 dark:hover:border-[#1f7f9b]/60 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-zinc-100"
                                 }`}
                               >
                                 {isSelected ? (
-                                  <Check className="h-3.5 w-3.5 text-[#1f7f9b]" />
+                                  <Check className="h-3.5 w-3.5 text-[#1f7f9b] dark:text-[#38bdf8] stroke-[3]" />
                                 ) : (
-                                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-300" />
+                                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
                                 )}
                                 <span>{brand}</span>
                               </button>
@@ -1127,7 +1127,7 @@ export default function CreateOrganizationPage() {
                         </div>
                       )}
 
-                      <p className="text-[11px] text-zinc-500">
+                      <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
                         {selectedModuleBrands.length > 0
                           ? `${selectedModuleBrands.length} marca(s) selecionada(s) para priorização em orçamentos.`
                           : "Se nenhuma marca for marcada, todas as marcas disponíveis no distribuidor serão cotadas normalmente."}
@@ -1135,22 +1135,22 @@ export default function CreateOrganizationPage() {
                     </div>
 
                     {/* Card Marcas de Inversores */}
-                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm space-y-3">
-                      <div className="flex items-center justify-between gap-2">
+                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 sm:p-5 shadow-sm space-y-3.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
                         <div className="flex items-center gap-2.5">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400">
                             <Cpu className="h-4 w-4" />
                           </span>
                           <div>
-                            <h3 className="text-sm font-semibold text-zinc-900">
+                            <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-50">
                               Preferência de Marcas de Inversores
                             </h3>
-                            <p className="text-xs text-zinc-500">
+                            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal">
                               Inversores e microinversores disponíveis no distribuidor
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => {
@@ -1162,7 +1162,7 @@ export default function CreateOrganizationPage() {
                                 setSelectedInverterBrands([...availableBrands.inverters]);
                               }
                             }}
-                            className="text-[11px] font-semibold text-[#1f7f9b] hover:underline cursor-pointer"
+                            className="text-xs sm:text-sm font-semibold text-[#1f7f9b] dark:text-[#38bdf8] hover:underline cursor-pointer"
                           >
                             {selectedInverterBrands.length === availableBrands.inverters.length
                               ? "Limpar"
@@ -1172,12 +1172,12 @@ export default function CreateOrganizationPage() {
                       </div>
 
                       {loadingBrands ? (
-                        <div className="flex items-center gap-2 py-3 text-xs text-zinc-500">
+                        <div className="flex items-center gap-2 py-3 text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
                           <Loader2 className="h-4 w-4 animate-spin text-[#1f7f9b]" />
                           Carregando marcas ativas do distribuidor...
                         </div>
                       ) : availableBrands.inverters.length === 0 ? (
-                        <p className="py-2 text-xs text-zinc-500 italic">
+                        <p className="py-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 italic">
                           Todas as marcas homologadas do distribuidor serão cotadas por padrão.
                         </p>
                       ) : (
@@ -1195,16 +1195,16 @@ export default function CreateOrganizationPage() {
                                       : [...prev, brand]
                                   );
                                 }}
-                                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
+                                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs sm:text-sm font-medium transition cursor-pointer ${
                                   isSelected
-                                    ? "border-[#1f7f9b] bg-[#1f7f9b]/10 text-[#0A4A63] shadow-sm font-semibold"
-                                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
+                                    ? "border-[#1f7f9b] bg-[#1f7f9b]/15 dark:bg-[#1f7f9b]/25 text-[#0A4A63] dark:text-[#38bdf8] shadow-xs font-semibold ring-1 ring-[#1f7f9b]/40"
+                                    : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 text-zinc-800 dark:text-zinc-200 hover:border-[#1f7f9b]/60 dark:hover:border-[#1f7f9b]/60 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-zinc-100"
                                 }`}
                               >
                                 {isSelected ? (
-                                  <Check className="h-3.5 w-3.5 text-[#1f7f9b]" />
+                                  <Check className="h-3.5 w-3.5 text-[#1f7f9b] dark:text-[#38bdf8] stroke-[3]" />
                                 ) : (
-                                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-300" />
+                                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
                                 )}
                                 <span>{brand}</span>
                               </button>
@@ -1213,20 +1213,23 @@ export default function CreateOrganizationPage() {
                         </div>
                       )}
 
-                      <p className="text-[11px] text-zinc-500">
+                      <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
                         {selectedInverterBrands.length > 0
                           ? `${selectedInverterBrands.length} marca(s) selecionada(s) para priorização em orçamentos.`
                           : "Se nenhuma marca for marcada, todas as marcas disponíveis no distribuidor serão cotadas normalmente."}
                       </p>
                     </div>
 
-                    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]/70 p-3">
-                      <p className="text-xs font-semibold text-[var(--color-foreground)]">
+                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3.5">
+                      <p className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)]">
                         Flexibilidade Total
                       </p>
-                      <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+                      <p className="mt-1 text-xs sm:text-sm text-[var(--color-muted-foreground)]">
                         Essas configurações podem ser editadas a qualquer momento no menu{" "}
-                        <strong>Gestão &gt; Perfil do Integrador</strong>.
+                        <strong className="text-zinc-900 dark:text-zinc-100">
+                          Gestão &gt; Perfil do Integrador
+                        </strong>
+                        .
                       </p>
                     </div>
 

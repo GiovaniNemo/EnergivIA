@@ -194,23 +194,23 @@ export default function PerfilIntegradorPage(): JSX.Element {
       )}
 
       {/* CARD 1: PREÇO BASE DE VENDA POR KWP */}
-      <Card className="border-[var(--color-border)] shadow-sm">
+      <Card className="border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1f7f9b]/10 text-[#0A4A63]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1f7f9b]/15 text-[#1f7f9b] dark:text-[#38bdf8]">
                 <DollarSign className="h-5 w-5" />
               </span>
               <div>
-                <CardTitle className="text-base font-semibold text-[var(--color-foreground)]">
+                <CardTitle className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50">
                   Preço Base de Venda por kWp (R$/kWp)
                 </CardTitle>
-                <CardDescription className="text-xs">
+                <CardDescription className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal mt-0.5">
                   Valor sugerido automaticamente ao gerar novas propostas e dimensionamentos
                 </CardDescription>
               </div>
             </div>
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
+            <span className="self-start sm:self-auto rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1 text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
               Padrão EnergivIA: R$ 2.800/kWp
             </span>
           </div>
@@ -218,11 +218,11 @@ export default function PerfilIntegradorPage(): JSX.Element {
         <CardContent className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             <div className="space-y-3">
-              <label className="text-xs font-semibold text-zinc-700">
+              <label className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
                 Valor por kWp na sua região
               </label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-500">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-bold text-zinc-500 dark:text-zinc-400">
                   R$
                 </span>
                 <input
@@ -236,16 +236,16 @@ export default function PerfilIntegradorPage(): JSX.Element {
                     const val = Number(e.target.value);
                     setDefaultKwpRate(isNaN(val) ? 2800 : val);
                   }}
-                  className="w-full rounded-xl border border-zinc-300 bg-white py-2.5 pl-11 pr-16 text-base font-semibold text-zinc-900 shadow-sm focus:border-[#1f7f9b] focus:outline-none focus:ring-1 focus:ring-[#1f7f9b] disabled:bg-zinc-100"
+                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-3 pl-11 pr-16 text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 shadow-sm focus:border-[#1f7f9b] focus:outline-none focus:ring-2 focus:ring-[#1f7f9b]/25 disabled:bg-zinc-100 dark:disabled:bg-zinc-800/50"
                 />
-                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-medium text-zinc-500">
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-zinc-500 dark:text-zinc-400">
                   / kWp
                 </span>
               </div>
 
               {/* Botões de preset rápido */}
               <div className="space-y-1.5 pt-1">
-                <span className="text-xs text-zinc-500 font-medium">
+                <span className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 font-medium">
                   Valores rápidos de referência:
                 </span>
                 <div className="flex flex-wrap gap-2">
@@ -255,10 +255,10 @@ export default function PerfilIntegradorPage(): JSX.Element {
                       type="button"
                       disabled={!canEdit}
                       onClick={() => setDefaultKwpRate(rate)}
-                      className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
+                      className={`rounded-lg px-3 py-1.5 text-xs sm:text-sm font-semibold transition cursor-pointer ${
                         defaultKwpRate === rate
-                          ? "bg-[#1f7f9b] text-white shadow-sm"
-                          : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                          ? "bg-[#1f7f9b] text-white border border-[#1f7f9b] shadow-sm font-bold"
+                          : "bg-zinc-100 dark:bg-zinc-800/90 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700"
                       }`}
                     >
                       R$ {rate.toLocaleString("pt-BR")}
@@ -267,35 +267,37 @@ export default function PerfilIntegradorPage(): JSX.Element {
                 </div>
               </div>
 
-              <p className="text-xs text-zinc-500 leading-relaxed pt-1">
+              <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed pt-1">
                 Esse valor permite calibrar seus orçamentos para a realidade de mercado da sua
                 cidade e estado, sem a necessidade de reconfigurar a cada cotação.
               </p>
             </div>
 
             {/* Preview ao vivo de simulação */}
-            <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-4 space-y-3">
-              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700">
-                <TrendingUp className="h-4 w-4 text-[#1f7f9b]" />
+            <div className="rounded-xl border border-zinc-200/90 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 p-4 space-y-3.5">
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200">
+                <TrendingUp className="h-4 w-4 text-[#1f7f9b] dark:text-[#38bdf8]" />
                 <span>Impacto estimado em Propostas Comerciais</span>
               </div>
               <div className="grid grid-cols-2 gap-2.5">
                 {simulationPreviews.map((item) => (
                   <div
                     key={item.label}
-                    className="rounded-lg border border-zinc-200 bg-white p-2.5 shadow-2xs"
+                    className="rounded-xl border border-zinc-200/90 dark:border-zinc-800/90 bg-white dark:bg-zinc-900 p-3 shadow-xs transition-colors"
                   >
-                    <p className="text-[11px] font-medium text-zinc-500 truncate">{item.label}</p>
-                    <p className="text-xs font-bold text-zinc-800 mt-0.5">
+                    <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 truncate">
+                      {item.label}
+                    </p>
+                    <p className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
                       {item.kwp.toLocaleString("pt-BR")} kWp
                     </p>
-                    <p className="text-sm font-extrabold text-[#0A4A63] mt-1">
+                    <p className="text-base font-extrabold text-[#0A4A63] dark:text-[#38bdf8] mt-1">
                       R$ {item.total.toLocaleString("pt-BR")}
                     </p>
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-zinc-400 italic">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 italic">
                 * Valores brutos finais simulados com base no valor de R${" "}
                 {defaultKwpRate.toLocaleString("pt-BR")}/kWp configurado.
               </p>
@@ -305,25 +307,25 @@ export default function PerfilIntegradorPage(): JSX.Element {
       </Card>
 
       {/* CARD 2: PREFERÊNCIA DE MARCAS DE MÓDULOS */}
-      <Card className="border-[var(--color-border)] shadow-sm">
+      <Card className="border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
                 <Sun className="h-5 w-5" />
               </span>
               <div>
-                <CardTitle className="text-base font-semibold text-[var(--color-foreground)]">
+                <CardTitle className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50">
                   Marcas de Módulos (Painéis Solares)
                 </CardTitle>
-                <CardDescription className="text-xs">
+                <CardDescription className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal mt-0.5">
                   Marcas homologadas com produtos ativos no catálogo do distribuidor
                 </CardDescription>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-zinc-500">
+            <div className="flex items-center gap-3">
+              <span className="text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-300">
                 {selectedModuleBrands.length} de {availableBrands.modules.length} selecionada(s)
               </span>
               {canEdit && availableBrands.modules.length > 0 && (
@@ -336,7 +338,7 @@ export default function PerfilIntegradorPage(): JSX.Element {
                       setSelectedModuleBrands([...availableBrands.modules]);
                     }
                   }}
-                  className="text-xs font-semibold text-[#1f7f9b] hover:underline cursor-pointer"
+                  className="text-xs sm:text-sm font-semibold text-[#1f7f9b] dark:text-[#38bdf8] hover:underline cursor-pointer"
                 >
                   {selectedModuleBrands.length === availableBrands.modules.length
                     ? "Limpar Seleção"
@@ -346,13 +348,13 @@ export default function PerfilIntegradorPage(): JSX.Element {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           {loadingBrands ? (
-            <div className="py-6 flex items-center justify-center gap-2 text-sm text-zinc-500">
+            <div className="py-6 flex items-center justify-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
               <LoadingState label="Carregando marcas ativas do distribuidor..." compact />
             </div>
           ) : availableBrands.modules.length === 0 ? (
-            <p className="py-4 text-xs text-zinc-500 italic">
+            <p className="py-4 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 italic">
               Nenhuma marca específica encontrada no distribuidor no momento. Todas as marcas
               disponíveis serão cotadas normalmente.
             </p>
@@ -368,14 +370,16 @@ export default function PerfilIntegradorPage(): JSX.Element {
                     onClick={() => handleToggleModuleBrand(brand)}
                     className={`flex items-center justify-between rounded-xl border p-3 text-left transition cursor-pointer ${
                       isSelected
-                        ? "border-[#1f7f9b] bg-[#1f7f9b]/10 text-[#0A4A63] shadow-sm font-semibold"
-                        : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
+                        ? "border-[#1f7f9b] bg-[#1f7f9b]/15 dark:bg-[#1f7f9b]/25 text-[#0A4A63] dark:text-[#38bdf8] shadow-xs font-semibold ring-1 ring-[#1f7f9b]/40"
+                        : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 text-zinc-800 dark:text-zinc-200 hover:border-[#1f7f9b]/60 dark:hover:border-[#1f7f9b]/60 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-zinc-100"
                     }`}
                   >
-                    <span className="text-xs font-medium truncate mr-2">{brand}</span>
+                    <span className="text-xs sm:text-sm font-medium truncate mr-2">{brand}</span>
                     <span
                       className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition ${
-                        isSelected ? "bg-[#1f7f9b] text-white" : "border border-zinc-300 bg-zinc-50"
+                        isSelected
+                          ? "bg-[#1f7f9b] text-white"
+                          : "border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800"
                       }`}
                     >
                       {isSelected ? <Check className="h-3 w-3 stroke-[3]" /> : null}
@@ -386,17 +390,22 @@ export default function PerfilIntegradorPage(): JSX.Element {
             </div>
           )}
 
-          <div className="rounded-lg bg-zinc-50 p-3 text-xs text-zinc-600 border border-zinc-200">
+          <div className="rounded-xl bg-zinc-100/70 dark:bg-zinc-900/60 p-3.5 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800">
             {selectedModuleBrands.length > 0 ? (
               <p>
-                <strong>Marcas prioritárias ativas:</strong> O sistema priorizará kits e propostas
-                compostos por {selectedModuleBrands.join(", ")}.
+                <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
+                  Marcas prioritárias ativas:
+                </strong>{" "}
+                O sistema priorizará kits e propostas compostos por{" "}
+                {selectedModuleBrands.join(", ")}.
               </p>
             ) : (
               <p>
-                <strong>Modo Padrão Global:</strong> Nenhuma restrição aplicada. Todas as marcas
-                ativas no distribuidor serão cotadas normalmente conforme melhor preço e
-                disponibilidade de estoque.
+                <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
+                  Modo Padrão Global:
+                </strong>{" "}
+                Nenhuma restrição aplicada. Todas as marcas ativas no distribuidor serão cotadas
+                normalmente conforme melhor preço e disponibilidade de estoque.
               </p>
             )}
           </div>
@@ -404,25 +413,25 @@ export default function PerfilIntegradorPage(): JSX.Element {
       </Card>
 
       {/* CARD 3: PREFERÊNCIA DE MARCAS DE INVERSORES */}
-      <Card className="border-[var(--color-border)] shadow-sm">
+      <Card className="border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/10 text-sky-600">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/15 text-sky-600 dark:text-sky-400">
                 <Cpu className="h-5 w-5" />
               </span>
               <div>
-                <CardTitle className="text-base font-semibold text-[var(--color-foreground)]">
+                <CardTitle className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50">
                   Marcas de Inversores & Microinversores
                 </CardTitle>
-                <CardDescription className="text-xs">
+                <CardDescription className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal mt-0.5">
                   Inversores string, híbridos e microinversores disponíveis no distribuidor
                 </CardDescription>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-zinc-500">
+            <div className="flex items-center gap-3">
+              <span className="text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-300">
                 {selectedInverterBrands.length} de {availableBrands.inverters.length} selecionada(s)
               </span>
               {canEdit && availableBrands.inverters.length > 0 && (
@@ -435,7 +444,7 @@ export default function PerfilIntegradorPage(): JSX.Element {
                       setSelectedInverterBrands([...availableBrands.inverters]);
                     }
                   }}
-                  className="text-xs font-semibold text-[#1f7f9b] hover:underline cursor-pointer"
+                  className="text-xs sm:text-sm font-semibold text-[#1f7f9b] dark:text-[#38bdf8] hover:underline cursor-pointer"
                 >
                   {selectedInverterBrands.length === availableBrands.inverters.length
                     ? "Limpar Seleção"
@@ -445,13 +454,13 @@ export default function PerfilIntegradorPage(): JSX.Element {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           {loadingBrands ? (
-            <div className="py-6 flex items-center justify-center gap-2 text-sm text-zinc-500">
+            <div className="py-6 flex items-center justify-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
               <LoadingState label="Carregando marcas ativas do distribuidor..." compact />
             </div>
           ) : availableBrands.inverters.length === 0 ? (
-            <p className="py-4 text-xs text-zinc-500 italic">
+            <p className="py-4 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 italic">
               Nenhuma marca específica de inversor encontrada no distribuidor no momento. Todas as
               marcas disponíveis serão cotadas normalmente.
             </p>
@@ -467,14 +476,16 @@ export default function PerfilIntegradorPage(): JSX.Element {
                     onClick={() => handleToggleInverterBrand(brand)}
                     className={`flex items-center justify-between rounded-xl border p-3 text-left transition cursor-pointer ${
                       isSelected
-                        ? "border-[#1f7f9b] bg-[#1f7f9b]/10 text-[#0A4A63] shadow-sm font-semibold"
-                        : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
+                        ? "border-[#1f7f9b] bg-[#1f7f9b]/15 dark:bg-[#1f7f9b]/25 text-[#0A4A63] dark:text-[#38bdf8] shadow-xs font-semibold ring-1 ring-[#1f7f9b]/40"
+                        : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 text-zinc-800 dark:text-zinc-200 hover:border-[#1f7f9b]/60 dark:hover:border-[#1f7f9b]/60 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-zinc-100"
                     }`}
                   >
-                    <span className="text-xs font-medium truncate mr-2">{brand}</span>
+                    <span className="text-xs sm:text-sm font-medium truncate mr-2">{brand}</span>
                     <span
                       className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition ${
-                        isSelected ? "bg-[#1f7f9b] text-white" : "border border-zinc-300 bg-zinc-50"
+                        isSelected
+                          ? "bg-[#1f7f9b] text-white"
+                          : "border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800"
                       }`}
                     >
                       {isSelected ? <Check className="h-3 w-3 stroke-[3]" /> : null}
@@ -485,17 +496,21 @@ export default function PerfilIntegradorPage(): JSX.Element {
             </div>
           )}
 
-          <div className="rounded-lg bg-zinc-50 p-3 text-xs text-zinc-600 border border-zinc-200">
+          <div className="rounded-xl bg-zinc-100/70 dark:bg-zinc-900/60 p-3.5 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800">
             {selectedInverterBrands.length > 0 ? (
               <p>
-                <strong>Marcas prioritárias ativas:</strong> O sistema priorizará inversores de{" "}
-                {selectedInverterBrands.join(", ")}.
+                <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
+                  Marcas prioritárias ativas:
+                </strong>{" "}
+                O sistema priorizará inversores de {selectedInverterBrands.join(", ")}.
               </p>
             ) : (
               <p>
-                <strong>Modo Padrão Global:</strong> Nenhuma restrição aplicada. Todos os inversores
-                homologados do distribuidor serão considerados para escolha automática do melhor
-                custo-benefício.
+                <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
+                  Modo Padrão Global:
+                </strong>{" "}
+                Nenhuma restrição aplicada. Todos os inversores homologados do distribuidor serão
+                considerados para escolha automática do melhor custo-benefício.
               </p>
             )}
           </div>
