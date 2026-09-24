@@ -557,3 +557,16 @@
 .animate-solar-reflection {
   animation: solarReflectionSweep 4.5s cubic-bezier(0.25, 1, 0.5, 1) infinite;
 }
+
+/* Suppress iOS Safari / WebKit native play button and media controls overlays */
+video::-webkit-media-controls,
+video::-webkit-media-controls-start-playback-button,
+video::-webkit-media-controls-play-button,
+video::-webkit-media-controls-panel {
+  display: none !important;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+

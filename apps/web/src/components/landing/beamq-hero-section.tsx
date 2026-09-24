@@ -10,15 +10,51 @@ const appLoginUrl = "/login";
 
 export function BeamqHeroSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
-    if (video) {
-      video.play().catch(() => {
-        // Fallback if autoplay is restricted
-      });
-    }
+    if (!video) return;
+
+    // Direct property assignment to bypass React hydration attribute quirk on iOS WebKit
+    video.muted = true;
+    video.defaultMuted = true;
+
+    const startPlayback = () => {
+      if (video.paused) {
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsPlaying(true);
+            })
+            .catch(() => {
+              // Low power mode or strict autoplay policy on iOS
+              setIsPlaying(false);
+            });
+        }
+      } else {
+        setIsPlaying(true);
+      }
+    };
+
+    startPlayback();
+
+    // In iOS Low Power Mode, video autoplay is restricted until the first user interaction
+    const handleUserInteraction = () => {
+      startPlayback();
+    };
+
+    window.addEventListener("touchstart", handleUserInteraction, { once: true, passive: true });
+    window.addEventListener("scroll", handleUserInteraction, { once: true, passive: true });
+    window.addEventListener("click", handleUserInteraction, { once: true, passive: true });
+
+    return () => {
+      window.removeEventListener("touchstart", handleUserInteraction);
+      window.removeEventListener("scroll", handleUserInteraction);
+      window.removeEventListener("click", handleUserInteraction);
+    };
   }, []);
 
   return (
@@ -27,14 +63,26 @@ export function BeamqHeroSection() {
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <video
           ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover object-center opacity-85 will-change-transform"
+          className={`absolute inset-0 w-full h-full object-cover object-center will-change-transform transition-opacity duration-1000 ${
+            isPlaying ? "opacity-85 visible" : "opacity-0 invisible"
+          }`}
           style={{ filter: "hue-rotate(-95deg) saturate(1.15) contrast(1.2) brightness(0.98)" }}
           src="https://strvid.nyc3.cdn.digitaloceanspaces.com/motionsite/blue-light-glow.mp4"
           autoPlay
           loop
           muted
           playsInline
+          // @ts-expect-error - webkit attribute for legacy WebKit / iOS Safari
+          webkit-playsinline="true"
           preload="auto"
+          controls={false}
+          disablePictureInPicture
+          disableRemotePlayback
+          aria-hidden="true"
+          tabIndex={-1}
+          onPlay={() => setIsPlaying(true)}
+          onPlaying={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
         />
         {/* Pure White Vertical Laser Beam Core */}
         <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[2px] bg-gradient-to-b from-transparent via-white to-transparent opacity-95 shadow-[0_0_8px_#ffffff,0_0_20px_rgba(255,255,255,0.9),0_0_35px_rgba(16,185,129,0.35)]" />
