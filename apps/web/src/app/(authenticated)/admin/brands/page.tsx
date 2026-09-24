@@ -30,6 +30,8 @@ import {
   Typography,
   Tooltip,
   Grid,
+  Checkbox,
+  CircularProgress,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
@@ -66,6 +68,9 @@ export default function AdminBrandsPage(): JSX.Element {
   const [bulkInput, setBulkInput] = useState("");
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const { data: brands = [], isLoading } = useQuery({
     queryKey: ["admin", "brands"],
@@ -206,6 +211,56 @@ export default function AdminBrandsPage(): JSX.Element {
       totalProducts,
     };
   }, [brands]);
+
+  const isAllSelected =
+    filteredBrands.length > 0 && filteredBrands.every((b) => selectedIds.includes(b.id));
+  const isSomeSelected = filteredBrands.some((b) => selectedIds.includes(b.id)) && !isAllSelected;
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      const currentFilteredIds = new Set(filteredBrands.map((b) => b.id));
+      setSelectedIds((prev) => prev.filter((id) => !currentFilteredIds.has(id)));
+    } else {
+      const allFilteredIds = filteredBrands.map((b) => b.id);
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...allFilteredIds])));
+    }
+  };
+
+  const handleToggleSelectRow = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.allSettled(selectedIds.map((id) => deleteBrand(id)));
+      const succeededCount = results.filter((r) => r.status === "fulfilled").length;
+      const failedCount = results.filter((r) => r.status === "rejected").length;
+
+      queryClient.invalidateQueries({ queryKey: ["admin", "brands"] });
+      setSelectedIds([]);
+      setDeleteConfirmOpen(false);
+
+      if (failedCount === 0) {
+        alert(`${succeededCount} marca(s) excluída(s) com sucesso!`);
+      } else if (succeededCount === 0) {
+        alert(
+          `Nenhuma das ${failedCount} marca(s) selecionada(s) pôde ser excluída, pois possuem produtos cadastrados no catálogo.`
+        );
+      } else {
+        alert(
+          `${succeededCount} marca(s) excluída(s) com sucesso. ${failedCount} marca(s) não puderam ser excluídas pois possuem produtos vinculados no catálogo.`
+        );
+      }
+    } catch {
+      alert("Houve um erro inesperado ao excluir as marcas selecionadas.");
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -363,12 +418,73 @@ export default function AdminBrandsPage(): JSX.Element {
         </Box>
       </Box>
 
+      {/* Barra de Ações em Massa */}
+      {selectedIds.length > 0 && (
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 1.5,
+            px: 2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderRadius: 2,
+            bgcolor: (theme) =>
+              theme.palette.mode === "dark"
+                ? "rgba(31, 127, 155, 0.2)"
+                : "rgba(31, 127, 155, 0.08)",
+            borderColor: "#1f7f9b",
+            boxShadow: "0 2px 8px rgba(31,127,155,0.12)",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
+              {selectedIds.length}{" "}
+              {selectedIds.length === 1 ? "marca selecionada" : "marcas selecionadas"}
+            </Typography>
+            <Button
+              size="small"
+              onClick={() => setSelectedIds([])}
+              sx={{ textTransform: "none", fontSize: "0.8rem", color: "text.secondary" }}
+            >
+              Desmarcar todas
+            </Button>
+          </Box>
+          <Button
+            variant="contained"
+            color="error"
+            size="small"
+            startIcon={
+              bulkDeleting ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <DeleteIcon fontSize="small" />
+              )
+            }
+            disabled={bulkDeleting}
+            onClick={() => setDeleteConfirmOpen(true)}
+            sx={{ textTransform: "none", fontWeight: 600, px: 2 }}
+          >
+            Excluir selecionadas ({selectedIds.length})
+          </Button>
+        </Paper>
+      )}
+
       {/* Brands Table */}
       <Paper variant="outlined" sx={{ overflow: "hidden", borderRadius: 2 }}>
         <TableContainer>
           <Table size="medium">
             <TableHead sx={{ bgcolor: "action.hover" }}>
               <TableRow>
+                <TableCell padding="checkbox" sx={{ width: 48, pl: 2 }}>
+                  <Checkbox
+                    size="small"
+                    indeterminate={isSomeSelected}
+                    checked={isAllSelected}
+                    onChange={handleToggleSelectAll}
+                    inputProps={{ "aria-label": "Selecionar todas as marcas" }}
+                  />
+                </TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Marca</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Categorias Fabricadas</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>País de Origem</TableCell>
@@ -384,7 +500,7 @@ export default function AdminBrandsPage(): JSX.Element {
               {isLoading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     sx={{ py: 6, textAlign: "center", color: "text.secondary" }}
                   >
                     Carregando marcas…
@@ -393,7 +509,7 @@ export default function AdminBrandsPage(): JSX.Element {
               ) : filteredBrands.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     sx={{ py: 6, textAlign: "center", color: "text.secondary" }}
                   >
                     Nenhuma marca encontrada com os filtros aplicados.
@@ -402,12 +518,22 @@ export default function AdminBrandsPage(): JSX.Element {
               ) : (
                 filteredBrands.map((brand) => {
                   const productCount = brand._count?.products ?? 0;
+                  const isRowSelected = selectedIds.includes(brand.id);
                   return (
                     <TableRow
                       key={brand.id}
                       hover
+                      selected={isRowSelected}
                       sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                     >
+                      <TableCell padding="checkbox" sx={{ width: 48, pl: 2 }}>
+                        <Checkbox
+                          size="small"
+                          checked={isRowSelected}
+                          onChange={() => handleToggleSelectRow(brand.id)}
+                          inputProps={{ "aria-label": `Selecionar marca ${brand.name}` }}
+                        />
+                      </TableCell>
                       <TableCell>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                           <Avatar
@@ -662,6 +788,48 @@ export default function AdminBrandsPage(): JSX.Element {
             sx={{ textTransform: "none", fontWeight: 600 }}
           >
             {bulkLoading ? "Importando..." : "Importar em Lote"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog de Confirmação de Exclusão em Massa */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => !bulkDeleting && setDeleteConfirmOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700, fontSize: "1.15rem" }}>
+          Excluir {selectedIds.length} {selectedIds.length === 1 ? "marca" : "marcas"}?
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            Tem certeza que deseja excluir as {selectedIds.length} marcas selecionadas? Esta ação
+            não pode ser desfeita.
+          </Typography>
+          <Typography variant="caption" color="text.disabled" sx={{ display: "block" }}>
+            * Por segurança do catálogo, marcas com produtos vinculados não serão removidas.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => setDeleteConfirmOpen(false)}
+            disabled={bulkDeleting}
+            sx={{ textTransform: "none" }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleBulkDelete}
+            disabled={bulkDeleting}
+            startIcon={
+              bulkDeleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />
+            }
+            sx={{ textTransform: "none", fontWeight: 600 }}
+          >
+            {bulkDeleting ? "Excluindo..." : "Sim, excluir marcas"}
           </Button>
         </DialogActions>
       </Dialog>
