@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Sparkles,
   TrendingUp,
   DollarSign,
   Cpu,
@@ -189,7 +188,7 @@ export function AiTokenomicsTab() {
       case "PROPOSAL_INSIGHT":
         return <TrendingUp className="h-4 w-4 text-blue-500" />;
       default:
-        return <Sparkles className="h-4 w-4 text-purple-500" />;
+        return <Cpu className="h-4 w-4 text-purple-500" />;
     }
   };
 
@@ -201,7 +200,7 @@ export function AiTokenomicsTab() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-[var(--color-card)] to-purple-500/5 border border-[var(--color-border)] shadow-sm">
         <div className="space-y-1">
           <h2 className="text-xl font-bold text-[var(--color-foreground)] flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-purple-500 animate-pulse" />
+            <Cpu className="h-5 w-5 text-purple-500" />
             Custos de IA & Tokenomics (Unit Economics)
           </h2>
           <p className="text-xs text-[var(--color-muted-foreground)]">

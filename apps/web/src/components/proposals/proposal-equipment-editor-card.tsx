@@ -8,7 +8,7 @@ import {
   Cpu,
   Loader2,
   Search,
-  Sparkles,
+  Calculator,
   Sun,
   Warehouse,
   Zap,
@@ -567,7 +567,7 @@ export function ProposalEquipmentEditorCard({
               </span>
             ) : !dirty ? (
               <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-                <Sparkles className="h-3 w-3" />
+                <Calculator className="h-3 w-3" />
                 Preço por kWp
               </span>
             ) : null}
@@ -589,7 +589,7 @@ export function ProposalEquipmentEditorCard({
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
-                    <Sparkles className="h-3.5 w-3.5" />
+                    <Calculator className="h-3.5 w-3.5" />
                   </span>
                   <span className="text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
                     Preço por kWp

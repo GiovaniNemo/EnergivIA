@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Sparkles, UserPlus, Satellite, Moon, Map as MapIcon, Lock } from "lucide-react";
+import { TrendingUp, UserPlus, Satellite, Moon, Map as MapIcon, Lock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface InstallationPoint {
@@ -496,7 +496,7 @@ export function RadarMapView({
           <div className="flex justify-between items-start">
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                <Sparkles className="w-3.5 h-3.5" />
+                <TrendingUp className="w-3.5 h-3.5" />
                 <span>Score Prospecção: {selectedInstallation.leadPotentialScore}%</span>
               </div>
               <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
@@ -504,8 +504,9 @@ export function RadarMapView({
                   ? selectedInstallation.holderName
                   : `${selectedInstallation.neighborhood}, ${selectedInstallation.city}`}
               </h4>
-              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-                📍 {selectedInstallation.addressMasked}
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+                <MapPin className="w-3 h-3 shrink-0" />
+                <span>{selectedInstallation.addressMasked}</span>
               </p>
               {selectedInstallation.documentNumber &&
                 selectedInstallation.documentNumber !== "***" && (

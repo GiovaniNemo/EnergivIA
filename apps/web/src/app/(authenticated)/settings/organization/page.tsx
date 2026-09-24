@@ -23,7 +23,6 @@ import {
   CheckCircle2,
   Plus,
   Building2,
-  Sparkles,
   Trash2,
   ShieldCheck,
   AlertTriangle,
@@ -700,7 +699,7 @@ function OrganizationSettingsContent() {
 
             {cnpjAutofillInfo && (
               <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-primary)]">
-                <Sparkles className="h-3.5 w-3.5" />
+                <CheckCircle2 className="h-3.5 w-3.5" />
                 <span>{cnpjAutofillInfo}</span>
               </div>
             )}

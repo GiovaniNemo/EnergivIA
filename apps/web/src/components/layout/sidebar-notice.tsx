@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Info, Wrench, Sparkles, AlertCircle, X, ExternalLink } from "lucide-react";
+import { Info, Wrench, CheckCircle2, AlertCircle, X, ExternalLink } from "lucide-react";
 
 export interface SystemAnnouncement {
   id: string;
@@ -104,7 +104,7 @@ export function SidebarNotice({ collapsed = false }: SidebarNoticeProps): JSX.El
         };
       case "success":
         return {
-          icon: Sparkles,
+          icon: CheckCircle2,
           bg: "bg-emerald-500/10 dark:bg-emerald-950/40",
           border: "border-emerald-500/30 dark:border-emerald-600/40",
           text: "text-emerald-700 dark:text-emerald-300",

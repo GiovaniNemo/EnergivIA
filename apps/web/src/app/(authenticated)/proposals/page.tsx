@@ -15,7 +15,7 @@ import {
   FileText,
   LayoutTemplate,
   Package,
-  Sparkles,
+  Plus,
   TrendingUp,
   User,
 } from "lucide-react";
@@ -182,7 +182,7 @@ export default function ProposalsPage(): JSX.Element {
                 "h-10 bg-emerald-600 px-4 text-white hover:bg-emerald-500"
               )}
             >
-              <Sparkles className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
               Criar no funil
             </Link>
             <Link

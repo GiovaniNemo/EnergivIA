@@ -1,16 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  Building2,
-  Calendar,
-  CheckCircle2,
-  Gauge,
-  Loader2,
-  Receipt,
-  ScanLine,
-  Sparkles,
-} from "lucide-react";
+import { Building2, Calendar, CheckCircle2, Gauge, Loader2, Receipt, ScanLine } from "lucide-react";
 
 interface BillScannerVisualizerProps {
   fileName?: string;
@@ -282,7 +273,7 @@ export function BillScannerVisualizer({
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10">
-              <Sparkles className="h-4 w-4 text-emerald-400 animate-pulse" />
+              <ScanLine className="h-4 w-4 text-emerald-400 animate-pulse" />
               <Loader2 className="absolute -bottom-1 -right-1 h-3.5 w-3.5 animate-spin text-emerald-300" />
             </div>
             <div className="min-w-0">

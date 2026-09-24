@@ -14,7 +14,7 @@ import {
   Pencil,
   IdCard,
   Plus,
-  Sparkles,
+  Zap,
   Wallet,
 } from "lucide-react";
 import { cn } from "@energivia/utils";
@@ -500,7 +500,7 @@ export function ClientLeadDrawer({
               </section>
 
               <section>
-                {sectionHeading(<Sparkles className="h-3.5 w-3.5" />, "Ações rápidas")}
+                {sectionHeading(<Zap className="h-3.5 w-3.5" />, "Ações rápidas")}
                 <div className="grid gap-2">
                   {hasStudyReady ? (
                     <Link

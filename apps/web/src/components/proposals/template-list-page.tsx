@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FilePenLine, LayoutTemplate } from "lucide-react";
+import { FilePenLine, LayoutTemplate, Lock, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/loading-state";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,7 +56,6 @@ function getTemplateThumbnail(template: ProposalTemplateEntity): string | undefi
 }
 
 import { useQuery } from "@tanstack/react-query";
-import { Lock, Sparkles } from "lucide-react";
 import { ImportTemplateModal } from "./editor/import-template-modal";
 import { BUILTIN_TEMPLATE_PRESETS } from "./editor/utils";
 import {
@@ -207,7 +206,7 @@ export function TemplateListPage(): JSX.Element {
       {isTrial && (
         <div className="flex items-center justify-between gap-4 rounded-xl border border-sky-500/30 bg-sky-50 dark:bg-sky-950/20 px-4 py-3 text-sm text-sky-950 dark:text-sky-200">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 shrink-0 text-sky-600 dark:text-sky-400" />
+            <Info className="h-5 w-5 shrink-0 text-sky-600 dark:text-sky-400" />
             <span>
               <strong>Modo de Avaliação:</strong> Você tem acesso aos modelos oficiais padrão da
               EnergivIA para gerar suas propostas. A criação de templates personalizados é liberada
@@ -266,7 +265,7 @@ export function TemplateListPage(): JSX.Element {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl font-bold">
               <span className="rounded-xl border border-sky-500/20 bg-sky-500/10 p-2 text-sky-400">
-                <Sparkles className="h-5 w-5" />
+                <LayoutTemplate className="h-5 w-5" />
               </span>
               Personalização de Templates
             </DialogTitle>

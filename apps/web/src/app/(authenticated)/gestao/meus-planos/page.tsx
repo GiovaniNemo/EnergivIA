@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Gem,
   Rocket,
-  Sparkles,
   ShieldCheck,
   CreditCard,
   AlertTriangle,
@@ -19,6 +18,9 @@ import {
   Zap,
   XCircle,
   Loader2,
+  Info,
+  Boxes,
+  TrendingUp,
 } from "lucide-react";
 
 import { normalizePlanFeatures } from "@energivia/shared-types";
@@ -271,7 +273,7 @@ function MeusPlanosContent() {
               <CheckCircle2 className="w-5 h-5 text-emerald-400" />
             )}
             {toastMessage.type === "error" && <AlertTriangle className="w-5 h-5 text-red-400" />}
-            {toastMessage.type === "info" && <Sparkles className="w-5 h-5 text-blue-400" />}
+            {toastMessage.type === "info" && <Info className="w-5 h-5 text-blue-400" />}
             <span className="text-sm font-medium">{toastMessage.text}</span>
           </div>
           <button
@@ -398,7 +400,7 @@ function MeusPlanosContent() {
         <div className="mb-12 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0">
-              <Sparkles className="w-6 h-6" />
+              <Calendar className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -427,7 +429,7 @@ function MeusPlanosContent() {
 
         {plans.length === 0 ? (
           <div className="text-center py-16 bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] p-8 max-w-md mx-auto">
-            <Sparkles className="w-12 h-12 text-[var(--color-primary)] mx-auto mb-4 opacity-80" />
+            <Boxes className="w-12 h-12 text-[var(--color-primary)] mx-auto mb-4 opacity-80" />
             <h3 className="text-xl font-bold text-[var(--color-foreground)] mb-2">
               Nenhum plano disponível
             </h3>
@@ -488,12 +490,12 @@ function MeusPlanosContent() {
                           : "bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950"
                       }`}
                     >
-                      <Sparkles className="w-3.5 h-3.5" />
+                      <TrendingUp className="w-3.5 h-3.5" />
                       Disponível p/ Upgrade
                     </div>
                   ) : isHighlighted ? (
                     <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-xs font-extrabold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider shadow-sm flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" /> Mais Escolhido
+                      <CheckCircle2 className="w-3 h-3" /> Mais Escolhido
                     </div>
                   ) : null}
 

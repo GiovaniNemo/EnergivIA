@@ -18,7 +18,7 @@ import {
   MessageSquare,
   Phone,
   Send,
-  Sparkles,
+  UserPlus,
   Thermometer,
   Trophy,
   TrendingDown,
@@ -41,7 +41,7 @@ import { DynamicCta } from "./DynamicCta";
 function stageIconFor(stage: DealStage): LucideIcon {
   switch (stage) {
     case "NEW":
-      return Sparkles;
+      return UserPlus;
     case "CONTACTED":
       return Phone;
     case "PROPOSAL":

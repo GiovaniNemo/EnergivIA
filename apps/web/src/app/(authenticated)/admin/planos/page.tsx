@@ -10,7 +10,8 @@ import {
   Trash2,
   CheckCircle2,
   AlertTriangle,
-  Sparkles,
+  Info,
+  Boxes,
   Layers,
   Percent,
   Calendar,
@@ -587,7 +588,7 @@ export default function AdminPlanosPage() {
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           )}
           {toast.type === "error" && <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />}
-          {toast.type === "info" && <Sparkles className="w-5 h-5 text-blue-400 shrink-0" />}
+          {toast.type === "info" && <Info className="w-5 h-5 text-blue-400 shrink-0" />}
           <span className="text-sm font-medium">{toast.text}</span>
           <button
             onClick={() => setToast(null)}
@@ -746,7 +747,7 @@ export default function AdminPlanosPage() {
 
             {plans.length === 0 ? (
               <div className="p-12 text-center">
-                <Sparkles className="w-12 h-12 text-[var(--color-primary)] mx-auto mb-3 opacity-60" />
+                <Boxes className="w-12 h-12 text-[var(--color-primary)] mx-auto mb-3 opacity-60" />
                 <p className="text-lg font-bold text-[var(--color-foreground)]">
                   Nenhum plano cadastrado
                 </p>
@@ -1051,7 +1052,7 @@ export default function AdminPlanosPage() {
                         <td className="px-6 py-4">
                           {coupon.duration === "once" ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold">
-                              <Sparkles className="w-3 h-3" /> Apenas 1ª Parcela
+                              <Tag className="w-3 h-3" /> Apenas 1ª Parcela
                             </span>
                           ) : coupon.duration === "repeating" ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-bold">

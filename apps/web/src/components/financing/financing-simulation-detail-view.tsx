@@ -7,7 +7,7 @@ import {
   ArrowUpDown,
   CheckCircle2,
   Clock,
-  Sparkles,
+  BadgeCheck,
   Star,
   TrendingDown,
   Wallet,
@@ -222,7 +222,7 @@ export function FinancingSimulationDetailView({
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-4 py-3">
         <div className="flex items-center gap-2 text-sm">
-          <Sparkles className="h-4 w-4 text-emerald-600" />
+          <BadgeCheck className="h-4 w-4 text-emerald-600" />
           <span className="font-medium">{sim.offers.length} oferta(s)</span>
           <span className="text-[var(--color-muted-foreground)]">
             de {new Set(sim.offers.map((o) => o.providerId)).size} financiador(es)

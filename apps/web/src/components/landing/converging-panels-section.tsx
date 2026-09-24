@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Building2, Home, Layers, MessageSquare, SunMedium, Sparkles } from "lucide-react";
+import { Building2, Home, Layers, MessageSquare, SunMedium, Zap } from "lucide-react";
 import { MockProposalPreview, type ProposalMockType } from "./mock-proposal-previews";
 
 interface PanelData {
@@ -106,7 +106,7 @@ function PanelCard({ panel, index }: { panel: PanelData; index: number }) {
         </div>
 
         <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-white/5 border border-white/10 px-2.5 py-1 text-[11px] font-mono text-slate-300">
-          <Sparkles className="h-3 w-3 text-emerald-400" />
+          <Zap className="h-3 w-3 text-emerald-400" />
           {panel.tag}
         </span>
       </div>

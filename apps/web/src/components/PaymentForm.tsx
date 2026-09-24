@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useOrganization } from "@/components/providers/organization-provider";
-import { Tag, AlertTriangle, Loader2, Sparkles, X } from "lucide-react";
+import { Tag, AlertTriangle, Loader2, X } from "lucide-react";
 
 interface PaymentFormProps {
   planId: string;
@@ -178,7 +178,7 @@ export default function PaymentForm({
       ) : appliedCoupon ? (
         <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between animate-in zoom-in-95 duration-200">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+            <Tag className="w-4 h-4 text-emerald-400 shrink-0" />
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-mono font-bold text-xs text-emerald-300">

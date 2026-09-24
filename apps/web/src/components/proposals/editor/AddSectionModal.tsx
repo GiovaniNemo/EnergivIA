@@ -723,19 +723,24 @@ function IconSettings() {
     </svg>
   );
 }
-function IconSparkle() {
+function IconBot({ size = 12 }: { size?: number }) {
   return (
     <svg
-      width="12"
-      height="12"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2.5"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z" />
+      <path d="M12 8V4H8" />
+      <rect width="16" height="12" x="4" y="8" rx="2" />
+      <path d="M2 14h2" />
+      <path d="M20 14h2" />
+      <path d="M15 13v2" />
+      <path d="M9 13v2" />
     </svg>
   );
 }
@@ -1106,7 +1111,7 @@ export function AddSectionModal({
                   ← Voltar à biblioteca
                 </button>
                 <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 text-[11px] font-bold text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
-                  <IconSparkle /> Gemini AI
+                  <IconBot /> Assistente IA
                 </span>
               </div>
 
@@ -1185,7 +1190,7 @@ export function AddSectionModal({
                       </>
                     ) : (
                       <>
-                        <IconSparkle /> Gerar Seção
+                        <IconBot size={14} /> Gerar Seção
                       </>
                     )}
                   </button>
@@ -1227,7 +1232,7 @@ export function AddSectionModal({
               {!aiResult && !aiLoading && (
                 <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 mb-3">
-                    <IconSparkle />
+                    <IconBot size={28} />
                   </div>
                   <h5 className="text-sm font-bold text-[var(--color-foreground)]">
                     Nenhum conteúdo gerado ainda
@@ -1246,7 +1251,8 @@ export function AddSectionModal({
                   <div className="h-4 w-5/6 rounded bg-slate-200 dark:bg-slate-700 mb-2" />
                   <div className="h-4 w-4/6 rounded bg-slate-200 dark:bg-slate-700 mb-2" />
                   <p className="mt-4 text-xs font-semibold text-violet-600 dark:text-violet-400">
-                    O Gemini está redigindo os argumentos e formatando o HTML da seção...
+                    A Inteligência Artificial está redigindo os argumentos e formatando o HTML da
+                    seção...
                   </p>
                 </div>
               )}
@@ -1413,7 +1419,7 @@ export function AddSectionModal({
                 {}
                 <div className="mx-1 rounded-xl border border-violet-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-3 dark:border-violet-800 dark:from-indigo-950/30 dark:to-purple-950/30">
                   <p className="mb-1 flex items-center gap-1.5 text-[12px] font-bold text-violet-700 dark:text-violet-400">
-                    <IconSparkle /> Gerar com IA
+                    <IconBot /> Gerar com IA
                   </p>
                   <p className="mb-2.5 text-[11px] leading-snug text-[var(--color-muted-foreground)]">
                     Descreva a seção que precisa e a IA cria a partir do contexto da proposta.

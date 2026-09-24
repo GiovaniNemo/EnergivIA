@@ -4,14 +4,14 @@
 import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useOrganization } from "../providers/organization-provider";
-import { Star, X, Sparkles, Send, CheckCircle2 } from "lucide-react";
+import { Star, X, MessageSquareHeart, Send, CheckCircle2 } from "lucide-react";
 
 const FEEDBACK_TAGS = [
-  "⚡ Propostas Rápidas",
-  "🤖 IA Precisa",
-  "🎨 Layout Moderno",
-  "💬 WhatsApp Ágil",
-  "📊 Cálculos Confiáveis",
+  "Propostas Rápidas",
+  "IA Precisa",
+  "Layout Moderno",
+  "WhatsApp Ágil",
+  "Cálculos Confiáveis",
 ];
 
 const RATING_LABELS: Record<number, { title: string; color: string }> = {
@@ -187,11 +187,11 @@ export function FeedbackPromptCard() {
             <div className="relative flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950 shadow-md shadow-amber-500/30">
-                  <Sparkles className="h-5 w-5" />
+                  <MessageSquareHeart className="h-5 w-5" />
                 </div>
                 <div>
                   <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30 mb-0.5">
-                    {user?.isTrial ? "☀️ Período de Testes (5 dias)" : "💎 Sua Experiência"}
+                    {user?.isTrial ? "Período de Testes (5 dias)" : "Sua Experiência"}
                   </span>
                   <h3 className="text-sm sm:text-base font-bold text-slate-100 leading-tight">
                     O que você achou da EnergivIA?

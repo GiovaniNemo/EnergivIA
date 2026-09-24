@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Home, Sparkles } from "lucide-react";
+import { ArrowLeft, Home, Search } from "lucide-react";
 
 export default function NotFound(): JSX.Element {
   return (
@@ -33,7 +33,7 @@ export default function NotFound(): JSX.Element {
 
         {/* 404 Badge */}
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-teal-500/30 bg-teal-500/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-teal-300">
-          <Sparkles className="h-3.5 w-3.5 text-teal-400" />
+          <Search className="h-3.5 w-3.5 text-teal-400" />
           <span>ERRO 404 • PÁGINA NÃO ENCONTRADA</span>
         </div>
 

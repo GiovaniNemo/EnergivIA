@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Sparkles } from "lucide-react";
+import { Bot } from "lucide-react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
@@ -78,7 +78,7 @@ export function CompactTipTapVariableField({
             onClick={assistAction.onClick}
             className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-200/95 transition hover:border-emerald-400/50 hover:bg-emerald-500/18"
           >
-            <Sparkles className="h-3 w-3" aria-hidden />
+            <Bot className="h-3 w-3" aria-hidden />
             IA
           </button>
         ) : null}

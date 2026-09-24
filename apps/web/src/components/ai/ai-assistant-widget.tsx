@@ -15,7 +15,7 @@ import {
   FileText,
   Zap,
   HelpCircle,
-  Sparkles,
+  Calculator,
   LockKeyhole,
   ArrowRight,
 } from "lucide-react";
@@ -652,7 +652,7 @@ export function AIAssistantWidget() {
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full px-2 py-4 space-y-4 animate-in fade-in duration-300">
                 <div className="w-12 h-12 bg-gradient-to-tr from-emerald-500/20 to-teal-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.12)]">
-                  <Sparkles className="w-6 h-6 text-emerald-400" />
+                  <Bot className="w-6 h-6 text-emerald-400" />
                 </div>
                 <div className="text-center space-y-1">
                   <h4 className="text-white font-medium text-sm">Assistente Solar EnergivIA</h4>
@@ -705,7 +705,7 @@ export function AIAssistantWidget() {
                     className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-gray-900/90 hover:bg-gray-800 border border-gray-800 hover:border-emerald-500/40 text-left transition-all group active:scale-[0.98]"
                   >
                     <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/20 shrink-0 transition-colors">
-                      <Sparkles className="w-4 h-4" />
+                      <Calculator className="w-4 h-4" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-gray-200 group-hover:text-emerald-300 transition-colors">

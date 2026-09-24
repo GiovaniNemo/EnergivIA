@@ -5,7 +5,6 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Clock,
   Layers,
-  Sparkles,
   TrendingUp,
   Workflow,
   Zap,
@@ -370,7 +369,7 @@ export function ImpactResultsSection(): JSX.Element {
                   key={`${name}-${i}`}
                   className="flex items-center gap-2 text-sm font-semibold text-slate-400 transition-colors duration-200 hover:text-emerald-300 whitespace-nowrap cursor-default"
                 >
-                  <Sparkles className="h-3 w-3 text-emerald-500/50" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500/60 shrink-0" />
                   {name}
                 </span>
               ))}

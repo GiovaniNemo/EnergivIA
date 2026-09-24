@@ -9,7 +9,7 @@ import {
   HandCoins,
   PercentSquare,
   Plus,
-  Sparkles,
+  Calculator,
   TrendingUp,
   Users2,
 } from "lucide-react";
@@ -111,7 +111,7 @@ export function FinancingDashboardView(): JSX.Element {
           {}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Kpi
-              icon={<Sparkles className="h-4 w-4" />}
+              icon={<Calculator className="h-4 w-4" />}
               label="Simulações"
               value={String(data.totalSimulations)}
               hint="Total criadas"

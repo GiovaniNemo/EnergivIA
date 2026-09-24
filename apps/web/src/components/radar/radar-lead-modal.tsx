@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sparkles, CheckCircle2, User, Phone, MapPin, Zap } from "lucide-react";
+import { Target, MessageSquareText, CheckCircle2, User, Phone, MapPin, Zap } from "lucide-react";
 import { convertRadarToLead } from "@/lib/radar-api";
 import { useOrganization } from "@/components/providers/organization-provider";
 
@@ -94,7 +94,7 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
       <DialogContent className="sm:max-w-[520px] bg-white dark:bg-neutral-900 text-slate-900 dark:text-white border border-slate-200 dark:border-neutral-800 shadow-2xl">
         <DialogHeader>
           <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-semibold text-xs tracking-wider uppercase">
-            <Sparkles className="w-4 h-4" />
+            <Target className="w-4 h-4" />
             <span>OPORTUNIDADE DE PROSPECÇÃO RADAR</span>
           </div>
           <DialogTitle className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -164,14 +164,14 @@ export function RadarLeadModal({ isOpen, onClose, installation, onSuccess }: Rad
                 className="bg-slate-50 dark:bg-neutral-950 border-slate-200 dark:border-neutral-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-neutral-500 focus:border-amber-500"
               />
               <p className="text-[11px] text-slate-500 dark:text-neutral-400 leading-tight">
-                💡 Caso ainda não tenha o telefone, deixe em branco para salvar como alvo de visita
-                ou prospecção no campo.
+                Caso ainda não tenha o telefone, deixe em branco para salvar como alvo de visita ou
+                prospecção no campo.
               </p>
             </div>
 
             <div className="space-y-1.5">
               <Label className="text-xs text-slate-700 dark:text-neutral-300 flex items-center gap-1.5 font-medium">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <MessageSquareText className="w-3.5 h-3.5 text-amber-500" />
                 Roteiro & Pitch Sugerido de Abordagem
               </Label>
               <textarea

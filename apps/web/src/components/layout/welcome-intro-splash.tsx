@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { Bot, ArrowRight } from "lucide-react";
 
 interface WelcomeIntroSplashProps {
   onComplete?: () => void;
@@ -183,7 +183,7 @@ export function WelcomeIntroSplash({ onComplete }: WelcomeIntroSplashProps): JSX
         {step === 2 && (
           <div className="animate-intro-phrase flex flex-col items-center">
             <div className="mb-5 inline-flex items-center justify-center w-12 h-12 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/20 to-teal-500/10 backdrop-blur-md shadow-[0_0_30px_rgba(16,185,129,0.25)]">
-              <Sparkles className="w-6 h-6 text-emerald-400" />
+              <Bot className="w-6 h-6 text-emerald-400" />
             </div>
             <h1 className="text-3xl sm:text-5xl md:text-6xl font-semibold tracking-tight text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
               O seu parceiro{" "}

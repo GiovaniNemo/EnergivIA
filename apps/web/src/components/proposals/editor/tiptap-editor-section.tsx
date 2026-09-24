@@ -13,7 +13,7 @@ import {
   List,
   ListOrdered,
   Quote,
-  Sparkles,
+  Bot,
   Underline,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,9 +31,10 @@ export function TipTapEditorSection({
   onInsertVariable,
 }: TipTapEditorSectionProps): JSX.Element {
   const toolbarButtonClass = (active: boolean) =>
-    `inline-flex h-8 w-8 items-center justify-center rounded-md border transition ${active
-      ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-300"
-      : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
+    `inline-flex h-8 w-8 items-center justify-center rounded-md border transition ${
+      active
+        ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-300"
+        : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
     }`;
 
   return (
@@ -135,7 +136,7 @@ export function TipTapEditorSection({
             className="h-8 rounded-full border-emerald-400/35 bg-emerald-500/12 px-3 text-xs text-emerald-300 hover:bg-emerald-500/20"
             onClick={() => onAction("improve")}
           >
-            <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+            <Bot className="mr-1.5 h-3.5 w-3.5" />
             Melhorar texto
           </Button>
         </div>

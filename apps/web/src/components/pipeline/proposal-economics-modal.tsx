@@ -24,7 +24,6 @@ import {
   Package,
   Share2,
   Shield,
-  Sparkles,
   Sun,
   Upload,
   FileText,
@@ -33,6 +32,9 @@ import {
   Zap,
   Bot,
   Info,
+  Boxes,
+  Calculator,
+  Sliders,
 } from "lucide-react";
 import { buildSystemDealTitle } from "@/components/lead-detail/lead-detail-utils";
 import { Button } from "@/components/ui/button";
@@ -2981,7 +2983,7 @@ export const ProposalEconomicsModal = forwardRef<
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
-                        <Sparkles className="h-3.5 w-3.5" />
+                        <Calculator className="h-3.5 w-3.5" />
                       </span>
                       <span className="text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
                         Preço por kWp
@@ -3321,7 +3323,7 @@ export const ProposalEconomicsModal = forwardRef<
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                      <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                      <Sliders className="h-3.5 w-3.5 text-emerald-500" />
                       Perfil do Integrador
                     </span>
                   )}
@@ -3363,7 +3365,7 @@ export const ProposalEconomicsModal = forwardRef<
                         }))
                       }
                     >
-                      <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                      <Sliders className="h-3.5 w-3.5 text-emerald-500" />
                       Perfil do Integrador
                     </button>
 
@@ -3474,7 +3476,7 @@ export const ProposalEconomicsModal = forwardRef<
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <div>
                             <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-foreground)] flex items-center gap-1.5">
-                              <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                              <Boxes className="h-3.5 w-3.5 text-emerald-500" />
                               Opções de Kits por Preço por kWp
                             </h4>
                             <span className="text-[11px] text-[var(--color-muted-foreground)]">

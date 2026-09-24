@@ -119,7 +119,7 @@ export function EnergiviaFloatingHub() {
               className="flex items-center gap-2.5 group"
             >
               <span className="px-3 py-1.5 rounded-full bg-neutral-900/95 text-amber-300 text-xs font-bold shadow-lg border border-amber-500/30 backdrop-blur-md opacity-90 group-hover:opacity-100 transition whitespace-nowrap">
-                Avaliar EnergivIA ⭐
+                Avaliar EnergivIA
               </span>
               <button
                 type="button"
@@ -140,7 +140,7 @@ export function EnergiviaFloatingHub() {
               className="flex items-center gap-2.5 group"
             >
               <span className="px-3 py-1.5 rounded-full bg-neutral-900/95 text-emerald-300 text-xs font-bold shadow-lg border border-emerald-500/30 backdrop-blur-md opacity-90 group-hover:opacity-100 transition whitespace-nowrap">
-                Assistente EnergivIA 🤖
+                Assistente EnergivIA
               </span>
               <button
                 type="button"

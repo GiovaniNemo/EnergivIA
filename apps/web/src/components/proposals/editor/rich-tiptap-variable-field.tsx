@@ -16,7 +16,7 @@ import {
   List,
   ListOrdered,
   Quote,
-  Sparkles,
+  Bot,
   Underline as UnderlineIcon,
 } from "lucide-react";
 import { VariableMark } from "./extensions";
@@ -86,9 +86,10 @@ export function RichTipTapVariableField({
   }, [editor, value]);
 
   const toolbarButtonClass = (active: boolean) =>
-    `inline-flex h-8 w-8 items-center justify-center rounded-md border transition ${active
-      ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-300"
-      : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
+    `inline-flex h-8 w-8 items-center justify-center rounded-md border transition ${
+      active
+        ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-300"
+        : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
     }`;
 
   return (
@@ -102,7 +103,7 @@ export function RichTipTapVariableField({
             onClick={assistAction.onClick}
             className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-200/95 transition hover:border-emerald-400/50 hover:bg-emerald-500/18"
           >
-            <Sparkles className="h-3 w-3" aria-hidden />
+            <Bot className="h-3 w-3" aria-hidden />
             IA
           </button>
         ) : null}

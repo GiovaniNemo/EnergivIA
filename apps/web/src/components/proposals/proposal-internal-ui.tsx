@@ -19,7 +19,7 @@ import {
   Loader2,
   MoreVertical,
   Send,
-  Sparkles,
+  Calculator,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -933,7 +933,7 @@ export function ProposalKwpRateBusinessCard({
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pl-5 pr-5 pt-5">
         <div className="space-y-1">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" />
+            <Calculator className="h-3.5 w-3.5" />
             Visão de negócio · Preço por kWp
           </p>
           <CardTitle className="text-lg font-semibold">Precificação por kWp</CardTitle>

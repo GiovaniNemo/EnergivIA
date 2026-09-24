@@ -7,7 +7,6 @@ import {
   Database,
   Mail,
   MessageSquare,
-  Sparkles,
   RefreshCw,
   CheckCircle2,
   AlertTriangle,
@@ -406,7 +405,7 @@ export default function AdminSistemaPage() {
 
   // Helper icons for services
   const getServiceIcon = (name: string, category: string) => {
-    if (category === "ai" || name.includes("Inteligência") || name.includes("IA")) return Sparkles;
+    if (category === "ai" || name.includes("Inteligência") || name.includes("IA")) return Cpu;
     if (name.includes("Banco") || name.includes("Prisma") || name.includes("PostgreSQL"))
       return Database;
     if (name.includes("PDF") || name.includes("Puppeteer")) return FileText;
@@ -482,7 +481,7 @@ export default function AdminSistemaPage() {
                 : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-card)] hover:text-[var(--color-foreground)]"
             }`}
           >
-            <Sparkles className="h-4 w-4 text-purple-400" />
+            <Cpu className="h-4 w-4 text-purple-400" />
             IA & Tokenomics
             <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 font-bold">
               Custos
@@ -1074,7 +1073,7 @@ export default function AdminSistemaPage() {
                     title: "IA Generativa Solar & Chatbot",
                     description:
                       "Assistente de propostas, geração de textos comerciais e chat de dúvidas técnicas com IA",
-                    icon: Sparkles,
+                    icon: Cpu,
                   },
                   {
                     key: "newProposalEditor",

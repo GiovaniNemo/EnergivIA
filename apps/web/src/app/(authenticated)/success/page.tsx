@@ -3,7 +3,7 @@
 import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, ArrowRight, Sparkles, AlertCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import { useOrganization } from "@/components/providers/organization-provider";
 
 function SuccessContent() {
@@ -108,7 +108,7 @@ function SuccessContent() {
         </div>
 
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-4 border border-emerald-500/20">
-          <Sparkles className="w-3.5 h-3.5" />
+          <CheckCircle2 className="w-3.5 h-3.5" />
           Pagamento Confirmado
         </div>
 

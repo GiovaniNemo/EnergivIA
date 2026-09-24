@@ -36,7 +36,9 @@ import {
   ShieldCheck,
   ShieldAlert,
   AlertTriangle,
-  Sparkles,
+  Handshake,
+  LayoutTemplate,
+  Rocket,
   CheckCircle2,
   CreditCard,
   House,
@@ -167,7 +169,7 @@ const communicationToneOptions = [
     id: "consultivo",
     label: "Consultivo",
     description: "Explica melhor os benefícios e aumenta a confiança",
-    icon: Sparkles,
+    icon: Handshake,
   },
   {
     id: "tecnico",
@@ -567,7 +569,7 @@ export default function CreateOrganizationPage() {
               <li className="flex items-center gap-3.5 rounded-xl bg-white/12 px-3 py-2">
                 <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-white/12">
                   <span className="pointer-events-none absolute inset-0 bg-white/10" />
-                  <Sparkles className="relative z-10 h-3.5 w-3.5 text-white" />
+                  <LayoutTemplate className="relative z-10 h-3.5 w-3.5 text-white" />
                 </span>
                 <p className="text-xs font-medium text-white/90 xl:text-sm">
                   Templates prontos para fechar mais vendas.
@@ -1134,7 +1136,7 @@ export default function CreateOrganizationPage() {
                           "Criando conta…"
                         ) : (
                           <span className="inline-flex items-center gap-2">
-                            <Sparkles className="h-4 w-4" />
+                            <Rocket className="h-4 w-4" />
                             Começar a vender agora
                           </span>
                         )}
