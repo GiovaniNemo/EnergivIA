@@ -155,7 +155,7 @@ export const MENU_ITEMS: MenuItem[] = [
   },
 
   {
-    label: "Distribuidores",
+    label: "Fornecedores",
     icon: Truck,
     path: "/admin/distribuidores",
     section: "admin",

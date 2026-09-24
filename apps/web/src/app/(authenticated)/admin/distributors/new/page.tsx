@@ -36,7 +36,7 @@ export default function NewDistributorPage(): JSX.Element {
   return (
     <Paper variant="outlined" sx={{ p: 3, maxWidth: 560 }}>
       <Typography variant="h2" sx={{ fontSize: "1.25rem", fontWeight: 600, mb: 2 }}>
-        Novo distribuidor
+        Novo fornecedor
       </Typography>
       <Box component="form" onSubmit={handleSubmit((v) => createMutation.mutate(v))}>
         <Controller
@@ -153,7 +153,7 @@ export default function NewDistributorPage(): JSX.Element {
             variant="contained"
             disabled={!formState.isDirty || createMutation.isPending}
           >
-            Criar distribuidor
+            Criar fornecedor
           </Button>
         </Box>
       </Box>

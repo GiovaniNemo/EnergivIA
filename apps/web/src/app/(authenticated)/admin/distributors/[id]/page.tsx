@@ -81,7 +81,7 @@ export default function EditDistributorPage(): JSX.Element {
   if (isError) {
     return (
       <Alert severity="error">
-        Distribuidor não encontrado.{" "}
+        Fornecedor não encontrado.{" "}
         <Button size="small" onClick={() => router.push("/admin/distribuidores")}>
           Voltar
         </Button>
@@ -93,7 +93,7 @@ export default function EditDistributorPage(): JSX.Element {
     <Box sx={{ maxWidth: 920, display: "flex", flexDirection: "column", gap: 3 }}>
       <Paper variant="outlined" sx={{ p: 3, maxWidth: 560 }}>
         <Typography variant="h2" sx={{ fontSize: "1.25rem", fontWeight: 600, mb: 2 }}>
-          Editar distribuidor
+          Editar fornecedor
         </Typography>
         <Box component="form" onSubmit={handleSubmit((v) => updateMutation.mutate(v))}>
           <Controller
@@ -221,7 +221,7 @@ export default function EditDistributorPage(): JSX.Element {
         </Box>
       </Paper>
       <FreightRulesEditor
-        description="Valor fixo de frete por UF de destino desta distribuidora — aplicado nas propostas cujo kit vem dela."
+        description="Valor fixo de frete por UF de destino deste fornecedor — aplicado nas propostas cujo kit vem dele."
         load={loadFreight}
         save={saveFreight}
       />

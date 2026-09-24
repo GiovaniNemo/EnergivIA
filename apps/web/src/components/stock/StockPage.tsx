@@ -73,7 +73,7 @@ function ExplainerBlock(): JSX.Element {
         <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--color-muted-foreground)]">
           O que a <strong>sua empresa</strong> realmente tem: você define{" "}
           <strong>quantidade</strong> e <strong>custo unitário</strong>. Na proposta ele funciona
-          como uma <strong>distribuidora própria</strong> — o kit sai do seu estoque, com baixa
+          como um <strong>fornecimento próprio</strong> — o kit sai do seu estoque, com baixa
           automática.
         </p>
       </div>
@@ -247,7 +247,7 @@ export function StockPage(): JSX.Element {
           <h2 className="text-lg font-semibold">Seu estoque está vazio</h2>
           <p className="max-w-md text-sm text-[var(--color-muted-foreground)]">
             Adicione produtos do catálogo global, definindo quantidade e custo. Depois eles ficam
-            disponíveis como uma “distribuidora própria” na hora de montar o kit da proposta.
+            disponíveis como fornecimento próprio na hora de montar o kit da proposta.
           </p>
           <Button type="button" onClick={openCreate} disabled={!canEdit} className="mt-1">
             <Plus className="mr-1.5 h-4 w-4" />

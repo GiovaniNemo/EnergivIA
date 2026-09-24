@@ -46,10 +46,9 @@ const MILESTONES: Milestone[] = [
   },
   {
     id: 2,
-    title: "Seleção do Kit Distribuidor",
+    title: "Seleção do Kit Solar",
     tag: "Passo 3",
-    description:
-      "Cálculo da potência (3,15 kWp), preço do kit Distribuidor e escolha do integrador.",
+    description: "Cálculo da potência (3,15 kWp), preço dos equipamentos e escolha do integrador.",
     stepStartIndex: 7,
     stepEndIndex: 8,
   },
@@ -158,7 +157,7 @@ const FLOW_STEPS: StepConfig[] = [
     readPauseMs: 1000,
   },
 
-  // Passo 3: Kit Distribuidor
+  // Passo 3: Kit Solar
   {
     milestoneId: 2,
     botTypingLabel: "EnergivIA calculando melhor kit solar...",
@@ -652,12 +651,12 @@ export function WhatsappFlowSimulator(): JSX.Element {
                         {msg.kind === "kit_distribuidor" && (
                           <div className="text-[15px] leading-[21px] space-y-2 text-black font-normal">
                             <p className="font-semibold text-black">
-                              Kit Distribuidor Selecionado com Sucesso:
+                              Kit Solar Selecionado com Sucesso:
                             </p>
                             <div className="rounded-xl border border-emerald-300/80 bg-emerald-50/40 p-2.5 space-y-1 text-[13.5px]">
                               <div className="flex items-center justify-between">
                                 <span className="font-bold text-black text-xs uppercase tracking-wide">
-                                  Kit Solar Distribuidor 3,15 kWp
+                                  Kit Solar Homologado 3,15 kWp
                                 </span>
                                 <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
                                   Em Estoque
@@ -668,7 +667,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
                                 <br />• 1x Inversor Micro/String 3kW Monofásico
                               </p>
                               <div className="border-t border-slate-200 pt-1 flex justify-between items-center text-xs">
-                                <span className="text-black/80">Custo Distribuidor:</span>
+                                <span className="text-black/80">Custo dos Equipamentos:</span>
                                 <span className="font-semibold text-black">R$ 4.290,00</span>
                               </div>
                               <div className="flex justify-between items-center text-xs">

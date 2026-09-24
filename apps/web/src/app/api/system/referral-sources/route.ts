@@ -63,9 +63,9 @@ let globalReferralSources: ReferralSourceOption[] = [
   },
   {
     id: "distribuidor-solar",
-    label: "Distribuidor Solar (Edeltec, Fortlev, etc.)",
+    label: "Parceiro Comercial / Fornecedor Solar",
     requiresDetails: true,
-    detailsPlaceholder: "Qual distribuidor / representante?",
+    detailsPlaceholder: "Qual parceiro / representante?",
     active: true,
     order: 6,
     createdAt: new Date().toISOString(),

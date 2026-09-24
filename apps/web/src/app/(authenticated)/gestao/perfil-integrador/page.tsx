@@ -162,8 +162,8 @@ export default function PerfilIntegradorPage(): JSX.Element {
             Perfil do Integrador
           </h1>
           <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-            Defina o valor base de venda por kWp e configure suas preferências de marcas do
-            distribuidor para as cotações.
+            Defina o valor base de venda por kWp e configure suas preferências de marcas para as
+            cotações.
           </p>
         </div>
 
@@ -319,7 +319,7 @@ export default function PerfilIntegradorPage(): JSX.Element {
                   Marcas de Módulos (Painéis Solares)
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal mt-0.5">
-                  Marcas homologadas com produtos ativos no catálogo do distribuidor
+                  Marcas homologadas com produtos ativos no catálogo
                 </CardDescription>
               </div>
             </div>
@@ -351,12 +351,12 @@ export default function PerfilIntegradorPage(): JSX.Element {
         <CardContent className="space-y-4">
           {loadingBrands ? (
             <div className="py-6 flex items-center justify-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
-              <LoadingState label="Carregando marcas ativas do distribuidor..." compact />
+              <LoadingState label="Carregando marcas ativas do catálogo..." compact />
             </div>
           ) : availableBrands.modules.length === 0 ? (
             <p className="py-4 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 italic">
-              Nenhuma marca específica encontrada no distribuidor no momento. Todas as marcas
-              disponíveis serão cotadas normalmente.
+              Nenhuma marca específica encontrada no momento. Todas as marcas disponíveis serão
+              cotadas normalmente.
             </p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
@@ -404,7 +404,7 @@ export default function PerfilIntegradorPage(): JSX.Element {
                 <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
                   Modo Padrão Global:
                 </strong>{" "}
-                Nenhuma restrição aplicada. Todas as marcas ativas no distribuidor serão cotadas
+                Nenhuma restrição aplicada. Todas as marcas ativas no catálogo serão cotadas
                 normalmente conforme melhor preço e disponibilidade de estoque.
               </p>
             )}
@@ -425,7 +425,7 @@ export default function PerfilIntegradorPage(): JSX.Element {
                   Marcas de Inversores & Microinversores
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal mt-0.5">
-                  Inversores string, híbridos e microinversores disponíveis no distribuidor
+                  Inversores string, híbridos e microinversores disponíveis no catálogo
                 </CardDescription>
               </div>
             </div>
@@ -457,12 +457,12 @@ export default function PerfilIntegradorPage(): JSX.Element {
         <CardContent className="space-y-4">
           {loadingBrands ? (
             <div className="py-6 flex items-center justify-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
-              <LoadingState label="Carregando marcas ativas do distribuidor..." compact />
+              <LoadingState label="Carregando marcas ativas do catálogo..." compact />
             </div>
           ) : availableBrands.inverters.length === 0 ? (
             <p className="py-4 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 italic">
-              Nenhuma marca específica de inversor encontrada no distribuidor no momento. Todas as
-              marcas disponíveis serão cotadas normalmente.
+              Nenhuma marca específica de inversor encontrada no momento. Todas as marcas
+              disponíveis serão cotadas normalmente.
             </p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
@@ -509,7 +509,7 @@ export default function PerfilIntegradorPage(): JSX.Element {
                 <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
                   Modo Padrão Global:
                 </strong>{" "}
-                Nenhuma restrição aplicada. Todos os inversores homologados do distribuidor serão
+                Nenhuma restrição aplicada. Todos os inversores homologados do catálogo serão
                 considerados para escolha automática do melhor custo-benefício.
               </p>
             )}

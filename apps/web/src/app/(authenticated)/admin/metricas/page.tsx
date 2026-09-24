@@ -1296,7 +1296,7 @@ export default function AdminMetricasPage() {
 
           <div className="space-y-3 text-xs pt-2">
             <div className="p-3 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] flex items-center justify-between">
-              <span className="text-[var(--color-muted-foreground)]">Distribuidores Solares:</span>
+              <span className="text-[var(--color-muted-foreground)]">Fornecedores Integrados:</span>
               <span className="font-bold text-[var(--color-foreground)]">
                 {overview.totalDistributors || 12} integrados
               </span>

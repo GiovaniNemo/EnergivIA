@@ -389,11 +389,11 @@ export function ProductForm({
             <Paper variant="outlined" sx={{ p: 4, textAlign: "center", borderRadius: 2 }}>
               <LocalShippingOutlinedIcon sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                Nenhum distribuidor ofertando este produto no momento
+                Nenhum fornecedor ofertando este produto no momento
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                Vincule este produto aos estoques dos distribuidores na aba{" "}
-                <strong>Distribuidores &gt; Gerenciar Catálogo & Preços</strong>.
+                Vincule este produto aos estoques dos fornecedores na aba{" "}
+                <strong>Fornecedores &gt; Gerenciar Catálogo & Preços</strong>.
               </Typography>
             </Paper>
           ) : (
@@ -402,7 +402,7 @@ export function ProductForm({
                 <Table size="medium">
                   <TableHead sx={{ bgcolor: "action.hover" }}>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 600 }}>Distribuidor</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Fornecedor</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>SKU do Fornecedor</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Preço Unitário</TableCell>
                       <TableCell align="center" sx={{ fontWeight: 600 }}>

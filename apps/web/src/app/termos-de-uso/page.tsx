@@ -245,8 +245,8 @@ export default function TermsOfUsePage(): JSX.Element {
               <p>
                 <strong>6.1. Sem Vínculo Mercantil:</strong> A ENERGIVIA LTDA não vende
                 equipamentos, não mantém estoque e não realiza logística, sendo isenta de
-                solidariedade por vícios, garantias físicas ou atrasos de entrega de distribuidores
-                terceiros (Art. 18, CDC).
+                solidariedade por vícios, garantias físicas ou atrasos de entrega de fornecedores e
+                fabricantes terceiros (Art. 18, CDC).
               </p>
               <p>
                 <strong>6.2. LGPD (Lei nº 13.709/2018):</strong> O Integrador atua como Controlador

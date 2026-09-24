@@ -448,7 +448,7 @@ export default function DistributorInventoryPage(): JSX.Element {
               {inventory.data.length === 0
                 ? debouncedSearch || categoryId
                   ? "Nenhum resultado com os filtros atuais."
-                  : "Nenhum produto neste distribuidor."
+                  : "Nenhum produto neste fornecedor."
                 : `Mostrando ${inventory.data.length} de ${inventory.total} produto${inventory.total === 1 ? "" : "s"} nesta página.`}
             </Typography>
           ) : null}
@@ -473,7 +473,7 @@ export default function DistributorInventoryPage(): JSX.Element {
                     onChange={(_, c) => toggleOptionalColumn("sku", c)}
                   />
                 }
-                label="SKU do distribuidor"
+                label="SKU do fornecedor"
               />
               <FormControlLabel
                 control={
@@ -528,7 +528,7 @@ export default function DistributorInventoryPage(): JSX.Element {
                 <TableCell>Produto</TableCell>
                 <TableCell>Marca</TableCell>
                 <TableCell>Tipo</TableCell>
-                {optionalColumns.sku ? <TableCell>SKU distrib.</TableCell> : null}
+                {optionalColumns.sku ? <TableCell>SKU fornec.</TableCell> : null}
                 <TableCell align="right">Preço</TableCell>
                 <TableCell align="right">Estoque</TableCell>
                 {optionalColumns.leadTime ? (
@@ -551,7 +551,7 @@ export default function DistributorInventoryPage(): JSX.Element {
                     <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
                       {debouncedSearch || categoryId
                         ? "Nenhum produto corresponde à busca ou ao tipo selecionado."
-                        : 'Nenhum produto neste distribuidor. Use "Adicionar produto" para começar.'}
+                        : 'Nenhum produto neste fornecedor. Use "Adicionar produto" para começar.'}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -717,11 +717,11 @@ export default function DistributorInventoryPage(): JSX.Element {
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Remover do distribuidor">
+                        <Tooltip title="Remover do fornecedor">
                           <IconButton
                             size="small"
                             onClick={() => {
-                              if (window.confirm("Remover este produto do distribuidor?")) {
+                              if (window.confirm("Remover este produto do fornecedor?")) {
                                 deleteMutation.mutate(row.id);
                               }
                             }}
@@ -769,19 +769,19 @@ export default function DistributorInventoryPage(): JSX.Element {
       )}
 
       <Dialog open={syncModalOpen} onClose={() => setSyncModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Sincronizar via API do Distribuidor</DialogTitle>
+        <DialogTitle>Sincronizar via API do Fornecedor</DialogTitle>
         <DialogContent dividers>
           <Box py={1}>
             <Typography variant="body1" paragraph>
               A integração via API permite atualizar automaticamente{" "}
               <strong>preços, estoque em tempo real e fichas técnicas</strong> de materiais,
-              conectando-se diretamente ao sistema do distribuidor.
+              conectando-se diretamente ao sistema do fornecedor.
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
               Para implementar o funcionamento real deste botão, você precisará nos fornecer as{" "}
               <strong>Credenciais (API Keys, Tokens)</strong> e a{" "}
-              <strong>Documentação (Manual de Integração)</strong> fornecidas pelo distribuidor (ex:
-              Aldo Solar, Amara, etc.).
+              <strong>Documentação (Manual de Integração)</strong> fornecidas pelo parceiro /
+              fornecedor (ex: Aldo Solar, Amara, etc.).
             </Typography>
             <Alert severity="info" sx={{ mt: 2 }}>
               Integração pendente: Aguardando as chaves de acesso dos fornecedores.
@@ -829,7 +829,7 @@ export default function DistributorInventoryPage(): JSX.Element {
                 render={({ field, fieldState }) => (
                   <TextField
                     {...field}
-                    label="SKU do distribuidor"
+                    label="SKU do fornecedor"
                     error={Boolean(fieldState.error)}
                     helperText={fieldState.error?.message}
                     fullWidth
@@ -978,7 +978,7 @@ export default function DistributorInventoryPage(): JSX.Element {
                   render={({ field, fieldState }) => (
                     <TextField
                       {...field}
-                      label="SKU do distribuidor"
+                      label="SKU do fornecedor"
                       error={Boolean(fieldState.error)}
                       helperText={fieldState.error?.message}
                       fullWidth

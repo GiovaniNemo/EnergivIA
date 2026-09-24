@@ -1410,8 +1410,8 @@ export default function AdminSistemaPage() {
                             Exigir detalhes / &quot;Quem recomendou?&quot;
                           </span>
                           <span className="text-[var(--color-muted-foreground)] block mt-0.5">
-                            Se marcado, o integrador terá que digitar o nome da pessoa, distribuidor
-                            ou detalhes ao selecionar esta opção.
+                            Se marcado, o integrador terá que digitar o nome da pessoa, parceiro
+                            comercial ou detalhes ao selecionar esta opção.
                           </span>
                         </div>
                       </label>

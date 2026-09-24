@@ -82,7 +82,7 @@ export default function AdminDistributorsPage(): JSX.Element {
   const handleDelete = (d: Distributor) => {
     if (
       window.confirm(
-        `Excluir distribuidor "${d.name}"? Esta ação removerá os produtos vinculados a ele.`
+        `Excluir fornecedor "${d.name}"? Esta ação removerá os produtos vinculados a ele.`
       )
     ) {
       deleteMutation.mutate(d.id);
@@ -288,7 +288,7 @@ export default function AdminDistributorsPage(): JSX.Element {
             <ListItemIcon sx={{ color: "inherit" }}>
               <DeleteIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>Excluir Distribuidor</ListItemText>
+            <ListItemText>Excluir Fornecedor</ListItemText>
           </MenuItem>
         </Menu>
       </>
@@ -316,7 +316,7 @@ export default function AdminDistributorsPage(): JSX.Element {
             </Avatar>
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                Distribuidores Parceiros
+                Fornecedores Parceiros
               </Typography>
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
                 {stats.total}
@@ -407,13 +407,13 @@ export default function AdminDistributorsPage(): JSX.Element {
           size="medium"
           sx={{ textTransform: "none", fontWeight: 600 }}
         >
-          Adicionar Distribuidor
+          Adicionar Fornecedor
         </Button>
       </Box>
 
       {isError && (
         <Alert severity="error" variant="filled">
-          Não foi possível carregar os distribuidores. {error instanceof Error ? error.message : ""}
+          Não foi possível carregar os fornecedores. {error instanceof Error ? error.message : ""}
         </Alert>
       )}
 
@@ -423,7 +423,7 @@ export default function AdminDistributorsPage(): JSX.Element {
           <Table size="medium">
             <TableHead sx={{ bgcolor: "action.hover" }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Distribuidor</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Fornecedor</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Integração / Fonte</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>CNPJ / Contato</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Localização</TableCell>
@@ -442,7 +442,7 @@ export default function AdminDistributorsPage(): JSX.Element {
                     colSpan={6}
                     sx={{ py: 6, textAlign: "center", color: "text.secondary" }}
                   >
-                    Carregando distribuidores…
+                    Carregando fornecedores…
                   </TableCell>
                 </TableRow>
               ) : filteredDistributors.length === 0 ? (
@@ -453,10 +453,10 @@ export default function AdminDistributorsPage(): JSX.Element {
                         sx={{ fontSize: 48, color: "action.disabled", mb: 1 }}
                       />
                       <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                        Nenhum distribuidor encontrado
+                        Nenhum fornecedor encontrado
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>
-                        Cadastre os distribuidores parceiros para cotar e precificar kits
+                        Cadastre os fornecedores parceiros para cotar e precificar kits
                         automaticamente.
                       </Typography>
                       <Button
@@ -465,7 +465,7 @@ export default function AdminDistributorsPage(): JSX.Element {
                         onClick={() => router.push("/admin/distribuidores/new")}
                         sx={{ textTransform: "none" }}
                       >
-                        Adicionar Distribuidor
+                        Adicionar Fornecedor
                       </Button>
                     </Box>
                   </TableCell>
@@ -589,7 +589,7 @@ export default function AdminDistributorsPage(): JSX.Element {
             fullWidth
             margin="normal"
             size="small"
-            placeholder="Insira a chave fornecida pelo distribuidor"
+            placeholder="Insira a chave fornecida pelo parceiro / fornecedor"
           />
           <TextField
             label="API Secret / Chave Privada"

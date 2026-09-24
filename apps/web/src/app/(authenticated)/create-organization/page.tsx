@@ -105,9 +105,9 @@ const DEFAULT_REFERRAL_SOURCES: ReferralSourceOption[] = [
   },
   {
     id: "distribuidor-solar",
-    label: "Distribuidor Solar (Edeltec, Fortlev, etc.)",
+    label: "Parceiro Comercial / Fornecedor Solar",
     requiresDetails: true,
-    detailsPlaceholder: "Qual distribuidor / representante?",
+    detailsPlaceholder: "Qual parceiro / representante?",
     active: true,
   },
   {
@@ -732,7 +732,7 @@ export default function CreateOrganizationPage() {
                 {step === 1
                   ? "Informe seu CNPJ para personalizarmos suas propostas comerciais em poucos segundos."
                   : step === 2
-                    ? "Defina o valor base de venda por kWp na sua região e selecione as marcas do distribuidor para suas cotações."
+                    ? "Defina o valor base de venda por kWp na sua região e selecione suas marcas preferidas para as cotações."
                     : "Agora vamos personalizar suas propostas para o seu tipo de cliente."}
               </p>
             </div>
@@ -1062,7 +1062,7 @@ export default function CreateOrganizationPage() {
                               Preferência de Marcas de Módulos
                             </h3>
                             <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal">
-                              Marcas ativas no catálogo do distribuidor
+                              Marcas ativas no catálogo homologado
                             </p>
                           </div>
                         </div>
@@ -1088,11 +1088,11 @@ export default function CreateOrganizationPage() {
                       {loadingBrands ? (
                         <div className="flex items-center gap-2 py-3 text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
                           <Loader2 className="h-4 w-4 animate-spin text-[#1f7f9b]" />
-                          Carregando marcas ativas do distribuidor...
+                          Carregando marcas ativas do catálogo...
                         </div>
                       ) : availableBrands.modules.length === 0 ? (
                         <p className="py-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 italic">
-                          Todas as marcas homologadas do distribuidor serão cotadas por padrão.
+                          Todas as marcas homologadas serão cotadas por padrão.
                         </p>
                       ) : (
                         <div className="flex flex-wrap gap-2 pt-1">
@@ -1130,7 +1130,7 @@ export default function CreateOrganizationPage() {
                       <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
                         {selectedModuleBrands.length > 0
                           ? `${selectedModuleBrands.length} marca(s) selecionada(s) para priorização em orçamentos.`
-                          : "Se nenhuma marca for marcada, todas as marcas disponíveis no distribuidor serão cotadas normalmente."}
+                          : "Se nenhuma marca for marcada, todas as marcas disponíveis no catálogo serão cotadas normalmente."}
                       </p>
                     </div>
 
@@ -1146,7 +1146,7 @@ export default function CreateOrganizationPage() {
                               Preferência de Marcas de Inversores
                             </h3>
                             <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal">
-                              Inversores e microinversores disponíveis no distribuidor
+                              Inversores e microinversores disponíveis no catálogo
                             </p>
                           </div>
                         </div>
@@ -1174,11 +1174,11 @@ export default function CreateOrganizationPage() {
                       {loadingBrands ? (
                         <div className="flex items-center gap-2 py-3 text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
                           <Loader2 className="h-4 w-4 animate-spin text-[#1f7f9b]" />
-                          Carregando marcas ativas do distribuidor...
+                          Carregando marcas ativas do catálogo...
                         </div>
                       ) : availableBrands.inverters.length === 0 ? (
                         <p className="py-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 italic">
-                          Todas as marcas homologadas do distribuidor serão cotadas por padrão.
+                          Todas as marcas homologadas serão cotadas por padrão.
                         </p>
                       ) : (
                         <div className="flex flex-wrap gap-2 pt-1">
@@ -1216,7 +1216,7 @@ export default function CreateOrganizationPage() {
                       <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
                         {selectedInverterBrands.length > 0
                           ? `${selectedInverterBrands.length} marca(s) selecionada(s) para priorização em orçamentos.`
-                          : "Se nenhuma marca for marcada, todas as marcas disponíveis no distribuidor serão cotadas normalmente."}
+                          : "Se nenhuma marca for marcada, todas as marcas disponíveis no catálogo serão cotadas normalmente."}
                       </p>
                     </div>
 
@@ -1396,7 +1396,7 @@ export default function CreateOrganizationPage() {
                             As estimativas de geração e propostas da EnergivIA têm caráter comercial
                             preliminar. A responsabilidade técnica, vistoria presencial no local,
                             validação estrutural/elétrica e emissão de ART/TRT perante a
-                            distribuidora são exclusivas do integrador credenciado.
+                            concessionária são exclusivas do integrador credenciado.
                           </p>
                         </div>
                       </div>
@@ -1567,7 +1567,7 @@ export default function CreateOrganizationPage() {
                 As simulações geradas pela ENERGIVIA LTDA são exclusivamente estimativas
                 preliminares. Não substitui vistoria presencial, análise estrutural ou projeto
                 elétrico executivo, nem supre a necessidade de recolhimento de ART/TRT perante
-                CREA/CFT e distribuidoras de energia.
+                CREA/CFT e concessionárias de energia.
               </p>
             </section>
 
@@ -1607,10 +1607,10 @@ export default function CreateOrganizationPage() {
               </h4>
               <p>
                 A ENERGIVIA LTDA não vende equipamentos, não mantém estoque e não realiza logística,
-                sendo isenta de solidariedade por vícios ou atrasos de distribuidores terceiros
-                (Art. 18, CDC). Na LGPD, o Integrador atua como Controlador dos dados do cliente
-                final (faturas e contatos), e a EnergivIA como Operadora técnica com ambiente
-                seguro.
+                sendo isenta de solidariedade por vícios ou atrasos de fornecedores ou fabricantes
+                terceiros (Art. 18, CDC). Na LGPD, o Integrador atua como Controlador dos dados do
+                cliente final (faturas e contatos), e a EnergivIA como Operadora técnica com
+                ambiente seguro.
               </p>
             </section>
 

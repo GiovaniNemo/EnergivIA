@@ -392,7 +392,7 @@ export function ProposalEquipmentEditorCard({
 
   async function save(): Promise<void> {
     if (!distributorId) {
-      setSaveError("Selecione um distribuidor antes de salvar.");
+      setSaveError("Selecione um catálogo ou estoque antes de salvar.");
       return;
     }
     if (lines.length === 0) {
@@ -401,7 +401,7 @@ export function ProposalEquipmentEditorCard({
     }
     if (lines.some((l) => l.unavailable)) {
       setSaveError(
-        `Existem ${unavailableCount} item(ns) sem oferta no distribuidor selecionado — substitua ou remova antes de salvar.`
+        `Existem ${unavailableCount} item(ns) indisponíveis no momento — substitua ou remova antes de salvar.`
       );
       return;
     }
@@ -428,7 +428,7 @@ export function ProposalEquipmentEditorCard({
         <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-3.5 py-2.5">
           <p className="text-xs font-medium text-[var(--color-foreground)]">
             {line.unavailable ? "Substituir" : "Trocar"} {humanizeCategory(line.categoryName)} —
-            produtos deste distribuidor
+            produtos disponíveis
           </p>
           <button
             type="button"
@@ -459,7 +459,7 @@ export function ProposalEquipmentEditorCard({
             <div className="max-h-64 overflow-y-auto rounded-lg border border-[var(--color-border)]">
               {swapOptions.length === 0 ? (
                 <p className="px-3 py-4 text-center text-xs text-[var(--color-muted-foreground)]">
-                  Nenhum produto encontrado nessa categoria neste distribuidor.
+                  Nenhum produto encontrado nessa categoria no catálogo.
                 </p>
               ) : (
                 swapOptions.map((opt) => {
@@ -549,9 +549,9 @@ export function ProposalEquipmentEditorCard({
               Kit da proposta
             </h2>
             <p className="mt-1 max-w-xl text-xs text-[var(--color-muted-foreground)]">
-              Troque distribuidor, itens ou quantidades. Ao salvar, o valor comercial é recalculado
-              e um <span className="font-medium">novo link público</span> é gerado — o anterior
-              deixa de funcionar.
+              Ajuste itens, marcas ou quantidades. Ao salvar, o valor comercial é recalculado e um{" "}
+              <span className="font-medium">novo link público</span> é gerado — o anterior deixa de
+              funcionar.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -727,7 +727,7 @@ export function ProposalEquipmentEditorCard({
                               <span className="mt-0.5 block text-[0.7rem] font-normal">
                                 <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-red-700 dark:text-red-300">
                                   <AlertTriangle className="h-3 w-3" />
-                                  Indisponível neste distribuidor
+                                  Indisponível no momento
                                 </span>{" "}
                                 <button
                                   type="button"

@@ -373,7 +373,7 @@ function createUsinasProposalDocument(clientName = "Fábrica Horizonte"): Propos
         {
           title: "Engenharia & Especificações",
           solutionName: "Usina Solar de Solo 185 kWp",
-          text: "<p>Solução turn-key completa incluindo supressão, fundações, subestação e aprovação junto à distribuidora.</p>",
+          text: "<p>Solução turn-key completa incluindo supressão, fundações, subestação e aprovação junto à concessionária.</p>",
           benefits: [
             { id: "u1", text: "Geração anual projetada de 295 MWh", icon: "sun" },
             { id: "u2", text: "Módulos bifaciais com ganho de albedo", icon: "zap" },

@@ -90,7 +90,7 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     quote:
-      "A precisão do cálculo com os kits da distribuidora evita qualquer erro de margem. Fechamos 38% mais contratos no primeiro mês.",
+      "A precisão do dimensionamento automático com os kits solares evita qualquer erro de margem. Fechamos 38% mais contratos no primeiro mês.",
     author: "Thiago Menezes",
     role: "Engenheiro & Integrador",
     company: "EnerVix Engenharia",
@@ -105,7 +105,7 @@ const PARTNERS = [
   "Lumen Engenharia",
   "Voltz Solar",
   "EcoWatt Brasil",
-  "Solarex Distribuidora",
+  "Solarex Energia",
 ];
 
 export function ImpactResultsSection(): JSX.Element {

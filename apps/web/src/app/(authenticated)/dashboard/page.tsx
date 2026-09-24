@@ -500,7 +500,7 @@ export default function DashboardPage(): JSX.Element {
               <span style={{ color: "#388e3c" }}>simulação em segundos</span>
             </h3>
             <p className="mt-1 text-[13px] leading-[1.5] text-[var(--color-muted-foreground)]">
-              A IA lê a fatura, identifica a distribuidora e monta kit + proposta automaticamente.
+              A IA lê a fatura, identifica a concessionária e monta kit + proposta automaticamente.
             </p>
             <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
               {(["PDF", "JPG", "PNG", "HEIC"] as const).map((fmt) => (

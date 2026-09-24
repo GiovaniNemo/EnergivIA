@@ -14,7 +14,7 @@ const tabs = [
   { label: "Produtos", href: "/admin/produtos", icon: <Inventory2OutlinedIcon fontSize="small" /> },
   { label: "Marcas", href: "/admin/marcas", icon: <CategoryOutlinedIcon fontSize="small" /> },
   {
-    label: "Distribuidores",
+    label: "Fornecedores",
     href: "/admin/distribuidores",
     icon: <LocalShippingOutlinedIcon fontSize="small" />,
   },
@@ -74,7 +74,7 @@ export default function AdminLayout({ children }: { children: ReactNode }): JSX.
               Admin · Catálogo
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-              Gerencie produtos, marcas, distribuidores e modelos de template de proposta.
+              Gerencie produtos, marcas, fornecedores e modelos de template de proposta.
             </Typography>
             <Tabs
               value={tabValue}
