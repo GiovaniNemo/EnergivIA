@@ -5,7 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOrganization } from "@/components/providers/organization-provider";
-import { createOrganization, uploadOrganizationLogo } from "@/lib/organizations-api";
+import {
+  createOrganization,
+  uploadOrganizationLogo,
+  getDistributorAvailableBrands,
+} from "@/lib/organizations-api";
 import { triggerWelcomeIntroSplash } from "@/components/layout/welcome-intro-splash";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +56,10 @@ import {
   MapPin,
   Scale,
   ExternalLink,
+  SlidersHorizontal,
+  Sun,
+  Cpu,
+  Check,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 
@@ -125,7 +133,7 @@ const DEFAULT_REFERRAL_SOURCES: ReferralSourceOption[] = [
   },
 ];
 
-const steps = ["Empresa", "Propostas Inteligentes"];
+const steps = ["Empresa", "Perfil do Integrador", "Propostas Inteligentes"];
 const businessSegmentOptions = [
   {
     id: "residencial",
@@ -203,12 +211,13 @@ const OnboardingConnector = styled(StepConnector)(({ theme }) => ({
 }));
 
 function OnboardingStepIcon(props: StepIconProps): JSX.Element {
-  const { active, className, icon } = props;
+  const { active, completed, className, icon } = props;
   const map: Record<string, JSX.Element> = {
     "1": <Building2 className="h-3.5 w-3.5" />,
-    "2": <FileText className="h-3.5 w-3.5" />,
+    "2": <SlidersHorizontal className="h-3.5 w-3.5" />,
+    "3": <FileText className="h-3.5 w-3.5" />,
   };
-  const isOnPath = active || Number(icon) < 2;
+  const isOnPath = Boolean(active || completed);
   return (
     <div
       className={[
@@ -261,8 +270,19 @@ export default function CreateOrganizationPage() {
   const [templateTone, setTemplateTone] = useState("Comercial");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [direction, setDirection] = useState<1 | -1>(1);
+  const [defaultKwpRate, setDefaultKwpRate] = useState<number>(2800);
+  const [availableBrands, setAvailableBrands] = useState<{
+    modules: string[];
+    inverters: string[];
+  }>({
+    modules: [],
+    inverters: [],
+  });
+  const [loadingBrands, setLoadingBrands] = useState(false);
+  const [selectedModuleBrands, setSelectedModuleBrands] = useState<string[]>([]);
+  const [selectedInverterBrands, setSelectedInverterBrands] = useState<string[]>([]);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -272,6 +292,18 @@ export default function CreateOrganizationPage() {
   const segmentRef = useRef<HTMLButtonElement | null>(null);
   const lastSearchedCnpj = useRef<string>("");
   const lastSearchedCep = useRef<string>("");
+
+  useEffect(() => {
+    setLoadingBrands(true);
+    getDistributorAvailableBrands()
+      .then((data) => {
+        if (data && (data.modules?.length || data.inverters?.length)) {
+          setAvailableBrands(data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingBrands(false));
+  }, []);
 
   useEffect(() => {
     fetch("/api/system/referral-sources")
@@ -414,6 +446,10 @@ export default function CreateOrganizationPage() {
         templateRegion: cityState.trim() || undefined,
         referralSource: (selectedSourceOption?.label ?? selectedReferralSource.trim()) || undefined,
         referredBy: referredBy.trim() || undefined,
+        defaultKwpRate: defaultKwpRate ? Number(defaultKwpRate) : 2800,
+        preferredModuleBrands: selectedModuleBrands.length > 0 ? selectedModuleBrands : undefined,
+        preferredInverterBrands:
+          selectedInverterBrands.length > 0 ? selectedInverterBrands : undefined,
         ...(skipTemplateStep
           ? {}
           : {
@@ -437,35 +473,48 @@ export default function CreateOrganizationPage() {
   };
 
   const goNext = () => {
-    if (cnpj.replace(/\D/g, "").length !== 14) {
-      setError("Informe um CNPJ válido com 14 dígitos.");
+    if (step === 1) {
+      if (cnpj.replace(/\D/g, "").length !== 14) {
+        setError("Informe um CNPJ válido com 14 dígitos.");
+        return;
+      }
+      if (!name.trim()) {
+        setError("Informe o nome da empresa.");
+        return;
+      }
+      if (!selectedReferralSource) {
+        setError("Selecione como você conheceu a EnergivIA.");
+        return;
+      }
+      if (selectedSourceOption?.requiresDetails && !referredBy.trim()) {
+        setError(
+          selectedSourceOption.id === "indicacao-amigo"
+            ? "Informe quem recomendou a EnergivIA para você."
+            : "Por favor, preencha os detalhes da indicação/origem."
+        );
+        return;
+      }
+      setError(null);
+      setDirection(1);
+      setStep(2);
       return;
     }
-    if (!name.trim()) {
-      setError("Informe o nome da empresa.");
+    if (step === 2) {
+      setError(null);
+      setDirection(1);
+      setStep(3);
       return;
     }
-    if (!selectedReferralSource) {
-      setError("Selecione como você conheceu a EnergivIA.");
-      return;
-    }
-    if (selectedSourceOption?.requiresDetails && !referredBy.trim()) {
-      setError(
-        selectedSourceOption.id === "indicacao-amigo"
-          ? "Informe quem recomendou a EnergivIA para você."
-          : "Por favor, preencha os detalhes da indicação/origem."
-      );
-      return;
-    }
-    setError(null);
-    setDirection(1);
-    setStep(2);
   };
 
   const goBack = () => {
     setError(null);
     setDirection(-1);
-    setStep(1);
+    if (step === 3) {
+      setStep(2);
+    } else if (step === 2) {
+      setStep(1);
+    }
   };
 
   const handleLogoUpload = async (file: File) => {
@@ -675,12 +724,16 @@ export default function CreateOrganizationPage() {
               <h1 className="text-[25px] font-bold tracking-tight text-[#0A4A63] lg:text-[27px]">
                 {step === 1
                   ? "Configure o perfil da sua empresa"
-                  : "Personalize suas propostas inteligentes"}
+                  : step === 2
+                    ? "Defina seu perfil comercial & marcas preferidas"
+                    : "Personalize suas propostas inteligentes"}
               </h1>
               <p className="mx-auto max-w-[620px] text-[14px] font-medium leading-relaxed text-[var(--color-muted-foreground)]">
                 {step === 1
                   ? "Informe seu CNPJ para personalizarmos suas propostas comerciais em poucos segundos."
-                  : "Agora vamos personalizar suas propostas para o seu tipo de cliente."}
+                  : step === 2
+                    ? "Defina o valor base de venda por kWp na sua região e selecione as marcas do distribuidor para suas cotações."
+                    : "Agora vamos personalizar suas propostas para o seu tipo de cliente."}
               </p>
             </div>
 
@@ -913,15 +966,300 @@ export default function CreateOrganizationPage() {
                   </div>
                 </div>
 
+                {/* ETAPA 2: PERFIL DO INTEGRADOR & PRECIFICAÇÃO */}
                 <div
                   className={`transition-all duration-300 ${
                     step === 2
                       ? "relative pointer-events-auto visible translate-x-0 opacity-100"
-                      : direction > 0
+                      : step < 2
                         ? "absolute inset-0 pointer-events-none invisible translate-x-6 opacity-0"
                         : "absolute inset-0 pointer-events-none invisible -translate-x-6 opacity-0"
                   }`}
                   aria-hidden={step !== 2}
+                >
+                  <div className="space-y-4 pt-1.5">
+                    {/* Card Preço por kWp */}
+                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1f7f9b]/10 text-[#0A4A63]">
+                            <Zap className="h-4 w-4" />
+                          </span>
+                          <div>
+                            <h3 className="text-sm font-semibold text-zinc-900">
+                              Preço Padrão de Venda por kWp
+                            </h3>
+                            <p className="text-xs text-zinc-500">
+                              Valor base praticado pela sua empresa na sua região
+                            </p>
+                          </div>
+                        </div>
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200">
+                          Padrão: R$ 2.800/kWp
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 pt-1">
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-500">
+                            R$
+                          </span>
+                          <input
+                            type="number"
+                            min={1000}
+                            max={15000}
+                            step={50}
+                            value={defaultKwpRate || ""}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              setDefaultKwpRate(isNaN(val) ? 2800 : val);
+                            }}
+                            placeholder="2800"
+                            className="w-full rounded-lg border border-zinc-300 bg-white py-2.5 pl-10 pr-16 text-sm font-medium text-zinc-900 shadow-sm focus:border-[#1f7f9b] focus:outline-none focus:ring-1 focus:ring-[#1f7f9b]"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-zinc-500">
+                            / kWp
+                          </span>
+                        </div>
+
+                        {/* Presets rápidos */}
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <span className="text-xs text-zinc-500 font-medium">
+                            Valores rápidos:
+                          </span>
+                          {[2500, 2800, 3000, 3300, 3600].map((rate) => (
+                            <button
+                              key={rate}
+                              type="button"
+                              onClick={() => setDefaultKwpRate(rate)}
+                              className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                                defaultKwpRate === rate
+                                  ? "bg-[#1f7f9b] text-white shadow-sm"
+                                  : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                              }`}
+                            >
+                              R$ {rate.toLocaleString("pt-BR")}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[11.5px] leading-relaxed text-zinc-500">
+                          Este valor servirá como sugestão inicial automática para precificar suas
+                          propostas e kits solares. Você pode ajustar pontualmente em cada proposta
+                          ou alterar nas configurações.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Card Marcas de Módulos */}
+                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+                            <Sun className="h-4 w-4" />
+                          </span>
+                          <div>
+                            <h3 className="text-sm font-semibold text-zinc-900">
+                              Preferência de Marcas de Módulos
+                            </h3>
+                            <p className="text-xs text-zinc-500">
+                              Marcas ativas no catálogo do distribuidor
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (selectedModuleBrands.length === availableBrands.modules.length) {
+                                setSelectedModuleBrands([]);
+                              } else {
+                                setSelectedModuleBrands([...availableBrands.modules]);
+                              }
+                            }}
+                            className="text-[11px] font-semibold text-[#1f7f9b] hover:underline cursor-pointer"
+                          >
+                            {selectedModuleBrands.length === availableBrands.modules.length
+                              ? "Limpar"
+                              : "Selecionar todas"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {loadingBrands ? (
+                        <div className="flex items-center gap-2 py-3 text-xs text-zinc-500">
+                          <Loader2 className="h-4 w-4 animate-spin text-[#1f7f9b]" />
+                          Carregando marcas ativas do distribuidor...
+                        </div>
+                      ) : availableBrands.modules.length === 0 ? (
+                        <p className="py-2 text-xs text-zinc-500 italic">
+                          Todas as marcas homologadas do distribuidor serão cotadas por padrão.
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {availableBrands.modules.map((brand) => {
+                            const isSelected = selectedModuleBrands.includes(brand);
+                            return (
+                              <button
+                                key={brand}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedModuleBrands((prev) =>
+                                    prev.includes(brand)
+                                      ? prev.filter((b) => b !== brand)
+                                      : [...prev, brand]
+                                  );
+                                }}
+                                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
+                                  isSelected
+                                    ? "border-[#1f7f9b] bg-[#1f7f9b]/10 text-[#0A4A63] shadow-sm font-semibold"
+                                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
+                                }`}
+                              >
+                                {isSelected ? (
+                                  <Check className="h-3.5 w-3.5 text-[#1f7f9b]" />
+                                ) : (
+                                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-300" />
+                                )}
+                                <span>{brand}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      <p className="text-[11px] text-zinc-500">
+                        {selectedModuleBrands.length > 0
+                          ? `${selectedModuleBrands.length} marca(s) selecionada(s) para priorização em orçamentos.`
+                          : "Se nenhuma marca for marcada, todas as marcas disponíveis no distribuidor serão cotadas normalmente."}
+                      </p>
+                    </div>
+
+                    {/* Card Marcas de Inversores */}
+                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600">
+                            <Cpu className="h-4 w-4" />
+                          </span>
+                          <div>
+                            <h3 className="text-sm font-semibold text-zinc-900">
+                              Preferência de Marcas de Inversores
+                            </h3>
+                            <p className="text-xs text-zinc-500">
+                              Inversores e microinversores disponíveis no distribuidor
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (
+                                selectedInverterBrands.length === availableBrands.inverters.length
+                              ) {
+                                setSelectedInverterBrands([]);
+                              } else {
+                                setSelectedInverterBrands([...availableBrands.inverters]);
+                              }
+                            }}
+                            className="text-[11px] font-semibold text-[#1f7f9b] hover:underline cursor-pointer"
+                          >
+                            {selectedInverterBrands.length === availableBrands.inverters.length
+                              ? "Limpar"
+                              : "Selecionar todas"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {loadingBrands ? (
+                        <div className="flex items-center gap-2 py-3 text-xs text-zinc-500">
+                          <Loader2 className="h-4 w-4 animate-spin text-[#1f7f9b]" />
+                          Carregando marcas ativas do distribuidor...
+                        </div>
+                      ) : availableBrands.inverters.length === 0 ? (
+                        <p className="py-2 text-xs text-zinc-500 italic">
+                          Todas as marcas homologadas do distribuidor serão cotadas por padrão.
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {availableBrands.inverters.map((brand) => {
+                            const isSelected = selectedInverterBrands.includes(brand);
+                            return (
+                              <button
+                                key={brand}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedInverterBrands((prev) =>
+                                    prev.includes(brand)
+                                      ? prev.filter((b) => b !== brand)
+                                      : [...prev, brand]
+                                  );
+                                }}
+                                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
+                                  isSelected
+                                    ? "border-[#1f7f9b] bg-[#1f7f9b]/10 text-[#0A4A63] shadow-sm font-semibold"
+                                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
+                                }`}
+                              >
+                                {isSelected ? (
+                                  <Check className="h-3.5 w-3.5 text-[#1f7f9b]" />
+                                ) : (
+                                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-300" />
+                                )}
+                                <span>{brand}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      <p className="text-[11px] text-zinc-500">
+                        {selectedInverterBrands.length > 0
+                          ? `${selectedInverterBrands.length} marca(s) selecionada(s) para priorização em orçamentos.`
+                          : "Se nenhuma marca for marcada, todas as marcas disponíveis no distribuidor serão cotadas normalmente."}
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]/70 p-3">
+                      <p className="text-xs font-semibold text-[var(--color-foreground)]">
+                        Flexibilidade Total
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+                        Essas configurações podem ser editadas a qualquer momento no menu{" "}
+                        <strong>Gestão &gt; Perfil do Integrador</strong>.
+                      </p>
+                    </div>
+
+                    {error && (
+                      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 shrink-0" />
+                        <span>{error}</span>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-2 border-t border-[var(--color-border)] pt-3 sm:flex-row">
+                      <Button type="button" variant="outline" className="w-full" onClick={goBack}>
+                        Voltar
+                      </Button>
+                      <Button
+                        type="button"
+                        className="w-full bg-[linear-gradient(90deg,#1b5e7c_0%,#1f7f9b_55%,#39d3bf_100%)] text-white shadow-[0_8px_18px_rgba(31,127,155,0.22)] hover:opacity-95 cursor-pointer"
+                        onClick={goNext}
+                      >
+                        Continuar para Propostas
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ETAPA 3: PROPOSTAS INTELIGENTES & TERMOS */}
+                <div
+                  className={`transition-all duration-300 ${
+                    step === 3
+                      ? "relative pointer-events-auto visible translate-x-0 opacity-100"
+                      : "absolute inset-0 pointer-events-none invisible translate-x-6 opacity-0"
+                  }`}
+                  aria-hidden={step !== 3}
                 >
                   <div className="space-y-3 pt-2">
                     <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-white p-3">

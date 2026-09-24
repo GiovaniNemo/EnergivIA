@@ -1,4 +1,13 @@
-import { IsString, IsOptional, IsBoolean, MinLength, MaxLength, Matches } from "class-validator";
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+  IsArray,
+  MinLength,
+  MaxLength,
+  Matches,
+} from "class-validator";
 
 export class CreateOrganizationDto {
   @IsString()
@@ -72,6 +81,20 @@ export class CreateOrganizationDto {
   @IsString()
   @MaxLength(80)
   templateTone?: string;
+
+  @IsOptional()
+  @IsNumber()
+  defaultKwpRate?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  preferredModuleBrands?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  preferredInverterBrands?: string[];
 
   @IsOptional()
   @IsString()

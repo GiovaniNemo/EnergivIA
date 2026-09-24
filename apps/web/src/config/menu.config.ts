@@ -24,6 +24,7 @@ import {
   CreditCard,
   Crown,
   Compass,
+  SlidersHorizontal,
 } from "lucide-react";
 
 export type SidebarSectionKey = "operation" | "management" | "admin" | "platform";
@@ -107,6 +108,14 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/configuracoes/custos-projeto",
     section: "management",
     tooltip: "Regras de custo (fixo, % ou por kWp) e faixas de potência",
+    requiresRole: "admin",
+  },
+  {
+    label: "Perfil do Integrador",
+    icon: SlidersHorizontal,
+    path: "/gestao/perfil-integrador",
+    section: "management",
+    tooltip: "Preferências de marcas de módulos, inversores e valor base por kWp",
     requiresRole: "admin",
   },
   {

@@ -1,4 +1,12 @@
-import { IsString, IsOptional, MinLength, MaxLength, Matches } from "class-validator";
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsArray,
+  MinLength,
+  MaxLength,
+  Matches,
+} from "class-validator";
 
 export class UpdateOrganizationDto {
   @IsOptional()
@@ -38,6 +46,20 @@ export class UpdateOrganizationDto {
   @IsString()
   @MaxLength(80)
   templateTone?: string;
+
+  @IsOptional()
+  @IsNumber()
+  defaultKwpRate?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  preferredModuleBrands?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  preferredInverterBrands?: string[];
 
   @IsOptional()
   @IsString()

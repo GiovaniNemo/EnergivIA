@@ -57,4 +57,67 @@ export class BrandsService {
     }
     await this.prisma.brand.delete({ where: { id } });
   }
+
+  async getDistributorAvailable(): Promise<{ modules: string[]; inverters: string[] }> {
+    const distProds = await this.prisma.distributorProduct.findMany({
+      where: {
+        product: {
+          active: true,
+        },
+      },
+      select: {
+        product: {
+          select: {
+            brand: { select: { name: true } },
+            category: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    const isGeneric = (name: string) => {
+      const lower = name.toLowerCase().trim();
+      return (
+        lower === "genérico" || lower === "generico" || lower === "genérica" || lower === "generica"
+      );
+    };
+
+    const modulesSet = new Set<string>();
+    const invertersSet = new Set<string>();
+
+    for (const dp of distProds) {
+      const brandName = dp.product?.brand?.name?.trim();
+      const cat = dp.product?.category?.name?.trim().toLowerCase();
+      if (!brandName || isGeneric(brandName)) continue;
+
+      if (cat === "module") {
+        modulesSet.add(brandName);
+      } else if (cat === "inverter" || cat === "microinverter" || cat === "hybrid_inverter") {
+        invertersSet.add(brandName);
+      }
+    }
+
+    if (modulesSet.size === 0 || invertersSet.size === 0) {
+      const activeProds = await this.prisma.product.findMany({
+        where: { active: true },
+        select: {
+          brand: { select: { name: true } },
+          category: { select: { name: true } },
+        },
+      });
+      for (const p of activeProds) {
+        const brandName = p.brand?.name?.trim();
+        const cat = p.category?.name?.trim().toLowerCase();
+        if (!brandName || isGeneric(brandName)) continue;
+        if (cat === "module") modulesSet.add(brandName);
+        else if (cat === "inverter" || cat === "microinverter" || cat === "hybrid_inverter")
+          invertersSet.add(brandName);
+      }
+    }
+
+    return {
+      modules: Array.from(modulesSet).sort((a, b) => a.localeCompare(b)),
+      inverters: Array.from(invertersSet).sort((a, b) => a.localeCompare(b)),
+    };
+  }
 }

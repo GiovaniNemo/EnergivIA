@@ -5,11 +5,16 @@ import { UpdateBrandDto } from "./dto/update-brand.dto";
 
 @Controller("brands")
 export class BrandsController {
-  constructor(private readonly brandsService: BrandsService) { }
+  constructor(private readonly brandsService: BrandsService) {}
 
   @Get()
   findAll() {
     return this.brandsService.findAll();
+  }
+
+  @Get("distributor-available")
+  getDistributorAvailable() {
+    return this.brandsService.getDistributorAvailable();
   }
 
   @Get(":id")

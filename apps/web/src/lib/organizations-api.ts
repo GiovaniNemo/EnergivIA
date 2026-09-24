@@ -30,6 +30,9 @@ export interface Organization {
   createdAt: string;
   role?: string;
   membershipId?: string;
+  defaultKwpRate?: number | null;
+  preferredModuleBrands?: string[];
+  preferredInverterBrands?: string[];
   subscription?: {
     status: string;
     planId: string;
@@ -199,6 +202,9 @@ export async function createOrganization(data: {
   templateRegion?: string;
   templateValueProposition?: string;
   templateTone?: string;
+  defaultKwpRate?: number;
+  preferredModuleBrands?: string[];
+  preferredInverterBrands?: string[];
   referralSource?: string;
   referredBy?: string;
   termsAccepted?: boolean;
@@ -264,6 +270,19 @@ export async function getOrganization(id: string, organizationId?: string): Prom
   return res.json();
 }
 
+export interface DistributorAvailableBrands {
+  modules: string[];
+  inverters: string[];
+}
+
+export async function getDistributorAvailableBrands(): Promise<DistributorAvailableBrands> {
+  const res = await apiProxy("GET", "/brands/distributor-available");
+  if (!res.ok) {
+    return { modules: [], inverters: [] };
+  }
+  return res.json();
+}
+
 export async function updateOrganization(
   id: string,
   data: {
@@ -281,6 +300,9 @@ export async function updateOrganization(
     templateRegion?: string;
     templateValueProposition?: string;
     templateTone?: string;
+    defaultKwpRate?: number;
+    preferredModuleBrands?: string[];
+    preferredInverterBrands?: string[];
   },
   organizationId?: string
 ): Promise<Organization> {

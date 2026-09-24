@@ -109,6 +109,26 @@ function readOptionalSetting(settings: unknown, key: string): string | null {
   return typeof raw === "string" && raw.trim() ? raw : null;
 }
 
+function readNumberSetting(settings: unknown, key: string): number | null {
+  if (!settings || typeof settings !== "object") return null;
+  const raw = (settings as Record<string, unknown>)[key];
+  if (typeof raw === "number" && !isNaN(raw)) return raw;
+  if (typeof raw === "string" && raw.trim()) {
+    const num = Number(raw.replace(/[^\d.-]/g, ""));
+    return isNaN(num) ? null : num;
+  }
+  return null;
+}
+
+function readStringArraySetting(settings: unknown, key: string): string[] {
+  if (!settings || typeof settings !== "object") return [];
+  const raw = (settings as Record<string, unknown>)[key];
+  if (Array.isArray(raw)) {
+    return raw.map((item) => String(item).trim()).filter(Boolean);
+  }
+  return [];
+}
+
 function buildTemplateSettings(dto: {
   templateBusinessSegment?: string;
   templateRegion?: string;
@@ -279,6 +299,13 @@ export class OrganizationsService {
           ...(dto.city ? { city: dto.city.trim() } : {}),
           ...(dto.state ? { state: dto.state.trim() } : {}),
           ...templateSettings,
+          ...(dto.defaultKwpRate !== undefined ? { defaultKwpRate: dto.defaultKwpRate } : {}),
+          ...(dto.preferredModuleBrands
+            ? { preferredModuleBrands: dto.preferredModuleBrands }
+            : {}),
+          ...(dto.preferredInverterBrands
+            ? { preferredInverterBrands: dto.preferredInverterBrands }
+            : {}),
           referralSource: dto.referralSource?.trim() || null,
           referredBy: dto.referredBy?.trim() || null,
           termsAccepted: dto.termsAccepted ?? true,
@@ -503,6 +530,15 @@ export class OrganizationsService {
           "templateValueProposition"
         ),
         templateTone: readOptionalSetting(organization.settings, "templateTone"),
+        defaultKwpRate: readNumberSetting(organization.settings, "defaultKwpRate"),
+        preferredModuleBrands: readStringArraySetting(
+          organization.settings,
+          "preferredModuleBrands"
+        ),
+        preferredInverterBrands: readStringArraySetting(
+          organization.settings,
+          "preferredInverterBrands"
+        ),
         role: m.role,
         membershipId: m.id,
         subscription: organization.subscription,
@@ -537,6 +573,9 @@ export class OrganizationsService {
       templateRegion: readOptionalSetting(org.settings, "templateRegion"),
       templateValueProposition: readOptionalSetting(org.settings, "templateValueProposition"),
       templateTone: readOptionalSetting(org.settings, "templateTone"),
+      defaultKwpRate: readNumberSetting(org.settings, "defaultKwpRate"),
+      preferredModuleBrands: readStringArraySetting(org.settings, "preferredModuleBrands"),
+      preferredInverterBrands: readStringArraySetting(org.settings, "preferredInverterBrands"),
       role: membership.role,
     };
   }
@@ -673,6 +712,15 @@ export class OrganizationsService {
       ...(dto.templateTone !== undefined && {
         templateTone: dto.templateTone.trim() || null,
       }),
+      ...(dto.defaultKwpRate !== undefined && {
+        defaultKwpRate: dto.defaultKwpRate,
+      }),
+      ...(dto.preferredModuleBrands !== undefined && {
+        preferredModuleBrands: dto.preferredModuleBrands,
+      }),
+      ...(dto.preferredInverterBrands !== undefined && {
+        preferredInverterBrands: dto.preferredInverterBrands,
+      }),
     };
 
     const org = await this.prisma.tenant.update({
@@ -691,7 +739,10 @@ export class OrganizationsService {
           dto.templateBusinessSegment !== undefined ||
           dto.templateRegion !== undefined ||
           dto.templateValueProposition !== undefined ||
-          dto.templateTone !== undefined) && { settings: nextSettings }),
+          dto.templateTone !== undefined ||
+          dto.defaultKwpRate !== undefined ||
+          dto.preferredModuleBrands !== undefined ||
+          dto.preferredInverterBrands !== undefined) && { settings: nextSettings }),
       },
     });
     return {
@@ -708,6 +759,9 @@ export class OrganizationsService {
       templateRegion: readOptionalSetting(org.settings, "templateRegion"),
       templateValueProposition: readOptionalSetting(org.settings, "templateValueProposition"),
       templateTone: readOptionalSetting(org.settings, "templateTone"),
+      defaultKwpRate: readNumberSetting(org.settings, "defaultKwpRate"),
+      preferredModuleBrands: readStringArraySetting(org.settings, "preferredModuleBrands"),
+      preferredInverterBrands: readStringArraySetting(org.settings, "preferredInverterBrands"),
     };
   }
 

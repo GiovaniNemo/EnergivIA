@@ -77,6 +77,7 @@ import {
   tryCopyPdfWithoutEncryption,
 } from "@/lib/bill-pdf-client";
 import type { Deal, DealStage } from "@/app/(authenticated)/pipeline/use-deals";
+import { useOrganization } from "@/components/providers/organization-provider";
 import { listCostRules, type CostRuleRow } from "@/lib/cost-rules-api";
 import {
   generateDistributorTiers,
@@ -545,6 +546,7 @@ export const ProposalEconomicsModal = forwardRef<
   ProposalEconomicsModalProps
 >(function ProposalEconomicsModal({ organizationId, sync: syncProp, onBusyChange }, ref) {
   const router = useRouter();
+  const { currentOrganization } = useOrganization();
   const currentOrganizationId = organizationId;
   const sync = syncProp ?? proposalStudyBridge.getPipelineHooks();
   const [proposalDeal, setProposalDeal] = useState<Deal | null>(null);
@@ -708,7 +710,15 @@ export const ProposalEconomicsModal = forwardRef<
   const [proposalCreateLoading, setProposalCreateLoading] = useState(false);
   const [proposalCreateError, setProposalCreateError] = useState<string | null>(null);
   const [_quotingMode, _setQuotingMode] = useState<"kwp_rate" | "distributor">("kwp_rate");
-  const [kwpRateValue, setKwpRateValue] = useState<number>(2800);
+  const [kwpRateValue, setKwpRateValue] = useState<number>(
+    () => currentOrganization?.defaultKwpRate ?? 2800
+  );
+
+  useEffect(() => {
+    if (currentOrganization?.defaultKwpRate && currentOrganization.defaultKwpRate > 0) {
+      setKwpRateValue((prev) => (prev === 2800 ? currentOrganization.defaultKwpRate! : prev));
+    }
+  }, [currentOrganization?.defaultKwpRate]);
 
   const [distributorTiers, setDistributorTiers] = useState<DistributorTierKit[] | null>(null);
   const [selectedDistributorTierId, setSelectedDistributorTierId] = useState<
