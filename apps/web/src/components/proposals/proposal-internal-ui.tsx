@@ -934,11 +934,11 @@ export function ProposalKwpRateBusinessCard({
         <div className="space-y-1">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5" />
-            Visão de negócio · Turnkey
+            Visão de negócio · Preço por kWp
           </p>
           <CardTitle className="text-lg font-semibold">Precificação por kWp</CardTitle>
           <CardDescription className="text-xs">
-            Modelo chave na mão: equipamentos, engenharia, instalação e margem unificados.
+            Modelo unificado: equipamentos, engenharia, instalação e margem inclusos.
           </CardDescription>
         </div>
         <Button
@@ -961,7 +961,7 @@ export function ProposalKwpRateBusinessCard({
         <div className="flex flex-wrap items-end justify-between gap-2 border-b border-[var(--color-border)]/70 pb-3">
           <div>
             <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
-              Taxa aplicada
+              Preço por kWp
             </p>
             <p className="mt-0.5 text-3xl font-bold tabular-nums sm:text-4xl text-emerald-600 dark:text-emerald-400">
               {hideSensitiveValues ? "••••" : `${formatBRL(ratePerKwp)}/kWp`}
@@ -1028,7 +1028,7 @@ export function ProposalKwpRateBusinessCard({
               : "Composição montada no Perfil do Integrador"}
           </span>
           <span className="font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
-            Turnkey completo
+            Solução completa
           </span>
         </div>
       </CardContent>

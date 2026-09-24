@@ -29,7 +29,7 @@ RESPOSTAS ÀS OPÇÕES DO MENU INICIAL (1 a 6):
   "Excelente! ☀️ Qual a potência de pico desejada para o sistema solar? (Exemplo: digite 5 kWp ou 7.5 kWp)"
 - Opção 4 (ou "quantidade de placas" / "placas"):
   "Ótimo! 🔌 Quantas placas solares você deseja no kit e qual a potência delas? (Exemplo: digite 10 placas de 590W ou 12 módulos)"
-- Opção 5 (ou "preço por kwp" / "kwp da regiao" / "chave na mao"):
+- Opção 5 (ou "preço por kwp" / "kwp da regiao" / "sistema completo"):
   "Excelente! ⚡ Na cotação por R$/kWp você usa o valor instalado da sua região com kits completos (Inversor, Módulos, Estrutura, Cabos e Conectores) e mão de obra inclusa.
   
 Qual é o consumo médio mensal do seu cliente em kWh ou a potência desejada em kWp? (Exemplo: digite 450 kWh ou 5 kWp)"
