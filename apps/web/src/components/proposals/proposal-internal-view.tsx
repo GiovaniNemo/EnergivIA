@@ -43,6 +43,7 @@ import {
   ProposalCollapsibleProducts,
   ProposalEquipmentSummaryCard,
   ProposalInternalHeader,
+  ProposalKwpRateBusinessCard,
   ProposalSalesHeroCard,
 } from "@/components/proposals/proposal-internal-ui";
 import { ProposalEquipmentEditorCard } from "@/components/proposals/proposal-equipment-editor-card";
@@ -240,6 +241,44 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
     productLineCount > 0
       ? integrator!.kitItems.reduce((s, i) => s + i.quantity, 0)
       : componentFallback.reduce((s, c) => s + c.quantity, 0);
+
+  const isKwpRate = useMemo(() => {
+    if (integrator?.sourceType === "kwp_rate") return true;
+    if (proposal?.title?.toLowerCase().includes("kwp")) return true;
+    if (integrator?.notes?.toLowerCase().includes("kwp")) return true;
+    if (
+      integrator &&
+      integrator.equipmentSubtotalBrl > 0 &&
+      integrator.equipmentSubtotalBrl === integrator.quotedSaleBrl &&
+      (!integrator.projectCostLines || integrator.projectCostLines.length === 0)
+    ) {
+      return true;
+    }
+    return false;
+  }, [integrator, proposal?.title]);
+
+  const systemKw = integrator?.systemPowerKw ?? proposal?.simulation.input.systemSizeKw ?? 0;
+  const ratePerKwp = useMemo(() => {
+    if (systemKw > 0 && quotedSale > 0) {
+      return Math.round(quotedSale / systemKw);
+    }
+    return 2800;
+  }, [systemKw, quotedSale]);
+
+  const monthlyGenerationKwh = Math.round(systemKw * 130);
+  const moduleQuantity =
+    integrator?.kitItems.find(
+      (i) =>
+        i.categoryName === "module" ||
+        i.productName.toLowerCase().includes("módulo") ||
+        i.productName.toLowerCase().includes("painel")
+    )?.quantity ?? null;
+  const inverterItem = integrator?.kitItems.find(
+    (i) =>
+      i.categoryName === "inverter" ||
+      i.categoryName === "microinverter" ||
+      i.productName.toLowerCase().includes("inversor")
+  );
 
   async function downloadInternalPdf(): Promise<void> {
     if (!proposal || !currentOrganizationId) return;
@@ -616,54 +655,68 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
           paybackClassName={paybackToneClass(paybackY)}
           paybackWarning={paybackY > 20}
         />
-        {isOwnerOrAdmin && (
-          <ProposalBusinessHeroCard
-            hasKit={hasEquipmentBreakdown}
-            marginPct={marginPct}
-            marginAppliedBrl={marginAppliedFromRules ?? null}
-            laborAppliedBrl={laborAppliedFromRules ?? null}
-            hasRuleCostBreakdown={hasRuleCostBreakdown}
-            equipmentCost={hasEquipmentBreakdown ? equipmentSubtotal : null}
-            remainderAfterEquipmentBrl={remainderAgg}
-            saleToClient={quotedSale}
-            health={marginHealth}
-            isEditingMargin={isEditingMargin}
-            onEditMarginClick={() => {
-              setIsEditingMarginPct(false);
-              setMarginOverrideDraft(marginAppliedFromRules ?? 0);
-              setIsEditingMargin(true);
-            }}
-            marginOverrideDraft={marginOverrideDraft}
-            onMarginOverrideChange={setMarginOverrideDraft}
-            marginOverrideSaving={marginOverrideSaving}
-            onSaveMarginOverride={() => void saveMarginOverride()}
-            onCancelMarginEdit={() => setIsEditingMargin(false)}
-            isEditingMarginPct={isEditingMarginPct}
-            onEditMarginPctClick={() => {
-              setIsEditingMargin(false);
-              setIsEditingLabor(false);
-              setMarginPctDraft(marginPct !== null ? Math.round(marginPct * 10) / 10 : 20);
-              setIsEditingMarginPct(true);
-            }}
-            marginPctDraft={marginPctDraft}
-            onMarginPctDraftChange={setMarginPctDraft}
-            marginPctSaving={marginPctSaving}
-            onSaveMarginPct={() => void saveMarginPctOverride()}
-            onCancelMarginPctEdit={() => setIsEditingMarginPct(false)}
-            nonMarginBaseCost={nonMarginBaseCost}
-            isEditingLabor={isEditingLabor}
-            onEditLaborClick={() => {
-              setIsEditingMarginPct(false);
-              setLaborOverrideDraft(laborAppliedFromRules ?? 0);
-              setIsEditingLabor(true);
-            }}
-            laborOverrideDraft={laborOverrideDraft}
-            onLaborOverrideChange={setLaborOverrideDraft}
-            laborOverrideSaving={laborOverrideSaving}
-            onSaveLaborOverride={() => void saveLaborOverride()}
-            onCancelLaborEdit={() => setIsEditingLabor(false)}
-          />
-        )}
+        {isOwnerOrAdmin &&
+          (isKwpRate ? (
+            <ProposalKwpRateBusinessCard
+              systemKw={systemKw}
+              ratePerKwp={ratePerKwp}
+              saleToClient={quotedSale}
+              monthlyGenerationKwh={monthlyGenerationKwh}
+              moduleQuantity={moduleQuantity}
+              inverterInfo={
+                inverterItem
+                  ? `${inverterItem.brandName || ""} ${inverterItem.productName}`.trim()
+                  : null
+              }
+            />
+          ) : (
+            <ProposalBusinessHeroCard
+              hasKit={hasEquipmentBreakdown}
+              marginPct={marginPct}
+              marginAppliedBrl={marginAppliedFromRules ?? null}
+              laborAppliedBrl={laborAppliedFromRules ?? null}
+              hasRuleCostBreakdown={hasRuleCostBreakdown}
+              equipmentCost={hasEquipmentBreakdown ? equipmentSubtotal : null}
+              remainderAfterEquipmentBrl={remainderAgg}
+              saleToClient={quotedSale}
+              health={marginHealth}
+              isEditingMargin={isEditingMargin}
+              onEditMarginClick={() => {
+                setIsEditingMarginPct(false);
+                setMarginOverrideDraft(marginAppliedFromRules ?? 0);
+                setIsEditingMargin(true);
+              }}
+              marginOverrideDraft={marginOverrideDraft}
+              onMarginOverrideChange={setMarginOverrideDraft}
+              marginOverrideSaving={marginOverrideSaving}
+              onSaveMarginOverride={() => void saveMarginOverride()}
+              onCancelMarginEdit={() => setIsEditingMargin(false)}
+              isEditingMarginPct={isEditingMarginPct}
+              onEditMarginPctClick={() => {
+                setIsEditingMargin(false);
+                setIsEditingLabor(false);
+                setMarginPctDraft(marginPct !== null ? Math.round(marginPct * 10) / 10 : 20);
+                setIsEditingMarginPct(true);
+              }}
+              marginPctDraft={marginPctDraft}
+              onMarginPctDraftChange={setMarginPctDraft}
+              marginPctSaving={marginPctSaving}
+              onSaveMarginPct={() => void saveMarginPctOverride()}
+              onCancelMarginPctEdit={() => setIsEditingMarginPct(false)}
+              nonMarginBaseCost={nonMarginBaseCost}
+              isEditingLabor={isEditingLabor}
+              onEditLaborClick={() => {
+                setIsEditingMarginPct(false);
+                setLaborOverrideDraft(laborAppliedFromRules ?? 0);
+                setIsEditingLabor(true);
+              }}
+              laborOverrideDraft={laborOverrideDraft}
+              onLaborOverrideChange={setLaborOverrideDraft}
+              laborOverrideSaving={laborOverrideSaving}
+              onSaveLaborOverride={() => void saveLaborOverride()}
+              onCancelLaborEdit={() => setIsEditingLabor(false)}
+            />
+          ))}
       </section>
 
       {regeneratedPublicUrl ? (
@@ -739,7 +792,7 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
       </section>
 
       {isOwnerOrAdmin &&
-      integrator?.sourceType !== "kwp_rate" &&
+      !isKwpRate &&
       integrator?.defaultEssentialCostNames &&
       integrator.defaultEssentialCostNames.length > 0 &&
       !orgCostRulesExist &&
@@ -787,7 +840,7 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
       ) : null}
 
       {isOwnerOrAdmin &&
-      integrator?.sourceType !== "kwp_rate" &&
+      !isKwpRate &&
       integrator?.projectCostLines &&
       integrator.projectCostLines.length > 0 ? (
         <section

@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   Check,
+  CheckCircle2,
   ChevronDown,
   Copy,
   ExternalLink,
@@ -18,6 +19,7 @@ import {
   Loader2,
   MoreVertical,
   Send,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -901,6 +903,134 @@ export function ProposalBusinessHeroCard({
             ) : null}
           </>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export type ProposalKwpRateBusinessCardProps = {
+  systemKw: number;
+  ratePerKwp: number;
+  saleToClient: number;
+  monthlyGenerationKwh?: number | null;
+  moduleQuantity?: number | null;
+  inverterInfo?: string | null;
+};
+
+export function ProposalKwpRateBusinessCard({
+  systemKw,
+  ratePerKwp,
+  saleToClient,
+  monthlyGenerationKwh,
+  moduleQuantity,
+  inverterInfo,
+}: ProposalKwpRateBusinessCardProps): JSX.Element {
+  const [hideSensitiveValues, setHideSensitiveValues] = useState(false);
+
+  return (
+    <Card className="relative flex h-full flex-col overflow-hidden border-[var(--color-border)] bg-[var(--color-card)] shadow-none">
+      <div className="absolute left-0 top-0 h-full w-1 bg-emerald-500" aria-hidden />
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pl-5 pr-5 pt-5">
+        <div className="space-y-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5" />
+            Visão de negócio · Turnkey
+          </p>
+          <CardTitle className="text-lg font-semibold">Precificação por kWp</CardTitle>
+          <CardDescription className="text-xs">
+            Modelo chave na mão: equipamentos, engenharia, instalação e margem unificados.
+          </CardDescription>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+          onClick={() => setHideSensitiveValues((prev) => !prev)}
+          title={
+            hideSensitiveValues ? "Mostrar valores confidenciais" : "Ocultar valores do cliente"
+          }
+          aria-label={
+            hideSensitiveValues ? "Mostrar valores confidenciais" : "Ocultar valores do cliente"
+          }
+        >
+          {hideSensitiveValues ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </Button>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-4 p-5 pt-0 pl-5">
+        <div className="flex flex-wrap items-end justify-between gap-2 border-b border-[var(--color-border)]/70 pb-3">
+          <div>
+            <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
+              Taxa aplicada
+            </p>
+            <p className="mt-0.5 text-3xl font-bold tabular-nums sm:text-4xl text-emerald-600 dark:text-emerald-400">
+              {hideSensitiveValues ? "••••" : `${formatBRL(ratePerKwp)}/kWp`}
+            </p>
+          </div>
+          <div className="flex max-w-[15rem] items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 text-xs text-emerald-700 dark:text-emerald-300">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+            <span className="font-medium leading-tight">
+              Preço fechado ao cliente. Sem regras ou margem duplicada.
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-background)]/50 p-3">
+            <p className="text-[11px] font-medium text-[var(--color-muted-foreground)]">
+              Potência instalada
+            </p>
+            <p className="mt-1 text-base sm:text-lg font-semibold tabular-nums text-[var(--color-foreground)]">
+              {systemKw.toLocaleString("pt-BR", {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 2,
+              })}{" "}
+              kWp
+            </p>
+            {moduleQuantity ? (
+              <p className="text-[11px] text-[var(--color-muted-foreground)] mt-0.5">
+                {moduleQuantity} módulos dimensionados
+              </p>
+            ) : null}
+          </div>
+
+          <div className="rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-background)]/50 p-3">
+            <p className="text-[11px] font-medium text-[var(--color-muted-foreground)]">
+              Geração estimada
+            </p>
+            <p className="mt-1 text-base sm:text-lg font-semibold tabular-nums text-[var(--color-foreground)]">
+              {monthlyGenerationKwh
+                ? `~${monthlyGenerationKwh.toLocaleString("pt-BR")} kWh/mês`
+                : "—"}
+            </p>
+            <p className="text-[11px] text-[var(--color-muted-foreground)] mt-0.5">
+              Média mensal de produção
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/[0.04] p-3">
+            <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+              Valor fechado (cliente)
+            </p>
+            <p className="mt-1 text-base sm:text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+              {hideSensitiveValues ? "R$ •••••" : formatBRL(saleToClient)}
+            </p>
+            <p className="text-[11px] text-emerald-700/80 dark:text-emerald-300/80 mt-0.5">
+              Equipamentos + serviços + margem
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-muted)]/15 px-3.5 py-2.5 text-xs text-[var(--color-muted-foreground)]">
+          <span className="truncate max-w-[22rem]">
+            {inverterInfo
+              ? `Equipamentos: ${inverterInfo}`
+              : "Composição montada no Perfil do Integrador"}
+          </span>
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
+            Turnkey completo
+          </span>
+        </div>
       </CardContent>
     </Card>
   );
