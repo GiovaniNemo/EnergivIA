@@ -1539,13 +1539,21 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         });
       }
 
+      const kitItems = [
+        `• ${moduleQty}x Módulos ${cfg.moduleBrand} ${modulePowerW}W`,
+        `• 1x Inversor ${cfg.inverterBrand} ${invPower}kW`,
+      ];
+      if (roofLabel !== "Sem estrutura") {
+        kitItems.push(`• Estrutura: ${roofLabel}`);
+      }
+
       return {
         distributorName: cfg.distributorName,
         distributorId: cfg.distributorId,
         totalPrice,
         kwp: realSystemKwp,
         estimatedGeneration: Math.round(realSystemKwp * geracaoPorKwp),
-        items: [] as string[],
+        items: kitItems,
         invName: cfg.inverterBrand,
         modCount: moduleQty,
         modName: cfg.moduleBrand,
@@ -1634,6 +1642,20 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
     quotes.forEach((q, index) => {
       quoteText += `${this.numToEmoji(index + 1)} *${q.distributorName}* - R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+      const items: string[] =
+        q.items && q.items.length > 0
+          ? q.items
+          : q.structuredItems && q.structuredItems.length > 0
+            ? q.structuredItems.map(
+                (si: any) => `• ${si.quantity > 1 ? `${si.quantity}x ` : ""}${si.productName}`
+              )
+            : [];
+      if (items.length > 0) {
+        quoteText += `Itens do Kit:\n`;
+        items.forEach((item: string) => {
+          quoteText += `${item}\n`;
+        });
+      }
       quoteText += `Potência: ${q.kwp} kWp | Geração Estimada: ${q.estimatedGeneration} kWh/mês\n\n`;
     });
 
