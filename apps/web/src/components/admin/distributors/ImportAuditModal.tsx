@@ -328,7 +328,12 @@ export function ImportAuditModal({
                   p: 1.75,
                   borderRadius: 2,
                   bgcolor: (t) => (t.palette.mode === "dark" ? "neutral.900" : "grey.50"),
-                  borderColor: (summary?.criticalSpecsCount ?? 0) > 0 ? "error.main" : "divider",
+                  borderColor:
+                    (summary?.criticalSpecsCount ?? 0) > 0
+                      ? "error.main"
+                      : missingSpecsItems.length > 0
+                        ? "warning.main"
+                        : "divider",
                 }}
               >
                 <Typography
@@ -344,7 +349,12 @@ export function ImportAuditModal({
                   fontWeight={700}
                   sx={{
                     mt: 0.5,
-                    color: (summary?.criticalSpecsCount ?? 0) > 0 ? "error.main" : "text.primary",
+                    color:
+                      (summary?.criticalSpecsCount ?? 0) > 0
+                        ? "error.main"
+                        : missingSpecsItems.length > 0
+                          ? "warning.main"
+                          : "text.primary",
                   }}
                 >
                   {missingSpecsItems.length}
@@ -415,7 +425,13 @@ export function ImportAuditModal({
                       <Chip
                         label={missingSpecsItems.length}
                         size="small"
-                        color={(summary?.criticalSpecsCount ?? 0) > 0 ? "error" : "default"}
+                        color={
+                          (summary?.criticalSpecsCount ?? 0) > 0
+                            ? "error"
+                            : missingSpecsItems.length > 0
+                              ? "warning"
+                              : "default"
+                        }
                         sx={{ height: 20, fontSize: "0.75rem" }}
                       />
                     </Box>
@@ -613,11 +629,11 @@ export function ImportAuditModal({
               <Box>
                 <Alert severity="info" sx={{ mb: 2 }}>
                   <Typography variant="body2">
-                    <strong>Regra de Dimensionamento:</strong> Módulos Fotovoltaicos (Potência Wp) e
-                    Inversores/Microinversores (Potência Nominal) necessitam impreterivelmente
-                    destes parâmetros para os cálculos do kit. Acessórios como cabos, trilhos e
-                    fixadores operam por regras de multiplicação de arranjo e não impedem a geração
-                    de orçamentos.
+                    <strong>Parâmetros Técnicos & Dimensionamento:</strong> Módulos Fotovoltaicos
+                    (Potência Wp, Voc, Vmp, Isc, Imp) e Inversores/Microinversores (Potência
+                    Nominal, Tensão CC Máx, Corrente Entrada, Faixa MPPT) necessitam destes
+                    parâmetros para cálculo de kits e validação de compatibilidade. Clique em{" "}
+                    <strong>Completar Ficha</strong> para preenchê-los.
                   </Typography>
                 </Alert>
 
@@ -628,10 +644,11 @@ export function ImportAuditModal({
                   >
                     <CheckCircleOutlineIcon color="success" sx={{ fontSize: 48, mb: 1 }} />
                     <Typography variant="subtitle1" fontWeight={600}>
-                      Todas as fichas técnicas essenciais estão preenchidas!
+                      Todas as fichas técnicas estão preenchidas!
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Nenhum produto crítico de dimensionamento está sem potência ou capacidade.
+                      Nenhum produto crítico de dimensionamento ou com parâmetros elétricos
+                      pendentes.
                     </Typography>
                   </Paper>
                 ) : (
@@ -696,7 +713,7 @@ export function ImportAuditModal({
                             </TableCell>
                             <TableCell>
                               {item.isCritical ? (
-                                <Tooltip title="Sem este dado, o sistema não consegue calcular os kits com este produto">
+                                <Tooltip title="Sem este dado básico, o sistema não consegue calcular os kits com este produto">
                                   <Chip
                                     icon={<WarningAmberIcon fontSize="small" />}
                                     label="Essencial p/ Dimensionar"
@@ -706,13 +723,16 @@ export function ImportAuditModal({
                                   />
                                 </Tooltip>
                               ) : (
-                                <Chip
-                                  label="Informativo"
-                                  size="small"
-                                  color="default"
-                                  variant="outlined"
-                                  sx={{ fontSize: "0.75rem" }}
-                                />
+                                <Tooltip title="Recomendado para validação de faixas elétricas e compatibilidade de strings">
+                                  <Chip
+                                    icon={<WarningAmberIcon fontSize="small" />}
+                                    label="Parâmetro Elétrico Pendente"
+                                    size="small"
+                                    color="warning"
+                                    variant="outlined"
+                                    sx={{ fontWeight: 600, fontSize: "0.75rem" }}
+                                  />
+                                </Tooltip>
                               )}
                             </TableCell>
                             <TableCell sx={{ textAlign: "right" }}>

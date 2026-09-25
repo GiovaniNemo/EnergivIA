@@ -358,6 +358,97 @@ function extractSpecs(productName: string, category: string, brandName?: string)
   return specs;
 }
 
+export function checkProductMissingSpecs(
+  categoryName?: string | null,
+  specs?: Record<string, unknown> | null
+): { missingFields: string[]; isCritical: boolean } {
+  const normCat = (categoryName || "").toLowerCase().trim();
+  const safeSpecs = specs || {};
+  const missingFields: string[] = [];
+  let isCritical = false;
+
+  const hasVal = (val: unknown): boolean => {
+    if (val === undefined || val === null) return false;
+    if (typeof val === "boolean") return true;
+    if (typeof val === "number") return !isNaN(val) && val > 0;
+    if (typeof val === "string") {
+      const trimmed = val.trim();
+      if (!trimmed) return false;
+      const num = Number(trimmed.replace(",", "."));
+      if (!isNaN(num)) return num > 0;
+      return true;
+    }
+    return false;
+  };
+
+  if (normCat.includes("mod") || normCat.includes("pain") || normCat === "module") {
+    if (!hasVal(safeSpecs["power_w"])) {
+      missingFields.push("Potência do Módulo (Wp)");
+      isCritical = true;
+    }
+    if (!hasVal(safeSpecs["voc"])) missingFields.push("Tensão Aberta (Voc)");
+    if (!hasVal(safeSpecs["vmp"])) missingFields.push("Tensão Máx Potência (Vmp)");
+    if (!hasVal(safeSpecs["isc"])) missingFields.push("Corrente Curto (Isc)");
+    if (!hasVal(safeSpecs["imp"])) missingFields.push("Corrente Máx Potência (Imp)");
+  } else if (normCat.includes("micro")) {
+    if (!hasVal(safeSpecs["nominal_power_w"]) && !hasVal(safeSpecs["max_module_power"])) {
+      missingFields.push("Potência Nominal (kW/W)");
+      isCritical = true;
+    }
+    if (!hasVal(safeSpecs["max_input_voltage"])) missingFields.push("Tensão Entrada Máx");
+    if (!hasVal(safeSpecs["max_input_current"])) missingFields.push("Corrente Entrada Máx");
+  } else if (
+    normCat.includes("inv") ||
+    normCat === "inverter" ||
+    normCat === "hybrid_inverter" ||
+    normCat === "off_grid_inverter"
+  ) {
+    if (!hasVal(safeSpecs["nominal_power_w"])) {
+      missingFields.push("Potência Nominal (kW/W)");
+      isCritical = true;
+    }
+    if (!hasVal(safeSpecs["max_dc_voltage"])) missingFields.push("Tensão DC Máx");
+    if (!hasVal(safeSpecs["max_input_current"])) missingFields.push("Corrente Entrada Máx");
+    if (!hasVal(safeSpecs["mppt_voltage_min"]) || !hasVal(safeSpecs["mppt_voltage_max"])) {
+      missingFields.push("Faixa MPPT (Vmin/Vmax)");
+    }
+  } else if (
+    normCat.includes("struct") ||
+    normCat.includes("estrutur") ||
+    normCat === "structure_kit"
+  ) {
+    if (!hasVal(safeSpecs["roof_type"])) {
+      missingFields.push("Tipo de Telhado/Fixação");
+      isCritical = true;
+    }
+    if (!hasVal(safeSpecs["max_modules"])) {
+      missingFields.push("Qtd. Máx. Módulos");
+    }
+  } else if (normCat.includes("perfil") || normCat === "profile") {
+    if (!hasVal(safeSpecs["length_m"])) {
+      missingFields.push("Comprimento (m)");
+    }
+  } else if (normCat.includes("cabo") || normCat === "dc_cable") {
+    if (!hasVal(safeSpecs["section_mm2"])) {
+      missingFields.push("Bitola do Cabo (mm²)");
+    }
+  } else if (normCat.includes("bat") || normCat === "battery") {
+    if (!hasVal(safeSpecs["capacity_kwh"])) {
+      missingFields.push("Capacidade da Bateria (kWh)");
+      isCritical = true;
+    }
+  } else if (normCat.includes("string") || normCat.includes("box") || normCat === "string_box") {
+    if (!hasVal(safeSpecs["inputs_count"])) {
+      missingFields.push("Nº de Entradas");
+    }
+    if (!hasVal(safeSpecs["max_voltage_v"])) {
+      missingFields.push("Tensão Máx CC");
+    }
+  }
+
+  return { missingFields, isCritical };
+}
+
 @Injectable()
 export class SpreadsheetImportService {
   private readonly logger = new Logger(SpreadsheetImportService.name);
@@ -790,46 +881,7 @@ export class SpreadsheetImportService {
       // 6. Rastreamento de Ficha Técnica (para dimensionamento correto)
       const currentSpecs = (product.specs as Record<string, unknown>) || {};
       const mergedSpecs: Record<string, unknown> = { ...currentSpecs, ...specs };
-      const missingFields: string[] = [];
-      let isCritical = false;
-
-      if (catName === "module") {
-        if (!mergedSpecs["power_w"]) {
-          missingFields.push("Potência do Módulo (Wp)");
-          isCritical = true;
-        }
-      } else if (
-        catName === "inverter" ||
-        catName === "microinverter" ||
-        catName === "hybrid_inverter" ||
-        catName === "off_grid_inverter"
-      ) {
-        if (!mergedSpecs["nominal_power_w"] && !mergedSpecs["max_module_power"]) {
-          missingFields.push("Potência Nominal (kW/W)");
-          isCritical = true;
-        }
-      } else if (catName === "structure_kit") {
-        if (!mergedSpecs["roof_type"]) {
-          missingFields.push("Tipo de Telhado/Fixação");
-          isCritical = true;
-        }
-        if (!mergedSpecs["max_modules"]) {
-          missingFields.push("Qtd. Máx. Módulos");
-        }
-      } else if (catName === "profile") {
-        if (!mergedSpecs["length_m"]) {
-          missingFields.push("Comprimento (m)");
-        }
-      } else if (catName === "dc_cable") {
-        if (!mergedSpecs["section_mm2"]) {
-          missingFields.push("Bitola do Cabo (mm²)");
-        }
-      } else if (catName === "battery") {
-        if (!mergedSpecs["capacity_kwh"]) {
-          missingFields.push("Capacidade da Bateria (kWh)");
-          isCritical = true;
-        }
-      }
+      const { missingFields, isCritical } = checkProductMissingSpecs(catName, mergedSpecs);
 
       if (missingFields.length > 0) {
         missingSpecsItems.push({
@@ -983,145 +1035,111 @@ export class SpreadsheetImportService {
     if (!log) return null;
 
     const details = (log.details as Record<string, unknown>) || {};
-    const missingSpecsRaw =
-      (details["missingSpecsItems"] as Array<{
-        productId: string;
-        productName: string;
-        sku: string | null;
-        brand: string;
-        category: string;
-        missingFields: string[];
-        isCritical: boolean;
-      }>) || [];
+    const dismissedGenericIds = (details["dismissedGenericIds"] as string[]) || [];
 
-    const brandReviewRaw =
-      (details["brandReviewItems"] as Array<{
-        productId: string;
-        productName: string;
-        sku: string | null;
-        currentBrand: string;
-        category: string;
-        price: number;
-        isNew: boolean;
-      }>) || [];
+    // Revalidação dinâmica e abrangente contra o catálogo ativo do distribuidor
+    const distributorOffers = await this.prisma.distributorProduct.findMany({
+      where: { distributorId },
+      include: {
+        product: {
+          include: { brand: true, category: true },
+        },
+      },
+    });
 
-    // Revalidação dinâmica contra o banco de dados em tempo real
-    const allProductIds = Array.from(
-      new Set([
-        ...missingSpecsRaw.map((m) => m.productId),
-        ...brandReviewRaw.map((b) => b.productId),
-      ])
-    );
+    const revalidatedMissing: Array<{
+      productId: string;
+      productName: string;
+      sku: string | null;
+      brand: string;
+      category: string;
+      missingFields: string[];
+      isCritical: boolean;
+    }> = [];
 
-    if (allProductIds.length > 0) {
-      const liveProducts = await this.prisma.product.findMany({
-        where: { id: { in: allProductIds } },
-        include: { brand: true, category: true },
-      });
-      const liveMap = new Map(liveProducts.map((p) => [p.id, p]));
+    const revalidatedBrandReview: Array<{
+      productId: string;
+      productName: string;
+      sku: string | null;
+      currentBrand: string;
+      category: string;
+      price: number;
+      isNew: boolean;
+    }> = [];
 
-      const revalidatedMissing: typeof missingSpecsRaw = [];
-      for (const item of missingSpecsRaw) {
-        const live = liveMap.get(item.productId);
-        // Se o produto foi deletado/mesclado, não exibe
-        if (!live) continue;
+    for (const offer of distributorOffers) {
+      const p = offer.product;
+      if (!p) continue;
 
-        const liveCat = live.category?.name ?? item.category;
-        const liveSpecs = (live.specs as Record<string, unknown>) || {};
-        const missingFields: string[] = [];
-        let isCritical = false;
+      const catName = p.category?.name ?? "other";
+      const specs = (p.specs as Record<string, unknown>) || {};
+      const brandName = p.brand?.name ?? "Genérico";
 
-        if (liveCat === "module") {
-          if (!liveSpecs["power_w"]) {
-            missingFields.push("Potência do Módulo (Wp)");
-            isCritical = true;
-          }
-        } else if (
-          liveCat === "inverter" ||
-          liveCat === "microinverter" ||
-          liveCat === "hybrid_inverter" ||
-          liveCat === "off_grid_inverter"
-        ) {
-          if (!liveSpecs["nominal_power_w"] && !liveSpecs["max_module_power"]) {
-            missingFields.push("Potência Nominal (kW/W)");
-            isCritical = true;
-          }
-        } else if (liveCat === "structure_kit") {
-          if (!liveSpecs["roof_type"]) {
-            missingFields.push("Tipo de Telhado/Fixação");
-            isCritical = true;
-          }
-          if (!liveSpecs["max_modules"]) {
-            missingFields.push("Qtd. Máx. Módulos");
-          }
-        } else if (liveCat === "profile") {
-          if (!liveSpecs["length_m"]) {
-            missingFields.push("Comprimento (m)");
-          }
-        } else if (liveCat === "dc_cable") {
-          if (!liveSpecs["section_mm2"]) {
-            missingFields.push("Bitola do Cabo (mm²)");
-          }
-        } else if (liveCat === "battery") {
-          if (!liveSpecs["capacity_kwh"]) {
-            missingFields.push("Capacidade da Bateria (kWh)");
-            isCritical = true;
-          }
-        }
-
-        if (missingFields.length > 0) {
-          revalidatedMissing.push({
-            ...item,
-            productName: live.name,
-            brand: live.brand?.name ?? item.brand,
-            category: liveCat,
-            missingFields,
-            isCritical,
-          });
-        }
+      // 1. Rastreamento e revalidação de Ficha Técnica
+      const { missingFields, isCritical } = checkProductMissingSpecs(catName, specs);
+      if (missingFields.length > 0) {
+        revalidatedMissing.push({
+          productId: p.id,
+          productName: p.name,
+          sku: offer.distributorSku || null,
+          brand: brandName,
+          category: catName,
+          missingFields,
+          isCritical,
+        });
       }
 
-      const revalidatedBrandReview: typeof brandReviewRaw = [];
-      for (const item of brandReviewRaw) {
-        const live = liveMap.get(item.productId);
-        if (!live) continue;
-        const brandName = live.brand?.name ?? item.currentBrand;
-        const isGeneric =
-          brandName.toLowerCase().includes("genéric") ||
-          brandName.toLowerCase() === "generico" ||
-          brandName.toLowerCase() === "generica";
-        if (isGeneric) {
-          revalidatedBrandReview.push({
-            ...item,
-            productName: live.name,
-            currentBrand: brandName,
-            category: live.category?.name ?? item.category,
-          });
-        }
+      // 2. Rastreamento e revalidação de Marcas Genéricas
+      const isGeneric =
+        brandName.toLowerCase().includes("genéric") ||
+        brandName.toLowerCase() === "generico" ||
+        brandName.toLowerCase() === "generica";
+
+      if (isGeneric && !dismissedGenericIds.includes(p.id)) {
+        revalidatedBrandReview.push({
+          productId: p.id,
+          productName: p.name,
+          sku: offer.distributorSku || null,
+          currentBrand: brandName,
+          category: catName,
+          price: Number(offer.price),
+          isNew: false,
+        });
       }
-
-      const summary = (log.summary as Record<string, unknown>) || {};
-      const updatedSummary = {
-        ...summary,
-        missingSpecsCount: revalidatedMissing.length,
-        criticalSpecsCount: revalidatedMissing.filter((m) => m.isCritical).length,
-        brandReviewCount: revalidatedBrandReview.length,
-      };
-
-      const updatedDetails = {
-        ...details,
-        missingSpecsItems: revalidatedMissing,
-        brandReviewItems: revalidatedBrandReview,
-      };
-
-      return {
-        ...log,
-        summary: updatedSummary,
-        details: updatedDetails,
-      };
     }
 
-    return log;
+    // Ordenar fichas pendentes: críticas primeiro, depois por categoria e nome
+    revalidatedMissing.sort((a, b) => {
+      if (a.isCritical && !b.isCritical) return -1;
+      if (!a.isCritical && b.isCritical) return 1;
+      if (a.category !== b.category) return a.category.localeCompare(b.category);
+      return a.productName.localeCompare(b.productName);
+    });
+
+    const summary = (log.summary as Record<string, unknown>) || {};
+    const totalProcessedCount =
+      Number(summary["totalProcessed"]) ||
+      Number(summary["itemsCreated"] || 0) + Number(summary["itemsUpdated"] || 0);
+
+    const updatedSummary = {
+      ...summary,
+      totalProcessed: totalProcessedCount,
+      missingSpecsCount: revalidatedMissing.length,
+      criticalSpecsCount: revalidatedMissing.filter((m) => m.isCritical).length,
+      brandReviewCount: revalidatedBrandReview.length,
+    };
+
+    const updatedDetails = {
+      ...details,
+      missingSpecsItems: revalidatedMissing,
+      brandReviewItems: revalidatedBrandReview,
+    };
+
+    return {
+      ...log,
+      summary: updatedSummary,
+      details: updatedDetails,
+    };
   }
 
   async dismissGenericInLog(logId: string, productId: string) {
