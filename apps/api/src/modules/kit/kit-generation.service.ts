@@ -27,6 +27,30 @@ function kitItemsTotal(items: KitItemLine[]): number {
   return Math.round(items.reduce((sum, i) => sum + i.quantity * i.unit_price, 0) * 100) / 100;
 }
 
+export function checkIsTier1Module(
+  brandName?: string | null,
+  productName?: string | null,
+  isTier1Flag?: boolean
+): boolean {
+  if (isTier1Flag) return true;
+  const combined = `${brandName || ""} ${productName || ""}`.toLowerCase();
+  return /canadian|longi|jinko|ja solar|trina|risen|astronergy|chint|byd|dah solar|dah\b|osda|talesun|sunova|seraphim|gcl|tw solar|tongwei|sine|tier\s*1/i.test(
+    combined
+  );
+}
+
+function extractTier1Flag(obj: unknown): boolean {
+  if (!obj || typeof obj !== "object") return false;
+  if ("specs" in obj && obj.specs && typeof obj.specs === "object") {
+    const s = obj.specs as Record<string, unknown>;
+    return Boolean(s["is_tier_1"]);
+  }
+  if ("is_tier_1" in obj) {
+    return Boolean((obj as Record<string, unknown>)["is_tier_1"]);
+  }
+  return false;
+}
+
 type SizingResult = NonNullable<ReturnType<typeof sizeSolarSystem>>;
 
 type BuiltKit = {
@@ -140,8 +164,11 @@ export class KitGenerationService {
       own_stock_used: usedOwnStock,
       modules: {
         ...built.kitItems[0]!,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        is_tier_1: Boolean((built.sizingResult.module.specs as any)?.is_tier_1),
+        is_tier_1: checkIsTier1Module(
+          built.kitItems[0]?.brand_name || built.sizingResult.module.brandName,
+          built.kitItems[0]?.product_name || built.sizingResult.module.name,
+          extractTier1Flag(built.sizingResult.module)
+        ),
       },
       inverter: built.kitItems[1]!,
       string_configuration: isStringSizingResult(built.sizingResult)
@@ -416,7 +443,11 @@ export class KitGenerationService {
         module_model: built.kitItems[0]?.product_name || built.sizingResult.module.name,
         module_qty: built.kitItems[0]?.quantity || built.sizingResult.module_quantity,
         module_power_w: Number(moduleSpecs.power_w) || 585,
-        module_is_tier_1: Boolean(moduleSpecs?.is_tier_1),
+        module_is_tier_1: checkIsTier1Module(
+          built.kitItems[0]?.brand_name || built.sizingResult.module.brandName,
+          built.kitItems[0]?.product_name || built.sizingResult.module.name,
+          Boolean(moduleSpecs?.is_tier_1)
+        ),
         estimated_monthly_generation_kwh: Math.round(built.systemPowerKw * 130),
       };
     };
@@ -554,6 +585,14 @@ export class KitGenerationService {
                 ? "Nenhum inversor desta origem fecha o dimensionamento com este módulo."
                 : "Este inversor não fecha o dimensionamento com os módulos desta origem.",
             datasheet_url: candidate.datasheetUrl,
+            is_tier_1:
+              category === "module"
+                ? checkIsTier1Module(
+                    candidate.brandName,
+                    candidate.name,
+                    extractTier1Flag(candidate)
+                  )
+                : undefined,
           };
         }
         return this.toCompatibleAlternative(candidate, built, category);
@@ -706,8 +745,6 @@ export class KitGenerationService {
     const stringSummary = isStringSizingResult(built.sizingResult)
       ? `${built.sizingResult.string_configuration.string_count} strings de ${built.sizingResult.string_configuration.modules_per_string} módulos`
       : `${built.kitItems[0]!.quantity} módulos com microinversor`;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const moduleSpecs = built.sizingResult.module.specs as any;
     return {
       product_id: candidate.id,
       product_name: candidate.name,
@@ -719,7 +756,14 @@ export class KitGenerationService {
       system_power_kw: built.systemPowerKw,
       string_summary: stringSummary,
       datasheet_url: candidate.datasheetUrl,
-      is_tier_1: category === "module" ? Boolean(moduleSpecs?.is_tier_1) : undefined,
+      is_tier_1:
+        category === "module"
+          ? checkIsTier1Module(
+              candidate.brandName || built.sizingResult.module.brandName,
+              candidate.name || built.sizingResult.module.name,
+              extractTier1Flag(candidate) || extractTier1Flag(built.sizingResult.module)
+            )
+          : undefined,
     };
   }
 

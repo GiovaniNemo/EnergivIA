@@ -516,6 +516,21 @@ export function buildGeneratedProposalFromSimulation(
   };
 }
 
+function isModuleTier1(
+  module?: {
+    brand_name?: string | null;
+    product_name?: string | null;
+    is_tier_1?: boolean | null;
+  } | null
+): boolean {
+  if (!module) return false;
+  if (module.is_tier_1) return true;
+  const combined = `${module.brand_name || ""} ${module.product_name || ""}`.toLowerCase();
+  return /canadian|longi|jinko|ja solar|trina|risen|astronergy|chint|byd|dah solar|dah\b|osda|talesun|sunova|seraphim|gcl|tw solar|tongwei|sine|tier\s*1/i.test(
+    combined
+  );
+}
+
 export type ProposalEconomicsSync = {
   updateDealStage: (leadId: string, stage: DealStage) => void;
   updateDealProposalStatus: (leadId: string, hasProposal: boolean) => void;
@@ -3674,12 +3689,29 @@ export const ProposalEconomicsModal = forwardRef<
                                         : ""}
                                       {tier.inverter_brand} ({tier.inverter_power_kw} kW)
                                     </p>
-                                    <p>
+                                    <p className="flex items-center gap-1.5 flex-wrap">
                                       <strong className="text-[var(--color-foreground)] font-medium">
                                         Módulos:{" "}
                                       </strong>
-                                      {tier.module_qty}x {tier.module_brand} ({tier.module_power_w}
-                                      W)
+                                      <span>
+                                        {tier.module_qty}x {tier.module_brand} (
+                                        {tier.module_power_w}
+                                        W)
+                                      </span>
+                                      {isModuleTier1({
+                                        brand_name: tier.module_brand,
+                                        product_name: tier.module_model,
+                                        is_tier_1:
+                                          tier.module_is_tier_1 ||
+                                          tier.kit_result?.modules?.is_tier_1,
+                                      }) ? (
+                                        <img
+                                          src="/badges/tier1.png"
+                                          alt="Tier 1"
+                                          title="Módulo certificado Tier 1 (BloombergNEF)"
+                                          className="h-4.5 sm:h-5 w-auto object-contain rounded shadow-xs shrink-0"
+                                        />
+                                      ) : null}
                                     </p>
                                     <p className="text-[11px] text-[var(--color-muted-foreground)]/80">
                                       + Estrutura, cabos e conectores inclusos
@@ -3733,7 +3765,7 @@ export const ProposalEconomicsModal = forwardRef<
                               </span>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
-                              {proposalKitResult.modules.is_tier_1 ? (
+                              {isModuleTier1(proposalKitResult.modules) ? (
                                 <img
                                   src="/badges/tier1.png"
                                   alt="Tier 1 Bloomberg"
@@ -3977,6 +4009,16 @@ export const ProposalEconomicsModal = forwardRef<
                                       {extractPowerBadge(alt.product_name)}
                                     </span>
                                   ) : null}
+                                  {kitSwapCategory === "module" &&
+                                  (isModuleTier1(alt) ||
+                                    (isCurrent && isModuleTier1(proposalKitResult.modules))) ? (
+                                    <img
+                                      src="/badges/tier1.png"
+                                      alt="Tier 1"
+                                      title="Módulo certificado Tier 1 (BloombergNEF)"
+                                      className="h-5 sm:h-5.5 w-auto object-contain rounded shadow-xs shrink-0"
+                                    />
+                                  ) : null}
                                   <span className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] leading-snug break-words">
                                     {alt.brand_name ? `${alt.brand_name} ` : ""}
                                     {alt.product_name}
@@ -4065,9 +4107,19 @@ export const ProposalEconomicsModal = forwardRef<
                               >
                                 <td className="py-2 px-2 sm:p-3 font-medium text-[var(--color-foreground)]">
                                   <div className="min-w-0">
-                                    <p className="text-[0.7rem] sm:text-xs font-semibold leading-tight break-words text-[var(--color-foreground)]">
-                                      {item.product_name}
-                                    </p>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <p className="text-[0.7rem] sm:text-xs font-semibold leading-tight break-words text-[var(--color-foreground)]">
+                                        {item.product_name}
+                                      </p>
+                                      {isModuleRow && isModuleTier1(proposalKitResult.modules) ? (
+                                        <img
+                                          src="/badges/tier1.png"
+                                          alt="Tier 1"
+                                          title="Módulo certificado Tier 1 (BloombergNEF)"
+                                          className="h-4 sm:h-4.5 w-auto object-contain rounded shadow-xs shrink-0"
+                                        />
+                                      ) : null}
+                                    </div>
                                     {item.brand_name ? (
                                       <p className="text-[0.62rem] sm:hidden text-[var(--color-muted-foreground)] font-normal mt-0.5 break-words">
                                         {item.brand_name}

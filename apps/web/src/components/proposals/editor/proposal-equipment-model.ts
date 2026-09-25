@@ -381,7 +381,12 @@ export function proposalEquipmentItemFromProduct(
     subtitle: product.name,
     categoryName: cat,
     specs: buildEquipmentDisplaySpecs(cat, product.specs as Record<string, unknown>, quantity),
-    isTier1: cat === "module" && Boolean((product.specs as Record<string, unknown>)?.is_tier_1),
+    isTier1:
+      cat === "module" &&
+      (Boolean((product.specs as Record<string, unknown>)?.is_tier_1) ||
+        /canadian|longi|jinko|ja solar|trina|risen|astronergy|chint|byd|dah solar|dah\b|osda|talesun|sunova|seraphim|gcl|tw solar|tongwei|sine|tier\s*1/i.test(
+          `${product.brand?.name || ""} ${product.name || ""}`
+        )),
   };
 }
 
@@ -626,9 +631,9 @@ export function buildEquipmentItemFromKitLine(
   const isTier1 =
     cat === "module" &&
     (Boolean(line.specs?.["is_tier_1"]) ||
-      rawName.toLowerCase().includes("tier 1") ||
-      rawName.toLowerCase().includes("tier-1") ||
-      rawName.toLowerCase().includes("tier1"));
+      /canadian|longi|jinko|ja solar|trina|risen|astronergy|chint|byd|dah solar|dah\b|osda|talesun|sunova|seraphim|gcl|tw solar|tongwei|sine|tier\s*1/i.test(
+        `${line.brandName || ""} ${rawName}`
+      ));
 
   return {
     id: line.productId ? `eq-kit-${line.productId}-${index}` : `eq-kit-${index}`,
