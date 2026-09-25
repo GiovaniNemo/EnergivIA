@@ -159,8 +159,15 @@ function extractCategory(productName: string, bannerSection: string = ""): strin
   if (/conector|mc4/i.test(pNorm)) {
     return "connector";
   }
+  // Perfis / Trilhos são componentes estruturais avulsos (ex: perfil 2,40m, minitrilho 55cm)
   if (
-    /estrutura|trilho|perfil|minitrilho|telha|solo\s+terrestre|fixador|suporte|gancho|parafuso|triangulo|triângulo|grampo/i.test(
+    /perfil|trilho|minitrilho/i.test(pNorm) &&
+    !/estrutura\s+solo|estrutura\s+completa|solo\s+monoposte|kit\s+solo/i.test(pNorm)
+  ) {
+    return "profile";
+  }
+  if (
+    /estrutura|telha|solo\s+terrestre|fixador|suporte|gancho|parafuso|triangulo|triângulo|grampo/i.test(
       pNorm
     )
   ) {
@@ -199,7 +206,10 @@ function extractCategory(productName: string, bannerSection: string = ""): strin
   if (/conector|mc4/i.test(bNorm)) {
     return "connector";
   }
-  if (/estrutura|trilho|perfil|telha|solo/i.test(bNorm)) {
+  if (/perfil|trilho/i.test(bNorm)) {
+    return "profile";
+  }
+  if (/estrutura|telha|solo/i.test(bNorm)) {
     return "structure_kit";
   }
   if (/modulo|módulo|painel|placa/i.test(bNorm)) {
@@ -219,6 +229,9 @@ interface ProductSpecs {
   max_modules?: number;
   roof_type?: string;
   section_mm2?: number;
+  length_m?: number;
+  material?: string;
+  profile_type?: string;
   type?: string;
   is_tier_1?: boolean;
 }
@@ -292,9 +305,8 @@ function extractSpecs(productName: string, category: string, brandName?: string)
     } else if (
       norm.includes("TELHA METALICA") ||
       norm.includes("METÁLICA") ||
-      norm.includes("MINI TRILHO") ||
-      norm.includes("MINITRILHO") ||
-      norm.includes("ZINCO")
+      norm.includes("ZINCO") ||
+      norm.includes("ONDULADA")
     ) {
       specs.roof_type = "metal";
     } else if (norm.includes("SOLO") || norm.includes("TERRESTRE")) {
@@ -308,6 +320,33 @@ function extractSpecs(productName: string, category: string, brandName?: string)
       norm.includes("GANCHO")
     ) {
       specs.roof_type = "ceramic";
+    }
+  } else if (category === "profile") {
+    const lenMatch = norm.match(/(\d+(?:[.,]\d+)?)\s*M\b/);
+    const cmMatch = norm.match(/(\d+)\s*CM\b/);
+    if (lenMatch && lenMatch[1]) {
+      specs.length_m = parseFloat(lenMatch[1].replace(",", "."));
+    } else if (cmMatch && cmMatch[1]) {
+      specs.length_m = parseInt(cmMatch[1], 10) / 100;
+    }
+
+    const modMatch = norm.match(/(\d+)\s*(?:PAINEIS|PAINÉIS|MODULOS|MÓDULOS|PLACAS)/);
+    if (modMatch && modMatch[1]) {
+      specs.max_modules = parseInt(modMatch[1], 10);
+    }
+
+    if (norm.includes("ALUMINIO") || norm.includes("ALUMÍNIO")) {
+      specs.material = "ALUMINIO";
+    }
+
+    if (norm.includes("HIBRIDO") || norm.includes("HÍBRIDO")) {
+      specs.profile_type = "HÍBRIDO";
+    } else if (norm.includes("SMART-X")) {
+      specs.profile_type = "SMART-X";
+    } else if (norm.includes("SMART")) {
+      specs.profile_type = "SMART";
+    } else if (norm.includes("PRATIC LITE") || norm.includes("PRATYC")) {
+      specs.profile_type = "PRATYC";
     }
   } else if (category === "dc_cable") {
     const mmMatch = norm.match(/(\d+(?:[.,]\d+)?)\s*MM/);
@@ -777,6 +816,10 @@ export class SpreadsheetImportService {
         if (!mergedSpecs["max_modules"]) {
           missingFields.push("Qtd. Máx. Módulos");
         }
+      } else if (catName === "profile") {
+        if (!mergedSpecs["length_m"]) {
+          missingFields.push("Comprimento (m)");
+        }
       } else if (catName === "dc_cable") {
         if (!mergedSpecs["section_mm2"]) {
           missingFields.push("Bitola do Cabo (mm²)");
@@ -1010,6 +1053,10 @@ export class SpreadsheetImportService {
           }
           if (!liveSpecs["max_modules"]) {
             missingFields.push("Qtd. Máx. Módulos");
+          }
+        } else if (liveCat === "profile") {
+          if (!liveSpecs["length_m"]) {
+            missingFields.push("Comprimento (m)");
           }
         } else if (liveCat === "dc_cable") {
           if (!liveSpecs["section_mm2"]) {

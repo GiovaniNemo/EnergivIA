@@ -83,10 +83,7 @@ export function inferStructureSpecsFromName(name: string): {
     n.includes("COLONIAL") ||
     n.includes("CERAMIC") ||
     n.includes("CERÂMIC") ||
-    n.includes("GANCHO") ||
-    n.includes("HÍBRIDO") ||
-    n.includes("HIBRIDO") ||
-    n.includes("PERFIL")
+    n.includes("GANCHO")
   ) {
     result.roof_type = "ceramic";
   }
