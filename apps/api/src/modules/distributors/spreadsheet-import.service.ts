@@ -118,38 +118,94 @@ function extractBrand(rowBrand: string | undefined, productName: string): string
   return "Genérica";
 }
 
-function extractCategory(productName: string, bannerSection: string = ""): string {
-  const combined = `${bannerSection} ${productName}`.toLowerCase();
+function normalizeProductForMatching(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\b(EX|EX-TARIFARIO|EXTARIFARIO|EX-TAR|EXTAR)\b/gi, "")
+    .replace(/\b(SOLAR|ON\s*GRID|OFF\s*GRID|FOTOVOLTAICO|MONITORAMENTO|WIFI|NEW|AFCI)\b/gi, "")
+    .replace(/[^a-zA-Z0-9]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
 
-  if (/microinversor|micro-inversor|micro\s+inversor|\bmicro\b/i.test(combined)) {
-    return "microinverter";
+function extractModelCode(name: string): string | null {
+  const norm = name
+    .toUpperCase()
+    .replace(/\b(EX|SOLAR|ON\s*GRID|MONITORAMENTO|WIFI|AFCI|NEW)\b/g, "")
+    .trim();
+  const m = norm.match(/\b([A-Z0-9]{3,}-[A-Z0-9.-]+|[A-Z]{2,}\d+[A-Z0-9.-]*)\b/);
+  if (
+    m &&
+    m[1] &&
+    m[1].length >= 4 &&
+    !/^(SOLAR|MONOFASICO|TRIFASICO|BIFASICO|INVERSOR|MICROINVERSOR|MODULO|ESTRUTURA|PAINEL)/i.test(
+      m[1]
+    )
+  ) {
+    return m[1];
   }
-  if (/inversor|\binv\b/i.test(combined)) {
-    return "inverter";
-  }
-  if (/cabo|cabo\s+solar|flexivel\s+\d+mm|bobina\s+\d+k/i.test(combined)) {
+  return null;
+}
+
+function extractCategory(productName: string, bannerSection: string = ""): string {
+  const pNorm = productName.toLowerCase();
+
+  // 1. O nome do produto tem PRECEDÊNCIA MÁXIMA sobre o cabeçalho de seção
+  if (/cabo|cabo\s+solar|flexivel\s+\d+mm|bobina\s+\d+k|rolo\s+\d+\s*metros/i.test(pNorm)) {
     return "dc_cable";
   }
-  if (/conector|mc4/i.test(combined)) {
+  if (/conector|mc4/i.test(pNorm)) {
     return "connector";
   }
   if (
-    /estrutura|trilho|perfil|telha|solo\s+terrestre|fixador|suporte|gancho|parafuso/i.test(combined)
+    /estrutura|trilho|perfil|minitrilho|telha|solo\s+terrestre|fixador|suporte|gancho|parafuso|triangulo|triângulo|grampo/i.test(
+      pNorm
+    )
   ) {
     return "structure_kit";
   }
-  if (/string\s*box|stringbox|quadro/i.test(combined)) {
+  if (/microinversor|micro-inversor|micro\s+inversor|\bmicro\b/i.test(pNorm)) {
+    return "microinverter";
+  }
+  if (/inversor|\binv\b/i.test(pNorm)) {
+    return "inverter";
+  }
+  if (/string\s*box|stringbox|quadro/i.test(pNorm)) {
     return "string_box";
   }
-  if (/bateria|acumulador|litio|lítio/i.test(combined)) {
+  if (/bateria|acumulador|litio|lítio/i.test(pNorm)) {
     return "battery";
   }
-  if (/otimizador|optimizer/i.test(combined)) {
+  if (/otimizador|optimizer/i.test(pNorm)) {
     return "optimizer";
   }
-  if (/modulo|módulo|painel|placa/i.test(combined)) {
+  if (/modulo|módulo|painel|placa/i.test(pNorm)) {
     return "module";
   }
+
+  // 2. Fallback para bannerSection caso o nome não declare categorização explícita
+  const bNorm = bannerSection.toLowerCase();
+  if (/microinversor|micro-inversor|micro\s+inversor|\bmicro\b/i.test(bNorm)) {
+    return "microinverter";
+  }
+  if (/inversor|\binv\b/i.test(bNorm)) {
+    return "inverter";
+  }
+  if (/cabo|cabo\s+solar/i.test(bNorm)) {
+    return "dc_cable";
+  }
+  if (/conector|mc4/i.test(bNorm)) {
+    return "connector";
+  }
+  if (/estrutura|trilho|perfil|telha|solo/i.test(bNorm)) {
+    return "structure_kit";
+  }
+  if (/modulo|módulo|painel|placa/i.test(bNorm)) {
+    return "module";
+  }
+
   return "other";
 }
 
@@ -161,6 +217,8 @@ interface ProductSpecs {
   phase?: string;
   mppt_count?: number;
   max_modules?: number;
+  roof_type?: string;
+  section_mm2?: number;
   type?: string;
   is_tier_1?: boolean;
 }
@@ -221,6 +279,40 @@ function extractSpecs(productName: string, category: string, brandName?: string)
       }
     } else {
       specs.type = "STRING_INVERTER";
+    }
+  } else if (category === "structure_kit") {
+    const modMatch = norm.match(/(\d+)\s*(?:PAINEIS|PAINÉIS|MODULOS|MÓDULOS|PLACAS)/);
+    if (modMatch && modMatch[1]) {
+      specs.max_modules = parseInt(modMatch[1], 10);
+    }
+    if (norm.includes("FIBROMADEIRA") || (norm.includes("FIBRO") && norm.includes("MADEIRA"))) {
+      specs.roof_type = "fibromadeira";
+    } else if (norm.includes("FIBROMETAL") || (norm.includes("FIBRO") && norm.includes("METAL"))) {
+      specs.roof_type = "fibrometal";
+    } else if (
+      norm.includes("TELHA METALICA") ||
+      norm.includes("METÁLICA") ||
+      norm.includes("MINI TRILHO") ||
+      norm.includes("MINITRILHO") ||
+      norm.includes("ZINCO")
+    ) {
+      specs.roof_type = "metal";
+    } else if (norm.includes("SOLO") || norm.includes("TERRESTRE")) {
+      specs.roof_type = "ground";
+    } else if (norm.includes("LAJE") || norm.includes("TRIANGULO") || norm.includes("TRIÂNGULO")) {
+      specs.roof_type = "laje";
+    } else if (
+      norm.includes("COLONIAL") ||
+      norm.includes("CERAMIC") ||
+      norm.includes("CERÂMIC") ||
+      norm.includes("GANCHO")
+    ) {
+      specs.roof_type = "ceramic";
+    }
+  } else if (category === "dc_cable") {
+    const mmMatch = norm.match(/(\d+(?:[.,]\d+)?)\s*MM/);
+    if (mmMatch && mmMatch[1]) {
+      specs.section_mm2 = parseFloat(mmMatch[1].replace(",", "."));
     }
   }
 
@@ -476,9 +568,10 @@ export class SpreadsheetImportService {
         category = await this.prisma.category.create({ data: { name: catName } });
       }
 
-      // 3. Buscar Produto existente (1º por SKU do distribuidor, 2º por Nome exato/normalizado)
+      // 3. Buscar Produto existente com deduplicação inteligente (SKU -> Nome exato -> Normalizado -> Sem "EX" -> Modelo/Código)
       let product = null;
 
+      // 3.1 Busca por SKU do distribuidor
       if (codStr) {
         const existingOfferBySku = await this.prisma.distributorProduct.findFirst({
           where: {
@@ -492,17 +585,55 @@ export class SpreadsheetImportService {
         }
       }
 
+      // 3.2 Busca por Nome exato
       if (!product) {
         product = await this.prisma.product.findFirst({
           where: { name: { equals: produtoStr, mode: "insensitive" } },
         });
       }
 
+      // 3.3 Busca por Nome limpo (espaçamento normalizado)
       if (!product) {
         const normalizedName = produtoStr.replace(/\s+/g, " ").trim();
         product = await this.prisma.product.findFirst({
           where: { name: { equals: normalizedName, mode: "insensitive" } },
         });
+      }
+
+      // 3.4 Busca desconsiderando "EX" (Ex-tarifário) e termos acessórios ("ON GRID", "SOLAR", "MONITORAMENTO")
+      if (!product) {
+        const cleanedQuery = normalizeProductForMatching(produtoStr);
+        if (cleanedQuery.length >= 6) {
+          const candidates = await this.prisma.product.findMany({
+            where: {
+              OR: [{ brandId: brand.id }, { categoryId: category.id }],
+            },
+          });
+
+          for (const cand of candidates) {
+            const candCleaned = normalizeProductForMatching(cand.name);
+            if (candCleaned === cleanedQuery) {
+              product = cand;
+              break;
+            }
+          }
+        }
+      }
+
+      // 3.5 Busca por Código de Modelo + Marca (ex: MIC3000TL-X2, GW5K-DNS-G40, CS6W-585T, SUN-4K-G05P1-EU-AM2)
+      if (!product) {
+        const modelCode = extractModelCode(produtoStr);
+        if (modelCode && modelCode.length >= 4) {
+          const candByModel = await this.prisma.product.findFirst({
+            where: {
+              brandId: brand.id,
+              name: { contains: modelCode, mode: "insensitive" },
+            },
+          });
+          if (candByModel) {
+            product = candByModel;
+          }
+        }
       }
 
       if (!product) {
@@ -515,12 +646,17 @@ export class SpreadsheetImportService {
           },
         });
       } else if (Object.keys(specs).length > 0) {
-        // Atualizar specs caso produto existente não as tenha
+        // Atualizar specs mesclando caso produto existente não tenha ou esteja incompleto
         const currentSpecs = (product.specs as Record<string, unknown>) || {};
-        if (Object.keys(currentSpecs).length === 0) {
+        const merged = { ...specs, ...currentSpecs };
+        // Se as specs atuais estavam vazias ou ganharam novos campos úteis
+        if (
+          Object.keys(currentSpecs).length === 0 ||
+          Object.keys(merged).length > Object.keys(currentSpecs).length
+        ) {
           await this.prisma.product.update({
             where: { id: product.id },
-            data: { specs: specs as Prisma.InputJsonValue },
+            data: { specs: merged as Prisma.InputJsonValue },
           });
         }
       }
@@ -632,6 +768,18 @@ export class SpreadsheetImportService {
         if (!mergedSpecs["nominal_power_w"] && !mergedSpecs["max_module_power"]) {
           missingFields.push("Potência Nominal (kW/W)");
           isCritical = true;
+        }
+      } else if (catName === "structure_kit") {
+        if (!mergedSpecs["roof_type"]) {
+          missingFields.push("Tipo de Telhado/Fixação");
+          isCritical = true;
+        }
+        if (!mergedSpecs["max_modules"]) {
+          missingFields.push("Qtd. Máx. Módulos");
+        }
+      } else if (catName === "dc_cable") {
+        if (!mergedSpecs["section_mm2"]) {
+          missingFields.push("Bitola do Cabo (mm²)");
         }
       } else if (catName === "battery") {
         if (!mergedSpecs["capacity_kwh"]) {
@@ -785,10 +933,148 @@ export class SpreadsheetImportService {
   }
 
   async getLatestImportLog(distributorId: string) {
-    return this.prisma.distributorImportLog.findFirst({
+    const log = await this.prisma.distributorImportLog.findFirst({
       where: { distributorId },
       orderBy: { createdAt: "desc" },
     });
+    if (!log) return null;
+
+    const details = (log.details as Record<string, unknown>) || {};
+    const missingSpecsRaw =
+      (details["missingSpecsItems"] as Array<{
+        productId: string;
+        productName: string;
+        sku: string | null;
+        brand: string;
+        category: string;
+        missingFields: string[];
+        isCritical: boolean;
+      }>) || [];
+
+    const brandReviewRaw =
+      (details["brandReviewItems"] as Array<{
+        productId: string;
+        productName: string;
+        sku: string | null;
+        currentBrand: string;
+        category: string;
+        price: number;
+        isNew: boolean;
+      }>) || [];
+
+    // Revalidação dinâmica contra o banco de dados em tempo real
+    const allProductIds = Array.from(
+      new Set([
+        ...missingSpecsRaw.map((m) => m.productId),
+        ...brandReviewRaw.map((b) => b.productId),
+      ])
+    );
+
+    if (allProductIds.length > 0) {
+      const liveProducts = await this.prisma.product.findMany({
+        where: { id: { in: allProductIds } },
+        include: { brand: true, category: true },
+      });
+      const liveMap = new Map(liveProducts.map((p) => [p.id, p]));
+
+      const revalidatedMissing: typeof missingSpecsRaw = [];
+      for (const item of missingSpecsRaw) {
+        const live = liveMap.get(item.productId);
+        // Se o produto foi deletado/mesclado, não exibe
+        if (!live) continue;
+
+        const liveCat = live.category?.name ?? item.category;
+        const liveSpecs = (live.specs as Record<string, unknown>) || {};
+        const missingFields: string[] = [];
+        let isCritical = false;
+
+        if (liveCat === "module") {
+          if (!liveSpecs["power_w"]) {
+            missingFields.push("Potência do Módulo (Wp)");
+            isCritical = true;
+          }
+        } else if (
+          liveCat === "inverter" ||
+          liveCat === "microinverter" ||
+          liveCat === "hybrid_inverter" ||
+          liveCat === "off_grid_inverter"
+        ) {
+          if (!liveSpecs["nominal_power_w"] && !liveSpecs["max_module_power"]) {
+            missingFields.push("Potência Nominal (kW/W)");
+            isCritical = true;
+          }
+        } else if (liveCat === "structure_kit") {
+          if (!liveSpecs["roof_type"]) {
+            missingFields.push("Tipo de Telhado/Fixação");
+            isCritical = true;
+          }
+          if (!liveSpecs["max_modules"]) {
+            missingFields.push("Qtd. Máx. Módulos");
+          }
+        } else if (liveCat === "dc_cable") {
+          if (!liveSpecs["section_mm2"]) {
+            missingFields.push("Bitola do Cabo (mm²)");
+          }
+        } else if (liveCat === "battery") {
+          if (!liveSpecs["capacity_kwh"]) {
+            missingFields.push("Capacidade da Bateria (kWh)");
+            isCritical = true;
+          }
+        }
+
+        if (missingFields.length > 0) {
+          revalidatedMissing.push({
+            ...item,
+            productName: live.name,
+            brand: live.brand?.name ?? item.brand,
+            category: liveCat,
+            missingFields,
+            isCritical,
+          });
+        }
+      }
+
+      const revalidatedBrandReview: typeof brandReviewRaw = [];
+      for (const item of brandReviewRaw) {
+        const live = liveMap.get(item.productId);
+        if (!live) continue;
+        const brandName = live.brand?.name ?? item.currentBrand;
+        const isGeneric =
+          brandName.toLowerCase().includes("genéric") ||
+          brandName.toLowerCase() === "generico" ||
+          brandName.toLowerCase() === "generica";
+        if (isGeneric) {
+          revalidatedBrandReview.push({
+            ...item,
+            productName: live.name,
+            currentBrand: brandName,
+            category: live.category?.name ?? item.category,
+          });
+        }
+      }
+
+      const summary = (log.summary as Record<string, unknown>) || {};
+      const updatedSummary = {
+        ...summary,
+        missingSpecsCount: revalidatedMissing.length,
+        criticalSpecsCount: revalidatedMissing.filter((m) => m.isCritical).length,
+        brandReviewCount: revalidatedBrandReview.length,
+      };
+
+      const updatedDetails = {
+        ...details,
+        missingSpecsItems: revalidatedMissing,
+        brandReviewItems: revalidatedBrandReview,
+      };
+
+      return {
+        ...log,
+        summary: updatedSummary,
+        details: updatedDetails,
+      };
+    }
+
+    return log;
   }
 
   async dismissGenericInLog(logId: string, productId: string) {

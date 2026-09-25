@@ -955,6 +955,13 @@ export function ImportAuditModal({
         onClose={() => setSpecsProductId(null)}
         onSaved={() => {
           onBrandUpdated?.();
+          if (distributorId) {
+            fetchLatestImportLog(distributorId)
+              .then((data) => {
+                if (data) setLog(data);
+              })
+              .catch(() => {});
+          }
         }}
         defaultTab={1}
       />
