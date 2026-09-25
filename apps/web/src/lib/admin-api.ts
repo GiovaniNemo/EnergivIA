@@ -404,6 +404,7 @@ export interface DistributorProduct {
     id: string;
     name: string;
     imageUrl?: string | null;
+    specs?: Record<string, unknown> | null;
     brand: { id: string; name: string; imageUrl?: string | null };
     category: { id: string; name: string };
   };

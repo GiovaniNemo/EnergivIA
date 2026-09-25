@@ -14,6 +14,7 @@ import {
   Typography,
   CircularProgress,
   Alert,
+  Chip,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import SaveIcon from "@mui/icons-material/Save";
@@ -21,6 +22,7 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import { ProductForm } from "./ProductForm";
 import { buildProductSchema, categoryNames, type CategoryName } from "@/lib/admin/schemas";
 import { fetchBrands, fetchCategories, fetchProduct, updateProduct } from "@/lib/admin-api";
+import { getProductSpecsStatus } from "@/lib/product-specs-status";
 
 const defaultSpecsByCategory: Partial<Record<CategoryName, Record<string, unknown>>> = {
   inverter: { type: "string" },
@@ -117,6 +119,14 @@ export function ProductSpecsDialog({
     [watchCategoryId, categories]
   );
 
+  const watchedSpecs = methods.watch("specs");
+  const specsStatus = useMemo(() => {
+    return getProductSpecsStatus(
+      effectiveCategoryName || product?.category?.name,
+      (watchedSpecs || product?.specs) as Record<string, unknown>
+    );
+  }, [effectiveCategoryName, product?.category?.name, watchedSpecs, product?.specs]);
+
   const updateMutation = useMutation({
     mutationFn: (data: Parameters<typeof updateProduct>[1]) => updateProduct(productId!, data),
     onSuccess: () => {
@@ -179,11 +189,37 @@ export function ProductSpecsDialog({
         }}
       >
         <Box display="flex" alignItems="center" gap={1.5} overflow="hidden">
-          <DescriptionOutlinedIcon color="primary" />
+          <DescriptionOutlinedIcon
+            sx={{
+              color: specsStatus.isComplete ? "#10b981" : "#ef4444",
+            }}
+          />
           <Box overflow="hidden">
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }} noWrap>
-              {product?.name ? `Ficha Técnica · ${product.name}` : "Ficha Técnica do Produto"}
-            </Typography>
+            <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }} noWrap>
+                {product?.name ? `Ficha Técnica · ${product.name}` : "Ficha Técnica do Produto"}
+              </Typography>
+              <Chip
+                size="small"
+                label={
+                  specsStatus.isComplete
+                    ? "Ficha Completa"
+                    : `Incompleta (${specsStatus.missingFields.length} pendentes)`
+                }
+                sx={{
+                  fontWeight: 700,
+                  fontSize: "0.7rem",
+                  height: 22,
+                  color: specsStatus.isComplete ? "#10b981" : "#ef4444",
+                  bgcolor: specsStatus.isComplete
+                    ? "rgba(16, 185, 129, 0.1)"
+                    : "rgba(239, 68, 68, 0.1)",
+                  border: `1px solid ${
+                    specsStatus.isComplete ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"
+                  }`,
+                }}
+              />
+            </Box>
             {product?.brand?.name && (
               <Typography variant="caption" color="text.secondary">
                 Fabricante: {product.brand.name}
@@ -212,6 +248,38 @@ export function ProductSpecsDialog({
               {errorMsg && (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   {errorMsg}
+                </Alert>
+              )}
+              {!specsStatus.isComplete && specsStatus.totalRequired > 0 && (
+                <Alert
+                  severity="warning"
+                  sx={{
+                    mb: 2.5,
+                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    bgcolor: "rgba(245, 158, 11, 0.08)",
+                  }}
+                >
+                  <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5, color: "#d97706" }}>
+                    ⚠️ Parâmetros pendentes para dimensionamento solar:
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block", mb: 0.75 }}
+                  >
+                    Ao puxar da planilha, apenas dados básicos vieram no nome. Preencha os campos
+                    abaixo para que as propostas e cálculos funcionem sem erros:
+                  </Typography>
+                  <Box
+                    component="ul"
+                    sx={{ m: 0, pl: 2.5, fontSize: "0.82rem", color: "text.primary" }}
+                  >
+                    {specsStatus.missingFields.map((field) => (
+                      <li key={field}>
+                        <strong>{field}</strong>
+                      </li>
+                    ))}
+                  </Box>
                 </Alert>
               )}
               <ProductForm

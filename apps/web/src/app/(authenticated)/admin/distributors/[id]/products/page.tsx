@@ -46,6 +46,7 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import AssessmentOutlinedIcon from "@mui/icons-material/AssessmentOutlined";
 import { ProductSpecsDialog } from "@/components/admin/products/ProductSpecsDialog";
 import { ImportAuditModal } from "@/components/admin/distributors/ImportAuditModal";
+import { getProductSpecsStatus } from "@/lib/product-specs-status";
 import {
   fetchDistributor,
   fetchDistributorProducts,
@@ -140,6 +141,7 @@ export default function DistributorInventoryPage(): JSX.Element {
     useState<Record<OptionalColumnId, boolean>>(DEFAULT_OPTIONAL_COLUMNS);
   const [columnMenuAnchor, setColumnMenuAnchor] = useState<null | HTMLElement>(null);
   const [categoryId, setCategoryId] = useState("");
+  const [specsFilter, setSpecsFilter] = useState<"all" | "incomplete" | "complete">("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<DistributorProduct | null>(null);
@@ -165,7 +167,7 @@ export default function DistributorInventoryPage(): JSX.Element {
   useEffect(() => {
     setPage(1);
     setSelectedIds([]);
-  }, [debouncedSearch, categoryId]);
+  }, [debouncedSearch, categoryId, specsFilter]);
 
   const persistOptionalColumns = (next: Record<OptionalColumnId, boolean>) => {
     setOptionalColumns(next);
@@ -221,6 +223,20 @@ export default function DistributorInventoryPage(): JSX.Element {
   });
 
   const products = productsData?.data ?? [];
+
+  const displayRows = useMemo(() => {
+    const list = inventory?.data || [];
+    if (specsFilter === "all") return list;
+    return list.filter((row) => {
+      const status = getProductSpecsStatus(
+        row.product?.category?.name,
+        row.product?.specs as Record<string, unknown>
+      );
+      if (specsFilter === "incomplete") return !status.isComplete;
+      if (specsFilter === "complete") return status.isComplete;
+      return true;
+    });
+  }, [inventory?.data, specsFilter]);
 
   const addMutation = useMutation({
     mutationFn: (values: DistributorProductFormValues) =>
@@ -487,6 +503,25 @@ export default function DistributorInventoryPage(): JSX.Element {
                   {formatCategoryLabel(c.name)}
                 </MenuItem>
               ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label="Ficha Técnica"
+              value={specsFilter}
+              onChange={(e) => {
+                setSpecsFilter(e.target.value as "all" | "incomplete" | "complete");
+                setPage(1);
+              }}
+              sx={{ minWidth: 190, width: { xs: "100%", sm: "auto" } }}
+            >
+              <MenuItem value="all">Todas as Fichas</MenuItem>
+              <MenuItem value="incomplete" sx={{ color: "#ef4444", fontWeight: 600 }}>
+                🔴 Incompletas (Pendentes)
+              </MenuItem>
+              <MenuItem value="complete" sx={{ color: "#10b981", fontWeight: 600 }}>
+                🟢 100% Completas
+              </MenuItem>
             </TextField>
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
               <Tooltip title="Escolher colunas da tabela">
@@ -760,19 +795,23 @@ export default function DistributorInventoryPage(): JSX.Element {
                 <TableRow>
                   <TableCell colSpan={visibleColCount}>Carregando...</TableCell>
                 </TableRow>
-              ) : !inventory?.data?.length ? (
+              ) : !displayRows.length ? (
                 <TableRow>
                   <TableCell colSpan={visibleColCount}>
                     <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                      {debouncedSearch || categoryId
-                        ? "Nenhum produto corresponde à busca ou ao tipo selecionado."
+                      {debouncedSearch || categoryId || specsFilter !== "all"
+                        ? "Nenhum produto corresponde aos filtros ou busca selecionada."
                         : 'Nenhum produto neste fornecedor. Use "Adicionar produto" para começar.'}
                     </Typography>
                   </TableCell>
                 </TableRow>
               ) : (
-                inventory.data.map((row) => {
+                displayRows.map((row) => {
                   const isItemActive = row.active !== false;
+                  const specsStatus = getProductSpecsStatus(
+                    row.product.category?.name,
+                    row.product.specs as Record<string, unknown>
+                  );
 
                   return (
                     <TableRow
@@ -798,7 +837,7 @@ export default function DistributorInventoryPage(): JSX.Element {
                           }}
                         />
                       </TableCell>
-                      <TableCell sx={{ maxWidth: 320 }}>
+                      <TableCell sx={{ maxWidth: 340 }}>
                         <Box
                           onClick={() => setSpecsProductId(row.product.id)}
                           sx={{
@@ -821,19 +860,44 @@ export default function DistributorInventoryPage(): JSX.Element {
                           >
                             {row.product.name.slice(0, 1).toUpperCase()}
                           </Avatar>
-                          <Tooltip
-                            title={`Ver ficha técnica de: ${row.product.name}`}
-                            placement="top-start"
+                          <Box
+                            sx={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 0.3 }}
                           >
-                            <Typography
-                              className="product-name-text"
-                              variant="body2"
-                              sx={{ fontWeight: 600, transition: "color 0.2s ease" }}
-                              noWrap
+                            <Tooltip
+                              title={`Ver ficha técnica de: ${row.product.name}`}
+                              placement="top-start"
                             >
-                              {row.product.name}
-                            </Typography>
-                          </Tooltip>
+                              <Typography
+                                className="product-name-text"
+                                variant="body2"
+                                sx={{ fontWeight: 600, transition: "color 0.2s ease" }}
+                                noWrap
+                              >
+                                {row.product.name}
+                              </Typography>
+                            </Tooltip>
+                            {!specsStatus.isComplete && specsStatus.totalRequired > 0 && (
+                              <Tooltip
+                                arrow
+                                title={`Faltam dados essenciais: ${specsStatus.missingFields.join(", ")}`}
+                              >
+                                <Chip
+                                  size="small"
+                                  label={`Ficha incompleta (${specsStatus.filledCount}/${specsStatus.totalRequired})`}
+                                  sx={{
+                                    height: 18,
+                                    fontSize: "0.62rem",
+                                    fontWeight: 700,
+                                    color: "#ef4444",
+                                    bgcolor: "rgba(239, 68, 68, 0.08)",
+                                    border: "1px solid rgba(239, 68, 68, 0.25)",
+                                    width: "fit-content",
+                                    cursor: "pointer",
+                                  }}
+                                />
+                              </Tooltip>
+                            )}
+                          </Box>
                         </Box>
                       </TableCell>
                       <TableCell>{row.product.brand.name}</TableCell>
@@ -960,12 +1024,65 @@ export default function DistributorInventoryPage(): JSX.Element {
                       </TableCell>
                       <TableCell align="right">
                         <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
-                          <Tooltip title="Ficha Técnica & Especificações">
+                          <Tooltip
+                            arrow
+                            title={
+                              <Box sx={{ p: 0.5, maxWidth: 320 }}>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontWeight: 700,
+                                    display: "block",
+                                    color: specsStatus.isComplete ? "#34d399" : "#f87171",
+                                  }}
+                                >
+                                  {specsStatus.isComplete
+                                    ? "🟢 Ficha Técnica Completa"
+                                    : "🔴 Ficha Técnica Incompleta"}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  sx={{ display: "block", mt: 0.25, color: "text.secondary" }}
+                                >
+                                  {specsStatus.tooltipText}
+                                </Typography>
+                                {!specsStatus.isComplete && (
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      display: "block",
+                                      mt: 0.75,
+                                      color: "#fbbf24",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    Clique para preencher os dados faltantes
+                                  </Typography>
+                                )}
+                              </Box>
+                            }
+                          >
                             <IconButton
                               size="small"
-                              color="primary"
                               onClick={() => setSpecsProductId(row.product.id)}
                               aria-label="Ficha Técnica"
+                              sx={{
+                                color: specsStatus.isComplete ? "#10b981" : "#ef4444",
+                                bgcolor: specsStatus.isComplete
+                                  ? "rgba(16, 185, 129, 0.08)"
+                                  : "rgba(239, 68, 68, 0.08)",
+                                border: `1px solid ${
+                                  specsStatus.isComplete
+                                    ? "rgba(16, 185, 129, 0.35)"
+                                    : "rgba(239, 68, 68, 0.35)"
+                                }`,
+                                "&:hover": {
+                                  bgcolor: specsStatus.isComplete
+                                    ? "rgba(16, 185, 129, 0.18)"
+                                    : "rgba(239, 68, 68, 0.18)",
+                                },
+                                transition: "all 0.2s ease",
+                              }}
                             >
                               <DescriptionOutlinedIcon fontSize="small" />
                             </IconButton>

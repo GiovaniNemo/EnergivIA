@@ -5,19 +5,45 @@ import { useFormContext, Controller } from "react-hook-form";
 import { NumberSpecField } from "./NumberSpecField";
 
 const fields: Array<{ name: string; label: string; helperText?: string; integer?: boolean }> = [
-  { name: "nominal_power_w", label: "Potência Nominal CA (W)", integer: true },
+  {
+    name: "nominal_power_w",
+    label: "Potência Nominal CA (W) *",
+    helperText: "Obrigatório para dimensionamento (ex: 5000 para 5kW)",
+    integer: true,
+  },
   {
     name: "warranty_years",
     label: "Garantia de fábrica (anos)",
     helperText: "Garantia em anos (ex: 5, 10, 12 ou 15)",
     integer: true,
   },
-  { name: "max_dc_voltage", label: "Tensão DC máx. (V)" },
-  { name: "mppt_count", label: "Nº de MPPTs", integer: true },
+  {
+    name: "max_dc_voltage",
+    label: "Tensão DC máx. (V) *",
+    helperText: "Obrigatório (limite de tensão do inversor, ex: 600 ou 1000)",
+  },
+  {
+    name: "mppt_count",
+    label: "Nº de MPPTs *",
+    helperText: "Obrigatório (quantidade de MPPTs, ex: 1, 2 ou 4)",
+    integer: true,
+  },
   { name: "max_strings_per_mppt", label: "Strings por MPPT", integer: true },
-  { name: "mppt_voltage_min", label: "Tensão MPPT mín. (V)" },
-  { name: "mppt_voltage_max", label: "Tensão MPPT máx. (V)" },
-  { name: "max_input_current", label: "Corrente entrada máx. (A)" },
+  {
+    name: "mppt_voltage_min",
+    label: "Tensão MPPT mín. (V) *",
+    helperText: "Obrigatório (tensão mínima de operação MPPT, ex: 80 ou 120)",
+  },
+  {
+    name: "mppt_voltage_max",
+    label: "Tensão MPPT máx. (V) *",
+    helperText: "Obrigatório (tensão máxima de operação MPPT, ex: 550 ou 850)",
+  },
+  {
+    name: "max_input_current",
+    label: "Corrente entrada máx. (A) *",
+    helperText: "Obrigatório (limite de corrente por MPPT, ex: 14, 16 ou 25)",
+  },
   { name: "max_dc_power", label: "Potência DC máx. (W)" },
   { name: "recommended_dc_ac_ratio_min", label: "Ratio DC/AC mín. recomendado" },
   { name: "recommended_dc_ac_ratio_max", label: "Ratio DC/AC máx. recomendado" },

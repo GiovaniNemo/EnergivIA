@@ -197,6 +197,7 @@ export class DistributorsService {
               id: true,
               name: true,
               imageUrl: true,
+              specs: true,
               brand: { select: { id: true, name: true, imageUrl: true } },
               category: { select: { id: true, name: true } },
             },
