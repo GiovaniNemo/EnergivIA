@@ -137,6 +137,15 @@ export default function AdminPlanosPage() {
   const [couponSubmitting, setCouponSubmitting] = useState(false);
   const [couponModalError, setCouponModalError] = useState<string | null>(null);
 
+  // Stripe status & sync state
+  const [stripeStatus, setStripeStatus] = useState<{
+    configured: boolean;
+    mode: "live" | "test" | "unconfigured";
+    isLive: boolean;
+    hasWebhook: boolean;
+  } | null>(null);
+  const [syncingStripe, setSyncingStripe] = useState(false);
+
   // Toast state
   const [toast, setToast] = useState<{
     type: "success" | "error" | "info";
@@ -173,6 +182,17 @@ export default function AdminPlanosPage() {
         const couponsData = await couponsRes.json();
         setCoupons(Array.isArray(couponsData) ? couponsData : []);
       }
+
+      // 3. Fetch Stripe Status
+      try {
+        const statusRes = await fetch("/api/proxy/stripe/status");
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          setStripeStatus(statusData);
+        }
+      } catch (err) {
+        console.warn("Não foi possível obter status do Stripe", err);
+      }
     } catch (error) {
       console.error("Erro ao carregar dados", error);
       showToast("Erro ao carregar dados do servidor", "error");
@@ -180,6 +200,31 @@ export default function AdminPlanosPage() {
       setLoading(false);
     }
   }, []);
+
+  const handleSyncWithStripe = async () => {
+    setSyncingStripe(true);
+    try {
+      const res = await fetch("/api/proxy/plans/sync-stripe", {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Falha ao sincronizar planos com o Stripe");
+      }
+      const data = await res.json();
+      const modeText = stripeStatus?.isLive ? "PRODUÇÃO (Real)" : "TESTE";
+      showToast(
+        `Sucesso! ${data.total ?? (data.plans?.length || 0)} planos sincronizados com o Stripe em modo ${modeText}!`,
+        "success"
+      );
+      fetchData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao sincronizar";
+      showToast(msg, "error");
+    } finally {
+      setSyncingStripe(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -623,6 +668,21 @@ export default function AdminPlanosPage() {
           >
             <RefreshCw className="w-4 h-4" />
           </button>
+
+          {activeTab === "planos" && (
+            <button
+              onClick={handleSyncWithStripe}
+              disabled={syncingStripe}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--color-card)] hover:bg-[var(--color-muted)] border border-[var(--color-border)] text-[var(--color-foreground)] font-semibold text-sm shadow-sm transition hover:scale-[1.02] disabled:opacity-50"
+              title="Cria ou atualiza todos os planos no Stripe automaticamente (útil ao mudar para Produção)"
+            >
+              <RefreshCw
+                className={`w-4 h-4 text-emerald-400 ${syncingStripe ? "animate-spin" : ""}`}
+              />
+              {syncingStripe ? "Sincronizando..." : "Sincronizar com Stripe"}
+            </button>
+          )}
+
           {activeTab === "planos" ? (
             <button
               onClick={handleOpenCreatePlan}
@@ -693,9 +753,29 @@ export default function AdminPlanosPage() {
             <span className="text-xs font-medium text-[var(--color-muted-foreground)] uppercase tracking-wider">
               Gateway Pagamentos
             </span>
-            <p className="text-base font-bold text-emerald-400 flex items-center gap-1 mt-1">
-              <CheckCircle2 className="w-4 h-4" /> Stripe Integrado
-            </p>
+            <div className="mt-1 flex items-center gap-1.5">
+              {stripeStatus?.isLive ? (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Stripe Produção (Real)
+                </span>
+              ) : stripeStatus?.mode === "test" ? (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  Stripe Modo Teste
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-full border border-rose-500/20">
+                  <span className="w-2 h-2 rounded-full bg-rose-400" />
+                  Chaves Pendentes
+                </span>
+              )}
+            </div>
+            {stripeStatus?.hasWebhook && (
+              <p className="text-[11px] text-[var(--color-muted-foreground)] mt-1 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Webhook Conectado
+              </p>
+            )}
           </div>
           <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
             <CreditCard className="w-5 h-5" />

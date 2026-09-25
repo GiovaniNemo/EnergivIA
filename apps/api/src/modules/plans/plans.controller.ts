@@ -22,6 +22,16 @@ export class PlansController {
     return this.plansService.create(data);
   }
 
+  @Post("sync-stripe")
+  async syncAllWithStripe() {
+    return this.plansService.syncAllWithStripe();
+  }
+
+  @Post(":id/sync-stripe")
+  async syncPlanWithStripe(@Param("id") id: string) {
+    return this.plansService.syncPlanWithStripe(id);
+  }
+
   @Put(":id")
   async update(@Param("id") id: string, @Body() data: Record<string, unknown>) {
     return this.plansService.update(id, data);

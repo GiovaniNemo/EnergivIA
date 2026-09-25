@@ -25,6 +25,21 @@ export class StripeService {
     return this.stripe;
   }
 
+  getStatus() {
+    const secretKey = this.configService.get<string>("STRIPE_SECRET_KEY") || "";
+    const webhookSecret = this.configService.get<string>("STRIPE_WEBHOOK_SECRET") || "";
+    const isConfigured = Boolean(secretKey && secretKey !== "sk_test_mock");
+    const isLive = secretKey.startsWith("sk_live_");
+    const hasWebhook = Boolean(webhookSecret && webhookSecret !== "whsec_mock");
+
+    return {
+      configured: isConfigured,
+      mode: isLive ? "live" : isConfigured ? "test" : "unconfigured",
+      isLive,
+      hasWebhook,
+    };
+  }
+
   async createProduct(name: string, description?: string) {
     try {
       return await this.stripe.products.create({
@@ -85,8 +100,35 @@ export class StripeService {
       }
     }
 
-    if (!plan.stripeId) {
-      throw new Error("Plan not synced with Stripe.");
+    // Valida se o preço existe no ambiente ativo do Stripe (Test vs Live)
+    let validStripePriceId = plan.stripeId;
+    if (validStripePriceId) {
+      try {
+        await this.stripe.prices.retrieve(validStripePriceId);
+      } catch (err) {
+        this.logger.warn(
+          `Preço ${validStripePriceId} não encontrado no ambiente Stripe ativo (${err}). Recriando produto e preço no Stripe...`
+        );
+        validStripePriceId = null;
+      }
+    }
+
+    if (!validStripePriceId) {
+      const product = await this.createProduct(
+        `Plano ${plan.name} - EnergivIA`,
+        plan.description || undefined
+      );
+      const stripePrice = await this.createPrice(
+        product.id,
+        Number(plan.price),
+        (plan.interval as "month" | "year") || "month"
+      );
+      validStripePriceId = stripePrice.id;
+
+      plan = await this.prisma.plan.update({
+        where: { id: plan.id },
+        data: { stripeId: validStripePriceId },
+      });
     }
 
     // Procura ou cria o customer no Stripe
@@ -95,6 +137,21 @@ export class StripeService {
     });
 
     let stripeCustomerId = subscription?.stripeCustomerId;
+
+    // Se já existia um customer gravado, verifica se ele é válido no ambiente ativo do Stripe
+    if (stripeCustomerId) {
+      try {
+        const existingCustomer = await this.stripe.customers.retrieve(stripeCustomerId);
+        if (existingCustomer.deleted) {
+          stripeCustomerId = undefined;
+        }
+      } catch {
+        this.logger.warn(
+          `Customer ${stripeCustomerId} não encontrado no ambiente atual do Stripe. Criando novo customer...`
+        );
+        stripeCustomerId = undefined;
+      }
+    }
 
     if (!stripeCustomerId) {
       const tenant = await this.prisma.tenant.findUnique({
@@ -138,7 +195,7 @@ export class StripeService {
       payment_method_types: ["card"],
       line_items: [
         {
-          price: plan.stripeId,
+          price: validStripePriceId,
           quantity: 1,
         },
       ],

@@ -309,4 +309,86 @@ export class PlansService implements OnModuleInit {
   async deactivate(id: string) {
     return this.toggleActive(id, false);
   }
+
+  async syncPlanWithStripe(id: string) {
+    const plan = await this.prisma.plan.findUnique({ where: { id } });
+    if (!plan) throw new NotFoundException("Plano não encontrado");
+
+    let needsNewPrice = false;
+    let productId: string | undefined;
+
+    if (plan.stripeId) {
+      try {
+        const stripePrice = await this.stripeService.stripeClient.prices.retrieve(plan.stripeId);
+        productId =
+          typeof stripePrice.product === "string" ? stripePrice.product : stripePrice.product?.id;
+
+        if (productId) {
+          await this.stripeService.stripeClient.products.update(productId, {
+            name: `Plano ${plan.name} EnergivIA`,
+            description: plan.description || undefined,
+          });
+        }
+      } catch {
+        needsNewPrice = true;
+      }
+    } else {
+      needsNewPrice = true;
+    }
+
+    if (needsNewPrice || !productId) {
+      const product = await this.stripeService.createProduct(
+        `Plano ${plan.name} EnergivIA`,
+        plan.description || undefined
+      );
+      const stripePrice = await this.stripeService.createPrice(
+        product.id,
+        Number(plan.price),
+        (plan.interval as "month" | "year") || "month"
+      );
+
+      const updated = await this.prisma.plan.update({
+        where: { id: plan.id },
+        data: { stripeId: stripePrice.id },
+      });
+
+      return {
+        id: updated.id,
+        name: updated.name,
+        stripeId: stripePrice.id,
+        recreated: true,
+      };
+    }
+
+    return {
+      id: plan.id,
+      name: plan.name,
+      stripeId: plan.stripeId,
+      recreated: false,
+    };
+  }
+
+  async syncAllWithStripe() {
+    const plans = await this.prisma.plan.findMany({
+      where: { active: true },
+    });
+
+    const results = [];
+    for (const plan of plans) {
+      try {
+        const res = await this.syncPlanWithStripe(plan.id);
+        results.push(res);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(`Error syncing plan ${plan.name} (${plan.id}) with Stripe: ${msg}`);
+        results.push({ id: plan.id, name: plan.name, error: msg });
+      }
+    }
+
+    return {
+      success: true,
+      total: results.length,
+      plans: results,
+    };
+  }
 }

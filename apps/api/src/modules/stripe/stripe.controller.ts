@@ -24,6 +24,11 @@ import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator
 export class StripeController {
   constructor(private stripeService: StripeService) {}
 
+  @Get("status")
+  async getStatus() {
+    return this.stripeService.getStatus();
+  }
+
   @Post("create-checkout-session")
   async createCheckoutSession(
     @Body() body: { planId: string; tenantId: string; returnUrl?: string; couponCode?: string }
