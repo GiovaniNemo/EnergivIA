@@ -24,6 +24,7 @@ import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator
 export class StripeController {
   constructor(private stripeService: StripeService) {}
 
+  @Public()
   @Get("status")
   async getStatus() {
     return this.stripeService.getStatus();
