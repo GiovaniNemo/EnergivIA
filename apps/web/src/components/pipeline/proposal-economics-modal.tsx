@@ -3760,19 +3760,19 @@ export const ProposalEconomicsModal = forwardRef<
                               <div className="flex h-5 w-5 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
                                 <Sun className="h-3.5 w-3.5" />
                               </div>
-                              <span className="text-[0.7rem] sm:text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)] truncate">
+                              <span className="text-[0.7rem] sm:text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)] shrink-0">
                                 Módulos
                               </span>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
                               {isModuleTier1(proposalKitResult.modules) ? (
                                 <img
                                   src="/badges/tier1.png"
                                   alt="Tier 1 Bloomberg"
                                   title="Módulo certificado Tier 1 (BloombergNEF)"
-                                  className="h-5 sm:h-6 w-auto object-contain shrink-0"
+                                  className="h-4.5 sm:h-5 w-auto object-contain shrink-0"
                                 />
                               ) : null}
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
                               {extractPowerBadge(proposalKitResult.modules.product_name) ? (
                                 <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 shrink-0">
                                   <Zap className="h-3 w-3 shrink-0" />
