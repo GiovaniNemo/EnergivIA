@@ -15,6 +15,7 @@ function getPublicProposalFetchUrl(id: string): string {
 
 export interface PublicProposalPayload {
   id: string;
+  proposalNumber?: number | null;
   title: string;
   validUntil: string;
   createdAt: string;

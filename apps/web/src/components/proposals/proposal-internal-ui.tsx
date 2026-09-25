@@ -64,6 +64,7 @@ const marginHealthLabel: Record<Exclude<MarginHealth, "none">, string> = {
 export type ProposalInternalHeaderProps = {
   leadId: string;
   leadName: string;
+  proposalNumber?: number | null;
   title: string;
   statusLabel: string;
   validUntilLabel: string;
@@ -91,6 +92,7 @@ export type ProposalInternalHeaderProps = {
 export function ProposalInternalHeader({
   leadId,
   leadName,
+  proposalNumber,
   title,
   statusLabel,
   validUntilLabel,
@@ -155,6 +157,11 @@ export function ProposalInternalHeader({
               {title}
             </h1>
             <div className="flex flex-wrap items-center gap-2">
+              {proposalNumber ? (
+                <span className="inline-flex items-center rounded-md border border-[var(--color-border)] bg-[var(--color-muted)] px-2.5 py-0.5 font-mono text-xs font-semibold text-[var(--color-foreground)]">
+                  #{proposalNumber}
+                </span>
+              ) : null}
               <span className="inline-flex rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/30 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-foreground)]">
                 {statusLabel}
               </span>

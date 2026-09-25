@@ -10,6 +10,7 @@ import { createWorker } from "tesseract.js";
 import { AiUsageService } from "../ai-usage/ai-usage.service";
 import { AiFeature } from "@prisma/client";
 import { getTenantPlanDetails } from "../../common/utils/plan-limits";
+import { getNextProposalNumber } from "../proposals/proposals.service";
 
 import type {
   ExtractedBillHistoryItem,
@@ -3098,6 +3099,10 @@ ${catalogContext}`;
             }));
 
         // 7. Proposta Comercial
+        const proposalNumber = await getNextProposalNumber(
+          this.prisma,
+          conversation.organizationId
+        );
         const proposal = await this.prisma.proposal.create({
           data: {
             tenantId: conversation.organizationId,
@@ -3105,6 +3110,7 @@ ${catalogContext}`;
             simulationId: simulation.id,
             proposalTemplateId: template?.id || defaultTemplate?.id || null,
             proposalTemplateVersion: template?.version || defaultTemplate?.version || 1,
+            proposalNumber,
             title: `Proposta Comercial - ${clientName}`,
             validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             renderedData: {

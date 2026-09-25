@@ -88,8 +88,15 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
     <main className="min-h-screen bg-[var(--color-background)]">
       {!isPdf && (
         <div className={`bg-[var(--color-background)] py-4 ${publicColumnClass}`}>
-          <h1 className="text-xl font-semibold text-[var(--color-foreground)]">{data.title}</h1>
-          <p className="text-sm text-[var(--color-muted-foreground)]">
+          <div className="flex flex-wrap items-center gap-2">
+            {data.proposalNumber ? (
+              <span className="inline-flex items-center rounded-md border border-[var(--color-border)] bg-[var(--color-muted)] px-2.5 py-0.5 font-mono text-xs font-semibold text-[var(--color-foreground)]">
+                #{data.proposalNumber}
+              </span>
+            ) : null}
+            <h1 className="text-xl font-semibold text-[var(--color-foreground)]">{data.title}</h1>
+          </div>
+          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
             Cliente: {data.deal?.lead?.name ?? "Cliente"} · Válida até{" "}
             {data.validUntil && !Number.isNaN(new Date(data.validUntil).getTime())
               ? new Date(data.validUntil).toLocaleDateString("pt-BR")

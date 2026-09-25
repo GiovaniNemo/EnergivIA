@@ -617,6 +617,7 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
       <ProposalInternalHeader
         leadId={proposal.deal.lead.id}
         leadName={proposal.deal.lead.name}
+        proposalNumber={proposal.proposalNumber}
         title={proposal.title}
         statusLabel={STATUS_LABEL[proposal.status] ?? proposal.status}
         validUntilLabel={new Date(proposal.validUntil).toLocaleDateString("pt-BR")}

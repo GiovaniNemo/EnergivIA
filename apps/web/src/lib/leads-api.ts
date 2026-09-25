@@ -55,6 +55,7 @@ export interface LeadsDashboardStats {
 
 export interface ProposalSummary {
   id: string;
+  proposalNumber?: number | null;
   title: string;
   status: string;
   createdAt: string;
@@ -335,6 +336,7 @@ export type FinancialSimulationResultJson = {
 
 export interface ProposalDetail {
   id: string;
+  proposalNumber?: number | null;
   title: string;
   status: string;
   validUntil: string;
@@ -369,6 +371,7 @@ export interface ProposalDetail {
 
 export interface ProposalListItem {
   id: string;
+  proposalNumber?: number | null;
   title: string;
   status: string;
   validUntil: string;

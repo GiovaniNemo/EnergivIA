@@ -67,6 +67,26 @@ async function findPublishedTemplateRow(
   });
 }
 
+export async function getNextProposalNumber(
+  client: {
+    proposal: {
+      findFirst: (args?: {
+        where?: { tenantId?: string; proposalNumber?: { not: null } };
+        orderBy?: { proposalNumber?: "desc" };
+        select?: { proposalNumber?: boolean };
+      }) => Promise<{ proposalNumber?: number | null } | null>;
+    };
+  },
+  tenantId: string
+): Promise<number> {
+  const last = await client.proposal.findFirst({
+    where: { tenantId, proposalNumber: { not: null } },
+    orderBy: { proposalNumber: "desc" },
+    select: { proposalNumber: true },
+  });
+  return Math.max(1000, last?.proposalNumber ?? 1000) + 1;
+}
+
 @Injectable()
 export class ProposalsService {
   private readonly logger = new Logger(ProposalsService.name);
@@ -123,6 +143,7 @@ export class ProposalsService {
 
       return {
         id: p.id,
+        proposalNumber: p.proposalNumber,
         title: p.title,
         status: p.status,
         validUntil: p.validUntil,
@@ -215,6 +236,7 @@ export class ProposalsService {
     }
 
     const created = await this.prisma.$transaction(async (tx) => {
+      const proposalNumber = await getNextProposalNumber(tx, tenantId);
       const proposal = await tx.proposal.create({
         data: {
           tenantId,
@@ -222,6 +244,7 @@ export class ProposalsService {
           simulationId: data.simulationId,
           proposalTemplateId,
           proposalTemplateVersion: templateVersion,
+          proposalNumber,
           title: data.title,
           validUntil: data.validUntil,
           status: "DRAFT",
@@ -246,14 +269,19 @@ export class ProposalsService {
         tenantId,
         leadId: deal.leadId,
         kind: "PROPOSAL_CREATED",
-        label: `Proposta criada (${data.title})`,
-        meta: { proposalId: created.id, dealId: data.dealId },
+        label: `Proposta criada (#${created.proposalNumber ?? "—"} - ${data.title})`,
+        meta: {
+          proposalId: created.id,
+          proposalNumber: created.proposalNumber,
+          dealId: data.dealId,
+        },
         occurredAt: created.createdAt,
       })
       .catch(() => {});
     this.webhooksDispatcher
       ?.dispatch(tenantId, "proposal.created", {
         proposalId: created.id,
+        proposalNumber: created.proposalNumber,
         title: created.title,
         dealId: data.dealId,
         status: created.status,
@@ -388,6 +416,7 @@ export class ProposalsService {
 
       return {
         id: proposal.id,
+        proposalNumber: proposal.proposalNumber,
         title: proposal.title,
         validUntil: proposal.validUntil,
         createdAt: proposal.createdAt,

@@ -15,6 +15,12 @@ export function mergePublicProposalVariables(
 
   merged["nome_cliente"] = payload.deal?.lead?.name ?? "Cliente";
   merged["proposta_id"] = payload.publicToken || payload.id;
+  merged["proposta_numero"] = payload.proposalNumber
+    ? `#${payload.proposalNumber}`
+    : payload.publicToken || payload.id;
+  merged["numero_proposta"] = payload.proposalNumber
+    ? `#${payload.proposalNumber}`
+    : payload.publicToken || payload.id;
 
   // Integrator snapshot: kit items and project costs
   const integrator = payload.renderedData?.integrator;

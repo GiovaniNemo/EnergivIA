@@ -149,6 +149,7 @@ export function ClientLeadDrawer({
     if (!lead) return [];
     const rows: {
       id: string;
+      proposalNumber?: number | null;
       title: string;
       dealTitle: string;
       status: string;
@@ -163,6 +164,7 @@ export function ClientLeadDrawer({
       for (const p of d.proposals) {
         rows.push({
           id: p.id,
+          proposalNumber: p.proposalNumber,
           title: p.title,
           dealTitle: d.title,
           status: p.status,
@@ -429,12 +431,19 @@ export function ClientLeadDrawer({
                           className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm transition-shadow hover:border-[var(--color-primary)]/25 hover:shadow-md"
                         >
                           <div className="flex flex-wrap items-start justify-between gap-2">
-                            <Link
-                              href={`/propostas/${p.id}`}
-                              className="min-w-0 flex-1 text-[15px] font-semibold leading-snug text-[var(--color-primary-700)] hover:underline dark:text-[var(--color-primary-400)]"
-                            >
-                              {p.title}
-                            </Link>
+                            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                              {p.proposalNumber ? (
+                                <span className="inline-flex shrink-0 items-center rounded border border-[var(--color-border)] bg-[var(--color-muted)] px-1.5 py-0.5 font-mono text-[10px] font-semibold text-[var(--color-foreground)]">
+                                  #{p.proposalNumber}
+                                </span>
+                              ) : null}
+                              <Link
+                                href={`/propostas/${p.id}`}
+                                className="min-w-0 flex-1 truncate text-[15px] font-semibold leading-snug text-[var(--color-primary-700)] hover:underline dark:text-[var(--color-primary-400)]"
+                              >
+                                {p.title}
+                              </Link>
+                            </div>
                             <span
                               className={proposalStatusPillClass(p.status)}
                               title={proposalStatusLabel(p.status)}

@@ -379,6 +379,7 @@ model Proposal {
    * anterior.
    */
   publicToken     String?        @unique @map("public_token")
+  proposalNumber  Int?           @map("proposal_number")
   title           String
   status          ProposalStatus @default(DRAFT)
   validUntil      DateTime
@@ -404,6 +405,7 @@ model Proposal {
   sections     Section[]
   notifications UserNotification[]
 
+  @@unique([tenantId, proposalNumber])
   @@index([tenantId])
   @@index([dealId])
   @@index([status])

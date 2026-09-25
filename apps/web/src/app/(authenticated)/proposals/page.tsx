@@ -292,15 +292,22 @@ export default function ProposalsPage(): JSX.Element {
                             <FileText className="h-5 w-5" />
                           </div>
                           <div className="min-w-0 flex-1 space-y-2">
-                            <Link
-                              href={`/propostas/${p.id}`}
-                              className="group/title inline-flex max-w-full items-start gap-1.5 text-[0.95rem] font-semibold leading-snug text-[var(--color-foreground)] hover:text-emerald-600 dark:hover:text-emerald-400 sm:text-base"
-                            >
-                              <span className="min-w-0 break-words">
-                                {formatProposalListTitle(p.title)}
-                              </span>
-                              <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-muted-foreground)] opacity-0 transition-opacity group-hover/title:opacity-100" />
-                            </Link>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {p.proposalNumber ? (
+                                <span className="inline-flex items-center rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/80 px-2 py-0.5 font-mono text-xs font-semibold text-[var(--color-foreground)]">
+                                  #{p.proposalNumber}
+                                </span>
+                              ) : null}
+                              <Link
+                                href={`/propostas/${p.id}`}
+                                className="group/title inline-flex max-w-full items-start gap-1.5 text-[0.95rem] font-semibold leading-snug text-[var(--color-foreground)] hover:text-emerald-600 dark:hover:text-emerald-400 sm:text-base"
+                              >
+                                <span className="min-w-0 break-words">
+                                  {formatProposalListTitle(p.title)}
+                                </span>
+                                <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-muted-foreground)] opacity-0 transition-opacity group-hover/title:opacity-100" />
+                              </Link>
+                            </div>
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--color-muted-foreground)]">
                               <span className="inline-flex items-center gap-1.5">
                                 <User className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
