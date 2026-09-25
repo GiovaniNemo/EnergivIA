@@ -1284,6 +1284,7 @@ export async function POST(req: Request) {
     );
 
     let integratorCompanyName = "EnergivIA";
+    let defaultKwpRate = 2800;
     try {
       const session = await auth0.getSession();
       if (session) {
@@ -1310,6 +1311,9 @@ export async function POST(req: Request) {
                 meData.organizations[0];
               if (currentOrg && currentOrg.name) {
                 integratorCompanyName = currentOrg.name;
+                if (currentOrg.defaultKwpRate) {
+                  defaultKwpRate = currentOrg.defaultKwpRate;
+                }
               }
             } else if (meData.company) {
               integratorCompanyName = meData.company;
@@ -1336,111 +1340,15 @@ export async function POST(req: Request) {
       greetingCompany = ` ${integratorCompanyName}`;
     }
 
-    const dynamicSystemPrompt = systemPrompt
-      .replace(/\[SAUDACAO\]/g, saudacao)
-      .replace(/\[EMPRESA\]/g, greetingCompany);
+    const dynamicSystemPrompt =
+      systemPrompt.replace(/\[SAUDACAO\]/g, saudacao).replace(/\[EMPRESA\]/g, greetingCompany) +
+      `\n\n[INFORMAÇÃO DO SISTEMA]: A taxa padrão configurada pela empresa do integrador é de R$ ${defaultKwpRate}/kWp. Se o integrador não informar nenhuma taxa, utilize ESSE VALOR (R$ ${defaultKwpRate}) automaticamente na ferramenta de cotação por kWp.`;
 
     const result = await streamText({
       model: openai("gpt-4o"),
       system: dynamicSystemPrompt,
       messages: formattedMessages,
       tools: {
-        gerar_cotacao_distribuidor: tool({
-          description:
-            "Usa o motor de cálculo da EnergivIA para dimensionar os componentes físicos e puxar orçamentos REAIS cruzando todos os distribuidores ativos.",
-          parameters: z.object({
-            monthlyConsumption: z
-              .any()
-              .optional()
-              .describe(
-                "Consumo mensal (kWh) do cliente (ex: 450). OBRIGATÓRIO se o dimensionamento for por consumo. NUNCA passe targetKWp se for por consumo!"
-              ),
-            targetKWp: z
-              .any()
-              .optional()
-              .describe(
-                "Potência alvo do sistema em kWp. Use SOMENTE se o integrador pediu explicitamente por kWp no chat (ex: '5 kwp'). NUNCA passe este campo se a simulação for por consumo!"
-              ),
-            targetModules: z
-              .number()
-              .optional()
-              .describe("Quantidade exata de módulos alvo, se o integrador pedir."),
-            location: z
-              .string()
-              .optional()
-              .describe("Cidade e Estado combinados (ex: 'Abaetetuba/PA')"),
-            cidade: z
-              .string()
-              .describe(
-                "Nome da cidade onde será a instalação (ex: 'Abaetetuba', 'Cuiabá', 'Maringá')."
-              ),
-            estado: z
-              .string()
-              .describe(
-                "Sigla do estado (UF) onde será a instalação (ex: 'PA', 'MT', 'PR'). Se o integrador não digitou a UF mas a cidade é brasileira conhecida (ex: Abaetetuba -> PA), deduza automaticamente!"
-              ),
-            gridVoltage: z
-              .string()
-              .describe(
-                "Padrão de entrada elétrico / Tensão. OBRIGATÓRIO (ex: 'Monofásico 220V', 'Bifásico 127V/220V', 'Trifásico 220V', 'Trifásico 380V'). NUNCA chame a ferramenta sem ter perguntado e obtido o padrão elétrico!"
-              ),
-            roofType: z
-              .string()
-              .describe(
-                "Tipo de telhado. OBRIGATÓRIO (ex: 'Cerâmica (Colonial)', 'Fibrocimento', 'Metálico', 'Solo', 'Laje', 'Fibrometal', 'Sem estrutura')."
-              ),
-            inverterType: z
-              .string()
-              .optional()
-              .describe(
-                "Tipo de inversor: 'string' (padrão tradicional on-grid), 'micro' (microinversor), 'hybrid' (híbrido com baterias), 'off_grid' (isolado)"
-              ),
-          }),
-          execute: async (args: any) => {
-            try {
-              let token = "";
-              try {
-                const session = await auth0.getSession();
-                if (session) {
-                  try {
-                    const authResult = await auth0.getAccessToken({
-                      audience: process.env["AUTH0_AUDIENCE"],
-                    });
-                    token = authResult.token || session.accessToken || session.idToken || "";
-                  } catch (e) {
-                    token = session.idToken || session.accessToken || "";
-                  }
-                }
-              } catch (e) {
-                console.warn("Sessão Auth0 não encontrada:", e);
-              }
-
-              const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
-              const headers: any = {};
-              if (token) headers["Authorization"] = `Bearer ${token}`;
-
-              const finalQuotes = await calculateDistributorQuotes({
-                baseURL,
-                headers,
-                messages,
-                ...args,
-              });
-
-              return {
-                success: true,
-                ofertasDistribuidores:
-                  finalQuotes.length > 0
-                    ? finalQuotes
-                    : "Nenhum distribuidor retornou kits com estoque na API.",
-              };
-            } catch (e: any) {
-              return {
-                success: false,
-                ofertasDistribuidores: "Falha ao buscar distribuidores da API real. " + e.message,
-              };
-            }
-          },
-        }),
         gerar_cotacao_por_kwp: tool({
           description:
             "Gera 3 opções de kits solares completos (1 - Standard, 2 - Elite, 3 - Premium) usando o valor em R$/kWp instalado cobrado pelo integrador na região dele. Todos os materiais (Inversor, Módulos, Estrutura, Cabos, Conectores) e a mão de obra já estão 100% inclusos no valor total.",
@@ -1471,9 +1379,11 @@ export async function POST(req: Request) {
               }
               if (kwp <= 0) kwp = 3.5;
 
+              const rate = Number(args.ratePerKwp) || defaultKwpRate;
+
               const tiers = generateKwpRateTiers({
                 kwp,
-                ratePerKwp: Number(args.ratePerKwp) || 2800,
+                ratePerKwp: rate,
                 roofType: args.roofType,
                 monthlyConsumption: Number(args.monthlyConsumption) || undefined,
                 cidade: args.cidade,
@@ -1758,7 +1668,6 @@ export async function POST(req: Request) {
               .string()
               .optional()
               .describe("O ID ou número do template escolhido pelo usuário."),
-            distributorId: z.string().optional().describe("O ID da distribuidora do kit cotado."),
             consumoMensalKwh: z
               .number()
               .optional()
@@ -1861,80 +1770,7 @@ export async function POST(req: Request) {
                 }
               }
 
-              // Priority 2: If kit items are still empty, auto-resolve quotes from catalog
-              if (rawKitItems.length === 0 || equipmentSubtotalBrl <= 0 || systemKwp <= 0) {
-                try {
-                  const calculatedQuotes = await calculateDistributorQuotes({
-                    baseURL,
-                    headers,
-                    messages,
-                    monthlyConsumption: args.consumoMensalKwh,
-                    targetKWp: args.potenciaSistemaKw || systemKwp,
-                  });
-
-                  if (calculatedQuotes.length > 0) {
-                    let selectedQuote = calculatedQuotes[0];
-                    if (chosenDistributorId) {
-                      const match = calculatedQuotes.find(
-                        (q: any) => q.distribuidoraId === chosenDistributorId
-                      );
-                      if (match) selectedQuote = match;
-                    } else {
-                      const userTexts = messages
-                        .filter((m: any) => m.role === "user")
-                        .map((m: any) =>
-                          typeof m.content === "string" ? m.content.toLowerCase() : ""
-                        );
-                      for (let i = userTexts.length - 1; i >= 0; i--) {
-                        const text = userTexts[i];
-                        if (
-                          text.includes("2") ||
-                          (calculatedQuotes[1] &&
-                            text.includes(calculatedQuotes[1].distribuidora.toLowerCase()))
-                        ) {
-                          if (calculatedQuotes[1]) {
-                            selectedQuote = calculatedQuotes[1];
-                            break;
-                          }
-                        } else if (
-                          text.includes("3") ||
-                          (calculatedQuotes[2] &&
-                            text.includes(calculatedQuotes[2].distribuidora.toLowerCase()))
-                        ) {
-                          if (calculatedQuotes[2]) {
-                            selectedQuote = calculatedQuotes[2];
-                            break;
-                          }
-                        } else if (
-                          text.includes("1") ||
-                          (calculatedQuotes[0] &&
-                            text.includes(calculatedQuotes[0].distribuidora.toLowerCase()))
-                        ) {
-                          selectedQuote = calculatedQuotes[0];
-                          break;
-                        }
-                      }
-                    }
-
-                    if (selectedQuote) {
-                      if (!chosenDistributorId && selectedQuote.distribuidoraId) {
-                        chosenDistributorId = selectedQuote.distribuidoraId;
-                      }
-                      if (equipmentSubtotalBrl <= 0 && selectedQuote.valor_kit_num) {
-                        equipmentSubtotalBrl = selectedQuote.valor_kit_num;
-                      }
-                      if (systemKwp <= 0 && selectedQuote.potencia_kwp) {
-                        systemKwp = selectedQuote.potencia_kwp;
-                      }
-                      if (rawKitItems.length === 0 && selectedQuote.itens_estruturados?.length) {
-                        rawKitItems = selectedQuote.itens_estruturados;
-                      }
-                    }
-                  }
-                } catch (calcErr) {
-                  console.warn("Falha ao re-calcular cotações na proposta:", calcErr);
-                }
-              }
+              // Priority 2: Removemos a busca de cotações em distribuidores legados
 
               // 3. Buscar cost-rules (mão de obra, margem etc) cadastradas pelo integrador
               let costRules: any[] = [];
@@ -1947,23 +1783,7 @@ export async function POST(req: Request) {
                 console.warn("Falha ao buscar cost rules:", e);
               }
 
-              const isKwpRateQuote =
-                args.sourceType === "kwp_rate" ||
-                Boolean(args.isKwpRate) ||
-                Boolean(
-                  rawKitItems.some((it: any) => String(it.productId || "").startsWith("kwp-"))
-                ) ||
-                Boolean(
-                  messages.some((m: any) => {
-                    const c = typeof m.content === "string" ? m.content : "";
-                    return (
-                      c.includes("Chave na Mão") ||
-                      c.includes("Chave na mão") ||
-                      c.includes("R$/kWp") ||
-                      c.includes("gerar_cotacao_por_kwp")
-                    );
-                  })
-                );
+              const isKwpRateQuote = true; // Sempre é cotação por kWp agora
 
               const costCalc = isKwpRateQuote
                 ? {
@@ -2041,10 +1861,9 @@ export async function POST(req: Request) {
                 equipmentSubtotalBrl,
                 quotedSaleBrl,
                 systemPowerKw: systemKwp,
-                sourceType: (isKwpRateQuote ? "kwp_rate" : "distributor") as const,
-                distributorId: isKwpRateQuote ? undefined : chosenDistributorId,
-                projectCostLines: isKwpRateQuote ? [] : costCalc.projectCostLines,
-                defaultEssentialCostNames: isKwpRateQuote ? [] : costCalc.defaultEssentialCostNames,
+                sourceType: "kwp_rate" as const,
+                projectCostLines: [],
+                defaultEssentialCostNames: [],
                 computedSaleFromCostRulesBrl: quotedSaleBrl,
               };
 

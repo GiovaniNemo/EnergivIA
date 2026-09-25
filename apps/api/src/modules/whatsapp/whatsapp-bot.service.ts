@@ -1390,11 +1390,12 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     targetKWp,
     targetModules,
     modPowerWUser,
-    cidade,
-    estado,
+    cidade: _cidade,
+    estado: _estado,
     roofType,
-    gridVoltage,
-    inverterType,
+    gridVoltage: _gridVoltage,
+    inverterType: _inverterType,
+    organizationId,
   }: {
     consumptionKwh?: number;
     targetKWp?: number;
@@ -1405,39 +1406,15 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     roofType?: string;
     gridVoltage?: string;
     inverterType?: string;
+    organizationId?: string;
   }) {
-    let mappedRoof = "ceramic";
-    const s = (roofType || "").toLowerCase().trim();
-    if (s === "1" || s.includes("ceramic") || s.includes("cerâmica") || s.includes("colonial")) {
-      mappedRoof = "ceramic";
-    } else if (
-      s === "2" ||
-      s.includes("fibrocimento") ||
-      s.includes("fibro") ||
-      s.includes("fibromadeira")
-    ) {
-      mappedRoof = "fibromadeira";
-    } else if (s === "6" || s.includes("fibrometal")) {
-      mappedRoof = "fibrometal";
-    } else if (s === "3" || s.includes("metal") || s.includes("metálic")) {
-      mappedRoof = "metal";
-    } else if (s === "4" || s.includes("solo") || s.includes("ground")) {
-      mappedRoof = "ground";
-    } else if (s === "5" || s.includes("laje")) {
-      mappedRoof = "laje";
-    } else if (s === "7" || s.includes("sem") || s.includes("nenhum") || s === "none") {
-      mappedRoof = "none";
-    }
+    void _cidade;
+    void _estado;
+    void _gridVoltage;
+    void _inverterType;
 
-    const forcedIncludeStructure = mappedRoof !== "none";
-    const roofFactor = 1.0;
-    const hspResult = getHsp(cidade || "São Paulo", estado || "SP");
-    const hsp = hspResult.hsp;
-    const perdas = 0.284;
-    const pr = 1 - perdas; // 0.716
-    const geracaoPorKwp = hsp * 30 * pr;
-
-    let finalTargetKWp: number | null = null;
+    let finalTargetKWp = 3.0;
+    const geracaoPorKwp = 130; // média
     if (typeof targetKWp === "number" && targetKWp > 0) {
       finalTargetKWp = targetKWp;
     } else if (
@@ -1448,618 +1425,135 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     ) {
       finalTargetKWp = (targetModules * modPowerWUser) / 1000;
     } else if (typeof consumptionKwh === "number" && consumptionKwh > 0) {
-      const consumoAjustado = consumptionKwh * 1.07;
-      finalTargetKWp = consumoAjustado / (geracaoPorKwp * roofFactor);
-    } else {
-      finalTargetKWp = 3.0; // fallback padrão seguro
+      finalTargetKWp = consumptionKwh / geracaoPorKwp;
+    }
+    const safeKwp = Math.max(0.5, finalTargetKWp);
+
+    let ratePerKwp = 2800;
+    if (organizationId) {
+      const org = await this.prisma.tenant.findUnique({ where: { id: organizationId } });
+      if (org && (org as any).defaultKwpRate) {
+        ratePerKwp = Number((org as any).defaultKwpRate);
+      }
     }
 
-    const distributorsRaw = await this.prisma.distributor.findMany({
-      include: {
-        distributorProducts: {
-          include: { product: { include: { brand: true, category: true } } },
-        },
+    const modulePowerW = 585;
+    const moduleQty = Math.max(4, Math.round((safeKwp * 1000) / modulePowerW));
+    const realSystemKwp = Math.round(((moduleQty * modulePowerW) / 1000) * 100) / 100;
+
+    let roofLabel = "Cerâmico";
+    const r = (roofType || "").toLowerCase();
+    if (r.includes("solo") || r.includes("ground") || r === "4") {
+      roofLabel = "Solo";
+    } else if (r.includes("metal") || r.includes("metálic") || r === "3") {
+      roofLabel = "Metálico";
+    } else if (r.includes("laje") || r === "5") {
+      roofLabel = "Laje";
+    } else if (r.includes("fibro") || r === "2" || r === "6") {
+      roofLabel = "Fibrocimento";
+    } else if (r.includes("sem") || r === "7" || r === "none") {
+      roofLabel = "Sem estrutura";
+    }
+
+    const invPowerSizes = [3, 3.6, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 75, 100];
+    let invPower = 3;
+    if (realSystemKwp > 3.8) {
+      for (const size of invPowerSizes) {
+        if (size * 1.3 >= realSystemKwp) {
+          invPower = size;
+          break;
+        }
+      }
+      if (invPower < realSystemKwp / 1.3) invPower = Math.ceil(realSystemKwp);
+    }
+
+    const tiers = [
+      {
+        id: "economic",
+        distributorName: "Standard",
+        distributorId: "kwp-standard",
+        materialCostFactor: 0.88,
+        inverterBrand: "Growatt",
+        moduleBrand: "DAH Solar",
       },
+      {
+        id: "cost_benefit",
+        distributorName: "Elite",
+        distributorId: "kwp-elite",
+        materialCostFactor: 1.0,
+        inverterBrand: "Deye",
+        moduleBrand: "Canadian Solar",
+      },
+      {
+        id: "premium",
+        distributorName: "Premium",
+        distributorId: "kwp-premium",
+        materialCostFactor: 1.15,
+        inverterBrand: "Huawei",
+        moduleBrand: "Jinko Solar",
+      },
+    ];
+
+    const results = tiers.map((cfg) => {
+      const baseEquipmentRate = ratePerKwp * 0.55;
+      const baseMarginAndServices = ratePerKwp - baseEquipmentRate;
+      const tierEquipmentRate = baseEquipmentRate * cfg.materialCostFactor;
+      const ratePerKwpEffective = tierEquipmentRate + baseMarginAndServices;
+      const totalPrice = Math.round(realSystemKwp * ratePerKwpEffective);
+
+      const baseEquipmentBudget = Math.round(realSystemKwp * tierEquipmentRate);
+      const modTotal = baseEquipmentBudget * 0.5;
+      const invTotal = baseEquipmentBudget * 0.36;
+
+      const structuredItems = [
+        {
+          productId: "kwp-mod",
+          productName: `Módulo ${cfg.moduleBrand} ${modulePowerW}W N-Type`,
+          brandName: cfg.moduleBrand,
+          categoryName: "module",
+          quantity: moduleQty,
+          unitPrice: modTotal / moduleQty,
+          lineTotal: modTotal,
+        },
+        {
+          productId: "kwp-inv",
+          productName: `Inversor ${cfg.inverterBrand} ${invPower}kW`,
+          brandName: cfg.inverterBrand,
+          categoryName: "inverter",
+          quantity: 1,
+          unitPrice: invTotal,
+          lineTotal: invTotal,
+        },
+      ];
+
+      if (roofLabel !== "Sem estrutura") {
+        const structTotal = baseEquipmentBudget * 0.14;
+        structuredItems.push({
+          productId: "kwp-struct",
+          productName: `Estrutura para ${moduleQty} módulos (${roofLabel})`,
+          brandName: "Universal",
+          categoryName: "structure",
+          quantity: moduleQty,
+          unitPrice: structTotal / moduleQty,
+          lineTotal: structTotal,
+        });
+      }
+
+      return {
+        distributorName: cfg.distributorName,
+        distributorId: cfg.distributorId,
+        totalPrice,
+        kwp: realSystemKwp,
+        estimatedGeneration: Math.round(realSystemKwp * geracaoPorKwp),
+        items: [] as string[],
+        invName: cfg.inverterBrand,
+        modCount: moduleQty,
+        modName: cfg.moduleBrand,
+        structuredItems,
+      };
     });
 
-    const normalizeStr = (str: string) =>
-      (str || "")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toUpperCase()
-        .trim();
-
-    const distributors = distributorsRaw.filter(
-      (d) => !normalizeStr(d.name || "").includes("ALDO")
-    );
-
-    const quotes: Array<{
-      distributorName: string;
-      distributorId?: string;
-      totalPrice: number;
-      kwp: number;
-      estimatedGeneration: number;
-      items: string[];
-      invName: string;
-      modCount: number;
-      modName: string;
-      structuredItems?: Array<{
-        productId: string;
-        productName: string;
-        brandName: string;
-        categoryName: string;
-        quantity: number;
-        unitPrice: number;
-        lineTotal: number;
-        imageUrl?: string;
-        specs?: Record<string, unknown>;
-      }>;
-    }> = [];
-
-    for (const d of distributors) {
-      const prods = d.distributorProducts || [];
-      if (prods.length === 0) continue;
-
-      const allProds = prods.map((dp) => ({
-        ...dp,
-        price: Number(dp.price) || 0,
-      }));
-
-      const isStructureOrAccessory = (p: any) => {
-        const s = normalizeStr(
-          (p.product?.name || "") +
-            " " +
-            (p.product?.description || "") +
-            " " +
-            (p.product?.category?.name || "")
-        );
-        return (
-          s.includes("ESTRUTURA") ||
-          s.includes("PERFIL") ||
-          s.includes("TRILHO") ||
-          s.includes("SUPORTE") ||
-          s.includes("FIXACAO") ||
-          s.includes("ACESSORIO") ||
-          s.includes("GRAMPO") ||
-          s.includes("GANCHO") ||
-          s.includes("PARAFUSO") ||
-          s.includes("TERMINAL")
-        );
-      };
-
-      const invs = allProds.filter((p: any) => {
-        if (p.price <= 0) return false;
-        const s = normalizeStr(
-          (p.product?.name || "") +
-            " " +
-            (p.product?.description || "") +
-            " " +
-            (p.product?.category?.name || "")
-        );
-        if (isStructureOrAccessory(p)) return false;
-        if (s.includes("CABO") || s.includes("CONECTOR")) return false;
-        return (
-          s.includes("INVERSOR") || s.includes("MICROINVERSOR") || s.includes("MICRO INVERSOR")
-        );
-      });
-
-      const mods = allProds.filter((p: any) => {
-        if (p.price <= 0) return false;
-        const s = normalizeStr(
-          (p.product?.name || "") +
-            " " +
-            (p.product?.description || "") +
-            " " +
-            (p.product?.category?.name || "")
-        );
-        if (isStructureOrAccessory(p)) return false;
-        if (s.includes("INVERSOR") || s.includes("CABO") || s.includes("CONECTOR")) return false;
-        return (
-          s.includes("MODULO") ||
-          s.includes("PAINEL") ||
-          s.includes("PLACA SOLAR") ||
-          s.includes("FOTOVOLTAICO")
-        );
-      });
-
-      const cabs = allProds.filter(
-        (p: any) => p.price > 0 && JSON.stringify(p).toLowerCase().includes("cabo")
-      );
-      const cons = allProds.filter(
-        (p: any) => p.price > 0 && JSON.stringify(p).toLowerCase().includes("conector")
-      );
-      const ests = allProds.filter(
-        (p: any) =>
-          p.price > 0 &&
-          (JSON.stringify(p).toLowerCase().includes("estrutura") ||
-            JSON.stringify(p).toLowerCase().includes("perfil"))
-      );
-
-      // Escolhe o melhor módulo (preferência pelo de potência pedida se houver, ou primeiro módulo válido)
-      let mod = mods.find((m) => {
-        const sp = m.product?.specs as Record<string, any> | undefined;
-        const pw = Number(sp?.["power_w"]);
-        return modPowerWUser && pw === modPowerWUser;
-      });
-      if (!mod) {
-        const validMods = mods.filter((m) => {
-          const sp = m.product?.specs as Record<string, any> | undefined;
-          return !!sp?.["power_w"];
-        });
-        mod = validMods.length > 0 ? validMods[0] : mods[0];
-      }
-      if (!mod) continue;
-
-      const modSpecs = mod.product?.specs as Record<string, any> | undefined;
-      let modPowerW = Number(modSpecs?.["power_w"]);
-      if (!modPowerW) {
-        const modName = (mod.product?.name || "").toUpperCase();
-        const modMatch = modName.match(/(\d{3,4})\s*W/);
-        if (modMatch && modMatch[1]) modPowerW = parseInt(modMatch[1], 10);
-        else modPowerW = modPowerWUser || 550;
-      }
-
-      let moduleQ = targetModules ? targetModules : Math.ceil((finalTargetKWp * 1000) / modPowerW);
-      let realKWp = (moduleQ * modPowerW) / 1000;
-
-      // Inversores compatíveis com a tensão/padrão de rede
-      const validInvs = [];
-      for (const invObj of invs) {
-        const specs = invObj.product?.specs as Record<string, any> | undefined;
-        const name = (invObj.product?.name || "").toUpperCase();
-        const voltSpec = String(
-          specs?.["output_voltage_v"] || specs?.["ac_output_voltage"] || ""
-        ).toUpperCase();
-
-        // Checa compatibilidade com gridVoltage
-        if (gridVoltage) {
-          const g = gridVoltage.toLowerCase();
-          const isTri380 =
-            g.includes("380") ||
-            g === "4" ||
-            g.includes("tri 380") ||
-            g.includes("tri_380") ||
-            g.includes("trifasico 380") ||
-            g.includes("trifásico 380");
-          const isTri220 =
-            (g.includes("tri") && g.includes("220")) ||
-            g === "3" ||
-            g.includes("tri 220") ||
-            g.includes("tri_220") ||
-            g.includes("trifasico 220") ||
-            g.includes("trifásico 220");
-          const isMono220 =
-            g.includes("mono") || g === "1" || g.includes("monofasico") || g.includes("monofásico");
-          const isBi220 =
-            g.includes("bi") || g === "2" || g.includes("bifasico") || g.includes("bifásico");
-
-          if (isTri380) {
-            const isMatch380 =
-              name.includes("380V") ||
-              name.includes("380") ||
-              voltSpec.includes("380") ||
-              ((name.includes("TRIFASICO") || name.includes("TRIFÁSICO")) &&
-                !name.includes("220V") &&
-                !name.includes("-LV"));
-            if (!isMatch380) continue;
-          } else if (isTri220) {
-            const isMatch220 =
-              (name.includes("TRIFASICO") || name.includes("TRIFÁSICO")) &&
-              (name.includes("220V") ||
-                name.includes("220") ||
-                name.includes("-LV") ||
-                voltSpec.includes("220"));
-            if (!isMatch220) continue;
-          } else if (isMono220 || isBi220) {
-            if (
-              name.includes("380V") ||
-              name.includes("380") ||
-              name.includes("TRIFASICO") ||
-              name.includes("TRIFÁSICO")
-            ) {
-              continue;
-            }
-          }
-        }
-
-        let testModuleQ = moduleQ;
-        if (
-          (name.includes("MONOF") || name.includes("MONO")) &&
-          testModuleQ < 4 &&
-          !targetModules
-        ) {
-          testModuleQ = 4;
-        }
-        const testRealKWp = (testModuleQ * modPowerW) / 1000;
-
-        const match = name.match(/(\d+(?:[.,]\d+)?)\s*(K?W)/);
-        let invKWp = null;
-
-        if (match && match[1]) {
-          invKWp = parseFloat(match[1].replace(",", "."));
-          if (match[2] === "W") invKWp = invKWp / 1000;
-        } else if (specs && specs["max_dc_power"]) {
-          invKWp = Number(specs["max_dc_power"]) / 1000;
-        } else {
-          invKWp = finalTargetKWp;
-        }
-
-        const ratio = testRealKWp / invKWp;
-        if (ratio < 0.45 || ratio > 1.55) continue;
-
-        validInvs.push({
-          ...invObj,
-          _testModuleQ: testModuleQ,
-          _testRealKWp: testRealKWp,
-        });
-      }
-
-      if (validInvs.length === 0) continue;
-
-      const categorizedInvs = validInvs.map((invObj: any) => {
-        const name = (invObj.product?.name || "").toUpperCase();
-        const voltSpec = String(
-          invObj.product?.specs?.output_voltage_v || invObj.product?.specs?.ac_output_voltage || ""
-        ).toUpperCase();
-        const isMicro = name.includes("MICRO") || voltSpec.includes("MICRO");
-        const isHybrid =
-          name.includes("HIBRID") ||
-          name.includes("HÍBRID") ||
-          name.includes("HYBRID") ||
-          voltSpec.includes("HIBRID");
-        const isOffGrid =
-          name.includes("OFF-GRID") ||
-          name.includes("OFF GRID") ||
-          name.includes("OFFGRID") ||
-          voltSpec.includes("OFF");
-        const isString = !isMicro && !isHybrid && !isOffGrid;
-
-        return {
-          ...invObj,
-          _isMicro: isMicro,
-          _isHybrid: isHybrid,
-          _isOffGrid: isOffGrid,
-          _isString: isString,
-        };
-      });
-
-      const userInvType = (inverterType || "string").toLowerCase();
-      let preferredInvs: any[] = [];
-      if (userInvType === "micro") {
-        preferredInvs = categorizedInvs.filter((i) => i._isMicro);
-      } else if (userInvType === "hybrid") {
-        preferredInvs = categorizedInvs.filter((i) => i._isHybrid);
-      } else if (userInvType === "off_grid") {
-        preferredInvs = categorizedInvs.filter((i) => i._isOffGrid);
-      } else {
-        preferredInvs = categorizedInvs.filter((i) => i._isString);
-      }
-
-      const poolToUse = preferredInvs.length > 0 ? preferredInvs : categorizedInvs;
-      poolToUse.sort((a, b) => Number(a.price) - Number(b.price));
-      const inv = poolToUse[0];
-      if (!inv) continue;
-
-      moduleQ = inv._testModuleQ;
-      realKWp = inv._testRealKWp;
-
-      const cabPreto =
-        cabs.find((c: any) => JSON.stringify(c).toLowerCase().includes("preto")) || cabs[0];
-      const cabVermelho =
-        cabs.find((c: any) => JSON.stringify(c).toLowerCase().includes("vermelho")) ||
-        (cabs.length > 1 && cabs[1] !== cabPreto ? cabs[1] : null);
-      const con = cons[0];
-
-      // Removed normalizeStr redeclaration to fix Temporal Dead Zone ReferenceError
-
-      const matchedEsts = ests.filter((p: any) => {
-        const n = p.product?.name || "";
-        const d = p.product?.description || "";
-        const s = normalizeStr(n + " " + d);
-
-        if (mappedRoof === "fibrometal") return s.includes("FIBROMETAL");
-        if (mappedRoof === "fibromadeira") {
-          return (
-            (s.includes("FIBROMADEIRA") || s.includes("FIBROCIMENTO") || s.includes("FIBRO")) &&
-            !s.includes("FIBROMETAL")
-          );
-        }
-        if (mappedRoof === "ceramic") {
-          return s.includes("CERAMIC") || s.includes("COLONIAL") || s.includes("TELHA");
-        }
-        if (mappedRoof === "metal") {
-          return (
-            (s.includes("METAL") ||
-              s.includes("TRILHO") ||
-              s.includes("ZINCO") ||
-              s.includes("TRAPEZOIDAL")) &&
-            !s.includes("FIBROMETAL")
-          );
-        }
-        if (mappedRoof === "ground") {
-          return s.includes("SOLO") || s.includes("GROUND");
-        }
-        if (mappedRoof === "laje") {
-          return s.includes("LAJE") || s.includes("TRIANGULO") || s.includes("TRIANGULAR");
-        }
-        return s.includes(normalizeStr(mappedRoof));
-      });
-
-      const effectiveEsts = matchedEsts.length > 0 ? matchedEsts : ests;
-
-      const parsedEsts = effectiveEsts
-        .map((p: any) => {
-          const n = (p.product?.name || "").toUpperCase();
-          const m = n.match(/(\d+)\s*(MOD|PAIN|PLAC)/);
-          let cap = m ? parseInt(m[1], 10) : 0;
-          if (cap > 4 && mappedRoof !== "ground") {
-            cap = 0;
-          }
-          return { ...p, cap };
-        })
-        .filter((p) => p.cap > 0);
-
-      const selectedStructures: any[] = [];
-      if (parsedEsts.length > 0) {
-        let remaining = moduleQ;
-        const bestByCap: Record<number, any> = {};
-        for (const p of parsedEsts) {
-          if (!bestByCap[p.cap] || Number(p.price) < Number(bestByCap[p.cap].price)) {
-            bestByCap[p.cap] = p;
-          }
-        }
-        const uniqueCaps = Object.values(bestByCap).sort((a: any, b: any) => b.cap - a.cap);
-
-        while (remaining > 0) {
-          let best = uniqueCaps.find((p: any) => p.cap <= remaining);
-          if (!best) {
-            const larger = [...uniqueCaps].sort((a: any, b: any) => a.cap - b.cap);
-            best = larger.find((p: any) => p.cap >= remaining);
-          }
-          if (!best) break;
-          selectedStructures.push(best);
-          remaining -= best.cap;
-        }
-      } else if (effectiveEsts.length > 0) {
-        selectedStructures.push(effectiveEsts[0]);
-      }
-
-      // Se o usuário selecionou uma estrutura e o distribuidor NÃO tem estrutura cadastrada, pula
-      if (forcedIncludeStructure && selectedStructures.length === 0) {
-        continue;
-      }
-
-      let profileQty = 0;
-      let profileProd: any = null;
-
-      if (forcedIncludeStructure) {
-        const perfis = ests.filter((p: any) => {
-          const n = (p.product?.name || "").toLowerCase();
-          return n.includes("perfil") && !n.includes("s/ perfil") && !n.includes("sem perfil");
-        });
-
-        if (perfis.length > 0) {
-          if (mappedRoof === "metal") {
-            profileProd =
-              perfis.find((p: any) => {
-                const n = (p.product?.name || "").toLowerCase();
-                return n.includes("baixo") || n.includes("mini trilho");
-              }) || perfis[0];
-          } else {
-            profileProd =
-              perfis.find((p: any) => {
-                const n = (p.product?.name || "").toLowerCase();
-                return (
-                  !n.includes("baixo") && !n.includes("mini trilho") && !n.includes("fechamento")
-                );
-              }) || perfis[0];
-          }
-
-          if (mappedRoof === "metal") {
-            for (const est of selectedStructures) {
-              if (est.cap === 4) profileQty += 10;
-              else if (est.cap === 2) profileQty += 5;
-              else profileQty += Math.ceil((est.cap || 1) * 2.5);
-            }
-            if (moduleQ % 2 !== 0) profileQty += 1;
-          } else if (mappedRoof === "ground") {
-            profileQty = 1;
-          } else {
-            profileQty = moduleQ % 2 === 0 ? moduleQ : moduleQ + 1;
-          }
-        }
-      }
-
-      let precoEst = 0;
-      const estLines: string[] = [];
-      const cleanProdName = (n?: string | null) =>
-        (n || "")
-          .replace(/[\s\-_]+$/, "")
-          .replace(/\s+-\s*$/, "")
-          .trim();
-
-      if (forcedIncludeStructure && selectedStructures.length > 0) {
-        const counts = new Map<string, number>();
-        for (const est of selectedStructures) {
-          precoEst += Number(est.price) || 0;
-          const name = est.product?.name || "Estrutura de Fixação";
-          counts.set(name, (counts.get(name) || 0) + 1);
-        }
-        for (const [name, count] of counts.entries()) {
-          estLines.push(`• Estrutura: ${count}x ${cleanProdName(name)}`);
-        }
-      }
-
-      const precoInv = Number(inv.price) || 0;
-      const precoMod = (Number(mod.price) || 0) * moduleQ;
-      const precoCabPreto = cabPreto ? Number(cabPreto.price) || 0 : 0;
-      const precoCabVermelho = cabVermelho ? Number(cabVermelho.price) || 0 : 0;
-      const precoCon = con ? (Number(con.price) || 0) * 2 : 0;
-      const precoPerfil =
-        profileProd && profileQty > 0 ? (Number(profileProd.price) || 0) * profileQty : 0;
-
-      const somaTotal =
-        precoInv + precoMod + precoCabPreto + precoCabVermelho + precoCon + precoEst + precoPerfil;
-
-      const structuredItems: Array<{
-        productId: string;
-        productName: string;
-        brandName: string;
-        categoryName: string;
-        quantity: number;
-        unitPrice: number;
-        lineTotal: number;
-        imageUrl?: string;
-        specs?: Record<string, unknown>;
-      }> = [];
-
-      // 1. Inversor
-      const invProdName = cleanProdName(inv.product?.name) || "Inversor Solar";
-      const invBrand = inv.product?.brand?.name || "";
-      structuredItems.push({
-        productId: inv.product?.id || inv.productId || inv.id || "",
-        productName: invProdName,
-        brandName: invBrand,
-        categoryName: "inverter",
-        quantity: 1,
-        unitPrice: precoInv,
-        lineTotal: precoInv,
-        imageUrl: inv.product?.imageUrl || undefined,
-        specs: (inv.product?.specs as Record<string, unknown>) || undefined,
-      });
-
-      // 2. Módulos
-      const modProdName = cleanProdName(mod.product?.name) || `Módulo Solar ${modPowerW}W`;
-      const modBrand = mod.product?.brand?.name || "";
-      structuredItems.push({
-        productId: mod.product?.id || mod.productId || mod.id || "",
-        productName: modProdName,
-        brandName: modBrand,
-        categoryName: "module",
-        quantity: moduleQ,
-        unitPrice: Number(mod.price) || 0,
-        lineTotal: precoMod,
-        imageUrl: mod.product?.imageUrl || undefined,
-        specs: (mod.product?.specs as Record<string, unknown>) || undefined,
-      });
-
-      // 3. Estruturas
-      if (forcedIncludeStructure && selectedStructures.length > 0) {
-        const estMap = new Map<string, { item: any; count: number }>();
-        for (const est of selectedStructures) {
-          const key = est.product?.id || est.id || est.product?.name || "est";
-          const existing = estMap.get(key);
-          if (existing) {
-            existing.count += 1;
-          } else {
-            estMap.set(key, { item: est, count: 1 });
-          }
-        }
-        for (const { item: est, count } of estMap.values()) {
-          const uPrice = Number(est.price) || 0;
-          structuredItems.push({
-            productId: est.product?.id || est.productId || est.id || "",
-            productName: cleanProdName(est.product?.name) || "Estrutura de Fixação",
-            brandName: est.product?.brand?.name || "",
-            categoryName: "structure_kit",
-            quantity: count,
-            unitPrice: uPrice,
-            lineTotal: uPrice * count,
-            imageUrl: est.product?.imageUrl || undefined,
-            specs: (est.product?.specs as Record<string, unknown>) || undefined,
-          });
-        }
-      }
-
-      // 4. Perfil / Trilho
-      if (profileProd && profileQty > 0) {
-        const uPrice = Number(profileProd.price) || 0;
-        structuredItems.push({
-          productId: profileProd.product?.id || profileProd.productId || profileProd.id || "",
-          productName: cleanProdName(profileProd.product?.name) || "Perfil / Trilho",
-          brandName: profileProd.product?.brand?.name || "",
-          categoryName: "profile",
-          quantity: profileQty,
-          unitPrice: uPrice,
-          lineTotal: precoPerfil,
-          imageUrl: profileProd.product?.imageUrl || undefined,
-          specs: (profileProd.product?.specs as Record<string, unknown>) || undefined,
-        });
-      }
-
-      // 5. Cabos
-      if (cabPreto) {
-        const uPrice = Number(cabPreto.price) || 0;
-        structuredItems.push({
-          productId: cabPreto.product?.id || cabPreto.productId || cabPreto.id || "",
-          productName: cleanProdName(cabPreto.product?.name) || "Cabo Solar 6mm Preto",
-          brandName: cabPreto.product?.brand?.name || "",
-          categoryName: "dc_cable",
-          quantity: 1,
-          unitPrice: uPrice,
-          lineTotal: precoCabPreto,
-          imageUrl: cabPreto.product?.imageUrl || undefined,
-          specs: (cabPreto.product?.specs as Record<string, unknown>) || undefined,
-        });
-      }
-      if (cabVermelho) {
-        const uPrice = Number(cabVermelho.price) || 0;
-        structuredItems.push({
-          productId: cabVermelho.product?.id || cabVermelho.productId || cabVermelho.id || "",
-          productName: cleanProdName(cabVermelho.product?.name) || "Cabo Solar 6mm Vermelho",
-          brandName: cabVermelho.product?.brand?.name || "",
-          categoryName: "dc_cable",
-          quantity: 1,
-          unitPrice: uPrice,
-          lineTotal: precoCabVermelho,
-          imageUrl: cabVermelho.product?.imageUrl || undefined,
-          specs: (cabVermelho.product?.specs as Record<string, unknown>) || undefined,
-        });
-      }
-
-      // 6. Conectores
-      if (con) {
-        const uPrice = Number(con.price) || 0;
-        structuredItems.push({
-          productId: con.product?.id || con.productId || con.id || "",
-          productName: cleanProdName(con.product?.name) || "Conectores MC4",
-          brandName: con.product?.brand?.name || "",
-          categoryName: "connector",
-          quantity: 2,
-          unitPrice: uPrice,
-          lineTotal: precoCon,
-          imageUrl: con.product?.imageUrl || undefined,
-          specs: (con.product?.specs as Record<string, unknown>) || undefined,
-        });
-      }
-
-      const items = [
-        `• Inversor: ${cleanProdName(inv.product?.name) || "Inversor Solar"}`,
-        `• Módulos: ${moduleQ}x ${cleanProdName(mod.product?.name) || `Módulo Solar ${modPowerW}W`}`,
-        ...estLines,
-        profileProd && profileQty > 0
-          ? `• Perfil: ${profileQty}x ${cleanProdName(profileProd.product?.name)}`
-          : null,
-        cabPreto ? `• Cabo Preto: ${cleanProdName(cabPreto.product?.name)}` : null,
-        cabVermelho ? `• Cabo Vermelho: ${cleanProdName(cabVermelho.product?.name)}` : null,
-        con ? `• Conectores: 2x ${cleanProdName(con.product?.name)}` : null,
-      ].filter(Boolean) as string[];
-
-      quotes.push({
-        distributorName: d.name,
-        distributorId: d.id,
-        totalPrice: somaTotal,
-        kwp: Number(realKWp.toFixed(2)),
-        estimatedGeneration: Math.round(realKWp * geracaoPorKwp * roofFactor),
-        items,
-        invName: inv.product?.name || "Inversor",
-        modCount: moduleQ,
-        modName: mod.product?.name || "Módulo",
-        structuredItems,
-      });
-    }
-
-    return quotes;
+    return results;
   }
 
   private async getAvailableTemplates(
@@ -2784,6 +2278,7 @@ ${catalogContext}`;
           estado: sessionCtx.estado || "SP",
           roofType: sessionCtx.roofType || "Cerâmica (Colonial)",
           gridVoltage: sessionCtx.gridVoltage || "Monofásico 220V",
+          organizationId: conversation.organizationId,
         });
 
         if (quotes.length > 0) {
@@ -2926,6 +2421,7 @@ ${catalogContext}`;
         estado: sessionCtx.estado || "SP",
         roofType: sessionCtx.roofType || "Cerâmica (Colonial)",
         gridVoltage: sessionCtx.gridVoltage,
+        organizationId: conversation.organizationId,
       });
 
       const effectiveConsumption =
@@ -3120,9 +2616,7 @@ ${catalogContext}`;
                 equipmentSubtotalBrl: selectedQuote.totalPrice,
                 quotedSaleBrl: quotedSaleBrl,
                 systemPowerKw: selectedQuote.kwp,
-                sourceType: "distributor",
-                distributorId: selectedQuote.distributorId,
-                distributorName: selectedQuote.distributorName,
+                sourceType: "kwp_rate",
                 projectCostLines: costCalc.projectCostLines,
                 defaultEssentialCostNames: costCalc.defaultEssentialCostNames,
                 computedSaleFromCostRulesBrl: quotedSaleBrl,
@@ -3221,6 +2715,7 @@ ${catalogContext}`;
           estado: sessionCtx.estado || "SP",
           roofType: selectedRoof,
           gridVoltage: sessionCtx.gridVoltage || "Monofásico 220V",
+          organizationId: conversation.organizationId,
         });
 
         if (quotes.length === 0) {
