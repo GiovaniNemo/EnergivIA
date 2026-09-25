@@ -1106,7 +1106,7 @@ async function calculateDistributorQuotes({
           : null,
         con ? `• Conectores: 2x ${cleanProdName(con.product?.name || con.descricao)}` : null,
       ].filter(Boolean),
-      info_adicional: `Potência: ${realKWp.toFixed(2)} kWp | Geração Estimada: ${finalEstGeneration} kWh/mês (em condições ideais)*\n*Obs: A estimativa de geração considera condições ideais de irradiação solar. A geração real pode variar conforme as caídas e inclinação do telhado, orientação solar (azimute) e eventuais sombreamentos.`,
+      info_adicional: `Potência: ${realKWp.toFixed(2)} kWp | Geração Estimada: ${finalEstGeneration} kWh/mês`,
     });
   }
 

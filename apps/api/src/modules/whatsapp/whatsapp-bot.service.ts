@@ -1634,12 +1634,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
     quotes.forEach((q, index) => {
       quoteText += `${this.numToEmoji(index + 1)} *${q.distributorName}* - R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-      quoteText += `Itens do Kit:\n`;
-      q.items.forEach((item: string) => {
-        quoteText += `${item}\n`;
-      });
-      quoteText += `Info: Potência: ${q.kwp} kWp | Geração Estimada: ${q.estimatedGeneration} kWh/mês (em condições ideais)*\n`;
-      quoteText += `*Obs: A estimativa de geração considera condições ideais de irradiação solar. A geração real pode variar conforme as caídas e inclinação do telhado, orientação solar (azimute) e eventuais sombreamentos.\n\n`;
+      quoteText += `Potência: ${q.kwp} kWp | Geração Estimada: ${q.estimatedGeneration} kWh/mês\n\n`;
     });
 
     quoteText += `Qual opção você prefere para o seu cliente?\n(Responda com o número da opção ou envie 0️⃣ para voltar/alterar estrutura)`;
