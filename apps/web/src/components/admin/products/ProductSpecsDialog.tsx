@@ -97,6 +97,20 @@ export function ProductSpecsDialog({
     },
   });
 
+  const watchCategoryId = methods.watch("category_id");
+  const effectiveCategoryName = useMemo(
+    () => categoryNameFromId(watchCategoryId ?? ""),
+    [watchCategoryId, categories]
+  );
+
+  const watchedSpecs = methods.watch("specs");
+  const specsStatus = useMemo(() => {
+    return getProductSpecsStatus(
+      effectiveCategoryName || product?.category?.name,
+      (watchedSpecs || product?.specs) as Record<string, unknown>
+    );
+  }, [effectiveCategoryName, product?.category?.name, watchedSpecs, product?.specs]);
+
   useEffect(() => {
     if (product && open) {
       const initialSpecs = { ...((product.specs as Record<string, unknown>) ?? {}) };
@@ -124,20 +138,6 @@ export function ProductSpecsDialog({
       setErrorMsg(null);
     }
   }, [product, open, methods, effectiveCategoryName]);
-
-  const watchCategoryId = methods.watch("category_id");
-  const effectiveCategoryName = useMemo(
-    () => categoryNameFromId(watchCategoryId ?? ""),
-    [watchCategoryId, categories]
-  );
-
-  const watchedSpecs = methods.watch("specs");
-  const specsStatus = useMemo(() => {
-    return getProductSpecsStatus(
-      effectiveCategoryName || product?.category?.name,
-      (watchedSpecs || product?.specs) as Record<string, unknown>
-    );
-  }, [effectiveCategoryName, product?.category?.name, watchedSpecs, product?.specs]);
 
   const updateMutation = useMutation({
     mutationFn: (data: Parameters<typeof updateProduct>[1]) => updateProduct(productId!, data),
