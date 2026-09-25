@@ -176,7 +176,7 @@ export function ProductSpecsDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1400 }}>
       <DialogTitle
         sx={{
           display: "flex",

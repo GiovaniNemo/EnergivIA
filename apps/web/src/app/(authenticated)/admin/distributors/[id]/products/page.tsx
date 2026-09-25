@@ -1481,6 +1481,7 @@ export default function DistributorInventoryPage(): JSX.Element {
         distributorId={id}
         distributorName={distributor?.name}
         initialLog={auditLogData}
+        onOpenSpecs={(pId) => setSpecsProductId(pId)}
         onBrandUpdated={() => {
           queryClient.invalidateQueries({ queryKey: ["admin", "distributors", id, "products"] });
           queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });

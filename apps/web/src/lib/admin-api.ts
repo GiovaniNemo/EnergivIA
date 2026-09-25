@@ -375,7 +375,10 @@ export async function dismissGenericInLog(
       method: "PATCH",
     }
   );
-  if (!res.ok) throw new Error("Falha ao dispensar produto genérico.");
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || "Falha ao dispensar produto genérico.");
+  }
   return res.json();
 }
 
@@ -385,7 +388,10 @@ export async function updateProductBrand(productId: string, brandId: string): Pr
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ brandId }),
   });
-  if (!res.ok) throw new Error("Falha ao atualizar marca do produto.");
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || "Falha ao atualizar marca do produto.");
+  }
   return res.json();
 }
 

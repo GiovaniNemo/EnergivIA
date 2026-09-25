@@ -53,15 +53,12 @@ export class DistributorsController {
   }
 
   @Patch("import-logs/:logId/dismiss-generic/:productId")
-  dismissGenericInLog(
-    @Param("logId", ParseUUIDPipe) logId: string,
-    @Param("productId", ParseUUIDPipe) productId: string
-  ) {
+  dismissGenericInLog(@Param("logId") logId: string, @Param("productId") productId: string) {
     return this.spreadsheetImportService.dismissGenericInLog(logId, productId);
   }
 
   @Patch("products/:id/brand")
-  updateProductBrand(@Param("id", ParseUUIDPipe) id: string, @Body() body: { brandId: string }) {
+  updateProductBrand(@Param("id") id: string, @Body() body: { brandId: string }) {
     return this.spreadsheetImportService.updateProductBrand(id, body.brandId);
   }
 

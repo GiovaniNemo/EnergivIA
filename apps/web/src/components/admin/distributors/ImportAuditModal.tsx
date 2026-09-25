@@ -36,9 +36,10 @@ import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import RemoveShoppingCartIcon from "@mui/icons-material/RemoveShoppingCart";
 import SellIcon from "@mui/icons-material/Sell";
 import ConstructionIcon from "@mui/icons-material/Construction";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import CheckIcon from "@mui/icons-material/Check";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import { ProductSpecsDialog } from "@/components/admin/products/ProductSpecsDialog";
 import {
   fetchLatestImportLog,
   dismissGenericInLog,
@@ -55,6 +56,7 @@ interface ImportAuditModalProps {
   distributorName?: string;
   initialLog?: DistributorImportLog | null;
   onBrandUpdated?: () => void;
+  onOpenSpecs?: (productId: string) => void;
 }
 
 export function ImportAuditModal({
@@ -64,6 +66,7 @@ export function ImportAuditModal({
   distributorName,
   initialLog,
   onBrandUpdated,
+  onOpenSpecs,
 }: ImportAuditModalProps) {
   const [currentTab, setCurrentTab] = useState(0);
   const [log, setLog] = useState<DistributorImportLog | null>(initialLog ?? null);
@@ -74,6 +77,7 @@ export function ImportAuditModal({
   const [dismissingId, setDismissingId] = useState<string | null>(null);
   const [dismissedLocal, setDismissedLocal] = useState<string[]>([]);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
+  const [specsProductId, setSpecsProductId] = useState<string | null>(null);
 
   // Load brands for selection
   useEffect(() => {
@@ -494,7 +498,18 @@ export function ImportAuditModal({
                         {activeBrandItems.map((item) => (
                           <TableRow key={item.productId} hover>
                             <TableCell>
-                              <Typography variant="body2" fontWeight={600}>
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                onClick={() => {
+                                  if (onOpenSpecs) onOpenSpecs(item.productId);
+                                  else setSpecsProductId(item.productId);
+                                }}
+                                sx={{
+                                  cursor: "pointer",
+                                  "&:hover": { color: "primary.main", textDecoration: "underline" },
+                                }}
+                              >
                                 {item.productName}
                               </Typography>
                               {item.sku && (
@@ -639,7 +654,18 @@ export function ImportAuditModal({
                         {missingSpecsItems.map((item) => (
                           <TableRow key={item.productId} hover>
                             <TableCell>
-                              <Typography variant="body2" fontWeight={600}>
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                onClick={() => {
+                                  if (onOpenSpecs) onOpenSpecs(item.productId);
+                                  else setSpecsProductId(item.productId);
+                                }}
+                                sx={{
+                                  cursor: "pointer",
+                                  "&:hover": { color: "primary.main", textDecoration: "underline" },
+                                }}
+                              >
                                 {item.productName}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
@@ -692,12 +718,23 @@ export function ImportAuditModal({
                             <TableCell sx={{ textAlign: "right" }}>
                               <Button
                                 size="small"
-                                variant="outlined"
+                                variant="contained"
                                 color="primary"
-                                endIcon={<OpenInNewIcon fontSize="small" />}
-                                href={`/admin/produtos`}
-                                target="_blank"
-                                sx={{ textTransform: "none" }}
+                                startIcon={<DescriptionOutlinedIcon fontSize="small" />}
+                                onClick={() => {
+                                  if (onOpenSpecs) {
+                                    onOpenSpecs(item.productId);
+                                  } else {
+                                    setSpecsProductId(item.productId);
+                                  }
+                                }}
+                                sx={{
+                                  textTransform: "none",
+                                  fontWeight: 600,
+                                  fontSize: "0.8rem",
+                                  whiteSpace: "nowrap",
+                                  boxShadow: "none",
+                                }}
                               >
                                 Completar Ficha
                               </Button>
@@ -911,6 +948,16 @@ export function ImportAuditModal({
           Fechar
         </Button>
       </DialogActions>
+
+      <ProductSpecsDialog
+        open={Boolean(specsProductId)}
+        productId={specsProductId}
+        onClose={() => setSpecsProductId(null)}
+        onSaved={() => {
+          onBrandUpdated?.();
+        }}
+        defaultTab={1}
+      />
     </Dialog>
   );
 }

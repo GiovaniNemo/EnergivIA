@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import * as xlsx from "xlsx";
@@ -127,10 +127,7 @@ function extractCategory(productName: string, bannerSection: string = ""): strin
   if (/inversor|\binv\b/i.test(combined)) {
     return "inverter";
   }
-  if (/modulo|módulo|painel|placa|fotovoltaic/i.test(combined)) {
-    return "module";
-  }
-  if (/cabo|cabo\s+solar|flexivel\s+\d+mm/i.test(combined)) {
+  if (/cabo|cabo\s+solar|flexivel\s+\d+mm|bobina\s+\d+k/i.test(combined)) {
     return "dc_cable";
   }
   if (/conector|mc4/i.test(combined)) {
@@ -149,6 +146,9 @@ function extractCategory(productName: string, bannerSection: string = ""): strin
   }
   if (/otimizador|optimizer/i.test(combined)) {
     return "optimizer";
+  }
+  if (/modulo|módulo|painel|placa/i.test(combined)) {
+    return "module";
   }
   return "other";
 }
@@ -792,9 +792,12 @@ export class SpreadsheetImportService {
   }
 
   async dismissGenericInLog(logId: string, productId: string) {
-    const log = await this.prisma.distributorImportLog.findUniqueOrThrow({
+    const log = await this.prisma.distributorImportLog.findUnique({
       where: { id: logId },
     });
+    if (!log) {
+      throw new NotFoundException(`Registro de auditoria (${logId}) não encontrado.`);
+    }
     const details = (log.details as Record<string, unknown>) || {};
     const dismissed = Array.isArray(details["dismissedGenericIds"])
       ? (details["dismissedGenericIds"] as string[])
