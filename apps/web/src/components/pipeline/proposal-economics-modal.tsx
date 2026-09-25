@@ -3770,7 +3770,7 @@ export const ProposalEconomicsModal = forwardRef<
                                   src="/badges/tier1.png"
                                   alt="Tier 1 Bloomberg"
                                   title="Módulo certificado Tier 1 (BloombergNEF)"
-                                  className="h-7 sm:h-8 w-auto object-contain rounded-md shadow-xs border border-emerald-500/20"
+                                  className="h-5 sm:h-6 w-auto object-contain shrink-0"
                                 />
                               ) : null}
                               {extractPowerBadge(proposalKitResult.modules.product_name) ? (
@@ -4016,7 +4016,7 @@ export const ProposalEconomicsModal = forwardRef<
                                       src="/badges/tier1.png"
                                       alt="Tier 1"
                                       title="Módulo certificado Tier 1 (BloombergNEF)"
-                                      className="h-5 sm:h-5.5 w-auto object-contain rounded shadow-xs shrink-0"
+                                      className="h-4.5 sm:h-5 w-auto object-contain shrink-0"
                                     />
                                   ) : null}
                                   <span className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] leading-snug break-words">

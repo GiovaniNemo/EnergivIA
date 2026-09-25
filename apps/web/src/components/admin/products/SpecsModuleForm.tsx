@@ -63,11 +63,9 @@ export function SpecsModuleForm(): JSX.Element {
                 src="/badges/tier1.png"
                 alt="Selo Tier 1"
                 sx={{
-                  height: 38,
+                  height: 26,
                   width: "auto",
-                  borderRadius: 1,
                   objectFit: "contain",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                 }}
               />
               <Box>
