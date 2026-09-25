@@ -22,7 +22,7 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import { ProductForm } from "./ProductForm";
 import { buildProductSchema, categoryNames, type CategoryName } from "@/lib/admin/schemas";
 import { fetchBrands, fetchCategories, fetchProduct, updateProduct } from "@/lib/admin-api";
-import { getProductSpecsStatus } from "@/lib/product-specs-status";
+import { getProductSpecsStatus, inferStructureSpecsFromName } from "@/lib/product-specs-status";
 
 const defaultSpecsByCategory: Partial<Record<CategoryName, Record<string, unknown>>> = {
   inverter: { type: "string" },
@@ -99,6 +99,18 @@ export function ProductSpecsDialog({
 
   useEffect(() => {
     if (product && open) {
+      const initialSpecs = { ...((product.specs as Record<string, unknown>) ?? {}) };
+      const cat = effectiveCategoryName || product.category?.name;
+      if (cat === "structure_kit" || cat === "structure") {
+        const inferred = inferStructureSpecsFromName(product.name);
+        if (inferred.roof_type && !initialSpecs["roof_type"]) {
+          initialSpecs["roof_type"] = inferred.roof_type;
+        }
+        if (inferred.max_modules && !initialSpecs["max_modules"]) {
+          initialSpecs["max_modules"] = inferred.max_modules;
+        }
+      }
+
       methods.reset({
         name: product.name,
         brand_id: product.brandId,
@@ -106,12 +118,12 @@ export function ProductSpecsDialog({
         image_url: product.imageUrl ?? "",
         datasheet_url: product.datasheetUrl ?? "",
         active: product.active,
-        specs: (product.specs as Record<string, unknown>) ?? {},
+        specs: initialSpecs,
       });
       setSuccessMsg(null);
       setErrorMsg(null);
     }
-  }, [product, open, methods]);
+  }, [product, open, methods, effectiveCategoryName]);
 
   const watchCategoryId = methods.watch("category_id");
   const effectiveCategoryName = useMemo(
@@ -285,7 +297,7 @@ export function ProductSpecsDialog({
               <ProductForm
                 categories={categories}
                 brands={brands}
-                categoryName={effectiveCategoryName}
+                categoryName={effectiveCategoryName || (product?.category?.name as CategoryName)}
                 productId={productId ?? undefined}
                 defaultTab={defaultTab}
               />

@@ -27,13 +27,14 @@ export interface PreviewRenderVariables {
   taxa_reajuste_anual?: string;
   potencia_sistema_kwp?: string | number;
   geracao_mensal_kwh?: string | number;
+  cobertura_consumo_pct?: string | number;
+  equivalente_arvores_ano?: string | number;
   proposta_id?: string;
   proposta_numero?: string;
   numero_proposta?: string;
   proposalId?: string;
   id?: string;
   kit_itens_lista?: string;
-  [key: string]: unknown;
 }
 
 export type SectionRenderMode = "web" | "pdf";
