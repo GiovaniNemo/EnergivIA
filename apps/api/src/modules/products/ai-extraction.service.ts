@@ -74,7 +74,13 @@ ${
     ? `Texto auxiliar extraído do documento:\n${textContent}\n`
     : "Nota: O PDF não possui camada de texto selecionável (é um documento escaneado/com imagens). Examine visualmente as tabelas, colunas de especificações e valores numéricos."
 }
-Retorne APENAS um objeto JSON com as chaves "detectedCategory" ('module', 'inverter' ou 'unknown') e "specs" com os parâmetros numéricos elétricos e mecânicos correspondentes.`;
+Retorne APENAS um objeto JSON com as chaves "detectedCategory" ('module', 'inverter' ou 'unknown') e "specs" com os parâmetros numéricos elétricos e mecânicos correspondentes.
+Para Inversores, procure com máxima atenção:
+- "nominal_power_w": Potência nominal de saída CA (Rated output power) em Watts (ex: 25000 para 25kW).
+- "max_dc_power": Máxima potência fotovoltaica recomendada de entrada CC em Watts (ex: 32500 para 32.5kW).
+- "recommended_dc_ac_ratio_max": Relação CC/CA (Ratio DC/AC / Overloading) máxima se informada explicitamente no documento (ex: 1.30 ou 1.50).
+- "recommended_dc_ac_ratio_min": Relação CC/CA mínima recomendada se informada no documento.
+- "mppt_count", "max_strings_per_mppt", "mppt_voltage_min", "mppt_voltage_max", "max_input_current", "max_short_circuit_current_a", "voltage_v", "phase", "efficiency", "warranty_years".`;
 
     const attemptErrors: string[] = [];
 
@@ -157,9 +163,14 @@ Retorne APENAS um objeto JSON com as chaves "detectedCategory" ('module', 'inver
           const parsed = this.parseJsonSafely(text);
 
           if (parsed && typeof parsed === "object") {
+            const detectedCategory = parsed.detectedCategory || "unknown";
+            const sanitizedSpecs = this.sanitizeAndEnrichSpecs(
+              detectedCategory,
+              parsed.specs || {}
+            );
             return {
-              detectedCategory: parsed.detectedCategory || "unknown",
-              specs: parsed.specs || {},
+              detectedCategory,
+              specs: sanitizedSpecs,
             };
           }
         } catch (err: unknown) {
@@ -214,6 +225,8 @@ Retorne APENAS um objeto JSON com as chaves "detectedCategory" ('module', 'inver
     "max_short_circuit_current_a": number,
     "mppt_count": number,
     "max_strings_per_mppt": number,
+    "recommended_dc_ac_ratio_max": number,
+    "recommended_dc_ac_ratio_min": number,
     "phase": "monophasic" | "biphasic" | "triphasic",
     "voltage_v": number
   }
@@ -235,9 +248,14 @@ Retorne APENAS um objeto JSON com as chaves "detectedCategory" ('module', 'inver
           if (content) {
             const parsed = JSON.parse(content);
             this.logger.log("Especificações extraídas com sucesso via OpenAI (gpt-4o-mini).");
+            const detectedCategory = parsed.detectedCategory || "unknown";
+            const sanitizedSpecs = this.sanitizeAndEnrichSpecs(
+              detectedCategory,
+              parsed.specs || {}
+            );
             return {
-              detectedCategory: parsed.detectedCategory || "unknown",
-              specs: parsed.specs || {},
+              detectedCategory,
+              specs: sanitizedSpecs,
             };
           }
         } else {
@@ -258,6 +276,93 @@ Retorne APENAS um objeto JSON com as chaves "detectedCategory" ('module', 'inver
     );
     const primaryError = attemptErrors[0] ?? "Nenhum modelo de IA conseguiu processar o documento.";
     throw new BadRequestException(`Falha ao extrair especificações com a IA: ${primaryError}`);
+  }
+
+  /**
+   * Sanitiza e valida matematicamente as especificações do equipamento,
+   * prevenindo alucinações da IA e calculando determinísticamente grandezas
+   * elétricas como a Relação CC/CA (Ratio DC/AC).
+   */
+  private sanitizeAndEnrichSpecs(
+    detectedCategory: string,
+    rawSpecs: Record<string, unknown>
+  ): Record<string, unknown> {
+    const specs = { ...rawSpecs };
+
+    // Tratamento e cálculo determinístico para Inversores
+    if (detectedCategory === "inverter" || specs["nominal_power_w"] !== undefined) {
+      let nominalPower =
+        typeof specs["nominal_power_w"] === "number" ? specs["nominal_power_w"] : null;
+      let maxDcPower = typeof specs["max_dc_power"] === "number" ? specs["max_dc_power"] : null;
+
+      // 1. Normalização de unidades (kW para Watts se veio número menor que 300)
+      if (nominalPower !== null && nominalPower > 0 && nominalPower < 300) {
+        nominalPower = Math.round(nominalPower * 1000);
+        specs["nominal_power_w"] = nominalPower;
+      }
+      if (maxDcPower !== null && maxDcPower > 0 && maxDcPower < 500) {
+        maxDcPower = Math.round(maxDcPower * 1000);
+        specs["max_dc_power"] = maxDcPower;
+      }
+
+      // 2. Extração e sanitização do Ratio Máximo com proteção anti-alucinação
+      let ratioMax: number | null = null;
+      const rawRatioMax = specs["recommended_dc_ac_ratio_max"];
+      if (typeof rawRatioMax === "number" && !isNaN(rawRatioMax)) {
+        // Normaliza se a IA tiver trazido em porcentagem (ex: 130 em vez de 1.30)
+        const normalized = rawRatioMax > 10 ? rawRatioMax / 100 : rawRatioMax;
+        // Limites físicos de engenharia: relação CC/CA de inversores comerciais fica entre 1.05 e 1.70
+        if (normalized >= 1.05 && normalized <= 1.7) {
+          ratioMax = Number(normalized.toFixed(2));
+        } else {
+          this.logger.warn(
+            `Ratio máximo da IA (${rawRatioMax}) descartado por violar os limites físicos fotovoltaicos.`
+          );
+        }
+      }
+
+      // 3. Cálculo matemático determinístico se não veio ratio explícito ou foi descartado:
+      // Ratio Máximo = Potência CC Máxima / Potência CA Nominal
+      if (ratioMax === null && maxDcPower && nominalPower && nominalPower > 0) {
+        const calculated = Number((maxDcPower / nominalPower).toFixed(2));
+        if (calculated >= 1.05 && calculated <= 1.7) {
+          ratioMax = calculated;
+          this.logger.log(
+            `Ratio CC/CA máximo calculado matematicamente: ${maxDcPower}W / ${nominalPower}W = ${ratioMax}`
+          );
+        }
+      }
+
+      // 4. Se o datasheet não especifica max_dc_power, aplica o padrão seguro do mercado (1.30)
+      if (ratioMax === null) {
+        ratioMax = 1.3;
+      }
+
+      // 5. Sanitização do Ratio Mínimo
+      let ratioMin: number | null = null;
+      const rawRatioMin = specs["recommended_dc_ac_ratio_min"];
+      if (typeof rawRatioMin === "number" && !isNaN(rawRatioMin)) {
+        const normalized = rawRatioMin > 10 ? rawRatioMin / 100 : rawRatioMin;
+        if (normalized >= 1.0 && normalized < ratioMax) {
+          ratioMin = Number(normalized.toFixed(2));
+        }
+      }
+
+      // Padrão de engenharia: 1.05 (mínimo de sobrecarregamento para evitar ociosidade do inversor)
+      if (ratioMin === null) {
+        ratioMin = 1.05;
+      }
+
+      // Garantir coerência relacional estrita: ratioMin <= ratioMax
+      if (ratioMin > ratioMax) {
+        ratioMin = Number(Math.max(1.0, ratioMax - 0.2).toFixed(2));
+      }
+
+      specs["recommended_dc_ac_ratio_max"] = ratioMax;
+      specs["recommended_dc_ac_ratio_min"] = ratioMin;
+    }
+
+    return specs;
   }
 
   private parseJsonSafely(rawText: string): {
