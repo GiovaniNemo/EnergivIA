@@ -147,6 +147,7 @@ export class DistributorsService {
       stockQuantity: number;
       leadTimeDays: number | null;
       minimumOrderQuantity: number;
+      active: boolean;
       lastPriceUpdate: Date | null;
       updatedAt: Date;
       product: {
@@ -233,6 +234,7 @@ export class DistributorsService {
           stockQuantity: row.stockQuantity,
           leadTimeDays: row.leadTimeDays,
           minimumOrderQuantity: row.minimumOrderQuantity,
+          active: row.active,
           lastPriceUpdate: row.lastPriceUpdate,
           updatedAt: row.updatedAt,
           product: row.product,
@@ -417,6 +419,7 @@ export class DistributorsService {
       stock_quantity: r.stockQuantity,
       lead_time_days: r.leadTimeDays,
       minimum_order_quantity: r.minimumOrderQuantity,
+      active: r.active,
       last_price_update: r.lastPriceUpdate,
       distributor: r.distributor,
     }));

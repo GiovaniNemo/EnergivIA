@@ -1014,7 +1014,10 @@ export default function DistributorInventoryPage(): JSX.Element {
                             <Switch
                               size="small"
                               checked={isItemActive}
-                              disabled={updateMutation.isPending}
+                              disabled={
+                                updateMutation.isPending &&
+                                updateMutation.variables?.dpId === row.id
+                              }
                               onChange={(e) =>
                                 updateMutation.mutate({
                                   dpId: row.id,
