@@ -7,16 +7,17 @@ import pdfParse from "pdf-parse";
 export class AiExtractionService {
   private readonly logger = new Logger(AiExtractionService.name);
   private genAI: GoogleGenerativeAI;
+  private apiKey: string;
 
   constructor(private readonly configService: ConfigService) {
-    const apiKey =
+    this.apiKey =
       this.configService.get<string>("GOOGLE_GEMINI_API_KEY") ||
       this.configService.get<string>("GEMINI_API_KEY") ||
       this.configService.get<string>("GOOGLE_GENERATIVE_AI_API_KEY") ||
       process.env["GOOGLE_GEMINI_API_KEY"] ||
       process.env["GEMINI_API_KEY"] ||
       "";
-    this.genAI = new GoogleGenerativeAI(apiKey);
+    this.genAI = new GoogleGenerativeAI(this.apiKey);
   }
 
   async extractSpecsFromDatasheetUrl(datasheetUrl: string, productName?: string) {
@@ -75,24 +76,63 @@ ${
 }
 Retorne APENAS um objeto JSON com as chaves "detectedCategory" ('module', 'inverter' ou 'unknown') e "specs" com os parâmetros numéricos elétricos e mecânicos correspondentes.`;
 
-    // Candidate models to try in order of preference (apenas modelos vigentes com suporte a multimodal)
-    const candidateModels = [
-      process.env["GEMINI_MULTIMODAL_MODEL"],
-      process.env["GEMINI_MODEL"],
-      "gemini-1.5-flash",
-      "gemini-2.0-flash",
-      "gemini-1.5-pro",
-    ].filter(Boolean) as string[];
-
     const attemptErrors: string[] = [];
 
+    // Consulta os modelos habilitados dinamicamente para esta chave de API
+    const { models: dynamicallyAvailable, apiError: geminiDiscoveryError } =
+      await this.getAvailableGeminiModels();
+
+    if (geminiDiscoveryError) {
+      attemptErrors.push(`[Google Generative Language API]: ${geminiDiscoveryError}`);
+    }
+
+    let candidateModels: string[] = [];
+
+    if (dynamicallyAvailable.length > 0) {
+      const preferred = [
+        process.env["GEMINI_MULTIMODAL_MODEL"],
+        process.env["GEMINI_MODEL"],
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-8b",
+        "gemini-1.5-flash-001",
+        "gemini-1.5-flash-002",
+        "gemini-1.5-pro",
+        "gemini-1.5-pro-001",
+        "gemini-2.0-flash-exp",
+      ].filter(Boolean) as string[];
+
+      // Adiciona na ordem de preferência os modelos que realmente existem na chave
+      for (const pref of preferred) {
+        if (dynamicallyAvailable.includes(pref) && !candidateModels.includes(pref)) {
+          candidateModels.push(pref);
+        }
+      }
+
+      // Adiciona quaisquer outros modelos que suportem generateContent
+      for (const avail of dynamicallyAvailable) {
+        if (!candidateModels.includes(avail)) {
+          candidateModels.push(avail);
+        }
+      }
+    } else {
+      // Fallback estático caso a descoberta de modelos falhe
+      candidateModels = [
+        process.env["GEMINI_MULTIMODAL_MODEL"],
+        process.env["GEMINI_MODEL"],
+        "gemini-1.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash-8b",
+        "gemini-1.5-pro",
+      ].filter(Boolean) as string[];
+    }
+
     // 1. Tenta extrair usando a lista de modelos Gemini (com suporte multimodal ao PDF)
-    if (this.genAI) {
+    if (this.genAI && this.apiKey) {
       for (const modelCandidate of candidateModels) {
         try {
           this.logger.log(`Tentando extrair datasheet com modelo Gemini: ${modelCandidate}`);
 
-          // Tentamos primeiro com responseMimeType: "application/json"
           const model = this.genAI.getGenerativeModel({
             model: modelCandidate,
             generationConfig: {
@@ -245,6 +285,41 @@ Retorne APENAS um objeto JSON com as chaves "detectedCategory" ('module', 'inver
         };
       }
       throw new Error("Não foi possível interpretar a resposta da IA como JSON.");
+    }
+  }
+
+  private async getAvailableGeminiModels(): Promise<{
+    models: string[];
+    apiError?: string;
+  }> {
+    if (!this.apiKey) {
+      return { models: [], apiError: "Chave de API do Gemini não configurada no servidor." };
+    }
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${this.apiKey}`
+      );
+      if (!res.ok) {
+        const errorData = (await res.json().catch(() => null)) as {
+          error?: { message?: string; status?: string };
+        } | null;
+        const msg = errorData?.error?.message || `Status HTTP ${res.status}: ${res.statusText}`;
+        this.logger.warn(`Google AI Studio / Generative Language API retornou erro: ${msg}`);
+        return { models: [], apiError: msg };
+      }
+      const data = (await res.json()) as {
+        models?: Array<{ name: string; supportedGenerationMethods?: string[] }>;
+      };
+      const models = (data.models || [])
+        .filter((m) => m.supportedGenerationMethods?.includes("generateContent"))
+        .map((m) => m.name.replace(/^models\//, ""));
+
+      this.logger.log(`Modelos disponíveis para esta chave Gemini: ${models.join(", ")}`);
+      return { models };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Erro de conexão ao consultar modelos do Gemini: ${msg}`);
+      return { models: [], apiError: msg };
     }
   }
 }
