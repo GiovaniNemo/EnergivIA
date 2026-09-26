@@ -239,31 +239,33 @@ export function getEquipmentHighlights(
     const top = String(s["grid_topology"] || s["grid_standard"] || "").toLowerCase();
     const outV = String(s["output_voltage_v"] || "").toUpperCase();
 
-    if (
-      top === "tri_380" ||
-      outV.includes("380") ||
-      nameUpper.includes("380V") ||
-      nameUpper.includes("380 V")
-    ) {
-      voltageLabel = "Trifásico 380V";
-    } else if (
-      top === "tri_220" ||
-      (outV.includes("220") &&
-        (nameUpper.includes("TRIFAS") ||
-          Number(s["mppt_count"]) >= 3 ||
-          Number(s["nominal_power_w"]) > 10000)) ||
-      (nameUpper.includes("TRIFAS") && (nameUpper.includes("220V") || nameUpper.includes("220 V")))
-    ) {
+    // Prioridade máxima: o que está salvo na Ficha Técnica (grid_topology / output_voltage_v)
+    if (top === "tri_220" || (top.includes("220") && top.includes("tri"))) {
       voltageLabel = "Trifásico 220V";
-    } else if (
-      top === "mono_220" ||
-      outV.includes("220") ||
-      nameUpper.includes("MONOFAS") ||
-      nameUpper.includes("MONO")
-    ) {
+    } else if (top === "tri_380" || (top.includes("380") && top.includes("tri"))) {
+      voltageLabel = "Trifásico 380V";
+    } else if (top === "mono_220" || (top.includes("220") && top.includes("mono"))) {
       voltageLabel = "Monofásico 220V";
+    } else if (outV === "380V" || outV === "380V/220V") {
+      voltageLabel = "Trifásico 380V";
+    } else if (outV === "220V") {
+      voltageLabel = Number(s["nominal_power_w"]) > 10000 ? "Trifásico 220V" : "Monofásico 220V";
     } else if (outV) {
       voltageLabel = outV;
+    } else if (nameUpper) {
+      // Fallback: somente quando a ficha técnica NÃO tiver topologia nem tensão preenchidas
+      if (nameUpper.includes("380V") || nameUpper.includes("380 V")) {
+        voltageLabel = "Trifásico 380V";
+      } else if (
+        nameUpper.includes("TRIFAS") &&
+        (nameUpper.includes("220V") || nameUpper.includes("220 V"))
+      ) {
+        voltageLabel = "Trifásico 220V";
+      } else if (nameUpper.includes("MONOFAS") || nameUpper.includes("MONO")) {
+        voltageLabel = "Monofásico 220V";
+      } else if (nameUpper.includes("220V") || nameUpper.includes("220 V")) {
+        voltageLabel = Number(s["nominal_power_w"]) > 10000 ? "Trifásico 220V" : "220V";
+      }
     }
 
     // 2. Overload / Ratio DC/AC
