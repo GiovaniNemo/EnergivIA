@@ -81,6 +81,14 @@ export function SpecsInverterForm(): JSX.Element {
             select
             fullWidth
             size="small"
+            SelectProps={{
+              MenuProps: {
+                PaperProps: {
+                  sx: { zIndex: 10000 },
+                },
+                sx: { zIndex: 10000 },
+              },
+            }}
           >
             <MenuItem value="mono_220">Monofásico 220V (Padrão On-Grid até 10kW)</MenuItem>
             <MenuItem value="tri_220">Trifásico 220V (Rede 127/220V)</MenuItem>

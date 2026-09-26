@@ -257,6 +257,14 @@ export function ProductForm({
                     fullWidth
                     size="small"
                     required
+                    SelectProps={{
+                      MenuProps: {
+                        PaperProps: {
+                          sx: { zIndex: 10000, maxHeight: 320 },
+                        },
+                        sx: { zIndex: 10000 },
+                      },
+                    }}
                   >
                     {brands.map((b) => (
                       <MenuItem key={b.id} value={b.id}>
@@ -283,6 +291,14 @@ export function ProductForm({
                     fullWidth
                     size="small"
                     required
+                    SelectProps={{
+                      MenuProps: {
+                        PaperProps: {
+                          sx: { zIndex: 10000, maxHeight: 320 },
+                        },
+                        sx: { zIndex: 10000 },
+                      },
+                    }}
                   >
                     {categories.map((c) => (
                       <MenuItem key={c.id} value={c.id}>

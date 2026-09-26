@@ -167,22 +167,46 @@ export function ProductSpecsDialog({
 
   const onSubmit = (values: FormValues) => {
     setErrorMsg(null);
-    if (effectiveCategoryName && defaultSpecsByCategory[effectiveCategoryName]) {
-      values.specs = { ...defaultSpecsByCategory[effectiveCategoryName], ...values.specs };
+    const cat = effectiveCategoryName || (product?.category?.name as CategoryName);
+    if (cat && defaultSpecsByCategory[cat]) {
+      values.specs = { ...defaultSpecsByCategory[cat], ...values.specs };
+    }
+    if ((cat === "inverter" || cat?.toLowerCase().includes("inv")) && values.specs) {
+      values.specs["type"] = "string";
     }
 
-    const schema = buildProductSchema(effectiveCategoryName);
+    const schema = buildProductSchema(cat);
     const parsed = schema.safeParse(values);
     if (!parsed.success) {
+      const fieldLabels: Record<string, string> = {
+        name: "Nome do produto (Aba Informações Gerais)",
+        brand_id: "Marca / Fabricante (Aba Informações Gerais)",
+        category_id: "Categoria (Aba Informações Gerais)",
+        "specs.nominal_power_w": "Potência Nominal CA (W)",
+        "specs.max_dc_voltage": "Tensão DC Máx (V)",
+        "specs.mppt_count": "Nº de MPPTs",
+        "specs.max_strings_per_mppt": "Strings por MPPT",
+        "specs.mppt_voltage_min": "Tensão MPPT Mín (V)",
+        "specs.mppt_voltage_max": "Tensão MPPT Máx (V)",
+        "specs.max_input_current": "Corrente Entrada Máx (A)",
+        "specs.max_dc_power": "Potência DC Máx (W)",
+        "specs.recommended_dc_ac_ratio_min": "Ratio DC/AC Mín",
+        "specs.recommended_dc_ac_ratio_max": "Ratio DC/AC Máx",
+      };
+
       parsed.error.issues.forEach((issue) => {
         const path = issue.path.length > 0 ? issue.path.join(".") : "root";
         methods.setError(path as import("react-hook-form").FieldPath<FormValues>, {
           message: issue.message,
         });
       });
-      setErrorMsg(
-        "Existem campos obrigatórios não preenchidos ou com valores inválidos na ficha técnica."
-      );
+
+      const missingList = parsed.error.issues.map((i) => {
+        const p = i.path.join(".");
+        return fieldLabels[p] || p;
+      });
+
+      setErrorMsg(`Campos pendentes ou inválidos para salvar: ${missingList.join(", ")}`);
       return;
     }
 
@@ -210,6 +234,20 @@ export function ProductSpecsDialog({
             shouldValidate: true,
           });
         });
+
+        // Vincula a marca correspondente se identificada (ex: SAJ, GoodWe, etc.)
+        if (match.brand) {
+          const matchedBrand = brands.find(
+            (b) => b.name.trim().toUpperCase() === match.brand!.trim().toUpperCase()
+          );
+          if (matchedBrand) {
+            methods.setValue("brand_id", matchedBrand.id, {
+              shouldDirty: true,
+              shouldValidate: true,
+            });
+          }
+        }
+
         setSuccessMsg(
           `Especificações oficiais preenchidas com sucesso via Catálogo Homologado (${match.model})!`
         );
@@ -226,7 +264,7 @@ export function ProductSpecsDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1400 }}>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle
         sx={{
           display: "flex",
