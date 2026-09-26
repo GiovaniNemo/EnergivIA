@@ -173,6 +173,9 @@ export function ProductSpecsDialog({
           message: issue.message,
         });
       });
+      setErrorMsg(
+        "Existem campos obrigatórios não preenchidos ou com valores inválidos na ficha técnica."
+      );
       return;
     }
 
