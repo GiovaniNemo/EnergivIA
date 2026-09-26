@@ -148,6 +148,27 @@ export async function extractDatasheet(
   return res.json();
 }
 
+export async function lookupEquipmentHomologation(productName: string): Promise<{
+  found: boolean;
+  source: string;
+  matchedModel?: string;
+  brand?: string;
+  category?: string;
+  inmetroCode?: string;
+  specs?: Record<string, unknown>;
+}> {
+  const res = await fetch(`${getApiUrl()}/products/homologation/lookup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ productName }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message ?? "Falha ao consultar base de homologação.");
+  }
+  return res.json();
+}
+
 export async function fetchProduct(id: string): Promise<Product> {
   const res = await fetch(`${getApiUrl()}/products/${id}`);
   if (!res.ok) throw new Error("Falha ao carregar produto.");

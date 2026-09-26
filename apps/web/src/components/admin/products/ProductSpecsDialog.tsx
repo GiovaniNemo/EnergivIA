@@ -21,7 +21,13 @@ import SaveIcon from "@mui/icons-material/Save";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import { ProductForm } from "./ProductForm";
 import { buildProductSchema, categoryNames, type CategoryName } from "@/lib/admin/schemas";
-import { fetchBrands, fetchCategories, fetchProduct, updateProduct } from "@/lib/admin-api";
+import {
+  fetchBrands,
+  fetchCategories,
+  fetchProduct,
+  updateProduct,
+  lookupEquipmentHomologation,
+} from "@/lib/admin-api";
 import { getProductSpecsStatus, inferStructureSpecsFromName } from "@/lib/product-specs-status";
 
 const defaultSpecsByCategory: Partial<Record<CategoryName, Record<string, unknown>>> = {
@@ -59,6 +65,7 @@ export function ProductSpecsDialog({
   const queryClient = useQueryClient();
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
 
   const { data: product, isLoading: loadingProduct } = useQuery({
     queryKey: ["admin", "product", productId],
@@ -190,6 +197,34 @@ export function ProductSpecsDialog({
     });
   };
 
+  const handleLookupHomologation = async () => {
+    if (!product?.name) return;
+    setIsLookingUp(true);
+    setErrorMsg(null);
+    try {
+      const match = await lookupEquipmentHomologation(product.name);
+      if (match && match.specs) {
+        Object.entries(match.specs).forEach(([k, v]) => {
+          methods.setValue(`specs.${k}` as Parameters<typeof methods.setValue>[0], v, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        });
+        setSuccessMsg(
+          `Especificações oficiais preenchidas com sucesso via Catálogo Homologado (${match.model})!`
+        );
+      } else {
+        setErrorMsg(
+          "Nenhuma homologação exata encontrada para este modelo no catálogo oficial. Você pode preencher manualmente os campos abaixo."
+        );
+      }
+    } catch {
+      setErrorMsg("Erro ao consultar catálogo oficial de equipamentos.");
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1400 }}>
       <DialogTitle
@@ -265,6 +300,50 @@ export function ProductSpecsDialog({
                   {errorMsg}
                 </Alert>
               )}
+
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  p: 1.5,
+                  mb: 2,
+                  bgcolor: "rgba(59, 130, 246, 0.08)",
+                  border: "1px solid rgba(59, 130, 246, 0.25)",
+                  borderRadius: 2,
+                  gap: 1.5,
+                  flexWrap: { xs: "wrap", sm: "nowrap" },
+                }}
+              >
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
+                    ⚡ Auto-Preenchimento Homologado & Datasheet
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Preencher tensões, MPPTs, potências e ratio CC/CA oficiais para evitar erros de
+                    cálculo.
+                  </Typography>
+                </Box>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={handleLookupHomologation}
+                  disabled={isLookingUp}
+                  startIcon={
+                    isLookingUp ? <CircularProgress size={16} color="inherit" /> : undefined
+                  }
+                  sx={{
+                    whiteSpace: "nowrap",
+                    textTransform: "none",
+                    fontWeight: 700,
+                    bgcolor: "#2563eb",
+                    "&:hover": { bgcolor: "#1d4ed8" },
+                  }}
+                >
+                  {isLookingUp ? "Consultando..." : "Buscar Ficha Oficial"}
+                </Button>
+              </Box>
+
               {!specsStatus.isComplete && specsStatus.totalRequired > 0 && (
                 <Alert
                   severity="warning"

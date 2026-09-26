@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Body, Param, Query } from "@nestjs/common";
 import { ProductsService } from "./products.service";
 import { DistributorsService } from "../distributors/distributors.service";
+import { EquipmentHomologationService } from "./equipment-homologation.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { QueryProductsDto } from "./dto/query-products.dto";
@@ -9,8 +10,14 @@ import { QueryProductsDto } from "./dto/query-products.dto";
 export class ProductsController {
   constructor(
     private readonly productsService: ProductsService,
-    private readonly distributorsService: DistributorsService
+    private readonly distributorsService: DistributorsService,
+    private readonly equipmentHomologationService: EquipmentHomologationService
   ) {}
+
+  @Post("homologation/lookup")
+  lookupHomologation(@Body() body: { productName: string }) {
+    return this.equipmentHomologationService.lookup(body.productName);
+  }
 
   @Get()
   findAll(@Query() query: QueryProductsDto) {

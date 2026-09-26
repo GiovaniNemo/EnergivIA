@@ -5,11 +5,12 @@ import { PrismaModule } from "../../prisma/prisma.module";
 import { DistributorsModule } from "../distributors/distributors.module";
 import { AiExtractionController } from "./ai-extraction.controller";
 import { AiExtractionService } from "./ai-extraction.service";
+import { EquipmentHomologationService } from "./equipment-homologation.service";
 
 @Module({
   imports: [PrismaModule, DistributorsModule],
   controllers: [ProductsController, AiExtractionController],
-  providers: [ProductsService, AiExtractionService],
-  exports: [ProductsService],
+  providers: [ProductsService, AiExtractionService, EquipmentHomologationService],
+  exports: [ProductsService, EquipmentHomologationService],
 })
 export class ProductsModule {}
