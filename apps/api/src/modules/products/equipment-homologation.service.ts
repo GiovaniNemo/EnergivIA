@@ -334,7 +334,106 @@ export class EquipmentHomologationService {
     },
 
     // ==========================================
-    // SAJ - Família C6 LV Trifásico 220V & R5 Monofásico
+    // SAJ - Família C6 Trifásico 380V (T6 / 6 MPPTs / 380V)
+    // ==========================================
+    {
+      brand: "SAJ",
+      model: "C6-75K-T6-40",
+      category: "inverter",
+      aliases: [
+        "C6-75K-T6-40",
+        "C6-75K-T6",
+        "75K-T6-40",
+        "75K-T6",
+        "SAJ 6MPPT 75KW",
+        "SAJ 380V 75KW",
+        "380V SAJ 75KW",
+      ],
+      inmetroCode: "006911/2025",
+      specs: {
+        nominal_power_w: 75000,
+        max_dc_power: 144000,
+        max_dc_voltage: 1100,
+        mppt_count: 6,
+        max_strings_per_mppt: 2,
+        mppt_voltage_min: 180,
+        mppt_voltage_max: 1000,
+        max_input_current: 40,
+        max_short_circuit_current_a: 50,
+        recommended_dc_ac_ratio_min: 1.05,
+        recommended_dc_ac_ratio_max: 2.0,
+        warranty_years: 5,
+        grid_topology: "tri_380",
+        grid_standard: "TRI_380",
+        output_voltage_v: "380V/220V",
+        efficiency: 98.8,
+      },
+    },
+    {
+      brand: "SAJ",
+      model: "C6-60K-T6-40",
+      category: "inverter",
+      aliases: [
+        "C6-60K-T6-40",
+        "C6-60K-T6",
+        "60K-T6-40",
+        "60K-T6",
+        "SAJ 6MPPT 60KW",
+        "SAJ 380V 60KW",
+      ],
+      specs: {
+        nominal_power_w: 60000,
+        max_dc_power: 115000,
+        max_dc_voltage: 1100,
+        mppt_count: 6,
+        max_strings_per_mppt: 2,
+        mppt_voltage_min: 180,
+        mppt_voltage_max: 1000,
+        max_input_current: 40,
+        max_short_circuit_current_a: 50,
+        recommended_dc_ac_ratio_min: 1.05,
+        recommended_dc_ac_ratio_max: 2.0,
+        warranty_years: 5,
+        grid_topology: "tri_380",
+        grid_standard: "TRI_380",
+        output_voltage_v: "380V/220V",
+        efficiency: 98.8,
+      },
+    },
+    {
+      brand: "SAJ",
+      model: "C6-50K-T5-40",
+      category: "inverter",
+      aliases: [
+        "C6-50K-T5-40",
+        "C6-50K-T5",
+        "50K-T5-40",
+        "50K-T5",
+        "SAJ 5MPPT 50KW",
+        "SAJ 380V 50KW",
+      ],
+      specs: {
+        nominal_power_w: 50000,
+        max_dc_power: 96000,
+        max_dc_voltage: 1100,
+        mppt_count: 5,
+        max_strings_per_mppt: 2,
+        mppt_voltage_min: 180,
+        mppt_voltage_max: 1000,
+        max_input_current: 40,
+        max_short_circuit_current_a: 50,
+        recommended_dc_ac_ratio_min: 1.05,
+        recommended_dc_ac_ratio_max: 2.0,
+        warranty_years: 5,
+        grid_topology: "tri_380",
+        grid_standard: "TRI_380",
+        output_voltage_v: "380V/220V",
+        efficiency: 98.8,
+      },
+    },
+
+    // ==========================================
+    // SAJ - Família C6 LV Trifásico 220V (T12 / T9 / T6)
     // ==========================================
     {
       brand: "SAJ",
@@ -344,14 +443,13 @@ export class EquipmentHomologationService {
         "C6-75K-T12-LV-40",
         "C6-75K-T12-LV",
         "C6-75K-T12",
-        "C6-75K",
-        "C6 75K",
+        "C6-75K-LV",
         "75K-T12-LV-40",
         "75K-T12-LV",
         "75K-T12",
-        "SAJ 75KW",
-        "SAJ 75K",
         "SAJ 12MPPT 75KW",
+        "SAJ 220V 75KW",
+        "SAJ 75KW 220V",
       ],
       inmetroCode: "003281/2025",
       specs: {
@@ -802,8 +900,24 @@ export class EquipmentHomologationService {
 
     this.logger.log(`Buscando homologação oficial para produto: "${cleanInput}"`);
 
+    const has380 = cleanInput.includes("380V") || cleanInput.includes("380 V");
+    const has220 = cleanInput.includes("220V") || cleanInput.includes("220 V");
+
+    const isVoltageCompatible = (itemSpecs: Record<string, unknown>): boolean => {
+      const top = String(itemSpecs["grid_topology"] || "");
+      if (has380 && !has220) {
+        if (top === "tri_220" || top === "mono_220") return false;
+      }
+      if (has220 && !has380) {
+        if (top === "tri_380") return false;
+      }
+      return true;
+    };
+
     // 1. Busca exata ou por aliases de modelo
     for (const item of this.catalog) {
+      if (!isVoltageCompatible(item.specs)) continue;
+
       // Verifica o modelo principal
       const cleanModel = item.model
         .toUpperCase()
@@ -865,6 +979,7 @@ export class EquipmentHomologationService {
 
     // 2. Busca combinada de Marca + Potência (ex: "GOODWE" + "37.5" ou "GROWATT" + "25")
     for (const item of this.catalog) {
+      if (!isVoltageCompatible(item.specs)) continue;
       const brandUpper = item.brand.toUpperCase();
       if (cleanInput.includes(brandUpper)) {
         // Tenta encontrar número de potência
