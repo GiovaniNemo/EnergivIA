@@ -143,6 +143,18 @@ export function ProductSpecsDialog({
       });
       setSuccessMsg(null);
       setErrorMsg(null);
+    } else if (!open) {
+      methods.reset({
+        name: "",
+        brand_id: "",
+        category_id: "",
+        image_url: "",
+        datasheet_url: "",
+        active: true,
+        specs: {},
+      });
+      setSuccessMsg(null);
+      setErrorMsg(null);
     }
   }, [product, open, methods, effectiveCategoryName]);
 
@@ -326,7 +338,7 @@ export function ProductSpecsDialog({
             <CircularProgress size={36} />
           </Box>
         ) : (
-          <FormProvider {...methods}>
+          <FormProvider {...methods} key={product.id}>
             <form id="product-specs-dialog-form" onSubmit={methods.handleSubmit(onSubmit)}>
               {successMsg && (
                 <Alert severity="success" sx={{ mb: 2 }}>

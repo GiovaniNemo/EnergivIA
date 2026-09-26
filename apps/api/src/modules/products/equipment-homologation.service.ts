@@ -554,6 +554,145 @@ export class EquipmentHomologationService {
     },
 
     // ==========================================
+    // SAJ - Família R6 LV Trifásico 220V (12K, 15K, 20K, 25K)
+    // ==========================================
+    {
+      brand: "SAJ",
+      model: "R6-15K-T2-32-LV",
+      category: "inverter",
+      aliases: [
+        "R6-15K-T2-32-LV",
+        "R6-15K-T2-32",
+        "R6-15K-T2-LV",
+        "R6-15K-T2",
+        "R6-15K-LV",
+        "R6-15K",
+        "R6 15K",
+        "15K-T2-32-LV",
+        "15K-T2-LV",
+        "SAJ 15KW",
+        "SAJ 15K",
+      ],
+      specs: {
+        nominal_power_w: 15000,
+        max_dc_power: 30000,
+        max_dc_voltage: 1100,
+        mppt_count: 2,
+        max_strings_per_mppt: 2,
+        mppt_voltage_min: 180,
+        mppt_voltage_max: 1000,
+        max_input_current: 32,
+        max_short_circuit_current_a: 38.4,
+        recommended_dc_ac_ratio_min: 1.05,
+        recommended_dc_ac_ratio_max: 2.0,
+        warranty_years: 10,
+        grid_topology: "tri_220",
+        grid_standard: "TRI_220",
+        output_voltage_v: "220V",
+        efficiency: 98.8,
+      },
+    },
+    {
+      brand: "SAJ",
+      model: "R6-20K-T2-32-LV",
+      category: "inverter",
+      aliases: [
+        "R6-20K-T2-32-LV",
+        "R6-20K-T2-32",
+        "R6-20K-T2",
+        "R6-20K",
+        "R6 20K",
+        "20K-T2-32-LV",
+        "SAJ 20KW",
+        "SAJ 20K",
+      ],
+      specs: {
+        nominal_power_w: 20000,
+        max_dc_power: 40000,
+        max_dc_voltage: 1100,
+        mppt_count: 2,
+        max_strings_per_mppt: 2,
+        mppt_voltage_min: 180,
+        mppt_voltage_max: 1000,
+        max_input_current: 32,
+        max_short_circuit_current_a: 38.4,
+        recommended_dc_ac_ratio_min: 1.05,
+        recommended_dc_ac_ratio_max: 2.0,
+        warranty_years: 10,
+        grid_topology: "tri_220",
+        grid_standard: "TRI_220",
+        output_voltage_v: "220V",
+        efficiency: 98.8,
+      },
+    },
+    {
+      brand: "SAJ",
+      model: "R6-25K-T2-32-LV",
+      category: "inverter",
+      aliases: [
+        "R6-25K-T2-32-LV",
+        "R6-25K-T2-32",
+        "R6-25K-T2",
+        "R6-25K",
+        "R6 25K",
+        "25K-T2-32-LV",
+        "SAJ 25KW",
+        "SAJ 25K",
+      ],
+      specs: {
+        nominal_power_w: 25000,
+        max_dc_power: 50000,
+        max_dc_voltage: 1100,
+        mppt_count: 2,
+        max_strings_per_mppt: 2,
+        mppt_voltage_min: 180,
+        mppt_voltage_max: 1000,
+        max_input_current: 32,
+        max_short_circuit_current_a: 38.4,
+        recommended_dc_ac_ratio_min: 1.05,
+        recommended_dc_ac_ratio_max: 2.0,
+        warranty_years: 10,
+        grid_topology: "tri_220",
+        grid_standard: "TRI_220",
+        output_voltage_v: "220V",
+        efficiency: 98.8,
+      },
+    },
+    {
+      brand: "SAJ",
+      model: "R6-12K-T2-32-LV",
+      category: "inverter",
+      aliases: [
+        "R6-12K-T2-32-LV",
+        "R6-12K-T2-32",
+        "R6-12K-T2",
+        "R6-12K",
+        "R6 12K",
+        "12K-T2-32-LV",
+        "SAJ 12KW",
+        "SAJ 12K",
+      ],
+      specs: {
+        nominal_power_w: 12000,
+        max_dc_power: 24000,
+        max_dc_voltage: 1100,
+        mppt_count: 2,
+        max_strings_per_mppt: 2,
+        mppt_voltage_min: 180,
+        mppt_voltage_max: 1000,
+        max_input_current: 32,
+        max_short_circuit_current_a: 38.4,
+        recommended_dc_ac_ratio_min: 1.05,
+        recommended_dc_ac_ratio_max: 2.0,
+        warranty_years: 10,
+        grid_topology: "tri_220",
+        grid_standard: "TRI_220",
+        output_voltage_v: "220V",
+        efficiency: 98.8,
+      },
+    },
+
+    // ==========================================
     // MÓDULOS FOTOVOLTAICOS POPULARES
     // ==========================================
     {
@@ -738,8 +877,15 @@ export class EquipmentHomologationService {
 
         if (powerKw) {
           const powerStr = String(powerKw);
-          const powerWithComma = powerStr.replace(".", ",");
-          if (cleanInput.includes(powerStr) || cleanInput.includes(powerWithComma)) {
+          const escaped = powerStr.replace(".", "[.,]");
+          // Exige que o número de potência não seja parte de outro número maior (ex: 15kW não pode bater com 5kW)
+          // Para potências de um único dígito (< 10kW), exige explicitamente unidade "KW" ou "K" para não confundir com números de MPPTs/strings
+          const regexStrict =
+            powerKw < 10
+              ? new RegExp(`(?:^|[^0-9])${escaped}\\s*(?:KW|K)(?:[^0-9]|$)`, "i")
+              : new RegExp(`(?:^|[^0-9])${escaped}\\s*(?:KW|K)?(?:[^0-9]|$)`, "i");
+
+          if (regexStrict.test(cleanInput)) {
             this.logger.log(
               `Match por Marca + Potência: ${item.brand} (${powerKw}kW) -> ${item.model}`
             );
