@@ -333,9 +333,17 @@ export function ProductForm({
           <Controller
             name="active"
             control={control}
-            render={({ field }) => (
+            render={({ field: { value, onChange, ref, ...rest } }) => (
               <FormControlLabel
-                control={<Switch {...field} checked={Boolean(field.value)} color="primary" />}
+                control={
+                  <Switch
+                    {...rest}
+                    inputRef={ref}
+                    checked={Boolean(value)}
+                    onChange={(e) => onChange(e.target.checked)}
+                    color="primary"
+                  />
+                }
                 label="Produto ativo no Catálogo Global"
               />
             )}

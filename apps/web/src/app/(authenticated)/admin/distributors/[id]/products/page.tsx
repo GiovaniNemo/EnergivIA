@@ -270,11 +270,26 @@ export default function DistributorInventoryPage(): JSX.Element {
         active?: boolean;
       };
     }) => updateDistributorProduct(dpId, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "distributors", id, "products"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
       setEditingRow(null);
       setInlinePrice(null);
       setInlineStock(null);
+      if (variables.data.active !== undefined) {
+        setImportFeedback({
+          severity: "success",
+          message: variables.data.active
+            ? "Produto ativado para cotações com sucesso."
+            : "Produto pausado/desativado para cotações com sucesso.",
+        });
+      }
+    },
+    onError: (err: Error) => {
+      setImportFeedback({
+        severity: "error",
+        message: "Erro ao atualizar produto do fornecedor: " + err.message,
+      });
     },
   });
 

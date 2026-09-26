@@ -16,11 +16,14 @@ import {
   Avatar,
   Grid,
   Tooltip,
+  Switch,
+  Snackbar,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { DataGrid, type GridColDef, type GridRenderCellParams } from "@mui/x-data-grid";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
@@ -153,10 +156,27 @@ export default function AdminProductsPage(): JSX.Element {
     queryFn: fetchCategories,
   });
 
-  const deactivateMutation = useMutation({
-    mutationFn: ({ id }: { id: string }) => updateProduct(id, { active: false }),
-    onSuccess: () => {
+  const [feedback, setFeedback] = useState<{
+    message: string;
+    severity: "success" | "error";
+  } | null>(null);
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) => updateProduct(id, { active }),
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
+      setFeedback({
+        message: variables.active
+          ? "Produto ativado no catálogo com sucesso!"
+          : "Produto desativado do catálogo com sucesso!",
+        severity: "success",
+      });
+    },
+    onError: (err: Error) => {
+      setFeedback({
+        message: err.message || "Falha ao alterar status do produto.",
+        severity: "error",
+      });
     },
   });
 
@@ -266,18 +286,66 @@ export default function AdminProductsPage(): JSX.Element {
       {
         field: "active",
         headerName: "Status",
-        width: 110,
-        renderCell: (cellParams: GridRenderCellParams<Product, boolean>) =>
-          cellParams.value ? (
-            <Chip label="Ativo" size="small" color="success" sx={{ fontWeight: 600 }} />
-          ) : (
-            <Chip label="Inativo" size="small" variant="outlined" sx={{ color: "text.disabled" }} />
-          ),
+        width: 140,
+        renderCell: (cellParams: GridRenderCellParams<Product, boolean>) => {
+          const isActive = Boolean(cellParams.value);
+          const isPending =
+            toggleActiveMutation.isPending &&
+            toggleActiveMutation.variables?.id === cellParams.row.id;
+          return (
+            <Tooltip
+              title={
+                isActive
+                  ? "Ativo no Catálogo Global. Clique para desativar."
+                  : "Desativado (inativo). Clique para ativar."
+              }
+            >
+              <Box
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 0.75,
+                  cursor: "pointer",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleActiveMutation.mutate({ id: cellParams.row.id, active: !isActive });
+                }}
+              >
+                <Switch
+                  size="small"
+                  checked={isActive}
+                  disabled={isPending}
+                  color="success"
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    toggleActiveMutation.mutate({
+                      id: cellParams.row.id,
+                      active: e.target.checked,
+                    });
+                  }}
+                />
+                <Chip
+                  size="small"
+                  label={isActive ? "Ativo" : "Inativo"}
+                  color={isActive ? "success" : "default"}
+                  variant={isActive ? "filled" : "outlined"}
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: "0.72rem",
+                    height: 22,
+                    cursor: "pointer",
+                  }}
+                />
+              </Box>
+            </Tooltip>
+          );
+        },
       },
       {
         field: "actions",
         headerName: "Ações",
-        width: 130,
+        width: 140,
         sortable: false,
         renderCell: (cellParams: GridRenderCellParams<Product>) => (
           <Box sx={{ display: "flex", gap: 0.5 }}>
@@ -293,20 +361,30 @@ export default function AdminProductsPage(): JSX.Element {
                 <EditIcon fontSize="small" />
               </IconButton>
             </Tooltip>
-            {cellParams.row.active ? (
-              <Tooltip title="Desativar">
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deactivateMutation.mutate({ id: cellParams.row.id });
-                  }}
-                  aria-label="Desativar"
-                >
+            <Tooltip title={cellParams.row.active ? "Desativar Produto" : "Ativar Produto"}>
+              <IconButton
+                size="small"
+                disabled={
+                  toggleActiveMutation.isPending &&
+                  toggleActiveMutation.variables?.id === cellParams.row.id
+                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleActiveMutation.mutate({
+                    id: cellParams.row.id,
+                    active: !cellParams.row.active,
+                  });
+                }}
+                color={cellParams.row.active ? "default" : "success"}
+                aria-label={cellParams.row.active ? "Desativar" : "Ativar"}
+              >
+                {cellParams.row.active ? (
                   <VisibilityOffIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            ) : null}
+                ) : (
+                  <VisibilityIcon fontSize="small" />
+                )}
+              </IconButton>
+            </Tooltip>
             <Tooltip title="Excluir">
               <IconButton
                 size="small"
@@ -678,6 +756,23 @@ export default function AdminProductsPage(): JSX.Element {
           />
         </Box>
       </Paper>
+
+      <Snackbar
+        open={Boolean(feedback)}
+        autoHideDuration={4000}
+        onClose={() => setFeedback(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        {feedback ? (
+          <Alert
+            severity={feedback.severity}
+            onClose={() => setFeedback(null)}
+            sx={{ width: "100%", boxShadow: 3 }}
+          >
+            {feedback.message}
+          </Alert>
+        ) : undefined}
+      </Snackbar>
     </Box>
   );
 }

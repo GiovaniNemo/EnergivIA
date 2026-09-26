@@ -20,7 +20,12 @@ import CloseIcon from "@mui/icons-material/Close";
 import SaveIcon from "@mui/icons-material/Save";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import { ProductForm } from "./ProductForm";
-import { buildProductSchema, categoryNames, type CategoryName } from "@/lib/admin/schemas";
+import {
+  buildProductSchema,
+  productBaseSchema,
+  categoryNames,
+  type CategoryName,
+} from "@/lib/admin/schemas";
 import {
   fetchBrands,
   fetchCategories,
@@ -187,7 +192,9 @@ export function ProductSpecsDialog({
       values.specs["type"] = "string";
     }
 
-    const schema = buildProductSchema(cat);
+    // Se o produto está sendo desativado (active: false), não bloqueamos por especificações incompletas
+    const isDeactivating = values.active === false;
+    const schema = isDeactivating ? productBaseSchema : buildProductSchema(cat);
     const parsed = schema.safeParse(values);
     if (!parsed.success) {
       const fieldLabels: Record<string, string> = {
@@ -228,8 +235,10 @@ export function ProductSpecsDialog({
       category_id: parsed.data.category_id,
       image_url: parsed.data.image_url,
       datasheet_url: parsed.data.datasheet_url,
-      active: parsed.data.active,
-      specs: parsed.data.specs ?? {},
+      specs:
+        (isDeactivating
+          ? (values.specs as Record<string, unknown>)
+          : (parsed.data as { specs?: Record<string, unknown> }).specs) ?? {},
     });
   };
 
