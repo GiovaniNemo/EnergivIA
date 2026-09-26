@@ -190,6 +190,38 @@ export function ProductSpecsDialog({
     }
     if ((cat === "inverter" || cat?.toLowerCase().includes("inv")) && values.specs) {
       values.specs["type"] = "string";
+      const nom = Number(values.specs["nominal_power_w"]);
+      if (nom > 0) {
+        if (!values.specs["max_dc_power"] || Number(values.specs["max_dc_power"]) <= 0) {
+          values.specs["max_dc_power"] = Math.round(nom * 1.5);
+        }
+        if (!values.specs["recommended_dc_ac_ratio_min"]) {
+          values.specs["recommended_dc_ac_ratio_min"] = 1.05;
+        }
+        if (!values.specs["recommended_dc_ac_ratio_max"]) {
+          values.specs["recommended_dc_ac_ratio_max"] = 1.5;
+        }
+      }
+      if (!values.specs["max_strings_per_mppt"]) {
+        values.specs["max_strings_per_mppt"] = 2;
+      }
+    }
+    if (
+      (cat === "hybrid_inverter" ||
+        cat?.toLowerCase().includes("hibr") ||
+        cat?.toLowerCase().includes("híbr")) &&
+      values.specs
+    ) {
+      values.specs["type"] = "hybrid";
+      const nom = Number(values.specs["nominal_power_w"]);
+      if (nom > 0) {
+        if (!values.specs["max_dc_power"] || Number(values.specs["max_dc_power"]) <= 0) {
+          values.specs["max_dc_power"] = Math.round(nom * 1.5);
+        }
+      }
+      if (!values.specs["max_strings_per_mppt"]) {
+        values.specs["max_strings_per_mppt"] = 2;
+      }
     }
 
     // Se o produto está sendo desativado (active: false), não bloqueamos por especificações incompletas

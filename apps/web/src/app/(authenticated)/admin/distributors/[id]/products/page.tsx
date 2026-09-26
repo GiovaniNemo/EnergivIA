@@ -154,6 +154,7 @@ export default function DistributorInventoryPage(): JSX.Element {
     message: string;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const specsCompletedCallbackRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     setOptionalColumns(loadOptionalColumns());
@@ -1479,8 +1480,12 @@ export default function DistributorInventoryPage(): JSX.Element {
       <ProductSpecsDialog
         open={Boolean(specsProductId)}
         productId={specsProductId}
-        onClose={() => setSpecsProductId(null)}
+        onClose={() => {
+          setSpecsProductId(null);
+          specsCompletedCallbackRef.current = null;
+        }}
         onSaved={() => {
+          specsCompletedCallbackRef.current?.();
           queryClient.invalidateQueries({ queryKey: ["admin", "distributors", id, "products"] });
           queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
         }}
@@ -1496,7 +1501,10 @@ export default function DistributorInventoryPage(): JSX.Element {
         distributorId={id}
         distributorName={distributor?.name}
         initialLog={auditLogData}
-        onOpenSpecs={(pId) => setSpecsProductId(pId)}
+        onOpenSpecs={(pId, onCompleted) => {
+          specsCompletedCallbackRef.current = onCompleted || null;
+          setSpecsProductId(pId);
+        }}
         onBrandUpdated={() => {
           queryClient.invalidateQueries({ queryKey: ["admin", "distributors", id, "products"] });
           queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });

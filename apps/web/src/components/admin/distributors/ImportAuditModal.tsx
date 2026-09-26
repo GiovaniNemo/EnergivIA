@@ -56,7 +56,7 @@ interface ImportAuditModalProps {
   distributorName?: string;
   initialLog?: DistributorImportLog | null;
   onBrandUpdated?: () => void;
-  onOpenSpecs?: (productId: string) => void;
+  onOpenSpecs?: (productId: string, onCompleted?: () => void) => void;
 }
 
 export function ImportAuditModal({
@@ -76,6 +76,7 @@ export function ImportAuditModal({
   const [savingBrandId, setSavingBrandId] = useState<string | null>(null);
   const [dismissingId, setDismissingId] = useState<string | null>(null);
   const [dismissedLocal, setDismissedLocal] = useState<string[]>([]);
+  const [completedSpecsIds, setCompletedSpecsIds] = useState<string[]>([]);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
   const [specsProductId, setSpecsProductId] = useState<string | null>(null);
 
@@ -122,10 +123,11 @@ export function ImportAuditModal({
     return details.brandReviewItems.filter((item) => !dismissedLocal.includes(item.productId));
   }, [details?.brandReviewItems, dismissedLocal]);
 
-  // Missing specs items
+  // Missing specs items (filtered by locally completed specs)
   const missingSpecsItems = useMemo(() => {
-    return details?.missingSpecsItems || [];
-  }, [details?.missingSpecsItems]);
+    const list = details?.missingSpecsItems || [];
+    return list.filter((item) => !completedSpecsIds.includes(item.productId));
+  }, [details?.missingSpecsItems, completedSpecsIds]);
 
   // Out of stock items
   const outOfStockItems = useMemo(() => {
@@ -184,6 +186,20 @@ export function ImportAuditModal({
       style: "currency",
       currency: "BRL",
     }).format(val);
+  };
+
+  const handleOpenSpecs = (item: { productId: string; productName: string }) => {
+    if (onOpenSpecs) {
+      onOpenSpecs(item.productId, () => {
+        setCompletedSpecsIds((prev) => [...prev, item.productId]);
+        setSuccessBanner(
+          `Ficha técnica de "${item.productName}" salva e homologada para dimensionamento!`
+        );
+        setTimeout(() => setSuccessBanner(null), 5000);
+      });
+    } else {
+      setSpecsProductId(item.productId);
+    }
   };
 
   return (
@@ -674,10 +690,7 @@ export function ImportAuditModal({
                               <Typography
                                 variant="body2"
                                 fontWeight={600}
-                                onClick={() => {
-                                  if (onOpenSpecs) onOpenSpecs(item.productId);
-                                  else setSpecsProductId(item.productId);
-                                }}
+                                onClick={() => handleOpenSpecs(item)}
                                 sx={{
                                   cursor: "pointer",
                                   "&:hover": { color: "primary.main", textDecoration: "underline" },
@@ -741,13 +754,7 @@ export function ImportAuditModal({
                                 variant="contained"
                                 color="primary"
                                 startIcon={<DescriptionOutlinedIcon fontSize="small" />}
-                                onClick={() => {
-                                  if (onOpenSpecs) {
-                                    onOpenSpecs(item.productId);
-                                  } else {
-                                    setSpecsProductId(item.productId);
-                                  }
-                                }}
+                                onClick={() => handleOpenSpecs(item)}
                                 sx={{
                                   textTransform: "none",
                                   fontWeight: 600,
@@ -974,6 +981,13 @@ export function ImportAuditModal({
         productId={specsProductId}
         onClose={() => setSpecsProductId(null)}
         onSaved={() => {
+          if (specsProductId) {
+            setCompletedSpecsIds((prev) => [...prev, specsProductId]);
+            setSuccessBanner(
+              "Ficha técnica salva com sucesso! O produto foi liberado para dimensionamento."
+            );
+            setTimeout(() => setSuccessBanner(null), 5000);
+          }
           onBrandUpdated?.();
           if (distributorId) {
             fetchLatestImportLog(distributorId)

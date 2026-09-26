@@ -179,7 +179,7 @@ export function isStringInverterSpec(specs: unknown): specs is StringInverterSpe
     "type" in specs &&
     (specs as { type: string }).type === "string" &&
     "max_dc_voltage" in specs &&
-    "max_dc_power" in specs
+    ("max_dc_power" in specs || "nominal_power_w" in specs)
   );
 }
 

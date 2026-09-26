@@ -242,7 +242,12 @@ export class ProductRepository {
         id: p.id,
         name: p.name,
         brandName: p.brand.name,
-        specs: p.specs as unknown as StringInverterSpec,
+        specs: {
+          ...(p.specs as unknown as StringInverterSpec),
+          max_dc_power:
+            (p.specs as unknown as StringInverterSpec).max_dc_power ||
+            Math.round(((p.specs as unknown as StringInverterSpec).nominal_power_w || 0) * 1.5),
+        },
         datasheetUrl: p.datasheetUrl,
       })),
       source
