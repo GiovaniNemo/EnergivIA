@@ -207,3 +207,116 @@ export function getProductSpecsStatus(
     color: isComplete ? "success" : "error",
   };
 }
+
+export interface EquipmentHighlights {
+  voltageLabel?: string | null;
+  overloadLabel?: string | null;
+  mpptLabel?: string | null;
+  powerLabel?: string | null;
+  mpptRangeLabel?: string | null;
+}
+
+export function getEquipmentHighlights(
+  categoryName?: string | null,
+  specs?: Record<string, unknown> | null,
+  productName?: string | null
+): EquipmentHighlights | null {
+  const normCat = normalizeCategory(categoryName);
+  const s = (specs || {}) as Record<string, unknown>;
+  const nameUpper = (productName || "").toUpperCase();
+
+  const isInv =
+    normCat === "inverter" ||
+    normCat === "hybrid_inverter" ||
+    normCat === "off_grid_inverter" ||
+    normCat === "microinverter";
+
+  const isModule = normCat === "module";
+
+  if (isInv) {
+    // 1. Tensão / Padrão de Rede (220V ou 380V)
+    let voltageLabel: string | null = null;
+    const top = String(s["grid_topology"] || s["grid_standard"] || "").toLowerCase();
+    const outV = String(s["output_voltage_v"] || "").toUpperCase();
+
+    if (
+      top === "tri_380" ||
+      outV.includes("380") ||
+      nameUpper.includes("380V") ||
+      nameUpper.includes("380 V")
+    ) {
+      voltageLabel = "Trifásico 380V";
+    } else if (
+      top === "tri_220" ||
+      (outV.includes("220") &&
+        (nameUpper.includes("TRIFAS") ||
+          Number(s["mppt_count"]) >= 3 ||
+          Number(s["nominal_power_w"]) > 10000)) ||
+      (nameUpper.includes("TRIFAS") && (nameUpper.includes("220V") || nameUpper.includes("220 V")))
+    ) {
+      voltageLabel = "Trifásico 220V";
+    } else if (
+      top === "mono_220" ||
+      outV.includes("220") ||
+      nameUpper.includes("MONOFAS") ||
+      nameUpper.includes("MONO")
+    ) {
+      voltageLabel = "Monofásico 220V";
+    } else if (outV) {
+      voltageLabel = outV;
+    }
+
+    // 2. Overload / Ratio DC/AC
+    let overloadLabel: string | null = null;
+    const maxRatio = Number(s["recommended_dc_ac_ratio_max"]);
+    if (!isNaN(maxRatio) && maxRatio > 1) {
+      overloadLabel = `Overload ${Math.round(maxRatio * 100)}%`;
+    } else if (s["max_dc_power"] && s["nominal_power_w"]) {
+      const nom = Number(s["nominal_power_w"]);
+      const maxDc = Number(s["max_dc_power"]);
+      if (nom > 0 && maxDc > nom) {
+        overloadLabel = `Overload ${Math.round((maxDc / nom) * 100)}%`;
+      }
+    }
+
+    // 3. MPPTs
+    let mpptLabel: string | null = null;
+    if (s["mppt_count"]) {
+      mpptLabel = `${s["mppt_count"]} MPPT${Number(s["mppt_count"]) > 1 ? "s" : ""}`;
+    } else if (s["channels"]) {
+      mpptLabel = `${s["channels"]} Canais`;
+    }
+
+    // 4. Faixa MPPT
+    let mpptRangeLabel: string | null = null;
+    if (s["mppt_voltage_min"] && s["mppt_voltage_max"]) {
+      mpptRangeLabel = `${s["mppt_voltage_min"]}-${s["mppt_voltage_max"]}V`;
+    }
+
+    // 5. Potência Nominal
+    let powerLabel: string | null = null;
+    if (s["nominal_power_w"]) {
+      const kw = Number(s["nominal_power_w"]) / 1000;
+      powerLabel = `${kw % 1 === 0 ? kw : kw.toFixed(1)} kW`;
+    }
+
+    if (!voltageLabel && !overloadLabel && !mpptLabel && !powerLabel && !mpptRangeLabel) {
+      return null;
+    }
+    return { voltageLabel, overloadLabel, mpptLabel, powerLabel, mpptRangeLabel };
+  }
+
+  if (isModule) {
+    let powerLabel: string | null = null;
+    if (s["power_w"]) {
+      powerLabel = `${s["power_w"]} Wp`;
+    }
+    let vocLabel: string | null = null;
+    if (s["voc"]) {
+      vocLabel = `Voc ${s["voc"]}V`;
+    }
+    return { powerLabel, voltageLabel: vocLabel };
+  }
+
+  return null;
+}

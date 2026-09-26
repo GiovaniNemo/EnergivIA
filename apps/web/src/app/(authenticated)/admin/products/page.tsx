@@ -40,6 +40,7 @@ import {
   type Product,
   type QueryProductsParams,
 } from "@/lib/admin-api";
+import { getEquipmentHighlights } from "@/lib/product-specs-status";
 
 const CATEGORY_LABELS: Record<string, string> = {
   connector: "Conector",
@@ -197,6 +198,11 @@ export default function AdminProductsPage(): JSX.Element {
         renderCell: (cellParams: GridRenderCellParams<Product>) => {
           const imageSrc = cellParams.row.imageUrl ?? cellParams.row.brand?.imageUrl ?? undefined;
           const powerBadge = getProductPowerBadge(cellParams.row);
+          const highlights = getEquipmentHighlights(
+            cellParams.row.category?.name,
+            cellParams.row.specs as Record<string, unknown>,
+            cellParams.row.name
+          );
 
           return (
             <Box
@@ -257,14 +263,57 @@ export default function AdminProductsPage(): JSX.Element {
                     />
                   )}
                 </Box>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ lineHeight: 1.3, mt: 0.25 }}
-                  noWrap
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.75,
+                    mt: 0.25,
+                    flexWrap: "wrap",
+                  }}
                 >
-                  {cellParams.row.brand?.name ?? "Marca não informada"}
-                </Typography>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ lineHeight: 1.3 }}
+                    noWrap
+                  >
+                    {cellParams.row.brand?.name ?? "Marca não informada"}
+                  </Typography>
+                  {highlights?.voltageLabel && (
+                    <Chip
+                      size="small"
+                      label={highlights.voltageLabel}
+                      sx={{
+                        height: 18,
+                        fontSize: "0.64rem",
+                        fontWeight: 600,
+                        bgcolor: highlights.voltageLabel.includes("380")
+                          ? "rgba(59, 130, 246, 0.1)"
+                          : "rgba(16, 185, 129, 0.1)",
+                        color: highlights.voltageLabel.includes("380") ? "#3b82f6" : "#10b981",
+                        border: "1px solid",
+                        borderColor: highlights.voltageLabel.includes("380")
+                          ? "rgba(59, 130, 246, 0.25)"
+                          : "rgba(16, 185, 129, 0.25)",
+                      }}
+                    />
+                  )}
+                  {highlights?.overloadLabel && (
+                    <Chip
+                      size="small"
+                      label={highlights.overloadLabel}
+                      sx={{
+                        height: 18,
+                        fontSize: "0.64rem",
+                        fontWeight: 600,
+                        bgcolor: "rgba(245, 158, 11, 0.08)",
+                        color: "#d97706",
+                        border: "1px solid rgba(245, 158, 11, 0.2)",
+                      }}
+                    />
+                  )}
+                </Box>
               </Box>
             </Box>
           );

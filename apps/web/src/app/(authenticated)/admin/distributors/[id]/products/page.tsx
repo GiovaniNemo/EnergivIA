@@ -46,7 +46,7 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import AssessmentOutlinedIcon from "@mui/icons-material/AssessmentOutlined";
 import { ProductSpecsDialog } from "@/components/admin/products/ProductSpecsDialog";
 import { ImportAuditModal } from "@/components/admin/distributors/ImportAuditModal";
-import { getProductSpecsStatus } from "@/lib/product-specs-status";
+import { getProductSpecsStatus, getEquipmentHighlights } from "@/lib/product-specs-status";
 import {
   fetchDistributor,
   fetchDistributorProducts,
@@ -828,6 +828,11 @@ export default function DistributorInventoryPage(): JSX.Element {
                     row.product.category?.name,
                     row.product.specs as Record<string, unknown>
                   );
+                  const highlights = getEquipmentHighlights(
+                    row.product.category?.name,
+                    row.product.specs as Record<string, unknown>,
+                    row.product.name
+                  );
 
                   return (
                     <TableRow
@@ -853,12 +858,12 @@ export default function DistributorInventoryPage(): JSX.Element {
                           }}
                         />
                       </TableCell>
-                      <TableCell sx={{ maxWidth: 340 }}>
+                      <TableCell sx={{ maxWidth: 360 }}>
                         <Box
                           onClick={() => setSpecsProductId(row.product.id)}
                           sx={{
                             display: "flex",
-                            alignItems: "center",
+                            alignItems: "flex-start",
                             gap: 1.2,
                             minWidth: 0,
                             cursor: "pointer",
@@ -872,7 +877,13 @@ export default function DistributorInventoryPage(): JSX.Element {
                             src={row.product.imageUrl ?? row.product.brand.imageUrl ?? undefined}
                             alt={row.product.name}
                             variant="rounded"
-                            sx={{ width: 32, height: 32, fontSize: "0.75rem", flexShrink: 0 }}
+                            sx={{
+                              width: 34,
+                              height: 34,
+                              fontSize: "0.75rem",
+                              flexShrink: 0,
+                              mt: 0.25,
+                            }}
                           >
                             {row.product.name.slice(0, 1).toUpperCase()}
                           </Avatar>
@@ -912,6 +923,101 @@ export default function DistributorInventoryPage(): JSX.Element {
                                   }}
                                 />
                               </Tooltip>
+                            )}
+                            {highlights && (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 0.5,
+                                  flexWrap: "wrap",
+                                  mt: 0.25,
+                                }}
+                              >
+                                {highlights.voltageLabel && (
+                                  <Chip
+                                    size="small"
+                                    label={highlights.voltageLabel}
+                                    sx={{
+                                      height: 18,
+                                      fontSize: "0.66rem",
+                                      fontWeight: 600,
+                                      bgcolor: highlights.voltageLabel.includes("380")
+                                        ? "rgba(59, 130, 246, 0.1)"
+                                        : "rgba(16, 185, 129, 0.1)",
+                                      color: highlights.voltageLabel.includes("380")
+                                        ? "#3b82f6"
+                                        : "#10b981",
+                                      border: "1px solid",
+                                      borderColor: highlights.voltageLabel.includes("380")
+                                        ? "rgba(59, 130, 246, 0.25)"
+                                        : "rgba(16, 185, 129, 0.25)",
+                                    }}
+                                  />
+                                )}
+                                {highlights.overloadLabel && (
+                                  <Chip
+                                    size="small"
+                                    label={highlights.overloadLabel}
+                                    sx={{
+                                      height: 18,
+                                      fontSize: "0.66rem",
+                                      fontWeight: 600,
+                                      bgcolor: "rgba(245, 158, 11, 0.08)",
+                                      color: "#d97706",
+                                      border: "1px solid rgba(245, 158, 11, 0.25)",
+                                    }}
+                                  />
+                                )}
+                                {highlights.mpptLabel && (
+                                  <Chip
+                                    size="small"
+                                    label={highlights.mpptLabel}
+                                    sx={{
+                                      height: 18,
+                                      fontSize: "0.66rem",
+                                      fontWeight: 500,
+                                      color: "text.secondary",
+                                      bgcolor: (t) =>
+                                        t.palette.mode === "dark"
+                                          ? "rgba(255, 255, 255, 0.06)"
+                                          : "rgba(0, 0, 0, 0.05)",
+                                    }}
+                                  />
+                                )}
+                                {highlights.mpptRangeLabel && (
+                                  <Chip
+                                    size="small"
+                                    label={highlights.mpptRangeLabel}
+                                    sx={{
+                                      height: 18,
+                                      fontSize: "0.66rem",
+                                      fontWeight: 500,
+                                      color: "text.secondary",
+                                      bgcolor: (t) =>
+                                        t.palette.mode === "dark"
+                                          ? "rgba(255, 255, 255, 0.06)"
+                                          : "rgba(0, 0, 0, 0.05)",
+                                    }}
+                                  />
+                                )}
+                                {highlights.powerLabel && (
+                                  <Chip
+                                    size="small"
+                                    label={highlights.powerLabel}
+                                    sx={{
+                                      height: 18,
+                                      fontSize: "0.66rem",
+                                      fontWeight: 500,
+                                      color: "text.secondary",
+                                      bgcolor: (t) =>
+                                        t.palette.mode === "dark"
+                                          ? "rgba(255, 255, 255, 0.06)"
+                                          : "rgba(0, 0, 0, 0.05)",
+                                    }}
+                                  />
+                                )}
+                              </Box>
                             )}
                           </Box>
                         </Box>
