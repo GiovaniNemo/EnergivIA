@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { GoogleGenerativeAI, Schema, SchemaType } from "@google/generative-ai";
+import { GoogleGenerativeAI, Part, Schema, SchemaType } from "@google/generative-ai";
 import pdfParse from "pdf-parse";
 
 @Injectable()
@@ -42,16 +42,23 @@ export class AiExtractionService {
     let textContent = "";
     try {
       const pdfData = await pdfParse(pdfBuffer);
-      textContent = pdfData.text;
-    } catch {
-      throw new BadRequestException(
-        "Falha ao extrair texto do PDF. O arquivo pode estar corrompido ou protegido."
+      textContent = pdfData.text || "";
+    } catch (parseErr) {
+      this.logger.warn(
+        `pdf-parse não conseguiu extrair texto do PDF (${
+          parseErr instanceof Error ? parseErr.message : String(parseErr)
+        }). O arquivo será processado visualmente pela IA multimodal.`
       );
+      textContent = "";
     }
 
-    if (!textContent || textContent.trim().length === 0) {
+    const hasDigitalText = Boolean(textContent && textContent.trim().length > 30);
+    // Gemini suporta inlineData de até 20MB
+    const pdfBase64 = pdfBuffer.length <= 20 * 1024 * 1024 ? pdfBuffer.toString("base64") : null;
+
+    if (!hasDigitalText && !pdfBase64) {
       throw new BadRequestException(
-        "Nenhum texto encontrado no PDF (pode ser um PDF escaneado/com imagens apenas)."
+        "Nenhum texto encontrado no PDF e o arquivo excede o limite de tamanho para análise visual direta."
       );
     }
 
@@ -186,30 +193,35 @@ export class AiExtractionService {
     };
 
     const modelInstruction = productName
-      ? `ATENÇÃO: Este PDF contém vários modelos. Extraia as especificações EXCLUSIVAMENTE para o modelo: "${productName}". Ignore os dados de outros modelos.`
+      ? `ATENÇÃO: Este documento/datasheet pode conter múltiplos modelos ou colunas comparativas. Extraia as especificações EXCLUSIVAMENTE para o modelo mais aderente a: "${productName}". Ignore os dados dos outros modelos.`
       : `Extraia as especificações técnicas gerais encontradas no datasheet.`;
 
-    const prompt = `Você é um engenheiro de sistemas fotovoltaicos. Leia o conteúdo do datasheet a seguir (texto extraído de um PDF).
+    const prompt = `Você é um engenheiro sênior de sistemas fotovoltaicos. Analise com atenção o documento de datasheet fornecido (PDF com dados técnicos, tabelas elétricas e mecânicas).
 ${modelInstruction}
-Retorne APENAS um objeto JSON com as chaves "detectedCategory" ('module', 'inverter' ou 'unknown') e "specs" com os parâmetros numéricos elétricos e mecânicos.
-Texto do Datasheet:
-${textContent}`;
+${
+  hasDigitalText
+    ? `Texto auxiliar extraído do documento:\n${textContent}\n`
+    : "Nota: O PDF não possui camada de texto selecionável (é um documento escaneado/com imagens). Examine visualmente as tabelas, colunas de especificações e valores numéricos."
+}
+Retorne APENAS um objeto JSON com as chaves "detectedCategory" ('module', 'inverter' ou 'unknown') e "specs" com os parâmetros numéricos elétricos e mecânicos correspondentes.`;
 
     // Candidate models to try in order of preference
     const candidateModels = [
+      process.env["GEMINI_MULTIMODAL_MODEL"],
       process.env["GEMINI_TEXT_MODEL"],
       "gemini-2.0-flash",
+      "gemini-1.5-flash",
+      "gemini-2.5-flash",
+      "gemini-1.5-pro",
       "gemini-2.0-flash-exp",
       "gemini-1.5-flash-latest",
-      "gemini-1.5-flash",
       "gemini-1.5-pro-latest",
-      "gemini-1.5-pro",
       "gemini-pro",
     ].filter(Boolean) as string[];
 
     let lastError: unknown = null;
 
-    // 1. Tenta extrair usando a lista de modelos Gemini
+    // 1. Tenta extrair usando a lista de modelos Gemini (com suporte multimodal ao PDF)
     if (this.genAI) {
       for (const modelCandidate of candidateModels) {
         try {
@@ -220,13 +232,26 @@ ${textContent}`;
               temperature: 0,
               responseMimeType: "application/json",
               responseSchema:
-                modelCandidate.includes("1.5") || modelCandidate.includes("2.0")
+                modelCandidate.includes("1.5") ||
+                modelCandidate.includes("2.0") ||
+                modelCandidate.includes("2.5")
                   ? responseSchema
                   : undefined,
             },
           });
 
-          const result = await model.generateContent(prompt);
+          // Monta o payload multimodal se houver base64 do PDF
+          const contentParts: (string | Part)[] = [prompt];
+          if (pdfBase64) {
+            contentParts.push({
+              inlineData: {
+                data: pdfBase64,
+                mimeType: "application/pdf",
+              },
+            });
+          }
+
+          const result = await model.generateContent(contentParts);
           const text = result.response.text();
           const cleaned = text
             .replace(/```json/gi, "")
@@ -252,10 +277,9 @@ ${textContent}`;
 
     // 2. Fallback para OpenAI (gpt-4o-mini / gpt-4o) caso Gemini falhe ou chave Google esteja inativa
     const openAiApiKey =
-      this.configService.get<string>("OPENAI_API_KEY") ||
-      process.env["OPENAI_API_KEY"];
+      this.configService.get<string>("OPENAI_API_KEY") || process.env["OPENAI_API_KEY"];
 
-    if (openAiApiKey) {
+    if (openAiApiKey && hasDigitalText) {
       try {
         this.logger.log("Acionando fallback OpenAI (gpt-4o-mini) para extração do datasheet...");
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -333,10 +357,11 @@ ${textContent}`;
       }
     }
 
-    this.logger.error("Todos os provedores de IA (Gemini e OpenAI) falharam na extração:", lastError);
+    this.logger.error(
+      "Todos os provedores de IA (Gemini e OpenAI) falharam na extração:",
+      lastError
+    );
     const msg = lastError instanceof Error ? lastError.message : "Erro desconhecido";
     throw new BadRequestException(`Falha ao extrair especificações com a IA: ${msg}`);
   }
 }
-
-
