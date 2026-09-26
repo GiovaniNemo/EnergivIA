@@ -311,8 +311,8 @@ Para Inversores, procure com máxima atenção:
       if (typeof rawRatioMax === "number" && !isNaN(rawRatioMax)) {
         // Normaliza se a IA tiver trazido em porcentagem (ex: 130 em vez de 1.30)
         const normalized = rawRatioMax > 10 ? rawRatioMax / 100 : rawRatioMax;
-        // Limites físicos de engenharia: relação CC/CA de inversores comerciais fica entre 1.05 e 1.70
-        if (normalized >= 1.05 && normalized <= 1.7) {
+        // Limites físicos de engenharia: inversores comerciais suportam até 100% de overload (Ratio até 2.0)
+        if (normalized >= 1.05 && normalized <= 2.1) {
           ratioMax = Number(normalized.toFixed(2));
         } else {
           this.logger.warn(
@@ -325,7 +325,7 @@ Para Inversores, procure com máxima atenção:
       // Ratio Máximo = Potência CC Máxima / Potência CA Nominal
       if (ratioMax === null && maxDcPower && nominalPower && nominalPower > 0) {
         const calculated = Number((maxDcPower / nominalPower).toFixed(2));
-        if (calculated >= 1.05 && calculated <= 1.7) {
+        if (calculated >= 1.05 && calculated <= 2.1) {
           ratioMax = calculated;
           this.logger.log(
             `Ratio CC/CA máximo calculado matematicamente: ${maxDcPower}W / ${nominalPower}W = ${ratioMax}`
