@@ -29,7 +29,7 @@ export class EquipmentHomologationService {
         "GW37.5K-SMT-L-G20",
         "GW37500",
         "37.5K-SMT",
-        "37,5KW TRIFASICO 220V 4MPPT",
+        "GOODWE 37.5KW",
       ],
       inmetroCode: "005298/2023",
       specs: {
@@ -55,7 +55,7 @@ export class EquipmentHomologationService {
       brand: "GoodWe",
       model: "GW25K-SMT-L-G20",
       category: "inverter",
-      aliases: ["GW25K-SMT", "GW25K-SMT-L", "25K-SMT", "25KW TRIFASICO 220V"],
+      aliases: ["GW25K-SMT", "GW25K-SMT-L", "25K-SMT", "GOODWE 25KW"],
       specs: {
         nominal_power_w: 25000,
         max_dc_power: 50000,
@@ -79,7 +79,7 @@ export class EquipmentHomologationService {
       brand: "GoodWe",
       model: "GW30K-SMT-L-G20",
       category: "inverter",
-      aliases: ["GW30K-SMT", "GW30K-SMT-L", "30K-SMT", "30KW TRIFASICO 220V"],
+      aliases: ["GW30K-SMT", "GW30K-SMT-L", "30K-SMT", "GOODWE 30KW"],
       specs: {
         nominal_power_w: 30000,
         max_dc_power: 60000,
@@ -103,7 +103,7 @@ export class EquipmentHomologationService {
       brand: "GoodWe",
       model: "GW50K-SMT-G20",
       category: "inverter",
-      aliases: ["GW50K-SMT", "50K-SMT", "50KW TRIFASICO 380V"],
+      aliases: ["GW50K-SMT", "50K-SMT", "GOODWE 50KW"],
       specs: {
         nominal_power_w: 50000,
         max_dc_power: 75000,
@@ -834,7 +834,7 @@ export class EquipmentHomologationService {
       brand: "Canadian Solar",
       model: "CS6W-585TB-AG (585W TOPCon)",
       category: "module",
-      aliases: ["CS6W-585", "585W CANADIAN", "CANADIAN 585", "TOPCON 585", "585W"],
+      aliases: ["CS6W-585", "585W CANADIAN", "CANADIAN 585", "TOPCON 585"],
       inmetroCode: "008234/2023",
       specs: {
         power_w: 585,
@@ -855,7 +855,7 @@ export class EquipmentHomologationService {
       brand: "Canadian Solar",
       model: "CS6W-550MS (550W)",
       category: "module",
-      aliases: ["CS6W-550", "550W CANADIAN", "CANADIAN 550", "550W"],
+      aliases: ["CS6W-550", "550W CANADIAN", "CANADIAN 550"],
       specs: {
         power_w: 550,
         voc: 49.6,
@@ -875,7 +875,7 @@ export class EquipmentHomologationService {
       brand: "Jinko Solar",
       model: "JKM580N-72HL4-V (580W TOPCon)",
       category: "module",
-      aliases: ["JKM580", "580W JINKO", "JINKO 580", "TOPCON 580", "580W"],
+      aliases: ["JKM580", "580W JINKO", "JINKO 580", "TOPCON 580"],
       specs: {
         power_w: 580,
         voc: 51.48,
@@ -951,30 +951,34 @@ export class EquipmentHomologationService {
       return true;
     };
 
-    // 1. Busca exata ou por aliases de modelo
-    for (const item of this.catalog) {
-      if (!isVoltageCompatible(item.specs)) continue;
+    // Identifica se alguma marca do catálogo está explicitamente presente no nome
+    const allBrands = Array.from(new Set(this.catalog.map((i) => i.brand.toUpperCase())));
+    const detectedBrands = allBrands.filter((brandName) => {
+      const parts = brandName.split(/\s+/).filter((p) => p.length >= 3);
+      return parts.some((p) => {
+        const regex = new RegExp(`(?:^|[^A-Z0-9])${p}(?:[^A-Z0-9]|$)`);
+        return regex.test(cleanInput);
+      });
+    });
 
-      // Verifica o modelo principal
+    const isBrandCompatible = (itemBrand: string): boolean => {
+      if (detectedBrands.length === 0) return true;
+      const bUpper = itemBrand.toUpperCase();
+      return detectedBrands.some((db) => bUpper.includes(db) || db.includes(bUpper));
+    };
+
+    const testItem = (item: HomologatedEquipment) => {
+      if (!isVoltageCompatible(item.specs)) return null;
+
       const cleanModel = item.model
         .toUpperCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
 
       if (cleanInput.includes(cleanModel)) {
-        this.logger.log(`Match exato encontrado: ${item.brand} - ${item.model}`);
-        return {
-          found: true,
-          source: "INMETRO PBE / Catálogo Homologado",
-          matchedModel: item.model,
-          brand: item.brand,
-          category: item.category,
-          inmetroCode: item.inmetroCode,
-          specs: item.specs,
-        };
+        return { type: "exato", item };
       }
 
-      // Verifica aliases
       for (const alias of item.aliases) {
         const cleanAlias = alias
           .toUpperCase()
@@ -982,24 +986,27 @@ export class EquipmentHomologationService {
           .replace(/[\u0300-\u036f]/g, "");
 
         if (cleanInput.includes(cleanAlias)) {
-          this.logger.log(`Match por alias "${alias}": ${item.brand} - ${item.model}`);
-          return {
-            found: true,
-            source: "INMETRO PBE / Catálogo Homologado",
-            matchedModel: item.model,
-            brand: item.brand,
-            category: item.category,
-            inmetroCode: item.inmetroCode,
-            specs: item.specs,
-          };
+          return { type: `alias "${alias}"`, item };
         }
 
-        // Teste de substring compactada (sem hífens/espaços) para casos como C6-75K vs C6 75K
         const compactAlias = cleanAlias.replace(/[^A-Z0-9]/g, "");
         const compactInput = cleanInput.replace(/[^A-Z0-9]/g, "");
         if (compactAlias.length >= 4 && compactInput.includes(compactAlias)) {
+          return { type: `alias compacto "${compactAlias}"`, item };
+        }
+      }
+
+      return null;
+    };
+
+    // 1. PRIORIDADE MÁXIMA: Se uma marca foi identificada no nome, busca dentro dos equipamentos da própria marca
+    if (detectedBrands.length > 0) {
+      for (const item of this.catalog) {
+        if (!isBrandCompatible(item.brand)) continue;
+        const res = testItem(item);
+        if (res) {
           this.logger.log(
-            `Match por alias compacto "${compactAlias}": ${item.brand} - ${item.model}`
+            `Match com marca prioritária (${res.type}): ${item.brand} - ${item.model}`
           );
           return {
             found: true,
@@ -1014,9 +1021,29 @@ export class EquipmentHomologationService {
       }
     }
 
-    // 2. Busca combinada de Marca + Potência (ex: "GOODWE" + "37.5" ou "GROWATT" + "25")
+    // 2. Busca geral por modelo ou alias (respeitando que se uma marca foi detectada, não cruza com marcas rivais)
+    for (const item of this.catalog) {
+      if (detectedBrands.length > 0 && !isBrandCompatible(item.brand)) continue;
+      const res = testItem(item);
+      if (res) {
+        this.logger.log(`Match encontrado (${res.type}): ${item.brand} - ${item.model}`);
+        return {
+          found: true,
+          source: "INMETRO PBE / Catálogo Homologado",
+          matchedModel: item.model,
+          brand: item.brand,
+          category: item.category,
+          inmetroCode: item.inmetroCode,
+          specs: item.specs,
+        };
+      }
+    }
+
+    // 3. Busca combinada de Marca + Potência (ex: "GOODWE" + "37.5" ou "GROWATT" + "25")
     for (const item of this.catalog) {
       if (!isVoltageCompatible(item.specs)) continue;
+      if (detectedBrands.length > 0 && !isBrandCompatible(item.brand)) continue;
+
       const brandUpper = item.brand.toUpperCase();
       if (cleanInput.includes(brandUpper)) {
         // Tenta encontrar número de potência

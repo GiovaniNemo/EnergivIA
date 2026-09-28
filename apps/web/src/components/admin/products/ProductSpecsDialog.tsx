@@ -281,6 +281,13 @@ export function ProductSpecsDialog({
     try {
       const match = await lookupEquipmentHomologation(product.name);
       if (match && match.specs) {
+        const currentSpecs = (methods.getValues("specs") || {}) as Record<string, unknown>;
+        const mergedSpecs = { ...currentSpecs, ...match.specs };
+        methods.setValue("specs", mergedSpecs, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+
         Object.entries(match.specs).forEach(([k, v]) => {
           methods.setValue(`specs.${k}` as Parameters<typeof methods.setValue>[0], v, {
             shouldDirty: true,
@@ -288,7 +295,7 @@ export function ProductSpecsDialog({
           });
         });
 
-        // Vincula a marca correspondente se identificada (ex: SAJ, GoodWe, etc.)
+        // Vincula a marca correspondente se identificada (ex: Growatt, GoodWe, SAJ, etc.)
         if (match.brand) {
           const matchedBrand = brands.find(
             (b) => b.name.trim().toUpperCase() === match.brand!.trim().toUpperCase()
@@ -301,8 +308,10 @@ export function ProductSpecsDialog({
           }
         }
 
+        methods.trigger();
+
         setSuccessMsg(
-          `Especificações oficiais preenchidas com sucesso via Catálogo Homologado (${match.model})!`
+          `Especificações oficiais preenchidas com sucesso via Catálogo Homologado (${match.brand ? `${match.brand} - ` : ""}${match.model})!`
         );
       } else {
         setErrorMsg(
