@@ -455,7 +455,7 @@ export default function AdminProductsPage(): JSX.Element {
         ),
       },
     ],
-    [router, deactivateMutation, deleteMutation]
+    [router, toggleActiveMutation, deleteMutation]
   );
 
   const handleFilterApply = () => {
