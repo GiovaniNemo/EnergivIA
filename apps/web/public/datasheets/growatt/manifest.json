@@ -181,5 +181,23 @@
     "clean": "neo-1200-2000m-x-ficha-de-dados-pt.pdf",
     "path": "/datasheets/growatt/neo-1200-2000m-x-ficha-de-dados-pt.pdf",
     "originalFullPath": "https://br.growatt.com/upload/file/NEO_1200-2000M-X_Ficha_de_dados_PT_062024.pdf"
+  },
+  {
+    "original": "MAC_30-36KTL3-XL2_Ficha_de_dados_PT_202506.pdf",
+    "clean": "mac-30-36ktl3-xl2-ficha-de-dados-pt.pdf",
+    "path": "/datasheets/growatt/mac-30-36ktl3-xl2-ficha-de-dados-pt.pdf",
+    "originalFullPath": "https://br.growatt.com/upload/file/MAC_30-36KTL3-XL2_Ficha_de_dados_PT_202506.pdf"
+  },
+  {
+    "original": "MID_15~25KTL3_XL2_Ficha_de_dados_PT_202506.pdf",
+    "clean": "mid-15-25ktl3-xl2-ficha-de-dados-pt.pdf",
+    "path": "/datasheets/growatt/mid-15-25ktl3-xl2-ficha-de-dados-pt.pdf",
+    "originalFullPath": "https://br.growatt.com/upload/file/MID_15~25KTL3_XL2_Ficha_de_dados_PT_202506.pdf"
+  },
+  {
+    "original": "MAX_50-75KTL3-XL2_Ficha_de_dados_PT_202503.pdf",
+    "clean": "max-50-75ktl3-xl2-ficha-de-dados-pt.pdf",
+    "path": "/datasheets/growatt/max-50-75ktl3-xl2-ficha-de-dados-pt.pdf",
+    "originalFullPath": "https://br.growatt.com/upload/file/MAX_50-75KTL3-XL2_Ficha_de_dados_PT_202503.pdf"
   }
 ]
