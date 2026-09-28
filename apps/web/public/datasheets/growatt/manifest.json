@@ -145,5 +145,41 @@
     "clean": "min-2500-6000tl-x2-ficha-de-dados-pt.pdf",
     "path": "/datasheets/growatt/min-2500-6000tl-x2-ficha-de-dados-pt.pdf",
     "originalFullPath": "c:\\Users\\Edeltec\\EnergivIA\\temp-datasheets\\DATASHEETS GROWATT\\Linha MIN\\MIN_2500-6000TL-X2_Ficha_de_dados_PT_202402.pdf"
+  },
+  {
+    "original": "MIC_3000TL-X2_Ficha_de_dados_PT_202411.pdf",
+    "clean": "mic-3000tl-x2-ficha-de-dados-pt.pdf",
+    "path": "/datasheets/growatt/mic-3000tl-x2-ficha-de-dados-pt.pdf",
+    "originalFullPath": "https://br.growatt.com/upload/file/MIC_3000TL-X2_Ficha_de_dados_PT_202411.pdf"
+  },
+  {
+    "original": "MID_20-25KTL3-X2_Ficha_de_dados_PT_202411.pdf",
+    "clean": "mid-20-25ktl3-x2-ficha-de-dados-pt.pdf",
+    "path": "/datasheets/growatt/mid-20-25ktl3-x2-ficha-de-dados-pt.pdf",
+    "originalFullPath": "https://br.growatt.com/upload/file/MID_20-25KTL3-X2_Ficha_de_dados_PT_202411.pdf"
+  },
+  {
+    "original": "MOD_12-15KTL3-X2_Pro_Ficha_de_dados_PT_202411.pdf",
+    "clean": "mod-12-15ktl3-x2-pro-ficha-de-dados-pt.pdf",
+    "path": "/datasheets/growatt/mod-12-15ktl3-x2-pro-ficha-de-dados-pt.pdf",
+    "originalFullPath": "https://br.growatt.com/upload/file/MOD_12-15KTL3-X2_Pro_Ficha_de_dados_PT_202411.pdf"
+  },
+  {
+    "original": "MAX_100-125KTL3-X2_LV_Ficha_de_dados_PT_202411.pdf",
+    "clean": "max-100-125ktl3-x2-lv-ficha-de-dados-pt.pdf",
+    "path": "/datasheets/growatt/max-100-125ktl3-x2-lv-ficha-de-dados-pt.pdf",
+    "originalFullPath": "https://br.growatt.com/upload/file/MAX_100-125KTL3-X2_LV_Ficha_de_dados_PT_202411.pdf"
+  },
+  {
+    "original": "NEO_2250-2500M-X2_Ficha_de_dados_PT_202501.pdf",
+    "clean": "neo-2250-2500m-x2-ficha-de-dados-pt.pdf",
+    "path": "/datasheets/growatt/neo-2250-2500m-x2-ficha-de-dados-pt.pdf",
+    "originalFullPath": "https://br.growatt.com/upload/file/NEO_2250-2500M-X2_Ficha_de_dados_PT_202501.pdf"
+  },
+  {
+    "original": "NEO_1200-2000M-X_Ficha_de_dados_PT_062024.pdf",
+    "clean": "neo-1200-2000m-x-ficha-de-dados-pt.pdf",
+    "path": "/datasheets/growatt/neo-1200-2000m-x-ficha-de-dados-pt.pdf",
+    "originalFullPath": "https://br.growatt.com/upload/file/NEO_1200-2000M-X_Ficha_de_dados_PT_062024.pdf"
   }
 ]
