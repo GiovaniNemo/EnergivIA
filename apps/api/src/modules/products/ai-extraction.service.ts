@@ -28,7 +28,7 @@ export class AiExtractionService {
       throw new BadRequestException("O arquivo fornecido não parece ser um PDF.");
     }
 
-    let pdfBuffer: Buffer;
+    let pdfBuffer!: Buffer;
     try {
       if (
         datasheetUrl.startsWith("/") ||
