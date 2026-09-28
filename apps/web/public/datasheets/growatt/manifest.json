@@ -1,0 +1,137 @@
+[
+  {
+    "original": "Hope 4.8L - Datasheet.pdf",
+    "clean": "hope-4.8l-datasheet.pdf",
+    "path": "/datasheets/growatt/hope-4.8l-datasheet.pdf"
+  },
+  {
+    "original": "MAC 25-36KTL3-XL Trifásico 220V.pdf",
+    "clean": "mac-25-36ktl3-xl-trifasico-220v.pdf",
+    "path": "/datasheets/growatt/mac-25-36ktl3-xl-trifasico-220v.pdf"
+  },
+  {
+    "original": "MAC 30-60KTL3 LV.pdf",
+    "clean": "mac-30-60ktl3-lv.pdf",
+    "path": "/datasheets/growatt/mac-30-60ktl3-lv.pdf"
+  },
+  {
+    "original": "MAX 100-125KTL3-X LV.pdf",
+    "clean": "max-100-125ktl3-x-lv.pdf",
+    "path": "/datasheets/growatt/max-100-125ktl3-x-lv.pdf"
+  },
+  {
+    "original": "MAX 185-253KTL3-X HV Datasheet.pdf",
+    "clean": "max-185-253ktl3-x-hv-datasheet.pdf",
+    "path": "/datasheets/growatt/max-185-253ktl3-x-hv-datasheet.pdf"
+  },
+  {
+    "original": "MAX 50-75KTL3-XL2.pdf",
+    "clean": "max-50-75ktl3-xl2.pdf",
+    "path": "/datasheets/growatt/max-50-75ktl3-xl2.pdf"
+  },
+  {
+    "original": "MAX 50-80KTL3LV.pdf",
+    "clean": "max-50-80ktl3lv.pdf",
+    "path": "/datasheets/growatt/max-50-80ktl3lv.pdf"
+  },
+  {
+    "original": "MAX 75KTL3 LV.pdf",
+    "clean": "max-75ktl3-lv.pdf",
+    "path": "/datasheets/growatt/max-75ktl3-lv.pdf"
+  },
+  {
+    "original": "MAX 80-100KTL3 MV.pdf",
+    "clean": "max-80-100ktl3-mv.pdf",
+    "path": "/datasheets/growatt/max-80-100ktl3-mv.pdf"
+  },
+  {
+    "original": "MIC 1-3KTL-X.pdf",
+    "clean": "mic-1-3ktl-x.pdf",
+    "path": "/datasheets/growatt/mic-1-3ktl-x.pdf"
+  },
+  {
+    "original": "MID 15-20KTL3-XL Trifasico 220V.pdf",
+    "clean": "mid-15-20ktl3-xl-trifasico-220v.pdf",
+    "path": "/datasheets/growatt/mid-15-20ktl3-xl-trifasico-220v.pdf"
+  },
+  {
+    "original": "MID 15-25KTL3-X.pdf",
+    "clean": "mid-15-25ktl3-x.pdf",
+    "path": "/datasheets/growatt/mid-15-25ktl3-x.pdf"
+  },
+  {
+    "original": "MID 25-40KTL3-X.pdf",
+    "clean": "mid-25-40ktl3-x.pdf",
+    "path": "/datasheets/growatt/mid-25-40ktl3-x.pdf"
+  },
+  {
+    "original": "MIN_2500-6000TL-XH (HIBRIDO)_Ficha_de_dados_PT.pdf",
+    "clean": "min-2500-6000tl-xh-hibrido-ficha-de-dados-pt.pdf",
+    "path": "/datasheets/growatt/min-2500-6000tl-xh-hibrido-ficha-de-dados-pt.pdf"
+  },
+  {
+    "original": "MIN_2500-6000TL-X_Ficha_de_dados_PT.pdf",
+    "clean": "min-2500-6000tl-x-ficha-de-dados-pt.pdf",
+    "path": "/datasheets/growatt/min-2500-6000tl-x-ficha-de-dados-pt.pdf"
+  },
+  {
+    "original": "MIN_7000-10000TL-X_Ficha_de_dados_PT.pdf",
+    "clean": "min-7000-10000tl-x-ficha-de-dados-pt.pdf",
+    "path": "/datasheets/growatt/min-7000-10000tl-x-ficha-de-dados-pt.pdf"
+  },
+  {
+    "original": "7-8K MTL-S.pdf",
+    "clean": "7-8k-mtl-s.pdf",
+    "path": "/datasheets/growatt/7-8k-mtl-s.pdf"
+  },
+  {
+    "original": "SPF 2-5TL HVM.pdf",
+    "clean": "spf-2-5tl-hvm.pdf",
+    "path": "/datasheets/growatt/spf-2-5tl-hvm.pdf"
+  },
+  {
+    "original": "SPF 2500~5000TL HVM Portugues.pdf",
+    "clean": "spf-2500-5000tl-hvm-portugues.pdf",
+    "path": "/datasheets/growatt/spf-2500-5000tl-hvm-portugues.pdf"
+  },
+  {
+    "original": "SPF 3.5-5K ES.pdf",
+    "clean": "spf-3.5-5k-es.pdf",
+    "path": "/datasheets/growatt/spf-3.5-5k-es.pdf"
+  },
+  {
+    "original": "SPF 3000TL LVM Portugues.pdf",
+    "clean": "spf-3000tl-lvm-portugues.pdf",
+    "path": "/datasheets/growatt/spf-3000tl-lvm-portugues.pdf"
+  },
+  {
+    "original": "SPF 3000TL LVM-ES Portugues.pdf",
+    "clean": "spf-3000tl-lvm-es-portugues.pdf",
+    "path": "/datasheets/growatt/spf-3000tl-lvm-es-portugues.pdf"
+  },
+  {
+    "original": "SPF 3500~5000 ES Portugues.pdf",
+    "clean": "spf-3500-5000-es-portugues.pdf",
+    "path": "/datasheets/growatt/spf-3500-5000-es-portugues.pdf"
+  },
+  {
+    "original": "SPF 3KTL LVM-ES.pdf",
+    "clean": "spf-3ktl-lvm-es.pdf",
+    "path": "/datasheets/growatt/spf-3ktl-lvm-es.pdf"
+  },
+  {
+    "original": "SPF 5KTL HVM-WPV.pdf",
+    "clean": "spf-5ktl-hvm-wpv.pdf",
+    "path": "/datasheets/growatt/spf-5ktl-hvm-wpv.pdf"
+  },
+  {
+    "original": "15-22KTL3-SL.pdf",
+    "clean": "15-22ktl3-sl.pdf",
+    "path": "/datasheets/growatt/15-22ktl3-sl.pdf"
+  },
+  {
+    "original": "8-10.5K MTLP-S.pdf",
+    "clean": "8-10.5k-mtlp-s.pdf",
+    "path": "/datasheets/growatt/8-10.5k-mtlp-s.pdf"
+  }
+]

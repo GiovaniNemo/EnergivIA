@@ -69,3 +69,6 @@ empreendimento-geracao-distribuida.csv
 empreendimento-gd.csv.csv
 *.csv
 
+# Temporary datasheets folder
+temp-datasheets/
+
