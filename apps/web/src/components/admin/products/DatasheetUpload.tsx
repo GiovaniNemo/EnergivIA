@@ -6,7 +6,7 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { createPresignedUploadUrl, extractDatasheet } from "@/lib/admin-api";
 
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB para PDFs
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB para PDFs
 
 interface DatasheetUploadProps {
   value?: string;
@@ -58,7 +58,7 @@ export function DatasheetUpload({
     }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      setError("Arquivo muito grande. Tamanho máximo: 10MB.");
+      setError("Arquivo muito grande. Tamanho máximo: 50MB.");
       return;
     }
 
