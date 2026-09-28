@@ -133,5 +133,11 @@
     "original": "8-10.5K MTLP-S.pdf",
     "clean": "8-10.5k-mtlp-s.pdf",
     "path": "/datasheets/growatt/8-10.5k-mtlp-s.pdf"
+  },
+  {
+    "original": "MIN_7300~10500TL-X2_Ficha_de_dados_PT_202607.pdf",
+    "clean": "min-7300-10500tl-x2-ficha-de-dados-pt.pdf",
+    "path": "/datasheets/growatt/min-7300-10500tl-x2-ficha-de-dados-pt.pdf",
+    "originalFullPath": "c:\\Users\\Edeltec\\EnergivIA\\temp-datasheets\\DATASHEETS GROWATT\\Linha MIN\\MIN_7300~10500TL-X2_Ficha_de_dados_PT_202607.pdf"
   }
 ]
