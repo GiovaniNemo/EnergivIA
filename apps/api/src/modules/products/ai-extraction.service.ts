@@ -110,13 +110,40 @@ ${
     ? `Texto auxiliar extraído do documento:\n${textContent}\n`
     : "Nota: O PDF não possui camada de texto selecionável (é um documento escaneado/com imagens). Examine visualmente as tabelas, colunas de especificações e valores numéricos."
 }
-Retorne APENAS um objeto JSON com as chaves "detectedCategory" ('module', 'inverter' ou 'unknown') e "specs" com os parâmetros numéricos elétricos e mecânicos correspondentes.
-Para Inversores, procure com máxima atenção:
+Retorne APENAS um objeto JSON com as chaves "detectedCategory" ('module', 'inverter', 'microinverter' ou 'unknown') e "specs" com os parâmetros numéricos elétricos e mecânicos correspondentes.
+
+Para Módulos Fotovoltaicos (painéis solares), procure com máxima atenção:
+- "power_w": Potência nominal do módulo em Watts (Pmax/Rated Power), valor STC (ex: 575 para 575W).
+- "warranty_years": Garantia de produto em anos (não confundir com garantia de desempenho/linear).
+- "voc": Tensão de circuito aberto (Open Circuit Voltage) em Volts no STC.
+- "vmp": Tensão no ponto de máxima potência (Voltage at Maximum Power / Vmpp) em Volts no STC.
+- "isc": Corrente de curto-circuito (Short Circuit Current) em Amperes no STC.
+- "imp": Corrente no ponto de máxima potência (Current at Maximum Power / Impp) em Amperes no STC.
+- "efficiency": Eficiência do módulo em porcentagem (ex: 22.3 para 22.3%).
+- "max_system_voltage": Tensão máxima do sistema (Maximum System Voltage) em Volts (geralmente 1000V ou 1500V).
+- "width_mm": Largura do módulo em milímetros (dimensão menor).
+- "height_mm": Altura/Comprimento do módulo em milímetros (dimensão maior).
+- "weight_kg": Peso do módulo em kg.
+- "cells": Número de células (ex: 144).
+- "cell_type": Tipo de célula (ex: "Mono PERC", "N-Type TOPCon", "HJT").
+- "is_bifacial": Se o módulo é bifacial (true/false).
+IMPORTANTE: Se o datasheet mostrar múltiplas potências em colunas (ex: 570W, 575W, 580W), extraia os valores STC da coluna que melhor corresponde ao modelo informado. Sempre utilize os valores na condição STC (Standard Test Conditions), nunca NOCT.
+
+Para Inversores (string/central), procure com máxima atenção:
 - "nominal_power_w": Potência nominal de saída CA (Rated output power) em Watts (ex: 25000 para 25kW).
 - "max_dc_power": Máxima potência fotovoltaica recomendada de entrada CC em Watts (ex: 32500 para 32.5kW).
 - "recommended_dc_ac_ratio_max": Relação CC/CA (Ratio DC/AC / Overloading) máxima se informada explicitamente no documento (ex: 1.30 ou 1.50).
 - "recommended_dc_ac_ratio_min": Relação CC/CA mínima recomendada se informada no documento.
-- "mppt_count", "max_strings_per_mppt", "mppt_voltage_min", "mppt_voltage_max", "max_input_current", "max_short_circuit_current_a", "voltage_v", "phase", "efficiency", "warranty_years".`;
+- "mppt_count", "max_strings_per_mppt", "mppt_voltage_min", "mppt_voltage_max", "max_input_current", "max_short_circuit_current_a", "voltage_v", "phase", "efficiency", "warranty_years", "max_dc_voltage".
+
+Para Microinversores, procure com máxima atenção:
+- "channels": Número de canais/entradas MPPT independentes (ex: 4 para 4 módulos).
+- "max_input_voltage": Tensão máxima de entrada CC em Volts.
+- "max_input_current": Corrente máxima de entrada por canal em Amperes.
+- "max_module_power": Potência máxima recomendada do módulo por canal em Watts.
+- "min_module_power": Potência mínima recomendada do módulo por canal em Watts (se disponível).
+- "nominal_power_w": Potência nominal de saída CA total em Watts.
+- "efficiency", "warranty_years".`;
 
     const attemptErrors: string[] = [];
 
@@ -240,18 +267,24 @@ Para Inversores, procure com máxima atenção:
                 role: "system",
                 content: `Você é um engenheiro sênior de sistemas fotovoltaicos. Analise o texto do datasheet e extraia as especificações técnicas em JSON com formato:
 {
-  "detectedCategory": "module" | "inverter" | "unknown",
+  "detectedCategory": "module" | "inverter" | "microinverter" | "unknown",
   "specs": {
-    "power_w": number,
-    "warranty_years": number,
-    "voc": number,
-    "vmp": number,
-    "isc": number,
-    "imp": number,
-    "max_system_voltage": number,
-    "efficiency": number,
-    "width_mm": number,
-    "height_mm": number,
+    // Para módulos fotovoltaicos:
+    "power_w": number,       // Potência STC em Watts
+    "warranty_years": number, // Garantia de produto em anos
+    "voc": number,           // Tensão de circuito aberto STC (V)
+    "vmp": number,           // Tensão no ponto de máxima potência STC (V)
+    "isc": number,           // Corrente de curto-circuito STC (A)
+    "imp": number,           // Corrente no ponto de máxima potência STC (A)
+    "max_system_voltage": number, // Tensão máx do sistema (V)
+    "efficiency": number,    // Eficiência (%)
+    "width_mm": number,      // Largura em mm
+    "height_mm": number,     // Altura em mm
+    "weight_kg": number,     // Peso em kg
+    "cells": number,         // Número de células
+    "cell_type": string,     // Tipo de célula
+    "is_bifacial": boolean,
+    // Para inversores:
     "nominal_power_w": number,
     "max_dc_power": number,
     "max_dc_voltage": number,
@@ -264,9 +297,15 @@ Para Inversores, procure com máxima atenção:
     "recommended_dc_ac_ratio_max": number,
     "recommended_dc_ac_ratio_min": number,
     "phase": "monophasic" | "biphasic" | "triphasic",
-    "voltage_v": number
+    "voltage_v": number,
+    // Para microinversores:
+    "channels": number,
+    "max_input_voltage": number,
+    "max_module_power": number,
+    "min_module_power": number
   }
-}`,
+}
+Inclua apenas as chaves relevantes para a categoria detectada. Use valores STC para módulos.`,
               },
               {
                 role: "user",
@@ -396,6 +435,60 @@ Para Inversores, procure com máxima atenção:
 
       specs["recommended_dc_ac_ratio_max"] = ratioMax;
       specs["recommended_dc_ac_ratio_min"] = ratioMin;
+    }
+
+    // Tratamento e sanitização para Módulos Fotovoltaicos
+    if (
+      detectedCategory === "module" ||
+      specs["voc"] !== undefined ||
+      specs["power_w"] !== undefined
+    ) {
+      // Normalizar power_w (se veio em kW, converter para W)
+      const powerW = typeof specs["power_w"] === "number" ? specs["power_w"] : null;
+      if (powerW !== null && powerW > 0 && powerW < 100) {
+        specs["power_w"] = Math.round(powerW * 1000);
+      }
+
+      // Validar efficiency (deve estar entre 10% e 30% para módulos comerciais)
+      const eff = typeof specs["efficiency"] === "number" ? specs["efficiency"] : null;
+      if (eff !== null && (eff < 5 || eff > 35)) {
+        this.logger.warn(`Eficiência do módulo (${eff}%) fora do intervalo esperado, descartando.`);
+        delete specs["efficiency"];
+      }
+
+      // Normalizar dimensões: se vieram em metros (valores < 5), converter para mm
+      for (const dim of ["width_mm", "height_mm"]) {
+        const val = typeof specs[dim] === "number" ? (specs[dim] as number) : null;
+        if (val !== null && val > 0 && val < 5) {
+          specs[dim] = Math.round(val * 1000);
+          this.logger.log(`Dimensão ${dim} convertida de metros para mm: ${val} → ${specs[dim]}`);
+        }
+      }
+
+      // Normalizar max_system_voltage (valores comuns: 1000V ou 1500V)
+      const maxSysV =
+        typeof specs["max_system_voltage"] === "number" ? specs["max_system_voltage"] : null;
+      if (maxSysV !== null && maxSysV > 0 && maxSysV < 10) {
+        specs["max_system_voltage"] = Math.round(maxSysV * 1000);
+      }
+
+      // Validar coerência: Vmp < Voc
+      const voc = typeof specs["voc"] === "number" ? specs["voc"] : null;
+      const vmp = typeof specs["vmp"] === "number" ? specs["vmp"] : null;
+      if (voc !== null && vmp !== null && vmp >= voc) {
+        this.logger.warn(
+          `Vmp (${vmp}V) >= Voc (${voc}V) — valores possivelmente invertidos pela IA.`
+        );
+      }
+
+      // Validar coerência: Imp < Isc
+      const isc = typeof specs["isc"] === "number" ? specs["isc"] : null;
+      const imp = typeof specs["imp"] === "number" ? specs["imp"] : null;
+      if (isc !== null && imp !== null && imp >= isc) {
+        this.logger.warn(
+          `Imp (${imp}A) >= Isc (${isc}A) — valores possivelmente invertidos pela IA.`
+        );
+      }
     }
 
     return specs;
