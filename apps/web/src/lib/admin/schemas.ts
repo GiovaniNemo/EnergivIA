@@ -242,8 +242,8 @@ export const productBaseSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório").toUpperCase(),
   brand_id: z.string().min(1, "Selecione a marca"),
   category_id: z.string().min(1, "Selecione a categoria"),
-  image_url: z.string().url("URL da imagem inválida").optional().or(z.literal("")),
-  datasheet_url: z.string().url("URL do datasheet inválida").optional().or(z.literal("")),
+  image_url: z.string().optional().nullable().or(z.literal("")),
+  datasheet_url: z.string().optional().nullable().or(z.literal("")),
   active: z.boolean().default(true),
 });
 

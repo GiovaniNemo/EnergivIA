@@ -293,6 +293,8 @@ export function ProductSpecsDialog({
         "specs.max_input_voltage": "Tensão de Entrada Máx (V)",
         "specs.max_module_power": "Potência Máxima do Módulo (W)",
         "specs.min_module_power": "Potência Mínima do Módulo (W)",
+        datasheet_url: "Link do Datasheet",
+        image_url: "Link da Imagem",
       };
 
       parsed.error.issues.forEach((issue) => {
@@ -315,8 +317,8 @@ export function ProductSpecsDialog({
       name: parsed.data.name,
       brand_id: parsed.data.brand_id,
       category_id: parsed.data.category_id,
-      image_url: parsed.data.image_url,
-      datasheet_url: parsed.data.datasheet_url,
+      image_url: parsed.data.image_url ?? undefined,
+      datasheet_url: parsed.data.datasheet_url ?? undefined,
       specs:
         (isDeactivating
           ? (values.specs as Record<string, unknown>)
