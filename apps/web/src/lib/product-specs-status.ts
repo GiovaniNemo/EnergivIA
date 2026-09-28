@@ -99,19 +99,22 @@ export function getProductSpecsStatus(
   const safeSpecs = specs || {};
 
   // Requisitos essenciais de engenharia por categoria
-  const rulesByCategory: Record<string, Array<{ key: string; label: string }>> = {
+  const rulesByCategory: Record<
+    string,
+    Array<{ key: string; label: string; aliases?: string[] }>
+  > = {
     inverter: [
       { key: "nominal_power_w", label: "Potência Nominal CA" },
-      { key: "max_dc_voltage", label: "Tensão DC Máx" },
-      { key: "mppt_count", label: "Nº de MPPTs" },
+      { key: "max_dc_voltage", label: "Tensão DC Máx", aliases: ["max_input_voltage"] },
+      { key: "mppt_count", label: "Nº de MPPTs", aliases: ["channels"] },
       { key: "mppt_voltage_min", label: "Tensão MPPT Mín" },
       { key: "mppt_voltage_max", label: "Tensão MPPT Máx" },
       { key: "max_input_current", label: "Corrente Entrada Máx" },
     ],
     hybrid_inverter: [
       { key: "nominal_power_w", label: "Potência Nominal CA" },
-      { key: "max_dc_voltage", label: "Tensão DC Máx" },
-      { key: "mppt_count", label: "Nº de MPPTs" },
+      { key: "max_dc_voltage", label: "Tensão DC Máx", aliases: ["max_input_voltage"] },
+      { key: "mppt_count", label: "Nº de MPPTs", aliases: ["channels"] },
       { key: "mppt_voltage_min", label: "Tensão MPPT Mín" },
       { key: "mppt_voltage_max", label: "Tensão MPPT Máx" },
       { key: "max_input_current", label: "Corrente Entrada Máx" },
@@ -121,10 +124,14 @@ export function getProductSpecsStatus(
       { key: "battery_nominal_voltage_v", label: "Tensão da Bateria" },
     ],
     microinverter: [
-      { key: "channels", label: "Canais / MPPTs" },
-      { key: "max_input_voltage", label: "Tensão Entrada Máx" },
+      { key: "channels", label: "Canais / MPPTs", aliases: ["mppt_count"] },
+      { key: "max_input_voltage", label: "Tensão Entrada Máx", aliases: ["max_dc_voltage"] },
       { key: "max_input_current", label: "Corrente Entrada Máx" },
-      { key: "max_module_power", label: "Potência Máx do Módulo" },
+      {
+        key: "max_module_power",
+        label: "Potência Máx do Módulo",
+        aliases: ["nominal_power_w", "max_dc_power"],
+      },
     ],
     module: [
       { key: "power_w", label: "Potência (Wp)" },
@@ -186,7 +193,9 @@ export function getProductSpecsStatus(
   let filledCount = 0;
 
   for (const field of requiredFields) {
-    if (isValidValue(safeSpecs[field.key])) {
+    const hasMain = isValidValue(safeSpecs[field.key]);
+    const hasAlias = field.aliases?.some((aliasKey) => isValidValue(safeSpecs[aliasKey]));
+    if (hasMain || hasAlias) {
       filledCount++;
     } else {
       missingFields.push(field.label);

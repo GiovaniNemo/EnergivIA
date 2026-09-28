@@ -137,6 +137,32 @@ export function ProductSpecsDialog({
         }
       }
 
+      if (cat === "microinverter" || cat?.toLowerCase().includes("micro")) {
+        initialSpecs["type"] = "micro";
+        if (!initialSpecs["channels"] && initialSpecs["mppt_count"]) {
+          initialSpecs["channels"] = initialSpecs["mppt_count"];
+        }
+        if (!initialSpecs["max_input_voltage"] && initialSpecs["max_dc_voltage"]) {
+          initialSpecs["max_input_voltage"] = initialSpecs["max_dc_voltage"];
+        }
+        if (!initialSpecs["max_module_power"]) {
+          if (initialSpecs["max_dc_power"] && initialSpecs["channels"]) {
+            initialSpecs["max_module_power"] = Math.round(
+              Number(initialSpecs["max_dc_power"]) / Number(initialSpecs["channels"])
+            );
+          } else if (initialSpecs["nominal_power_w"] && initialSpecs["channels"]) {
+            initialSpecs["max_module_power"] = Math.round(
+              (Number(initialSpecs["nominal_power_w"]) * 1.4) / Number(initialSpecs["channels"])
+            );
+          }
+        }
+        if (!initialSpecs["min_module_power"] && initialSpecs["max_module_power"]) {
+          initialSpecs["min_module_power"] = Math.round(
+            Number(initialSpecs["max_module_power"]) * 0.5
+          );
+        }
+      }
+
       methods.reset({
         name: product.name,
         brand_id: product.brandId,
@@ -223,6 +249,26 @@ export function ProductSpecsDialog({
         values.specs["max_strings_per_mppt"] = 2;
       }
     }
+    if ((cat === "microinverter" || cat?.toLowerCase().includes("micro")) && values.specs) {
+      values.specs["type"] = "micro";
+      if (!values.specs["channels"] && values.specs["mppt_count"]) {
+        values.specs["channels"] = Number(values.specs["mppt_count"]);
+      }
+      if (!values.specs["max_input_voltage"] && values.specs["max_dc_voltage"]) {
+        values.specs["max_input_voltage"] = Number(values.specs["max_dc_voltage"]);
+      }
+      if (!values.specs["min_module_power"] && values.specs["max_module_power"]) {
+        values.specs["min_module_power"] = Math.round(
+          Number(values.specs["max_module_power"]) * 0.5
+        );
+      }
+      if (values.specs["channels"]) {
+        values.specs["mppt_count"] = Number(values.specs["channels"]);
+      }
+      if (values.specs["max_input_voltage"]) {
+        values.specs["max_dc_voltage"] = Number(values.specs["max_input_voltage"]);
+      }
+    }
 
     // Se o produto está sendo desativado (active: false), não bloqueamos por especificações incompletas
     const isDeactivating = values.active === false;
@@ -243,6 +289,10 @@ export function ProductSpecsDialog({
         "specs.max_dc_power": "Potência DC Máx (W)",
         "specs.recommended_dc_ac_ratio_min": "Ratio DC/AC Mín",
         "specs.recommended_dc_ac_ratio_max": "Ratio DC/AC Máx",
+        "specs.channels": "Canais (Nº de Módulos por micro)",
+        "specs.max_input_voltage": "Tensão de Entrada Máx (V)",
+        "specs.max_module_power": "Potência Máxima do Módulo (W)",
+        "specs.min_module_power": "Potência Mínima do Módulo (W)",
       };
 
       parsed.error.issues.forEach((issue) => {

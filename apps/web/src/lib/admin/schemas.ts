@@ -107,13 +107,15 @@ export const specsInverterSchema = z.object({
 });
 
 export const specsMicroInverterSchema = z.object({
-  type: z.literal("micro"),
+  type: z.string().default("micro"),
   channels: z.coerce.number().int().positive(),
   warranty_years: positiveNumber.optional(),
   max_input_voltage: positiveNumber,
   max_input_current: positiveNumber,
   max_module_power: positiveNumber,
-  min_module_power: positiveNumber,
+  min_module_power: positiveNumber.optional(),
+  nominal_power_w: positiveNumber.optional(),
+  efficiency: positiveNumber.optional(),
   grid_topology: z.enum(gridTopologyOptions).optional(),
   grid_standard: z.enum(gridStandardOptions).optional(),
   output_voltage_v: z.string().optional(),
