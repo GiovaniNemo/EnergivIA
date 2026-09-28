@@ -2,6 +2,8 @@ import { Injectable, BadRequestException, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { GoogleGenerativeAI, Part } from "@google/generative-ai";
 import pdfParse from "pdf-parse";
+import * as fs from "fs";
+import * as path from "path";
 
 @Injectable()
 export class AiExtractionService {
@@ -28,13 +30,47 @@ export class AiExtractionService {
 
     let pdfBuffer: Buffer;
     try {
-      const response = await fetch(datasheetUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch PDF: ${response.statusText}`);
+      if (
+        datasheetUrl.startsWith("/") ||
+        datasheetUrl.startsWith("\\") ||
+        !datasheetUrl.startsWith("http")
+      ) {
+        const cleanPath = datasheetUrl.replace(/^[/\\]+/, "");
+        const possiblePaths = [
+          path.resolve(process.cwd(), "..", "web", "public", cleanPath),
+          path.resolve(process.cwd(), "apps", "web", "public", cleanPath),
+          path.resolve("c:/Users/Edeltec/EnergivIA/apps/web/public", cleanPath),
+          path.resolve(datasheetUrl),
+        ];
+
+        let found = false;
+        for (const p of possiblePaths) {
+          if (fs.existsSync(p)) {
+            pdfBuffer = fs.readFileSync(p);
+            found = true;
+            this.logger.log(`Carregado PDF local do datasheet a partir de: ${p}`);
+            break;
+          }
+        }
+
+        if (!found) {
+          const baseUrl = process.env["WEB_APP_URL"] || "http://localhost:3000";
+          const fullUrl = `${baseUrl.replace(/\/$/, "")}/${cleanPath}`;
+          const response = await fetch(fullUrl);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const arrayBuffer = await response.arrayBuffer();
+          pdfBuffer = Buffer.from(arrayBuffer);
+        }
+      } else {
+        const response = await fetch(datasheetUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch PDF: ${response.statusText}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        pdfBuffer = Buffer.from(arrayBuffer);
       }
-      const arrayBuffer = await response.arrayBuffer();
-      pdfBuffer = Buffer.from(arrayBuffer);
-    } catch {
+    } catch (fetchErr) {
+      this.logger.error(`Erro ao carregar PDF do datasheet (${datasheetUrl}):`, fetchErr);
       throw new BadRequestException(
         "Não foi possível fazer o download do PDF do Datasheet para leitura."
       );

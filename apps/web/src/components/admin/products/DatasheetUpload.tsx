@@ -24,15 +24,33 @@ export function DatasheetUpload({
   onExtractedSpecs,
 }: DatasheetUploadProps): JSX.Element {
   const [error, setError] = useState<string>("");
+  const [successMsg, setSuccessMsg] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
 
   const accept = useMemo(() => ".pdf", []);
 
+  const handleExtractFromExistingPdf = async () => {
+    if (!value) return;
+    setError("");
+    setSuccessMsg("");
+    setIsExtracting(true);
+    try {
+      const { specs } = await extractDatasheet(value, productName);
+      onExtractedSpecs(specs);
+      setSuccessMsg("Ficha técnica preenchida com sucesso pela IA a partir do PDF anexado!");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao extrair dados do PDF com IA.");
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
   const handleFileChange = async (file: File | null) => {
     if (!file) return;
     setError("");
+    setSuccessMsg("");
 
     if (file.type !== "application/pdf") {
       setError("Formato inválido. Envie apenas arquivos PDF.");
@@ -72,6 +90,7 @@ export function DatasheetUpload({
       // 2. Extrai as especificações usando IA
       const { specs } = await extractDatasheet(fileUrl, productName);
       onExtractedSpecs(specs);
+      setSuccessMsg("PDF enviado e especificações extraídas com sucesso pela IA!");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao enviar datasheet.");
     } finally {
@@ -134,53 +153,89 @@ export function DatasheetUpload({
         <DescriptionOutlinedIcon sx={{ fontSize: 32, color: "text.secondary" }} />
 
         {value ? (
-          <Typography variant="body2" color="success.main" fontWeight={600}>
-            PDF anexado com sucesso!
+          <Box display="flex" flexDirection="column" alignItems="center" gap={0.5}>
+            <Typography variant="body2" color="success.main" fontWeight={600}>
+              PDF anexado com sucesso!
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              <a
+                href={value}
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: "var(--color-primary, #0ea5e9)", textDecoration: "underline" }}
+              >
+                Ver arquivo anexado
+              </a>
+            </Typography>
+          </Box>
+        ) : (
+          <Typography variant="body2" color="text.secondary" textAlign="center">
+            Arraste e solte o Datasheet em PDF aqui ou clique abaixo
           </Typography>
-        ) : null}
+        )}
 
-        <Typography variant="body2" color="text.secondary" textAlign="center">
-          Arraste e solte o Datasheet em PDF aqui ou clique abaixo
-        </Typography>
+        <Box display="flex" gap={1.5} flexWrap="wrap" justifyContent="center" alignItems="center">
+          {value ? (
+            <Button
+              variant="contained"
+              disabled={isUploading || isExtracting}
+              onClick={handleExtractFromExistingPdf}
+              startIcon={
+                isExtracting ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeIcon />
+              }
+              sx={{
+                bgcolor: "#059669",
+                "&:hover": { bgcolor: "#047857" },
+                color: "#fff",
+                fontWeight: 700,
+                textTransform: "none",
+                px: 2.5,
+                py: 1,
+              }}
+            >
+              {isExtracting ? "✨ Lendo PDF com IA..." : "✨ Ler PDF Anexado com IA"}
+            </Button>
+          ) : null}
 
-        <Button
-          variant="contained"
-          component="label"
-          disabled={isUploading || isExtracting}
-          startIcon={
-            isUploading || isExtracting ? (
-              <CircularProgress size={16} color="inherit" />
-            ) : (
-              <AutoAwesomeIcon />
-            )
-          }
-        >
-          {isUploading
-            ? "Enviando arquivo..."
-            : isExtracting
-              ? "✨ Extraindo com IA..."
-              : "Preencher com IA (Upload Datasheet)"}
-          <input
-            type="file"
-            hidden
-            accept={accept}
-            onChange={(e) => {
-              void handleFileChange(e.target.files?.[0] ?? null);
-              e.target.value = "";
+          <Button
+            variant={value ? "outlined" : "contained"}
+            component="label"
+            disabled={isUploading || isExtracting}
+            startIcon={
+              isUploading ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeIcon />
+            }
+            sx={{
+              textTransform: "none",
+              fontWeight: 600,
+              ...(value
+                ? {
+                    borderColor: "var(--color-border, #4b5563)",
+                    color: "text.primary",
+                    "&:hover": { borderColor: "primary.main" },
+                  }
+                : {}),
             }}
-          />
-        </Button>
+          >
+            {isUploading
+              ? "Enviando arquivo..."
+              : value
+                ? "Substituir PDF (Novo Upload)"
+                : "Preencher com IA (Upload Datasheet)"}
+            <input
+              type="file"
+              hidden
+              accept={accept}
+              onChange={(e) => {
+                void handleFileChange(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
+            />
+          </Button>
+        </Box>
       </Box>
 
+      {successMsg ? <Alert severity="success">{successMsg}</Alert> : null}
       {error ? <Alert severity="error">{error}</Alert> : null}
-
-      {value ? (
-        <Typography variant="caption" color="text.secondary">
-          <a href={value} target="_blank" rel="noreferrer">
-            Ver arquivo anexado
-          </a>
-        </Typography>
-      ) : null}
     </Box>
   );
 }
