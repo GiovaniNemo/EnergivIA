@@ -564,11 +564,18 @@ export class ProductRepository {
       maxModules: number;
     }[]
   > {
+    const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
+      category: { name: CATEGORY_NAMES.STRUCTURE_KIT },
+      active: true,
+    };
+    const restrictIds = await this.restrictProductIds(source);
+    if (restrictIds) {
+      if (restrictIds.length === 0) return [];
+      where.id = { in: restrictIds };
+    }
+
     const products = await this.prisma.product.findMany({
-      where: {
-        category: { name: CATEGORY_NAMES.STRUCTURE_KIT },
-        active: true,
-      },
+      where,
       include: { brand: true },
     });
 
@@ -616,11 +623,18 @@ export class ProductRepository {
       roll_length_m: number;
     }[]
   > {
+    const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
+      category: { name: CATEGORY_NAMES.DC_CABLE },
+      active: true,
+    };
+    const restrictIds = await this.restrictProductIds(source);
+    if (restrictIds) {
+      if (restrictIds.length === 0) return [];
+      where.id = { in: restrictIds };
+    }
+
     const products = await this.prisma.product.findMany({
-      where: {
-        category: { name: CATEGORY_NAMES.DC_CABLE },
-        active: true,
-      },
+      where,
       include: { brand: true },
     });
 
@@ -674,11 +688,18 @@ export class ProductRepository {
     brandName: string;
     price: number;
   } | null> {
+    const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
+      category: { name: CATEGORY_NAMES.CONNECTOR },
+      active: true,
+    };
+    const restrictIds = await this.restrictProductIds(source);
+    if (restrictIds) {
+      if (restrictIds.length === 0) return null;
+      where.id = { in: restrictIds };
+    }
+
     const products = await this.prisma.product.findMany({
-      where: {
-        category: { name: CATEGORY_NAMES.CONNECTOR },
-        active: true,
-      },
+      where,
       include: { brand: true },
     });
     const product = products.find((p) => (p.specs as { type?: string }).type === connectorType);
@@ -713,11 +734,18 @@ export class ProductRepository {
     brandName: string;
     price: number;
   } | null> {
+    const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
+      category: { name: CATEGORY_NAMES.PROFILE },
+      active: true,
+    };
+    const restrictIds = await this.restrictProductIds(source);
+    if (restrictIds) {
+      if (restrictIds.length === 0) return null;
+      where.id = { in: restrictIds };
+    }
+
     const products = await this.prisma.product.findMany({
-      where: {
-        category: { name: CATEGORY_NAMES.PROFILE },
-        active: true,
-      },
+      where,
       include: { brand: true },
     });
 
@@ -738,12 +766,12 @@ export class ProductRepository {
         const specs = p.specs as { profile_type?: string; length_m?: number };
         // Do not pick specific profiles when looking for standard ones
         if (specs.profile_type === "baixo" || specs.profile_type === "fechamento") return false;
-        const l = specs.length_m;
-        return typeof l === "number" && l >= minLengthM;
+        return typeof specs.length_m === "number" && specs.length_m >= minLengthM;
       });
     }
 
     if (!product) return null;
+
     const withPrice = await this.attachPrices(
       [
         {

@@ -133,10 +133,15 @@ export function sizeSolarSystem(input: SolarSizingInput): SizingResult | null {
   }
   if (modules.length === 0) return null;
 
-  // Encontra todos os inversores adequados baseados na potência solicitada, priorizando marcas preferidas
-  const candidateInverters = input.stringInverters.filter(
-    (inv) => inv.specs.max_dc_power >= systemPowerW
-  );
+  // Encontra todos os inversores adequados baseados na potência solicitada, priorizando marcas preferidas.
+  // Limita o sobredimensionamento do inversor para evitar sugerir inversores industriais (ex: 75kW) para pequenas usinas residenciais.
+  const maxAllowedInverterNominalW = Math.max(systemPowerW * 1.6, 6000);
+  const candidateInverters = input.stringInverters.filter((inv) => {
+    const nominalW = inv.specs.nominal_power_w || inv.specs.max_dc_power / 1.3;
+    const powerMinOk = inv.specs.max_dc_power >= systemPowerW * 0.75;
+    const powerMaxOk = nominalW <= maxAllowedInverterNominalW;
+    return powerMinOk && powerMaxOk;
+  });
   const preferredInvBrands = input.preferred_inverter_brands ?? [];
   const matchesInv = (brand: string) =>
     preferredInvBrands.length === 0 ||
@@ -148,6 +153,7 @@ export function sizeSolarSystem(input: SolarSizingInput): SizingResult | null {
       const bPref = matchesInv(b.brandName) ? 1 : 0;
       if (aPref !== bPref) return bPref - aPref;
     }
+    // Ordena pela menor diferença entre a potência do inversor e a potência do sistema
     return a.specs.max_dc_power - b.specs.max_dc_power;
   });
 
@@ -181,7 +187,7 @@ export function sizeSolarSystem(input: SolarSizingInput): SizingResult | null {
       }
     }
 
-    // 2. Fallback: Se nenhum inversor atendeu ao ratio ideal, tenta o primeiro candidato que atende os requisitos elétricos básicos e física CC
+    // 2. Fallback: Se nenhum inversor atendeu ao ratio ideal, tenta com ratio mínimo aceitável (mínimo 70% de carregamento)
     for (const stringInverter of candidateInverters) {
       const isSmallInverter = stringInverter.specs.max_dc_power <= 10000;
       const finalModuleQuantity = isSmallInverter ? Math.max(moduleQuantity, 4) : moduleQuantity;
@@ -192,14 +198,15 @@ export function sizeSolarSystem(input: SolarSizingInput): SizingResult | null {
         finalModuleQuantity
       );
       const isPowerExceeded = config.dc_power_w > stringInverter.specs.max_dc_power;
+      const ratioAcceptable = config.dc_ac_ratio >= 0.7 && config.dc_ac_ratio <= 1.7;
 
-      if (validated.voltage && validated.current && !isPowerExceeded) {
+      if (validated.voltage && validated.current && !isPowerExceeded && ratioAcceptable) {
         return {
           module,
           inverter: stringInverter,
           module_quantity: finalModuleQuantity,
           string_configuration: config,
-          validated,
+          validated: { ...validated, dc_ac_ratio: true },
         } satisfies StringSizingResult;
       }
     }

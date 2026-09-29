@@ -173,45 +173,50 @@ export function isModuleSpec(specs: unknown): specs is ModuleSpec {
 }
 
 export function isStringInverterSpec(specs: unknown): specs is StringInverterSpec {
-  return (
-    typeof specs === "object" &&
-    specs !== null &&
-    "type" in specs &&
-    (specs as { type: string }).type === "string" &&
-    "max_dc_voltage" in specs &&
-    ("max_dc_power" in specs || "nominal_power_w" in specs)
-  );
+  if (typeof specs !== "object" || specs === null) return false;
+  const s = specs as Record<string, unknown>;
+  const rawType = String(s["type"] || "")
+    .toLowerCase()
+    .trim();
+  const isTypeString =
+    rawType === "string" || rawType === "string_inverter" || rawType === "stringinverter";
+  return isTypeString && "max_dc_voltage" in s && ("max_dc_power" in s || "nominal_power_w" in s);
 }
 
 export function isMicroInverterSpec(specs: unknown): specs is MicroInverterSpec {
-  return (
-    typeof specs === "object" &&
-    specs !== null &&
-    "type" in specs &&
-    (specs as { type: string }).type === "micro" &&
-    "channels" in specs &&
-    "max_module_power" in specs
-  );
+  if (typeof specs !== "object" || specs === null) return false;
+  const s = specs as Record<string, unknown>;
+  const rawType = String(s["type"] || "")
+    .toLowerCase()
+    .trim();
+  const isTypeMicro =
+    rawType === "micro" || rawType === "microinverter" || rawType === "micro_inverter";
+  return isTypeMicro && "channels" in s && "max_module_power" in s;
 }
 
 export function isHybridInverterSpec(specs: unknown): specs is HybridInverterSpec {
-  return (
-    typeof specs === "object" &&
-    specs !== null &&
-    "type" in specs &&
-    (specs as { type: string }).type === "hybrid" &&
-    "nominal_power_w" in specs
-  );
+  if (typeof specs !== "object" || specs === null) return false;
+  const s = specs as Record<string, unknown>;
+  const rawType = String(s["type"] || "")
+    .toLowerCase()
+    .trim();
+  const isTypeHybrid =
+    rawType === "hybrid" || rawType === "hybrid_inverter" || rawType === "hybridinverter";
+  return isTypeHybrid && "nominal_power_w" in s;
 }
 
 export function isOffGridInverterSpec(specs: unknown): specs is OffGridInverterSpec {
-  return (
-    typeof specs === "object" &&
-    specs !== null &&
-    "type" in specs &&
-    (specs as { type: string }).type === "off_grid" &&
-    "nominal_power_w" in specs
-  );
+  if (typeof specs !== "object" || specs === null) return false;
+  const s = specs as Record<string, unknown>;
+  const rawType = String(s["type"] || "")
+    .toLowerCase()
+    .trim();
+  const isTypeOffGrid =
+    rawType === "off_grid" ||
+    rawType === "offgrid" ||
+    rawType === "off_grid_inverter" ||
+    rawType === "offgrid_inverter";
+  return isTypeOffGrid && "nominal_power_w" in s;
 }
 
 export function isBatterySpec(specs: unknown): specs is BatterySpec {

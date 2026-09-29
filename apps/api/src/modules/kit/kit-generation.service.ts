@@ -1114,12 +1114,41 @@ export class KitGenerationService {
     const isNoStructure =
       roofType === "none" || roofType === "sem_estrutura" || roofType === "sem estrutura";
 
+    // Garante que todos os componentes BOS (cabos, estruturas, conectores) pertençam
+    // rigorosamente ao mesmo distribuidor/fornecedor de onde vieram o módulo e o inversor
+    let bosSource: KitProductSource = source;
+    if (!bosSource.distributorId && !bosSource.supplierId && !bosSource.stockOwnerOrgId) {
+      const invOffer = await this.prisma.distributorProduct.findFirst({
+        where: {
+          productId: sizingResult.inverter.id,
+          active: true,
+          distributor: { active: true },
+        },
+        select: { distributorId: true },
+      });
+      if (invOffer) {
+        bosSource = { distributorId: invOffer.distributorId };
+      } else {
+        const modOffer = await this.prisma.distributorProduct.findFirst({
+          where: {
+            productId: sizingResult.module.id,
+            active: true,
+            distributor: { active: true },
+          },
+          select: { distributorId: true },
+        });
+        if (modOffer) {
+          bosSource = { distributorId: modOffer.distributorId };
+        }
+      }
+    }
+
     const [structureKits, dcCables, connector] = await Promise.all([
       isNoStructure
         ? Promise.resolve([])
-        : this.productRepo.findStructureKitsByRoofType(roofType, source),
-      this.productRepo.findDcCablesBySection(DC_CABLE_SECTION_MM2, source),
-      this.productRepo.findConnectorByType("mc4", source),
+        : this.productRepo.findStructureKitsByRoofType(roofType, bosSource),
+      this.productRepo.findDcCablesBySection(DC_CABLE_SECTION_MM2, bosSource),
+      this.productRepo.findConnectorByType("mc4", bosSource),
     ]);
 
     let stringBox = null;
@@ -1131,9 +1160,13 @@ export class KitGenerationService {
       if (input.string_box_id === "auto" && isStringSizingResult(sizingResult)) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mpptCount = (sizingResult.inverter.specs as any)?.mppt_count || 1;
-        stringBox = await this.productRepo.findRecommendedStringBox(stringCount, mpptCount, source);
+        stringBox = await this.productRepo.findRecommendedStringBox(
+          stringCount,
+          mpptCount,
+          bosSource
+        );
       } else {
-        stringBox = await this.productRepo.findStringBoxById(input.string_box_id, source);
+        stringBox = await this.productRepo.findStringBoxById(input.string_box_id, bosSource);
       }
     }
 
@@ -1142,7 +1175,7 @@ export class KitGenerationService {
     const profileLength = modulePower >= 700 ? 2.75 : 2.4;
     const profile = isNoStructure
       ? null
-      : await this.productRepo.findProfile(profileLength, roofType, source);
+      : await this.productRepo.findProfile(profileLength, roofType, bosSource);
 
     // We no longer fail the kit if structures or cables are missing.
     // They will just be omitted from the kit if they don't exist in stock.
@@ -1177,23 +1210,50 @@ export class KitGenerationService {
       }
     }
     if (dcCables && dcCables.length > 0) {
-      const redCable = dcCables.find((c) => c.color === "red");
-      const blackCable = dcCables.find((c) => c.color === "black");
-      const metersPerColor = dcCableMeters / 2;
+      const metersPerColor = Math.max(10, Math.ceil(dcCableMeters / 2));
+
+      // Seleção inteligente do rolo ideal: prioriza rolos comerciais padrão (<= 200m)
+      // mais próximos da metragem necessária, evitando bobinas industriais gigantescas de 2.000m
+      const pickCableForLength = (
+        cables: typeof dcCables,
+        color: "red" | "black",
+        neededMeters: number
+      ) => {
+        const matching = cables.filter((c) => c.color === color);
+        if (matching.length === 0) return null;
+        matching.sort((a, b) => {
+          const aRoll = a.roll_length_m || 25;
+          const bRoll = b.roll_length_m || 25;
+          const aIsNormal = aRoll <= 200;
+          const bIsNormal = bRoll <= 200;
+          if (aIsNormal && !bIsNormal) return -1;
+          if (!aIsNormal && bIsNormal) return 1;
+
+          const aCovers = aRoll >= neededMeters;
+          const bCovers = bRoll >= neededMeters;
+          if (aCovers && !bCovers) return -1;
+          if (!aCovers && bCovers) return 1;
+          return aRoll - bRoll;
+        });
+        return matching[0];
+      };
+
+      const redCable = pickCableForLength(dcCables, "red", metersPerColor);
+      const blackCable = pickCableForLength(dcCables, "black", metersPerColor);
 
       if (redCable && blackCable) {
         kitItems.push({
           product_id: redCable.id,
           product_name: redCable.name,
           brand_name: redCable.brandName,
-          quantity: Math.ceil(metersPerColor / redCable.roll_length_m),
+          quantity: Math.ceil(metersPerColor / (redCable.roll_length_m || 25)),
           unit_price: redCable.price,
         });
         kitItems.push({
           product_id: blackCable.id,
           product_name: blackCable.name,
           brand_name: blackCable.brandName,
-          quantity: Math.ceil(metersPerColor / blackCable.roll_length_m),
+          quantity: Math.ceil(metersPerColor / (blackCable.roll_length_m || 25)),
           unit_price: blackCable.price,
         });
       } else {
@@ -1202,7 +1262,7 @@ export class KitGenerationService {
           product_id: dcCables[0]!.id,
           product_name: dcCables[0]!.name,
           brand_name: dcCables[0]!.brandName,
-          quantity: Math.ceil(dcCableMeters / dcCables[0]!.roll_length_m),
+          quantity: Math.ceil(dcCableMeters / (dcCables[0]!.roll_length_m || 25)),
           unit_price: dcCables[0]!.price,
         });
       }
