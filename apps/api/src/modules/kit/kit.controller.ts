@@ -42,6 +42,7 @@ export class KitController {
         pinned_module_id: dto.pinned_module_id,
         pinned_inverter_id: dto.pinned_inverter_id,
         inverter_type: dto.inverter_type,
+        grid_topology: dto.grid_topology,
         string_box_id: dto.string_box_id,
       },
       dto.category,
@@ -67,6 +68,7 @@ export class KitController {
         pinned_module_id: dto.pinned_module_id,
         pinned_inverter_id: dto.pinned_inverter_id,
         inverter_type: dto.inverter_type,
+        grid_topology: dto.grid_topology,
         string_box_id: dto.string_box_id,
       },
       organizationId
@@ -92,6 +94,7 @@ export class KitController {
         pinned_module_id: dto.pinned_module_id,
         pinned_inverter_id: dto.pinned_inverter_id,
         inverter_type: dto.inverter_type,
+        grid_topology: dto.grid_topology,
         string_box_id: dto.string_box_id,
       },
       organizationId

@@ -66,6 +66,38 @@ export class KitGenerationService {
     private readonly prisma: PrismaService
   ) {}
 
+  private async resolveSource(rawId?: string): Promise<KitProductSource> {
+    if (!rawId) return {};
+
+    // 1. Tentar encontrar por ID na tabela Distributor
+    const distById = await this.prisma.distributor.findUnique({
+      where: { id: rawId },
+      select: { id: true, name: true },
+    });
+    if (distById) {
+      const supByName = await this.prisma.supplier.findFirst({
+        where: { name: { equals: distById.name, mode: "insensitive" } },
+        select: { id: true },
+      });
+      return { distributorId: distById.id, supplierId: supByName?.id };
+    }
+
+    // 2. Tentar encontrar por ID na tabela Supplier
+    const supById = await this.prisma.supplier.findUnique({
+      where: { id: rawId },
+      select: { id: true, name: true },
+    });
+    if (supById) {
+      const distByName = await this.prisma.distributor.findFirst({
+        where: { name: { equals: supById.name, mode: "insensitive" }, active: true },
+        select: { id: true },
+      });
+      return { supplierId: supById.id, distributorId: distByName?.id };
+    }
+
+    return { supplierId: rawId, distributorId: rawId };
+  }
+
   async generateSolarKit(
     input: GenerateKitInput,
     organizationId?: string
@@ -108,11 +140,13 @@ export class KitGenerationService {
       if (built) usedOwnStock = true;
     }
 
+    const resolvedSource = await this.resolveSource(input.supplier_id);
+
     if (!built) {
       built = await this.buildKit(
         input,
         roofType,
-        { supplierId: input.supplier_id, distributorId: input.supplier_id },
+        resolvedSource,
         preferredModuleBrands,
         preferredInverterBrands
       );
@@ -124,10 +158,38 @@ export class KitGenerationService {
       built = await this.buildKit(
         fallbackInput,
         roofType,
-        { supplierId: input.supplier_id, distributorId: input.supplier_id },
+        resolvedSource,
         preferredModuleBrands,
         preferredInverterBrands
       );
+    }
+
+    // Fallback em distribuidores ativos caso a fonte primária não tenha fechado o kit
+    if (!built) {
+      const activeDistributors = await this.prisma.distributor.findMany({
+        where: { active: true },
+        select: { id: true },
+      });
+      for (const dist of activeDistributors) {
+        built = await this.buildKit(
+          input,
+          roofType,
+          { distributorId: dist.id },
+          preferredModuleBrands,
+          preferredInverterBrands
+        );
+        if (built) break;
+        if (input.preferred_brand) {
+          built = await this.buildKit(
+            { ...input, preferred_brand: undefined },
+            roofType,
+            { distributorId: dist.id },
+            preferredModuleBrands,
+            preferredInverterBrands
+          );
+          if (built) break;
+        }
+      }
     }
 
     if (!built) {
@@ -190,10 +252,9 @@ export class KitGenerationService {
   ): Promise<DistributorTiersResult> {
     const roofType = input.roof_type || DEFAULT_ROOF_TYPE;
     const wantStock = Boolean(input.stock_owner_org_id);
-    const source: KitProductSource =
-      wantStock && organizationId
-        ? { stockOwnerOrgId: organizationId }
-        : { supplierId: input.supplier_id, distributorId: input.supplier_id };
+    let resolvedSource = await this.resolveSource(input.supplier_id);
+    let source: KitProductSource =
+      wantStock && organizationId ? { stockOwnerOrgId: organizationId } : resolvedSource;
 
     let preferredModuleBrands: string[] = [];
     let preferredInverterBrands: string[] = [];
@@ -234,7 +295,7 @@ export class KitGenerationService {
       baseBuilt = await this.buildKit(
         input,
         roofType,
-        { supplierId: input.supplier_id, distributorId: input.supplier_id },
+        source,
         preferredModuleBrands,
         preferredInverterBrands
       );
@@ -246,10 +307,44 @@ export class KitGenerationService {
       baseBuilt = await this.buildKit(
         fallbackInput,
         roofType,
-        { supplierId: input.supplier_id, distributorId: input.supplier_id },
+        source,
         preferredModuleBrands,
         preferredInverterBrands
       );
+    }
+
+    // Fallback dinâmico nos distribuidores ativos se ainda não fechou
+    if (!baseBuilt) {
+      const activeDistributors = await this.prisma.distributor.findMany({
+        where: { active: true },
+        select: { id: true },
+      });
+      for (const dist of activeDistributors) {
+        baseBuilt = await this.buildKit(
+          input,
+          roofType,
+          { distributorId: dist.id },
+          preferredModuleBrands,
+          preferredInverterBrands
+        );
+        if (baseBuilt) {
+          source = { distributorId: dist.id };
+          break;
+        }
+        if (input.preferred_brand) {
+          baseBuilt = await this.buildKit(
+            { ...input, preferred_brand: undefined },
+            roofType,
+            { distributorId: dist.id },
+            preferredModuleBrands,
+            preferredInverterBrands
+          );
+          if (baseBuilt) {
+            source = { distributorId: dist.id };
+            break;
+          }
+        }
+      }
     }
 
     if (!baseBuilt) {
@@ -561,7 +656,7 @@ export class KitGenerationService {
     const roofType = input.roof_type || DEFAULT_ROOF_TYPE;
     const source: KitProductSource = input.stock_owner_org_id
       ? { stockOwnerOrgId: input.stock_owner_org_id }
-      : { supplierId: input.supplier_id, distributorId: input.supplier_id };
+      : await this.resolveSource(input.supplier_id);
 
     const candidates = await this.findSwapCandidates(input.preferred_brand, source, category);
 

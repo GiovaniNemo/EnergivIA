@@ -92,7 +92,7 @@ export class ProductRepository {
       const supIds = source.supplierId
         ? await this.supplierProductRepo.getProductIdsBySupplier(source.supplierId)
         : [];
-      const distOffers = source.distributorId
+      let distOffers = source.distributorId
         ? await this.prisma.distributorProduct.findMany({
             where: {
               distributorId: source.distributorId,
@@ -102,10 +102,40 @@ export class ProductRepository {
             select: { productId: true },
           })
         : [];
+
+      // Fallback cruzado: se o ID recebido em supplierId na verdade for um distributorId ou vice-versa
+      if (supIds.length === 0 && distOffers.length === 0) {
+        const fallbackId = source.distributorId || source.supplierId;
+        if (fallbackId) {
+          distOffers = await this.prisma.distributorProduct.findMany({
+            where: {
+              distributorId: fallbackId,
+              active: true,
+              distributor: { active: true },
+            },
+            select: { productId: true },
+          });
+        }
+      }
+
       const distIds = distOffers.map((o) => o.productId);
       return Array.from(new Set([...supIds, ...distIds]));
     }
-    return null;
+
+    // Modo automático / sem restrição de fornecedor: retorna todos os produtos com ofertas ativas
+    const [activeDistRows, activeSupRows] = await Promise.all([
+      this.prisma.distributorProduct.findMany({
+        where: { active: true, distributor: { active: true } },
+        select: { productId: true },
+      }),
+      this.prisma.supplierProduct.findMany({
+        select: { productId: true },
+      }),
+    ]);
+    const validIds = Array.from(
+      new Set([...activeDistRows.map((d) => d.productId), ...activeSupRows.map((s) => s.productId)])
+    );
+    return validIds.length > 0 ? validIds : null;
   }
 
   private async attachPrices<T extends { id: string }>(
@@ -127,7 +157,7 @@ export class ProductRepository {
         ? await this.supplierProductRepo.getOffersBySupplier(source.supplierId, productIds)
         : new Map();
 
-      const distOffersRows = source.distributorId
+      let distOffersRows = source.distributorId
         ? await this.prisma.distributorProduct.findMany({
             where: {
               distributorId: source.distributorId,
@@ -137,6 +167,22 @@ export class ProductRepository {
             },
           })
         : [];
+
+      // Fallback cruzado se distOffersRows estiver vazio
+      if (supOffers.size === 0 && distOffersRows.length === 0) {
+        const fallbackId = source.distributorId || source.supplierId;
+        if (fallbackId) {
+          distOffersRows = await this.prisma.distributorProduct.findMany({
+            where: {
+              distributorId: fallbackId,
+              productId: { in: productIds },
+              active: true,
+              distributor: { active: true },
+            },
+          });
+        }
+      }
+
       const distOffers = new Map(
         distOffersRows.map((o) => [o.productId, { price: Number(o.price) }])
       );
@@ -175,7 +221,9 @@ export class ProductRepository {
       else if (offerSup) bestPrice = offerSup.price;
       else if (distPrice !== null) bestPrice = distPrice;
 
-      withPrice.push({ ...item, price: bestPrice ?? 0 } as T & { price: number });
+      if (bestPrice !== null && bestPrice > 0) {
+        withPrice.push({ ...item, price: bestPrice } as T & { price: number });
+      }
     }
     return withPrice;
   }
