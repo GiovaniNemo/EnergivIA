@@ -35,6 +35,7 @@ import {
   Boxes,
   Calculator,
   Sliders,
+  Building2,
 } from "lucide-react";
 import { buildSystemDealTitle } from "@/components/lead-detail/lead-detail-utils";
 import { Button } from "@/components/ui/button";
@@ -3463,7 +3464,7 @@ export const ProposalEconomicsModal = forwardRef<
                     <button
                       type="button"
                       className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs sm:text-sm transition cursor-pointer ${
-                        kitDraftSource.kind !== "own"
+                        kitDraftSource.kind === "auto"
                           ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
                           : "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
                       }`}
@@ -3479,7 +3480,52 @@ export const ProposalEconomicsModal = forwardRef<
                       Perfil do Integrador
                     </button>
 
-                    {/* Opção 2: Meu Estoque */}
+                    {/* Opção 2: Fornecedores / Distribuidores (Aldo Solar, Edeltec, etc.) */}
+                    {supplierOptions.map((supplier) => {
+                      const isSelected =
+                        kitDraftSource.kind === "supplier" &&
+                        kitDraftSource.id === supplier.supplier_id;
+                      return (
+                        <button
+                          key={supplier.supplier_id}
+                          type="button"
+                          disabled={!supplier.available}
+                          title={
+                            supplier.available
+                              ? `Montar kit com equipamentos de ${supplier.supplier_name}`
+                              : `${supplier.supplier_name} não possui estoque completo para esta potência/telhado`
+                          }
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs sm:text-sm transition ${
+                            isSelected
+                              ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300 shadow-xs"
+                              : supplier.available
+                                ? "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300 cursor-pointer"
+                                : "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-muted-foreground)] opacity-50"
+                          }`}
+                          onClick={() =>
+                            setProposalKitDraft((d) => ({
+                              ...d,
+                              source: { kind: "supplier", id: supplier.supplier_id },
+                              pins: {},
+                            }))
+                          }
+                        >
+                          <Building2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                          {supplier.supplier_name}
+                          {supplier.available && supplier.total != null ? (
+                            <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+                              ({formatCurrency(supplier.total)})
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:text-amber-300">
+                              incompleto
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+
+                    {/* Opção 3: Meu Estoque */}
                     {ownStockOption ? (
                       <button
                         type="button"
@@ -3491,7 +3537,7 @@ export const ProposalEconomicsModal = forwardRef<
                         }
                         className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs sm:text-sm transition ${
                           kitDraftSource.kind === "own"
-                            ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
+                            ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300 shadow-xs"
                             : ownStockOption.available
                               ? "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300 cursor-pointer"
                               : "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-muted-foreground)] opacity-60"

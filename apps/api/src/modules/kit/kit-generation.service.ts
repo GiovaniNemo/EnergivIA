@@ -489,6 +489,7 @@ export class KitGenerationService {
 
     const suppliers = await this.prisma.supplier.findMany({ select: { id: true, name: true } });
     const distributors = await this.prisma.distributor.findMany({
+      where: { active: true },
       select: { id: true, name: true },
     });
 
@@ -632,6 +633,7 @@ export class KitGenerationService {
     const currentSupplierId = input.stock_owner_org_id ? undefined : input.supplier_id;
     const suppliers = await this.prisma.supplier.findMany({ select: { id: true, name: true } });
     const distributors = await this.prisma.distributor.findMany({
+      where: { active: true },
       select: { id: true, name: true },
     });
 

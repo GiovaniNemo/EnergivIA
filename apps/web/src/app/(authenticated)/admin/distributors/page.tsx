@@ -86,11 +86,25 @@ export default function AdminDistributorsPage(): JSX.Element {
   const toggleActiveMutation = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>
       updateDistributor(id, { active }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
+    onMutate: async ({ id, active }) => {
+      await queryClient.cancelQueries({ queryKey: ["admin", "distributors"] });
+      const previousDistributors = queryClient.getQueryData<Distributor[]>([
+        "admin",
+        "distributors",
+      ]);
+      queryClient.setQueryData<Distributor[]>(["admin", "distributors"], (old) =>
+        (old ?? []).map((item) => (item.id === id ? { ...item, active } : item))
+      );
+      return { previousDistributors };
     },
-    onError: (err: Error) => {
+    onError: (err: Error, _vars, context) => {
+      if (context?.previousDistributors) {
+        queryClient.setQueryData(["admin", "distributors"], context.previousDistributors);
+      }
       alert("Erro ao alterar status do fornecedor: " + err.message);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "distributors"] });
     },
   });
 
@@ -619,7 +633,10 @@ export default function AdminDistributorsPage(): JSX.Element {
                               : "Pausado (produtos deste fornecedor NÃO aparecerão em cotações ou propostas)"
                           }
                         >
-                          <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+                          <Box
+                            onClick={(e) => e.stopPropagation()}
+                            sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}
+                          >
                             <Switch
                               size="small"
                               checked={isCotacaoActive}
