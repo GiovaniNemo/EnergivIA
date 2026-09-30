@@ -12,7 +12,6 @@ import {
   type BrandTierSelection,
 } from "@/lib/organizations-api";
 import { BrandTierSelector } from "@/components/ui/brand-tier-selector";
-import { useTheme } from "@/components/providers/theme-provider";
 import { triggerWelcomeIntroSplash } from "@/components/layout/welcome-intro-splash";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +60,6 @@ import {
   ExternalLink,
   SlidersHorizontal,
   Sun,
-  Moon,
   Cpu,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
@@ -276,7 +274,6 @@ function TypewriterHeader({ title, subtitle }: { title: string; subtitle: string
 
 export default function CreateOrganizationPage() {
   const router = useRouter();
-  const { resolvedTheme, setTheme } = useTheme();
   const {
     setCurrentOrganizationId,
     refetch,
@@ -403,6 +400,25 @@ export default function CreateOrganizationPage() {
         }
       })
       .catch(() => {});
+  }, []);
+
+  // Tela de onboarding exclusivamente em modo claro (fundo branco clean)
+  useEffect(() => {
+    const root = document.documentElement;
+    const hadDark = root.classList.contains("dark");
+    const previousColorScheme = root.style.colorScheme;
+    if (hadDark) {
+      root.classList.remove("dark");
+      root.classList.add("light");
+    }
+    root.style.colorScheme = "light";
+    return () => {
+      if (hadDark) {
+        root.classList.remove("light");
+        root.classList.add("dark");
+      }
+      root.style.colorScheme = previousColorScheme;
+    };
   }, []);
 
   useEffect(() => {
@@ -790,23 +806,6 @@ export default function CreateOrganizationPage() {
                 step === 2 ? "max-w-5xl" : "max-w-[760px]"
               }`}
             >
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-lg sm:h-9 sm:w-9 text-[var(--color-foreground)] hover:bg-[var(--color-accent)]"
-                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-                aria-label="Alternar tema"
-                title={
-                  resolvedTheme === "dark" ? "Mudar para modo claro" : "Mudar para modo escuro"
-                }
-              >
-                {resolvedTheme === "dark" ? (
-                  <Sun className="h-4 w-4 text-amber-400" />
-                ) : (
-                  <Moon className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
-                )}
-              </Button>
-
               <a
                 href="/auth/logout"
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-red-500"
