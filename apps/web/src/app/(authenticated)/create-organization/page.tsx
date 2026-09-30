@@ -243,7 +243,8 @@ function TypewriterHeader({ title, subtitle }: { title: string; subtitle: string
     setIsTyping(true);
 
     let idx = 0;
-    const speed = Math.max(18, Math.min(32, Math.floor(1100 / title.length)));
+    // Cadência mais suave e pausada para leitura confortável (~60ms por caractere)
+    const speed = 58;
     const interval = setInterval(() => {
       idx++;
       setDisplayedTitle(title.slice(0, idx));
