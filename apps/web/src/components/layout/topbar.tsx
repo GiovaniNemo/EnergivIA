@@ -171,7 +171,7 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-[60] flex h-16 shrink-0 items-center border-b border-[var(--color-border)] bg-[var(--color-card)]">
+    <header className="sticky top-0 z-[60] flex h-16 shrink-0 items-center border-b border-[var(--color-border)] bg-[var(--color-card)]/85 backdrop-blur-md transition-colors">
       {/* Brand logo container aligning with sidebar */}
       <div
         className={cn(

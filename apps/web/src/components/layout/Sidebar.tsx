@@ -212,7 +212,7 @@ export function Sidebar(): JSX.Element {
 
           {/* Efeito translúcido na parte inferior da sidebar (estilo landing page) */}
           <div
-            className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[var(--color-sidebar)] via-[var(--color-sidebar)]/70 to-transparent backdrop-blur-[2px]"
+            className="pointer-events-none absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[var(--color-sidebar)] via-[var(--color-sidebar)]/80 to-transparent backdrop-blur-[6px] [mask-image:linear-gradient(to_top,black_50%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_top,black_50%,transparent_100%)] z-10"
             aria-hidden="true"
           />
         </div>
