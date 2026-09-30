@@ -196,18 +196,26 @@ export function Sidebar(): JSX.Element {
           </div>
         ) : null}
 
-        <nav className="flex-1 space-y-4 overflow-y-auto pb-5 pt-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {sections.map((section) => (
-            <SidebarSection
-              key={section.key}
-              label={section.label}
-              items={section.items}
-              collapsed={collapsed}
-              isActive={isActive}
-              onItemClick={closeOnMobile}
-            />
-          ))}
-        </nav>
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          <nav className="flex-1 space-y-4 overflow-y-auto pb-10 pt-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            {sections.map((section) => (
+              <SidebarSection
+                key={section.key}
+                label={section.label}
+                items={section.items}
+                collapsed={collapsed}
+                isActive={isActive}
+                onItemClick={closeOnMobile}
+              />
+            ))}
+          </nav>
+
+          {/* Efeito translúcido na parte inferior da sidebar (estilo landing page) */}
+          <div
+            className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[var(--color-sidebar)] via-[var(--color-sidebar)]/70 to-transparent backdrop-blur-[2px]"
+            aria-hidden="true"
+          />
+        </div>
 
         {/* System Announcement Notice */}
         <SidebarNotice collapsed={collapsed} />

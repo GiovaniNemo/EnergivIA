@@ -570,6 +570,39 @@ video::-webkit-media-controls-panel {
   pointer-events: none !important;
 }
 
+/* Barra de rolagem estilizada e harmonizada com o tema escuro/claro */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333333;
+  border-radius: 9999px;
+  border: 2px solid var(--color-background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444444;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #222222;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border: 2px solid #222222;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
+}
+
 /* Utilitário global para ocultar scrollbars indesejadas mantendo a rolagem */
 .no-scrollbar::-webkit-scrollbar,
 .hide-scrollbar::-webkit-scrollbar,
@@ -591,5 +624,6 @@ html.hide-scrollbar,
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
 }
+
 
 
