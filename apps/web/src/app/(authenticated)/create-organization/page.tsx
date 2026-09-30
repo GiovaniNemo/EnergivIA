@@ -808,25 +808,22 @@ export default function CreateOrganizationPage() {
                 step === 2 ? "max-w-5xl" : "max-w-[760px]"
               }`}
             >
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg sm:h-9 sm:w-9 text-[var(--color-foreground)] hover:bg-[var(--color-accent)]"
                 onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-1 text-xs font-semibold text-[var(--color-foreground)] shadow-xs transition-colors hover:bg-[var(--color-muted)] cursor-pointer"
-                title={`Alternar para modo ${resolvedTheme === "dark" ? "claro" : "escuro"}`}
                 aria-label="Alternar tema"
+                title={
+                  resolvedTheme === "dark" ? "Mudar para modo claro" : "Mudar para modo escuro"
+                }
               >
                 {resolvedTheme === "dark" ? (
-                  <>
-                    <Sun className="h-3.5 w-3.5 text-amber-400" />
-                    <span>Modo Claro</span>
-                  </>
+                  <Sun className="h-4 w-4 text-amber-400" />
                 ) : (
-                  <>
-                    <Moon className="h-3.5 w-3.5 text-sky-600" />
-                    <span>Modo Escuro</span>
-                  </>
+                  <Moon className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
                 )}
-              </button>
+              </Button>
 
               <a
                 href="/auth/logout"
