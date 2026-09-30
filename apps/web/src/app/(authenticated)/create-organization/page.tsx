@@ -226,8 +226,8 @@ function OnboardingStepIcon(props: StepIconProps): JSX.Element {
       className={[
         "flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200",
         isOnPath
-          ? "bg-[linear-gradient(135deg,#1b5e7c_0%,#1f7f9b_55%,#39d3bf_100%)] text-white shadow-[0_6px_16px_rgba(31,127,155,0.2)]"
-          : "bg-white text-zinc-500 shadow-[inset_0_0_0_2px_#d4d4d8]",
+          ? "bg-[linear-gradient(135deg,#1b5e7c_0%,#1f7f9b_55%,#39d3bf_100%)] text-white shadow-[0_6px_16px_rgba(31,127,155,0.25)] ring-2 ring-emerald-500/20"
+          : "bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-2 border-zinc-200 dark:border-zinc-700 shadow-xs",
         className ?? "",
       ].join(" ")}
     >
@@ -403,24 +403,6 @@ export default function CreateOrganizationPage() {
         }
       })
       .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    const hadDark = root.classList.contains("dark");
-    const previousColorScheme = root.style.colorScheme;
-    if (hadDark) {
-      root.classList.remove("dark");
-      root.classList.add("light");
-    }
-    root.style.colorScheme = "light";
-    return () => {
-      if (hadDark) {
-        root.classList.remove("light");
-        root.classList.add("dark");
-      }
-      root.style.colorScheme = previousColorScheme;
-    };
   }, []);
 
   useEffect(() => {
@@ -801,8 +783,8 @@ export default function CreateOrganizationPage() {
           </div>
         </aside>
 
-        <main className="relative flex h-full min-h-0 flex-1 flex-col overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden bg-slate-50/60 dark:bg-zinc-950/90">
-          <div className="w-full border-b border-[var(--color-border)] bg-[var(--color-card)]/80 backdrop-blur-sm px-6 py-3">
+        <main className="relative flex h-full min-h-0 flex-1 flex-col overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0 bg-[var(--color-background)]">
+          <div className="w-full border-b border-[var(--color-border)] bg-[var(--color-card)]/90 backdrop-blur-md px-6 py-3">
             <div
               className={`mx-auto flex items-center justify-end gap-3 transition-all duration-300 ${
                 step === 2 ? "max-w-5xl" : "max-w-[760px]"
@@ -851,14 +833,14 @@ export default function CreateOrganizationPage() {
                           marginTop: "8px",
                           fontSize: "0.85rem",
                           fontWeight: 500,
-                          color: "#777777",
+                          color: "var(--color-muted-foreground)",
                         },
                         "& .MuiStepLabel-label.Mui-active": {
-                          color: "#777777",
-                          fontWeight: 600,
+                          color: "var(--color-foreground)",
+                          fontWeight: 700,
                         },
                         "& .MuiStepLabel-label.Mui-completed": {
-                          color: "#777777",
+                          color: "#1f7f9b",
                           fontWeight: 600,
                         },
                       }}
@@ -1269,8 +1251,8 @@ export default function CreateOrganizationPage() {
                   aria-hidden={step !== 3}
                 >
                   <div className="space-y-3 pt-2">
-                    <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-white p-3">
-                      <p className="text-sm font-medium text-[var(--color-foreground)]">
+                    <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
+                      <p className="text-sm font-semibold text-[var(--color-foreground)]">
                         Segmentos de atuação
                       </p>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1292,7 +1274,7 @@ export default function CreateOrganizationPage() {
                               className={`group flex min-h-[92px] w-full flex-col rounded-xl border p-3.5 text-left transition ${
                                 isSelected
                                   ? "border-[#1f7f9b] bg-[#1f7f9b]/10 shadow-[0_8px_18px_rgba(31,127,155,0.14)]"
-                                  : "border-zinc-200 bg-white hover:border-zinc-300"
+                                  : "border-zinc-200 dark:border-zinc-700/80 bg-zinc-50/50 dark:bg-zinc-800/50 hover:border-zinc-300 dark:hover:border-zinc-600"
                               }`}
                               aria-pressed={isSelected}
                             >
@@ -1302,16 +1284,16 @@ export default function CreateOrganizationPage() {
                                     className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                                       isSelected
                                         ? "bg-[linear-gradient(135deg,#1b5e7c_0%,#1f7f9b_55%,#39d3bf_100%)] text-white"
-                                        : "bg-zinc-100 text-zinc-600"
+                                        : "bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
                                     }`}
                                   >
                                     <Icon className="h-4 w-4" />
                                   </span>
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-semibold text-zinc-800">
+                                    <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
                                       {option.label}
                                     </p>
-                                    <p className="mt-0.5 text-xs text-zinc-600">
+                                    <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
                                       {option.description}
                                     </p>
                                   </div>
@@ -1327,12 +1309,12 @@ export default function CreateOrganizationPage() {
                       <p className="text-xs text-[var(--color-muted-foreground)]">
                         Selecione uma ou mais opções para personalizar seus templates.
                       </p>
-                      <p className="rounded-md bg-[#1f7f9b]/10 px-2 py-1 text-xs font-semibold text-[#0A4A63]">
+                      <p className="rounded-md bg-[#1f7f9b]/10 px-2 py-1 text-xs font-semibold text-[#0A4A63] dark:text-[#38bdf8]">
                         Vamos usar essas informações para sugerir templates para esses clientes.
                       </p>
                     </div>
-                    <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-white p-3">
-                      <p className="text-sm font-medium text-[var(--color-foreground)]">
+                    <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
+                      <p className="text-sm font-semibold text-[var(--color-foreground)]">
                         Tom de comunicação
                       </p>
                       <p className="text-xs text-[var(--color-muted-foreground)]">
@@ -1355,8 +1337,8 @@ export default function CreateOrganizationPage() {
                               onClick={() => setTemplateTone(option.label)}
                               className={`flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-center text-xs font-medium transition-colors ${
                                 isSelected
-                                  ? "bg-[#1f7f9b]/10 text-[#0A4A63] shadow-sm"
-                                  : "text-zinc-600 hover:text-zinc-800"
+                                  ? "bg-[#1f7f9b]/10 text-[#0A4A63] dark:text-[#38bdf8] shadow-sm font-bold"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
                               }`}
                             >
                               <Icon
@@ -1370,14 +1352,14 @@ export default function CreateOrganizationPage() {
                           );
                         })}
                       </div>
-                      <p className="text-xs font-semibold text-[#0A4A63]">
+                      <p className="text-xs font-semibold text-[#0A4A63] dark:text-[#38bdf8]">
                         {
                           communicationToneOptions.find((option) => option.label === templateTone)
                             ?.description
                         }
                       </p>
                     </div>
-                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-3">
+                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
                       <Input
                         label="Diferenciais da sua empresa (opcional)"
                         value={templateValueProposition}
@@ -1406,7 +1388,7 @@ export default function CreateOrganizationPage() {
                       </div>
                     </div>
 
-                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-3.5 space-y-2.5">
+                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm space-y-2.5">
                       <label className="flex items-start gap-3 cursor-pointer select-none">
                         <input
                           type="checkbox"
@@ -1417,7 +1399,7 @@ export default function CreateOrganizationPage() {
                           }}
                           className="mt-1 h-4 w-4 shrink-0 rounded border-zinc-300 text-[#0f6b86] focus:ring-[#0f6b86] cursor-pointer"
                         />
-                        <span className="text-xs text-zinc-700 leading-relaxed">
+                        <span className="text-xs text-[var(--color-foreground)] leading-relaxed">
                           Declaro que li e concordo com os{" "}
                           <button
                             type="button"
@@ -1425,7 +1407,7 @@ export default function CreateOrganizationPage() {
                               e.preventDefault();
                               setTermsModalOpen(true);
                             }}
-                            className="font-semibold text-[#0A4A63] underline hover:text-[#1f7f9b] transition-colors inline"
+                            className="font-semibold text-[#0f6b86] dark:text-[#38bdf8] underline hover:text-[#1f7f9b] transition-colors inline"
                           >
                             Termos de Uso
                           </button>{" "}
@@ -1433,7 +1415,7 @@ export default function CreateOrganizationPage() {
                           <Link
                             href="/privacidade"
                             target="_blank"
-                            className="font-semibold text-[#0A4A63] underline hover:text-[#1f7f9b] transition-colors inline"
+                            className="font-semibold text-[#0f6b86] dark:text-[#38bdf8] underline hover:text-[#1f7f9b] transition-colors inline"
                           >
                             Política de Privacidade
                           </Link>
@@ -1444,15 +1426,15 @@ export default function CreateOrganizationPage() {
                         </span>
                       </label>
 
-                      <div className="flex items-center justify-between pt-1 border-t border-zinc-100 text-[11px] text-zinc-500">
-                        <span className="flex items-center gap-1 text-emerald-700 font-medium">
+                      <div className="flex items-center justify-between pt-1 border-t border-[var(--color-border)] text-[11px] text-[var(--color-muted-foreground)]">
+                        <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
                           <ShieldCheck className="h-3.5 w-3.5" /> Conformidade LGPD, CDC e Marco
                           Civil
                         </span>
                         <button
                           type="button"
                           onClick={() => setTermsModalOpen(true)}
-                          className="inline-flex items-center gap-1 font-medium text-[#1f7f9b] hover:underline cursor-pointer"
+                          className="inline-flex items-center gap-1 font-medium text-[#0f6b86] dark:text-[#38bdf8] hover:underline cursor-pointer"
                         >
                           <FileText className="h-3 w-3" />
                           Ler termos na íntegra
