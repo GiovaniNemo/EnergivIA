@@ -223,31 +223,31 @@ export function BrandTierSelector({
   };
 
   return (
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 sm:p-5 shadow-sm space-y-4">
+    <div className="rounded-2xl border border-zinc-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 shadow-md shadow-zinc-200/50 dark:shadow-black/40 space-y-5 transition-all">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-zinc-200 dark:border-zinc-800">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3.5 border-b border-zinc-100 dark:border-zinc-800/80">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1f7f9b]/15 text-[#1f7f9b] dark:text-[#38bdf8]">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#1f7f9b]/20 to-[#1f7f9b]/5 text-[#1f7f9b] dark:text-[#38bdf8] border border-[#1f7f9b]/25 shadow-xs">
             {icon}
           </span>
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
-              <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50">
+              <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
                 {title}
               </h3>
               {isComplete ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/80 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-xs">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                   {totalAssigned} selecionada{totalAssigned > 1 ? "s" : ""}
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-950/70 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-950/80 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shadow-xs">
                   <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                   Mínimo 1 marca
                 </span>
               )}
             </div>
-            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mt-0.5">
+            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300 mt-0.5">
               {subtitle}
             </p>
           </div>
@@ -258,7 +258,7 @@ export function BrandTierSelector({
             type="button"
             onClick={handleAutoSuggest}
             disabled={availableBrands.length === 0}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#1f7f9b]/40 bg-[#1f7f9b]/10 hover:bg-[#1f7f9b]/20 px-3 py-1.5 text-xs sm:text-sm font-bold text-[#0A4A63] dark:text-[#38bdf8] transition cursor-pointer disabled:opacity-50 shadow-xs"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#1f7f9b]/40 bg-[#1f7f9b]/10 hover:bg-[#1f7f9b]/20 px-3.5 py-1.5 text-xs sm:text-sm font-bold text-[#0A4A63] dark:text-[#38bdf8] transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50 shadow-xs"
             title="Preencher automaticamente as categorias com as marcas disponíveis"
           >
             <Sparkles className="h-4 w-4" />
@@ -268,7 +268,7 @@ export function BrandTierSelector({
             <button
               type="button"
               onClick={handleClearAll}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-300 transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 px-3 py-1.5 text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               <span>Limpar</span>
@@ -278,16 +278,16 @@ export function BrandTierSelector({
       </div>
 
       {/* Marcas Disponíveis para Arrastar ou Selecionar */}
-      <div className="rounded-xl bg-zinc-50 dark:bg-zinc-900/80 p-3.5 sm:p-4 border border-zinc-200 dark:border-zinc-800 shadow-xs">
+      <div className="rounded-xl bg-slate-50/90 dark:bg-zinc-950/70 p-4 border border-zinc-200/80 dark:border-zinc-800/80 shadow-inner">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 mb-2.5">
           <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-            <GripVertical className="h-4 w-4 text-zinc-500" />
+            <GripVertical className="h-4 w-4 text-zinc-400" />
             Marcas ativas com itens cadastrados:
-            <span className="text-zinc-600 dark:text-zinc-400 font-normal text-xs">
+            <span className="text-zinc-500 dark:text-zinc-400 font-normal text-xs">
               (Arraste para um quadrante ou clique no botão +)
             </span>
           </span>
-          <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-200/70 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
+          <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 px-2.5 py-0.5 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-xs">
             {unassignedBrands.length} disponível(is)
           </span>
         </div>
@@ -312,7 +312,7 @@ export function BrandTierSelector({
                     draggable
                     onDragStart={(e) => handleDragStart(e, brand)}
                     onDragEnd={handleDragEnd}
-                    className="group inline-flex items-center gap-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-1.5 text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 shadow-xs hover:border-[#1f7f9b] hover:shadow-md cursor-grab active:cursor-grabbing transition"
+                    className="group inline-flex items-center gap-2 rounded-xl border border-zinc-300/80 dark:border-zinc-700 bg-white dark:bg-zinc-800/90 px-3 py-1.5 text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 shadow-xs hover:border-[#1f7f9b] hover:shadow-md cursor-grab active:cursor-grabbing transition-all hover:-translate-y-0.5"
                     title="Arraste para uma das categorias ou clique no + para adicionar"
                   >
                     <GripVertical className="h-3.5 w-3.5 text-zinc-400 group-hover:text-[#1f7f9b]" />
@@ -320,7 +320,7 @@ export function BrandTierSelector({
                     <button
                       type="button"
                       onClick={() => setQuickAddBrand(isMenuOpen ? null : brand)}
-                      className="ml-1 rounded bg-zinc-100 dark:bg-zinc-700 hover:bg-[#1f7f9b]/20 px-1.5 py-0.5 text-xs font-bold text-[#1f7f9b] transition cursor-pointer"
+                      className="ml-1 rounded-md bg-slate-100 dark:bg-zinc-700 hover:bg-[#1f7f9b]/20 px-1.5 py-0.5 text-xs font-bold text-[#1f7f9b] transition cursor-pointer"
                       title="Adicionar rapidamente a uma categoria"
                     >
                       +
@@ -329,7 +329,7 @@ export function BrandTierSelector({
 
                   {/* Mini menu de clique rápido para toque / velocidade */}
                   {isMenuOpen && (
-                    <div className="absolute top-full left-0 mt-1 z-30 w-44 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-1.5 shadow-xl space-y-1">
+                    <div className="absolute top-full left-0 mt-1.5 z-30 w-44 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-1.5 shadow-xl space-y-1 animate-in fade-in zoom-in-95">
                       <div className="text-xs font-bold text-zinc-700 dark:text-zinc-300 px-2 py-1 border-b border-zinc-100 dark:border-zinc-800">
                         Classificar como:
                       </div>
@@ -355,8 +355,8 @@ export function BrandTierSelector({
         )}
       </div>
 
-      {/* 3 Zonas de Destino (Drop Zones): Standard, Elite, Premium */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
+      {/* 3 Zonas de Destino (Drop Zones): Standard, Elite, Premium com Profundidade */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {TIERS.map((tier) => {
           const TierIcon = tier.icon;
           const tierBrands =
@@ -369,24 +369,26 @@ export function BrandTierSelector({
               onDragOver={(e) => handleDragOver(e, tier.key)}
               onDragLeave={() => setActiveDropZone(null)}
               onDrop={(e) => handleDrop(e, tier.key)}
-              className={`rounded-xl border transition-all p-4 flex flex-col justify-between min-h-[190px] ${
+              className={`rounded-2xl border transition-all p-4 sm:p-5 flex flex-col justify-between min-h-[210px] ${
                 isDropActive
-                  ? "border-[#1f7f9b] bg-[#1f7f9b]/10 ring-2 ring-[#1f7f9b]/40 shadow-lg"
-                  : "border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900/60 shadow-xs " +
+                  ? "border-[#1f7f9b] bg-[#1f7f9b]/10 ring-2 ring-[#1f7f9b]/40 shadow-xl scale-[1.01]"
+                  : "border-zinc-200/90 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-950/60 shadow-sm hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-700 " +
                     tier.borderHover
               }`}
             >
               <div>
                 {/* Cabeçalho do Tier */}
-                <div className="flex items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-zinc-200 dark:border-zinc-800">
+                <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-zinc-200/80 dark:border-zinc-800/80">
                   <div className="flex items-center gap-2">
-                    <TierIcon className="h-4 w-4 text-[#1f7f9b] dark:text-[#38bdf8]" />
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-xs">
+                      <TierIcon className="h-4 w-4 text-[#1f7f9b] dark:text-[#38bdf8]" />
+                    </span>
                     <span className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-50">
                       {tier.label}
                     </span>
                   </div>
                   <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-bold border ${tier.tagColor}`}
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-bold border shadow-xs ${tier.tagColor}`}
                   >
                     {tier.tag}
                   </span>
@@ -395,10 +397,10 @@ export function BrandTierSelector({
                 {/* Lista de Marcas neste Tier */}
                 {tierBrands.length === 0 ? (
                   <div
-                    className={`rounded-lg border border-dashed py-6 px-3 text-center transition ${
+                    className={`rounded-xl border border-dashed py-8 px-3 text-center transition ${
                       isDropActive
                         ? "border-[#1f7f9b] bg-[#1f7f9b]/15 text-[#1f7f9b] font-bold"
-                        : "border-zinc-300 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400"
+                        : "border-zinc-300 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 bg-white/60 dark:bg-zinc-900/40"
                     }`}
                   >
                     <span className="text-xs font-semibold">
@@ -412,17 +414,17 @@ export function BrandTierSelector({
                       return (
                         <div
                           key={brand}
-                          className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs sm:text-sm transition ${
+                          className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-xs sm:text-sm transition-all shadow-xs ${
                             isPriority
-                              ? "border-amber-400 bg-amber-50 dark:bg-amber-950/40 text-amber-950 dark:text-amber-100 ring-1 ring-amber-400 shadow-xs font-bold"
-                              : "border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold"
+                              ? "border-amber-400 bg-gradient-to-r from-amber-50 to-amber-100/40 dark:from-amber-950/60 dark:to-amber-900/30 text-amber-950 dark:text-amber-100 ring-1 ring-amber-400 shadow-sm font-bold"
+                              : "border-zinc-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold hover:border-zinc-300 dark:hover:border-zinc-600"
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <button
                               type="button"
                               onClick={() => handleSetPriority(brand)}
-                              className={`transition cursor-pointer p-1 rounded hover:bg-amber-200/60 dark:hover:bg-amber-800/60 ${
+                              className={`transition cursor-pointer p-1 rounded-md hover:bg-amber-200/60 dark:hover:bg-amber-800/60 ${
                                 isPriority
                                   ? "text-amber-500 fill-amber-500"
                                   : "text-zinc-400 hover:text-amber-500"
@@ -444,14 +446,14 @@ export function BrandTierSelector({
 
                           <div className="flex items-center gap-1.5 shrink-0">
                             {isPriority && (
-                              <span className="text-[11px] font-bold text-amber-900 dark:text-amber-200 bg-amber-200/80 dark:bg-amber-900/80 rounded-md px-2 py-0.5 border border-amber-300 dark:border-amber-700">
+                              <span className="text-[11px] font-bold text-amber-900 dark:text-amber-200 bg-amber-200/80 dark:bg-amber-900/80 rounded-md px-2 py-0.5 border border-amber-300 dark:border-amber-700 shadow-xs">
                                 Principal
                               </span>
                             )}
                             <button
                               type="button"
                               onClick={() => handleRemove(brand)}
-                              className="text-zinc-400 hover:text-rose-600 p-1 rounded cursor-pointer transition hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                              className="text-zinc-400 hover:text-rose-600 p-1 rounded-md cursor-pointer transition hover:bg-zinc-100 dark:hover:bg-zinc-700"
                               title="Remover marca"
                             >
                               <X className="h-3.5 w-3.5" />
@@ -473,8 +475,8 @@ export function BrandTierSelector({
         })}
       </div>
 
-      {/* Explicação da Prioridade e Fallback */}
-      <div className="flex items-start gap-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 p-3 sm:p-3.5 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800">
+      {/* Explicação da Prioridade e Fallback com Profundidade */}
+      <div className="flex items-start gap-3 rounded-xl bg-slate-50/90 dark:bg-zinc-950/70 p-3.5 sm:p-4 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs">
         <Star className="h-4 w-4 text-amber-500 fill-amber-500 shrink-0 mt-0.5" />
         <p className="leading-relaxed">
           {priority ? (

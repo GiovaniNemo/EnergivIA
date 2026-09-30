@@ -12,6 +12,7 @@ import {
   type BrandTierSelection,
 } from "@/lib/organizations-api";
 import { BrandTierSelector } from "@/components/ui/brand-tier-selector";
+import { useTheme } from "@/components/providers/theme-provider";
 import { triggerWelcomeIntroSplash } from "@/components/layout/welcome-intro-splash";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +61,7 @@ import {
   ExternalLink,
   SlidersHorizontal,
   Sun,
+  Moon,
   Cpu,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
@@ -274,6 +276,7 @@ function TypewriterHeader({ title, subtitle }: { title: string; subtitle: string
 
 export default function CreateOrganizationPage() {
   const router = useRouter();
+  const { resolvedTheme, setTheme } = useTheme();
   const {
     setCurrentOrganizationId,
     refetch,
@@ -798,13 +801,33 @@ export default function CreateOrganizationPage() {
           </div>
         </aside>
 
-        <main className="relative flex h-full min-h-0 flex-1 flex-col overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden bg-[var(--color-background)]">
-          <div className="w-full border-b border-[var(--color-border)] bg-[var(--color-card)]/50 px-6 py-3">
+        <main className="relative flex h-full min-h-0 flex-1 flex-col overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden bg-slate-50/60 dark:bg-zinc-950/90">
+          <div className="w-full border-b border-[var(--color-border)] bg-[var(--color-card)]/80 backdrop-blur-sm px-6 py-3">
             <div
-              className={`mx-auto flex items-center justify-end transition-all duration-300 ${
+              className={`mx-auto flex items-center justify-end gap-3 transition-all duration-300 ${
                 step === 2 ? "max-w-5xl" : "max-w-[760px]"
               }`}
             >
+              <button
+                type="button"
+                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-1 text-xs font-semibold text-[var(--color-foreground)] shadow-xs transition-colors hover:bg-[var(--color-muted)] cursor-pointer"
+                title={`Alternar para modo ${resolvedTheme === "dark" ? "claro" : "escuro"}`}
+                aria-label="Alternar tema"
+              >
+                {resolvedTheme === "dark" ? (
+                  <>
+                    <Sun className="h-3.5 w-3.5 text-amber-400" />
+                    <span>Modo Claro</span>
+                  </>
+                ) : (
+                  <>
+                    <Moon className="h-3.5 w-3.5 text-sky-600" />
+                    <span>Modo Escuro</span>
+                  </>
+                )}
+              </button>
+
               <a
                 href="/auth/logout"
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-red-500"
@@ -1133,7 +1156,7 @@ export default function CreateOrganizationPage() {
                     />
 
                     {/* Card Preço por kWp */}
-                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 sm:p-5 shadow-sm space-y-3.5">
+                    <div className="rounded-2xl border border-zinc-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 shadow-md shadow-zinc-200/50 dark:shadow-black/40 space-y-4 transition-all">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
                         <div className="flex items-center gap-2.5">
                           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1f7f9b]/15 text-[#1f7f9b] dark:text-[#38bdf8]">
