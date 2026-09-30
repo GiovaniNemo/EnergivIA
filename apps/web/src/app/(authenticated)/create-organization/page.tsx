@@ -402,9 +402,10 @@ export default function CreateOrganizationPage() {
       .catch(() => {});
   }, []);
 
-  // Tela de onboarding exclusivamente em modo claro (fundo branco clean)
+  // Tela de onboarding exclusivamente em modo claro (fundo branco clean) e sem barra de rolagem nativa visível
   useEffect(() => {
     const root = document.documentElement;
+    const body = document.body;
     const hadDark = root.classList.contains("dark");
     const previousColorScheme = root.style.colorScheme;
     if (hadDark) {
@@ -412,12 +413,17 @@ export default function CreateOrganizationPage() {
       root.classList.add("light");
     }
     root.style.colorScheme = "light";
+    root.classList.add("hide-scrollbar");
+    body.classList.add("hide-scrollbar");
+
     return () => {
       if (hadDark) {
         root.classList.remove("light");
         root.classList.add("dark");
       }
       root.style.colorScheme = previousColorScheme;
+      root.classList.remove("hide-scrollbar");
+      body.classList.remove("hide-scrollbar");
     };
   }, []);
 
@@ -701,9 +707,15 @@ export default function CreateOrganizationPage() {
   }
 
   return (
-    <section className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-[var(--color-background)]">
+    <section
+      data-hide-scrollbar="true"
+      className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-[var(--color-background)]"
+    >
       <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden lg:flex-row">
-        <aside className="hidden w-[380px] shrink-0 flex-col justify-between overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden border-r border-white/10 bg-[linear-gradient(135deg,#08324F_0%,#0A4A63_45%,#0FD3B4_115%)] px-7 py-8 lg:flex xl:w-[420px] xl:px-8 xl:py-10">
+        <aside
+          data-hide-scrollbar="true"
+          className="hidden w-[380px] shrink-0 flex-col justify-between overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden border-r border-white/10 bg-[linear-gradient(135deg,#08324F_0%,#0A4A63_45%,#0FD3B4_115%)] px-7 py-8 lg:flex xl:w-[420px] xl:px-8 xl:py-10"
+        >
           <div className="flex flex-1 flex-col justify-center space-y-6">
             <Link
               href="/?landing=1"
@@ -799,7 +811,10 @@ export default function CreateOrganizationPage() {
           </div>
         </aside>
 
-        <main className="relative flex h-full min-h-0 flex-1 flex-col overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0 bg-[var(--color-background)]">
+        <main
+          data-hide-scrollbar="true"
+          className="relative flex h-full min-h-0 flex-1 flex-col overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0 bg-[var(--color-background)]"
+        >
           <div className="w-full border-b border-[var(--color-border)] bg-[var(--color-card)]/90 backdrop-blur-md px-6 py-3">
             <div
               className={`mx-auto flex items-center justify-end gap-3 transition-all duration-300 ${
