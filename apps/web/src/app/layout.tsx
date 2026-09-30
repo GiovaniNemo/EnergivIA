@@ -119,12 +119,12 @@ export default function RootLayout({
   `;
 
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning className="no-scrollbar">
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body
-        className={`${inter.variable} ${roboto.variable} ${openSans.variable} ${montserrat.variable} ${plusJakarta.variable} font-sans antialiased min-h-screen flex flex-col bg-[var(--color-background)] text-[var(--color-foreground)]`}
+        className={`${inter.variable} ${roboto.variable} ${openSans.variable} ${montserrat.variable} ${plusJakarta.variable} font-sans antialiased min-h-screen flex flex-col bg-[var(--color-background)] text-[var(--color-foreground)] no-scrollbar`}
       >
         <div className="flex min-h-screen flex-1 flex-col">
           <GoogleAnalytics />

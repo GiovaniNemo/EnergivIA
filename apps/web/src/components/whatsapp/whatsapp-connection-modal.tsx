@@ -146,7 +146,7 @@ export function WhatsappConnectionModal({ open, onOpenChange }: WhatsappConnecti
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md overflow-y-auto max-h-[90vh] rounded-2xl p-6 scrollbar-thin">
+      <DialogContent className="max-w-md overflow-y-auto max-h-[90vh] rounded-2xl p-6 no-scrollbar">
         <DialogHeader className="space-y-2">
           <DialogTitle className="flex items-center gap-2 text-xl font-bold text-emerald-600 dark:text-emerald-400">
             {customWaLogoUrl ? (

@@ -901,7 +901,7 @@ export function AIAssistantWidget() {
                     value={input}
                     onChange={handleInputChange}
                     placeholder="Digite sua mensagem ou pergunta..."
-                    className="flex-1 max-h-40 min-h-[44px] bg-transparent text-sm text-white placeholder:text-gray-500 resize-none outline-none py-2 px-1.5 leading-relaxed overflow-y-auto scrollbar-thin"
+                    className="flex-1 max-h-40 min-h-[44px] bg-transparent text-sm text-white placeholder:text-gray-500 resize-none outline-none py-2 px-1.5 leading-relaxed overflow-y-auto no-scrollbar"
                     rows={1}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {

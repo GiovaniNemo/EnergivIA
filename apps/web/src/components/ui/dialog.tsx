@@ -258,7 +258,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
             ref,
             style: paperStyle,
             className: cn(
-              "relative my-auto box-border flex w-full max-h-[min(90vh,calc(100dvh-2rem))] flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3.5 pb-4 sm:rounded-2xl sm:px-6 sm:pb-6 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.55)] outline-none ring-1 ring-white/[0.06]",
+              "relative my-auto box-border flex w-full max-h-[min(90vh,calc(100dvh-2rem))] flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3.5 pb-4 sm:rounded-2xl sm:px-6 sm:pb-6 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.55)] outline-none ring-1 ring-white/[0.06] no-scrollbar",
               showCloseButton && !paperHasFlushPadding && "pt-12",
               !showCloseButton && "pt-6",
               allowOverflow ? "overflow-visible" : "overflow-hidden",
@@ -308,7 +308,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
         ) : null}
         <div
           className={cn(
-            "min-h-0 flex-1 p-1",
+            "min-h-0 flex-1 p-1 no-scrollbar",
             stickyChrome && "flex flex-col overflow-hidden",
             !stickyChrome &&
               (allowOverflow ? "overflow-visible" : "overflow-y-auto overscroll-contain")

@@ -50,7 +50,7 @@ export function EditorPanel({
   const tabStripRef = useRef<HTMLDivElement>(null);
   const tabClickScrollLockRef = useRef<string | null>(null);
   const tabClickScrollLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const syncActiveTabFromScrollRef = useRef<() => void>(() => { });
+  const syncActiveTabFromScrollRef = useRef<() => void>(() => {});
   const [activeQuickGroup, setActiveQuickGroup] = useState(GENERAL_GROUP_TITLE);
   const showRichTextEditor = selectedSection
     ? SECTION_USES_RICH_TEXT_EDITOR[selectedSection.type]
@@ -73,17 +73,17 @@ export function EditorPanel({
   const groupedFields =
     selectedSection != null
       ? SECTION_FIELD_CONFIG[selectedSection.type].reduce<
-        Array<{ title: string; fields: DynamicField[] }>
-      >((acc, field) => {
-        const groupTitle = field.group ?? GENERAL_GROUP_TITLE;
-        const existing = acc.find((entry) => entry.title === groupTitle);
-        if (existing) {
-          existing.fields.push(field);
-        } else {
-          acc.push({ title: groupTitle, fields: [field] });
-        }
-        return acc;
-      }, [])
+          Array<{ title: string; fields: DynamicField[] }>
+        >((acc, field) => {
+          const groupTitle = field.group ?? GENERAL_GROUP_TITLE;
+          const existing = acc.find((entry) => entry.title === groupTitle);
+          if (existing) {
+            existing.fields.push(field);
+          } else {
+            acc.push({ title: groupTitle, fields: [field] });
+          }
+          return acc;
+        }, [])
       : [];
 
   const generalFieldGroup = groupedFields.find((group) => group.title === GENERAL_GROUP_TITLE);
@@ -161,7 +161,7 @@ export function EditorPanel({
     });
 
     return () => {
-      syncActiveTabFromScrollRef.current = () => { };
+      syncActiveTabFromScrollRef.current = () => {};
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
       container.removeEventListener("scroll", updateActiveFromScroll);
@@ -261,7 +261,7 @@ export function EditorPanel({
 
       <div
         ref={scrollContainerRef}
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pr-4 [scrollbar-gutter:stable]"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pr-4 no-scrollbar"
       >
         {showRichTextEditor ? (
           <TipTapEditorSection
@@ -292,10 +292,11 @@ export function EditorPanel({
                           onClick={() => {
                             scrollToGroup(group);
                           }}
-                          className={`relative min-w-0 flex-1 px-2 py-2.5 text-center transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-card)] ${active
+                          className={`relative min-w-0 flex-1 px-2 py-2.5 text-center transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-card)] ${
+                            active
                               ? "bg-[var(--color-accent)] text-[var(--color-foreground)]"
                               : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-                            }`}
+                          }`}
                         >
                           <span className="relative z-[1] line-clamp-2 text-[13px] font-medium leading-tight tracking-wide">
                             {group}

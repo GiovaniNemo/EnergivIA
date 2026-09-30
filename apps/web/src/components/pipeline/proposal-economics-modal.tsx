@@ -2116,7 +2116,7 @@ export const ProposalEconomicsModal = forwardRef<
                 abordagem comercial com dados claros.
               </p>
             </DialogHeader>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-8 sm:py-6">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-8 sm:py-6 no-scrollbar">
               <div className="space-y-5">
                 {proposalError ? (
                   <p className="text-sm text-red-600 dark:text-red-400">{proposalError}</p>
