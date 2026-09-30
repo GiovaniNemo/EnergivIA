@@ -574,16 +574,13 @@ export default function CreateOrganizationPage() {
         (inverterTiers.elite?.length || 0) +
         (inverterTiers.premium?.length || 0);
 
-      if (availableBrands.modules.length >= 3 && modTotal < 3) {
-        setError(
-          "Selecione no mínimo 3 marcas de módulos distribuídas entre Standard, Elite e Premium."
-        );
+      // Apenas exige no mínimo 1 marca caso existam marcas ativas disponíveis no catálogo
+      if (availableBrands.modules.length > 0 && modTotal < 1) {
+        setError("Selecione pelo menos 1 marca de módulos para continuar.");
         return;
       }
-      if (availableBrands.inverters.length >= 3 && invTotal < 3) {
-        setError(
-          "Selecione no mínimo 3 marcas de inversores distribuídas entre Standard, Elite e Premium."
-        );
+      if (availableBrands.inverters.length > 0 && invTotal < 1) {
+        setError("Selecione pelo menos 1 marca de inversores para continuar.");
         return;
       }
 

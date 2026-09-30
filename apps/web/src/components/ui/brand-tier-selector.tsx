@@ -93,8 +93,7 @@ export function BrandTierSelector({
   const unassignedBrands = availableBrands.filter((b) => !assignedBrands.has(b));
   const totalAssigned = assignedBrands.size;
 
-  const isComplete =
-    standard.length > 0 && elite.length > 0 && premium.length > 0 && totalAssigned >= 3;
+  const isComplete = totalAssigned >= 1;
 
   const handleAssign = (brand: string, targetTier: TierKey) => {
     // Remove brand from wherever it was
@@ -239,12 +238,12 @@ export function BrandTierSelector({
               {isComplete ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                  Pronto
+                  {totalAssigned} selecionada{totalAssigned > 1 ? "s" : ""}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-950/70 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
                   <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                  {totalAssigned}/3 configuradas
+                  Mínimo 1 marca
                 </span>
               )}
             </div>
