@@ -453,8 +453,13 @@ export class KitGenerationService {
     if (economicCandidateModule) {
       economicBuilt = await tryBuild({
         moduleId: economicCandidateModule.id,
-        inverterId: sortedString[0]?.id,
-        inverterType: "string",
+        inverterId:
+          input.inverter_type === "microinverter"
+            ? sortedMicro[0]?.id
+            : input.inverter_type === "hybrid"
+              ? sortedHybrid[0]?.id
+              : sortedString[0]?.id,
+        inverterType: input.inverter_type || "string",
       });
     }
     if (!economicBuilt) economicBuilt = baseBuilt;
@@ -467,36 +472,77 @@ export class KitGenerationService {
     ) {
       costBenefitBuilt = await tryBuild({
         moduleId: costBenefitCandidateModule.id,
+        inverterType: input.inverter_type,
       });
     }
     if (!costBenefitBuilt) costBenefitBuilt = baseBuilt;
 
-    // 5. Assemble Premium kit
+    // 5. Assemble Premium kit (respecting requested inverter_type)
     let premiumBuilt: BuiltKit | null = null;
-    if (sortedMicro.length > 0) {
-      premiumBuilt = await tryBuild({
-        moduleId: premiumCandidateModule?.id,
-        inverterId: sortedMicro[0]?.id,
-        inverterType: "microinverter",
-      });
-    } else if (sortedHybrid.length > 0) {
-      premiumBuilt = await tryBuild({
-        moduleId: premiumCandidateModule?.id,
-        inverterId: sortedHybrid[0]?.id,
-        inverterType: "hybrid",
-      });
-    } else if (sortedString.length > 1) {
-      premiumBuilt = await tryBuild({
-        moduleId: premiumCandidateModule?.id,
-        inverterId: sortedString[sortedString.length - 1]?.id,
-      });
-    } else if (
-      premiumCandidateModule &&
-      premiumCandidateModule.id !== economicCandidateModule?.id
-    ) {
-      premiumBuilt = await tryBuild({
-        moduleId: premiumCandidateModule.id,
-      });
+    const requestedInverterType = input.inverter_type;
+
+    if (requestedInverterType === "string") {
+      // User specifically wants String inverter: NEVER inject microinverters or hybrids!
+      if (sortedString.length > 1) {
+        premiumBuilt = await tryBuild({
+          moduleId: premiumCandidateModule?.id,
+          inverterId: sortedString[sortedString.length - 1]?.id,
+          inverterType: "string",
+        });
+      } else if (
+        premiumCandidateModule &&
+        premiumCandidateModule.id !== economicCandidateModule?.id
+      ) {
+        premiumBuilt = await tryBuild({
+          moduleId: premiumCandidateModule.id,
+          inverterType: "string",
+        });
+      }
+    } else if (requestedInverterType === "microinverter") {
+      // User specifically wants Microinverter
+      if (sortedMicro.length > 0) {
+        premiumBuilt = await tryBuild({
+          moduleId: premiumCandidateModule?.id,
+          inverterId: sortedMicro[0]?.id,
+          inverterType: "microinverter",
+        });
+      }
+    } else if (requestedInverterType === "hybrid") {
+      // User specifically wants Hybrid
+      if (sortedHybrid.length > 0) {
+        premiumBuilt = await tryBuild({
+          moduleId: premiumCandidateModule?.id,
+          inverterId: sortedHybrid[0]?.id,
+          inverterType: "hybrid",
+        });
+      }
+    } else {
+      // No specific inverter type enforced: default premium hierarchy
+      if (sortedMicro.length > 0) {
+        premiumBuilt = await tryBuild({
+          moduleId: premiumCandidateModule?.id,
+          inverterId: sortedMicro[0]?.id,
+          inverterType: "microinverter",
+        });
+      } else if (sortedHybrid.length > 0) {
+        premiumBuilt = await tryBuild({
+          moduleId: premiumCandidateModule?.id,
+          inverterId: sortedHybrid[0]?.id,
+          inverterType: "hybrid",
+        });
+      } else if (sortedString.length > 1) {
+        premiumBuilt = await tryBuild({
+          moduleId: premiumCandidateModule?.id,
+          inverterId: sortedString[sortedString.length - 1]?.id,
+        });
+      } else if (
+        premiumCandidateModule &&
+        premiumCandidateModule.id !== economicCandidateModule?.id
+      ) {
+        premiumBuilt = await tryBuild({
+          moduleId: premiumCandidateModule.id,
+        });
+      }
     }
     if (!premiumBuilt) premiumBuilt = baseBuilt;
 
