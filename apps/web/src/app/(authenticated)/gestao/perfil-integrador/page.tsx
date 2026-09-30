@@ -6,9 +6,10 @@ import {
   updateOrganization,
   getDistributorAvailableBrands,
   type DistributorAvailableBrands,
+  type BrandTierSelection,
 } from "@/lib/organizations-api";
+import { BrandTierSelector } from "@/components/ui/brand-tier-selector";
 import { Button } from "@/components/ui/button";
-import { LoadingState } from "@/components/ui/loading-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Alert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
@@ -16,7 +17,6 @@ import {
   SlidersHorizontal,
   Sun,
   Cpu,
-  Check,
   CheckCircle2,
   Save,
   DollarSign,
@@ -39,8 +39,18 @@ export default function PerfilIntegradorPage(): JSX.Element {
 
   // Form states
   const [defaultKwpRate, setDefaultKwpRate] = useState<number>(2800);
-  const [selectedModuleBrands, setSelectedModuleBrands] = useState<string[]>([]);
-  const [selectedInverterBrands, setSelectedInverterBrands] = useState<string[]>([]);
+  const [moduleTiers, setModuleTiers] = useState<BrandTierSelection>({
+    standard: [],
+    elite: [],
+    premium: [],
+    priority: null,
+  });
+  const [inverterTiers, setInverterTiers] = useState<BrandTierSelection>({
+    standard: [],
+    elite: [],
+    premium: [],
+    priority: null,
+  });
 
   const [snack, setSnack] = useState<{
     severity: "success" | "error" | "info";
@@ -76,11 +86,27 @@ export default function PerfilIntegradorPage(): JSX.Element {
       ) {
         setDefaultKwpRate(Number(currentOrganization.defaultKwpRate) || 2800);
       }
-      if (Array.isArray(currentOrganization.preferredModuleBrands)) {
-        setSelectedModuleBrands([...currentOrganization.preferredModuleBrands]);
+      if (currentOrganization.moduleBrandTiers) {
+        setModuleTiers(currentOrganization.moduleBrandTiers);
+      } else if (Array.isArray(currentOrganization.preferredModuleBrands)) {
+        const m = currentOrganization.preferredModuleBrands;
+        setModuleTiers({
+          standard: m[0] ? [m[0]] : [],
+          elite: m[1] ? [m[1]] : [],
+          premium: m[2] ? [m[2]] : [],
+          priority: m[0] || null,
+        });
       }
-      if (Array.isArray(currentOrganization.preferredInverterBrands)) {
-        setSelectedInverterBrands([...currentOrganization.preferredInverterBrands]);
+      if (currentOrganization.inverterBrandTiers) {
+        setInverterTiers(currentOrganization.inverterBrandTiers);
+      } else if (Array.isArray(currentOrganization.preferredInverterBrands)) {
+        const inv = currentOrganization.preferredInverterBrands;
+        setInverterTiers({
+          standard: inv[0] ? [inv[0]] : [],
+          elite: inv[1] ? [inv[1]] : [],
+          premium: inv[2] ? [inv[2]] : [],
+          priority: inv[0] || null,
+        });
       }
     }
   }, [currentOrganization]);
@@ -97,14 +123,25 @@ export default function PerfilIntegradorPage(): JSX.Element {
 
     const rate = Math.max(500, Math.min(25000, Number(defaultKwpRate) || 2800));
 
+    const compileBrands = (tiers: BrandTierSelection) => {
+      const list: string[] = [];
+      if (tiers.priority) list.push(tiers.priority);
+      [...tiers.standard, ...tiers.elite, ...tiers.premium].forEach((b) => {
+        if (!list.includes(b)) list.push(b);
+      });
+      return list;
+    };
+
     setSaving(true);
     try {
       await updateOrganization(
         currentOrganizationId,
         {
           defaultKwpRate: rate,
-          preferredModuleBrands: selectedModuleBrands,
-          preferredInverterBrands: selectedInverterBrands,
+          moduleBrandTiers: moduleTiers,
+          inverterBrandTiers: inverterTiers,
+          preferredModuleBrands: compileBrands(moduleTiers),
+          preferredInverterBrands: compileBrands(inverterTiers),
         },
         currentOrganizationId
       );
@@ -122,20 +159,6 @@ export default function PerfilIntegradorPage(): JSX.Element {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleToggleModuleBrand = (brand: string) => {
-    if (!canEdit) return;
-    setSelectedModuleBrands((prev) =>
-      prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
-    );
-  };
-
-  const handleToggleInverterBrand = (brand: string) => {
-    if (!canEdit) return;
-    setSelectedInverterBrands((prev) =>
-      prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
-    );
   };
 
   // Preview de orçamentos com o kWp atual
@@ -307,215 +330,28 @@ export default function PerfilIntegradorPage(): JSX.Element {
       </Card>
 
       {/* CARD 2: PREFERÊNCIA DE MARCAS DE MÓDULOS */}
-      <Card className="border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                <Sun className="h-5 w-5" />
-              </span>
-              <div>
-                <CardTitle className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50">
-                  Marcas de Módulos (Painéis Solares)
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal mt-0.5">
-                  Marcas homologadas com produtos ativos no catálogo
-                </CardDescription>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-300">
-                {selectedModuleBrands.length} de {availableBrands.modules.length} selecionada(s)
-              </span>
-              {canEdit && availableBrands.modules.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedModuleBrands.length === availableBrands.modules.length) {
-                      setSelectedModuleBrands([]);
-                    } else {
-                      setSelectedModuleBrands([...availableBrands.modules]);
-                    }
-                  }}
-                  className="text-xs sm:text-sm font-semibold text-[#1f7f9b] dark:text-[#38bdf8] hover:underline cursor-pointer"
-                >
-                  {selectedModuleBrands.length === availableBrands.modules.length
-                    ? "Limpar Seleção"
-                    : "Selecionar Todas"}
-                </button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {loadingBrands ? (
-            <div className="py-6 flex items-center justify-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
-              <LoadingState label="Carregando marcas ativas do catálogo..." compact />
-            </div>
-          ) : availableBrands.modules.length === 0 ? (
-            <p className="py-4 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 italic">
-              Nenhuma marca específica encontrada no momento. Todas as marcas disponíveis serão
-              cotadas normalmente.
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-              {availableBrands.modules.map((brand) => {
-                const isSelected = selectedModuleBrands.includes(brand);
-                return (
-                  <button
-                    key={brand}
-                    type="button"
-                    disabled={!canEdit}
-                    onClick={() => handleToggleModuleBrand(brand)}
-                    className={`flex items-center justify-between rounded-xl border p-3 text-left transition cursor-pointer ${
-                      isSelected
-                        ? "border-[#1f7f9b] bg-[#1f7f9b]/15 dark:bg-[#1f7f9b]/25 text-[#0A4A63] dark:text-[#38bdf8] shadow-xs font-semibold ring-1 ring-[#1f7f9b]/40"
-                        : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 text-zinc-800 dark:text-zinc-200 hover:border-[#1f7f9b]/60 dark:hover:border-[#1f7f9b]/60 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-zinc-100"
-                    }`}
-                  >
-                    <span className="text-xs sm:text-sm font-medium truncate mr-2">{brand}</span>
-                    <span
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition ${
-                        isSelected
-                          ? "bg-[#1f7f9b] text-white"
-                          : "border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800"
-                      }`}
-                    >
-                      {isSelected ? <Check className="h-3 w-3 stroke-[3]" /> : null}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          <div className="rounded-xl bg-zinc-100/70 dark:bg-zinc-900/60 p-3.5 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800">
-            {selectedModuleBrands.length > 0 ? (
-              <p>
-                <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
-                  Marcas prioritárias ativas:
-                </strong>{" "}
-                O sistema priorizará kits e propostas compostos por{" "}
-                {selectedModuleBrands.join(", ")}.
-              </p>
-            ) : (
-              <p>
-                <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
-                  Modo Padrão Global:
-                </strong>{" "}
-                Nenhuma restrição aplicada. Todas as marcas ativas no catálogo serão cotadas
-                normalmente conforme melhor preço e disponibilidade de estoque.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <BrandTierSelector
+        title="Preferência de Marcas de Módulos"
+        subtitle="Organize as marcas ativas por categoria (Standard, Elite, Premium) e defina a prioridade de cotação"
+        icon={<Sun className="h-5 w-5" />}
+        categoryLabel="módulos"
+        availableBrands={availableBrands.modules}
+        value={moduleTiers}
+        onChange={setModuleTiers}
+        loading={loadingBrands}
+      />
 
       {/* CARD 3: PREFERÊNCIA DE MARCAS DE INVERSORES */}
-      <Card className="border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/15 text-sky-600 dark:text-sky-400">
-                <Cpu className="h-5 w-5" />
-              </span>
-              <div>
-                <CardTitle className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50">
-                  Marcas de Inversores & Microinversores
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal mt-0.5">
-                  Inversores string, híbridos e microinversores disponíveis no catálogo
-                </CardDescription>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-300">
-                {selectedInverterBrands.length} de {availableBrands.inverters.length} selecionada(s)
-              </span>
-              {canEdit && availableBrands.inverters.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedInverterBrands.length === availableBrands.inverters.length) {
-                      setSelectedInverterBrands([]);
-                    } else {
-                      setSelectedInverterBrands([...availableBrands.inverters]);
-                    }
-                  }}
-                  className="text-xs sm:text-sm font-semibold text-[#1f7f9b] dark:text-[#38bdf8] hover:underline cursor-pointer"
-                >
-                  {selectedInverterBrands.length === availableBrands.inverters.length
-                    ? "Limpar Seleção"
-                    : "Selecionar Todas"}
-                </button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {loadingBrands ? (
-            <div className="py-6 flex items-center justify-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
-              <LoadingState label="Carregando marcas ativas do catálogo..." compact />
-            </div>
-          ) : availableBrands.inverters.length === 0 ? (
-            <p className="py-4 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 italic">
-              Nenhuma marca específica de inversor encontrada no momento. Todas as marcas
-              disponíveis serão cotadas normalmente.
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-              {availableBrands.inverters.map((brand) => {
-                const isSelected = selectedInverterBrands.includes(brand);
-                return (
-                  <button
-                    key={brand}
-                    type="button"
-                    disabled={!canEdit}
-                    onClick={() => handleToggleInverterBrand(brand)}
-                    className={`flex items-center justify-between rounded-xl border p-3 text-left transition cursor-pointer ${
-                      isSelected
-                        ? "border-[#1f7f9b] bg-[#1f7f9b]/15 dark:bg-[#1f7f9b]/25 text-[#0A4A63] dark:text-[#38bdf8] shadow-xs font-semibold ring-1 ring-[#1f7f9b]/40"
-                        : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 text-zinc-800 dark:text-zinc-200 hover:border-[#1f7f9b]/60 dark:hover:border-[#1f7f9b]/60 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-zinc-100"
-                    }`}
-                  >
-                    <span className="text-xs sm:text-sm font-medium truncate mr-2">{brand}</span>
-                    <span
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition ${
-                        isSelected
-                          ? "bg-[#1f7f9b] text-white"
-                          : "border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800"
-                      }`}
-                    >
-                      {isSelected ? <Check className="h-3 w-3 stroke-[3]" /> : null}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          <div className="rounded-xl bg-zinc-100/70 dark:bg-zinc-900/60 p-3.5 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800">
-            {selectedInverterBrands.length > 0 ? (
-              <p>
-                <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
-                  Marcas prioritárias ativas:
-                </strong>{" "}
-                O sistema priorizará inversores de {selectedInverterBrands.join(", ")}.
-              </p>
-            ) : (
-              <p>
-                <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
-                  Modo Padrão Global:
-                </strong>{" "}
-                Nenhuma restrição aplicada. Todos os inversores homologados do catálogo serão
-                considerados para escolha automática do melhor custo-benefício.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <BrandTierSelector
+        title="Preferência de Marcas de Inversores"
+        subtitle="Organize os inversores por categoria de proposta (Standard, Elite, Premium) e defina a prioridade"
+        icon={<Cpu className="h-5 w-5" />}
+        categoryLabel="inversores"
+        availableBrands={availableBrands.inverters}
+        value={inverterTiers}
+        onChange={setInverterTiers}
+        loading={loadingBrands}
+      />
 
       {/* Botão de ação fixo na base */}
       <div className="flex items-center justify-end gap-3 pt-3">

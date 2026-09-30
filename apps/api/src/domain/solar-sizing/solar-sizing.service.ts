@@ -143,15 +143,20 @@ export function sizeSolarSystem(input: SolarSizingInput): SizingResult | null {
     return powerMinOk && powerMaxOk;
   });
   const preferredInvBrands = input.preferred_inverter_brands ?? [];
-  const matchesInv = (brand: string) =>
-    preferredInvBrands.length === 0 ||
-    preferredInvBrands.some((p) => brand.toLowerCase().includes(p.toLowerCase()));
+  const getInvRank = (brand: string) => {
+    if (preferredInvBrands.length === 0) return 0;
+    const bLower = brand.toLowerCase().trim();
+    const idx = preferredInvBrands.findIndex(
+      (p) => bLower.includes(p.toLowerCase()) || p.toLowerCase().includes(bLower)
+    );
+    return idx === -1 ? 9999 : idx;
+  };
 
   candidateInverters.sort((a, b) => {
     if (preferredInvBrands.length > 0) {
-      const aPref = matchesInv(a.brandName) ? 1 : 0;
-      const bPref = matchesInv(b.brandName) ? 1 : 0;
-      if (aPref !== bPref) return bPref - aPref;
+      const aRank = getInvRank(a.brandName);
+      const bRank = getInvRank(b.brandName);
+      if (aRank !== bRank) return aRank - bRank;
     }
     // Ordena pela menor diferença entre a potência do inversor e a potência do sistema
     return a.specs.max_dc_power - b.specs.max_dc_power;

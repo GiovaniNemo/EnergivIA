@@ -129,6 +129,53 @@ function readStringArraySetting(settings: unknown, key: string): string[] {
   return [];
 }
 
+export interface BrandTierData {
+  standard: string[];
+  elite: string[];
+  premium: string[];
+  priority: string | null;
+}
+
+function readTierSetting(settings: unknown, key: string): BrandTierData | null {
+  if (!settings || typeof settings !== "object") return null;
+  const raw = (settings as Record<string, unknown>)[key];
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const rawStd = r["standard"];
+  const standard = Array.isArray(rawStd) ? rawStd.map((s) => String(s).trim()).filter(Boolean) : [];
+  const rawElite = r["elite"];
+  const elite = Array.isArray(rawElite)
+    ? rawElite.map((s) => String(s).trim()).filter(Boolean)
+    : [];
+  const rawPrem = r["premium"];
+  const premium = Array.isArray(rawPrem)
+    ? rawPrem.map((s) => String(s).trim()).filter(Boolean)
+    : [];
+  const rawPriority = r["priority"];
+  const priority =
+    typeof rawPriority === "string" && rawPriority.trim() ? rawPriority.trim() : null;
+  return { standard, elite, premium, priority };
+}
+
+function compilePreferredFromTiers(
+  tiers?: { standard?: string[]; elite?: string[]; premium?: string[]; priority?: string | null },
+  fallback?: string[]
+): string[] | undefined {
+  if (!tiers) return fallback;
+  const list: string[] = [];
+  if (tiers.priority && tiers.priority.trim()) {
+    list.push(tiers.priority.trim());
+  }
+  const allTiers = [...(tiers.standard || []), ...(tiers.elite || []), ...(tiers.premium || [])];
+  for (const b of allTiers) {
+    const trimmed = b.trim();
+    if (trimmed && !list.includes(trimmed)) {
+      list.push(trimmed);
+    }
+  }
+  return list.length > 0 ? list : fallback;
+}
+
 function buildTemplateSettings(dto: {
   templateBusinessSegment?: string;
   templateRegion?: string;
@@ -300,12 +347,22 @@ export class OrganizationsService {
           ...(dto.state ? { state: dto.state.trim() } : {}),
           ...templateSettings,
           ...(dto.defaultKwpRate !== undefined ? { defaultKwpRate: dto.defaultKwpRate } : {}),
-          ...(dto.preferredModuleBrands
-            ? { preferredModuleBrands: dto.preferredModuleBrands }
-            : {}),
-          ...(dto.preferredInverterBrands
-            ? { preferredInverterBrands: dto.preferredInverterBrands }
-            : {}),
+          ...(() => {
+            const modPref = compilePreferredFromTiers(
+              dto.moduleBrandTiers,
+              dto.preferredModuleBrands
+            );
+            const invPref = compilePreferredFromTiers(
+              dto.inverterBrandTiers,
+              dto.preferredInverterBrands
+            );
+            return {
+              ...(modPref ? { preferredModuleBrands: modPref } : {}),
+              ...(invPref ? { preferredInverterBrands: invPref } : {}),
+              ...(dto.moduleBrandTiers ? { moduleBrandTiers: dto.moduleBrandTiers } : {}),
+              ...(dto.inverterBrandTiers ? { inverterBrandTiers: dto.inverterBrandTiers } : {}),
+            };
+          })(),
           referralSource: dto.referralSource?.trim() || null,
           referredBy: dto.referredBy?.trim() || null,
           termsAccepted: dto.termsAccepted ?? true,
@@ -370,6 +427,11 @@ export class OrganizationsService {
       templateRegion: readOptionalSetting(org.settings, "templateRegion"),
       templateValueProposition: readOptionalSetting(org.settings, "templateValueProposition"),
       templateTone: readOptionalSetting(org.settings, "templateTone"),
+      defaultKwpRate: readNumberSetting(org.settings, "defaultKwpRate"),
+      preferredModuleBrands: readStringArraySetting(org.settings, "preferredModuleBrands"),
+      preferredInverterBrands: readStringArraySetting(org.settings, "preferredInverterBrands"),
+      moduleBrandTiers: readTierSetting(org.settings, "moduleBrandTiers"),
+      inverterBrandTiers: readTierSetting(org.settings, "inverterBrandTiers"),
       referralSource: readOptionalSetting(org.settings, "referralSource"),
       referredBy: readOptionalSetting(org.settings, "referredBy"),
     };
@@ -539,6 +601,8 @@ export class OrganizationsService {
           organization.settings,
           "preferredInverterBrands"
         ),
+        moduleBrandTiers: readTierSetting(organization.settings, "moduleBrandTiers"),
+        inverterBrandTiers: readTierSetting(organization.settings, "inverterBrandTiers"),
         role: m.role,
         membershipId: m.id,
         subscription: organization.subscription,
@@ -576,6 +640,8 @@ export class OrganizationsService {
       defaultKwpRate: readNumberSetting(org.settings, "defaultKwpRate"),
       preferredModuleBrands: readStringArraySetting(org.settings, "preferredModuleBrands"),
       preferredInverterBrands: readStringArraySetting(org.settings, "preferredInverterBrands"),
+      moduleBrandTiers: readTierSetting(org.settings, "moduleBrandTiers"),
+      inverterBrandTiers: readTierSetting(org.settings, "inverterBrandTiers"),
       role: membership.role,
     };
   }
@@ -715,12 +781,23 @@ export class OrganizationsService {
       ...(dto.defaultKwpRate !== undefined && {
         defaultKwpRate: dto.defaultKwpRate,
       }),
-      ...(dto.preferredModuleBrands !== undefined && {
-        preferredModuleBrands: dto.preferredModuleBrands,
+      ...(dto.moduleBrandTiers !== undefined && {
+        moduleBrandTiers: dto.moduleBrandTiers,
       }),
-      ...(dto.preferredInverterBrands !== undefined && {
-        preferredInverterBrands: dto.preferredInverterBrands,
+      ...(dto.inverterBrandTiers !== undefined && {
+        inverterBrandTiers: dto.inverterBrandTiers,
       }),
+      ...(() => {
+        const modPref = compilePreferredFromTiers(dto.moduleBrandTiers, dto.preferredModuleBrands);
+        const invPref = compilePreferredFromTiers(
+          dto.inverterBrandTiers,
+          dto.preferredInverterBrands
+        );
+        return {
+          ...(modPref !== undefined && { preferredModuleBrands: modPref }),
+          ...(invPref !== undefined && { preferredInverterBrands: invPref }),
+        };
+      })(),
     };
 
     const org = await this.prisma.tenant.update({
@@ -742,7 +819,9 @@ export class OrganizationsService {
           dto.templateTone !== undefined ||
           dto.defaultKwpRate !== undefined ||
           dto.preferredModuleBrands !== undefined ||
-          dto.preferredInverterBrands !== undefined) && { settings: nextSettings }),
+          dto.preferredInverterBrands !== undefined ||
+          dto.moduleBrandTiers !== undefined ||
+          dto.inverterBrandTiers !== undefined) && { settings: nextSettings }),
       },
     });
     return {
@@ -762,6 +841,8 @@ export class OrganizationsService {
       defaultKwpRate: readNumberSetting(org.settings, "defaultKwpRate"),
       preferredModuleBrands: readStringArraySetting(org.settings, "preferredModuleBrands"),
       preferredInverterBrands: readStringArraySetting(org.settings, "preferredInverterBrands"),
+      moduleBrandTiers: readTierSetting(org.settings, "moduleBrandTiers"),
+      inverterBrandTiers: readTierSetting(org.settings, "inverterBrandTiers"),
     };
   }
 

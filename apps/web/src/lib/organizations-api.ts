@@ -33,10 +33,19 @@ export interface Organization {
   defaultKwpRate?: number | null;
   preferredModuleBrands?: string[];
   preferredInverterBrands?: string[];
+  moduleBrandTiers?: BrandTierSelection | null;
+  inverterBrandTiers?: BrandTierSelection | null;
   subscription?: {
     status: string;
     planId: string;
   } | null;
+}
+
+export interface BrandTierSelection {
+  standard: string[];
+  elite: string[];
+  premium: string[];
+  priority?: string | null;
 }
 
 import type { PlanFeaturesConfig } from "@energivia/shared-types";
@@ -205,6 +214,8 @@ export async function createOrganization(data: {
   defaultKwpRate?: number;
   preferredModuleBrands?: string[];
   preferredInverterBrands?: string[];
+  moduleBrandTiers?: BrandTierSelection;
+  inverterBrandTiers?: BrandTierSelection;
   referralSource?: string;
   referredBy?: string;
   termsAccepted?: boolean;
@@ -303,6 +314,8 @@ export async function updateOrganization(
     defaultKwpRate?: number;
     preferredModuleBrands?: string[];
     preferredInverterBrands?: string[];
+    moduleBrandTiers?: BrandTierSelection;
+    inverterBrandTiers?: BrandTierSelection;
   },
   organizationId?: string
 ): Promise<Organization> {

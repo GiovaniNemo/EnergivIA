@@ -383,11 +383,12 @@ export class KitGenerationService {
         if (!aExact && bExact) return 1;
       }
 
-      // 2ª prioridade: marcas preferidas configuradas no perfil do integrador
-      const aPref = preferredModuleBrands.includes(aBrand);
-      const bPref = preferredModuleBrands.includes(bBrand);
-      if (aPref && !bPref) return -1;
-      if (!aPref && bPref) return 1;
+      // 2ª prioridade: marcas preferidas configuradas no perfil do integrador (prioritária primeiro, depois fallback)
+      const aIdx = preferredModuleBrands.findIndex((p) => aBrand.includes(p) || p.includes(aBrand));
+      const bIdx = preferredModuleBrands.findIndex((p) => bBrand.includes(p) || p.includes(bBrand));
+      const aRank = aIdx === -1 ? 9999 : aIdx;
+      const bRank = bIdx === -1 ? 9999 : bIdx;
+      if (aRank !== bRank) return aRank - bRank;
 
       // 3ª prioridade: menor preço por Watt
       return a.pricePerW - b.pricePerW;
@@ -397,10 +398,15 @@ export class KitGenerationService {
       return [...inverters].sort((a, b) => {
         const aBrand = (a.brandName || "").toLowerCase().trim();
         const bBrand = (b.brandName || "").toLowerCase().trim();
-        const aPref = preferredInverterBrands.includes(aBrand);
-        const bPref = preferredInverterBrands.includes(bBrand);
-        if (aPref && !bPref) return -1;
-        if (!aPref && bPref) return 1;
+        const aIdx = preferredInverterBrands.findIndex(
+          (p) => aBrand.includes(p) || p.includes(aBrand)
+        );
+        const bIdx = preferredInverterBrands.findIndex(
+          (p) => bBrand.includes(p) || p.includes(bBrand)
+        );
+        const aRank = aIdx === -1 ? 9999 : aIdx;
+        const bRank = bIdx === -1 ? 9999 : bIdx;
+        if (aRank !== bRank) return aRank - bRank;
         return a.price - b.price;
       });
     };
@@ -921,10 +927,16 @@ export class KitGenerationService {
       ? allModules.filter((m) => m.id === input.pinned_module_id)
       : allModules;
 
-    const matchesPref = (brand: string, prefs: string[]) =>
-      prefs.length === 0 || prefs.some((p) => brand.toLowerCase().includes(p.toLowerCase()));
+    const getPrefRank = (brand: string, prefs: string[]) => {
+      if (prefs.length === 0) return 0;
+      const bLower = brand.toLowerCase().trim();
+      const idx = prefs.findIndex(
+        (p) => bLower.includes(p.toLowerCase()) || p.toLowerCase().includes(bLower)
+      );
+      return idx === -1 ? 9999 : idx;
+    };
 
-    // Prioritize modules: 1º marca solicitada, 2º marcas preferidas da organização, 3º melhor preço
+    // Prioritize modules: 1º marca solicitada, 2º marcas preferidas da organização (prioritária primeiro, depois fallback), 3º melhor preço
     if (!input.pinned_module_id) {
       modules.sort((a, b) => {
         if (input.preferred_brand) {
@@ -934,9 +946,9 @@ export class KitGenerationService {
           if (aExact !== bExact) return bExact - aExact;
         }
         if (preferredModuleBrands.length > 0) {
-          const aPref = matchesPref(a.brandName, preferredModuleBrands) ? 1 : 0;
-          const bPref = matchesPref(b.brandName, preferredModuleBrands) ? 1 : 0;
-          if (aPref !== bPref) return bPref - aPref;
+          const aRank = getPrefRank(a.brandName, preferredModuleBrands);
+          const bRank = getPrefRank(b.brandName, preferredModuleBrands);
+          if (aRank !== bRank) return aRank - bRank;
         }
         return (Number(a.price) || 0) - (Number(b.price) || 0);
       });

@@ -62,6 +62,22 @@ export class UpdateOrganizationDto {
   preferredInverterBrands?: string[];
 
   @IsOptional()
+  moduleBrandTiers?: {
+    standard: string[];
+    elite: string[];
+    premium: string[];
+    priority?: string | null;
+  };
+
+  @IsOptional()
+  inverterBrandTiers?: {
+    standard: string[];
+    elite: string[];
+    premium: string[];
+    priority?: string | null;
+  };
+
+  @IsOptional()
   @IsString()
   @MaxLength(10)
   cep?: string;

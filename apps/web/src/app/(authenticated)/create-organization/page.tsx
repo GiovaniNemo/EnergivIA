@@ -9,7 +9,9 @@ import {
   createOrganization,
   uploadOrganizationLogo,
   getDistributorAvailableBrands,
+  type BrandTierSelection,
 } from "@/lib/organizations-api";
+import { BrandTierSelector } from "@/components/ui/brand-tier-selector";
 import { triggerWelcomeIntroSplash } from "@/components/layout/welcome-intro-splash";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,7 +61,6 @@ import {
   SlidersHorizontal,
   Sun,
   Cpu,
-  Check,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 
@@ -281,8 +282,18 @@ export default function CreateOrganizationPage() {
     inverters: [],
   });
   const [loadingBrands, setLoadingBrands] = useState(false);
-  const [selectedModuleBrands, setSelectedModuleBrands] = useState<string[]>([]);
-  const [selectedInverterBrands, setSelectedInverterBrands] = useState<string[]>([]);
+  const [moduleTiers, setModuleTiers] = useState<BrandTierSelection>({
+    standard: [],
+    elite: [],
+    premium: [],
+    priority: null,
+  });
+  const [inverterTiers, setInverterTiers] = useState<BrandTierSelection>({
+    standard: [],
+    elite: [],
+    premium: [],
+    priority: null,
+  });
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -299,6 +310,43 @@ export default function CreateOrganizationPage() {
       .then((data) => {
         if (data && (data.modules?.length || data.inverters?.length)) {
           setAvailableBrands(data);
+
+          // Sugestão inicial automática para não tomar tempo do integrador
+          if (data.modules && data.modules.length > 0) {
+            const m = [...data.modules];
+            setModuleTiers((prev) => {
+              if (prev.standard.length > 0 || prev.elite.length > 0 || prev.premium.length > 0) {
+                return prev;
+              }
+              const std = m[0] ? [m[0]] : [];
+              const elite = m[1] ? [m[1]] : m[0] ? [m[0]] : [];
+              const prem = m[2] ? [m[2]] : m[1] ? [m[1]] : [m[0]];
+              return {
+                standard: std,
+                elite: elite,
+                premium: prem,
+                priority: prem[0] || elite[0] || std[0] || null,
+              };
+            });
+          }
+
+          if (data.inverters && data.inverters.length > 0) {
+            const inv = [...data.inverters];
+            setInverterTiers((prev) => {
+              if (prev.standard.length > 0 || prev.elite.length > 0 || prev.premium.length > 0) {
+                return prev;
+              }
+              const std = inv[0] ? [inv[0]] : [];
+              const elite = inv[1] ? [inv[1]] : inv[0] ? [inv[0]] : [];
+              const prem = inv[2] ? [inv[2]] : inv[1] ? [inv[1]] : [inv[0]];
+              return {
+                standard: std,
+                elite: elite,
+                premium: prem,
+                priority: prem[0] || elite[0] || std[0] || null,
+              };
+            });
+          }
         }
       })
       .catch(() => {})
@@ -447,9 +495,26 @@ export default function CreateOrganizationPage() {
         referralSource: (selectedSourceOption?.label ?? selectedReferralSource.trim()) || undefined,
         referredBy: referredBy.trim() || undefined,
         defaultKwpRate: defaultKwpRate ? Number(defaultKwpRate) : 2800,
-        preferredModuleBrands: selectedModuleBrands.length > 0 ? selectedModuleBrands : undefined,
-        preferredInverterBrands:
-          selectedInverterBrands.length > 0 ? selectedInverterBrands : undefined,
+        preferredModuleBrands: (() => {
+          const list: string[] = [];
+          if (moduleTiers.priority) list.push(moduleTiers.priority);
+          [...moduleTiers.standard, ...moduleTiers.elite, ...moduleTiers.premium].forEach((b) => {
+            if (!list.includes(b)) list.push(b);
+          });
+          return list.length > 0 ? list : undefined;
+        })(),
+        preferredInverterBrands: (() => {
+          const list: string[] = [];
+          if (inverterTiers.priority) list.push(inverterTiers.priority);
+          [...inverterTiers.standard, ...inverterTiers.elite, ...inverterTiers.premium].forEach(
+            (b) => {
+              if (!list.includes(b)) list.push(b);
+            }
+          );
+          return list.length > 0 ? list : undefined;
+        })(),
+        moduleBrandTiers: moduleTiers,
+        inverterBrandTiers: inverterTiers,
         ...(skipTemplateStep
           ? {}
           : {
@@ -500,6 +565,28 @@ export default function CreateOrganizationPage() {
       return;
     }
     if (step === 2) {
+      const modTotal =
+        (moduleTiers.standard?.length || 0) +
+        (moduleTiers.elite?.length || 0) +
+        (moduleTiers.premium?.length || 0);
+      const invTotal =
+        (inverterTiers.standard?.length || 0) +
+        (inverterTiers.elite?.length || 0) +
+        (inverterTiers.premium?.length || 0);
+
+      if (availableBrands.modules.length >= 3 && modTotal < 3) {
+        setError(
+          "Selecione no mínimo 3 marcas de módulos distribuídas entre Standard, Elite e Premium."
+        );
+        return;
+      }
+      if (availableBrands.inverters.length >= 3 && invTotal < 3) {
+        setError(
+          "Selecione no mínimo 3 marcas de inversores distribuídas entre Standard, Elite e Premium."
+        );
+        return;
+      }
+
       setError(null);
       setDirection(1);
       setStep(3);
@@ -979,174 +1066,28 @@ export default function CreateOrganizationPage() {
                 >
                   <div className="space-y-4 pt-1.5">
                     {/* Card Marcas de Módulos */}
-                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 sm:p-5 shadow-sm space-y-3.5">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
-                        <div className="flex items-center gap-2.5">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                            <Sun className="h-4 w-4" />
-                          </span>
-                          <div>
-                            <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-50">
-                              Preferência de Marcas de Módulos
-                            </h3>
-                            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal">
-                              Marcas ativas no catálogo homologado
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (selectedModuleBrands.length === availableBrands.modules.length) {
-                                setSelectedModuleBrands([]);
-                              } else {
-                                setSelectedModuleBrands([...availableBrands.modules]);
-                              }
-                            }}
-                            className="text-xs sm:text-sm font-semibold text-[#1f7f9b] dark:text-[#38bdf8] hover:underline cursor-pointer"
-                          >
-                            {selectedModuleBrands.length === availableBrands.modules.length
-                              ? "Limpar"
-                              : "Selecionar todas"}
-                          </button>
-                        </div>
-                      </div>
-
-                      {loadingBrands ? (
-                        <div className="flex items-center gap-2 py-3 text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
-                          <Loader2 className="h-4 w-4 animate-spin text-[#1f7f9b]" />
-                          Carregando marcas ativas do catálogo...
-                        </div>
-                      ) : availableBrands.modules.length === 0 ? (
-                        <p className="py-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 italic">
-                          Todas as marcas homologadas serão cotadas por padrão.
-                        </p>
-                      ) : (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {availableBrands.modules.map((brand) => {
-                            const isSelected = selectedModuleBrands.includes(brand);
-                            return (
-                              <button
-                                key={brand}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedModuleBrands((prev) =>
-                                    prev.includes(brand)
-                                      ? prev.filter((b) => b !== brand)
-                                      : [...prev, brand]
-                                  );
-                                }}
-                                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs sm:text-sm font-medium transition cursor-pointer ${
-                                  isSelected
-                                    ? "border-[#1f7f9b] bg-[#1f7f9b]/15 dark:bg-[#1f7f9b]/25 text-[#0A4A63] dark:text-[#38bdf8] shadow-xs font-semibold ring-1 ring-[#1f7f9b]/40"
-                                    : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 text-zinc-800 dark:text-zinc-200 hover:border-[#1f7f9b]/60 dark:hover:border-[#1f7f9b]/60 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-zinc-100"
-                                }`}
-                              >
-                                {isSelected ? (
-                                  <Check className="h-3.5 w-3.5 text-[#1f7f9b] dark:text-[#38bdf8] stroke-[3]" />
-                                ) : (
-                                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                                )}
-                                <span>{brand}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
-                        {selectedModuleBrands.length > 0
-                          ? `${selectedModuleBrands.length} marca(s) selecionada(s) para priorização em orçamentos.`
-                          : "Se nenhuma marca for marcada, todas as marcas disponíveis no catálogo serão cotadas normalmente."}
-                      </p>
-                    </div>
+                    <BrandTierSelector
+                      title="Preferência de Marcas de Módulos"
+                      subtitle="Organize as marcas ativas por categoria (Standard, Elite, Premium) e defina a prioridade"
+                      icon={<Sun className="h-4 w-4" />}
+                      categoryLabel="módulos"
+                      availableBrands={availableBrands.modules}
+                      value={moduleTiers}
+                      onChange={setModuleTiers}
+                      loading={loadingBrands}
+                    />
 
                     {/* Card Marcas de Inversores */}
-                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 sm:p-5 shadow-sm space-y-3.5">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
-                        <div className="flex items-center gap-2.5">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400">
-                            <Cpu className="h-4 w-4" />
-                          </span>
-                          <div>
-                            <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-50">
-                              Preferência de Marcas de Inversores
-                            </h3>
-                            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal">
-                              Inversores e microinversores disponíveis no catálogo
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (
-                                selectedInverterBrands.length === availableBrands.inverters.length
-                              ) {
-                                setSelectedInverterBrands([]);
-                              } else {
-                                setSelectedInverterBrands([...availableBrands.inverters]);
-                              }
-                            }}
-                            className="text-xs sm:text-sm font-semibold text-[#1f7f9b] dark:text-[#38bdf8] hover:underline cursor-pointer"
-                          >
-                            {selectedInverterBrands.length === availableBrands.inverters.length
-                              ? "Limpar"
-                              : "Selecionar todas"}
-                          </button>
-                        </div>
-                      </div>
-
-                      {loadingBrands ? (
-                        <div className="flex items-center gap-2 py-3 text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
-                          <Loader2 className="h-4 w-4 animate-spin text-[#1f7f9b]" />
-                          Carregando marcas ativas do catálogo...
-                        </div>
-                      ) : availableBrands.inverters.length === 0 ? (
-                        <p className="py-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 italic">
-                          Todas as marcas homologadas serão cotadas por padrão.
-                        </p>
-                      ) : (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {availableBrands.inverters.map((brand) => {
-                            const isSelected = selectedInverterBrands.includes(brand);
-                            return (
-                              <button
-                                key={brand}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedInverterBrands((prev) =>
-                                    prev.includes(brand)
-                                      ? prev.filter((b) => b !== brand)
-                                      : [...prev, brand]
-                                  );
-                                }}
-                                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs sm:text-sm font-medium transition cursor-pointer ${
-                                  isSelected
-                                    ? "border-[#1f7f9b] bg-[#1f7f9b]/15 dark:bg-[#1f7f9b]/25 text-[#0A4A63] dark:text-[#38bdf8] shadow-xs font-semibold ring-1 ring-[#1f7f9b]/40"
-                                    : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 text-zinc-800 dark:text-zinc-200 hover:border-[#1f7f9b]/60 dark:hover:border-[#1f7f9b]/60 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-zinc-100"
-                                }`}
-                              >
-                                {isSelected ? (
-                                  <Check className="h-3.5 w-3.5 text-[#1f7f9b] dark:text-[#38bdf8] stroke-[3]" />
-                                ) : (
-                                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                                )}
-                                <span>{brand}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
-                        {selectedInverterBrands.length > 0
-                          ? `${selectedInverterBrands.length} marca(s) selecionada(s) para priorização em orçamentos.`
-                          : "Se nenhuma marca for marcada, todas as marcas disponíveis no catálogo serão cotadas normalmente."}
-                      </p>
-                    </div>
+                    <BrandTierSelector
+                      title="Preferência de Marcas de Inversores"
+                      subtitle="Organize os inversores por categoria de proposta e defina a prioridade de cotação"
+                      icon={<Cpu className="h-4 w-4" />}
+                      categoryLabel="inversores"
+                      availableBrands={availableBrands.inverters}
+                      value={inverterTiers}
+                      onChange={setInverterTiers}
+                      loading={loadingBrands}
+                    />
 
                     {/* Card Preço por kWp */}
                     <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 sm:p-5 shadow-sm space-y-3.5">

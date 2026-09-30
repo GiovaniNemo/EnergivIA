@@ -97,6 +97,22 @@ export class CreateOrganizationDto {
   preferredInverterBrands?: string[];
 
   @IsOptional()
+  moduleBrandTiers?: {
+    standard: string[];
+    elite: string[];
+    premium: string[];
+    priority?: string | null;
+  };
+
+  @IsOptional()
+  inverterBrandTiers?: {
+    standard: string[];
+    elite: string[];
+    premium: string[];
+    priority?: string | null;
+  };
+
+  @IsOptional()
   @IsString()
   @MaxLength(120)
   referralSource?: string;

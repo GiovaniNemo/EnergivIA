@@ -74,31 +74,7 @@ export class BrandsService {
     const modulesSet = new Set<string>();
     const invertersSet = new Set<string>();
 
-    // 1. Marcas cadastradas no Brand com categorias configuradas
-    const allBrands = await this.prisma.brand.findMany({
-      select: {
-        name: true,
-        categories: true,
-      },
-    });
-
-    for (const b of allBrands) {
-      const brandName = b.name?.trim();
-      if (!brandName || isGeneric(brandName) || isStructureBrand(brandName)) continue;
-      const cats = (b.categories || []).map((c) => c.toLowerCase().trim());
-      if (cats.includes("module")) {
-        modulesSet.add(brandName);
-      }
-      if (
-        cats.includes("inverter") ||
-        cats.includes("microinverter") ||
-        cats.includes("hybrid_inverter")
-      ) {
-        invertersSet.add(brandName);
-      }
-    }
-
-    // 2. Marcas com produtos de distribuidor ativos
+    // 1. Marcas com produtos ativos no catálogo de distribuidores homologados (itens disponíveis no dimensionamento)
     const distProds = await this.prisma.distributorProduct.findMany({
       where: {
         active: true,
@@ -126,12 +102,17 @@ export class BrandsService {
 
       if (cat === "module") {
         modulesSet.add(brandName);
-      } else if (cat === "inverter" || cat === "microinverter" || cat === "hybrid_inverter") {
+      } else if (
+        cat === "inverter" ||
+        cat === "microinverter" ||
+        cat === "hybrid_inverter" ||
+        cat === "offgrid_inverter"
+      ) {
         invertersSet.add(brandName);
       }
     }
 
-    // 3. Fallback se necessário para produtos ativos gerais
+    // 2. Fallback caso não haja vínculos de distribuidor: produtos ativos no catálogo geral
     if (modulesSet.size === 0 || invertersSet.size === 0) {
       const activeProds = await this.prisma.product.findMany({
         where: { active: true },
@@ -144,9 +125,16 @@ export class BrandsService {
         const brandName = p.brand?.name?.trim();
         const cat = p.category?.name?.trim().toLowerCase();
         if (!brandName || isGeneric(brandName) || isStructureBrand(brandName)) continue;
-        if (cat === "module") modulesSet.add(brandName);
-        else if (cat === "inverter" || cat === "microinverter" || cat === "hybrid_inverter")
+        if (cat === "module" && modulesSet.size === 0) modulesSet.add(brandName);
+        else if (
+          (cat === "inverter" ||
+            cat === "microinverter" ||
+            cat === "hybrid_inverter" ||
+            cat === "offgrid_inverter") &&
+          invertersSet.size === 0
+        ) {
           invertersSet.add(brandName);
+        }
       }
     }
 
