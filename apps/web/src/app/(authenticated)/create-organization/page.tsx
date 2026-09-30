@@ -234,6 +234,43 @@ function OnboardingStepIcon(props: StepIconProps): JSX.Element {
   );
 }
 
+function TypewriterHeader({ title, subtitle }: { title: string; subtitle: string }) {
+  const [displayedTitle, setDisplayedTitle] = useState("");
+  const [isTyping, setIsTyping] = useState(true);
+
+  useEffect(() => {
+    setDisplayedTitle("");
+    setIsTyping(true);
+
+    let idx = 0;
+    const speed = Math.max(18, Math.min(32, Math.floor(1100 / title.length)));
+    const interval = setInterval(() => {
+      idx++;
+      setDisplayedTitle(title.slice(0, idx));
+      if (idx >= title.length) {
+        clearInterval(interval);
+        setIsTyping(false);
+      }
+    }, speed);
+
+    return () => clearInterval(interval);
+  }, [title]);
+
+  return (
+    <div className="space-y-2.5 px-2 pb-5 text-center">
+      <h1 className="text-2xl sm:text-3xl lg:text-[34px] font-extrabold tracking-tight text-[#0A4A63] dark:text-[#38bdf8] leading-tight min-h-[42px] sm:min-h-[46px] flex items-center justify-center">
+        <span>{displayedTitle}</span>
+        {isTyping && (
+          <span className="inline-block w-1 h-6 sm:h-8 ml-1 bg-[#1f7f9b] animate-pulse" />
+        )}
+      </h1>
+      <p className="mx-auto max-w-[680px] text-sm sm:text-base font-semibold leading-relaxed text-zinc-700 dark:text-zinc-300 transition-opacity duration-500 animate-in fade-in">
+        {subtitle}
+      </p>
+    </div>
+  );
+}
+
 export default function CreateOrganizationPage() {
   const router = useRouter();
   const {
@@ -812,22 +849,22 @@ export default function CreateOrganizationPage() {
               </Stepper>
             </div>
 
-            <div className="space-y-2 px-2 pb-4 text-center">
-              <h1 className="text-[25px] font-bold tracking-tight text-[#0A4A63] lg:text-[27px]">
-                {step === 1
+            <TypewriterHeader
+              title={
+                step === 1
                   ? "Configure o perfil da sua empresa"
                   : step === 2
                     ? "Defina seu perfil comercial & marcas preferidas"
-                    : "Personalize suas propostas inteligentes"}
-              </h1>
-              <p className="mx-auto max-w-[620px] text-[14px] font-medium leading-relaxed text-[var(--color-muted-foreground)]">
-                {step === 1
+                    : "Personalize suas propostas inteligentes"
+              }
+              subtitle={
+                step === 1
                   ? "Informe seu CNPJ para personalizarmos suas propostas comerciais em poucos segundos."
                   : step === 2
                     ? "Defina o valor base de venda por kWp na sua região e selecione suas marcas preferidas para as cotações."
-                    : "Agora vamos personalizar suas propostas para o seu tipo de cliente."}
-              </p>
-            </div>
+                    : "Agora vamos personalizar suas propostas para o seu tipo de cliente."
+              }
+            />
 
             <div className="px-2">
               <div className="relative min-h-[460px] overflow-x-hidden overflow-y-visible lg:min-h-[420px]">
