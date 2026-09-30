@@ -393,8 +393,14 @@ export interface ProposalListItem {
   kitLineCount: number;
 }
 
-export async function listProposals(organizationId: string): Promise<ProposalListItem[]> {
-  const res = await apiProxy("GET", "/proposals", undefined, organizationId);
+export async function listProposals(
+  organizationId: string,
+  params?: { search?: string }
+): Promise<ProposalListItem[]> {
+  const q = new URLSearchParams();
+  if (params?.search) q.set("search", params.search);
+  const suffix = q.toString() ? `?${q.toString()}` : "";
+  const res = await apiProxy("GET", `/proposals${suffix}`, undefined, organizationId);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);

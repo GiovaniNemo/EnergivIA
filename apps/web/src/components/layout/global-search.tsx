@@ -10,11 +10,38 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Search, X } from "lucide-react";
+import {
+  ArrowRight,
+  Boxes,
+  Building2,
+  Compass,
+  Crown,
+  FilePlus,
+  FileText,
+  Handshake,
+  Loader2,
+  Package,
+  Palette,
+  Receipt,
+  Search,
+  Settings,
+  SlidersHorizontal,
+  Sparkles,
+  Truck,
+  User,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { useShortcutMod } from "@/hooks/use-media-query";
-import { listLeads, type LeadListItem } from "@/lib/leads-api";
+import {
+  fetchGlobalSearch,
+  type GlobalSearchDealItem,
+  type GlobalSearchLeadItem,
+  type GlobalSearchProposalItem,
+} from "@/lib/search-api";
 
 const STAGE_LABEL: Record<string, string> = {
   NEW: "Novo",
@@ -26,12 +53,35 @@ const STAGE_LABEL: Record<string, string> = {
 };
 
 const STAGE_PILL_CLASS: Record<string, string> = {
-  NEW: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-  CONTACTED: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300",
-  PROPOSAL: "bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300",
-  NEGOTIATION: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
-  WON: "bg-emerald-200 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-200",
-  LOST: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
+  NEW: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700",
+  CONTACTED:
+    "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+  PROPOSAL:
+    "bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300 border-violet-200 dark:border-violet-800",
+  NEGOTIATION:
+    "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+  WON: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+  LOST: "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800",
+};
+
+const PROPOSAL_STATUS_LABEL: Record<string, string> = {
+  DRAFT: "Rascunho",
+  SENT: "Enviada",
+  VIEWED: "Visualizada",
+  ACCEPTED: "Aceita",
+  REJECTED: "Recusada",
+};
+
+const PROPOSAL_STATUS_CLASS: Record<string, string> = {
+  DRAFT:
+    "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700",
+  SENT: "bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200 dark:border-sky-800",
+  VIEWED:
+    "bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300 border-violet-200 dark:border-violet-800",
+  ACCEPTED:
+    "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+  REJECTED:
+    "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800",
 };
 
 function formatWhatsapp(raw: string | null | undefined): string | null {
@@ -47,6 +97,218 @@ function formatWhatsapp(raw: string | null | undefined): string | null {
   return `+${ddi} (${ddd}) ${body}`;
 }
 
+function formatBrl(val: number | string | null | undefined): string | null {
+  if (val == null) return null;
+  const num = typeof val === "string" ? parseFloat(val) : val;
+  if (isNaN(num)) return null;
+  return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+interface NavItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  path: string;
+  keywords: string[];
+  icon: typeof Search;
+  badge?: string;
+}
+
+const STATIC_NAV_ITEMS: NavItem[] = [
+  {
+    id: "nav-pipeline",
+    title: "Negociações (Funil de Vendas)",
+    subtitle: "Acompanhe e mova oportunidades pelo Kanban comercial",
+    path: "/pipeline",
+    keywords: [
+      "pipeline",
+      "funil",
+      "negociacao",
+      "negociação",
+      "kanban",
+      "vendas",
+      "etapas",
+      "oportunidades",
+    ],
+    icon: Handshake,
+  },
+  {
+    id: "nav-propostas",
+    title: "Propostas Comerciais",
+    subtitle: "Listagem, status de visualização e geração de estudos",
+    path: "/propostas",
+    keywords: ["propostas", "proposta", "comercial", "orçamento", "estudos", "pdf", "valores"],
+    icon: FileText,
+  },
+  {
+    id: "nav-clientes",
+    title: "Clientes & Contatos",
+    subtitle: "Gerencie a base de clientes, WhatsApp e histórico",
+    path: "/clientes",
+    keywords: ["clientes", "cliente", "leads", "lead", "contatos", "whatsapp", "cadastro"],
+    icon: Users,
+  },
+  {
+    id: "nav-radar",
+    title: "Radar Solar ANEEL",
+    subtitle: "Mapeamento de usinas conectadas e prospecção por vizinhança",
+    path: "/radar",
+    keywords: [
+      "radar",
+      "solar",
+      "aneel",
+      "mapa",
+      "usinas",
+      "concorrencia",
+      "prospeccao",
+      "prospecção",
+    ],
+    icon: Compass,
+    badge: "NOVO",
+  },
+  {
+    id: "nav-faturas",
+    title: "Análise de Faturas de Energia",
+    subtitle: "Upload e leitura inteligente de contas de luz com dimensionamento",
+    path: "/analise-faturas",
+    keywords: [
+      "fatura",
+      "faturas",
+      "conta",
+      "luz",
+      "energia",
+      "copel",
+      "ocr",
+      "upload",
+      "analise",
+      "análise",
+    ],
+    icon: Receipt,
+  },
+  {
+    id: "nav-perfil-integrador",
+    title: "Perfil do Integrador & Parâmetros",
+    subtitle: "Marcas homologadas, inversores, módulos e valor base por kWp",
+    path: "/gestao/perfil-integrador",
+    keywords: [
+      "integrador",
+      "perfil",
+      "marcas",
+      "inversores",
+      "modulos",
+      "módulos",
+      "paineis",
+      "painéis",
+      "kwp",
+      "potencia",
+      "preço base",
+      "dimensionamento",
+      "tier",
+    ],
+    icon: SlidersHorizontal,
+  },
+  {
+    id: "nav-templates",
+    title: "Templates de Proposta",
+    subtitle: "Personalize temas, capas e layouts visuais das propostas PDF",
+    path: "/propostas/templates",
+    keywords: [
+      "templates",
+      "template",
+      "modelos",
+      "designer",
+      "documentos",
+      "propostas",
+      "personalizar",
+      "capa",
+    ],
+    icon: Palette,
+  },
+  {
+    id: "nav-estoque",
+    title: "Estoque Próprio",
+    subtitle: "Controle de saldo, custos e produtos em estoque",
+    path: "/configuracoes/estoque",
+    keywords: ["estoque", "produtos", "equipamentos", "saldo", "custo", "armazem", "reservas"],
+    icon: Boxes,
+  },
+  {
+    id: "nav-equipe",
+    title: "Equipe & Colaboradores",
+    subtitle: "Gestão de membros, vendedores e níveis de permissão",
+    path: "/configuracoes/equipe",
+    keywords: ["equipe", "usuarios", "usuários", "membros", "vendedores", "convidar", "acesso"],
+    icon: UserPlus,
+  },
+  {
+    id: "nav-organizacao",
+    title: "Organização & Empresa",
+    subtitle: "Dados cadastrais, logotipo oficial e configurações da integradora",
+    path: "/configuracoes/organizacao",
+    keywords: [
+      "organizacao",
+      "organização",
+      "empresa",
+      "cnpj",
+      "dados",
+      "logo",
+      "integrador",
+      "perfil",
+    ],
+    icon: Building2,
+  },
+  {
+    id: "nav-planos",
+    title: "Meus Planos & Assinatura",
+    subtitle: "Recursos disponíveis, faturamento e assinatura do sistema",
+    path: "/gestao/meus-planos",
+    keywords: [
+      "planos",
+      "plano",
+      "assinatura",
+      "faturamento",
+      "pagamento",
+      "stripe",
+      "mensalidade",
+      "upgrade",
+    ],
+    icon: Crown,
+  },
+  {
+    id: "nav-configuracoes",
+    title: "Configurações Gerais",
+    subtitle: "Preferências globais e opções do sistema",
+    path: "/configuracoes",
+    keywords: ["configuracoes", "configurações", "ajustes", "sistema", "geral"],
+    icon: Settings,
+  },
+  {
+    id: "nav-fornecedores",
+    title: "Fornecedores & Distribuidores",
+    subtitle: "Catálogo de parceiros de suprimentos e distribuidores",
+    path: "/admin/distribuidores",
+    keywords: ["fornecedores", "distribuidores", "distribuidor", "catalogo", "compras"],
+    icon: Truck,
+  },
+  {
+    id: "nav-produtos-globais",
+    title: "Catálogo de Produtos Globais",
+    subtitle: "Equipamentos, especificações técnicas e fichas de produtos",
+    path: "/admin/produtos",
+    keywords: ["produtos", "catalogo", "catálogo", "equipamentos", "especificacoes"],
+    icon: Package,
+  },
+];
+
+interface QuickAction {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: typeof Search;
+  action: () => void;
+  keywords: string[];
+}
+
 export type GlobalSearchHandle = {
   focus: () => void;
 };
@@ -54,6 +316,13 @@ export type GlobalSearchHandle = {
 export interface GlobalSearchProps {
   onSelect?: () => void;
 }
+
+type UnifiedSearchResultItem =
+  | { type: "action"; data: QuickAction }
+  | { type: "nav"; data: NavItem }
+  | { type: "proposal"; data: GlobalSearchProposalItem }
+  | { type: "deal"; data: GlobalSearchDealItem }
+  | { type: "lead"; data: GlobalSearchLeadItem };
 
 export const GlobalSearch = forwardRef<GlobalSearchHandle, GlobalSearchProps>(
   function GlobalSearch(props, ref) {
@@ -64,13 +333,19 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle, GlobalSearchProps>(
 
     const [query, setQuery] = useState("");
     const [debounced, setDebounced] = useState("");
-    const [results, setResults] = useState<LeadListItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const [activeIdx, setActiveIdx] = useState(0);
 
+    const [apiResults, setApiResults] = useState<{
+      leads: GlobalSearchLeadItem[];
+      proposals: GlobalSearchProposalItem[];
+      deals: GlobalSearchDealItem[];
+    }>({ leads: [], proposals: [], deals: [] });
+
     const inputRef = useRef<HTMLInputElement | null>(null);
     const wrapRef = useRef<HTMLDivElement | null>(null);
+    const listRef = useRef<HTMLUListElement | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useImperativeHandle(ref, () => ({
@@ -85,7 +360,7 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle, GlobalSearchProps>(
 
     useEffect(() => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => setDebounced(query.trim()), 220);
+      debounceRef.current = setTimeout(() => setDebounced(query.trim()), 180);
       return () => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
       };
@@ -94,24 +369,27 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle, GlobalSearchProps>(
     useEffect(() => {
       if (!currentOrganizationId) return;
       if (!debounced) {
-        setResults([]);
+        setApiResults({ leads: [], proposals: [], deals: [] });
         setLoading(false);
         return;
       }
+
       let cancelled = false;
       setLoading(true);
-      listLeads(currentOrganizationId, { page: 1, pageSize: 8, search: debounced })
+
+      fetchGlobalSearch(currentOrganizationId, debounced)
         .then((res) => {
           if (cancelled) return;
-          setResults(res.data);
+          setApiResults(res);
           setActiveIdx(0);
         })
         .catch(() => {
-          if (!cancelled) setResults([]);
+          if (!cancelled) setApiResults({ leads: [], proposals: [], deals: [] });
         })
         .finally(() => {
           if (!cancelled) setLoading(false);
         });
+
       return () => {
         cancelled = true;
       };
@@ -128,20 +406,152 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle, GlobalSearchProps>(
       return () => document.removeEventListener("mousedown", handler);
     }, [open]);
 
-    const navigateTo = useCallback(
-      (lead: LeadListItem) => {
-        const stage = lead.latestDealStage;
-        const hasActiveDeal =
-          Boolean(lead.latestDealId) && stage !== "WON" && stage !== "LOST" && stage !== null;
-        if (hasActiveDeal) {
-          router.push(`/pipeline?id=${lead.id}`);
-        } else {
-          router.push(`/clientes/${lead.id}`);
+    // Quick Actions
+    const quickActions = useMemo<QuickAction[]>(() => {
+      return [
+        {
+          id: "action-new-lead",
+          title: "Cadastrar Novo Cliente",
+          subtitle: "Adicionar contato na base e iniciar funil de vendas",
+          icon: UserPlus,
+          keywords: ["novo", "cliente", "lead", "cadastrar", "adicionar", "contato"],
+          action: () => router.push("/clientes"),
+        },
+        {
+          id: "action-new-proposal",
+          title: "Nova Proposta Comercial",
+          subtitle: "Criar novo estudo ou proposta solar",
+          icon: FilePlus,
+          keywords: ["nova", "proposta", "criar", "estudo", "orcamento", "orçamento"],
+          action: () => router.push("/propostas"),
+        },
+        {
+          id: "action-analyze-bill",
+          title: "Analisar Conta de Luz",
+          subtitle: "Fazer upload de fatura para extração automática",
+          icon: Receipt,
+          keywords: ["analisar", "fatura", "conta", "luz", "copel", "upload", "extrair"],
+          action: () => router.push("/analise-faturas"),
+        },
+        {
+          id: "action-radar-map",
+          title: "Explorar Radar Solar ANEEL",
+          subtitle: "Ver usinas conectadas na região no mapa interativo",
+          icon: Compass,
+          keywords: ["radar", "mapa", "aneel", "usinas", "regiao", "região"],
+          action: () => router.push("/radar"),
+        },
+      ];
+    }, [router]);
+
+    // Filter Navigation Pages based on query
+    const matchingNavItems = useMemo(() => {
+      if (!debounced) {
+        return STATIC_NAV_ITEMS.slice(0, 5); // popular pages on empty query
+      }
+      const q = debounced.toLowerCase();
+      return STATIC_NAV_ITEMS.filter(
+        (item) =>
+          item.title.toLowerCase().includes(q) ||
+          item.subtitle.toLowerCase().includes(q) ||
+          item.keywords.some((k) => k.includes(q))
+      ).slice(0, 4);
+    }, [debounced]);
+
+    // Filter Quick Actions based on query
+    const matchingActions = useMemo(() => {
+      if (!debounced) {
+        return quickActions.slice(0, 3);
+      }
+      const q = debounced.toLowerCase();
+      return quickActions.filter(
+        (a) =>
+          a.title.toLowerCase().includes(q) ||
+          a.subtitle.toLowerCase().includes(q) ||
+          a.keywords.some((k) => k.includes(q))
+      );
+    }, [debounced, quickActions]);
+
+    // Build unified item list for keyboard navigation and rendering
+    const flatItems = useMemo<UnifiedSearchResultItem[]>(() => {
+      const items: UnifiedSearchResultItem[] = [];
+
+      // If user typed a query, show specific matches first (Proposals, Deals, Clients)
+      if (debounced) {
+        for (const p of apiResults.proposals) {
+          items.push({ type: "proposal", data: p });
         }
+        for (const d of apiResults.deals) {
+          items.push({ type: "deal", data: d });
+        }
+        for (const l of apiResults.leads) {
+          items.push({ type: "lead", data: l });
+        }
+        for (const n of matchingNavItems) {
+          items.push({ type: "nav", data: n });
+        }
+        for (const a of matchingActions) {
+          items.push({ type: "action", data: a });
+        }
+      } else {
+        // Empty state: show quick actions and navigation shortcuts
+        for (const a of matchingActions) {
+          items.push({ type: "action", data: a });
+        }
+        for (const n of matchingNavItems) {
+          items.push({ type: "nav", data: n });
+        }
+      }
+
+      return items;
+    }, [debounced, apiResults, matchingNavItems, matchingActions]);
+
+    // Scroll active item into view
+    useEffect(() => {
+      if (!listRef.current) return;
+      const activeEl = listRef.current.querySelector<HTMLElement>(
+        `[data-search-idx="${activeIdx}"]`
+      );
+      if (activeEl) {
+        activeEl.scrollIntoView({ block: "nearest" });
+      }
+    }, [activeIdx]);
+
+    const handleSelect = useCallback(
+      (item: UnifiedSearchResultItem) => {
         setOpen(false);
         setQuery("");
         inputRef.current?.blur();
         onSelect?.();
+
+        switch (item.type) {
+          case "action":
+            item.data.action();
+            break;
+          case "nav":
+            router.push(item.data.path);
+            break;
+          case "proposal":
+            router.push(`/propostas/${item.data.id}`);
+            break;
+          case "deal":
+            router.push(`/pipeline?id=${item.data.lead?.id || item.data.id}`);
+            break;
+          case "lead": {
+            const stage = item.data.latestDealStage;
+            const hasActiveDeal =
+              Boolean(item.data.latestDealId) &&
+              stage !== "WON" &&
+              stage !== "LOST" &&
+              stage !== null;
+            if (hasActiveDeal) {
+              router.push(`/pipeline?id=${item.data.id}`);
+            } else {
+              router.push(`/clientes/${item.data.id}`);
+            }
+            break;
+          }
+        }
       },
       [router, onSelect]
     );
@@ -152,26 +562,19 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle, GlobalSearchProps>(
         inputRef.current?.blur();
         return;
       }
-      if (!open || results.length === 0) return;
+      if (!open || flatItems.length === 0) return;
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        setActiveIdx((idx) => Math.min(idx + 1, results.length - 1));
+        setActiveIdx((idx) => (idx + 1) % flatItems.length);
       } else if (event.key === "ArrowUp") {
         event.preventDefault();
-        setActiveIdx((idx) => Math.max(idx - 1, 0));
+        setActiveIdx((idx) => (idx - 1 + flatItems.length) % flatItems.length);
       } else if (event.key === "Enter") {
         event.preventDefault();
-        const lead = results[activeIdx];
-        if (lead) navigateTo(lead);
+        const selected = flatItems[activeIdx];
+        if (selected) handleSelect(selected);
       }
     };
-
-    const helperText = useMemo(() => {
-      if (!debounced) return "Comece a digitar para buscar clientes...";
-      if (loading) return "Buscando...";
-      if (results.length === 0) return "Nenhum cliente encontrado.";
-      return null;
-    }, [debounced, loading, results.length]);
 
     return (
       <div ref={wrapRef} className="relative w-full">
@@ -186,9 +589,10 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle, GlobalSearchProps>(
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Buscar clientes, negociações, propostas..."
-          className="h-9 rounded-lg border-[var(--color-border)] bg-[var(--color-muted)] pl-9 pr-16 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+          placeholder="Buscar clientes, negociações, propostas ou páginas..."
+          className="h-9 w-full rounded-xl border-[var(--color-border)] bg-[var(--color-muted)]/70 pl-9 pr-16 text-sm text-[var(--color-foreground)] backdrop-blur-sm transition-all placeholder:text-[var(--color-muted-foreground)] focus:bg-[var(--color-card)] focus:ring-2 focus:ring-[var(--color-ring)] focus:shadow-md"
         />
+
         {query ? (
           <button
             type="button"
@@ -196,68 +600,382 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle, GlobalSearchProps>(
               setQuery("");
               inputRef.current?.focus();
             }}
-            className="absolute right-2.5 top-1/2 z-10 -translate-y-1/2 rounded p-0.5 text-[var(--color-muted-foreground)] hover:bg-[var(--color-card)] hover:text-[var(--color-foreground)]"
+            className="absolute right-2.5 top-1/2 z-10 -translate-y-1/2 rounded-md p-1 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
             aria-label="Limpar busca"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         ) : shortcutMod ? (
-          <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 rounded border border-[var(--color-border)] bg-[var(--color-card)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--color-muted-foreground)] shadow-sm">
+          <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 rounded border border-[var(--color-border)] bg-[var(--color-card)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--color-muted-foreground)] shadow-xs">
             {shortcutMod}K
           </kbd>
         ) : null}
 
         {open ? (
-          <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] shadow-xl">
-            {helperText ? (
-              <div className="flex items-center gap-2 px-4 py-3 text-sm text-[var(--color-muted-foreground)]">
-                {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                {helperText}
+          <div className="absolute left-0 sm:-left-4 right-0 sm:right-auto sm:w-[580px] top-[calc(100%+8px)] z-[80] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+            {/* Header info / status */}
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-2 text-[11px] font-medium text-[var(--color-muted-foreground)]">
+              <span className="flex items-center gap-1.5">
+                {loading ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin text-emerald-600 dark:text-emerald-400" />
+                    <span>Pesquisando no sistema...</span>
+                  </>
+                ) : debounced ? (
+                  <span>
+                    Resultados para &ldquo;
+                    <strong className="text-[var(--color-foreground)]">{debounced}</strong>&rdquo;
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-[var(--color-muted-foreground)]">
+                    <Sparkles className="h-3 w-3 text-amber-500" />
+                    <span>Acesso rápido e comandos</span>
+                  </span>
+                )}
+              </span>
+              <span className="hidden sm:inline text-[10px] text-[var(--color-muted-foreground)]">
+                Navegue com ↑ ↓ e pressione Enter
+              </span>
+            </div>
+
+            {/* List */}
+            {flatItems.length === 0 && !loading ? (
+              <div className="px-6 py-10 text-center">
+                <Search className="mx-auto h-8 w-8 text-[var(--color-muted-foreground)] opacity-40 mb-2" />
+                <p className="text-sm font-medium text-[var(--color-foreground)]">
+                  Nenhum resultado encontrado
+                </p>
+                <p className="text-xs text-[var(--color-muted-foreground)] mt-1">
+                  Tente buscar por nome de cliente, telefone, número da proposta (#1042) ou página.
+                </p>
               </div>
             ) : (
-              <ul className="max-h-[360px] overflow-y-auto py-1">
-                {results.map((lead, idx) => {
-                  const stage = lead.latestDealStage ?? "NEW";
-                  const stageLabel = STAGE_LABEL[stage] ?? stage;
-                  const stageClass = STAGE_PILL_CLASS[stage] ?? STAGE_PILL_CLASS["NEW"];
-                  const phone = formatWhatsapp(lead.whatsapp);
-                  return (
-                    <li key={lead.id}>
-                      <button
-                        type="button"
-                        onMouseEnter={() => setActiveIdx(idx)}
-                        onClick={() => navigateTo(lead)}
-                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                          idx === activeIdx
-                            ? "bg-[var(--color-muted)]"
-                            : "hover:bg-[var(--color-muted)]/50"
-                        }`}
-                      >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-200 to-emerald-400 text-[11px] font-bold text-emerald-900">
-                          {String(lead.name || "L")
-                            .slice(0, 2)
-                            .toUpperCase()}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="truncate text-sm font-semibold text-[var(--color-foreground)]">
-                              {lead.name}
-                            </span>
-                            <span
-                              className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${stageClass}`}
-                            >
-                              {stageLabel}
-                            </span>
-                          </div>
-                          <div className="truncate text-[11px] text-[var(--color-muted-foreground)]">
-                            {phone ?? lead.email ?? "Sem contato"}
-                            {lead.company ? ` · ${lead.company}` : ""}
-                          </div>
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
+              <ul ref={listRef} className="max-h-[460px] overflow-y-auto p-2 space-y-1">
+                {/* 1. Propostas Section */}
+                {apiResults.proposals.length > 0 && (
+                  <li className="pt-1 pb-1">
+                    <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)] flex items-center justify-between">
+                      <span>Propostas Comerciais</span>
+                      <span className="rounded-full bg-[var(--color-muted)] px-1.5 py-0.2 text-[10px]">
+                        {apiResults.proposals.length}
+                      </span>
+                    </div>
+                    <div className="space-y-1 mt-1">
+                      {apiResults.proposals.map((p) => {
+                        const itemIdx = flatItems.findIndex(
+                          (it) => it.type === "proposal" && it.data.id === p.id
+                        );
+                        const isSelected = itemIdx === activeIdx;
+                        const statusLabel = PROPOSAL_STATUS_LABEL[p.status] ?? p.status;
+                        const statusClass =
+                          PROPOSAL_STATUS_CLASS[p.status] ?? PROPOSAL_STATUS_CLASS["DRAFT"];
+                        const formattedVal = formatBrl(p.quotedValueBrl);
+
+                        return (
+                          <button
+                            key={`prop-${p.id}`}
+                            type="button"
+                            data-search-idx={itemIdx}
+                            onMouseEnter={() => setActiveIdx(itemIdx)}
+                            onClick={() => handleSelect(flatItems[itemIdx]!)}
+                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all ${
+                              isSelected
+                                ? "bg-[var(--color-muted)] shadow-xs ring-1 ring-[var(--color-border)]"
+                                : "hover:bg-[var(--color-muted)]/60"
+                            }`}
+                          >
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 font-bold text-xs border border-violet-200 dark:border-violet-800">
+                              <FileText className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-sm text-[var(--color-foreground)] truncate">
+                                  {p.proposalNumber ? `#${p.proposalNumber} · ` : ""}
+                                  {p.title}
+                                </span>
+                                <span
+                                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusClass}`}
+                                >
+                                  {statusLabel}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-[var(--color-muted-foreground)] truncate mt-0.5">
+                                {p.deal?.lead ? (
+                                  <span className="font-medium text-[var(--color-foreground)]/80">
+                                    {p.deal.lead.name}
+                                  </span>
+                                ) : null}
+                                {formattedVal ? (
+                                  <>
+                                    <span>·</span>
+                                    <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                                      {formattedVal}
+                                    </span>
+                                  </>
+                                ) : null}
+                              </div>
+                            </div>
+                            <ArrowRight
+                              className={`h-4 w-4 shrink-0 transition-opacity ${isSelected ? "text-violet-600 dark:text-violet-400 opacity-100" : "opacity-0"}`}
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </li>
+                )}
+
+                {/* 2. Negociações (Deals) Section */}
+                {apiResults.deals.length > 0 && (
+                  <li className="pt-2 pb-1">
+                    <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)] flex items-center justify-between">
+                      <span>Negociações no Funil</span>
+                      <span className="rounded-full bg-[var(--color-muted)] px-1.5 py-0.2 text-[10px]">
+                        {apiResults.deals.length}
+                      </span>
+                    </div>
+                    <div className="space-y-1 mt-1">
+                      {apiResults.deals.map((d) => {
+                        const itemIdx = flatItems.findIndex(
+                          (it) => it.type === "deal" && it.data.id === d.id
+                        );
+                        const isSelected = itemIdx === activeIdx;
+                        const stageLabel = STAGE_LABEL[d.stage] ?? d.stage;
+                        const stageClass = STAGE_PILL_CLASS[d.stage] ?? STAGE_PILL_CLASS["NEW"];
+                        const formattedVal = formatBrl(d.value);
+
+                        return (
+                          <button
+                            key={`deal-${d.id}`}
+                            type="button"
+                            data-search-idx={itemIdx}
+                            onMouseEnter={() => setActiveIdx(itemIdx)}
+                            onClick={() => handleSelect(flatItems[itemIdx]!)}
+                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all ${
+                              isSelected
+                                ? "bg-[var(--color-muted)] shadow-xs ring-1 ring-[var(--color-border)]"
+                                : "hover:bg-[var(--color-muted)]/60"
+                            }`}
+                          >
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold text-xs border border-amber-200 dark:border-amber-800">
+                              <Handshake className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-sm text-[var(--color-foreground)] truncate">
+                                  {d.title}
+                                </span>
+                                <span
+                                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${stageClass}`}
+                                >
+                                  {stageLabel}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-[var(--color-muted-foreground)] truncate mt-0.5">
+                                <span className="font-medium text-[var(--color-foreground)]/80">
+                                  {d.lead.name}
+                                </span>
+                                {d.lead.company ? (
+                                  <>
+                                    <span>·</span>
+                                    <span>{d.lead.company}</span>
+                                  </>
+                                ) : null}
+                                {formattedVal ? (
+                                  <>
+                                    <span>·</span>
+                                    <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                                      {formattedVal}
+                                    </span>
+                                  </>
+                                ) : null}
+                              </div>
+                            </div>
+                            <ArrowRight
+                              className={`h-4 w-4 shrink-0 transition-opacity ${isSelected ? "text-amber-600 dark:text-amber-400 opacity-100" : "opacity-0"}`}
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </li>
+                )}
+
+                {/* 3. Clientes (Leads) Section */}
+                {apiResults.leads.length > 0 && (
+                  <li className="pt-2 pb-1">
+                    <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)] flex items-center justify-between">
+                      <span>Clientes & Leads</span>
+                      <span className="rounded-full bg-[var(--color-muted)] px-1.5 py-0.2 text-[10px]">
+                        {apiResults.leads.length}
+                      </span>
+                    </div>
+                    <div className="space-y-1 mt-1">
+                      {apiResults.leads.map((l) => {
+                        const itemIdx = flatItems.findIndex(
+                          (it) => it.type === "lead" && it.data.id === l.id
+                        );
+                        const isSelected = itemIdx === activeIdx;
+                        const stage = l.latestDealStage ?? "NEW";
+                        const stageLabel = STAGE_LABEL[stage] ?? stage;
+                        const stageClass = STAGE_PILL_CLASS[stage] ?? STAGE_PILL_CLASS["NEW"];
+                        const phone = formatWhatsapp(l.whatsapp);
+                        const initials = (l.name || "L")
+                          .split(" ")
+                          .slice(0, 2)
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase();
+
+                        return (
+                          <button
+                            key={`lead-${l.id}`}
+                            type="button"
+                            data-search-idx={itemIdx}
+                            onMouseEnter={() => setActiveIdx(itemIdx)}
+                            onClick={() => handleSelect(flatItems[itemIdx]!)}
+                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all ${
+                              isSelected
+                                ? "bg-[var(--color-muted)] shadow-xs ring-1 ring-[var(--color-border)]"
+                                : "hover:bg-[var(--color-muted)]/60"
+                            }`}
+                          >
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 font-bold text-xs border border-emerald-200 dark:border-emerald-800">
+                              {initials || <User className="h-4 w-4" />}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-sm text-[var(--color-foreground)] truncate">
+                                  {l.name}
+                                </span>
+                                <span
+                                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${stageClass}`}
+                                >
+                                  {stageLabel}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-[var(--color-muted-foreground)] truncate mt-0.5">
+                                <span>{phone ?? l.email ?? "Sem telefone"}</span>
+                                {l.company ? (
+                                  <>
+                                    <span>·</span>
+                                    <span className="truncate">{l.company}</span>
+                                  </>
+                                ) : null}
+                              </div>
+                            </div>
+                            <ArrowRight
+                              className={`h-4 w-4 shrink-0 transition-opacity ${isSelected ? "text-emerald-600 dark:text-emerald-400 opacity-100" : "opacity-0"}`}
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </li>
+                )}
+
+                {/* 4. Navegação & Módulos Section */}
+                {matchingNavItems.length > 0 && (
+                  <li className="pt-2 pb-1">
+                    <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                      <span>Páginas & Recursos</span>
+                    </div>
+                    <div className="space-y-1 mt-1">
+                      {matchingNavItems.map((n) => {
+                        const itemIdx = flatItems.findIndex(
+                          (it) => it.type === "nav" && it.data.id === n.id
+                        );
+                        const isSelected = itemIdx === activeIdx;
+                        const Icon = n.icon;
+
+                        return (
+                          <button
+                            key={n.id}
+                            type="button"
+                            data-search-idx={itemIdx}
+                            onMouseEnter={() => setActiveIdx(itemIdx)}
+                            onClick={() => handleSelect(flatItems[itemIdx]!)}
+                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-all ${
+                              isSelected
+                                ? "bg-[var(--color-muted)] shadow-xs ring-1 ring-[var(--color-border)]"
+                                : "hover:bg-[var(--color-muted)]/60"
+                            }`}
+                          >
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-muted)] text-[var(--color-foreground)]">
+                              <Icon className="h-4 w-4 opacity-80" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-sm text-[var(--color-foreground)] truncate">
+                                  {n.title}
+                                </span>
+                                {n.badge && (
+                                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                    {n.badge}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-[var(--color-muted-foreground)] truncate">
+                                {n.subtitle}
+                              </p>
+                            </div>
+                            <ArrowRight
+                              className={`h-4 w-4 shrink-0 transition-opacity ${isSelected ? "text-[var(--color-foreground)] opacity-100" : "opacity-0"}`}
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </li>
+                )}
+
+                {/* 5. Ações Rápidas Section */}
+                {matchingActions.length > 0 && (
+                  <li className="pt-2 pb-1">
+                    <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                      <span>Ações Rápidas</span>
+                    </div>
+                    <div className="space-y-1 mt-1">
+                      {matchingActions.map((a) => {
+                        const itemIdx = flatItems.findIndex(
+                          (it) => it.type === "action" && it.data.id === a.id
+                        );
+                        const isSelected = itemIdx === activeIdx;
+                        const Icon = a.icon;
+
+                        return (
+                          <button
+                            key={a.id}
+                            type="button"
+                            data-search-idx={itemIdx}
+                            onMouseEnter={() => setActiveIdx(itemIdx)}
+                            onClick={() => handleSelect(flatItems[itemIdx]!)}
+                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-all ${
+                              isSelected
+                                ? "bg-[var(--color-muted)] shadow-xs ring-1 ring-[var(--color-border)]"
+                                : "hover:bg-[var(--color-muted)]/60"
+                            }`}
+                          >
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="font-semibold text-sm text-[var(--color-foreground)] truncate block">
+                                {a.title}
+                              </span>
+                              <p className="text-xs text-[var(--color-muted-foreground)] truncate">
+                                {a.subtitle}
+                              </p>
+                            </div>
+                            <ArrowRight
+                              className={`h-4 w-4 shrink-0 transition-opacity ${isSelected ? "text-emerald-600 dark:text-emerald-400 opacity-100" : "opacity-0"}`}
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </li>
+                )}
               </ul>
             )}
           </div>

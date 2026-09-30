@@ -43,6 +43,7 @@ import { EmailModule } from "./common/email/email.module";
 import { AiUsageModule } from "./modules/ai-usage/ai-usage.module";
 import { WebhooksModule } from "./modules/webhooks/webhooks.module";
 import { FeedbacksModule } from "./modules/feedbacks/feedbacks.module";
+import { SearchModule } from "./modules/search/search.module";
 
 @Module({
   controllers: [HealthController],
@@ -98,6 +99,7 @@ import { FeedbacksModule } from "./modules/feedbacks/feedbacks.module";
     AiUsageModule,
     WebhooksModule,
     FeedbacksModule,
+    SearchModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: SentryGlobalFilter },

@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
   Header,
   StreamableFile,
@@ -28,8 +29,12 @@ export class ProposalOperationsController {
   }
 
   @Get()
-  list(@TenantId() tenantId: string, @CurrentUser() user?: JwtPayload) {
-    return this.proposalsService.list(tenantId, user);
+  list(
+    @TenantId() tenantId: string,
+    @Query("search") search?: string,
+    @CurrentUser() user?: JwtPayload
+  ) {
+    return this.proposalsService.list(tenantId, user, search);
   }
 
   @Get(":id")

@@ -199,7 +199,7 @@ export function Topbar() {
         ) : null}
         <OrganizationSwitcher />
         {/* Desktop Global Search */}
-        <div className="hidden min-w-0 flex-1 max-w-md sm:block">
+        <div className="hidden min-w-0 flex-1 max-w-lg lg:max-w-xl sm:block">
           <GlobalSearch ref={searchHandleRef} />
         </div>
       </div>

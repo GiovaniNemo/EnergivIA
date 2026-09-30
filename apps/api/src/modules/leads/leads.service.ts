@@ -180,18 +180,41 @@ export class LeadsService {
         : {}),
     };
     if (query.search) {
-      const digits = query.search.replace(/\D/g, "");
+      const trimmed = query.search.trim();
+      const digits = trimmed.replace(/\D/g, "");
+      const propNumber = digits.length > 0 && !isNaN(Number(digits)) ? Number(digits) : null;
       const or: Prisma.LeadWhereInput[] = [
-        { name: { contains: query.search, mode: "insensitive" } },
-        { email: { contains: query.search, mode: "insensitive" } },
-        { company: { contains: query.search, mode: "insensitive" } },
+        { name: { contains: trimmed, mode: "insensitive" } },
+        { email: { contains: trimmed, mode: "insensitive" } },
+        { company: { contains: trimmed, mode: "insensitive" } },
       ];
       if (digits.length > 0) {
         or.push({ whatsapp: { contains: digits } });
       }
-      if (digits.length === 11 || digits.length === 14) {
-        or.push({ cpfCnpj: digits });
+      if (digits.length >= 3) {
+        or.push({ cpfCnpj: { contains: digits } });
       }
+      or.push({
+        deals: {
+          some: {
+            ...soft,
+            OR: [
+              { title: { contains: trimmed, mode: "insensitive" } },
+              {
+                proposals: {
+                  some: {
+                    ...soft,
+                    OR: [
+                      { title: { contains: trimmed, mode: "insensitive" } },
+                      ...(propNumber !== null ? [{ proposalNumber: propNumber }] : []),
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      });
       where.OR = or;
     }
 

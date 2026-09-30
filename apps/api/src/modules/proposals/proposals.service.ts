@@ -100,16 +100,36 @@ export class ProposalsService {
     @Optional() private readonly webhooksDispatcher?: WebhooksDispatcherService
   ) {}
 
-  async list(tenantId: string, user?: { sub?: string; role?: string } | string) {
+  async list(tenantId: string, user?: { sub?: string; role?: string } | string, search?: string) {
     const userRole = typeof user === "string" ? user : user?.role;
     const userId = typeof user === "object" ? user?.sub : undefined;
     const isOwnerOrAdmin = userRole === "OWNER" || userRole === "ADMIN" || userRole === "PLATFORM";
+
+    const trimmed = search?.trim();
+    const digits = trimmed ? trimmed.replace(/\D/g, "") : "";
+    const propNumber = digits.length > 0 && !isNaN(Number(digits)) ? Number(digits) : null;
+
+    const searchWhere: Prisma.ProposalWhereInput = trimmed
+      ? {
+          OR: [
+            { title: { contains: trimmed, mode: "insensitive" } },
+            ...(propNumber !== null ? [{ proposalNumber: propNumber }] : []),
+            { deal: { title: { contains: trimmed, mode: "insensitive" } } },
+            { deal: { lead: { name: { contains: trimmed, mode: "insensitive" } } } },
+            { deal: { lead: { email: { contains: trimmed, mode: "insensitive" } } } },
+            { deal: { lead: { company: { contains: trimmed, mode: "insensitive" } } } },
+            ...(digits.length > 0 ? [{ deal: { lead: { whatsapp: { contains: digits } } } }] : []),
+            ...(digits.length >= 3 ? [{ deal: { lead: { cpfCnpj: { contains: digits } } } }] : []),
+          ],
+        }
+      : {};
 
     const rows = await this.prisma.proposal.findMany({
       where: {
         tenantId,
         ...soft,
         ...(!isOwnerOrAdmin && userId ? { deal: { assignedUserId: userId } } : {}),
+        ...searchWhere,
       },
       include: {
         deal: {
@@ -120,6 +140,7 @@ export class ProposalsService {
         simulation: { select: { input: true } },
       },
       orderBy: { createdAt: "desc" },
+      take: search ? 30 : undefined,
     });
 
     const isCommercial = userRole === "SALES" || userRole === "VIEWER";
