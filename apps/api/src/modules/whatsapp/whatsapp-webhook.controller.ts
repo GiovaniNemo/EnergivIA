@@ -55,11 +55,36 @@ export class WhatsappWebhookController {
   @Post("webhook")
   @HttpCode(HttpStatus.OK)
   async handleIncomingMessage(@Body() body: Record<string, unknown>) {
-    // Processamento assíncrono para responder imediatamente HTTP 200 à Meta
+    // 1. Detecção automática: Payload da Evolution API
+    const dataObj =
+      body && typeof body["data"] === "object" && body["data"] !== null
+        ? (body["data"] as Record<string, unknown>)
+        : null;
+    if (
+      body &&
+      (body["event"] === "messages.upsert" || body["instance"] || (dataObj && "key" in dataObj))
+    ) {
+      this.botService.handleEvolutionWebhookPayload(body).catch((err) => {
+        this.logger.error("Erro no processamento do webhook Evolution WhatsApp:", err);
+      });
+      return { status: "SUCCESS" };
+    }
+
+    // 2. Payload da Meta Cloud API
     this.botService.handleWebhookPayload(body).catch((err) => {
       this.logger.error("Erro no processamento do webhook WhatsApp:", err);
     });
 
     return { status: "EVENT_RECEIVED" };
+  }
+
+  @Public()
+  @Post("webhook/evolution")
+  @HttpCode(HttpStatus.OK)
+  async handleEvolutionWebhook(@Body() body: Record<string, unknown>) {
+    this.botService.handleEvolutionWebhookPayload(body).catch((err) => {
+      this.logger.error("Erro no processamento do webhook Evolution WhatsApp:", err);
+    });
+    return { status: "SUCCESS" };
   }
 }

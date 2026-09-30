@@ -62,20 +62,104 @@ export class WhatsappCloudService {
     return { ok: res.ok, status: res.status, errText };
   }
 
+  private readonly mediaCache = new Map<
+    string,
+    { buffer: Buffer; mimeType: string; timestamp: number }
+  >();
+
+  registerMediaBuffer(mediaId: string, buffer: Buffer, mimeType: string) {
+    this.mediaCache.set(mediaId, { buffer, mimeType, timestamp: Date.now() });
+    // Limpar itens velhos (> 30 min)
+    const threshold = Date.now() - 30 * 60 * 1000;
+    for (const [key, item] of this.mediaCache.entries()) {
+      if (item.timestamp < threshold) {
+        this.mediaCache.delete(key);
+      }
+    }
+  }
+
+  private isEvolutionProvider(): boolean {
+    const explicitProvider = this.config.get<string>("WHATSAPP_PROVIDER")?.trim().toLowerCase();
+    if (explicitProvider === "meta") return false;
+    if (explicitProvider === "evolution") return true;
+    return !!this.config.get<string>("EVOLUTION_API_URL")?.trim();
+  }
+
+  private async postTextViaEvolution(
+    toWaId: string,
+    body: string
+  ): Promise<{ ok: boolean; status: number; errText: string }> {
+    const baseUrl = this.config.get<string>("EVOLUTION_API_URL")?.trim().replace(/\/+$/, "");
+    const apiKey = this.config.get<string>("EVOLUTION_API_KEY")?.trim();
+    const instance = this.config.get<string>("EVOLUTION_INSTANCE_NAME")?.trim() || "energiv-bot";
+
+    if (!baseUrl || !apiKey) {
+      return {
+        ok: false,
+        status: 500,
+        errText:
+          "Evolution API not fully configured (missing EVOLUTION_API_URL or EVOLUTION_API_KEY)",
+      };
+    }
+
+    const cleanNumber = toWaId.replace(/\D/g, "");
+    const url = `${baseUrl}/message/sendText/${encodeURIComponent(instance)}`;
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: apiKey,
+        },
+        body: JSON.stringify({
+          number: cleanNumber,
+          text: body,
+        }),
+      });
+
+      const errText = res.ok ? "" : await res.text().catch(() => "");
+      return { ok: res.ok, status: res.status, errText };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { ok: false, status: 500, errText: msg };
+    }
+  }
+
   async sendTextMessage(params: {
     phoneNumberId: string;
     toWaId: string;
     body: string;
   }): Promise<void> {
+    const body = normalizeAssistantTextForWhatsapp(params.body);
+    const to = params.toWaId.replace(/\D/g, "");
+
+    // 1. Envio via Evolution API (Custo ZERO por mensagem)
+    if (this.isEvolutionProvider()) {
+      const { ok, status, errText } = await this.postTextViaEvolution(params.toWaId, body);
+      if (ok) {
+        const maxLen = 4000;
+        const text = body.length > maxLen ? `${body.slice(0, maxLen)}…[truncado]` : body;
+        this.logger.log(`[Evolution API] WhatsApp mensagem enviada: para=${to}\n---\n${text}\n---`);
+        return;
+      }
+      this.logger.error(
+        `[Evolution API] Falha no envio para ${to}: HTTP ${status} err=${errText.slice(0, 300)}`
+      );
+      // Se a Evolution falhar e não houver token da Meta, encerra aqui
+      const token = this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim();
+      if (!token) return;
+      this.logger.warn(`Tentando fallback via Meta Cloud API para ${to}...`);
+    }
+
+    // 2. Envio via Meta Cloud API (Oficial)
     const token =
       this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim() ||
       "EAANhZClS6ZCeYBSdcHOC6Ne9TD5m1o7h8QG6s8ZC65ZBdRmp4ruWdX2kOV2uTbmSRwimo2uyefGD4SnJzeZCn1WEmEIspoB7ZAmYvOUh9JV5QB9o3a27ufF5yRsvCX5gRZAmruk6GaozfqixmvUfFmDBdaCZC7hZCsZBfJ6MCCXX1ezY5ESNPviJTOZCtVEOOZATlQZDZD";
     if (!token) {
-      this.logger.warn("WHATSAPP_ACCESS_TOKEN not set; skipping outbound WhatsApp message.");
+      this.logger.warn("Nenhum provedor de WhatsApp configurado (nem Evolution nem Meta).");
       return;
     }
-
-    const body = normalizeAssistantTextForWhatsapp(params.body);
 
     const primaryId = params.phoneNumberId.trim();
     let usedPhoneNumberId = primaryId;
@@ -92,11 +176,10 @@ export class WhatsappCloudService {
     }
 
     if (ok) {
-      const to = params.toWaId.replace(/\D/g, "");
       const maxLen = 4000;
       const text = body.length > maxLen ? `${body.slice(0, maxLen)}…[truncado]` : body;
       this.logger.log(
-        `WhatsApp mensagem enviada: phone_number_id=${usedPhoneNumberId} para=${to}\n---\n${text}\n---`
+        `[Meta Cloud] WhatsApp mensagem enviada: phone_number_id=${usedPhoneNumberId} para=${to}\n---\n${text}\n---`
       );
       return;
     }
@@ -144,11 +227,62 @@ export class WhatsappCloudService {
   async downloadWhatsappMedia(
     mediaId: string
   ): Promise<{ buffer: Buffer; mimeType: string } | null> {
+    if (!mediaId) {
+      this.logger.warn("downloadWhatsappMedia: missing mediaId");
+      return null;
+    }
+
+    // 1. Checar se já temos a mídia registrada da Evolution API (via base64 do webhook)
+    const cached = this.mediaCache.get(mediaId);
+    if (cached) {
+      this.logger.log(`WA media: recuperada do cache local mediaId=${mediaId}`);
+      return { buffer: cached.buffer, mimeType: cached.mimeType };
+    }
+
+    // 2. Se for Evolution API e tiver URL, tentar buscar na Evolution
+    if (this.isEvolutionProvider()) {
+      const baseUrl = this.config.get<string>("EVOLUTION_API_URL")?.trim().replace(/\/+$/, "");
+      const apiKey = this.config.get<string>("EVOLUTION_API_KEY")?.trim();
+      const instance = this.config.get<string>("EVOLUTION_INSTANCE_NAME")?.trim() || "energiv-bot";
+
+      if (baseUrl && apiKey) {
+        try {
+          const evoUrl = `${baseUrl}/chat/getBase64FromMediaMessage/${encodeURIComponent(instance)}`;
+          const evoRes = await fetch(evoUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: apiKey,
+            },
+            body: JSON.stringify({
+              message: { key: { id: mediaId } },
+              convertToMp4: false,
+            }),
+          });
+
+          if (evoRes.ok) {
+            const data = (await evoRes.json()) as { base64?: string; mimetype?: string };
+            if (data.base64) {
+              const buffer = Buffer.from(data.base64, "base64");
+              const mimeType = data.mimetype || "application/octet-stream";
+              this.registerMediaBuffer(mediaId, buffer, mimeType);
+              return { buffer, mimeType };
+            }
+          }
+        } catch (evoErr) {
+          this.logger.warn(`WA media: falha ao buscar mídia na Evolution API: ${evoErr}`);
+        }
+      }
+    }
+
+    // 3. Fallback: Meta Cloud API
     const token =
       this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim() ||
       "EAANhZClS6ZCeYBSdcHOC6Ne9TD5m1o7h8QG6s8ZC65ZBdRmp4ruWdX2kOV2uTbmSRwimo2uyefGD4SnJzeZCn1WEmEIspoB7ZAmYvOUh9JV5QB9o3a27ufF5yRsvCX5gRZAmruk6GaozfqixmvUfFmDBdaCZC7hZCsZBfJ6MCCXX1ezY5ESNPviJTOZCtVEOOZATlQZDZD";
-    if (!token || !mediaId) {
-      this.logger.warn("downloadWhatsappMedia: missing WHATSAPP_ACCESS_TOKEN or mediaId");
+    if (!token) {
+      this.logger.warn(
+        "downloadWhatsappMedia: missing WHATSAPP_ACCESS_TOKEN and not found in Evolution cache"
+      );
       return null;
     }
     const timeoutMsRaw = this.config.get<string | number>("WHATSAPP_MEDIA_FETCH_TIMEOUT_MS");

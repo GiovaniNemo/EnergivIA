@@ -338,6 +338,126 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async handleEvolutionWebhookPayload(payload: any): Promise<void> {
+    if (!payload) return;
+
+    // Normalização: a Evolution pode enviar { event: "messages.upsert", data: { ... } }
+    // ou array de dados ou payload direto
+    const event = payload.event;
+    if (event && event !== "messages.upsert") {
+      // Ignora status de conexão, contatos, etc.
+      return;
+    }
+
+    const data = payload.data || payload;
+    const key = data.key;
+    if (!key) return;
+
+    // Ignora mensagens enviadas pelo próprio bot
+    if (key.fromMe) return;
+
+    const remoteJid = key.remoteJid || "";
+    // Ignora grupos e status do WhatsApp
+    if (remoteJid.endsWith("@g.us") || remoteJid.includes("status@broadcast")) {
+      return;
+    }
+
+    const fromWaId = remoteJid.replace(/@.*$/, "").replace(/\D/g, "");
+    if (!fromWaId) return;
+
+    const messageContent = data.message || {};
+    const messageId = key.id || `evo_${Date.now()}`;
+    const contactName = data.pushName || "Integrador";
+
+    let msgType = "unknown";
+    const mappedMessage: WebhookMessage = {
+      id: messageId,
+      from: fromWaId,
+    };
+
+    // 1. Mensagem de texto simples ou estendida
+    if (messageContent.conversation) {
+      msgType = "text";
+      mappedMessage.type = "text";
+      mappedMessage.text = { body: messageContent.conversation };
+    } else if (messageContent.extendedTextMessage?.text) {
+      msgType = "text";
+      mappedMessage.type = "text";
+      mappedMessage.text = { body: messageContent.extendedTextMessage.text };
+    }
+    // 2. Documento (ex: conta de luz em PDF)
+    else if (messageContent.documentMessage) {
+      msgType = "document";
+      const doc = messageContent.documentMessage;
+      mappedMessage.type = "document";
+      mappedMessage.document = {
+        id: messageId,
+        filename: doc.fileName || doc.title || "fatura.pdf",
+        mime_type: doc.mimetype || "application/pdf",
+      };
+
+      const b64 = doc.base64 || data.base64 || messageContent.base64;
+      if (b64) {
+        const cleanB64 = b64.replace(/^data:.*?;base64,/, "");
+        this.whatsappCloud.registerMediaBuffer(
+          messageId,
+          Buffer.from(cleanB64, "base64"),
+          mappedMessage.document.mime_type || "application/pdf"
+        );
+      }
+    }
+    // 3. Imagem (ex: foto de conta de luz)
+    else if (messageContent.imageMessage) {
+      msgType = "image";
+      const img = messageContent.imageMessage;
+      mappedMessage.type = "image";
+      mappedMessage.image = {
+        id: messageId,
+        caption: img.caption || "",
+        mime_type: img.mimetype || "image/jpeg",
+      };
+
+      const b64 = img.base64 || data.base64 || messageContent.base64;
+      if (b64) {
+        const cleanB64 = b64.replace(/^data:.*?;base64,/, "");
+        this.whatsappCloud.registerMediaBuffer(
+          messageId,
+          Buffer.from(cleanB64, "base64"),
+          mappedMessage.image.mime_type || "image/jpeg"
+        );
+      }
+    }
+    // 4. Áudio / Mensagem de Voz
+    else if (messageContent.audioMessage) {
+      msgType = "audio";
+      mappedMessage.type = "audio";
+      mappedMessage.audio = { id: messageId };
+
+      const b64 = messageContent.audioMessage.base64 || data.base64 || messageContent.base64;
+      if (b64) {
+        const cleanB64 = b64.replace(/^data:.*?;base64,/, "");
+        this.whatsappCloud.registerMediaBuffer(
+          messageId,
+          Buffer.from(cleanB64, "base64"),
+          messageContent.audioMessage.mimetype || "audio/ogg; codecs=opus"
+        );
+      }
+    }
+
+    if (msgType === "unknown") {
+      this.logger.debug(
+        `[Evolution API] Mensagem de tipo desconhecido/não suportada recebida de ${fromWaId}`
+      );
+      return;
+    }
+
+    await this.processSingleMessage({
+      message: mappedMessage,
+      phoneNumberId: payload.instance || "evolution",
+      contactName,
+    });
+  }
+
   private async resolveAuthorizedTenant(fromWaId: string) {
     const candidates = expandInboundPhoneCandidates(fromWaId);
 
