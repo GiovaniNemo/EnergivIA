@@ -14,6 +14,11 @@ export function CookieConsentBanner(): JSX.Element | null {
 
   useEffect(() => {
     try {
+      if (typeof window !== "undefined" && window.location.search.includes("hide_cookie=1")) {
+        setConsent("all");
+        setMounted(true);
+        return;
+      }
       const saved = localStorage.getItem(COOKIE_CONSENT_KEY) as CookieConsentStatus;
       if (saved) {
         setConsent(saved);
