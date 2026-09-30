@@ -829,11 +829,23 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     });
 
     // 5.1 Verificação de Feedback / Avaliação WhatsApp
+    const isGreetingOrIntent =
+      /^(oi|ol[aá]|bom dia|boa tarde|boa noite|menu|iniciar|reiniciar|ajuda|opa|e a[ií]|quero|proposta|cotar|cotação|simular|painel|solar|conta|fatura)\b/i.test(
+        incomingText.trim()
+      );
+
     const lastAssistantMsg = [...(conversation.messages || [])]
       .reverse()
       .find((m) => m.role === "assistant");
-    const wasAskedFeedback =
+
+    const feedbackTimeLimitMs = 2 * 60 * 60 * 1000; // 2 horas de validade para pergunta de feedback
+    const isRecentFeedbackRequest =
       lastAssistantMsg &&
+      lastAssistantMsg.createdAt &&
+      Date.now() - new Date(lastAssistantMsg.createdAt).getTime() < feedbackTimeLimitMs;
+
+    const wasAskedFeedback =
+      isRecentFeedbackRequest &&
       (lastAssistantMsg.content.includes("Como está sendo sua experiência") ||
         lastAssistantMsg.content.includes("como você avalia") ||
         lastAssistantMsg.content.includes("Deixe sua nota"));
@@ -842,12 +854,16 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       incomingText.match(/(?:nota\s*)?([1-5])\s*(?:estrelas?|star|⭐)?(?:\s*[-–:]\s*(.*))?$/i) ||
       incomingText.match(/^(?:⭐\s*){1,5}$/);
 
+    const hasExplicitRating =
+      incomingText.toLowerCase().includes("estrela") ||
+      incomingText.toLowerCase().includes("nota") ||
+      incomingText.includes("⭐") ||
+      /^[1-5](\s*[-–:]|$)/.test(incomingText.trim());
+
     if (
-      wasAskedFeedback ||
-      (feedbackMatch &&
-        (incomingText.toLowerCase().includes("estrela") ||
-          incomingText.toLowerCase().includes("nota") ||
-          incomingText.includes("⭐")))
+      !isGreetingOrIntent &&
+      ((wasAskedFeedback && (feedbackMatch || hasExplicitRating)) ||
+        (feedbackMatch && hasExplicitRating))
     ) {
       let rating = 5;
       const comment = incomingText;
