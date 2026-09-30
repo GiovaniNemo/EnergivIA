@@ -978,78 +978,6 @@ export default function CreateOrganizationPage() {
                   aria-hidden={step !== 2}
                 >
                   <div className="space-y-4 pt-1.5">
-                    {/* Card Preço por kWp */}
-                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 sm:p-5 shadow-sm space-y-3.5">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
-                        <div className="flex items-center gap-2.5">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1f7f9b]/15 text-[#1f7f9b] dark:text-[#38bdf8]">
-                            <Zap className="h-4 w-4" />
-                          </span>
-                          <div>
-                            <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-50">
-                              Preço Padrão de Venda por kWp
-                            </h3>
-                            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal">
-                              Valor base praticado pela sua empresa na sua região
-                            </p>
-                          </div>
-                        </div>
-                        <span className="self-start sm:self-auto rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
-                          Padrão: R$ 2.800/kWp
-                        </span>
-                      </div>
-
-                      <div className="space-y-2.5 pt-1">
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-500 dark:text-zinc-400">
-                            R$
-                          </span>
-                          <input
-                            type="number"
-                            min={1000}
-                            max={15000}
-                            step={50}
-                            value={defaultKwpRate || ""}
-                            onChange={(e) => {
-                              const val = Number(e.target.value);
-                              setDefaultKwpRate(isNaN(val) ? 2800 : val);
-                            }}
-                            placeholder="2800"
-                            className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-2.5 pl-10 pr-16 text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 shadow-sm focus:border-[#1f7f9b] focus:outline-none focus:ring-2 focus:ring-[#1f7f9b]/25"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                            / kWp
-                          </span>
-                        </div>
-
-                        {/* Presets rápidos */}
-                        <div className="flex flex-wrap items-center gap-2 pt-1">
-                          <span className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 font-medium">
-                            Valores rápidos:
-                          </span>
-                          {[2500, 2800, 3000, 3300, 3600].map((rate) => (
-                            <button
-                              key={rate}
-                              type="button"
-                              onClick={() => setDefaultKwpRate(rate)}
-                              className={`rounded-lg px-2.5 py-1 text-xs sm:text-sm font-semibold transition cursor-pointer ${
-                                defaultKwpRate === rate
-                                  ? "bg-[#1f7f9b] text-white border border-[#1f7f9b] shadow-sm font-bold"
-                                  : "bg-zinc-100 dark:bg-zinc-800/90 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                              }`}
-                            >
-                              R$ {rate.toLocaleString("pt-BR")}
-                            </button>
-                          ))}
-                        </div>
-                        <p className="text-xs sm:text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
-                          Este valor servirá como sugestão inicial automática para precificar suas
-                          propostas e kits solares. Você pode ajustar pontualmente em cada proposta
-                          ou alterar nas configurações.
-                        </p>
-                      </div>
-                    </div>
-
                     {/* Card Marcas de Módulos */}
                     <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 sm:p-5 shadow-sm space-y-3.5">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
@@ -1218,6 +1146,78 @@ export default function CreateOrganizationPage() {
                           ? `${selectedInverterBrands.length} marca(s) selecionada(s) para priorização em orçamentos.`
                           : "Se nenhuma marca for marcada, todas as marcas disponíveis no catálogo serão cotadas normalmente."}
                       </p>
+                    </div>
+
+                    {/* Card Preço por kWp */}
+                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 sm:p-5 shadow-sm space-y-3.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1f7f9b]/15 text-[#1f7f9b] dark:text-[#38bdf8]">
+                            <Zap className="h-4 w-4" />
+                          </span>
+                          <div>
+                            <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-50">
+                              Preço Padrão de Venda por kWp
+                            </h3>
+                            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal">
+                              Valor base praticado pela sua empresa na sua região
+                            </p>
+                          </div>
+                        </div>
+                        <span className="self-start sm:self-auto rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                          Padrão: R$ 2.800/kWp
+                        </span>
+                      </div>
+
+                      <div className="space-y-2.5 pt-1">
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-500 dark:text-zinc-400">
+                            R$
+                          </span>
+                          <input
+                            type="number"
+                            min={1000}
+                            max={15000}
+                            step={50}
+                            value={defaultKwpRate || ""}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              setDefaultKwpRate(isNaN(val) ? 2800 : val);
+                            }}
+                            placeholder="2800"
+                            className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-2.5 pl-10 pr-16 text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 shadow-sm focus:border-[#1f7f9b] focus:outline-none focus:ring-2 focus:ring-[#1f7f9b]/25"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                            / kWp
+                          </span>
+                        </div>
+
+                        {/* Presets rápidos */}
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <span className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 font-medium">
+                            Valores rápidos:
+                          </span>
+                          {[2500, 2800, 3000, 3300, 3600].map((rate) => (
+                            <button
+                              key={rate}
+                              type="button"
+                              onClick={() => setDefaultKwpRate(rate)}
+                              className={`rounded-lg px-2.5 py-1 text-xs sm:text-sm font-semibold transition cursor-pointer ${
+                                defaultKwpRate === rate
+                                  ? "bg-[#1f7f9b] text-white border border-[#1f7f9b] shadow-sm font-bold"
+                                  : "bg-zinc-100 dark:bg-zinc-800/90 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                              }`}
+                            >
+                              R$ {rate.toLocaleString("pt-BR")}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs sm:text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                          Este valor servirá como sugestão inicial automática para precificar suas
+                          propostas e kits solares. Você pode ajustar pontualmente em cada proposta
+                          ou alterar nas configurações.
+                        </p>
+                      </div>
                     </div>
 
                     <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3.5">
