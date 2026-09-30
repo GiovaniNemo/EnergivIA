@@ -71,6 +71,18 @@ export class BrandsService {
       return ["romagnole", "solar group", "pratyc"].includes(lower);
     };
 
+    const isMicroInverterBrand = (name: string) => {
+      const lower = name.toLowerCase().trim();
+      return [
+        "nep",
+        "northern electric power",
+        "hoymiles",
+        "enphase",
+        "tsun",
+        "deye micro",
+      ].includes(lower);
+    };
+
     const modulesSet = new Set<string>();
     const invertersSet = new Set<string>();
 
@@ -102,12 +114,8 @@ export class BrandsService {
 
       if (cat === "module") {
         modulesSet.add(brandName);
-      } else if (
-        cat === "inverter" ||
-        cat === "microinverter" ||
-        cat === "hybrid_inverter" ||
-        cat === "offgrid_inverter"
-      ) {
+      } else if (cat === "inverter" && !isMicroInverterBrand(brandName)) {
+        // Apenas inversores convencionais (string / central), excluindo microinversores
         invertersSet.add(brandName);
       }
     }
@@ -127,10 +135,8 @@ export class BrandsService {
         if (!brandName || isGeneric(brandName) || isStructureBrand(brandName)) continue;
         if (cat === "module" && modulesSet.size === 0) modulesSet.add(brandName);
         else if (
-          (cat === "inverter" ||
-            cat === "microinverter" ||
-            cat === "hybrid_inverter" ||
-            cat === "offgrid_inverter") &&
+          cat === "inverter" &&
+          !isMicroInverterBrand(brandName) &&
           invertersSet.size === 0
         ) {
           invertersSet.add(brandName);
