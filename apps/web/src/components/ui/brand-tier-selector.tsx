@@ -379,7 +379,7 @@ export function BrandTierSelector({
             >
               <div>
                 {/* Cabeçalho do Tier */}
-                <div className="flex items-center justify-between gap-2 pb-2.5 mb-2 border-b border-zinc-200 dark:border-zinc-800">
+                <div className="flex items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-zinc-200 dark:border-zinc-800">
                   <div className="flex items-center gap-2">
                     <TierIcon className="h-4 w-4 text-[#1f7f9b] dark:text-[#38bdf8]" />
                     <span className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-50">
@@ -392,9 +392,6 @@ export function BrandTierSelector({
                     {tier.tag}
                   </span>
                 </div>
-                <p className="text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-3 leading-snug">
-                  {tier.description}
-                </p>
 
                 {/* Lista de Marcas neste Tier */}
                 {tierBrands.length === 0 ? (
