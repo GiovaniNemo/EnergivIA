@@ -3426,17 +3426,6 @@ export const ProposalEconomicsModal = forwardRef<
                       </span>
                     ) : null}
                   </h3>
-                  {proposalKitResult?.own_stock_used || kitDraftSource.kind === "own" ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                      <Warehouse className="h-3.5 w-3.5 text-emerald-500" />
-                      Meu estoque
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                      <Sliders className="h-3.5 w-3.5 text-emerald-500" />
-                      Perfil do Integrador
-                    </span>
-                  )}
                 </div>
 
                 {/* Seletor de Origem do Kit */}
