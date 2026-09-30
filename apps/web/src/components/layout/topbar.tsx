@@ -171,16 +171,16 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-[60] flex h-14 shrink-0 items-center border-b border-[var(--color-border)] bg-[var(--color-card)]">
+    <header className="sticky top-0 z-[60] flex h-16 shrink-0 items-center border-b border-[var(--color-border)] bg-[var(--color-card)]">
       {/* Brand logo container aligning with sidebar */}
       <div
         className={cn(
-          "hidden shrink-0 items-center border-r border-[var(--color-border)] h-full transition-[width] duration-200 md:flex",
-          collapsed ? "w-20 justify-center px-2" : "w-[16rem] justify-center px-2.5"
+          "hidden shrink-0 items-center border-r border-[var(--color-border)] h-full transition-[width] duration-200 md:flex overflow-hidden",
+          collapsed ? "w-20 justify-center p-1" : "w-[16rem] justify-center px-2 py-0.5"
         )}
       >
         <Link href="/painel" className="flex w-full h-full min-w-0 items-center justify-center">
-          <BrandLogo collapsed={collapsed} />
+          <BrandLogo size="lg" collapsed={collapsed} />
         </Link>
       </div>
 

@@ -34,16 +34,16 @@ export function BrandLogo({
 
   const config = {
     sm: {
-      imgClass: "h-full max-h-[34px] w-full object-contain",
-      iconClass: "h-7 w-7",
+      imgClass: "h-full max-h-[38px] w-auto max-w-full object-contain",
+      iconClass: "h-8 w-8",
     },
     md: {
-      imgClass: "h-full max-h-[38px] md:max-h-[40px] w-full object-contain",
-      iconClass: "h-9 w-9",
+      imgClass: "h-full max-h-[46px] w-auto max-w-full object-contain",
+      iconClass: "h-10 w-10",
     },
     lg: {
-      imgClass: "h-full max-h-[56px] w-full object-contain",
-      iconClass: "h-11 w-11",
+      imgClass: "h-full max-h-[58px] w-full object-contain",
+      iconClass: "h-12 w-12",
     },
   }[size];
 
