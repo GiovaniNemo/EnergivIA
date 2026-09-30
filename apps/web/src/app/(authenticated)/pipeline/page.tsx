@@ -254,9 +254,14 @@ export default function PipelinePage(): JSX.Element {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const initialDealParamRef = useRef(searchParams?.get("id"));
-  const { currentOrganizationId, loading: orgLoading } = useOrganization();
+  const { currentOrganizationId, user, loading: orgLoading } = useOrganization();
   const { deals, setDeals, replaceDeals, updateDealStage, updateDealProposalStatus } = useDeals([]);
   const { openStudyForDeal, isProposalCreationLocked } = useProposalStudy();
+  const [prioridadesScope, setPrioridadesScope] = useState<"mine" | "team" | "all">("mine");
+  const [prioridadesSort, setPrioridadesSort] = useState<
+    "impacto" | "atrasadas" | "valor" | "recentes"
+  >("impacto");
+  const [prioridadesSortOpen, setPrioridadesSortOpen] = useState(false);
   const [proposalBusyLeadId, setProposalBusyLeadId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -791,6 +796,72 @@ export default function PipelinePage(): JSX.Element {
     await Promise.allSettled(updates);
     await loadDeals();
   }
+
+  async function handlePostponeDeal(deal: Deal, days: number): Promise<void> {
+    if (!currentOrganizationId || !deal.dealId) return;
+    const nextDate = new Date();
+    nextDate.setDate(nextDate.getDate() + days);
+    nextDate.setHours(9, 0, 0, 0);
+
+    await patchDeal(currentOrganizationId, deal.dealId, {
+      nextActionAt: nextDate.toISOString(),
+      nextActionType: `Follow-up adiado (+${days}d)`,
+    });
+    await loadDeals();
+  }
+
+  async function handleAssignSingleDeal(deal: Deal, assignedUserId: string | null): Promise<void> {
+    await assignDeal(deal, assignedUserId);
+  }
+
+  const prioridadesCounts = useMemo(() => {
+    const openDeals = filteredDeals.filter((d) => d.stage !== "fechado");
+    const mine = openDeals.filter(
+      (d) => !d.assigneeUserId || (user?.sub && d.assigneeUserId === user.sub)
+    ).length;
+    const team = openDeals.filter((d) =>
+      Boolean(d.assigneeUserId && (!user?.sub || d.assigneeUserId !== user.sub))
+    ).length;
+    const all = openDeals.length;
+    return { mine, team, all };
+  }, [filteredDeals, user?.sub]);
+
+  const prioridadesDeals = useMemo(() => {
+    let result = filteredDeals.filter((d) => d.stage !== "fechado");
+
+    if (prioridadesScope === "mine") {
+      result = result.filter(
+        (d) => !d.assigneeUserId || (user?.sub && d.assigneeUserId === user.sub)
+      );
+    } else if (prioridadesScope === "team") {
+      result = result.filter((d) =>
+        Boolean(d.assigneeUserId && (!user?.sub || d.assigneeUserId !== user.sub))
+      );
+    }
+
+    const now = Date.now();
+    return [...result].sort((a, b) => {
+      switch (prioridadesSort) {
+        case "atrasadas": {
+          const aDate = a.nextStepDate ? a.nextStepDate.getTime() : Infinity;
+          const bDate = b.nextStepDate ? b.nextStepDate.getTime() : Infinity;
+          return aDate - bDate;
+        }
+        case "valor":
+          return b.value - a.value;
+        case "recentes":
+          return b.recentAt.getTime() - a.recentAt.getTime();
+        case "impacto":
+        default: {
+          const aOverdue = a.nextStepDate && a.nextStepDate.getTime() < now ? 1000 : 0;
+          const bOverdue = b.nextStepDate && b.nextStepDate.getTime() < now ? 1000 : 0;
+          const aScore = aOverdue + (b.value > 0 ? (a.value / b.value) * 100 : 0);
+          const bScore = bOverdue + (a.value > 0 ? (b.value / a.value) * 100 : 0);
+          return bScore - aScore;
+        }
+      }
+    });
+  }, [filteredDeals, prioridadesScope, prioridadesSort, user?.sub]);
 
   function openWhatsapp(deal: Deal): void {
     if (!deal.whatsapp) return;
@@ -1391,35 +1462,78 @@ export default function PipelinePage(): JSX.Element {
         </div>
       )}
 
-      {}
       {activeView === "prioridades" && (
         <div className="flex flex-wrap items-center gap-2">
           {(
             [
-              { key: "mine", label: `Minhas (${openDealsCount})` },
-              { key: "team", label: "Do time (0)" },
-              { key: "all", label: `Todas (${openDealsCount})` },
+              { key: "mine", label: `Minhas (${prioridadesCounts.mine})` },
+              { key: "team", label: `Do time (${prioridadesCounts.team})` },
+              { key: "all", label: `Todas (${prioridadesCounts.all})` },
             ] as const
-          ).map(({ key, label }, i) => (
+          ).map(({ key, label }) => (
             <button
               key={key}
               type="button"
+              onClick={() => setPrioridadesScope(key)}
               className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                i === 0
-                  ? "border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-background)]"
-                  : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] hover:border-[var(--color-foreground)]/40"
+                prioridadesScope === key
+                  ? "border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-background)] font-semibold shadow-xs"
+                  : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] hover:border-[var(--color-foreground)]/40 hover:bg-[var(--color-muted)]"
               }`}
             >
               {label}
             </button>
           ))}
-          <div className="ml-auto">
+          <div className="ml-auto relative">
             <button
               type="button"
-              className="text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+              onClick={() => setPrioridadesSortOpen((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:border-[var(--color-foreground)]/30 transition-colors"
             >
-              Ordenar: impacto × urgência ▾
+              <span>
+                Ordenar:{" "}
+                <strong className="text-[var(--color-foreground)] font-semibold">
+                  {prioridadesSort === "impacto"
+                    ? "impacto × urgência"
+                    : prioridadesSort === "atrasadas"
+                      ? "mais atrasadas"
+                      : prioridadesSort === "valor"
+                        ? "maior valor"
+                        : "mais recentes"}
+                </strong>
+              </span>
+              <span className="text-[10px] opacity-70">▾</span>
             </button>
+
+            {prioridadesSortOpen && (
+              <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-52 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-1.5 shadow-xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100">
+                {[
+                  { key: "impacto", label: "Impacto × Urgência" },
+                  { key: "atrasadas", label: "Mais atrasadas primeiro" },
+                  { key: "valor", label: "Maior valor do projeto" },
+                  { key: "recentes", label: "Mais recentes" },
+                ].map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => {
+                      setPrioridadesSort(opt.key as "impacto" | "atrasadas" | "valor" | "recentes");
+                      setPrioridadesSortOpen(false);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-left transition-colors ${
+                      prioridadesSort === opt.key
+                        ? "bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
+                        : "hover:bg-[var(--color-muted)] text-[var(--color-foreground)]"
+                    }`}
+                  >
+                    <span>{opt.label}</span>
+                    {prioridadesSort === opt.key && (
+                      <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1537,7 +1651,8 @@ export default function PipelinePage(): JSX.Element {
       {}
       {activeView === "prioridades" && (
         <PipelinePrioridadesView
-          deals={filteredDeals}
+          deals={prioridadesDeals}
+          assignees={assignees}
           onOpenProposal={(deal) => {
             void openStudyForDeal(deal);
           }}
@@ -1547,6 +1662,8 @@ export default function PipelinePage(): JSX.Element {
             if (nextStage) void moveDeal(deal.id, nextStage);
           }}
           onOpenContact={(deal) => setDetailDealId(deal.id)}
+          onPostpone={handlePostponeDeal}
+          onAssign={handleAssignSingleDeal}
         />
       )}
 
