@@ -731,6 +731,67 @@ export default function PipelinePage(): JSX.Element {
     }
   }
 
+  async function handleBatchAdvanceStage(
+    dealIds: string[],
+    targetStage?: DealStage
+  ): Promise<void> {
+    if (!currentOrganizationId || dealIds.length === 0) return;
+    const stageOrder: DealStage[] = ["novo", "contato", "proposta", "negociacao", "fechado"];
+    const targetDeals = deals.filter((d) => dealIds.includes(d.id));
+
+    const updates = targetDeals.map(async (deal) => {
+      const nextStage =
+        targetStage ??
+        (() => {
+          const idx = stageOrder.indexOf(deal.stage);
+          return idx < stageOrder.length - 1 ? stageOrder[idx + 1] : deal.stage;
+        })();
+      if (!deal.dealId || nextStage === deal.stage) return;
+      return patchDeal(currentOrganizationId, deal.dealId, {
+        stage: mapUiStageToApi(nextStage),
+      });
+    });
+
+    await Promise.allSettled(updates);
+    await loadDeals();
+  }
+
+  async function handleBatchAssign(
+    dealIds: string[],
+    assignedUserId: string | null
+  ): Promise<void> {
+    if (!currentOrganizationId || dealIds.length === 0) return;
+    const targetDeals = deals.filter((d) => dealIds.includes(d.id));
+
+    const updates = targetDeals.map(async (deal) => {
+      if (!deal.dealId) return;
+      return patchDeal(currentOrganizationId, deal.dealId, { assignedUserId });
+    });
+
+    await Promise.allSettled(updates);
+    await loadDeals();
+  }
+
+  async function handleBatchFollowUp(
+    dealIds: string[],
+    nextActionAt: string,
+    nextActionType: string
+  ): Promise<void> {
+    if (!currentOrganizationId || dealIds.length === 0) return;
+    const targetDeals = deals.filter((d) => dealIds.includes(d.id));
+
+    const updates = targetDeals.map(async (deal) => {
+      if (!deal.dealId) return;
+      return patchDeal(currentOrganizationId, deal.dealId, {
+        nextActionAt,
+        nextActionType,
+      });
+    });
+
+    await Promise.allSettled(updates);
+    await loadDeals();
+  }
+
   function openWhatsapp(deal: Deal): void {
     if (!deal.whatsapp) return;
     const url = waMeUrl(
@@ -993,24 +1054,6 @@ export default function PipelinePage(): JSX.Element {
               </button>
             ))}
           </div>
-          {}
-          <Button variant="outline" size="sm" className="hidden sm:inline-flex">
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className="mr-1.5"
-              aria-hidden="true"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            Exportar
-          </Button>
           <Button
             className="bg-emerald-600 text-white hover:bg-emerald-700"
             size="sm"
@@ -1480,9 +1523,15 @@ export default function PipelinePage(): JSX.Element {
         </div>
       )}
 
-      {}
       {activeView === "tabela" && (
-        <PipelineTableView deals={filteredDeals} onOpenDeal={(deal) => setDetailDealId(deal.id)} />
+        <PipelineTableView
+          deals={filteredDeals}
+          assignees={assignees}
+          onOpenDeal={(deal) => setDetailDealId(deal.id)}
+          onAdvanceBatch={handleBatchAdvanceStage}
+          onAssignBatch={handleBatchAssign}
+          onFollowUpBatch={handleBatchFollowUp}
+        />
       )}
 
       {}
