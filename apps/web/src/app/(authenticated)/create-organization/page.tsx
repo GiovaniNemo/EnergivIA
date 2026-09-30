@@ -765,7 +765,11 @@ export default function CreateOrganizationPage() {
 
         <main className="relative flex h-full min-h-0 flex-1 flex-col overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden bg-[var(--color-background)]">
           <div className="w-full border-b border-[var(--color-border)] bg-[var(--color-card)]/50 px-6 py-3">
-            <div className="mx-auto flex max-w-[760px] items-center justify-end">
+            <div
+              className={`mx-auto flex items-center justify-end transition-all duration-300 ${
+                step === 2 ? "max-w-5xl" : "max-w-[760px]"
+              }`}
+            >
               <a
                 href="/auth/logout"
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-red-500"
@@ -776,7 +780,11 @@ export default function CreateOrganizationPage() {
             </div>
           </div>
 
-          <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col justify-start px-4 py-6 pb-16 sm:px-8 sm:py-8 sm:pb-24">
+          <div
+            className={`mx-auto flex w-full flex-1 flex-col justify-start px-4 py-6 pb-16 sm:px-8 sm:py-8 sm:pb-24 transition-all duration-300 ${
+              step === 2 ? "max-w-5xl" : "max-w-[760px]"
+            }`}
+          >
             <div className="mb-6 px-2">
               <Stepper alternativeLabel activeStep={step - 1} connector={<OnboardingConnector />}>
                 {steps.map((label) => (
