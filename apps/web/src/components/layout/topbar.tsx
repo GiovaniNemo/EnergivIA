@@ -171,11 +171,11 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-[60] flex h-16 shrink-0 items-center border-b border-[var(--color-border)] bg-[var(--color-card)]/85 backdrop-blur-md transition-colors">
+    <header className="sticky top-0 z-[60] flex h-16 shrink-0 items-center border-b border-black/5 bg-white/70 backdrop-blur-xl shadow-xs transition-colors dark:border-white/10 dark:bg-[#1a1a1a]/70">
       {/* Brand logo container aligning with sidebar */}
       <div
         className={cn(
-          "hidden shrink-0 items-center border-r border-[var(--color-border)] h-full transition-[width] duration-200 md:flex overflow-hidden",
+          "hidden shrink-0 items-center border-r border-black/5 dark:border-white/10 h-full transition-[width] duration-200 md:flex overflow-hidden",
           collapsed ? "w-20 justify-center p-1" : "w-[16rem] justify-center px-2 py-0.5"
         )}
       >
@@ -254,7 +254,7 @@ export function Topbar() {
           ) : (
             <WhatsappIcon className="h-4 w-4 shrink-0 text-white" />
           )}
-          <span className="hidden md:inline">IA no WhatsApp 💬</span>
+          <span className="hidden md:inline">IA no WhatsApp</span>
           <span className="hidden xs:inline md:hidden text-[11px]">IA</span>
         </button>
 
