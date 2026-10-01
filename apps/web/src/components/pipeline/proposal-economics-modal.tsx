@@ -35,7 +35,6 @@ import {
   Boxes,
   Calculator,
   Sliders,
-  Building2,
 } from "lucide-react";
 import { buildSystemDealTitle } from "@/components/lead-detail/lead-detail-utils";
 import { Button } from "@/components/ui/button";
@@ -3993,12 +3992,6 @@ export const ProposalEconomicsModal = forwardRef<
                               )}
                               <span className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  {alt.distributor_name ? (
-                                    <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-medium bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/30">
-                                      <Building2 className="h-3 w-3 shrink-0" />
-                                      {alt.distributor_name}
-                                    </span>
-                                  ) : null}
                                   {extractPowerBadge(alt.product_name) ? (
                                     <span
                                       className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold ${
