@@ -82,6 +82,73 @@ function expandInboundPhoneCandidates(raw: string): string[] {
   return [...out];
 }
 
+function formatPhone(phone: string): string {
+  const d = phone.replace(/\D/g, "");
+  if (d.length === 11) {
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  }
+  if (d.length === 10) {
+    return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  }
+  return phone;
+}
+
+function extractNameAndPhone(text: string): { name: string; phone?: string } {
+  const cleanText = text.trim();
+
+  // Procura padrão de telefone brasileiro: DDD (2 dígitos) seguido de 8 ou 9 dígitos
+  // Ex: 44099117969, 44988117969, (44) 98811-7969, 44 98811-7969, 44-988117969, +5544988117969
+  const contiguousDigitsRegex = /\b(?:\+?55)?([1-9]{2}\d{8,9})\b/;
+  const formattedPhoneRegex =
+    /(?:\+?55\s*)?(?:\(?\s*([1-9]{2})\s*\)?\s*)?(?:(9\s*\d{4}|\d{4})[-.\s]?(\d{4}))\b/;
+
+  let foundPhone: string | undefined;
+  let matchStr = "";
+
+  const matchContiguous = cleanText.match(contiguousDigitsRegex);
+  if (matchContiguous && matchContiguous[1]) {
+    foundPhone = matchContiguous[1];
+    matchStr = matchContiguous[0];
+  } else {
+    const matchFormatted = cleanText.match(formattedPhoneRegex);
+    if (matchFormatted && matchFormatted[0]) {
+      const d = matchFormatted[0].replace(/\D/g, "");
+      const cleaned = d.startsWith("55") && (d.length === 12 || d.length === 13) ? d.slice(2) : d;
+      if (cleaned.length === 10 || cleaned.length === 11) {
+        foundPhone = cleaned;
+        matchStr = matchFormatted[0];
+      }
+    }
+  }
+
+  // Remove o telefone encontrado do texto para extrair o nome
+  let rawName = cleanText;
+  if (matchStr) {
+    rawName = rawName.replace(matchStr, "");
+  }
+
+  // Remove pontuações e termos comuns entre nome e telefone (ex: vírgulas, hífens, "whats:", etc.)
+  rawName = rawName
+    .replace(/\b(?:whats(?:app)?|cel(?:ular)?|tel(?:efone)?|fone|nome)\b:?/gi, "")
+    .replace(/^[,;\-/:|()=*~_\s]+|[,;\-/:|()=*~_\s]+$/g, "")
+    .trim();
+
+  // Capitaliza o nome se tiver letras
+  const formattedName = rawName
+    ? rawName
+        .split(/\s+/)
+        .map((w) =>
+          w.length > 2 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()
+        )
+        .join(" ")
+    : "";
+
+  return {
+    name: formattedName,
+    phone: foundPhone,
+  };
+}
+
 @Injectable()
 export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WhatsappBotService.name);
@@ -152,6 +219,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       lastBotContent.includes("Qual o padrão de entrada da instalação?") ||
       lastBotContent.includes("Qual a estrutura do telhado?") ||
       lastBotContent.includes("Qual opção você prefere para o seu cliente?") ||
+      lastBotContent.includes("cliente final") ||
       lastBotContent.includes("Qual o nome do cliente final") ||
       lastBotContent.includes("E qual o WhatsApp dele") ||
       lastBotContent.includes("Qual modelo de proposta comercial você deseja usar") ||
@@ -2030,10 +2098,16 @@ ${catalogContext}`;
 
         // 7. Nome e WhatsApp do Cliente (pode ser detectado pelas confirmações do assistente)
         if (m.role === "assistant") {
-          const nameM1 = content.match(/registrar o cliente ([^.]+)\./i);
-          const nameM2 = content.match(/Cliente \*([^*]+)\* anotado/i);
-          if (nameM1?.[1]) clientName = nameM1[1].trim();
-          else if (nameM2?.[1]) clientName = nameM2[1].trim();
+          const bothM = content.match(/Cliente \*([^*]+)\* e WhatsApp \*([^*]+)\*/i);
+          if (bothM?.[1]) {
+            clientName = bothM[1].replace(/\*/g, "").trim();
+            if (bothM[2]) clientWhatsapp = bothM[2].replace(/\D/g, "");
+          } else {
+            const nameM1 = content.match(/registrar o cliente \*?([^*.]+)\*?\./i);
+            const nameM2 = content.match(/Cliente \*([^*]+)\* anotado/i);
+            if (nameM1?.[1]) clientName = nameM1[1].replace(/\*/g, "").trim();
+            else if (nameM2?.[1]) clientName = nameM2[1].replace(/\*/g, "").trim();
+          }
 
           const locM =
             content.match(/Localização identificada:\s*\*([^*\/]+)\/([A-Za-z]{2})\*/i) ||
@@ -2044,6 +2118,26 @@ ${catalogContext}`;
           }
 
           continue; // Não analisa mensagens do bot para evitar capturar exemplos de texto
+        }
+
+        const prevAssistantForLead = i > 0 ? messages[i - 1]?.content || "" : "";
+        if (
+          prevAssistantForLead.includes("cliente final") ||
+          prevAssistantForLead.includes("E qual o WhatsApp dele") ||
+          prevAssistantForLead.includes("WhatsApp correto")
+        ) {
+          const { name: parsedName, phone: parsedPhone } = extractNameAndPhone(content);
+          if (parsedPhone) {
+            clientWhatsapp = parsedPhone;
+          }
+          if (
+            parsedName &&
+            parsedName.length >= 2 &&
+            !parsedName.toLowerCase().startsWith("voltar") &&
+            !parsedName.toLowerCase().startsWith("0")
+          ) {
+            clientName = parsedName;
+          }
         }
 
         // 1. Extração de kWp
@@ -2113,7 +2207,7 @@ ${catalogContext}`;
           lowerC.startsWith("mudar cidade") ||
           lowerC.startsWith("trocar cidade") ||
           lowerC.startsWith("alterar cidade") ||
-          (isLocationInput(content) && !prevContent.includes("nome do cliente final"))
+          (isLocationInput(content) && !prevContent.includes("cliente final"))
         ) {
           const hspRes = getHsp(content);
           if (hspRes.city) {
@@ -2340,7 +2434,12 @@ ${catalogContext}`;
         return `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
       }
 
-      if (lastBotMsg.includes("Qual o nome do cliente final")) {
+      const isClientNameQuestion =
+        lastBotMsg.includes("cliente final") ||
+        lastBotMsg.includes("Qual o nome do cliente final") ||
+        lastBotMsg.includes("nome correto do cliente final");
+
+      if (isClientNameQuestion) {
         const quotes = await this.calculateDistributorKits({
           consumptionKwh: sessionCtx.consumptionKwh,
           targetKWp: sessionCtx.targetKWp,
@@ -2359,8 +2458,13 @@ ${catalogContext}`;
         return `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
       }
 
-      if (lastBotMsg.includes("E qual o WhatsApp dele")) {
-        return `Sem problemas! Qual o nome correto do cliente final para registrarmos no seu CRM?`;
+      if (
+        lastBotMsg.includes("E qual o WhatsApp dele") ||
+        lastBotMsg.includes("qual o WhatsApp") ||
+        lastBotMsg.includes("qual o whatsapp") ||
+        lastBotMsg.includes("WhatsApp correto")
+      ) {
+        return `Sem problemas! Qual o nome do cliente final para registrarmos no seu CRM? (ou digite 0️⃣ para voltar às opções de kits)`;
       }
 
       if (lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar")) {
@@ -2389,8 +2493,17 @@ ${catalogContext}`;
       return `Por favor, responda com o número da opção do kit desejado (ex: 1 ou 2) ou envie 0️⃣ para voltar e alterar a estrutura.`;
     }
 
-    // ESTADO B: O Bot pediu o nome do cliente final
-    if (lastBotMsg.includes("Qual o nome do cliente final")) {
+    // ESTADO B: O Bot pediu o nome do cliente final (ou o nome correto)
+    const isAskingClientName =
+      (lastBotMsg.includes("cliente final") &&
+        (lastBotMsg.includes("nome") ||
+          lastBotMsg.includes("Nome") ||
+          lastBotMsg.includes("CRM") ||
+          lastBotMsg.includes("registrarmos"))) ||
+      lastBotMsg.includes("Qual o nome do cliente final") ||
+      lastBotMsg.includes("nome correto do cliente final");
+
+    if (isAskingClientName) {
       const lower = incomingText.toLowerCase().trim();
       const isGreeting =
         /^(olá|ola|oi|oii|bom dia|boa tarde|boa noite|menu|iniciar|ajuda|novo|reiniciar)$/i.test(
@@ -2403,14 +2516,58 @@ ${catalogContext}`;
           `(Ou envie 0️⃣ para voltar e ver os kits disponíveis, ou *novo* para iniciar outra simulação)`
         );
       }
-      const clientName = incomingText.trim();
-      return `Certo, vou registrar o cliente *${clientName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
+
+      const { name, phone } = extractNameAndPhone(incomingText);
+      const effectiveName = name || (phone ? "Cliente" : incomingText.trim());
+
+      // Se o usuário já enviou o Nome E o WhatsApp na mesma mensagem (ex: "cezar 44988117969" ou "cezar, 44099117969")
+      if (phone && name) {
+        const templates = await this.getAvailableTemplates(conversation.organizationId);
+        let templateListText = "";
+        templates.forEach((t, i) => {
+          templateListText += `${this.numToEmoji(i + 1)} ${t.name}\n`;
+        });
+        templateListText += `0️⃣ Voltar / Rever dados\n`;
+
+        return (
+          `Cliente *${effectiveName}* e WhatsApp *${formatPhone(phone)}* registrados com sucesso! 👤✨\n\n` +
+          `Qual modelo de proposta comercial você deseja usar para o seu cliente?\n` +
+          `${templateListText}\n` +
+          `(Responda com o número da opção desejada ou digite 0️⃣ para corrigir o nome/telefone)`
+        );
+      }
+
+      // Se enviou apenas o telefone sem nome
+      if (phone && !name) {
+        return `Anotado o WhatsApp *${formatPhone(phone)}*! E qual o *nome* do cliente final para registrarmos no seu CRM?`;
+      }
+
+      // Se enviou apenas o nome
+      return `Certo, vou registrar o cliente *${effectiveName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
     }
 
     // ESTADO C: O Bot pediu o WhatsApp do cliente final -> Apresenta os modelos de proposta
-    if (lastBotMsg.includes("E qual o WhatsApp dele")) {
-      const clientNameMatch = lastBotMsg.match(/registrar o cliente \*?([^.*]+)\*?\./i);
-      const clientName = clientNameMatch?.[1]?.trim() || "Cliente";
+    if (
+      lastBotMsg.includes("E qual o WhatsApp dele") ||
+      lastBotMsg.includes("qual o WhatsApp") ||
+      lastBotMsg.includes("qual o whatsapp") ||
+      lastBotMsg.includes("WhatsApp correto")
+    ) {
+      const clientNameMatch =
+        lastBotMsg.match(/registrar o cliente \*?([^*.]+)\*?\./i) ||
+        lastBotMsg.match(/Cliente \*([^*]+)\*/i);
+      let clientName =
+        clientNameMatch?.[1]?.replace(/\*/g, "").trim() || sessionCtx.clientName || "Cliente";
+
+      const { name: newName, phone } = extractNameAndPhone(incomingText);
+      if (newName && !phone) {
+        // Usuário corrigiu apenas o nome
+        return `Certo, corrigi o nome para *${newName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
+      }
+      if (newName && phone) {
+        // Usuário enviou nome e telefone
+        clientName = newName;
+      }
 
       const templates = await this.getAvailableTemplates(conversation.organizationId);
       let templateListText = "";
@@ -2419,8 +2576,10 @@ ${catalogContext}`;
       });
       templateListText += `0️⃣ Voltar / Rever dados\n`;
 
+      const phoneDisplay = phone ? ` e WhatsApp *${formatPhone(phone)}*` : "";
+
       return (
-        `Cliente *${clientName}* anotado com sucesso! 👤✨\n\n` +
+        `Cliente *${clientName}*${phoneDisplay} anotado com sucesso! 👤✨\n\n` +
         `Qual modelo de proposta comercial você deseja usar para o seu cliente?\n` +
         `${templateListText}\n` +
         `(Responda com o número da opção desejada)`
@@ -2436,7 +2595,10 @@ ${catalogContext}`;
       const chosenTemplate = availableTemplates[chosenTemplateIndex] || availableTemplates[0];
 
       let clientName = sessionCtx.clientName || "Cliente";
-      let clientWhatsapp = "WhatsApp";
+      let clientWhatsapp =
+        sessionCtx.clientWhatsapp && sessionCtx.clientWhatsapp !== "WhatsApp"
+          ? sessionCtx.clientWhatsapp
+          : "WhatsApp";
       let chosenQuoteIndex = 0;
 
       // Recupera escolhas das mensagens
@@ -2444,6 +2606,13 @@ ${catalogContext}`;
         const m = messages[i];
         if (!m) continue;
         const content = typeof m.content === "string" ? m.content.trim() : "";
+
+        if (clientWhatsapp === "WhatsApp") {
+          const { phone } = extractNameAndPhone(content);
+          if (phone) {
+            clientWhatsapp = phone;
+          }
+        }
 
         if (m.role === "assistant" && content.includes("E qual o WhatsApp dele")) {
           for (let j = i + 1; j < messages.length; j++) {
@@ -2881,7 +3050,10 @@ ${catalogContext}`;
       lastBotMsg.includes("Qual opção você prefere para o seu cliente?") ||
       lastBotMsg.includes("Qual o padrão de entrada da instalação?") ||
       lastBotMsg.includes("Qual a estrutura do telhado?") ||
-      lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar");
+      lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar") ||
+      lastBotMsg.includes("cliente final") ||
+      lastBotMsg.includes("WhatsApp") ||
+      lastBotMsg.includes("whatsapp");
 
     if (!isChoosingOtherOption) {
       if (lower === "1" || lower === "1." || lower === "opcao 1" || lower === "opção 1") {
