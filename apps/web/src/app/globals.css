@@ -56,6 +56,12 @@
   }
 }
 
+@keyframes borderBeam {
+  100% {
+    offset-distance: 100%;
+  }
+}
+
 @keyframes laserScan {
   0% {
     top: 5%;
@@ -624,5 +630,15 @@ html.hide-scrollbar,
   scrollbar-width: none !important;
 }
 
+@keyframes spin-border {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
 
-
+.animate-spin-border {
+  animation: spin-border 3.5s linear infinite;
+}

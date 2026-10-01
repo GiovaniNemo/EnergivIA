@@ -238,25 +238,34 @@ export function Topbar() {
             </Link>
           ))}
 
-        {/* WhatsApp AI Button (Responsive) */}
-        <button
-          type="button"
-          onClick={() => setWhatsappModalOpen(true)}
-          className="inline-flex h-8 items-center gap-1 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 px-2 sm:h-9 sm:gap-1.5 sm:px-2.5 text-xs font-bold text-white shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95 hover:from-emerald-600 hover:to-green-700 shrink-0"
-          title="Conhecer IA no WhatsApp"
-        >
-          {customWaLogoUrl ? (
-            <img
-              src={customWaLogoUrl}
-              alt="WhatsApp"
-              className="h-4 w-4 shrink-0 object-contain rounded-sm"
-            />
-          ) : (
-            <WhatsappIcon className="h-4 w-4 shrink-0 text-white" />
-          )}
-          <span className="hidden md:inline">IA no WhatsApp</span>
-          <span className="hidden xs:inline md:hidden text-[11px]">IA</span>
-        </button>
+        {/* WhatsApp AI Button (Responsive) with glowing border light beam */}
+        <div className="relative inline-flex p-[1.5px] overflow-hidden rounded-lg group shrink-0">
+          <span
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[220%] aspect-square animate-spin-border opacity-90 group-hover:opacity-100 pointer-events-none"
+            style={{
+              background:
+                "conic-gradient(from 0deg, transparent 0deg 280deg, rgba(167, 243, 208, 0.4) 310deg, #6ee7b7 340deg, #ffffff 355deg, transparent 360deg)",
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => setWhatsappModalOpen(true)}
+            className="relative z-10 inline-flex h-8 items-center gap-1 rounded-[7px] bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-600 px-2 sm:h-9 sm:gap-1.5 sm:px-2.5 text-xs font-bold text-white shadow-sm transition-all hover:brightness-105 active:scale-95 shrink-0"
+            title="Conhecer IA no WhatsApp"
+          >
+            {customWaLogoUrl ? (
+              <img
+                src={customWaLogoUrl}
+                alt="WhatsApp"
+                className="h-4 w-4 shrink-0 object-contain rounded-sm"
+              />
+            ) : (
+              <WhatsappIcon className="h-4 w-4 shrink-0 text-white" />
+            )}
+            <span className="hidden md:inline">IA no WhatsApp</span>
+            <span className="hidden xs:inline md:hidden text-[11px]">IA</span>
+          </button>
+        </div>
 
         <NotificationsBell />
         <Button
