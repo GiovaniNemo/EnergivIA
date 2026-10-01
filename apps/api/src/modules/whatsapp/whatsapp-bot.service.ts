@@ -149,7 +149,10 @@ function extractNameAndPhone(text: string): { name: string; phone?: string } {
   };
 }
 
-function parseKwpRate(input: string): number | null {
+function parseKwpRate(
+  input: string,
+  systemKwp?: number
+): { rate: number; isDerivedFromTotal?: boolean } | null {
   const clean = input.trim().toLowerCase();
 
   // Opções de menu ou confirmação
@@ -183,9 +186,13 @@ function parseKwpRate(input: string): number | null {
   if (kMatch && kMatch[1]) {
     const kVal = parseFloat(kMatch[1].replace(",", "."));
     if (!isNaN(kVal) && kVal >= 0.5 && kVal <= 25) {
-      return Math.round(kVal * 1000);
+      return { rate: Math.round(kVal * 1000) };
     }
   }
+
+  // Se explicitamente informou valor total: ex "total 8500", "8500 total", "valor total: R$ 8.500"
+  const isExplicitTotal =
+    clean.includes("total") || clean.includes("valor final") || clean.includes("preço final");
 
   // Padrão monetário / numérico geral
   // Ex: "R$ 2.800,00", "2800", "2.800", "2800,50", "3200/kwp", "r$3.000", "3.200 por kwp"
@@ -228,12 +235,24 @@ function parseKwpRate(input: string): number | null {
 
   // Se o integrador digitou algo como "2.8" ou "3.2" (abreviação comum para 2800 ou 3200)
   if (val > 0 && val < 20) {
-    return Math.round(val * 1000);
+    return { rate: Math.round(val * 1000) };
+  }
+
+  // Se explicitamente informou como valor total OU se for um valor total acima de 4.800 e não especificou /kwp
+  if (
+    (isExplicitTotal || (val > 4800 && !clean.includes("/kwp") && !clean.includes("por kwp"))) &&
+    systemKwp &&
+    systemKwp > 0
+  ) {
+    const derivedRate = Math.round((val / systemKwp) * 100) / 100;
+    if (derivedRate >= 500 && derivedRate <= 25000) {
+      return { rate: derivedRate, isDerivedFromTotal: true };
+    }
   }
 
   // Faixa de R$/kWp aceitável no mercado solar brasileiro (R$ 500 a R$ 25.000)
   if (val >= 500 && val <= 25000) {
-    return Math.round(val * 100) / 100;
+    return { rate: Math.round(val * 100) / 100 };
   }
 
   return null;
@@ -1624,6 +1643,41 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     return ratePerKwp;
   }
 
+  private getSystemSizingSummary(sessionCtx: {
+    targetKWp?: number;
+    targetModules?: number;
+    modPowerWUser?: number;
+    consumptionKwh?: number;
+    [key: string]: any;
+  }) {
+    let finalTargetKWp = 3.0;
+    const geracaoPorKwp = 130; // média nacional kWh/mês por kWp
+    if (typeof sessionCtx.targetKWp === "number" && sessionCtx.targetKWp > 0) {
+      finalTargetKWp = sessionCtx.targetKWp;
+    } else if (
+      typeof sessionCtx.targetModules === "number" &&
+      sessionCtx.targetModules > 0 &&
+      typeof sessionCtx.modPowerWUser === "number" &&
+      sessionCtx.modPowerWUser > 0
+    ) {
+      finalTargetKWp = (sessionCtx.targetModules * sessionCtx.modPowerWUser) / 1000;
+    } else if (typeof sessionCtx.consumptionKwh === "number" && sessionCtx.consumptionKwh > 0) {
+      finalTargetKWp = sessionCtx.consumptionKwh / geracaoPorKwp;
+    }
+    const safeKwp = Math.max(0.5, finalTargetKWp);
+    const modulePowerW = 585;
+    const moduleQty = Math.max(4, Math.round((safeKwp * 1000) / modulePowerW));
+    const realSystemKwp = Math.round(((moduleQty * modulePowerW) / 1000) * 100) / 100;
+    const estimatedGeneration = Math.round(realSystemKwp * geracaoPorKwp);
+
+    return {
+      realSystemKwp,
+      moduleQty,
+      modulePowerW,
+      estimatedGeneration,
+    };
+  }
+
   private async calculateDistributorKits({
     consumptionKwh,
     targetKWp,
@@ -2228,7 +2282,7 @@ ${catalogContext}`;
             ) || content.match(/\(Taxa:\s*R\$\s*([\d.,]+)\/kWp\)/i);
           if (rateMatch && rateMatch[1]) {
             const parsed = parseKwpRate(rateMatch[1]);
-            if (parsed) customRatePerKwp = parsed;
+            if (parsed) customRatePerKwp = parsed.rate;
           }
 
           const roofM = content.match(
@@ -2268,7 +2322,7 @@ ${catalogContext}`;
         ) {
           const parsed = parseKwpRate(content);
           if (parsed) {
-            customRatePerKwp = parsed;
+            customRatePerKwp = parsed.rate;
           }
         }
 
@@ -2590,7 +2644,10 @@ ${catalogContext}`;
         return `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
       }
 
-      if (lastBotMsg.includes("Qual valor por kWp")) {
+      if (
+        lastBotMsg.includes("Qual valor por kWp") ||
+        lastBotMsg.includes("Qual valor você deseja utilizar")
+      ) {
         const orgDefaultRate = await this.getOrganizationDefaultKwpRate(
           conversation.organizationId
         );
@@ -2598,14 +2655,23 @@ ${catalogContext}`;
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         });
+        const sizing = this.getSystemSizingSummary(sessionCtx);
+        const totalEstimado = Math.round(sizing.realSystemKwp * orgDefaultRate);
+        const consumoRef = sessionCtx.consumptionKwh
+          ? ` para o consumo de *${sessionCtx.consumptionKwh} kWh/mês*`
+          : "";
+
         return (
           `Estrutura registrada: *${sessionCtx.roofType || "Cerâmica (Colonial)"}*. 🏠\n\n` +
-          `Identificamos a sua taxa padrão configurada: *R$ ${formattedRate}/kWp*.\n\n` +
+          `☀️ *Dimensionamento calculado${consumoRef}:*\n` +
+          `• *Potência do sistema:* ${sizing.realSystemKwp} kWp (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
+          `• *Geração estimada:* ${sizing.estimatedGeneration} kWh/mês\n` +
+          `• *Sua taxa padrão:* R$ ${formattedRate}/kWp (Valor aprox: *R$ ${totalEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}*)\n\n` +
           `Como você deseja prosseguir para esta cotação?\n` +
           `1️⃣ Seguir com a taxa padrão (*R$ ${formattedRate}/kWp*)\n` +
           `2️⃣ Informar outro valor por kWp (ou digite o valor diretamente, ex: *2500*, *R$ 3.200*)\n` +
           `0️⃣ Voltar / Alterar estrutura\n\n` +
-          `(Responda com o número da opção ou informe o valor desejado)`
+          `(Responda 1 para seguir, 2 para editar ou envie o valor desejado)`
         );
       }
 
@@ -2617,14 +2683,23 @@ ${catalogContext}`;
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         });
+        const sizing = this.getSystemSizingSummary(sessionCtx);
+        const totalEstimado = Math.round(sizing.realSystemKwp * orgDefaultRate);
+        const consumoRef = sessionCtx.consumptionKwh
+          ? ` para o consumo de *${sessionCtx.consumptionKwh} kWh/mês*`
+          : "";
+
         return (
           `Estrutura registrada: *${sessionCtx.roofType || "Cerâmica (Colonial)"}*. 🏠\n\n` +
-          `Identificamos a sua taxa padrão configurada: *R$ ${formattedRate}/kWp*.\n\n` +
+          `☀️ *Dimensionamento calculado${consumoRef}:*\n` +
+          `• *Potência do sistema:* ${sizing.realSystemKwp} kWp (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
+          `• *Geração estimada:* ${sizing.estimatedGeneration} kWh/mês\n` +
+          `• *Sua taxa padrão:* R$ ${formattedRate}/kWp (Valor aprox: *R$ ${totalEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}*)\n\n` +
           `Como você deseja prosseguir para esta cotação?\n` +
           `1️⃣ Seguir com a taxa padrão (*R$ ${formattedRate}/kWp*)\n` +
           `2️⃣ Informar outro valor por kWp (ou digite o valor diretamente, ex: *2500*, *R$ 3.200*)\n` +
           `0️⃣ Voltar / Alterar estrutura\n\n` +
-          `(Responda com o número da opção ou informe o valor desejado)`
+          `(Responda 1 para seguir, 2 para editar ou envie o valor desejado)`
         );
       }
 
@@ -3147,15 +3222,23 @@ ${catalogContext}`;
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         });
+        const sizing = this.getSystemSizingSummary({ ...sessionCtx, roofType: selectedRoof });
+        const totalEstimado = Math.round(sizing.realSystemKwp * orgDefaultRate);
+        const consumoRef = sessionCtx.consumptionKwh
+          ? ` para o consumo de *${sessionCtx.consumptionKwh} kWh/mês*`
+          : "";
 
         return (
           `Estrutura registrada: *${selectedRoof}*. 🏠\n\n` +
-          `Identificamos a sua taxa padrão configurada: *R$ ${formattedRate}/kWp*.\n\n` +
+          `☀️ *Dimensionamento calculado${consumoRef}:*\n` +
+          `• *Potência do sistema:* ${sizing.realSystemKwp} kWp (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
+          `• *Geração estimada:* ${sizing.estimatedGeneration} kWh/mês\n` +
+          `• *Sua taxa padrão:* R$ ${formattedRate}/kWp (Valor aprox: *R$ ${totalEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}*)\n\n` +
           `Como você deseja prosseguir para esta cotação?\n` +
           `1️⃣ Seguir com a taxa padrão (*R$ ${formattedRate}/kWp*)\n` +
           `2️⃣ Informar outro valor por kWp (ou digite o valor diretamente, ex: *2500*, *R$ 3.200*)\n` +
           `0️⃣ Voltar / Alterar estrutura\n\n` +
-          `(Responda com o número da opção ou informe o valor desejado)`
+          `(Responda 1 para seguir, 2 para editar ou envie o valor desejado)`
         );
       }
 
@@ -3228,15 +3311,21 @@ ${catalogContext}`;
         lower === "trocar";
 
       if (isChoice2) {
+        const sizing = this.getSystemSizingSummary(sessionCtx);
         return (
-          `Perfeito! Qual valor por kWp (R$/kWp) você deseja utilizar para esta cotação? 💰\n\n` +
-          `(Exemplos: digite *2500*, *R$ 3.200,00* ou *2.850/kWp*, ou envie 0️⃣ para voltar)`
+          `Perfeito! O sistema dimensionado é de *${sizing.realSystemKwp} kWp* (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W). ☀️\n\n` +
+          `Qual valor você deseja utilizar para esta cotação? 💰\n\n` +
+          `• *Por kWp:* ex: *2500*, *R$ 3.200,00* ou *2.850/kWp*\n` +
+          `• *Ou valor total do projeto:* ex: *total 18500* (calculamos o R$/kWp automaticamente)\n\n` +
+          `(Envie o valor desejado ou 0️⃣ para voltar)`
         );
       }
 
-      // Usuário digitou o valor diretamente (ex: "2500", "R$ 3.200", "2.850/kwp", "3k", etc.)
-      const directRate = parseKwpRate(incomingText);
-      if (directRate) {
+      // Usuário digitou o valor diretamente (ex: "2500", "R$ 3.200", "2.850/kwp", "3k", etc. ou valor total)
+      const sizing = this.getSystemSizingSummary(sessionCtx);
+      const directParsed = parseKwpRate(incomingText, sizing.realSystemKwp);
+      if (directParsed) {
+        const finalRate = directParsed.rate;
         const quotes = await this.calculateDistributorKits({
           consumptionKwh: sessionCtx.consumptionKwh,
           targetKWp: sessionCtx.targetKWp,
@@ -3247,7 +3336,7 @@ ${catalogContext}`;
           roofType: sessionCtx.roofType || "Cerâmica (Colonial)",
           gridVoltage: sessionCtx.gridVoltage || "Monofásico 220V",
           organizationId: conversation.organizationId,
-          customRatePerKwp: directRate,
+          customRatePerKwp: finalRate,
         });
 
         if (quotes.length === 0) {
@@ -3257,9 +3346,17 @@ ${catalogContext}`;
           );
         }
 
+        const formattedRate = finalRate.toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+        const prefixMsg = directParsed.isDerivedFromTotal
+          ? `Entendido! Convertemos seu valor informado para *R$ ${formattedRate}/kWp* (com base no sistema de ${sizing.realSystemKwp} kWp)! ☀️💰\n\n`
+          : `Taxa personalizada de *R$ ${formattedRate}/kWp* aplicada para esta cotação! ☀️💰\n\n`;
+
         return (
-          `Taxa personalizada de *R$ ${directRate.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kWp* aplicada para esta cotação! ☀️💰\n\n` +
-          this.formatQuotesListText(quotes, { ...sessionCtx, customRatePerKwp: directRate })
+          prefixMsg +
+          this.formatQuotesListText(quotes, { ...sessionCtx, customRatePerKwp: finalRate })
         );
       }
 
@@ -3271,15 +3368,20 @@ ${catalogContext}`;
       return (
         `Opção não reconhecida. Como você prefere seguir com a taxa por kWp para esta cotação?\n\n` +
         `1️⃣ Seguir com a taxa padrão (*R$ ${formattedRate}/kWp*)\n` +
-        `2️⃣ Informar outro valor por kWp (ex: *2500*, *R$ 3.200*)\n` +
+        `2️⃣ Informar outro valor por kWp (ex: *2500*, *R$ 3.200* ou *total 18500*)\n` +
         `0️⃣ Voltar / Alterar estrutura`
       );
     }
 
     // ESTADO E.2: O Bot pediu especificamente para digitar o valor por kWp
-    if (lastBotMsg.includes("Qual valor por kWp")) {
-      const parsedRate = parseKwpRate(incomingText);
-      if (parsedRate) {
+    if (
+      lastBotMsg.includes("Qual valor por kWp") ||
+      lastBotMsg.includes("Qual valor você deseja utilizar")
+    ) {
+      const sizing = this.getSystemSizingSummary(sessionCtx);
+      const parsedRateObj = parseKwpRate(incomingText, sizing.realSystemKwp);
+      if (parsedRateObj) {
+        const finalRate = parsedRateObj.rate;
         const quotes = await this.calculateDistributorKits({
           consumptionKwh: sessionCtx.consumptionKwh,
           targetKWp: sessionCtx.targetKWp,
@@ -3290,7 +3392,7 @@ ${catalogContext}`;
           roofType: sessionCtx.roofType || "Cerâmica (Colonial)",
           gridVoltage: sessionCtx.gridVoltage || "Monofásico 220V",
           organizationId: conversation.organizationId,
-          customRatePerKwp: parsedRate,
+          customRatePerKwp: finalRate,
         });
 
         if (quotes.length === 0) {
@@ -3300,14 +3402,22 @@ ${catalogContext}`;
           );
         }
 
+        const formattedRate = finalRate.toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+        const prefixMsg = parsedRateObj.isDerivedFromTotal
+          ? `Entendido! Convertemos seu valor informado para *R$ ${formattedRate}/kWp* (com base no sistema de ${sizing.realSystemKwp} kWp)! ☀️💰\n\n`
+          : `Taxa personalizada de *R$ ${formattedRate}/kWp* aplicada para esta cotação! ☀️💰\n\n`;
+
         return (
-          `Taxa personalizada de *R$ ${parsedRate.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kWp* aplicada para esta cotação! ☀️💰\n\n` +
-          this.formatQuotesListText(quotes, { ...sessionCtx, customRatePerKwp: parsedRate })
+          prefixMsg +
+          this.formatQuotesListText(quotes, { ...sessionCtx, customRatePerKwp: finalRate })
         );
       }
 
       return (
-        `Valor não reconhecido. Por favor, informe o valor por kWp desejado (ex: *2500*, *R$ 3.200,00* ou *2.850/kWp*) ou envie 0️⃣ para voltar:\n\n` +
+        `Valor não reconhecido. Por favor, informe o valor por kWp desejado (ex: *2500*, *R$ 3.200,00* ou *total 18500*) ou envie 0️⃣ para voltar:\n\n` +
         `(O valor configurado na sua plataforma continuará preservado)`
       );
     }
