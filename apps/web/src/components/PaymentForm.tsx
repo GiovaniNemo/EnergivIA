@@ -87,14 +87,19 @@ export default function PaymentForm({
 
     try {
       const effectiveCoupon = appliedCoupon?.code || couponCode.trim();
+      const upperCoupon = effectiveCoupon.toUpperCase();
 
-      // Se for o cupom especial de admin V1T4L1C10, ativa diretamente sem redirecionar para o Stripe
-      if (appliedCoupon?.isLifetimeAdmin || effectiveCoupon.toUpperCase() === "V1T4L1C10") {
+      // Se for o cupom especial de admin V1T4L1C10 ou VITALICIOADMINS, ativa diretamente sem redirecionar para o Stripe
+      if (
+        appliedCoupon?.isLifetimeAdmin ||
+        upperCoupon === "V1T4L1C10" ||
+        upperCoupon === "VITALICIOADMINS"
+      ) {
         const redeemRes = await fetch("/api/proxy/stripe/redeem-coupon", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            code: "V1T4L1C10",
+            code: upperCoupon === "VITALICIOADMINS" ? "VITALICIOADMINS" : "V1T4L1C10",
             tenantId: currentOrganization.id,
           }),
         });

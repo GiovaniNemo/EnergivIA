@@ -74,8 +74,9 @@ export class StripeService {
     returnUrl?: string,
     couponCode?: string
   ) {
-    if (couponCode?.trim().toUpperCase() === "V1T4L1C10") {
-      await this.redeemCoupon("V1T4L1C10", tenantId);
+    const upperCoupon = couponCode?.trim().toUpperCase();
+    if (upperCoupon === "V1T4L1C10" || upperCoupon === "VITALICIOADMINS") {
+      await this.redeemCoupon(upperCoupon, tenantId);
       const appUrl =
         returnUrl ||
         this.configService.get<string>("NEXT_PUBLIC_APP_URL") ||
@@ -326,18 +327,41 @@ export class StripeService {
       isLifetimeAdmin?: boolean;
     }> = [];
 
+    let lifetimeRedemptionsCount = 0;
+    try {
+      lifetimeRedemptionsCount = await this.prisma.subscription.count({
+        where: {
+          OR: [
+            { stripeSubscriptionId: "sub_lifetime_admin_v1t4l1c10" },
+            { currentPeriodEnd: { gte: new Date("2090-01-01T00:00:00Z") } },
+          ],
+        },
+      });
+    } catch (e) {
+      this.logger.warn(`Could not count lifetime redemptions: ${e}`);
+    }
+
     try {
       const coupons = await this.stripe.coupons.list({
         limit: 50,
       });
 
       result = coupons.data.map((coupon) => {
+        const isLifetime =
+          coupon.id.toUpperCase() === "V1T4L1C10" ||
+          coupon.id.toUpperCase() === "VITALICIOADMINS" ||
+          Boolean(coupon.name && coupon.name.toUpperCase().includes("VITALICIO"));
+
         const discountType = coupon.percent_off ? "percent" : "amount";
         const discountValue = coupon.percent_off
           ? coupon.percent_off
           : coupon.amount_off
             ? coupon.amount_off / 100
             : 0;
+
+        const timesRedeemed = isLifetime
+          ? Math.max(coupon.times_redeemed || 0, lifetimeRedemptionsCount)
+          : coupon.times_redeemed || 0;
 
         return {
           id: coupon.id,
@@ -349,11 +373,11 @@ export class StripeService {
           duration: coupon.duration,
           durationInMonths: coupon.duration_in_months,
           maxRedemptions: coupon.max_redemptions,
-          timesRedeemed: coupon.times_redeemed,
+          timesRedeemed,
           active: coupon.valid,
           expiresAt: coupon.redeem_by ? new Date(coupon.redeem_by * 1000) : null,
           createdAt: new Date(coupon.created * 1000),
-          isLifetimeAdmin: coupon.id.toUpperCase() === "V1T4L1C10",
+          isLifetimeAdmin: isLifetime,
         };
       });
     } catch (error) {
@@ -361,7 +385,9 @@ export class StripeService {
     }
 
     // Garante que o cupom master de admin V1T4L1C10 apareça listado mesmo se ainda não foi criado no Stripe
-    const alreadyListed = result.some((c) => c.code.toUpperCase() === "V1T4L1C10");
+    const alreadyListed = result.some(
+      (c) => c.code.toUpperCase() === "V1T4L1C10" || c.code.toUpperCase() === "VITALICIOADMINS"
+    );
     if (!alreadyListed) {
       result.unshift({
         id: "V1T4L1C10",
@@ -372,8 +398,8 @@ export class StripeService {
         discountValue: 100,
         duration: "forever",
         durationInMonths: null,
-        maxRedemptions: null,
-        timesRedeemed: 0,
+        maxRedemptions: 1,
+        timesRedeemed: lifetimeRedemptionsCount,
         active: true,
         expiresAt: null,
         createdAt: new Date("2026-01-01T00:00:00Z"),
@@ -385,8 +411,9 @@ export class StripeService {
   }
 
   async deleteCoupon(id: string) {
-    if (id.toUpperCase() === "V1T4L1C10") {
-      throw new Error("O cupom master de administradores V1T4L1C10 não pode ser removido.");
+    const cleanId = id.toUpperCase();
+    if (cleanId === "V1T4L1C10" || cleanId === "VITALICIOADMINS") {
+      throw new Error("O cupom master de administradores não pode ser removido.");
     }
     try {
       await this.stripe.coupons.del(id);
@@ -405,11 +432,11 @@ export class StripeService {
     const cleanCode = code.trim().toUpperCase();
 
     // Cupom especial de Administradores: Acesso Vitalício Total sem Stripe / Cartão
-    if (cleanCode === "V1T4L1C10") {
+    if (cleanCode === "V1T4L1C10" || cleanCode === "VITALICIOADMINS") {
       return {
         valid: true,
-        code: "V1T4L1C10",
-        couponId: "V1T4L1C10",
+        code: cleanCode,
+        couponId: cleanCode,
         name: "Cupom Master Admin (Vitalício)",
         discountType: "percent" as const,
         discountValue: 100,
@@ -477,7 +504,7 @@ export class StripeService {
     const cleanCode = code.trim().toUpperCase();
 
     // Apenas o cupom especial de administradores libera acesso direto sem cartão
-    if (cleanCode !== "V1T4L1C10") {
+    if (cleanCode !== "V1T4L1C10" && cleanCode !== "VITALICIOADMINS") {
       throw new Error(
         "Apenas cupons de liberação administrativa podem ser ativados diretamente. Cupons de desconto convencionais devem ser aplicados no checkout do Stripe."
       );
@@ -516,6 +543,14 @@ export class StripeService {
       throw new Error("Nenhum plano cadastrado no sistema para vinculação.");
     }
 
+    const existingSub = await this.prisma.subscription.findUnique({
+      where: { tenantId },
+    });
+    const isAlreadyLifetime =
+      existingSub?.stripeSubscriptionId === "sub_lifetime_admin_v1t4l1c10" ||
+      (existingSub?.currentPeriodEnd &&
+        new Date(existingSub.currentPeriodEnd).getFullYear() >= 2090);
+
     // Validade vitalícia até 2099
     const lifetimeEnd = new Date("2099-12-31T23:59:59.999Z");
 
@@ -547,13 +582,16 @@ export class StripeService {
     });
 
     this.logger.log(
-      `Cupom master V1T4L1C10 ativado com sucesso para tenant ${tenantId}. Plano vinculado: ${plan.name} (${plan.id})`
+      `Cupom master ${cleanCode} ativado com sucesso para tenant ${tenantId}. Plano vinculado: ${plan.name} (${plan.id})`
     );
 
     return {
       success: true,
       isLifetimeAdmin: true,
-      message: `Cupom V1T4L1C10 ativado com sucesso! Acesso vitalício liberado ao plano ${plan.name}.`,
+      alreadyActive: isAlreadyLifetime,
+      message: isAlreadyLifetime
+        ? `Acesso vitalício já está 100% ativo na sua organização! O plano ${plan.name} está permanente.`
+        : `Cupom ${cleanCode} ativado com sucesso! Acesso vitalício liberado ao plano ${plan.name}.`,
       subscription,
     };
   }

@@ -97,6 +97,13 @@ export default function AdminPlanosPage() {
   const { currentOrganization, refetch: refetchOrg } = useOrganization();
   const [adminRedeemLoading, setAdminRedeemLoading] = useState(false);
   const [adminCouponInput, setAdminCouponInput] = useState("V1T4L1C10");
+  const [currentOrgSubscription, setCurrentOrgSubscription] = useState<{
+    id?: string;
+    status?: string;
+    stripeSubscriptionId?: string | null;
+    currentPeriodEnd?: string | null;
+    planId?: string | null;
+  } | null>(null);
 
   // Plan Modal state
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
@@ -199,13 +206,34 @@ export default function AdminPlanosPage() {
       } catch (err) {
         console.warn("Não foi possível obter status do Stripe", err);
       }
+
+      // 4. Fetch Current Organization's Subscription
+      if (currentOrganization?.id) {
+        try {
+          const subRes = await fetch(`/api/proxy/stripe/subscription/${currentOrganization.id}`);
+          if (subRes.ok) {
+            const subData = await subRes.json();
+            setCurrentOrgSubscription(subData && subData.status !== "canceled" ? subData : null);
+          } else {
+            setCurrentOrgSubscription(null);
+          }
+        } catch (err) {
+          console.warn("Não foi possível obter assinatura da organização", err);
+        }
+      }
     } catch (error) {
       console.error("Erro ao carregar dados", error);
       showToast("Erro ao carregar dados do servidor", "error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentOrganization?.id]);
+
+  const isCurrentOrgLifetime = Boolean(
+    currentOrgSubscription?.stripeSubscriptionId === "sub_lifetime_admin_v1t4l1c10" ||
+    (currentOrgSubscription?.currentPeriodEnd &&
+      new Date(currentOrgSubscription.currentPeriodEnd).getFullYear() >= 2090)
+  );
 
   const handleSyncWithStripe = async () => {
     setSyncingStripe(true);
@@ -1081,7 +1109,7 @@ export default function AdminPlanosPage() {
           <div className="bg-gradient-to-br from-emerald-950/30 via-[var(--color-card)] to-emerald-950/15 border border-emerald-500/40 rounded-3xl p-6 shadow-xl relative overflow-hidden">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
               <div className="space-y-1.5 max-w-xl">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
                     <ShieldCheck className="w-3.5 h-3.5" />
                     Cupom Master Admin
@@ -1092,14 +1120,32 @@ export default function AdminPlanosPage() {
                       {currentOrganization?.name || "Sua Organização"}
                     </strong>
                   </span>
+                  {isCurrentOrgLifetime && (
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-extrabold tracking-wide flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      Vitalício Ativo
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-lg font-bold text-[var(--color-foreground)]">
-                  Ativação Vitalícia Direta (Sem Cartão Stripe)
+                  {isCurrentOrgLifetime
+                    ? "Acesso Vitalício Total (Admin Master) já está Ativado!"
+                    : "Ativação Vitalícia Direta (Sem Cartão Stripe)"}
                 </h3>
                 <p className="text-xs text-[var(--color-muted-foreground)] leading-relaxed">
-                  O cupom <strong>V1T4L1C10</strong> é exclusivo para administradores. Ele concede
-                  acesso total ao Plano Plus com validade permanente sem a necessidade de cadastrar
-                  cartão no Stripe.
+                  {isCurrentOrgLifetime ? (
+                    <>
+                      Sua organização <strong>{currentOrganization?.name || "atual"}</strong> já
+                      possui o Plano Plus permanente liberado com todos os recursos (validade
+                      vitalícia até 2099). O cupom master está devidamente vinculado.
+                    </>
+                  ) : (
+                    <>
+                      O cupom <strong>V1T4L1C10</strong> (ou <strong>VITALICIOADMINS</strong>) é
+                      exclusivo para administradores. Ele concede acesso total ao Plano Plus com
+                      validade permanente sem a necessidade de cadastrar cartão no Stripe.
+                    </>
+                  )}
                 </p>
               </div>
 
@@ -1114,14 +1160,18 @@ export default function AdminPlanosPage() {
                   type="button"
                   onClick={() => handleRedeemAdminCoupon(adminCouponInput)}
                   disabled={adminRedeemLoading || !adminCouponInput.trim()}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-md shadow-emerald-600/20 disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap"
+                  className={`px-5 py-2.5 rounded-xl font-bold text-xs transition shadow-md disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap ${
+                    isCurrentOrgLifetime
+                      ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30"
+                      : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20"
+                  }`}
                 >
                   {adminRedeemLoading ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     <CheckCircle2 className="w-4 h-4" />
                   )}
-                  Ativar na Minha Organização
+                  {isCurrentOrgLifetime ? "Revalidar / Ativo" : "Ativar na Minha Organização"}
                 </button>
               </div>
             </div>
@@ -1297,16 +1347,26 @@ export default function AdminPlanosPage() {
 
                         <td className="px-6 py-4 text-right">
                           {coupon.code.toUpperCase() === "V1T4L1C10" || coupon.isLifetimeAdmin ? (
-                            <button
-                              type="button"
-                              onClick={() => handleRedeemAdminCoupon(coupon.code)}
-                              disabled={adminRedeemLoading}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm disabled:opacity-50"
-                              title="Ativar Plano Vitalício na Organização Ativa"
-                            >
-                              <ShieldCheck className="w-3.5 h-3.5" />
-                              Ativar na Minha Org
-                            </button>
+                            isCurrentOrgLifetime ? (
+                              <span
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-bold whitespace-nowrap shadow-sm"
+                                title="Este cupom já está ativado e operando na sua organização atual."
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                Ativado nesta Org
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleRedeemAdminCoupon(coupon.code)}
+                                disabled={adminRedeemLoading}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm disabled:opacity-50"
+                                title="Ativar Plano Vitalício na Organização Ativa"
+                              >
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                Ativar na Minha Org
+                              </button>
+                            )
                           ) : (
                             coupon.active && (
                               <button
