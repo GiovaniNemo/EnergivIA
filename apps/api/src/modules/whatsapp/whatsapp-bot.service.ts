@@ -444,6 +444,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
           this.logger.log(
             `Conversa ${conversation.id} (${toWaId}) encerrada por inatividade de 15 minutos.`
           );
+
+          await this.flushPendingProposalViewAlerts(conversation.id, phoneNumberId, toWaId);
           continue;
         }
 
@@ -1038,6 +1040,46 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         toWaId: fromWaId,
         body: replyText,
       });
+
+      // Se acabou de gerar a proposta, descarrega alertas pendentes de visualização
+      if (replyText.includes("Proposta comercial gerada com sucesso")) {
+        await this.flushPendingProposalViewAlerts(conversation.id, phoneNumberId, fromWaId);
+      }
+    }
+  }
+
+  private async flushPendingProposalViewAlerts(
+    conversationId: string,
+    phoneNumberId: string,
+    toWaId: string
+  ): Promise<void> {
+    try {
+      const conv = await this.prisma.conversation.findUnique({
+        where: { id: conversationId },
+        select: { metadata: true },
+      });
+      const meta = (conv?.metadata as Record<string, any>) || {};
+      const alerts = Array.isArray(meta["pendingProposalViewAlerts"])
+        ? (meta["pendingProposalViewAlerts"] as string[])
+        : [];
+      if (alerts.length > 0) {
+        const nextMeta: Record<string, any> = { ...meta };
+        delete nextMeta["pendingProposalViewAlerts"];
+        await this.prisma.conversation.update({
+          where: { id: conversationId },
+          data: { metadata: nextMeta },
+        });
+
+        for (const alertBody of alerts) {
+          await this.whatsappCloud.sendTextMessage({
+            phoneNumberId,
+            toWaId,
+            body: alertBody,
+          });
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`Falha ao descarregar alertas pendentes de visualização: ${err}`);
     }
   }
 

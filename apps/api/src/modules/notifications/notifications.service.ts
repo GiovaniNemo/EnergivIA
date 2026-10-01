@@ -526,6 +526,15 @@ export class NotificationsService {
       `👉 *Acesse no EnergivIA:* ${params.fullProposalUrl}`;
 
     for (const phone of phones) {
+      const activeConv = await this.findActiveQuotationConversation(params.tenantId, phone);
+      if (activeConv) {
+        await this.queuePendingProposalViewAlert(activeConv.id, message);
+        this.logger.log(
+          `Integrador ${phone} está em cotação ativa no WhatsApp. Alerta de visualização retido para entrega após a cotação.`
+        );
+        continue;
+      }
+
       await this.whatsappCloud
         .sendTextMessage({
           phoneNumberId,
@@ -535,6 +544,131 @@ export class NotificationsService {
         .catch((err) => {
           this.logger.warn(`Failed to send WhatsApp viewed message to ${phone}: ${err}`);
         });
+    }
+  }
+
+  private async findActiveQuotationConversation(
+    tenantId: string,
+    phone: string
+  ): Promise<{ id: string } | null> {
+    try {
+      const cleanPhone = phone.replace(/\D/g, "");
+      const candidates = new Set<string>();
+      candidates.add(cleanPhone);
+      if (cleanPhone.startsWith("55") && cleanPhone.length >= 12) {
+        candidates.add(cleanPhone.slice(2));
+      } else {
+        candidates.add(`55${cleanPhone}`);
+      }
+
+      const convs = await this.prisma.conversation.findMany({
+        where: {
+          organizationId: tenantId,
+          channel: "whatsapp",
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 3,
+        include: {
+          messages: {
+            orderBy: { createdAt: "desc" },
+            take: 5,
+          },
+        },
+      });
+
+      const fifteenMinMs = 15 * 60 * 1000;
+      const now = Date.now();
+
+      for (const conv of convs) {
+        const meta = (conv.metadata as Record<string, unknown>) || {};
+        const customerWaId =
+          typeof meta["customerWaId"] === "string" ? meta["customerWaId"].replace(/\D/g, "") : "";
+        if (!candidates.has(customerWaId) && customerWaId !== cleanPhone) {
+          continue;
+        }
+
+        // Se a conversa está inativa há mais de 15 minutos, a cotação não está em andamento
+        if (now - conv.updatedAt.getTime() > fifteenMinMs) {
+          continue;
+        }
+
+        const msgs = conv.messages || [];
+        if (msgs.length === 0) continue;
+
+        const assistantMsgs = msgs.filter(
+          (m) => m.role === "assistant" && !m.content?.includes("Você ainda está por aí?")
+        );
+
+        if (assistantMsgs.length === 0) continue;
+        const lastBotText = assistantMsgs[0]?.content || "";
+
+        // Se a última mensagem indica que a proposta já foi concluída ou encerrada, NÃO está em cotação
+        if (
+          lastBotText.includes("Proposta comercial gerada com sucesso") ||
+          lastBotText.includes("Como não tivemos retorno por aqui, encerramos") ||
+          lastBotText.includes("Quando quiser iniciar uma nova cotação")
+        ) {
+          continue;
+        }
+
+        // Verifica se a última mensagem é de uma etapa da cotação
+        const isQuotationStep =
+          lastBotText.includes("Qual o padrão de entrada") ||
+          lastBotText.includes("Qual a estrutura do telhado") ||
+          lastBotText.includes("Como você deseja prosseguir para esta cotação") ||
+          lastBotText.includes("Como deseja prosseguir para esta cotação") ||
+          lastBotText.includes("Qual valor por kWp") ||
+          lastBotText.includes("Qual valor você deseja utilizar") ||
+          lastBotText.includes("taxa padrão configurada") ||
+          lastBotText.includes("Qual opção você prefere para o seu cliente") ||
+          lastBotText.includes("opções de kits dimensionados") ||
+          lastBotText.includes("Qual o nome do cliente final") ||
+          lastBotText.includes("nome correto do cliente final") ||
+          lastBotText.includes("E qual o WhatsApp dele") ||
+          lastBotText.includes("qual o WhatsApp") ||
+          lastBotText.includes("qual o whatsapp") ||
+          lastBotText.includes("WhatsApp correto") ||
+          lastBotText.includes("Qual modelo de proposta comercial você deseja usar") ||
+          lastBotText.includes("Legal, dados extraídos com precisão") ||
+          lastBotText.includes("Sua taxa padrão:") ||
+          lastBotText.includes("Escolha uma das opções");
+
+        if (isQuotationStep) {
+          return { id: conv.id };
+        }
+      }
+
+      return null;
+    } catch (e) {
+      this.logger.warn(`Erro ao verificar cotação ativa para ${phone}: ${e}`);
+      return null;
+    }
+  }
+
+  private async queuePendingProposalViewAlert(
+    conversationId: string,
+    alertMessage: string
+  ): Promise<void> {
+    try {
+      const conv = await this.prisma.conversation.findUnique({
+        where: { id: conversationId },
+        select: { metadata: true },
+      });
+      const meta = (conv?.metadata as Record<string, unknown>) || {};
+      const pendingRaw = meta["pendingProposalViewAlerts"];
+      const pending: string[] = Array.isArray(pendingRaw) ? (pendingRaw as string[]) : [];
+      pending.push(alertMessage);
+      await this.prisma.conversation.update({
+        where: { id: conversationId },
+        data: {
+          metadata: {
+            ...meta,
+            pendingProposalViewAlerts: pending,
+          },
+        },
+      });
+    } catch (e) {
+      this.logger.warn(`Erro ao enfileirar alerta de proposta: ${e}`);
     }
   }
 
@@ -684,6 +818,15 @@ export class NotificationsService {
     }
 
     for (const phone of phones) {
+      const activeConv = await this.findActiveQuotationConversation(params.tenantId, phone);
+      if (activeConv) {
+        await this.queuePendingProposalViewAlert(activeConv.id, message);
+        this.logger.log(
+          `Integrador ${phone} está em cotação ativa no WhatsApp. Resposta de proposta retida para entrega após a cotação.`
+        );
+        continue;
+      }
+
       await this.whatsappCloud
         .sendTextMessage({
           phoneNumberId,
