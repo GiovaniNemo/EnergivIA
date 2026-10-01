@@ -232,9 +232,19 @@ export class StripeService {
         } else {
           sessionParams.allow_promotion_codes = true;
         }
-      } catch (err) {
-        this.logger.warn(`Could not retrieve coupon code ${cleanCode}: ${err}`);
-        sessionParams.allow_promotion_codes = true;
+      } catch {
+        // Tenta buscar por promotion code cadastrado no Stripe
+        const promoList = await this.stripe.promotionCodes.list({
+          code: cleanCode,
+          active: true,
+          limit: 1,
+        });
+        const firstPromo = promoList.data[0];
+        if (firstPromo) {
+          sessionParams.discounts = [{ promotion_code: firstPromo.id }];
+        } else {
+          sessionParams.allow_promotion_codes = true;
+        }
       }
     } else {
       sessionParams.allow_promotion_codes = true;
@@ -291,6 +301,21 @@ export class StripeService {
     };
 
     const coupon = await this.stripe.coupons.create(couponParams);
+
+    // Também cria o PromotionCode correspondente no Stripe para que possa ser digitado diretamente no checkout do Stripe
+    try {
+      await this.stripe.promotionCodes.create({
+        promotion: {
+          type: "coupon",
+          coupon: coupon.id,
+        },
+        code: cleanCode,
+        ...(params.maxRedemptions ? { max_redemptions: Number(params.maxRedemptions) } : {}),
+        ...(redeemBy ? { expires_at: redeemBy } : {}),
+      });
+    } catch (promoErr) {
+      this.logger.warn(`Could not create matching promotion code for ${cleanCode}: ${promoErr}`);
+    }
 
     return {
       id: coupon.id,
@@ -448,7 +473,27 @@ export class StripeService {
     }
 
     try {
-      const coupon = await this.stripe.coupons.retrieve(cleanCode);
+      let coupon: Stripe.Coupon | null = null;
+      try {
+        coupon = await this.stripe.coupons.retrieve(cleanCode);
+      } catch {
+        // Tenta buscar por promotion code
+        const promoList = await this.stripe.promotionCodes.list({
+          code: cleanCode,
+          active: true,
+          limit: 1,
+        });
+        const firstPromo = promoList.data[0];
+        if (firstPromo?.promotion?.coupon) {
+          const promoCoupon = firstPromo.promotion.coupon;
+          if (typeof promoCoupon === "string") {
+            coupon = await this.stripe.coupons.retrieve(promoCoupon);
+          } else {
+            coupon = promoCoupon as Stripe.Coupon;
+          }
+        }
+      }
+
       if (coupon && coupon.valid) {
         if (coupon.redeem_by && coupon.redeem_by * 1000 < Date.now()) {
           return { valid: false, message: "Este cupom já expirou." };
