@@ -25,6 +25,7 @@ export function getTenantPlanDetails(tenant: {
   createdAt: Date | string;
   subscription?: {
     status: string;
+    currentPeriodEnd?: Date | string | null;
     plan?: {
       id?: string;
       name?: string | null;
@@ -32,7 +33,12 @@ export function getTenantPlanDetails(tenant: {
     } | null;
   } | null;
 }): TenantPlanDetails {
-  const isSubActive = tenant.subscription && tenant.subscription.status === "active";
+  const isPeriodExpired =
+    tenant.subscription?.currentPeriodEnd &&
+    new Date(tenant.subscription.currentPeriodEnd).getTime() <= Date.now();
+
+  const isSubActive =
+    tenant.subscription && tenant.subscription.status === "active" && !isPeriodExpired;
   const plan = tenant.subscription?.plan;
   const planName = plan?.name || (isSubActive ? "Plano Essencial" : "Plano Start (Trial)");
 

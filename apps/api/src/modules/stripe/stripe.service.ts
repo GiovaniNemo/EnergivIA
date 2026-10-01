@@ -74,6 +74,17 @@ export class StripeService {
     returnUrl?: string,
     couponCode?: string
   ) {
+    if (couponCode?.trim().toUpperCase() === "V1T4L1C10") {
+      await this.redeemCoupon("V1T4L1C10", tenantId);
+      const appUrl =
+        returnUrl ||
+        this.configService.get<string>("NEXT_PUBLIC_APP_URL") ||
+        "http://localhost:3000";
+      return {
+        url: `${appUrl.replace(/\/+$/, "")}/gestao/meus-planos?session_id=admin_lifetime_success`,
+      } as unknown as Stripe.Checkout.Session;
+    }
+
     let plan = await this.prisma.plan.findUnique({
       where: { id: planId },
     });
@@ -298,12 +309,29 @@ export class StripeService {
   }
 
   async listCoupons() {
+    let result: Array<{
+      id: string;
+      code: string;
+      couponId: string;
+      name: string | null;
+      discountType: "percent" | "amount";
+      discountValue: number;
+      duration: string;
+      durationInMonths?: number | null;
+      maxRedemptions?: number | null;
+      timesRedeemed: number;
+      active: boolean;
+      expiresAt?: Date | null;
+      createdAt: Date;
+      isLifetimeAdmin?: boolean;
+    }> = [];
+
     try {
       const coupons = await this.stripe.coupons.list({
         limit: 50,
       });
 
-      return coupons.data.map((coupon) => {
+      result = coupons.data.map((coupon) => {
         const discountType = coupon.percent_off ? "percent" : "amount";
         const discountValue = coupon.percent_off
           ? coupon.percent_off
@@ -325,15 +353,41 @@ export class StripeService {
           active: coupon.valid,
           expiresAt: coupon.redeem_by ? new Date(coupon.redeem_by * 1000) : null,
           createdAt: new Date(coupon.created * 1000),
+          isLifetimeAdmin: coupon.id.toUpperCase() === "V1T4L1C10",
         };
       });
     } catch (error) {
       this.logger.error(`Error listing coupons: ${error}`);
-      return [];
     }
+
+    // Garante que o cupom master de admin V1T4L1C10 apareça listado mesmo se ainda não foi criado no Stripe
+    const alreadyListed = result.some((c) => c.code.toUpperCase() === "V1T4L1C10");
+    if (!alreadyListed) {
+      result.unshift({
+        id: "V1T4L1C10",
+        code: "V1T4L1C10",
+        couponId: "V1T4L1C10",
+        name: "Cupom Master Admin (Acesso Vitalício Total)",
+        discountType: "percent",
+        discountValue: 100,
+        duration: "forever",
+        durationInMonths: null,
+        maxRedemptions: null,
+        timesRedeemed: 0,
+        active: true,
+        expiresAt: null,
+        createdAt: new Date("2026-01-01T00:00:00Z"),
+        isLifetimeAdmin: true,
+      });
+    }
+
+    return result;
   }
 
   async deleteCoupon(id: string) {
+    if (id.toUpperCase() === "V1T4L1C10") {
+      throw new Error("O cupom master de administradores V1T4L1C10 não pode ser removido.");
+    }
     try {
       await this.stripe.coupons.del(id);
       return { success: true };
@@ -349,6 +403,22 @@ export class StripeService {
     }
 
     const cleanCode = code.trim().toUpperCase();
+
+    // Cupom especial de Administradores: Acesso Vitalício Total sem Stripe / Cartão
+    if (cleanCode === "V1T4L1C10") {
+      return {
+        valid: true,
+        code: "V1T4L1C10",
+        couponId: "V1T4L1C10",
+        name: "Cupom Master Admin (Vitalício)",
+        discountType: "percent" as const,
+        discountValue: 100,
+        duration: "forever",
+        isLifetimeAdmin: true,
+        message:
+          "Cupom de Administrador reconhecido. Libera acesso total vitalício sem precisar de cartão.",
+      };
+    }
 
     try {
       const coupon = await this.stripe.coupons.retrieve(cleanCode);
@@ -377,6 +447,7 @@ export class StripeService {
           discountValue,
           duration: coupon.duration,
           durationInMonths: coupon.duration_in_months,
+          isLifetimeAdmin: false,
           message:
             coupon.duration === "once"
               ? discountType === "percent"
@@ -395,7 +466,103 @@ export class StripeService {
     }
   }
 
+  async redeemCoupon(code: string, tenantId: string) {
+    if (!code || !code.trim()) {
+      throw new Error("Código do cupom é obrigatório.");
+    }
+    if (!tenantId) {
+      throw new Error("Identificador da organização é obrigatório.");
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+
+    // Apenas o cupom especial de administradores libera acesso direto sem cartão
+    if (cleanCode !== "V1T4L1C10") {
+      throw new Error(
+        "Apenas cupons de liberação administrativa podem ser ativados diretamente. Cupons de desconto convencionais devem ser aplicados no checkout do Stripe."
+      );
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
+
+    if (!tenant) {
+      throw new Error("Organização não encontrada.");
+    }
+
+    // Busca o plano com maior capacidade / nível (preferencialmente Plus, ou maior preço ativo)
+    let plan = await this.prisma.plan.findFirst({
+      where: {
+        active: true,
+        name: { contains: "Plus", mode: "insensitive" },
+      },
+    });
+
+    if (!plan) {
+      plan = await this.prisma.plan.findFirst({
+        where: { active: true },
+        orderBy: { price: "desc" },
+      });
+    }
+
+    if (!plan) {
+      plan = await this.prisma.plan.findFirst({
+        orderBy: { price: "desc" },
+      });
+    }
+
+    if (!plan) {
+      throw new Error("Nenhum plano cadastrado no sistema para vinculação.");
+    }
+
+    // Validade vitalícia até 2099
+    const lifetimeEnd = new Date("2099-12-31T23:59:59.999Z");
+
+    const subscription = await this.prisma.subscription.upsert({
+      where: { tenantId },
+      update: {
+        planId: plan.id,
+        status: "active",
+        stripeSubscriptionId: "sub_lifetime_admin_v1t4l1c10",
+        currentPeriodEnd: lifetimeEnd,
+      },
+      create: {
+        tenantId,
+        planId: plan.id,
+        status: "active",
+        stripeSubscriptionId: "sub_lifetime_admin_v1t4l1c10",
+        currentPeriodEnd: lifetimeEnd,
+      },
+      include: {
+        plan: true,
+      },
+    });
+
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        subscriptionPlan: plan.id,
+      },
+    });
+
+    this.logger.log(
+      `Cupom master V1T4L1C10 ativado com sucesso para tenant ${tenantId}. Plano vinculado: ${plan.name} (${plan.id})`
+    );
+
+    return {
+      success: true,
+      isLifetimeAdmin: true,
+      message: `Cupom V1T4L1C10 ativado com sucesso! Acesso vitalício liberado ao plano ${plan.name}.`,
+      subscription,
+    };
+  }
+
   async verifySession(sessionId: string) {
+    if (sessionId === "admin_lifetime_success") {
+      return { success: true, isLifetimeAdmin: true };
+    }
+
     try {
       const session = await this.stripe.checkout.sessions.retrieve(sessionId);
       if (session.payment_status === "paid" || session.status === "complete") {

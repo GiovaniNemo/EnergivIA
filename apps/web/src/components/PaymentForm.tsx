@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useOrganization } from "@/components/providers/organization-provider";
-import { Tag, AlertTriangle, Loader2, X } from "lucide-react";
+import { Tag, AlertTriangle, Loader2, X, ShieldCheck } from "lucide-react";
 
 interface PaymentFormProps {
   planId: string;
@@ -18,6 +18,7 @@ interface AppliedCoupon {
   discountValue: number;
   duration: string;
   message: string;
+  isLifetimeAdmin?: boolean;
 }
 
 export default function PaymentForm({
@@ -85,6 +86,28 @@ export default function PaymentForm({
     }
 
     try {
+      const effectiveCoupon = appliedCoupon?.code || couponCode.trim();
+
+      // Se for o cupom especial de admin V1T4L1C10, ativa diretamente sem redirecionar para o Stripe
+      if (appliedCoupon?.isLifetimeAdmin || effectiveCoupon.toUpperCase() === "V1T4L1C10") {
+        const redeemRes = await fetch("/api/proxy/stripe/redeem-coupon", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: "V1T4L1C10",
+            tenantId: currentOrganization.id,
+          }),
+        });
+
+        if (!redeemRes.ok) {
+          const errData = await redeemRes.json().catch(() => ({}));
+          throw new Error(errData.message || "Erro ao ativar cupom administrativo.");
+        }
+
+        window.location.href = "/gestao/meus-planos?session_id=admin_lifetime_success";
+        return;
+      }
+
       const returnUrl = typeof window !== "undefined" ? window.location.origin : undefined;
 
       const response = await fetch("/api/proxy/stripe/create-checkout-session", {
@@ -94,7 +117,7 @@ export default function PaymentForm({
           planId,
           tenantId: currentOrganization.id,
           returnUrl,
-          couponCode: appliedCoupon ? appliedCoupon.code : couponCode.trim() || undefined,
+          couponCode: effectiveCoupon || undefined,
         }),
       });
 
@@ -122,7 +145,9 @@ export default function PaymentForm({
   // Calculate discounted price for display if planPrice is passed
   let discountedFirstPrice: number | null = null;
   if (planPrice && appliedCoupon) {
-    if (appliedCoupon.discountType === "percent") {
+    if (appliedCoupon.isLifetimeAdmin) {
+      discountedFirstPrice = 0;
+    } else if (appliedCoupon.discountType === "percent") {
       discountedFirstPrice = Math.max(0, planPrice * (1 - appliedCoupon.discountValue / 100));
     } else {
       discountedFirstPrice = Math.max(0, planPrice - appliedCoupon.discountValue);
@@ -185,16 +210,26 @@ export default function PaymentForm({
                   {appliedCoupon.code}
                 </span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold uppercase">
-                  {appliedCoupon.duration === "once" ? "1ª Parcela" : "Ativo"}
+                  {appliedCoupon.isLifetimeAdmin
+                    ? "Vitalício Admin"
+                    : appliedCoupon.duration === "once"
+                      ? "1ª Parcela"
+                      : "Ativo"}
                 </span>
               </div>
-              {discountedFirstPrice !== null && (
+              {appliedCoupon.isLifetimeAdmin ? (
                 <p className="text-[11px] text-emerald-400 font-bold">
-                  1ª parcela: R$ {discountedFirstPrice.toFixed(2)}{" "}
-                  <span className="line-through opacity-60 font-normal text-[10px]">
-                    R$ {planPrice?.toFixed(2)}
-                  </span>
+                  Acesso Ilimitado • Sem Cartão
                 </p>
+              ) : (
+                discountedFirstPrice !== null && (
+                  <p className="text-[11px] text-emerald-400 font-bold">
+                    1ª parcela: R$ {discountedFirstPrice.toFixed(2)}{" "}
+                    <span className="line-through opacity-60 font-normal text-[10px]">
+                      R$ {planPrice?.toFixed(2)}
+                    </span>
+                  </p>
+                )
               )}
             </div>
           </div>
@@ -216,24 +251,45 @@ export default function PaymentForm({
           type="submit"
           disabled={loading}
           className={
-            className ||
-            "w-full bg-[var(--color-primary)] text-[var(--color-primary-foreground)] py-3 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+            appliedCoupon?.isLifetimeAdmin
+              ? "w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2"
+              : className ||
+                "w-full bg-[var(--color-primary)] text-[var(--color-primary-foreground)] py-3 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
           }
         >
-          {loading
-            ? "Iniciando Checkout..."
-            : buttonText || `Assinar Plano ${planName || ""}`.trim()}
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              {appliedCoupon?.isLifetimeAdmin
+                ? "Ativando Acesso Vitalício..."
+                : "Iniciando Checkout..."}
+            </>
+          ) : appliedCoupon?.isLifetimeAdmin ? (
+            <>
+              <ShieldCheck className="w-4 h-4" />
+              Ativar Acesso Vitalício Imediato
+            </>
+          ) : (
+            buttonText || `Assinar Plano ${planName || ""}`.trim()
+          )}
         </button>
-        <p className="text-xs text-center text-[var(--color-muted-foreground)] flex items-center justify-center gap-1">
-          <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-              clipRule="evenodd"
-            />
-          </svg>
-          Pagamento 100% Seguro via Stripe.
-        </p>
+        {appliedCoupon?.isLifetimeAdmin ? (
+          <p className="text-xs text-center text-emerald-400/90 font-medium flex items-center justify-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            Acesso irrestrito liberado diretamente para sua conta.
+          </p>
+        ) : (
+          <p className="text-xs text-center text-[var(--color-muted-foreground)] flex items-center justify-center gap-1">
+            <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Pagamento 100% Seguro via Stripe.
+          </p>
+        )}
       </form>
     </div>
   );

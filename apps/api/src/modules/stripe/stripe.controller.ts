@@ -151,6 +151,21 @@ export class StripeController {
     return this.stripeService.validateCouponCode(body.code);
   }
 
+  @Post("redeem-coupon")
+  @HttpCode(HttpStatus.OK)
+  async redeemCoupon(@Body() body: { code: string; tenantId: string }) {
+    if (!body.code || !body.tenantId) {
+      throw new BadRequestException("Código do cupom e tenantId são obrigatórios.");
+    }
+    try {
+      return await this.stripeService.redeemCoupon(body.code, body.tenantId);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Erro ao resgatar cupom de acesso.";
+      throw new BadRequestException(errorMessage);
+    }
+  }
+
   // --- WEBHOOK ENDPOINT ---
 
   @Public()

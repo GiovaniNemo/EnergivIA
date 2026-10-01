@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 
 import { type PlanFeaturesConfig, normalizePlanFeatures } from "@energivia/shared-types";
+import { useOrganization } from "@/components/providers/organization-provider";
 
 interface Plan {
   id: string;
@@ -63,6 +64,7 @@ interface Coupon {
   active: boolean;
   expiresAt?: string | null;
   createdAt: string;
+  isLifetimeAdmin?: boolean;
 }
 
 const PREDEFINED_BENEFITS = [
@@ -91,6 +93,10 @@ export default function AdminPlanosPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const { currentOrganization, refetch: refetchOrg } = useOrganization();
+  const [adminRedeemLoading, setAdminRedeemLoading] = useState(false);
+  const [adminCouponInput, setAdminCouponInput] = useState("V1T4L1C10");
 
   // Plan Modal state
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
@@ -587,6 +593,11 @@ export default function AdminPlanosPage() {
   };
 
   const handleDeleteCoupon = async (id: string, code: string) => {
+    if (code.toUpperCase() === "V1T4L1C10") {
+      showToast("O cupom master de administradores não pode ser desativado.", "error");
+      return;
+    }
+
     if (!confirm(`Deseja realmente desativar o cupom ${code}?`)) return;
 
     try {
@@ -600,6 +611,42 @@ export default function AdminPlanosPage() {
     } catch (err) {
       console.error(err);
       showToast("Erro ao desativar cupom", "error");
+    }
+  };
+
+  const handleRedeemAdminCoupon = async (codeToRedeem = "V1T4L1C10") => {
+    if (!currentOrganization?.id) {
+      showToast("Organização ativa não encontrada.", "error");
+      return;
+    }
+
+    setAdminRedeemLoading(true);
+    try {
+      const res = await fetch("/api/proxy/stripe/redeem-coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: codeToRedeem.trim().toUpperCase(),
+          tenantId: currentOrganization.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Erro ao resgatar cupom de acesso");
+      }
+
+      showToast(
+        data.message || `Cupom ${codeToRedeem} ativado com sucesso! Acesso vitalício liberado.`,
+        "success"
+      );
+      await refetchOrg();
+      await fetchData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao resgatar cupom";
+      showToast(msg, "error");
+    } finally {
+      setAdminRedeemLoading(false);
     }
   };
 
@@ -1030,6 +1077,56 @@ export default function AdminPlanosPage() {
       {/* TAB 2: CUPONS */}
       {activeTab === "cupons" && (
         <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Quick Admin Coupon Activation Card */}
+          <div className="bg-gradient-to-br from-emerald-950/30 via-[var(--color-card)] to-emerald-950/15 border border-emerald-500/40 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="space-y-1.5 max-w-xl">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Cupom Master Admin
+                  </span>
+                  <span className="text-xs text-[var(--color-muted-foreground)]">
+                    Org Ativa:{" "}
+                    <strong className="text-[var(--color-foreground)]">
+                      {currentOrganization?.name || "Sua Organização"}
+                    </strong>
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-[var(--color-foreground)]">
+                  Ativação Vitalícia Direta (Sem Cartão Stripe)
+                </h3>
+                <p className="text-xs text-[var(--color-muted-foreground)] leading-relaxed">
+                  O cupom <strong>V1T4L1C10</strong> é exclusivo para administradores. Ele concede
+                  acesso total ao Plano Plus com validade permanente sem a necessidade de cadastrar
+                  cartão no Stripe.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <input
+                  type="text"
+                  value={adminCouponInput}
+                  onChange={(e) => setAdminCouponInput(e.target.value.toUpperCase())}
+                  className="bg-[var(--color-background)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold uppercase focus:ring-1 focus:ring-emerald-500 outline-none w-full sm:w-44 text-center"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRedeemAdminCoupon(adminCouponInput)}
+                  disabled={adminRedeemLoading || !adminCouponInput.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-md shadow-emerald-600/20 disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap"
+                >
+                  {adminRedeemLoading ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4" />
+                  )}
+                  Ativar na Minha Organização
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-3xl overflow-hidden shadow-xl">
             <div className="p-6 border-b border-[var(--color-border)] flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
@@ -1105,6 +1202,12 @@ export default function AdminPlanosPage() {
                                 <Copy className="w-4 h-4" />
                               )}
                             </button>
+                            {(coupon.code.toUpperCase() === "V1T4L1C10" ||
+                              coupon.isLifetimeAdmin) && (
+                              <span className="px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[10px] font-extrabold uppercase tracking-wider">
+                                Admin Master
+                              </span>
+                            )}
                           </div>
                           {coupon.name && (
                             <p className="text-xs text-[var(--color-muted-foreground)] mt-1">
@@ -1130,7 +1233,11 @@ export default function AdminPlanosPage() {
                         </td>
 
                         <td className="px-6 py-4">
-                          {coupon.duration === "once" ? (
+                          {coupon.code.toUpperCase() === "V1T4L1C10" || coupon.isLifetimeAdmin ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold">
+                              <ShieldCheck className="w-3 h-3" /> Vitalício Total (Admin)
+                            </span>
+                          ) : coupon.duration === "once" ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold">
                               <Tag className="w-3 h-3" /> Apenas 1ª Parcela
                             </span>
@@ -1189,14 +1296,27 @@ export default function AdminPlanosPage() {
                         </td>
 
                         <td className="px-6 py-4 text-right">
-                          {coupon.active && (
+                          {coupon.code.toUpperCase() === "V1T4L1C10" || coupon.isLifetimeAdmin ? (
                             <button
-                              onClick={() => handleDeleteCoupon(coupon.id, coupon.code)}
-                              className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition shadow-sm"
-                              title="Desativar Cupom"
+                              type="button"
+                              onClick={() => handleRedeemAdminCoupon(coupon.code)}
+                              disabled={adminRedeemLoading}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm disabled:opacity-50"
+                              title="Ativar Plano Vitalício na Organização Ativa"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                              Ativar na Minha Org
                             </button>
+                          ) : (
+                            coupon.active && (
+                              <button
+                                onClick={() => handleDeleteCoupon(coupon.id, coupon.code)}
+                                className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition shadow-sm"
+                                title="Desativar Cupom"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )
                           )}
                         </td>
                       </tr>

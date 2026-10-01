@@ -21,6 +21,7 @@ import {
   Info,
   Boxes,
   TrendingUp,
+  Tag,
 } from "lucide-react";
 
 import { normalizePlanFeatures } from "@energivia/shared-types";
@@ -39,6 +40,7 @@ interface SubscriptionData {
   tenantId: string;
   planId: string;
   status: string;
+  stripeSubscriptionId?: string;
   currentPeriodEnd: string;
   plan?: Plan;
 }
@@ -82,6 +84,10 @@ function MeusPlanosContent() {
     type: "success" | "error" | "info";
     text: string;
   } | null>(null);
+
+  const [redeemCode, setRedeemCode] = useState("");
+  const [redeemLoading, setRedeemLoading] = useState(false);
+  const [redeemError, setRedeemError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -208,6 +214,49 @@ function MeusPlanosContent() {
     }
   };
 
+  const handleRedeemCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!redeemCode.trim()) return;
+
+    const targetOrgId = currentOrganization?.id || user?.currentOrganizationId || user?.tenantId;
+    if (!targetOrgId) {
+      setRedeemError("Organização não encontrada.");
+      return;
+    }
+
+    setRedeemLoading(true);
+    setRedeemError(null);
+
+    try {
+      const res = await fetch("/api/proxy/stripe/redeem-coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: redeemCode.trim().toUpperCase(),
+          tenantId: targetOrgId,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Erro ao ativar cupom de acesso.");
+      }
+
+      setToastMessage({
+        type: "success",
+        text: data.message || "Cupom ativado com sucesso! Acesso vitalício liberado.",
+      });
+      setRedeemCode("");
+      await refetchOrg();
+      await loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao ativar cupom";
+      setRedeemError(msg);
+    } finally {
+      setRedeemLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <LoadingState
@@ -248,6 +297,11 @@ function MeusPlanosContent() {
       ? currentPlan.price
       : parseFloat(String(currentPlan.price) || "0")
     : 0;
+
+  const isLifetime =
+    subscription?.stripeSubscriptionId === "sub_lifetime_admin_v1t4l1c10" ||
+    (subscription?.currentPeriodEnd &&
+      new Date(subscription.currentPeriodEnd).getFullYear() >= 2090);
 
   const orgCreatedAt = currentOrganization?.createdAt
     ? new Date(currentOrganization.createdAt)
@@ -302,7 +356,7 @@ function MeusPlanosContent() {
 
       {/* CURRENT SUBSCRIPTION BANNER */}
       {subscription && currentPlan ? (
-        <div className="mb-12 bg-gradient-to-br from-emerald-950/40 via-[var(--color-card)] to-emerald-950/20 border border-emerald-500/40 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+        <div className="mb-10 bg-gradient-to-br from-emerald-950/40 via-[var(--color-card)] to-emerald-950/20 border border-emerald-500/40 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
           {/* Subtle Glow */}
           <div className="pointer-events-none absolute -right-20 -bottom-20 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl" />
 
@@ -311,7 +365,7 @@ function MeusPlanosContent() {
               <div className="flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider border border-emerald-500/30">
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  Plano Ativo
+                  {isLifetime ? "Acesso Vitalício Ativo" : "Plano Ativo"}
                 </span>
                 <span className="text-xs text-[var(--color-muted-foreground)] font-mono">
                   Org: {currentOrganization?.name || "Sua Empresa"}
@@ -322,16 +376,30 @@ function MeusPlanosContent() {
                 <h2 className="text-3xl font-extrabold text-[var(--color-foreground)]">
                   {currentPlan.name}
                 </h2>
-                <span className="text-2xl font-bold text-emerald-400">
-                  R$ {currentPlanPrice.toFixed(2)}
-                  <span className="text-sm text-[var(--color-muted-foreground)] font-normal">
-                    /mês
+                {isLifetime ? (
+                  <span className="text-xl font-bold text-emerald-400">Acesso Total Vitalício</span>
+                ) : (
+                  <span className="text-2xl font-bold text-emerald-400">
+                    R$ {currentPlanPrice.toFixed(2)}
+                    <span className="text-sm text-[var(--color-muted-foreground)] font-normal">
+                      /mês
+                    </span>
                   </span>
-                </span>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-6 text-sm text-[var(--color-muted-foreground)] pt-1">
-                {subscription.currentPeriodEnd && (
+                {isLifetime ? (
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <span>
+                      Licença:{" "}
+                      <strong className="text-emerald-400">
+                        Permanente (Sem cobranças futuras)
+                      </strong>
+                    </span>
+                  </div>
+                ) : subscription.currentPeriodEnd ? (
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-emerald-400" />
                     <span>
@@ -341,41 +409,53 @@ function MeusPlanosContent() {
                       </strong>
                     </span>
                   </div>
+                ) : null}
+
+                {!isLifetime && (
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-emerald-400" />
+                    <span>Cobrança automática via Stripe</span>
+                  </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-emerald-400" />
-                  <span>Cobrança automática via Stripe</span>
-                </div>
               </div>
             </div>
 
             {/* Actions for current subscription */}
             <div className="flex flex-wrap items-center gap-3">
-              <button
-                onClick={handleOpenPortal}
-                disabled={portalLoading}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[var(--color-card)] hover:bg-[var(--color-muted)] text-[var(--color-foreground)] border border-[var(--color-border)] font-semibold text-sm transition shadow-sm disabled:opacity-50"
-              >
-                {portalLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <ExternalLink className="w-4 h-4" />
-                )}
-                Gerenciar Faturas & Cartão
-              </button>
+              {isLifetime ? (
+                <div className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold text-sm shadow-sm">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  Acesso Total Liberado
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={handleOpenPortal}
+                    disabled={portalLoading}
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[var(--color-card)] hover:bg-[var(--color-muted)] text-[var(--color-foreground)] border border-[var(--color-border)] font-semibold text-sm transition shadow-sm disabled:opacity-50"
+                  >
+                    {portalLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <ExternalLink className="w-4 h-4" />
+                    )}
+                    Gerenciar Faturas & Cartão
+                  </button>
 
-              <button
-                onClick={() => setShowCancelModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-semibold text-sm transition"
-              >
-                <XCircle className="w-4 h-4" />
-                Cancelar Plano
-              </button>
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-semibold text-sm transition"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Cancelar Plano
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
       ) : trialDaysLeft === 0 ? (
-        <div className="mb-12 bg-gradient-to-r from-rose-950/40 via-[var(--color-card)] to-rose-950/20 border border-rose-500/40 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg shadow-rose-950/20">
+        <div className="mb-10 bg-gradient-to-r from-rose-950/40 via-[var(--color-card)] to-rose-950/20 border border-rose-500/40 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg shadow-rose-950/20">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
               <AlertTriangle className="w-6 h-6 animate-pulse" />
@@ -391,13 +471,13 @@ function MeusPlanosContent() {
               </div>
               <p className="text-sm text-[var(--color-muted-foreground)] mt-0.5">
                 O período gratuito de 5 dias da sua empresa encerrou. Escolha um dos planos abaixo
-                para continuar gerando orçamentos, dimensionamentos solares e propostas comerciais.
+                ou resgate um cupom de acesso para continuar gerando propostas.
               </p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="mb-12 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="mb-10 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0">
               <Calendar className="w-6 h-6" />
@@ -417,6 +497,57 @@ function MeusPlanosContent() {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* REDEEM COUPON CARD */}
+      {!isLifetime && (
+        <div className="mb-12 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl p-6 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-base font-bold text-[var(--color-foreground)]">
+                <Tag className="w-4 h-4 text-emerald-400" />
+                Possui um cupom de ativação ou código VIP?
+              </div>
+              <p className="text-xs text-[var(--color-muted-foreground)]">
+                Insira seu código de acesso para ativar a assinatura da sua empresa diretamente sem
+                necessidade de cartão.
+              </p>
+            </div>
+
+            <form
+              onSubmit={handleRedeemCoupon}
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto"
+            >
+              <input
+                type="text"
+                placeholder="Código do cupom (ex: V1T4L1C10)"
+                value={redeemCode}
+                onChange={(e) => {
+                  setRedeemCode(e.target.value.toUpperCase());
+                  if (redeemError) setRedeemError(null);
+                }}
+                className="bg-[var(--color-background)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold uppercase focus:ring-1 focus:ring-emerald-500 outline-none w-full sm:w-64"
+              />
+              <button
+                type="submit"
+                disabled={redeemLoading || !redeemCode.trim()}
+                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-md shadow-emerald-600/20 disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap"
+              >
+                {redeemLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4" />
+                )}
+                Ativar Cupom
+              </button>
+            </form>
+          </div>
+          {redeemError && (
+            <p className="text-xs text-red-400 font-medium flex items-center gap-1.5 mt-3 pt-3 border-t border-[var(--color-border)]">
+              <AlertTriangle className="w-3.5 h-3.5" /> {redeemError}
+            </p>
+          )}
         </div>
       )}
 
