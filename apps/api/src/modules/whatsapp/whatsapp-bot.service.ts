@@ -3213,7 +3213,7 @@ ${catalogContext}`;
       return (
         `Perfeito! Proposta comercial gerada com sucesso para o cliente *${clientName}*! 📋✅\n\n` +
         `☀️ *Potência:* \`${selectedQuote.kwp} kWp\`\n` +
-        `🏢 *Distribuidor:* \`${selectedQuote.distributorName}\`\n` +
+        `🏠 *Estrutura:* \`${sessionCtx.roofType || "Cerâmica (Colonial)"}\`\n` +
         `🎨 *Modelo:* \`${chosenTemplate?.name || "Comercial Moderno"}\`\n` +
         `💰 *Valor Total:* \`R$ ${quotedSaleBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\`\n\n` +
         `📄 *Acesse a Proposta Pronta no link:*\n` +
