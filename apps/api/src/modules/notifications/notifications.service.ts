@@ -114,8 +114,43 @@ export class NotificationsService {
       select: { phoneDigits: true },
     });
     for (const item of inbound) {
-      if (item.phoneDigits) phones.add(item.phoneDigits);
+      if (item.phoneDigits) {
+        const d = item.phoneDigits.replace(/\D/g, "");
+        if (d.length === 10 || d.length === 11) {
+          phones.add(`55${d}`);
+        } else if (d.startsWith("55") && (d.length === 12 || d.length === 13)) {
+          phones.add(d);
+        } else if (d) {
+          phones.add(d);
+        }
+      }
     }
+
+    // Se houver conversa recente no WhatsApp vinculada à organização, inclui o WhatsApp que interagiu com o bot
+    try {
+      const recentConv = await this.prisma.conversation.findFirst({
+        where: {
+          organizationId: tenantId,
+          channel: "whatsapp",
+        },
+        orderBy: { updatedAt: "desc" },
+      });
+      const meta = recentConv?.metadata as Record<string, unknown> | null;
+      const waId =
+        typeof meta?.["customerWaId"] === "string" ? meta["customerWaId"].replace(/\D/g, "") : null;
+      if (waId) {
+        if (waId.length === 10 || waId.length === 11) {
+          phones.add(`55${waId}`);
+        } else if (waId.startsWith("55") && (waId.length === 12 || waId.length === 13)) {
+          phones.add(waId);
+        } else if (waId) {
+          phones.add(waId);
+        }
+      }
+    } catch (e) {
+      this.logger.warn(`Failed to inspect recent conversation for notification phones: ${e}`);
+    }
+
     return Array.from(phones);
   }
 

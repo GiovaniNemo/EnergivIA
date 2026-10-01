@@ -22,6 +22,18 @@ function graphErrorSubcode(errText: string): number | null {
   }
 }
 
+function formatToInternationalWhatsapp(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) {
+    return digits;
+  }
+  if (digits.length === 10 || digits.length === 11) {
+    return `55${digits}`;
+  }
+  return digits;
+}
+
 @Injectable()
 export class WhatsappCloudService {
   private readonly logger = new Logger(WhatsappCloudService.name);
@@ -45,6 +57,7 @@ export class WhatsappCloudService {
     toWaId: string,
     body: string
   ): Promise<{ ok: boolean; status: number; errText: string }> {
+    const to = formatToInternationalWhatsapp(toWaId);
     const res = await fetch(this.buildMessagesUrl(phoneNumberId, token), {
       method: "POST",
       headers: {
@@ -53,7 +66,7 @@ export class WhatsappCloudService {
       },
       body: JSON.stringify({
         messaging_product: "whatsapp",
-        to: toWaId.replace(/\D/g, ""),
+        to,
         type: "text",
         text: { preview_url: false, body },
       }),
@@ -102,28 +115,50 @@ export class WhatsappCloudService {
       };
     }
 
-    const cleanNumber = toWaId.replace(/\D/g, "");
+    const cleanNumber = formatToInternationalWhatsapp(toWaId);
     const url = `${baseUrl}/message/sendText/${encodeURIComponent(instance)}`;
 
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: apiKey,
-        },
-        body: JSON.stringify({
-          number: cleanNumber,
-          text: body,
-        }),
-      });
+    const sendToNumber = async (num: string) => {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: apiKey,
+          },
+          body: JSON.stringify({
+            number: num,
+            text: body,
+          }),
+        });
 
-      const errText = res.ok ? "" : await res.text().catch(() => "");
-      return { ok: res.ok, status: res.status, errText };
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return { ok: false, status: 500, errText: msg };
+        const errText = res.ok ? "" : await res.text().catch(() => "");
+        return { ok: res.ok, status: res.status, errText };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { ok: false, status: 500, errText: msg };
+      }
+    };
+
+    let result = await sendToNumber(cleanNumber);
+    if (!result.ok && cleanNumber.startsWith("55")) {
+      let altNumber: string | null = null;
+      if (cleanNumber.length === 12) {
+        altNumber = `${cleanNumber.slice(0, 4)}9${cleanNumber.slice(4)}`;
+      } else if (cleanNumber.length === 13 && cleanNumber.charAt(4) === "9") {
+        altNumber = `${cleanNumber.slice(0, 4)}${cleanNumber.slice(5)}`;
+      }
+      if (altNumber) {
+        this.logger.warn(
+          `[Evolution API] Falha para ${cleanNumber} (${result.status}): ${result.errText.slice(0, 100)}. Tentando variante ${altNumber}...`
+        );
+        const altResult = await sendToNumber(altNumber);
+        if (altResult.ok) {
+          return altResult;
+        }
+      }
     }
+    return result;
   }
 
   async sendTextMessage(params: {
@@ -132,11 +167,11 @@ export class WhatsappCloudService {
     body: string;
   }): Promise<void> {
     const body = normalizeAssistantTextForWhatsapp(params.body);
-    const to = params.toWaId.replace(/\D/g, "");
+    const to = formatToInternationalWhatsapp(params.toWaId);
 
     // 1. Envio via Evolution API (Custo ZERO por mensagem)
     if (this.isEvolutionProvider()) {
-      const { ok, status, errText } = await this.postTextViaEvolution(params.toWaId, body);
+      const { ok, status, errText } = await this.postTextViaEvolution(to, body);
       if (ok) {
         const maxLen = 4000;
         const text = body.length > maxLen ? `${body.slice(0, maxLen)}…[truncado]` : body;
@@ -163,7 +198,7 @@ export class WhatsappCloudService {
 
     const primaryId = params.phoneNumberId.trim();
     let usedPhoneNumberId = primaryId;
-    let { ok, status, errText } = await this.postTextOnce(primaryId, token, params.toWaId, body);
+    let { ok, status, errText } = await this.postTextOnce(primaryId, token, to, body);
 
     const sub = graphErrorSubcode(errText);
     const fallbackId = this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID")?.trim();
@@ -172,7 +207,7 @@ export class WhatsappCloudService {
         `WhatsApp send com phone_number_id do webhook (${primaryId}) falhou (100/33); retentando com WHATSAPP_PHONE_NUMBER_ID=${fallbackId}.`
       );
       usedPhoneNumberId = fallbackId;
-      ({ ok, status, errText } = await this.postTextOnce(fallbackId, token, params.toWaId, body));
+      ({ ok, status, errText } = await this.postTextOnce(fallbackId, token, to, body));
     }
 
     if (ok) {
