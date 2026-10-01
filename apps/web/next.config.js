@@ -90,7 +90,7 @@ const { withSentryConfig } = require("@sentry/nextjs");
 module.exports = withSentryConfig(nextConfig, {
   silent: !process.env.CI,
   org: process.env.SENTRY_ORG || "energivia",
-  project: process.env.SENTRY_PROJECT || "energivia-web",
+  project: process.env.SENTRY_PROJECT || "energivia",
   authToken: process.env.SENTRY_AUTH_TOKEN,
   widenClientFileUpload: true,
   hideSourceMaps: true,

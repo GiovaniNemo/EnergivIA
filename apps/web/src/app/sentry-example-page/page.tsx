@@ -53,7 +53,7 @@ export default function Page() {
           <a
             target="_blank"
             rel="noopener"
-            href="https://energivia.sentry.io/issues/?project=4511504396386304"
+            href="https://energivia.sentry.io/issues/?project=4512182047342592"
           >
             Issues Page
           </a>
