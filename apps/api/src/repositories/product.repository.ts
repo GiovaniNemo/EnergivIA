@@ -141,7 +141,7 @@ export class ProductRepository {
   private async attachPrices<T extends { id: string }>(
     items: T[],
     source: KitProductSource
-  ): Promise<(T & { price: number })[]> {
+  ): Promise<(T & { price: number; distributorId?: string; distributorName?: string })[]> {
     if (items.length === 0) return [];
     const productIds = items.map((i) => i.id);
 
@@ -149,7 +149,14 @@ export class ProductRepository {
       const offers = await this.getStockOffers(source.stockOwnerOrgId, productIds);
       return items
         .filter((p) => offers.has(p.id))
-        .map((p) => ({ ...p, price: offers.get(p.id)!.price }) as T & { price: number });
+        .map(
+          (p) =>
+            ({
+              ...p,
+              price: offers.get(p.id)!.price,
+              distributorName: "Meu Estoque",
+            }) as T & { price: number; distributorId?: string; distributorName?: string }
+        );
     }
 
     if (source.supplierId || source.distributorId) {
@@ -165,6 +172,7 @@ export class ProductRepository {
               active: true,
               distributor: { active: true },
             },
+            include: { distributor: { select: { id: true, name: true } } },
           })
         : [];
 
@@ -179,50 +187,110 @@ export class ProductRepository {
               active: true,
               distributor: { active: true },
             },
+            include: { distributor: { select: { id: true, name: true } } },
           });
         }
       }
 
       const distOffers = new Map(
-        distOffersRows.map((o) => [o.productId, { price: Number(o.price) }])
+        distOffersRows.map((o) => [
+          o.productId,
+          {
+            price: Number(o.price),
+            distributorId: o.distributorId,
+            distributorName: o.distributor?.name,
+          },
+        ])
       );
 
       return items
         .filter((p) => supOffers.has(p.id) || distOffers.has(p.id))
         .map((p) => {
           let price = 0;
-          if (supOffers.has(p.id) && distOffers.has(p.id)) {
-            price = Math.min(supOffers.get(p.id)!.price, distOffers.get(p.id)!.price);
+          let distId: string | undefined = undefined;
+          let distName: string | undefined = undefined;
+          const distOffer = distOffers.get(p.id);
+
+          if (supOffers.has(p.id) && distOffer) {
+            if (distOffer.price <= supOffers.get(p.id)!.price) {
+              price = distOffer.price;
+              distId = distOffer.distributorId;
+              distName = distOffer.distributorName;
+            } else {
+              price = supOffers.get(p.id)!.price;
+            }
+          } else if (distOffer) {
+            price = distOffer.price;
+            distId = distOffer.distributorId;
+            distName = distOffer.distributorName;
           } else if (supOffers.has(p.id)) {
             price = supOffers.get(p.id)!.price;
-          } else if (distOffers.has(p.id)) {
-            price = distOffers.get(p.id)!.price;
           }
-          return { ...p, price } as T & { price: number };
+          return {
+            ...p,
+            price,
+            distributorId: distId,
+            distributorName: distName,
+          } as T & { price: number; distributorId?: string; distributorName?: string };
         });
     }
 
-    const withPrice: (T & { price: number })[] = [];
+    // Modo automático / multi-distribuidor: busca todas as ofertas ativas em lote
+    const distRows = await this.prisma.distributorProduct.findMany({
+      where: {
+        productId: { in: productIds },
+        active: true,
+        distributor: { active: true },
+      },
+      include: { distributor: { select: { id: true, name: true } } },
+      orderBy: { price: "asc" },
+    });
+
+    const cheapestDistByProduct = new Map<
+      string,
+      { price: number; distributorId: string; distributorName: string }
+    >();
+    for (const r of distRows) {
+      if (!cheapestDistByProduct.has(r.productId)) {
+        cheapestDistByProduct.set(r.productId, {
+          price: Number(r.price),
+          distributorId: r.distributorId,
+          distributorName: r.distributor.name,
+        });
+      }
+    }
+
+    const withPrice: (T & { price: number; distributorId?: string; distributorName?: string })[] =
+      [];
     for (const item of items) {
       const offerSup = await this.supplierProductRepo.getCheapestOffer(item.id);
-      const offerDistRow = await this.prisma.distributorProduct.findFirst({
-        where: {
-          productId: item.id,
-          active: true,
-          distributor: { active: true },
-        },
-        orderBy: { price: "asc" },
-      });
+      const distInfo = cheapestDistByProduct.get(item.id);
 
       let bestPrice: number | null = null;
-      const distPrice = offerDistRow ? Number(offerDistRow.price) : null;
+      let distId: string | undefined = distInfo?.distributorId;
+      let distName: string | undefined = distInfo?.distributorName;
 
-      if (offerSup && distPrice !== null) bestPrice = Math.min(offerSup.price, distPrice);
-      else if (offerSup) bestPrice = offerSup.price;
-      else if (distPrice !== null) bestPrice = distPrice;
+      if (offerSup && distInfo) {
+        if (distInfo.price <= offerSup.price) {
+          bestPrice = distInfo.price;
+        } else {
+          bestPrice = offerSup.price;
+          distId = undefined;
+          distName = undefined;
+        }
+      } else if (distInfo) {
+        bestPrice = distInfo.price;
+      } else if (offerSup) {
+        bestPrice = offerSup.price;
+      }
 
       if (bestPrice !== null && bestPrice > 0) {
-        withPrice.push({ ...item, price: bestPrice } as T & { price: number });
+        withPrice.push({
+          ...item,
+          price: bestPrice,
+          distributorId: distId,
+          distributorName: distName,
+        } as T & { price: number; distributorId?: string; distributorName?: string });
       }
     }
     return withPrice;

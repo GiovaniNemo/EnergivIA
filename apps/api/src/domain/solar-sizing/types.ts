@@ -13,6 +13,8 @@ export interface ProductWithSpecs<T = unknown> {
   price: number;
   specs: T;
   datasheetUrl?: string | null;
+  distributorId?: string;
+  distributorName?: string;
 }
 
 export interface StringConfiguration {

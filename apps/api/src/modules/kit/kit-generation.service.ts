@@ -6,7 +6,6 @@ import type {
   GenerateKitResult,
   KitAlternativeOption,
   KitAlternativesResult,
-  KitCrossSourceAlternative,
   KitItemLine,
   KitSourceOption,
   KitSourceOptionsResult,
@@ -14,7 +13,8 @@ import type {
   DistributorTierKit,
   DistributorTiersResult,
 } from "./types";
-import { isStringSizingResult } from "../../domain/solar-sizing/types";
+import { isStringSizingResult, type ProductWithSpecs } from "../../domain/solar-sizing/types";
+import type { ModuleSpec } from "../../domain/product-specs";
 import { PrismaService } from "../../prisma/prisma.service";
 import { Decimal } from "@prisma/client/runtime/library";
 
@@ -258,6 +258,19 @@ export class KitGenerationService {
 
     let preferredModuleBrands: string[] = [];
     let preferredInverterBrands: string[] = [];
+    let moduleTiersConfig: {
+      standard?: string[];
+      elite?: string[];
+      premium?: string[];
+      priority?: string | null;
+    } | null = null;
+    let inverterTiersConfig: {
+      standard?: string[];
+      elite?: string[];
+      premium?: string[];
+      priority?: string | null;
+    } | null = null;
+
     if (organizationId) {
       const tenant = await this.prisma.tenant.findUnique({
         where: { id: organizationId },
@@ -273,6 +286,22 @@ export class KitGenerationService {
         preferredInverterBrands = (settings["preferredInverterBrands"] as string[])
           .map((s) => String(s).toLowerCase().trim())
           .filter(Boolean);
+      }
+      if (settings["moduleBrandTiers"] && typeof settings["moduleBrandTiers"] === "object") {
+        moduleTiersConfig = settings["moduleBrandTiers"] as {
+          standard?: string[];
+          elite?: string[];
+          premium?: string[];
+          priority?: string | null;
+        };
+      }
+      if (settings["inverterBrandTiers"] && typeof settings["inverterBrandTiers"] === "object") {
+        inverterTiersConfig = settings["inverterBrandTiers"] as {
+          standard?: string[];
+          elite?: string[];
+          premium?: string[];
+          priority?: string | null;
+        };
       }
     }
 
@@ -354,13 +383,16 @@ export class KitGenerationService {
       );
     }
 
-    // 2. Fetch all modules and inverters for this source (traz todos para permitir fallback suave)
+    // 2. Fetch all modules and inverters from active catalog (permite misturar módulos e inversores de todos os distribuidores ativos)
+    const equipmentSource: KitProductSource =
+      wantStock && organizationId ? { stockOwnerOrgId: organizationId } : {};
+
     const [allModules, allStringInverters, allMicroInverters, allHybridInverters] =
       await Promise.all([
-        this.productRepo.findActiveModules(undefined, source),
-        this.productRepo.findActiveStringInverters(source),
-        this.productRepo.findActiveMicroInverters(source),
-        this.productRepo.findActiveHybridInverters(source),
+        this.productRepo.findActiveModules(undefined, equipmentSource),
+        this.productRepo.findActiveStringInverters(equipmentSource),
+        this.productRepo.findActiveMicroInverters(equipmentSource),
+        this.productRepo.findActiveHybridInverters(equipmentSource),
       ]);
 
     // Rank modules by price per watt, prioritizing preferred brands first
@@ -415,7 +447,7 @@ export class KitGenerationService {
     const sortedMicro = sortInverters(allMicroInverters);
     const sortedHybrid = sortInverters(allHybridInverters);
 
-    // Module candidates
+    // Module candidates fallback
     const economicCandidateModule = modulesWithPower[0]?.module;
     const premiumCandidateModule =
       modulesWithPower.length > 1
@@ -425,6 +457,33 @@ export class KitGenerationService {
       modulesWithPower.length > 2
         ? modulesWithPower[Math.floor(modulesWithPower.length / 2)]?.module
         : modulesWithPower[0]?.module;
+
+    const findModuleForBrands = (
+      brands: string[] | undefined,
+      defaultCandidate?: ProductWithSpecs<ModuleSpec>
+    ) => {
+      if (brands && brands.length > 0) {
+        const bLowers = brands.map((b) => b.toLowerCase().trim()).filter(Boolean);
+        const match = modulesWithPower.find((m) => {
+          const mBrand = (m.module.brandName || "").toLowerCase().trim();
+          return bLowers.some((b) => mBrand.includes(b) || b.includes(mBrand));
+        });
+        if (match) return match.module;
+      }
+      return defaultCandidate;
+    };
+
+    const findInverterForBrands = (brands: string[] | undefined, defaultId?: string) => {
+      if (brands && brands.length > 0) {
+        const bLowers = brands.map((b) => b.toLowerCase().trim()).filter(Boolean);
+        const match = sortedString.find((i) => {
+          const iBrand = (i.brandName || "").toLowerCase().trim();
+          return bLowers.some((b) => iBrand.includes(b) || b.includes(iBrand));
+        });
+        if (match) return match.id;
+      }
+      return defaultId;
+    };
 
     // Helper to safely build or fallback
     const tryBuild = async (pinned: {
@@ -448,101 +507,94 @@ export class KitGenerationService {
       return res || baseBuilt!;
     };
 
-    // 3. Assemble Economic kit
+    // 3. Assemble Economic kit (Standard)
+    const economicModule = findModuleForBrands(
+      moduleTiersConfig?.standard,
+      economicCandidateModule
+    );
+    const economicInverterId =
+      input.inverter_type === "microinverter"
+        ? sortedMicro[0]?.id
+        : input.inverter_type === "hybrid"
+          ? sortedHybrid[0]?.id
+          : findInverterForBrands(inverterTiersConfig?.standard, sortedString[0]?.id);
+
     let economicBuilt: BuiltKit | null = null;
-    if (economicCandidateModule) {
+    if (economicModule) {
       economicBuilt = await tryBuild({
-        moduleId: economicCandidateModule.id,
-        inverterId:
-          input.inverter_type === "microinverter"
-            ? sortedMicro[0]?.id
-            : input.inverter_type === "hybrid"
-              ? sortedHybrid[0]?.id
-              : sortedString[0]?.id,
+        moduleId: economicModule.id,
+        inverterId: economicInverterId,
         inverterType: input.inverter_type || "string",
       });
     }
     if (!economicBuilt) economicBuilt = baseBuilt;
 
-    // 4. Assemble Cost-Benefit kit (default balanced baseline)
+    // 4. Assemble Cost-Benefit kit (Elite)
+    const eliteModBrands = moduleTiersConfig?.priority
+      ? [moduleTiersConfig.priority, ...(moduleTiersConfig.elite || [])]
+      : moduleTiersConfig?.elite;
+    const eliteInvBrands = inverterTiersConfig?.priority
+      ? [inverterTiersConfig.priority, ...(inverterTiersConfig.elite || [])]
+      : inverterTiersConfig?.elite;
+
+    const costBenefitModule = findModuleForBrands(
+      eliteModBrands,
+      costBenefitCandidateModule && costBenefitCandidateModule.id !== economicCandidateModule?.id
+        ? costBenefitCandidateModule
+        : modulesWithPower[Math.min(1, modulesWithPower.length - 1)]?.module
+    );
+    const costBenefitInverterId = findInverterForBrands(
+      eliteInvBrands,
+      sortedString.length > 1
+        ? sortedString[Math.floor(sortedString.length / 2)]?.id
+        : sortedString[0]?.id
+    );
+
     let costBenefitBuilt: BuiltKit | null = null;
-    if (
-      costBenefitCandidateModule &&
-      costBenefitCandidateModule.id !== economicCandidateModule?.id
-    ) {
+    if (costBenefitModule) {
       costBenefitBuilt = await tryBuild({
-        moduleId: costBenefitCandidateModule.id,
+        moduleId: costBenefitModule.id,
+        inverterId: costBenefitInverterId,
         inverterType: input.inverter_type,
       });
     }
     if (!costBenefitBuilt) costBenefitBuilt = baseBuilt;
 
-    // 5. Assemble Premium kit (respecting requested inverter_type)
+    // 5. Assemble Premium kit
+    const premiumModule = findModuleForBrands(
+      moduleTiersConfig?.premium,
+      premiumCandidateModule || modulesWithPower[modulesWithPower.length - 1]?.module
+    );
+    const premiumInverterId = findInverterForBrands(
+      inverterTiersConfig?.premium,
+      sortedString.length > 1 ? sortedString[sortedString.length - 1]?.id : sortedString[0]?.id
+    );
+
     let premiumBuilt: BuiltKit | null = null;
     const requestedInverterType = input.inverter_type;
 
-    if (requestedInverterType === "string") {
-      // User specifically wants String inverter: NEVER inject microinverters or hybrids!
-      if (sortedString.length > 1) {
-        premiumBuilt = await tryBuild({
-          moduleId: premiumCandidateModule?.id,
-          inverterId: sortedString[sortedString.length - 1]?.id,
-          inverterType: "string",
-        });
-      } else if (
-        premiumCandidateModule &&
-        premiumCandidateModule.id !== economicCandidateModule?.id
-      ) {
-        premiumBuilt = await tryBuild({
-          moduleId: premiumCandidateModule.id,
-          inverterType: "string",
-        });
-      }
-    } else if (requestedInverterType === "microinverter") {
-      // User specifically wants Microinverter
+    if (requestedInverterType === "microinverter") {
       if (sortedMicro.length > 0) {
         premiumBuilt = await tryBuild({
-          moduleId: premiumCandidateModule?.id,
+          moduleId: premiumModule?.id,
           inverterId: sortedMicro[0]?.id,
           inverterType: "microinverter",
         });
       }
     } else if (requestedInverterType === "hybrid") {
-      // User specifically wants Hybrid
       if (sortedHybrid.length > 0) {
         premiumBuilt = await tryBuild({
-          moduleId: premiumCandidateModule?.id,
+          moduleId: premiumModule?.id,
           inverterId: sortedHybrid[0]?.id,
           inverterType: "hybrid",
         });
       }
     } else {
-      // No specific inverter type enforced: default premium hierarchy
-      if (sortedMicro.length > 0) {
-        premiumBuilt = await tryBuild({
-          moduleId: premiumCandidateModule?.id,
-          inverterId: sortedMicro[0]?.id,
-          inverterType: "microinverter",
-        });
-      } else if (sortedHybrid.length > 0) {
-        premiumBuilt = await tryBuild({
-          moduleId: premiumCandidateModule?.id,
-          inverterId: sortedHybrid[0]?.id,
-          inverterType: "hybrid",
-        });
-      } else if (sortedString.length > 1) {
-        premiumBuilt = await tryBuild({
-          moduleId: premiumCandidateModule?.id,
-          inverterId: sortedString[sortedString.length - 1]?.id,
-        });
-      } else if (
-        premiumCandidateModule &&
-        premiumCandidateModule.id !== economicCandidateModule?.id
-      ) {
-        premiumBuilt = await tryBuild({
-          moduleId: premiumCandidateModule.id,
-        });
-      }
+      premiumBuilt = await tryBuild({
+        moduleId: premiumModule?.id,
+        inverterId: premiumInverterId,
+        inverterType: "string",
+      });
     }
     if (!premiumBuilt) premiumBuilt = baseBuilt;
 
@@ -706,21 +758,59 @@ export class KitGenerationService {
     opts?: { includeOtherSources?: boolean; organizationId?: string }
   ): Promise<KitAlternativesResult> {
     const roofType = input.roof_type || DEFAULT_ROOF_TYPE;
-    const source: KitProductSource = input.stock_owner_org_id
-      ? { stockOwnerOrgId: input.stock_owner_org_id }
-      : await this.resolveSource(input.supplier_id);
 
-    const candidates = await this.findSwapCandidates(input.preferred_brand, source, category);
+    // Busca todos os candidatos ativos do catálogo geral para permitir troca entre distribuidores
+    const candidates = await this.findSwapCandidates(
+      undefined,
+      input.stock_owner_org_id ? { stockOwnerOrgId: input.stock_owner_org_id } : {},
+      category
+    );
+
+    // Mapeia o distribuidor de cada candidato para exibir na listagem
+    const candidateIds = candidates.map((c) => c.id);
+    const distOffers = await this.prisma.distributorProduct.findMany({
+      where: {
+        productId: { in: candidateIds },
+        active: true,
+        distributor: { active: true },
+      },
+      include: {
+        distributor: { select: { id: true, name: true } },
+      },
+      orderBy: { price: "asc" },
+    });
+
+    const distMap = new Map<string, { distributorId: string; distributorName: string }>();
+    for (const d of distOffers) {
+      if (!distMap.has(d.productId)) {
+        distMap.set(d.productId, {
+          distributorId: d.distributorId,
+          distributorName: d.distributor?.name || "Distribuidor",
+        });
+      }
+    }
+
+    const currentInverterId = input.pinned_inverter_id;
+    const currentModuleId = input.pinned_module_id;
 
     const alternatives = await Promise.all(
       candidates.map(async (candidate): Promise<KitAlternativeOption> => {
+        const distInfo = distMap.get(candidate.id);
         const pinnedInput: GenerateKitInput = {
           ...input,
           ...(category === "module"
-            ? { pinned_module_id: candidate.id }
-            : { pinned_inverter_id: candidate.id }),
+            ? {
+                pinned_module_id: candidate.id,
+                ...(currentInverterId ? { pinned_inverter_id: currentInverterId } : {}),
+              }
+            : {
+                pinned_inverter_id: candidate.id,
+                ...(currentModuleId ? { pinned_module_id: currentModuleId } : {}),
+              }),
         };
-        const built = await this.buildKit(pinnedInput, roofType, source);
+
+        // Permite dimensionamento misto de inversores e módulos entre distribuidores
+        const built = await this.buildKit(pinnedInput, roofType, {});
         if (!built) {
           return {
             product_id: candidate.id,
@@ -730,8 +820,8 @@ export class KitGenerationService {
             compatible: false,
             reason:
               category === "module"
-                ? "Nenhum inversor desta origem fecha o dimensionamento com este módulo."
-                : "Este inversor não fecha o dimensionamento com os módulos desta origem.",
+                ? "Incompatível com o inversor atual (tensão, corrente ou faixa MPPT fora da especificação técnica)."
+                : "Incompatível com o módulo atual (tensão, corrente ou faixa MPPT fora da especificação técnica).",
             datasheet_url: candidate.datasheetUrl,
             is_tier_1:
               category === "module"
@@ -741,9 +831,23 @@ export class KitGenerationService {
                     extractTier1Flag(candidate)
                   )
                 : undefined,
+            distributor_id: distInfo?.distributorId,
+            distributor_name:
+              distInfo?.distributorName ||
+              (candidate as unknown as { distributorName?: string }).distributorName ||
+              (input.stock_owner_org_id ? "Meu Estoque" : "Distribuidor"),
           };
         }
-        return this.toCompatibleAlternative(candidate, built, category);
+
+        const alt = this.toCompatibleAlternative(candidate, built, category);
+        return {
+          ...alt,
+          distributor_id: distInfo?.distributorId,
+          distributor_name:
+            distInfo?.distributorName ||
+            (candidate as unknown as { distributorName?: string }).distributorName ||
+            (input.stock_owner_org_id ? "Meu Estoque" : "Distribuidor"),
+        };
       })
     );
 
@@ -766,100 +870,14 @@ export class KitGenerationService {
       if (a.compatible !== b.compatible) return a.compatible ? -1 : 1;
       const aBrand = (a.brand_name || "").toLowerCase().trim();
       const bBrand = (b.brand_name || "").toLowerCase().trim();
-      const aPref = preferredBrands.includes(aBrand);
-      const bPref = preferredBrands.includes(bBrand);
+      const aPref = preferredBrands.some((p) => aBrand.includes(p) || p.includes(aBrand));
+      const bPref = preferredBrands.some((p) => bBrand.includes(p) || p.includes(bBrand));
       if (aPref && !bPref) return -1;
       if (!aPref && bPref) return 1;
-      return (a.kit_total ?? Number.MAX_SAFE_INTEGER) - (b.kit_total ?? Number.MAX_SAFE_INTEGER);
+      return (a.unit_price ?? 0) - (b.unit_price ?? 0);
     });
 
-    if (!opts?.includeOtherSources) {
-      return { category, alternatives };
-    }
-
-    const currentSupplierId = input.stock_owner_org_id ? undefined : input.supplier_id;
-    const suppliers = await this.prisma.supplier.findMany({ select: { id: true, name: true } });
-    const distributors = await this.prisma.distributor.findMany({
-      where: { active: true },
-      select: { id: true, name: true },
-    });
-
-    const originMap = new Map<
-      string,
-      { name: string; supplierId?: string; distributorId?: string }
-    >();
-    for (const s of suppliers) {
-      originMap.set(s.name.trim().toLowerCase(), { name: s.name.trim(), supplierId: s.id });
-    }
-    for (const d of distributors) {
-      const key = d.name.trim().toLowerCase();
-      const existing = originMap.get(key);
-      if (existing) existing.distributorId = d.id;
-      else originMap.set(key, { name: d.name.trim(), distributorId: d.id });
-    }
-    const allOrigins = Array.from(originMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-
-    const otherSourceEntries: Array<{
-      source: KitProductSource;
-      source_type: "own_stock" | "supplier";
-      supplier_id?: string;
-      supplier_name?: string;
-    }> = allOrigins
-      .filter((o) => o.supplierId !== currentSupplierId && o.distributorId !== currentSupplierId)
-      .map((o) => ({
-        source: { supplierId: o.supplierId, distributorId: o.distributorId },
-        source_type: "supplier" as const,
-        supplier_id: o.distributorId || o.supplierId,
-        supplier_name: o.name,
-      }));
-    if (opts.organizationId && !input.stock_owner_org_id) {
-      otherSourceEntries.push({
-        source: { stockOwnerOrgId: opts.organizationId },
-        source_type: "own_stock",
-      });
-    }
-
-    const crossBase: GenerateKitInput = {
-      ...input,
-      pinned_module_id: undefined,
-      pinned_inverter_id: undefined,
-    };
-    const nested = await Promise.all(
-      otherSourceEntries.map(async (entry) => {
-        const entryCandidates = await this.findSwapCandidates(
-          input.preferred_brand,
-          entry.source,
-          category
-        );
-        const rows = await Promise.all(
-          entryCandidates.map(async (candidate): Promise<KitCrossSourceAlternative | null> => {
-            const pinnedInput: GenerateKitInput = {
-              ...crossBase,
-              ...(category === "module"
-                ? { pinned_module_id: candidate.id }
-                : { pinned_inverter_id: candidate.id }),
-            };
-            const built = await this.buildKit(pinnedInput, roofType, entry.source);
-            if (!built) return null;
-            return {
-              ...this.toCompatibleAlternative(candidate, built, category),
-              source_type: entry.source_type,
-              supplier_id: entry.supplier_id,
-              supplier_name: entry.supplier_name,
-            };
-          })
-        );
-        return rows.filter((r): r is KitCrossSourceAlternative => r !== null);
-      })
-    );
-    const otherSources = nested
-      .flat()
-      .sort(
-        (a, b) =>
-          (a.kit_total ?? Number.MAX_SAFE_INTEGER) - (b.kit_total ?? Number.MAX_SAFE_INTEGER)
-      );
-
-    return { category, alternatives, other_sources: otherSources };
+    return { category, alternatives, other_sources: [] };
   }
 
   private async findSwapCandidates(
@@ -969,6 +987,38 @@ export class KitGenerationService {
       this.productRepo.findActiveHybridInverters(source),
       this.productRepo.findActiveOffGridInverters(source),
     ]);
+
+    // Se houver módulo fixado de outro distribuidor/origem, garante que ele seja carregado
+    if (input.pinned_module_id && !allModules.some((m) => m.id === input.pinned_module_id)) {
+      const globalMods = await this.productRepo.findActiveModules(undefined, {});
+      const pMod = globalMods.find((m) => m.id === input.pinned_module_id);
+      if (pMod) allModules.push(pMod);
+    }
+
+    // Se houver inversor fixado de outro distribuidor/origem, garante que ele seja carregado
+    if (
+      input.pinned_inverter_id &&
+      !allStringInverters.some((i) => i.id === input.pinned_inverter_id) &&
+      !allMicroInverters.some((i) => i.id === input.pinned_inverter_id) &&
+      !allHybridInverters.some((i) => i.id === input.pinned_inverter_id) &&
+      !allOffGridInverters.some((i) => i.id === input.pinned_inverter_id)
+    ) {
+      const [gString, gMicro, gHybrid, gOffGrid] = await Promise.all([
+        this.productRepo.findActiveStringInverters({}),
+        this.productRepo.findActiveMicroInverters({}),
+        this.productRepo.findActiveHybridInverters({}),
+        this.productRepo.findActiveOffGridInverters({}),
+      ]);
+      const pStr = gString.find((i) => i.id === input.pinned_inverter_id);
+      if (pStr) allStringInverters.push(pStr);
+      const pMic = gMicro.find((i) => i.id === input.pinned_inverter_id);
+      if (pMic) allMicroInverters.push(pMic);
+      const pHyb = gHybrid.find((i) => i.id === input.pinned_inverter_id);
+      if (pHyb) allHybridInverters.push(pHyb);
+      const pOff = gOffGrid.find((i) => i.id === input.pinned_inverter_id);
+      if (pOff) allOffGridInverters.push(pOff);
+    }
+
     const modules = input.pinned_module_id
       ? allModules.filter((m) => m.id === input.pinned_module_id)
       : allModules;
@@ -1150,6 +1200,8 @@ export class KitGenerationService {
       quantity: sizingResult.module_quantity,
       unit_price: sizingResult.module.price,
       datasheet_url: sizingResult.module.datasheetUrl,
+      distributor_id: sizingResult.module.distributorId,
+      distributor_name: sizingResult.module.distributorName,
     });
 
     const inverterQuantity = isStringSizingResult(sizingResult)
@@ -1162,6 +1214,8 @@ export class KitGenerationService {
       quantity: inverterQuantity,
       unit_price: sizingResult.inverter.price,
       datasheet_url: sizingResult.inverter.datasheetUrl,
+      distributor_id: sizingResult.inverter.distributorId,
+      distributor_name: sizingResult.inverter.distributorName,
     });
 
     const stringCount = isStringSizingResult(sizingResult)
@@ -1173,41 +1227,64 @@ export class KitGenerationService {
       roofType === "none" || roofType === "sem_estrutura" || roofType === "sem estrutura";
 
     // Garante que todos os componentes BOS (cabos, estruturas, conectores) pertençam
-    // rigorosamente ao mesmo distribuidor/fornecedor de onde vieram o módulo e o inversor
+    // rigorosamente ao mesmo distribuidor/fornecedor (o restante que não pode misturar)
     let bosSource: KitProductSource = source;
     if (!bosSource.distributorId && !bosSource.supplierId && !bosSource.stockOwnerOrgId) {
-      const invOffer = await this.prisma.distributorProduct.findFirst({
-        where: {
-          productId: sizingResult.inverter.id,
-          active: true,
-          distributor: { active: true },
-        },
-        select: { distributorId: true },
-      });
-      if (invOffer) {
-        bosSource = { distributorId: invOffer.distributorId };
+      if (sizingResult.inverter.distributorId) {
+        bosSource = { distributorId: sizingResult.inverter.distributorId };
+      } else if (sizingResult.module.distributorId) {
+        bosSource = { distributorId: sizingResult.module.distributorId };
       } else {
-        const modOffer = await this.prisma.distributorProduct.findFirst({
+        const invOffer = await this.prisma.distributorProduct.findFirst({
           where: {
-            productId: sizingResult.module.id,
+            productId: sizingResult.inverter.id,
             active: true,
             distributor: { active: true },
           },
           select: { distributorId: true },
         });
-        if (modOffer) {
-          bosSource = { distributorId: modOffer.distributorId };
+        if (invOffer) {
+          bosSource = { distributorId: invOffer.distributorId };
+        } else {
+          const modOffer = await this.prisma.distributorProduct.findFirst({
+            where: {
+              productId: sizingResult.module.id,
+              active: true,
+              distributor: { active: true },
+            },
+            select: { distributorId: true },
+          });
+          if (modOffer) {
+            bosSource = { distributorId: modOffer.distributorId };
+          }
         }
       }
     }
 
-    const [structureKits, dcCables, connector] = await Promise.all([
-      isNoStructure
-        ? Promise.resolve([])
-        : this.productRepo.findStructureKitsByRoofType(roofType, bosSource),
-      this.productRepo.findDcCablesBySection(DC_CABLE_SECTION_MM2, bosSource),
-      this.productRepo.findConnectorByType("mc4", bosSource),
-    ]);
+    let structureKits = isNoStructure
+      ? []
+      : await this.productRepo.findStructureKitsByRoofType(roofType, bosSource);
+    let dcCables = await this.productRepo.findDcCablesBySection(DC_CABLE_SECTION_MM2, bosSource);
+    let connector = await this.productRepo.findConnectorByType("mc4", bosSource);
+
+    // Fallback de BOS: se o distribuidor atual não tem estruturas cadastradas para esse telhado,
+    // busca do distribuidor do inversor ou do módulo para garantir kit completo
+    if (!isNoStructure && structureKits.length === 0) {
+      const altDistId = sizingResult.inverter.distributorId || sizingResult.module.distributorId;
+      if (altDistId && altDistId !== bosSource.distributorId) {
+        const altBosSource: KitProductSource = { distributorId: altDistId };
+        const altStructures = await this.productRepo.findStructureKitsByRoofType(
+          roofType,
+          altBosSource
+        );
+        if (altStructures.length > 0) {
+          structureKits = altStructures;
+          bosSource = altBosSource;
+          dcCables = await this.productRepo.findDcCablesBySection(DC_CABLE_SECTION_MM2, bosSource);
+          connector = await this.productRepo.findConnectorByType("mc4", bosSource);
+        }
+      }
+    }
 
     let stringBox = null;
     if (

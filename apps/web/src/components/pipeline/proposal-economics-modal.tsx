@@ -35,6 +35,7 @@ import {
   Boxes,
   Calculator,
   Sliders,
+  Building2,
 } from "lucide-react";
 import { buildSystemDealTitle } from "@/components/lead-detail/lead-detail-utils";
 import { Button } from "@/components/ui/button";
@@ -792,6 +793,18 @@ export const ProposalEconomicsModal = forwardRef<
 
   const displayedAlternatives = useMemo(() => {
     if (!kitAlternatives) return null;
+    const allAlts = [...kitAlternatives];
+    if (_kitCrossAlternatives && _kitCrossAlternatives.length > 0) {
+      for (const cross of _kitCrossAlternatives) {
+        if (!allAlts.some((a) => a.product_id === cross.product_id)) {
+          allAlts.push({
+            ...cross,
+            distributor_name: cross.supplier_name || cross.distributor_name,
+            distributor_id: cross.supplier_id || cross.distributor_id,
+          });
+        }
+      }
+    }
     const preferredList =
       kitSwapCategory === "module"
         ? (currentOrganization?.preferredModuleBrands ?? [])
@@ -805,7 +818,7 @@ export const ProposalEconomicsModal = forwardRef<
         ? proposalKitResult?.modules?.product_id
         : proposalKitResult?.inverter?.product_id;
 
-    return [...kitAlternatives].sort((a, b) => {
+    return allAlts.sort((a, b) => {
       const aIsCurrent = a.product_id === currentId ? 1 : 0;
       const bIsCurrent = b.product_id === currentId ? 1 : 0;
       if (aIsCurrent !== bIsCurrent) return bIsCurrent - aIsCurrent;
@@ -822,6 +835,7 @@ export const ProposalEconomicsModal = forwardRef<
     });
   }, [
     kitAlternatives,
+    _kitCrossAlternatives,
     kitSwapCategory,
     currentOrganization?.preferredModuleBrands,
     currentOrganization?.preferredInverterBrands,
@@ -1246,6 +1260,11 @@ export const ProposalEconomicsModal = forwardRef<
     let cancelled = false;
     setKitAlternativesLoading(true);
     setKitAlternativesError(null);
+    const currentModulePin =
+      proposalKitDraft.pins.moduleId || proposalKitResult?.modules?.product_id;
+    const currentInverterPin =
+      proposalKitDraft.pins.inverterId || proposalKitResult?.inverter?.product_id;
+
     void listKitAlternatives({
       category: kitSwapCategory,
       include_other_sources: true,
@@ -1255,13 +1274,11 @@ export const ProposalEconomicsModal = forwardRef<
         ? { preferred_brand: proposalKitRequest.preferredBrand }
         : {}),
       ...(proposalKitRequest.ownStock ? { own_stock: true } : {}),
-      ...(proposalKitRequest.supplierId ? { supplier_id: proposalKitRequest.supplierId } : {}),
-      ...(proposalKitRequest.pinnedModuleId
-        ? { pinned_module_id: proposalKitRequest.pinnedModuleId }
+      ...(proposalKitDraft.source.kind === "supplier" && proposalKitDraft.source.id
+        ? { supplier_id: proposalKitDraft.source.id }
         : {}),
-      ...(proposalKitRequest.pinnedInverterId
-        ? { pinned_inverter_id: proposalKitRequest.pinnedInverterId }
-        : {}),
+      ...(currentModulePin ? { pinned_module_id: currentModulePin } : {}),
+      ...(currentInverterPin ? { pinned_inverter_id: currentInverterPin } : {}),
       ...(proposalKitRequest.inverterType
         ? { inverter_type: proposalKitRequest.inverterType }
         : {}),
@@ -1287,25 +1304,14 @@ export const ProposalEconomicsModal = forwardRef<
     return () => {
       cancelled = true;
     };
-  }, [kitSwapCategory, proposalKitRequest]);
-
-  useEffect(() => {
-    if (!kitSourceOptions || autoSourceAppliedRef.current) return;
-    if (proposalKitDraft.source.kind !== "auto") {
-      autoSourceAppliedRef.current = true;
-      return;
-    }
-    const best = kitSourceOptions
-      .filter((s) => s.type === "supplier" && s.available && s.complete && s.supplier_id)
-      .sort(
-        (a, b) => (a.total ?? Number.MAX_SAFE_INTEGER) - (b.total ?? Number.MAX_SAFE_INTEGER)
-      )[0];
-    if (best?.supplier_id) {
-      autoSourceAppliedRef.current = true;
-      const supplierId = best.supplier_id;
-      setProposalKitDraft((d) => ({ ...d, source: { kind: "supplier", id: supplierId } }));
-    }
-  }, [kitSourceOptions, proposalKitDraft.source.kind]);
+  }, [
+    kitSwapCategory,
+    proposalKitRequest,
+    proposalKitDraft.pins.moduleId,
+    proposalKitDraft.pins.inverterId,
+    proposalKitResult?.modules?.product_id,
+    proposalKitResult?.inverter?.product_id,
+  ]);
   const heuristicaIrradiacao = useMemo(() => {
     const row = geoCities.find((c) => c.id === selectedCity?.id);
     const fromDb = irradiacaoFromSolarResource(row?.solarResource);
@@ -3963,6 +3969,7 @@ export const ProposalEconomicsModal = forwardRef<
                                 setKitSwapCategory(null);
                                 setProposalKitDraft((d) => ({
                                   ...d,
+                                  source: { kind: "auto" },
                                   pins: {
                                     ...d.pins,
                                     ...(cat === "module"
@@ -3986,6 +3993,12 @@ export const ProposalEconomicsModal = forwardRef<
                               )}
                               <span className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-1.5">
+                                  {alt.distributor_name ? (
+                                    <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-medium bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/30">
+                                      <Building2 className="h-3 w-3 shrink-0" />
+                                      {alt.distributor_name}
+                                    </span>
+                                  ) : null}
                                   {extractPowerBadge(alt.product_name) ? (
                                     <span
                                       className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold ${
@@ -4028,6 +4041,19 @@ export const ProposalEconomicsModal = forwardRef<
                                     : alt.reason}
                                 </span>
                               </span>
+                              <div className="shrink-0 text-right ml-2 self-center">
+                                <div className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)]">
+                                  {formatCurrency(alt.unit_price)}
+                                  <span className="text-[0.62rem] font-normal text-[var(--color-muted-foreground)] ml-0.5">
+                                    /un
+                                  </span>
+                                </div>
+                                {alt.compatible && alt.kit_total != null ? (
+                                  <div className="text-[0.62rem] text-[var(--color-muted-foreground)]">
+                                    Kit: {formatCurrency(alt.kit_total)}
+                                  </div>
+                                ) : null}
+                              </div>
                             </button>
                           );
                         })}

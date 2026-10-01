@@ -26,6 +26,8 @@ export interface KitAlternativeOption {
   string_summary?: string;
   datasheet_url?: string | null;
   is_tier_1?: boolean;
+  distributor_id?: string;
+  distributor_name?: string;
 }
 
 export interface KitCrossSourceAlternative extends KitAlternativeOption {
@@ -47,6 +49,8 @@ export interface KitItemLine {
   quantity: number;
   unit_price: number;
   datasheet_url?: string | null;
+  distributor_id?: string;
+  distributor_name?: string;
 }
 
 export interface KitSourceOption {

@@ -29,6 +29,8 @@ export interface KitAlternativeOption {
   kit_total?: number;
   system_power_kw?: number;
   string_summary?: string;
+  distributor_id?: string;
+  distributor_name?: string;
 }
 
 export interface KitCrossSourceAlternative extends KitAlternativeOption {
