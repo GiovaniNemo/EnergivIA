@@ -356,10 +356,7 @@ export class StripeService {
     try {
       lifetimeRedemptionsCount = await this.prisma.subscription.count({
         where: {
-          OR: [
-            { stripeSubscriptionId: "sub_lifetime_admin_v1t4l1c10" },
-            { currentPeriodEnd: { gte: new Date("2090-01-01T00:00:00Z") } },
-          ],
+          stripeSubscriptionId: "sub_lifetime_admin_v1t4l1c10",
         },
       });
     } catch (e) {
