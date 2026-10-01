@@ -137,6 +137,7 @@ export default function AdminPlanosPage() {
 
   // Coupon Modal state
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [couponForm, setCouponForm] = useState({
     code: "",
     name: "",
@@ -557,6 +558,7 @@ export default function AdminPlanosPage() {
   // --- COUPON HANDLERS ---
 
   const handleOpenCreateCoupon = () => {
+    setEditingCoupon(null);
     setCouponForm({
       code: "",
       name: "",
@@ -566,6 +568,30 @@ export default function AdminPlanosPage() {
       durationInMonths: "3",
       maxRedemptions: "",
       expiresAt: "",
+    });
+    setCouponModalError(null);
+    setIsCouponModalOpen(true);
+  };
+
+  const handleOpenEditCoupon = (coupon: Coupon) => {
+    setEditingCoupon(coupon);
+    let formattedExpires = "";
+    if (coupon.expiresAt) {
+      try {
+        formattedExpires = new Date(coupon.expiresAt).toISOString().split("T")[0] || "";
+      } catch {
+        formattedExpires = "";
+      }
+    }
+    setCouponForm({
+      code: coupon.code,
+      name: coupon.name || "",
+      discountType: coupon.discountType,
+      discountValue: String(coupon.discountValue),
+      duration: coupon.duration,
+      durationInMonths: coupon.durationInMonths ? String(coupon.durationInMonths) : "3",
+      maxRedemptions: coupon.maxRedemptions ? String(coupon.maxRedemptions) : "",
+      expiresAt: formattedExpires,
     });
     setCouponModalError(null);
     setIsCouponModalOpen(true);
@@ -596,23 +622,37 @@ export default function AdminPlanosPage() {
         expiresAt: couponForm.expiresAt || undefined,
       };
 
-      const res = await fetch("/api/proxy/stripe/coupons", {
-        method: "POST",
+      const isEditing = Boolean(editingCoupon);
+      const url = isEditing
+        ? `/api/proxy/stripe/coupons/${editingCoupon!.id}`
+        : "/api/proxy/stripe/coupons";
+      const method = isEditing ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Erro ao criar cupom no Stripe");
+        throw new Error(
+          err.message ||
+            (isEditing ? "Erro ao atualizar cupom no Stripe" : "Erro ao criar cupom no Stripe")
+        );
       }
 
-      showToast(`Cupom ${payload.code} criado e sincronizado com o Stripe!`);
+      showToast(
+        isEditing
+          ? `Cupom ${payload.code} atualizado e sincronizado com o Stripe!`
+          : `Cupom ${payload.code} criado e sincronizado com o Stripe!`
+      );
+      setEditingCoupon(null);
       setCouponModalError(null);
       setIsCouponModalOpen(false);
       fetchData();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro ao criar cupom";
+      const msg = err instanceof Error ? err.message : "Erro ao salvar cupom";
       setCouponModalError(msg);
       showToast(msg, "error");
     } finally {
@@ -1346,38 +1386,53 @@ export default function AdminPlanosPage() {
                         </td>
 
                         <td className="px-6 py-4 text-right">
-                          {coupon.code.toUpperCase() === "V1T4L1C10" || coupon.isLifetimeAdmin ? (
-                            isCurrentOrgLifetime ? (
-                              <span
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-bold whitespace-nowrap shadow-sm"
-                                title="Este cupom já está ativado e operando na sua organização atual."
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                Ativado nesta Org
-                              </span>
-                            ) : (
+                          <div className="flex items-center justify-end gap-2">
+                            {!(
+                              coupon.code.toUpperCase() === "V1T4L1C10" || coupon.isLifetimeAdmin
+                            ) && (
                               <button
                                 type="button"
-                                onClick={() => handleRedeemAdminCoupon(coupon.code)}
-                                disabled={adminRedeemLoading}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm disabled:opacity-50"
-                                title="Ativar Plano Vitalício na Organização Ativa"
+                                onClick={() => handleOpenEditCoupon(coupon)}
+                                className="p-2 rounded-xl bg-[var(--color-muted)] hover:bg-[var(--color-muted)]/80 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] border border-[var(--color-border)] transition shadow-sm"
+                                title="Editar Cupom"
                               >
-                                <ShieldCheck className="w-3.5 h-3.5" />
-                                Ativar na Minha Org
+                                <Pencil className="w-4 h-4" />
                               </button>
-                            )
-                          ) : (
-                            coupon.active && (
-                              <button
-                                onClick={() => handleDeleteCoupon(coupon.id, coupon.code)}
-                                className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition shadow-sm"
-                                title="Desativar Cupom"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )
-                          )}
+                            )}
+
+                            {coupon.code.toUpperCase() === "V1T4L1C10" || coupon.isLifetimeAdmin ? (
+                              isCurrentOrgLifetime ? (
+                                <span
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-bold whitespace-nowrap shadow-sm"
+                                  title="Este cupom já está ativado e operando na sua organização atual."
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  Ativado nesta Org
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRedeemAdminCoupon(coupon.code)}
+                                  disabled={adminRedeemLoading}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm disabled:opacity-50"
+                                  title="Ativar Plano Vitalício na Organização Ativa"
+                                >
+                                  <ShieldCheck className="w-3.5 h-3.5" />
+                                  Ativar na Minha Org
+                                </button>
+                              )
+                            ) : (
+                              coupon.active && (
+                                <button
+                                  onClick={() => handleDeleteCoupon(coupon.id, coupon.code)}
+                                  className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition shadow-sm"
+                                  title="Desativar Cupom"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1930,10 +1985,12 @@ export default function AdminPlanosPage() {
               <div>
                 <h3 className="text-xl md:text-2xl font-extrabold text-[var(--color-foreground)] flex items-center gap-2">
                   <Tag className="w-5 h-5 md:w-6 md:h-6 text-emerald-400" />
-                  Criar Cupom de Desconto
+                  {editingCoupon ? "Editar Cupom de Desconto" : "Criar Cupom de Desconto"}
                 </h3>
                 <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
-                  Gere cupons para campanhas de aquisição ou desconto exclusivo na 1ª mensalidade
+                  {editingCoupon
+                    ? "Atualize as configurações e regras do cupom sincronizado no Stripe"
+                    : "Gere cupons para campanhas de aquisição ou desconto exclusivo na 1ª mensalidade"}
                 </p>
               </div>
               <button
@@ -2150,7 +2207,11 @@ export default function AdminPlanosPage() {
                 disabled={couponSubmitting}
                 className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {couponSubmitting ? "Criando no Stripe..." : "Salvar & Ativar Cupom"}
+                {couponSubmitting
+                  ? "Sincronizando..."
+                  : editingCoupon
+                    ? "Salvar Alterações"
+                    : "Salvar & Ativar Cupom"}
               </button>
             </div>
           </div>

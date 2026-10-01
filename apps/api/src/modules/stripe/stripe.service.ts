@@ -432,6 +432,110 @@ export class StripeService {
     return result;
   }
 
+  async updateCoupon(
+    id: string,
+    params: {
+      name?: string;
+      code?: string;
+      discountType?: "percent" | "amount";
+      discountValue?: number;
+      duration?: "once" | "repeating" | "forever";
+      durationInMonths?: number;
+      maxRedemptions?: number;
+      expiresAt?: string;
+    }
+  ) {
+    if (!id || !id.trim()) {
+      throw new Error("ID do cupom é obrigatório.");
+    }
+
+    const cleanId = id.trim().toUpperCase();
+    if (cleanId === "V1T4L1C10" || cleanId === "VITALICIOADMINS") {
+      return {
+        id: cleanId,
+        code: cleanId,
+        name: params.name || "Cupom Master Admin (Acesso Vitalício Total)",
+        isLifetimeAdmin: true,
+      };
+    }
+
+    let existingCoupon: Stripe.Coupon | null = null;
+    try {
+      existingCoupon = await this.stripe.coupons.retrieve(cleanId);
+    } catch (err) {
+      this.logger.warn(`Could not retrieve coupon ${cleanId} for update: ${err}`);
+    }
+
+    const targetCode = (params.code || cleanId).trim().toUpperCase();
+
+    // Se o cupom não tem utilizações no Stripe, deleta e recria para atualizar regras financeiras e gerar promotionCode
+    if (!existingCoupon || existingCoupon.times_redeemed === 0) {
+      if (existingCoupon) {
+        try {
+          await this.stripe.coupons.del(cleanId);
+        } catch (delErr) {
+          this.logger.warn(`Could not delete old coupon ${cleanId} during update: ${delErr}`);
+        }
+      }
+
+      return await this.createCoupon({
+        name: params.name,
+        code: targetCode,
+        discountType: params.discountType || (existingCoupon?.percent_off ? "percent" : "amount"),
+        discountValue:
+          params.discountValue !== undefined
+            ? Number(params.discountValue)
+            : existingCoupon?.percent_off ||
+              (existingCoupon?.amount_off ? existingCoupon.amount_off / 100 : 0),
+        duration:
+          params.duration ||
+          (existingCoupon?.duration as "once" | "repeating" | "forever") ||
+          "once",
+        durationInMonths:
+          params.durationInMonths ?? (existingCoupon?.duration_in_months || undefined),
+        maxRedemptions:
+          params.maxRedemptions !== undefined
+            ? Number(params.maxRedemptions)
+            : existingCoupon?.max_redemptions || undefined,
+        expiresAt: params.expiresAt,
+      });
+    }
+
+    // Se já teve utilizações no Stripe, atualiza o nome
+    if (params.name) {
+      await this.stripe.coupons.update(cleanId, {
+        name: params.name.trim(),
+      });
+    }
+
+    // Garante que o PromotionCode correspondente exista e esteja ativo
+    try {
+      const promoList = await this.stripe.promotionCodes.list({
+        code: targetCode,
+        limit: 1,
+      });
+      if (promoList.data.length === 0) {
+        await this.stripe.promotionCodes.create({
+          promotion: {
+            type: "coupon",
+            coupon: cleanId,
+          },
+          code: targetCode,
+          ...(params.maxRedemptions ? { max_redemptions: Number(params.maxRedemptions) } : {}),
+        });
+      }
+    } catch (promoErr) {
+      this.logger.warn(`Could not sync promotion code during coupon update: ${promoErr}`);
+    }
+
+    return {
+      id: cleanId,
+      code: targetCode,
+      name: params.name || existingCoupon.name,
+      updated: true,
+    };
+  }
+
   async deleteCoupon(id: string) {
     const cleanId = id.toUpperCase();
     if (cleanId === "V1T4L1C10" || cleanId === "VITALICIOADMINS") {

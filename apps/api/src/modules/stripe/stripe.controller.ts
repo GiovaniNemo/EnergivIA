@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Put,
   Delete,
   Body,
   Param,
@@ -130,6 +131,33 @@ export class StripeController {
       return await this.stripeService.createCoupon(body);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Erro ao criar cupom no Stripe";
+      throw new BadRequestException(errorMessage);
+    }
+  }
+
+  @Put("coupons/:id")
+  async updateCoupon(
+    @Param("id") id: string,
+    @Body()
+    body: {
+      name?: string;
+      code?: string;
+      discountType?: "percent" | "amount";
+      discountValue?: number;
+      duration?: "once" | "repeating" | "forever";
+      durationInMonths?: number;
+      maxRedemptions?: number;
+      expiresAt?: string;
+    }
+  ) {
+    if (!id) {
+      throw new BadRequestException("Coupon ID is required");
+    }
+    try {
+      return await this.stripeService.updateCoupon(id, body);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Erro ao atualizar cupom no Stripe";
       throw new BadRequestException(errorMessage);
     }
   }
