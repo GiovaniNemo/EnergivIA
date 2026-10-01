@@ -3,7 +3,7 @@
 import { useMemo, useEffect, useState, useRef } from "react";
 import type { Deal, DealStage } from "./use-deals";
 import { useOrganization } from "@/components/providers/organization-provider";
-import { Check, Clock, Copy, MessageSquare, Sparkles, X, Zap } from "lucide-react";
+import { Check, Clock, Copy, Loader2, MessageSquare, Search, Sparkles, X, Zap } from "lucide-react";
 
 interface FocusPriority {
   dealId: string;
@@ -545,6 +545,12 @@ export function PipelinePrioridadesView({
 
   // Automation Modal & Quick Reply Modal states
   const [automationModalOpen, setAutomationModalOpen] = useState(false);
+  const [selectedStalledDealIds, setSelectedStalledDealIds] = useState<Set<string>>(new Set());
+  const [automationSearch, setAutomationSearch] = useState("");
+  const [isExecutingAutomation, setIsExecutingAutomation] = useState(false);
+  const [automationMessage, setAutomationMessage] = useState(
+    "Olá! Tudo bem? Passando para saber se você conseguiu analisar a proposta do seu sistema solar que te enviei. Ficou alguma dúvida sobre o payback ou os equipamentos?"
+  );
   const [quickReplyModal, setQuickReplyModal] = useState<QuickReply | null>(null);
   const [copiedToast, setCopiedToast] = useState(false);
   const [automationSuccess, setAutomationSuccess] = useState(false);
@@ -574,6 +580,62 @@ export function PipelinePrioridadesView({
       ),
     [openDeals]
   );
+
+  const handleOpenAutomationModal = () => {
+    setSelectedStalledDealIds(new Set(stalledDeals.map((d) => d.id)));
+    setAutomationSearch("");
+    setAutomationSuccess(false);
+    setAutomationModalOpen(true);
+  };
+
+  const filteredStalledDeals = useMemo(() => {
+    const q = automationSearch.trim().toLowerCase();
+    if (!q) return stalledDeals;
+    return stalledDeals.filter(
+      (d) =>
+        d.clientName.toLowerCase().includes(q) || (d.phone && d.phone.toLowerCase().includes(q))
+    );
+  }, [stalledDeals, automationSearch]);
+
+  const handleToggleSelectAll = () => {
+    if (selectedStalledDealIds.size === stalledDeals.length) {
+      setSelectedStalledDealIds(new Set());
+    } else {
+      setSelectedStalledDealIds(new Set(stalledDeals.map((d) => d.id)));
+    }
+  };
+
+  const handleToggleDeal = (id: string) => {
+    setSelectedStalledDealIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleExecuteAutomation = async () => {
+    if (selectedStalledDealIds.size === 0 || isExecutingAutomation) return;
+    setIsExecutingAutomation(true);
+    try {
+      if (onPostpone) {
+        const dealsToUpdate = stalledDeals.filter((d) => selectedStalledDealIds.has(d.id));
+        await Promise.all(dealsToUpdate.map((deal) => onPostpone(deal, 3)));
+      }
+      setAutomationSuccess(true);
+      setTimeout(() => {
+        setAutomationSuccess(false);
+        setAutomationModalOpen(false);
+      }, 1800);
+    } catch (err) {
+      console.error("Erro ao aplicar automação:", err);
+    } finally {
+      setIsExecutingAutomation(false);
+    }
+  };
 
   const upcomingDeals = useMemo(
     () =>
@@ -785,7 +847,7 @@ export function PipelinePrioridadesView({
               </p>
               <button
                 type="button"
-                onClick={() => setAutomationModalOpen(true)}
+                onClick={handleOpenAutomationModal}
                 className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-violet-600 hover:underline dark:text-violet-400 transition-colors"
               >
                 <span>Criar automação →</span>
@@ -896,87 +958,195 @@ export function PipelinePrioridadesView({
       {automationModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150"
-          onClick={() => setAutomationModalOpen(false)}
+          onClick={() => !isExecutingAutomation && setAutomationModalOpen(false)}
         >
           <div
-            className="w-full max-w-lg rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-2xl animate-in zoom-in-95 duration-150"
+            className="flex max-h-[92vh] w-full max-w-xl flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-2xl animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-3">
               <div>
-                <h3 className="text-base font-bold text-[var(--color-foreground)] flex items-center gap-2">
+                <h3 className="flex items-center gap-2 text-base font-bold text-[var(--color-foreground)]">
                   <Sparkles className="h-4 w-4 text-violet-600" />
                   <span>Automação de Follow-up Inteligente</span>
                 </h3>
-                <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
+                <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
                   Detectamos <strong>{stalledDeals.length} negociações</strong> paradas há mais de 3
                   dias sem resposta.
                 </p>
               </div>
               <button
                 type="button"
+                disabled={isExecutingAutomation}
                 onClick={() => setAutomationModalOpen(false)}
-                className="rounded-lg p-1 text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                className="rounded-lg p-1 text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors disabled:opacity-50"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="space-y-4 py-4">
-              <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-3.5 text-xs text-violet-900 dark:border-violet-900 dark:bg-violet-950/20 dark:text-violet-200">
-                <p className="font-semibold mb-1 flex items-center gap-1.5">
+            {/* Modal Body with Scroll */}
+            <div className="flex-1 space-y-4 overflow-y-auto py-3 pr-1">
+              {/* How it works info box */}
+              <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-3 text-xs text-violet-900 dark:border-violet-900 dark:bg-violet-950/20 dark:text-violet-200">
+                <p className="mb-1 flex items-center gap-1.5 font-semibold">
                   <Zap className="h-3.5 w-3.5 text-violet-600" />
                   Como funciona esta automação:
                 </p>
                 <p className="leading-relaxed opacity-90">
-                  Todas as negociações que estiverem sem contato há mais de 3 dias receberão um
-                  lembrete prioritário e agendamento de follow-up automático com modelo de mensagem
-                  para reativação.
+                  As negociações selecionadas abaixo receberão um lembrete prioritário e agendamento
+                  automático de follow-up para reativação imediata.
                 </p>
               </div>
 
+              {/* Deal Selection Section */}
               <div>
-                <label className="block text-xs font-semibold text-[var(--color-foreground)] mb-1.5">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[var(--color-foreground)]">
+                    Selecionar negociações ({selectedStalledDealIds.size} de {stalledDeals.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleToggleSelectAll}
+                    className="text-[11px] font-semibold text-violet-600 hover:underline dark:text-violet-400"
+                  >
+                    {selectedStalledDealIds.size === stalledDeals.length
+                      ? "Desmarcar todas"
+                      : "Selecionar todas"}
+                  </button>
+                </div>
+
+                {/* Filter input */}
+                {stalledDeals.length > 5 && (
+                  <div className="relative mb-2">
+                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-muted-foreground)]" />
+                    <input
+                      type="text"
+                      value={automationSearch}
+                      onChange={(e) => setAutomationSearch(e.target.value)}
+                      placeholder="Buscar por cliente ou telefone..."
+                      className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] py-1.5 pl-8 pr-3 text-xs text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    />
+                  </div>
+                )}
+
+                {/* Scrollable Deals List */}
+                <div className="max-h-56 space-y-1 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-1.5">
+                  {filteredStalledDeals.length > 0 ? (
+                    filteredStalledDeals.map((deal) => {
+                      const isSelected = selectedStalledDealIds.has(deal.id);
+                      const days = daysSince(deal.recentAt);
+                      return (
+                        <div
+                          key={deal.id}
+                          onClick={() => handleToggleDeal(deal.id)}
+                          className={`flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-xs transition-colors ${
+                            isSelected
+                              ? "bg-violet-50/70 border border-violet-200/80 dark:bg-violet-950/30 dark:border-violet-800/50"
+                              : "border border-transparent hover:bg-[var(--color-muted)]"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleDeal(deal.id)}
+                            className="h-3.5 w-3.5 rounded border-gray-300 text-violet-600 focus:ring-violet-500 pointer-events-none"
+                          />
+                          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-violet-100 text-[11px] font-bold text-violet-700 dark:bg-violet-900/50 dark:text-violet-300">
+                            {deal.clientName.slice(0, 1).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-semibold text-[var(--color-foreground)]">
+                              {deal.clientName}
+                            </p>
+                            <p className="truncate text-[10px] text-[var(--color-muted-foreground)]">
+                              {deal.phone || "Sem telefone"} •{" "}
+                              <span className="text-amber-600 dark:text-amber-400">
+                                parado há {days}d
+                              </span>
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-0.5 text-right">
+                            <span className="font-semibold text-[var(--color-foreground)]">
+                              {formatCurrency(deal.value)}
+                            </span>
+                            <span className="text-[10px] text-[var(--color-muted-foreground)]">
+                              {STAGE_LABEL[deal.stage]}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="py-4 text-center text-xs text-[var(--color-muted-foreground)]">
+                      Nenhuma negociação encontrada com o filtro informado.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Editable Reativação Message */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[var(--color-foreground)]">
                   Mensagem padrão de reativação:
                 </label>
                 <textarea
-                  readOnly
                   rows={3}
-                  defaultValue="Olá! Tudo bem? Passando para saber se você conseguiu analisar a proposta do seu sistema solar que te enviei. Ficou alguma dúvida sobre o payback ou os equipamentos?"
-                  className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-xs text-[var(--color-foreground)] focus:outline-none"
+                  value={automationMessage}
+                  onChange={(e) => setAutomationMessage(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-xs text-[var(--color-foreground)] focus:outline-none focus:ring-1 focus:ring-violet-500"
                 />
               </div>
 
+              {/* Feedback Alert */}
               {automationSuccess && (
-                <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-3 text-xs text-emerald-700 dark:text-emerald-300 font-semibold flex items-center gap-2">
-                  <Check className="h-4 w-4" />
-                  <span>Automação aplicada com sucesso para as negociações paradas!</span>
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-700 dark:text-emerald-300 animate-in fade-in duration-150">
+                  <Check className="h-4 w-4 text-emerald-600" />
+                  <span>
+                    Automação aplicada com sucesso para {selectedStalledDealIds.size}{" "}
+                    negociação(ões)!
+                  </span>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-[var(--color-border)] pt-3">
-              <button
-                type="button"
-                onClick={() => setAutomationModalOpen(false)}
-                className="rounded-xl px-4 py-2 text-xs font-semibold text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
-              >
-                Fechar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAutomationSuccess(true);
-                  setTimeout(() => {
-                    setAutomationSuccess(false);
-                    setAutomationModalOpen(false);
-                  }, 1800);
-                }}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-violet-500 transition-colors"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>Executar Automação Agora</span>
-              </button>
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between border-t border-[var(--color-border)] pt-3">
+              <span className="text-xs text-[var(--color-muted-foreground)]">
+                {selectedStalledDealIds.size} selecionada(s)
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isExecutingAutomation}
+                  onClick={() => setAutomationModalOpen(false)}
+                  className="rounded-xl px-4 py-2 text-xs font-semibold text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] disabled:opacity-50"
+                >
+                  Fechar
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedStalledDealIds.size === 0 || isExecutingAutomation}
+                  onClick={handleExecuteAutomation}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isExecutingAutomation ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Agendando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>
+                        Executar Automação{" "}
+                        {selectedStalledDealIds.size > 0 ? `(${selectedStalledDealIds.size})` : ""}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
