@@ -828,87 +828,6 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       include: { messages: { orderBy: { createdAt: "asc" } } },
     });
 
-    // 5.1 Verificação de Feedback / Avaliação WhatsApp
-    const isGreetingOrIntent =
-      /^(oi|ol[aá]|bom dia|boa tarde|boa noite|menu|iniciar|reiniciar|ajuda|opa|e a[ií]|quero|proposta|cotar|cotação|simular|painel|solar|conta|fatura)\b/i.test(
-        incomingText.trim()
-      );
-
-    const lastAssistantMsg = [...(conversation.messages || [])]
-      .reverse()
-      .find((m) => m.role === "assistant");
-
-    const feedbackTimeLimitMs = 2 * 60 * 60 * 1000; // 2 horas de validade para pergunta de feedback
-    const isRecentFeedbackRequest =
-      lastAssistantMsg &&
-      lastAssistantMsg.createdAt &&
-      Date.now() - new Date(lastAssistantMsg.createdAt).getTime() < feedbackTimeLimitMs;
-
-    const wasAskedFeedback =
-      isRecentFeedbackRequest &&
-      (lastAssistantMsg.content.includes("Como está sendo sua experiência") ||
-        lastAssistantMsg.content.includes("como você avalia") ||
-        lastAssistantMsg.content.includes("Deixe sua nota"));
-
-    const feedbackMatch =
-      incomingText.match(/(?:nota\s*)?([1-5])\s*(?:estrelas?|star|⭐)?(?:\s*[-–:]\s*(.*))?$/i) ||
-      incomingText.match(/^(?:⭐\s*){1,5}$/);
-
-    const hasExplicitRating =
-      incomingText.toLowerCase().includes("estrela") ||
-      incomingText.toLowerCase().includes("nota") ||
-      incomingText.includes("⭐") ||
-      /^[1-5](\s*[-–:]|$)/.test(incomingText.trim());
-
-    if (
-      !isGreetingOrIntent &&
-      ((wasAskedFeedback && (feedbackMatch || hasExplicitRating)) ||
-        (feedbackMatch && hasExplicitRating))
-    ) {
-      let rating = 5;
-      const comment = incomingText;
-
-      const starCount = (incomingText.match(/⭐/g) || []).length;
-      if (starCount >= 1 && starCount <= 5) {
-        rating = starCount;
-      } else {
-        const numMatch = incomingText.match(/\b([1-5])\b/);
-        if (numMatch && numMatch[1]) {
-          rating = parseInt(numMatch[1], 10);
-        }
-      }
-
-      await this.prisma.platformFeedback.create({
-        data: {
-          tenantId: tenant.id,
-          userName: contactName,
-          phone: fromWaId,
-          rating,
-          comment: comment.replace(/^[1-5](\s*estrelas?)?[-–:]?\s*/i, "").trim() || comment,
-          channel: "whatsapp",
-          userPlan: planStatus.planName || "TRIAL",
-        },
-      });
-
-      const feedbackThanks = `Muito obrigado pela sua avaliação (${rating}/5 ⭐)! A sua opinião nos ajuda a evoluir a EnergivIA a cada dia. ☀️🚀\n\nSe precisar de mais alguma cotação ou dimensionamento, basta me mandar uma nova mensagem!`;
-
-      await this.whatsappCloud.sendTextMessage({
-        phoneNumberId,
-        toWaId: fromWaId,
-        body: feedbackThanks,
-      });
-
-      await this.prisma.message.create({
-        data: {
-          conversationId: conversation.id,
-          role: "assistant",
-          content: feedbackThanks,
-          channel: "whatsapp",
-        },
-      });
-      return;
-    }
-
     // 6. Gera a resposta pelo motor de estado do bot e gera a proposta real
     let replyText = "";
     try {
@@ -2817,9 +2736,7 @@ ${catalogContext}`;
         `💰 *Valor Total:* R$ ${quotedSaleBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
         `📄 *Acesse a Proposta Pronta no link:*\n` +
         `${proposalLink}\n\n` +
-        `Ela já está disponível no seu painel CRM da EnergivIA. ☀️\n\n` +
-        `⭐ *Como está sendo sua experiência com a EnergivIA?*\n` +
-        `De *1 a 5 estrelas*, como você nos avalia? Deixe sua nota e comentário!`
+        `Ela já está disponível no seu painel CRM da EnergivIA. ☀️`
       );
     }
 
