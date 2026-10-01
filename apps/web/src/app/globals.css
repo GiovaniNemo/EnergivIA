@@ -642,3 +642,16 @@ html.hide-scrollbar,
 .animate-spin-border {
   animation: spin-border 3.5s linear infinite;
 }
+
+@media print {
+  .cookie-consent-banner,
+  [role="region"][aria-label="Consentimento de Cookies"],
+  [data-cookie-banner="true"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    pointer-events: none !important;
+  }
+}

@@ -893,7 +893,7 @@ export class ProposalsService {
 
     const webBaseUrl = resolvePublicWebAppBaseUrl();
     const token = proposal.publicToken || proposal.id;
-    const targetUrl = `${webBaseUrl}/proposta/${token}`;
+    const targetUrl = `${webBaseUrl}/proposta/${token}?pdf=true&hide_cookie=1`;
 
     this.logger.log(
       `Iniciando geração de PDF resiliente para proposta ${proposalId} na URL: ${targetUrl}`

@@ -559,8 +559,8 @@ export function PreviewDocument({
                 color: styles.branding.textColor,
                 borderRadius: `${styles.layout.borderRadius}px`,
                 boxShadow: `0 ${styles.layout.shadowIntensity * 8}px ${styles.layout.shadowIntensity * 26}px rgba(0,0,0,0.28)`,
-                pageBreakAfter: index === visibleSections.length - 1 ? "auto" : "always",
-                breakAfter: index === visibleSections.length - 1 ? "auto" : "page",
+                pageBreakAfter: index === visibleSections.length - 1 ? "avoid" : "always",
+                breakAfter: index === visibleSections.length - 1 ? "avoid" : "page",
                 pageBreakInside: "avoid",
                 breakInside: "avoid",
               }}

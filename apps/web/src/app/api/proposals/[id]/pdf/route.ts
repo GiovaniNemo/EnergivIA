@@ -64,7 +64,7 @@ export async function GET(
     });
 
     if (!apiResponse.ok) {
-      const err = await apiResponse.json().catch(() => ({})) as { message?: string };
+      const err = (await apiResponse.json().catch(() => ({}))) as { message?: string };
       return NextResponse.json(
         { error: err.message ?? `Proposta não encontrada (HTTP ${apiResponse.status})` },
         { status: apiResponse.status }
@@ -74,13 +74,13 @@ export async function GET(
     const payload = (await apiResponse.json()) as PublicProposalPayload;
 
     if (!payload.proposalTemplate?.config) {
-      return NextResponse.json(
-        { error: "Proposta sem template configurado." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Proposta sem template configurado." }, { status: 400 });
     }
-    const appUrl = (process.env["NEXT_PUBLIC_APP_URL"] || _request.nextUrl.origin).replace(/\/$/, "");
-    const proposalUrl = `${appUrl}/proposta/${payload.publicToken ?? id}?pdf=true`;
+    const appUrl = (process.env["NEXT_PUBLIC_APP_URL"] || _request.nextUrl.origin).replace(
+      /\/$/,
+      ""
+    );
+    const proposalUrl = `${appUrl}/proposta/${payload.publicToken ?? id}?pdf=true&hide_cookie=1`;
 
     const browser = await getBrowser();
     try {
@@ -89,7 +89,9 @@ export async function GET(
       await page.goto(proposalUrl, { waitUntil: "networkidle2", timeout: 45_000 });
 
       // Aguarda de modo explícito que o componente root renderize
-      await page.waitForSelector('[data-preview-scroll="true"]', { timeout: 15_000 }).catch(() => { });
+      await page
+        .waitForSelector('[data-preview-scroll="true"]', { timeout: 15_000 })
+        .catch(() => {});
       // Um pequeno delay extra para ter certeza que gráficos ou fontes terminaram de renderizar
       await new Promise((r) => setTimeout(r, 2000));
 

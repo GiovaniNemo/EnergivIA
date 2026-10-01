@@ -39,8 +39,15 @@ export function CookieConsentBanner(): JSX.Element | null {
     setConsent(choice);
   };
 
-  // Don't render on SSR or if user already gave consent
-  if (!mounted || consent !== null) {
+  // Don't render on SSR, if user already gave consent, or in PDF generation
+  if (
+    !mounted ||
+    consent !== null ||
+    (typeof window !== "undefined" &&
+      (window.location.search.includes("pdf=true") ||
+        window.location.search.includes("hide_cookie=1") ||
+        window.location.pathname.startsWith("/proposta/")))
+  ) {
     return null;
   }
 
@@ -48,7 +55,7 @@ export function CookieConsentBanner(): JSX.Element | null {
     <div
       role="region"
       aria-label="Consentimento de Cookies"
-      className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-xl animate-in fade-in slide-in-from-bottom-4 duration-300 sm:bottom-6 sm:left-auto sm:right-6"
+      className="cookie-consent-banner print:hidden fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-xl animate-in fade-in slide-in-from-bottom-4 duration-300 sm:bottom-6 sm:left-auto sm:right-6"
     >
       <div className="relative rounded-2xl border border-slate-700/80 bg-slate-900/95 p-5 shadow-2xl backdrop-blur-md text-slate-100 dark:border-slate-800 dark:bg-slate-950/95">
         <div className="flex items-start gap-4">

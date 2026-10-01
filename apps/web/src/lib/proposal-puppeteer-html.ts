@@ -82,24 +82,26 @@ export function proposalPuppeteerDocumentCss(): string {
     }
 
     [data-preview-scroll="true"] > div > article {
-      page-break-after: always;
-      break-after: page;
-      page-break-inside: avoid;
-      break-inside: avoid;
+      page-break-after: always !important;
+      break-after: page !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
       min-height: auto !important;
       height: auto !important;
       aspect-ratio: auto !important;
-      width: auto !important;
+      width: 100% !important;
       max-width: none !important;
-      margin: 0 0 8mm 0 !important;
+      margin: 0 !important;
+      padding-bottom: 0 !important;
       border-radius: 0 !important;
       box-shadow: none !important;
       overflow: visible !important;
     }
 
-    [data-preview-scroll="true"] > div > article:last-child {
-      page-break-after: auto;
-      break-after: auto;
+    [data-preview-scroll="true"] > div > article:last-child,
+    [data-preview-scroll="true"] > div > article:last-of-type {
+      page-break-after: avoid !important;
+      break-after: avoid !important;
       margin-bottom: 0 !important;
     }
 
