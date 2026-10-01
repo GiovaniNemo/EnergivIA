@@ -169,6 +169,7 @@ export interface DistributorTierKit {
   module_power_w: number;
   module_is_tier_1?: boolean;
   estimated_monthly_generation_kwh: number;
+  whatsapp_message?: string;
 }
 
 export interface DistributorTiersResult {

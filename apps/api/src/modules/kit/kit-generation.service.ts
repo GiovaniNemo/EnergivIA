@@ -17,6 +17,8 @@ import { isStringSizingResult, type ProductWithSpecs } from "../../domain/solar-
 import type { ModuleSpec } from "../../domain/product-specs";
 import { PrismaService } from "../../prisma/prisma.service";
 import { Decimal } from "@prisma/client/runtime/library";
+import { formatKitForWhatsApp } from "./whatsapp-formatter.service";
+import * as crypto from "crypto";
 
 const DC_CABLE_SECTION_MM2 = 6;
 const DEFAULT_ROOF_TYPE = "ceramic";
@@ -61,14 +63,37 @@ type BuiltKit = {
 
 @Injectable()
 export class KitGenerationService {
+  private readonly sourceResolutionCache = new Map<string, KitProductSource>();
+  private readonly productDistributorCache = new Map<string, string | null>();
+
   constructor(
     private readonly productRepo: ProductRepository,
     private readonly prisma: PrismaService
   ) {}
 
+  private async getDistributorIdForProduct(productId: string): Promise<string | null> {
+    if (this.productDistributorCache.has(productId)) {
+      return this.productDistributorCache.get(productId)!;
+    }
+    const offer = await this.prisma.distributorProduct.findFirst({
+      where: {
+        productId,
+        active: true,
+        distributor: { active: true },
+      },
+      select: { distributorId: true },
+    });
+    const distId = offer?.distributorId ?? null;
+    this.productDistributorCache.set(productId, distId);
+    return distId;
+  }
+
   private async resolveSource(rawId?: string): Promise<KitProductSource> {
     if (!rawId) return {};
+    const cached = this.sourceResolutionCache.get(rawId);
+    if (cached) return cached;
 
+    let res: KitProductSource;
     // 1. Tentar encontrar por ID na tabela Distributor
     const distById = await this.prisma.distributor.findUnique({
       where: { id: rawId },
@@ -79,23 +104,26 @@ export class KitGenerationService {
         where: { name: { equals: distById.name, mode: "insensitive" } },
         select: { id: true },
       });
-      return { distributorId: distById.id, supplierId: supByName?.id };
-    }
-
-    // 2. Tentar encontrar por ID na tabela Supplier
-    const supById = await this.prisma.supplier.findUnique({
-      where: { id: rawId },
-      select: { id: true, name: true },
-    });
-    if (supById) {
-      const distByName = await this.prisma.distributor.findFirst({
-        where: { name: { equals: supById.name, mode: "insensitive" }, active: true },
-        select: { id: true },
+      res = { distributorId: distById.id, supplierId: supByName?.id };
+    } else {
+      // 2. Tentar encontrar por ID na tabela Supplier
+      const supById = await this.prisma.supplier.findUnique({
+        where: { id: rawId },
+        select: { id: true, name: true },
       });
-      return { supplierId: supById.id, distributorId: distByName?.id };
+      if (supById) {
+        const distByName = await this.prisma.distributor.findFirst({
+          where: { name: { equals: supById.name, mode: "insensitive" }, active: true },
+          select: { id: true },
+        });
+        res = { supplierId: supById.id, distributorId: distByName?.id };
+      } else {
+        res = { supplierId: rawId, distributorId: rawId };
+      }
     }
 
-    return { supplierId: rawId, distributorId: rawId };
+    this.sourceResolutionCache.set(rawId, res);
+    return res;
   }
 
   async generateSolarKit(
@@ -207,21 +235,31 @@ export class KitGenerationService {
 
   private async persistKitResult(
     built: BuiltKit,
-    usedOwnStock: boolean
+    usedOwnStock: boolean,
+    persist = false
   ): Promise<GenerateKitResult> {
-    const kit = await this.prisma.kit.create({
-      data: { systemPowerKw: new Decimal(built.systemPowerKw) },
-    });
-    await this.prisma.kitItem.createMany({
-      data: built.kitItems.map((item) => ({
-        kitId: kit.id,
-        productId: item.product_id,
-        quantity: item.quantity,
-      })),
-    });
+    let kitId: string = crypto.randomUUID();
+    if (persist) {
+      try {
+        const kit = await this.prisma.kit.create({
+          data: { systemPowerKw: new Decimal(built.systemPowerKw) },
+        });
+        kitId = kit.id;
+        await this.prisma.kitItem.createMany({
+          data: built.kitItems.map((item) => ({
+            kitId: kit.id,
+            productId: item.product_id,
+            quantity: item.quantity,
+          })),
+        });
+      } catch (err) {
+        // Fallback gracefully without failing the calculation
+        console.warn("[persistKitResult] Skipped DB persist:", err);
+      }
+    }
 
     return {
-      kit_id: kit.id,
+      kit_id: kitId,
       system_power_kw: built.systemPowerKw,
       own_stock_used: usedOwnStock,
       modules: {
@@ -605,7 +643,7 @@ export class KitGenerationService {
       tagline: string,
       built: BuiltKit
     ): Promise<DistributorTierKit> => {
-      const kitResult = await this.persistKitResult(built, usedOwnStock);
+      const kitResult = await this.persistKitResult(built, usedOwnStock, false);
       const equipmentTotal = kitItemsTotal(built.kitItems);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const moduleSpecs = built.sizingResult.module.specs as any;
@@ -633,6 +671,7 @@ export class KitGenerationService {
         badge,
         tagline,
         kit_result: kitResult,
+        whatsapp_message: formatKitForWhatsApp(kitResult),
         equipment_total: equipmentTotal,
         rate_per_kwp: Math.round(equipmentTotal / Math.max(0.1, built.systemPowerKw)),
         inverter_brand: built.kitItems[1]?.brand_name || built.sizingResult.inverter.brandName,
@@ -710,22 +749,23 @@ export class KitGenerationService {
     }
     const allOrigins = Array.from(originMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 
-    const supplierSources: KitSourceOption[] = [];
-    for (const origin of allOrigins) {
-      const built = await this.buildKit(input, roofType, {
-        supplierId: origin.supplierId,
-        distributorId: origin.distributorId,
-      });
-      supplierSources.push({
-        type: "supplier",
-        supplier_id: origin.distributorId || origin.supplierId,
-        supplier_name: origin.name,
-        available: built !== null,
-        complete: built !== null && built.kitItems.length >= REQUIRED_KIT_CATEGORIES,
-        total: built ? kitItemsTotal(built.kitItems) : null,
-        item_count: built ? built.kitItems.length : null,
-      });
-    }
+    const supplierSources: KitSourceOption[] = await Promise.all(
+      allOrigins.map(async (origin) => {
+        const built = await this.buildKit(input, roofType, {
+          supplierId: origin.supplierId,
+          distributorId: origin.distributorId,
+        });
+        return {
+          type: "supplier" as const,
+          supplier_id: origin.distributorId || origin.supplierId,
+          supplier_name: origin.name,
+          available: built !== null,
+          complete: built !== null && built.kitItems.length >= REQUIRED_KIT_CATEGORIES,
+          total: built ? kitItemsTotal(built.kitItems) : null,
+          item_count: built ? built.kitItems.length : null,
+        };
+      })
+    );
 
     supplierSources.sort((a, b) => {
       if (a.available !== b.available) return a.available ? -1 : 1;
@@ -1235,27 +1275,13 @@ export class KitGenerationService {
       } else if (sizingResult.module.distributorId) {
         bosSource = { distributorId: sizingResult.module.distributorId };
       } else {
-        const invOffer = await this.prisma.distributorProduct.findFirst({
-          where: {
-            productId: sizingResult.inverter.id,
-            active: true,
-            distributor: { active: true },
-          },
-          select: { distributorId: true },
-        });
-        if (invOffer) {
-          bosSource = { distributorId: invOffer.distributorId };
+        const invDistId = await this.getDistributorIdForProduct(sizingResult.inverter.id);
+        if (invDistId) {
+          bosSource = { distributorId: invDistId };
         } else {
-          const modOffer = await this.prisma.distributorProduct.findFirst({
-            where: {
-              productId: sizingResult.module.id,
-              active: true,
-              distributor: { active: true },
-            },
-            select: { distributorId: true },
-          });
-          if (modOffer) {
-            bosSource = { distributorId: modOffer.distributorId };
+          const modDistId = await this.getDistributorIdForProduct(sizingResult.module.id);
+          if (modDistId) {
+            bosSource = { distributorId: modDistId };
           }
         }
       }

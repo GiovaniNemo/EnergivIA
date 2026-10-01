@@ -46,10 +46,41 @@ export type KitProductSource = {
 
 @Injectable()
 export class ProductRepository {
+  private readonly queryCache = new Map<string, { data: unknown; expiresAt: number }>();
+  private static readonly CACHE_TTL_MS = 60_000;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly supplierProductRepo: SupplierProductRepository
   ) {}
+
+  private getCached<T>(key: string): T | null {
+    const entry = this.queryCache.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.expiresAt) {
+      this.queryCache.delete(key);
+      return null;
+    }
+    return entry.data as T;
+  }
+
+  private setCache<T>(key: string, data: T, ttlMs = ProductRepository.CACHE_TTL_MS): T {
+    this.queryCache.set(key, {
+      data,
+      expiresAt: Date.now() + ttlMs,
+    });
+    if (this.queryCache.size > 2000) {
+      const now = Date.now();
+      for (const [k, v] of this.queryCache.entries()) {
+        if (v.expiresAt <= now) this.queryCache.delete(k);
+      }
+    }
+    return data;
+  }
+
+  public clearCache(): void {
+    this.queryCache.clear();
+  }
 
   private async getStockProductIds(orgId: string): Promise<string[]> {
     const rows = await this.prisma.stockItem.findMany({
@@ -87,8 +118,14 @@ export class ProductRepository {
   }
 
   private async restrictProductIds(source: KitProductSource): Promise<string[] | null> {
-    if (source.stockOwnerOrgId) return this.getStockProductIds(source.stockOwnerOrgId);
-    if (source.supplierId || source.distributorId) {
+    const cacheKey = `restrict:${source.stockOwnerOrgId ?? ""}:${source.supplierId ?? ""}:${source.distributorId ?? ""}`;
+    const cached = this.getCached<string[] | null>(cacheKey);
+    if (cached !== null) return cached ? [...cached] : null;
+
+    let res: string[] | null = null;
+    if (source.stockOwnerOrgId) {
+      res = await this.getStockProductIds(source.stockOwnerOrgId);
+    } else if (source.supplierId || source.distributorId) {
       const supIds = source.supplierId
         ? await this.supplierProductRepo.getProductIdsBySupplier(source.supplierId)
         : [];
@@ -119,23 +156,29 @@ export class ProductRepository {
       }
 
       const distIds = distOffers.map((o) => o.productId);
-      return Array.from(new Set([...supIds, ...distIds]));
+      res = Array.from(new Set([...supIds, ...distIds]));
+    } else {
+      // Modo automático / sem restrição de fornecedor: retorna todos os produtos com ofertas ativas
+      const [activeDistRows, activeSupRows] = await Promise.all([
+        this.prisma.distributorProduct.findMany({
+          where: { active: true, distributor: { active: true } },
+          select: { productId: true },
+        }),
+        this.prisma.supplierProduct.findMany({
+          select: { productId: true },
+        }),
+      ]);
+      const validIds = Array.from(
+        new Set([
+          ...activeDistRows.map((d) => d.productId),
+          ...activeSupRows.map((s) => s.productId),
+        ])
+      );
+      res = validIds.length > 0 ? validIds : null;
     }
 
-    // Modo automático / sem restrição de fornecedor: retorna todos os produtos com ofertas ativas
-    const [activeDistRows, activeSupRows] = await Promise.all([
-      this.prisma.distributorProduct.findMany({
-        where: { active: true, distributor: { active: true } },
-        select: { productId: true },
-      }),
-      this.prisma.supplierProduct.findMany({
-        select: { productId: true },
-      }),
-    ]);
-    const validIds = Array.from(
-      new Set([...activeDistRows.map((d) => d.productId), ...activeSupRows.map((s) => s.productId)])
-    );
-    return validIds.length > 0 ? validIds : null;
+    this.setCache(cacheKey, res ? [...res] : null);
+    return res;
   }
 
   private async attachPrices<T extends { id: string }>(
@@ -300,6 +343,10 @@ export class ProductRepository {
     brandName?: string,
     source: KitProductSource = {}
   ): Promise<ProductWithSpecs<ModuleSpec>[]> {
+    const cacheKey = `modules:${brandName?.toLowerCase() ?? ""}:${source.stockOwnerOrgId ?? ""}:${source.supplierId ?? ""}:${source.distributorId ?? ""}`;
+    const cached = this.getCached<ProductWithSpecs<ModuleSpec>[]>(cacheKey);
+    if (cached) return [...cached];
+
     const where: {
       category: { name: string };
       active: boolean;
@@ -323,7 +370,7 @@ export class ProductRepository {
       orderBy: [{ brand: { name: "asc" } }, { name: "asc" }],
     });
     const filtered = rows.filter((p) => isModuleSpec(p.specs));
-    return this.attachPrices(
+    const result = await this.attachPrices(
       filtered.map((p) => ({
         id: p.id,
         name: p.name,
@@ -333,11 +380,17 @@ export class ProductRepository {
       })),
       source
     );
+    this.setCache(cacheKey, result);
+    return [...result];
   }
 
   async findActiveStringInverters(
     source: KitProductSource = {}
   ): Promise<ProductWithSpecs<StringInverterSpec>[]> {
+    const cacheKey = `stringInverters:${source.stockOwnerOrgId ?? ""}:${source.supplierId ?? ""}:${source.distributorId ?? ""}`;
+    const cached = this.getCached<ProductWithSpecs<StringInverterSpec>[]>(cacheKey);
+    if (cached) return [...cached];
+
     const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
       category: { name: CATEGORY_NAMES.INVERTER },
       active: true,
@@ -353,7 +406,7 @@ export class ProductRepository {
       orderBy: { name: "asc" },
     });
     const filtered = rows.filter((p) => isStringInverterSpec(p.specs));
-    return this.attachPrices(
+    const result = await this.attachPrices(
       filtered.map((p) => ({
         id: p.id,
         name: p.name,
@@ -368,11 +421,17 @@ export class ProductRepository {
       })),
       source
     );
+    this.setCache(cacheKey, result);
+    return [...result];
   }
 
   async findActiveMicroInverters(
     source: KitProductSource = {}
   ): Promise<ProductWithSpecs<MicroInverterSpec>[]> {
+    const cacheKey = `microInverters:${source.stockOwnerOrgId ?? ""}:${source.supplierId ?? ""}:${source.distributorId ?? ""}`;
+    const cached = this.getCached<ProductWithSpecs<MicroInverterSpec>[]>(cacheKey);
+    if (cached) return [...cached];
+
     const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
       category: { name: CATEGORY_NAMES.MICROINVERTER },
       active: true,
@@ -388,7 +447,7 @@ export class ProductRepository {
       orderBy: { name: "asc" },
     });
     const filtered = rows.filter((p) => isMicroInverterSpec(p.specs));
-    return this.attachPrices(
+    const result = await this.attachPrices(
       filtered.map((p) => ({
         id: p.id,
         name: p.name,
@@ -398,11 +457,17 @@ export class ProductRepository {
       })),
       source
     );
+    this.setCache(cacheKey, result);
+    return [...result];
   }
 
   async findActiveHybridInverters(
     source: KitProductSource = {}
   ): Promise<ProductWithSpecs<HybridInverterSpec>[]> {
+    const cacheKey = `hybridInverters:${source.stockOwnerOrgId ?? ""}:${source.supplierId ?? ""}:${source.distributorId ?? ""}`;
+    const cached = this.getCached<ProductWithSpecs<HybridInverterSpec>[]>(cacheKey);
+    if (cached) return [...cached];
+
     const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
       category: { name: CATEGORY_NAMES.HYBRID_INVERTER },
       active: true,
@@ -418,7 +483,7 @@ export class ProductRepository {
       orderBy: { name: "asc" },
     });
     const filtered = rows.filter((p) => isHybridInverterSpec(p.specs));
-    return this.attachPrices(
+    const result = await this.attachPrices(
       filtered.map((p) => ({
         id: p.id,
         name: p.name,
@@ -428,11 +493,17 @@ export class ProductRepository {
       })),
       source
     );
+    this.setCache(cacheKey, result);
+    return [...result];
   }
 
   async findActiveOffGridInverters(
     source: KitProductSource = {}
   ): Promise<ProductWithSpecs<OffGridInverterSpec>[]> {
+    const cacheKey = `offGridInverters:${source.stockOwnerOrgId ?? ""}:${source.supplierId ?? ""}:${source.distributorId ?? ""}`;
+    const cached = this.getCached<ProductWithSpecs<OffGridInverterSpec>[]>(cacheKey);
+    if (cached) return [...cached];
+
     const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
       category: { name: CATEGORY_NAMES.OFF_GRID_INVERTER },
       active: true,
@@ -448,7 +519,7 @@ export class ProductRepository {
       orderBy: { name: "asc" },
     });
     const filtered = rows.filter((p) => isOffGridInverterSpec(p.specs));
-    return this.attachPrices(
+    const result = await this.attachPrices(
       filtered.map((p) => ({
         id: p.id,
         name: p.name,
@@ -458,6 +529,8 @@ export class ProductRepository {
       })),
       source
     );
+    this.setCache(cacheKey, result);
+    return [...result];
   }
 
   async findActiveBatteries(source: KitProductSource = {}): Promise<
@@ -470,6 +543,19 @@ export class ProductRepository {
       price: number;
     }[]
   > {
+    const cacheKey = `batteries:${source.stockOwnerOrgId ?? ""}:${source.supplierId ?? ""}:${source.distributorId ?? ""}`;
+    const cached = this.getCached<
+      {
+        id: string;
+        name: string;
+        brandName: string;
+        specs: BatterySpec;
+        datasheetUrl?: string | null;
+        price: number;
+      }[]
+    >(cacheKey);
+    if (cached) return [...cached];
+
     const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
       category: { name: CATEGORY_NAMES.BATTERY },
       active: true,
@@ -485,7 +571,7 @@ export class ProductRepository {
       orderBy: { name: "asc" },
     });
     const filtered = rows.filter((p) => isBatterySpec(p.specs));
-    return this.attachPrices(
+    const result = await this.attachPrices(
       filtered.map((p) => ({
         id: p.id,
         name: p.name,
@@ -495,6 +581,8 @@ export class ProductRepository {
       })),
       source
     );
+    this.setCache(cacheKey, result);
+    return [...result];
   }
 
   async findActiveBms(source: KitProductSource = {}): Promise<
@@ -507,6 +595,19 @@ export class ProductRepository {
       price: number;
     }[]
   > {
+    const cacheKey = `bms:${source.stockOwnerOrgId ?? ""}:${source.supplierId ?? ""}:${source.distributorId ?? ""}`;
+    const cached = this.getCached<
+      {
+        id: string;
+        name: string;
+        brandName: string;
+        specs: BmsSpec;
+        datasheetUrl?: string | null;
+        price: number;
+      }[]
+    >(cacheKey);
+    if (cached) return [...cached];
+
     const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
       category: { name: CATEGORY_NAMES.BMS },
       active: true,
@@ -522,7 +623,7 @@ export class ProductRepository {
       orderBy: { name: "asc" },
     });
     const filtered = rows.filter((p) => isBmsSpec(p.specs));
-    return this.attachPrices(
+    const result = await this.attachPrices(
       filtered.map((p) => ({
         id: p.id,
         name: p.name,
@@ -532,6 +633,8 @@ export class ProductRepository {
       })),
       source
     );
+    this.setCache(cacheKey, result);
+    return [...result];
   }
 
   async findActiveStringBoxes(source: KitProductSource = {}): Promise<
@@ -544,6 +647,19 @@ export class ProductRepository {
       price: number;
     }[]
   > {
+    const cacheKey = `stringBoxes:${source.stockOwnerOrgId ?? ""}:${source.supplierId ?? ""}:${source.distributorId ?? ""}`;
+    const cached = this.getCached<
+      {
+        id: string;
+        name: string;
+        brandName: string;
+        specs: StringBoxSpec;
+        datasheetUrl?: string | null;
+        price: number;
+      }[]
+    >(cacheKey);
+    if (cached) return [...cached];
+
     const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
       category: { name: CATEGORY_NAMES.STRING_BOX },
       active: true,
@@ -559,7 +675,7 @@ export class ProductRepository {
       orderBy: { name: "asc" },
     });
     const filtered = rows.filter((p) => isStringBoxSpec(p.specs));
-    return this.attachPrices(
+    const result = await this.attachPrices(
       filtered.map((p) => ({
         id: p.id,
         name: p.name,
@@ -569,6 +685,8 @@ export class ProductRepository {
       })),
       source
     );
+    this.setCache(cacheKey, result);
+    return [...result];
   }
 
   async findRecommendedStringBox(
@@ -632,6 +750,18 @@ export class ProductRepository {
       maxModules: number;
     }[]
   > {
+    const cacheKey = `structures:${roofType}:${source.stockOwnerOrgId ?? ""}:${source.supplierId ?? ""}:${source.distributorId ?? ""}`;
+    const cached = this.getCached<
+      {
+        id: string;
+        name: string;
+        brandName: string;
+        price: number;
+        maxModules: number;
+      }[]
+    >(cacheKey);
+    if (cached) return [...cached];
+
     const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
       category: { name: CATEGORY_NAMES.STRUCTURE_KIT },
       active: true,
@@ -666,7 +796,7 @@ export class ProductRepository {
 
     const withPrice = await this.attachPrices(dtos, source);
 
-    return withPrice
+    const result = withPrice
       .map((p) => ({
         id: p.id,
         name: p.name,
@@ -675,6 +805,8 @@ export class ProductRepository {
         maxModules: p.maxModules,
       }))
       .sort((a, b) => b.maxModules - a.maxModules); // Sort descending by max modules
+    this.setCache(cacheKey, result);
+    return [...result];
   }
 
   async findDcCablesBySection(
@@ -691,6 +823,20 @@ export class ProductRepository {
       roll_length_m: number;
     }[]
   > {
+    const cacheKey = `dcCables:${sectionMm2}:${source.stockOwnerOrgId ?? ""}:${source.supplierId ?? ""}:${source.distributorId ?? ""}`;
+    const cached = this.getCached<
+      {
+        id: string;
+        name: string;
+        brandName: string;
+        price: number;
+        section_mm2: number;
+        color: "red" | "black" | "unknown";
+        roll_length_m: number;
+      }[]
+    >(cacheKey);
+    if (cached) return [...cached];
+
     const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
       category: { name: CATEGORY_NAMES.DC_CABLE },
       active: true,
@@ -726,7 +872,7 @@ export class ProductRepository {
 
     const withPrice = await this.attachPrices(dtos, source);
 
-    return withPrice.map((p) => {
+    const result = withPrice.map((p) => {
       const lowerName = p.name.toLowerCase();
       let color: "red" | "black" | "unknown" = "unknown";
 
@@ -745,6 +891,8 @@ export class ProductRepository {
         roll_length_m: p.roll_length_m || 1,
       };
     });
+    this.setCache(cacheKey, result);
+    return [...result];
   }
 
   async findConnectorByType(
@@ -756,6 +904,15 @@ export class ProductRepository {
     brandName: string;
     price: number;
   } | null> {
+    const cacheKey = `connector:${connectorType}:${source.stockOwnerOrgId ?? ""}:${source.supplierId ?? ""}:${source.distributorId ?? ""}`;
+    const cached = this.getCached<{
+      id: string;
+      name: string;
+      brandName: string;
+      price: number;
+    } | null>(cacheKey);
+    if (cached !== null && cached !== undefined) return cached ? { ...cached } : null;
+
     const where: { category: { name: string }; active: boolean; id?: { in: string[] } } = {
       category: { name: CATEGORY_NAMES.CONNECTOR },
       active: true,
@@ -784,12 +941,14 @@ export class ProductRepository {
     );
     const one = withPrice[0];
     if (!one) return null;
-    return {
+    const result = {
       id: product.id,
       name: one.name,
       brandName: one.brandName,
       price: one.price,
     };
+    this.setCache(cacheKey, result);
+    return { ...result };
   }
 
   async findProfile(

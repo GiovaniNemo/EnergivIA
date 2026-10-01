@@ -84,7 +84,7 @@ export class KitController {
     @Body() dto: GenerateKitDto,
     @OptionalTenantId() organizationId: string | undefined
   ) {
-    return this.kitGeneration.generateDistributorTiers(
+    const res = await this.kitGeneration.generateDistributorTiers(
       {
         system_kw: dto.system_kw,
         roof_type: dto.roof_type,
@@ -99,5 +99,11 @@ export class KitController {
       },
       organizationId
     );
+    return {
+      tiers: res.tiers.map((t) => ({
+        ...t,
+        whatsapp_message: t.whatsapp_message || formatKitForWhatsApp(t.kit_result),
+      })),
+    };
   }
 }

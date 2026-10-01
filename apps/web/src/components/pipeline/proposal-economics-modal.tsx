@@ -1130,31 +1130,35 @@ export const ProposalEconomicsModal = forwardRef<
             : {}),
           ...(req.stringBoxId ? { string_box_id: req.stringBoxId } : {}),
         };
-        const [previewRes, tiersRes] = await Promise.allSettled([
-          generateKitWhatsAppPreview(reqPayload),
-          generateDistributorTiers(reqPayload),
-        ]);
+        let tiersRes: DistributorTiersResult | null = null;
+        let previewFallbackRes: WhatsAppPreviewResult | null = null;
+        try {
+          tiersRes = await generateDistributorTiers(reqPayload);
+        } catch (tierErr) {
+          try {
+            previewFallbackRes = await generateKitWhatsAppPreview(reqPayload);
+          } catch (prevErr) {
+            throw tierErr instanceof Error ? tierErr : prevErr;
+          }
+        }
         if (cancelled) return;
 
-        if (tiersRes.status === "fulfilled" && tiersRes.value?.tiers?.length > 0) {
-          const tiers = tiersRes.value.tiers;
+        if (tiersRes && tiersRes.tiers?.length > 0) {
+          const tiers = tiersRes.tiers;
           setDistributorTiers(tiers);
           const currentId = selectedDistributorTierIdRef.current;
           const matching = tiers.find((t) => t.tier_id === currentId) || tiers[1] || tiers[0];
           if (matching) {
             setProposalKitResult(matching.kit_result);
+            if (matching.whatsapp_message) {
+              setProposalKitWhatsapp(matching.whatsapp_message);
+            }
           }
-        } else if (previewRes.status === "fulfilled") {
-          setProposalKitResult(previewRes.value.json);
-        }
-
-        if (previewRes.status === "fulfilled") {
-          setProposalKitWhatsapp(previewRes.value.whatsapp_message);
-        }
-
-        if (previewRes.status === "rejected" && tiersRes.status === "rejected") {
-          const err = previewRes.reason || tiersRes.reason;
-          throw err instanceof Error ? err : new Error(String(err));
+        } else if (previewFallbackRes) {
+          setProposalKitResult(previewFallbackRes.json);
+          setProposalKitWhatsapp(previewFallbackRes.whatsapp_message);
+        } else {
+          throw new Error("Não foi possível montar os tiers do kit.");
         }
 
         setOptimisticModuleQty(null);
