@@ -828,31 +828,74 @@ export function ProposalEquipmentEditorCard({
                                 {qty}
                               </span>
                             ) : (
-                              <input
-                                type="number"
-                                min={1}
-                                inputMode="numeric"
-                                aria-label={`Quantidade de ${line.productName}`}
-                                className={`h-7 w-16 rounded-md border bg-[var(--color-background)] px-1.5 text-right tabular-nums outline-none focus:border-red-400 ${
-                                  belowCalculated
-                                    ? "border-red-500/60 focus:border-red-400"
-                                    : "border-[var(--color-border)] focus:border-emerald-400"
-                                }`}
-                                value={raw ?? String(line.quantity)}
-                                onChange={(e) => {
-                                  setQtyResetNotice(false);
-                                  const value = e.target.value;
-                                  setQtyDrafts((prev) =>
-                                    value === String(line.quantity)
-                                      ? (() => {
-                                          const clone = { ...prev };
-                                          delete clone[line.productId];
-                                          return clone;
-                                        })()
-                                      : { ...prev, [line.productId]: value }
-                                  );
-                                }}
-                              />
+                              <span className="inline-flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  disabled={qty <= 1}
+                                  aria-label={`Diminuir quantidade de ${line.productName}`}
+                                  className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--color-border)] text-sm leading-none hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                  onClick={() => {
+                                    setQtyResetNotice(false);
+                                    const next = Math.max(1, qty - 1);
+                                    setQtyDrafts((prev) =>
+                                      next === line.quantity
+                                        ? (() => {
+                                            const clone = { ...prev };
+                                            delete clone[line.productId];
+                                            return clone;
+                                          })()
+                                        : { ...prev, [line.productId]: String(next) }
+                                    );
+                                  }}
+                                >
+                                  −
+                                </button>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  inputMode="numeric"
+                                  aria-label={`Quantidade de ${line.productName}`}
+                                  className={`h-7 w-12 rounded-md border bg-[var(--color-background)] px-1 text-center tabular-nums outline-none text-xs ${
+                                    belowCalculated
+                                      ? "border-red-500/60 focus:border-red-400"
+                                      : "border-[var(--color-border)] focus:border-emerald-400"
+                                  }`}
+                                  value={raw ?? String(line.quantity)}
+                                  onChange={(e) => {
+                                    setQtyResetNotice(false);
+                                    const value = e.target.value;
+                                    setQtyDrafts((prev) =>
+                                      value === String(line.quantity)
+                                        ? (() => {
+                                            const clone = { ...prev };
+                                            delete clone[line.productId];
+                                            return clone;
+                                          })()
+                                        : { ...prev, [line.productId]: value }
+                                    );
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  aria-label={`Aumentar quantidade de ${line.productName}`}
+                                  className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--color-border)] text-sm leading-none hover:border-emerald-400"
+                                  onClick={() => {
+                                    setQtyResetNotice(false);
+                                    const next = qty + 1;
+                                    setQtyDrafts((prev) =>
+                                      next === line.quantity
+                                        ? (() => {
+                                            const clone = { ...prev };
+                                            delete clone[line.productId];
+                                            return clone;
+                                          })()
+                                        : { ...prev, [line.productId]: String(next) }
+                                    );
+                                  }}
+                                >
+                                  +
+                                </button>
+                              </span>
                             )}
                           </td>
                           <td className="hidden p-3 text-right tabular-nums text-[var(--color-muted-foreground)] sm:table-cell">

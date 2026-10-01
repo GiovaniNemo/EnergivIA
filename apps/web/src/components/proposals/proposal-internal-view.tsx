@@ -201,8 +201,10 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
   );
   const equipmentSubtotal = hasEquipmentBreakdown ? integrator!.equipmentSubtotalBrl : 0;
   const quotedSale = integrator?.quotedSaleBrl ?? proposal?.simulation.input.investmentAmount ?? 0;
+  const discountAmount = proposal?.discountBrl ?? 0;
+  const effectiveSaleToClient = Math.max(0, quotedSale - discountAmount);
   const remainderAgg = hasEquipmentBreakdown
-    ? Math.round((quotedSale - equipmentSubtotal) * 100) / 100
+    ? Math.round((effectiveSaleToClient - equipmentSubtotal) * 100) / 100
     : null;
 
   const marginAppliedFromRules = sumProjectCostLinesByName(
@@ -217,20 +219,20 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
     marginAppliedFromRules !== undefined || laborAppliedFromRules !== undefined;
 
   const marginPct =
-    hasEquipmentBreakdown && quotedSale > 0
+    hasEquipmentBreakdown && effectiveSaleToClient > 0
       ? marginAppliedFromRules !== undefined
-        ? (marginAppliedFromRules / quotedSale) * 100
+        ? (marginAppliedFromRules / effectiveSaleToClient) * 100
         : remainderAgg !== null
-          ? (remainderAgg / quotedSale) * 100
+          ? (remainderAgg / effectiveSaleToClient) * 100
           : null
       : null;
 
   const nonMarginBaseCost = useMemo(() => {
     if (!hasEquipmentBreakdown) return null;
     const margin = marginAppliedFromRules ?? remainderAgg ?? 0;
-    const base = quotedSale - margin;
+    const base = effectiveSaleToClient - margin;
     return base > 0 ? base : null;
-  }, [hasEquipmentBreakdown, marginAppliedFromRules, remainderAgg, quotedSale]);
+  }, [hasEquipmentBreakdown, marginAppliedFromRules, remainderAgg, effectiveSaleToClient]);
 
   const productLineCount = integrator?.kitItems.length ?? 0;
   const componentFallback = proposal
@@ -259,11 +261,11 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
 
   const systemKw = integrator?.systemPowerKw ?? proposal?.simulation.input.systemSizeKw ?? 0;
   const ratePerKwp = useMemo(() => {
-    if (systemKw > 0 && quotedSale > 0) {
-      return Math.round(quotedSale / systemKw);
+    if (systemKw > 0 && effectiveSaleToClient > 0) {
+      return Math.round(effectiveSaleToClient / systemKw);
     }
     return 2800;
-  }, [systemKw, quotedSale]);
+  }, [systemKw, effectiveSaleToClient]);
 
   const monthlyGenerationKwh = Math.round(systemKw * 130);
   const moduleQuantity =
@@ -439,12 +441,21 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
     setDiscountError(null);
     setDiscountSaving(true);
     try {
-      const { publicToken } = await updateProposalDiscount(
+      const { discountBrl: nextDiscount, publicToken } = await updateProposalDiscount(
         currentOrganizationId,
         proposal.id,
         discountDraft
       );
-      setRegeneratedPublicUrl(`${window.location.origin}/proposta/${publicToken}`);
+      setProposal((prev) =>
+        prev
+          ? {
+              ...prev,
+              discountBrl: nextDiscount,
+              publicToken: publicToken ?? prev.publicToken,
+            }
+          : null
+      );
+      setRegeneratedPublicUrl(null);
       await reload();
     } catch (e) {
       setDiscountError(e instanceof Error ? e.message : "Não foi possível salvar o desconto.");
@@ -648,7 +659,7 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
       >
         <ProposalSalesHeroCard
           monthlySavings={simRes.monthlySavings}
-          investment={quotedSale}
+          investment={effectiveSaleToClient}
           paybackYears={paybackY}
           totalSavings25y={simRes.totalSavings25y}
           annualSavingsFirstYear={annualFirst}
@@ -661,7 +672,7 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
             <ProposalKwpRateBusinessCard
               systemKw={systemKw}
               ratePerKwp={ratePerKwp}
-              saleToClient={quotedSale}
+              saleToClient={effectiveSaleToClient}
               monthlyGenerationKwh={monthlyGenerationKwh}
               moduleQuantity={moduleQuantity}
               inverterInfo={
@@ -679,7 +690,7 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
               hasRuleCostBreakdown={hasRuleCostBreakdown}
               equipmentCost={hasEquipmentBreakdown ? equipmentSubtotal : null}
               remainderAfterEquipmentBrl={remainderAgg}
-              saleToClient={quotedSale}
+              saleToClient={effectiveSaleToClient}
               health={marginHealth}
               isEditingMargin={isEditingMargin}
               onEditMarginClick={() => {
