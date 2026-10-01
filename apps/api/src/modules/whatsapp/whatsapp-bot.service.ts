@@ -3212,10 +3212,10 @@ ${catalogContext}`;
 
       return (
         `Perfeito! Proposta comercial gerada com sucesso para o cliente *${clientName}*! 📋✅\n\n` +
-        `☀️ *Potência:* ${selectedQuote.kwp} kWp\n` +
-        `🏢 *Distribuidor:* ${selectedQuote.distributorName}\n` +
-        `🎨 *Modelo:* ${chosenTemplate?.name || "Comercial Moderno"}\n` +
-        `💰 *Valor Total:* R$ ${quotedSaleBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
+        `☀️ *Potência:* \`${selectedQuote.kwp} kWp\`\n` +
+        `🏢 *Distribuidor:* \`${selectedQuote.distributorName}\`\n` +
+        `🎨 *Modelo:* \`${chosenTemplate?.name || "Comercial Moderno"}\`\n` +
+        `💰 *Valor Total:* \`R$ ${quotedSaleBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\`\n\n` +
         `📄 *Acesse a Proposta Pronta no link:*\n` +
         `${proposalLink}\n\n` +
         `Ela já está disponível no seu painel CRM da EnergivIA. ☀️`
