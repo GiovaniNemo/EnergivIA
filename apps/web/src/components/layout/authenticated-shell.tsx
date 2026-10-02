@@ -13,6 +13,8 @@ import { TrialLockOverlay } from "@/components/TrialLockOverlay";
 import { FeedbackPromptCard } from "@/components/feedback/FeedbackPromptCard";
 import { WelcomeIntroSplash } from "@/components/layout/welcome-intro-splash";
 import { EnergiviaFloatingHub } from "@/components/layout/EnergiviaFloatingHub";
+import { OnboardingTourProvider } from "@/components/onboarding/onboarding-tour-provider";
+import { OnboardingTourSpotlight } from "@/components/onboarding/onboarding-tour-spotlight";
 
 export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.Element {
   const pathname = usePathname();
@@ -32,38 +34,43 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
       <RequireOrganization>
         <AppMuiThemeProvider>
           <ProposalStudyProvider>
-            <div className="flex h-screen w-full flex-col overflow-hidden bg-[var(--color-background)]">
-              <TrialLockOverlay />
-              {!isOnboardingOrganization && <FeedbackPromptCard />}
-              {!isOnboardingOrganization && <EnergiviaFloatingHub />}
-              {isFullscreenTemplateEditor ||
-              isFullscreenBlueprintEditor ||
-              isOnboardingOrganization ? (
-                <main className="flex-1 h-full min-h-0 flex flex-col overflow-hidden bg-[var(--color-background)] p-0">
-                  {children}
-                </main>
-              ) : (
-                <SidebarProvider>
-                  <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                    <Topbar />
-                    <div className="flex min-h-0 flex-1 overflow-hidden">
-                      <AppSidebar />
-                      <SidebarInset>
-                        <main
-                          className={`flex-1 min-w-0 w-full max-w-full bg-[var(--color-background)] ${isFullscreenChat ? "overflow-hidden p-0" : "overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6"}`}
-                        >
-                          {isFullscreenChat ? (
-                            children
-                          ) : (
-                            <div className="mx-auto w-full max-w-[1400px] min-w-0">{children}</div>
-                          )}
-                        </main>
-                      </SidebarInset>
+            <OnboardingTourProvider>
+              <div className="flex h-screen w-full flex-col overflow-hidden bg-[var(--color-background)]">
+                <TrialLockOverlay />
+                {!isOnboardingOrganization && <FeedbackPromptCard />}
+                {!isOnboardingOrganization && <EnergiviaFloatingHub />}
+                {!isOnboardingOrganization && <OnboardingTourSpotlight />}
+                {isFullscreenTemplateEditor ||
+                isFullscreenBlueprintEditor ||
+                isOnboardingOrganization ? (
+                  <main className="flex-1 h-full min-h-0 flex flex-col overflow-hidden bg-[var(--color-background)] p-0">
+                    {children}
+                  </main>
+                ) : (
+                  <SidebarProvider>
+                    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                      <Topbar />
+                      <div className="flex min-h-0 flex-1 overflow-hidden">
+                        <AppSidebar />
+                        <SidebarInset>
+                          <main
+                            className={`flex-1 min-w-0 w-full max-w-full bg-[var(--color-background)] ${isFullscreenChat ? "overflow-hidden p-0" : "overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6"}`}
+                          >
+                            {isFullscreenChat ? (
+                              children
+                            ) : (
+                              <div className="mx-auto w-full max-w-[1400px] min-w-0">
+                                {children}
+                              </div>
+                            )}
+                          </main>
+                        </SidebarInset>
+                      </div>
                     </div>
-                  </div>
-                </SidebarProvider>
-              )}
-            </div>
+                  </SidebarProvider>
+                )}
+              </div>
+            </OnboardingTourProvider>
           </ProposalStudyProvider>
         </AppMuiThemeProvider>
       </RequireOrganization>

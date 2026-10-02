@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Bar,
@@ -192,6 +192,20 @@ export default function DashboardPage(): JSX.Element {
     },
     [handleFile]
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleTourModalAction = (e: Event) => {
+      const custom = e as CustomEvent<{ requiredModal?: string }>;
+      if (custom.detail?.requiredModal === "new-proposal") {
+        setNewProposalOpen(true);
+      }
+    };
+    window.addEventListener("energivia_tour_modal_action", handleTourModalAction);
+    return () => {
+      window.removeEventListener("energivia_tour_modal_action", handleTourModalAction);
+    };
+  }, []);
 
   const statsQuery = useQuery({
     queryKey: ["dashboard", "stats", orgId],
@@ -412,7 +426,10 @@ export default function DashboardPage(): JSX.Element {
   return (
     <div className="space-y-6">
       {}
-      <header className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
+      <header
+        data-tour="dashboard-overview"
+        className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end"
+      >
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-[28px] font-bold tracking-[-0.02em] text-[var(--color-foreground)]">
@@ -439,6 +456,7 @@ export default function DashboardPage(): JSX.Element {
         <div className="flex gap-2">
           <button
             type="button"
+            data-tour="btn-new-proposal"
             onClick={() => setNewProposalOpen(true)}
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 text-sm font-medium text-[var(--color-primary-foreground)] transition-colors hover:bg-[#43a047]"
           >
@@ -449,7 +467,10 @@ export default function DashboardPage(): JSX.Element {
       </header>
 
       {}
-      <section className="upload-hero relative grid grid-cols-1 overflow-hidden rounded-2xl border shadow-[0_1px_2px_rgba(0,0,0,0.05)] md:grid-cols-[1fr_320px]">
+      <section
+        data-tour="proposal-shortcuts"
+        className="upload-hero relative grid grid-cols-1 overflow-hidden rounded-2xl border shadow-[0_1px_2px_rgba(0,0,0,0.05)] md:grid-cols-[1fr_320px]"
+      >
         <div
           role="button"
           tabIndex={0}
