@@ -331,6 +331,11 @@ export function fromTemplateConfig(config: ProposalTemplateConfig): ProposalDocu
         c["text"] = `<p>${String(c["supportText"])}</p>`;
       }
     }
+    if (resolvedType === "signature") {
+      const c = mergedContent as Record<string, unknown>;
+      delete c["backgroundImage"];
+      delete c["coverImage"];
+    }
     return {
       id: section.id,
       type: resolvedType,

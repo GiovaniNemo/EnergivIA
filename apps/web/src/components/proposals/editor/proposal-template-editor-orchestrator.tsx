@@ -302,6 +302,26 @@ export function ProposalTemplateEditor({
     });
   }, [currentOrganization?.name]);
 
+  useEffect(() => {
+    setDocumentState((prev) => {
+      let changed = false;
+      const nextSections = prev.sections.map((sec) => {
+        if (sec.type === "signature") {
+          const f = sec.fields as Record<string, unknown>;
+          if (f["backgroundImage"] || f["coverImage"]) {
+            changed = true;
+            const nextFields = { ...f };
+            delete nextFields["backgroundImage"];
+            delete nextFields["coverImage"];
+            return { ...sec, fields: nextFields };
+          }
+        }
+        return sec;
+      });
+      return changed ? { ...prev, sections: nextSections } : prev;
+    });
+  }, []);
+
   const editor = useEditor({
     extensions: [
       StarterKit,

@@ -56,7 +56,7 @@ const SECTION_META: Record<SectionType, { desc: string; vars: number }> = {
   faq: { desc: "Perguntas frequentes sobre energia solar respondidas de forma direta.", vars: 0 },
   cta: { desc: "Chamada para ação com botão de aceite e campo de resposta.", vars: 2 },
   signature: {
-    desc: "Bloco de assinatura digital com dados do contratante e contratado.",
+    desc: "Termo de aceite e assinaturas bilaterais do contratante e contratado com validação jurídica.",
     vars: 4,
   },
   comparison: { desc: "Tabela comparativa entre diferentes sistemas ou concorrentes.", vars: 5 },
@@ -237,9 +237,17 @@ function SectionMockup({ kind, large }: { kind: MockupKind; large?: boolean }) {
     return (
       <div className={base}>
         <MockBar w="40%" h={bar} color="dark" />
-        <div className="flex-1 rounded-sm border border-slate-200 dark:border-slate-700 p-1 flex flex-col justify-end gap-[2px]">
-          <MockBar w="60%" h={bar} color="accent" />
-          <MockBar w="80%" h={bar - 1} />
+        <div className="grid grid-cols-2 gap-1.5 flex-1 mt-0.5">
+          <div className="rounded-sm border border-slate-200 dark:border-slate-700 p-1 flex flex-col justify-between bg-emerald-500/5">
+            <MockBar w="60%" h={bar - 1} color="accent" />
+            <div className="h-[1px] w-full bg-slate-300 dark:bg-slate-700 my-0.5" />
+            <MockBar w="80%" h={bar - 1} />
+          </div>
+          <div className="rounded-sm border border-slate-200 dark:border-slate-700 p-1 flex flex-col justify-between">
+            <MockBar w="60%" h={bar - 1} color="dark" />
+            <div className="h-[1px] w-full bg-slate-300 dark:bg-slate-700 my-0.5" />
+            <MockBar w="80%" h={bar - 1} />
+          </div>
         </div>
       </div>
     );

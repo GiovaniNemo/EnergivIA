@@ -35,6 +35,7 @@ import {
 import { DecisionCTASection } from "@/components/proposals/sections/cta/decision-cta-section";
 import { EconomyPurchasesSection } from "@/components/proposals/sections/economy-purchases/EconomyPurchasesSection";
 import { PricingSectionPreview } from "@/components/proposals/sections/pricing/pricing-section-preview";
+import { SignatureSectionPreview } from "@/components/proposals/sections/signature/signature-section-preview";
 
 import { buildDecisionCTATheme } from "@/components/proposals/sections/cta/cta-theme";
 import {
@@ -2874,14 +2875,7 @@ export function renderSectionContent(
       );
     }
     case "signature":
-      return (
-        <div>
-          <p data-editor-field-path="signatureName" className="font-medium">
-            {String(f.signatureName ?? vars.nome_empresa)}
-          </p>
-          <p className="text-zinc-400">{vars.nome_empresa}</p>
-        </div>
-      );
+      return <SignatureSectionPreview section={section} vars={vars} mode={renderMode} />;
     case "comparison":
       return (
         <div className="space-y-2">

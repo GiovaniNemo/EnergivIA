@@ -228,10 +228,28 @@ export function renderSection(section: ProposalBuilderSection): JSX.Element {
       );
     case "signature":
       return sectionCard(
-        section.title,
-        <div className="text-xs">
-          <p>{String(c.signerName ?? "")}</p>
-          <p className="text-zinc-400">{String(c.signerTitle ?? "")}</p>
+        section.title || "Termo de Aceite e Assinaturas",
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-2 bg-zinc-50/50 dark:bg-zinc-900/50">
+            <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
+              Contratante
+            </span>
+            <p className="font-semibold text-zinc-800 dark:text-zinc-200 truncate mt-0.5">
+              {String(c.clientSignerName || "Cliente")}
+            </p>
+            <div className="mt-2 h-px w-full bg-zinc-300 dark:bg-zinc-700" />
+            <span className="text-[9px] text-zinc-400">Assinatura do Cliente</span>
+          </div>
+          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-2 bg-zinc-50/50 dark:bg-zinc-900/50">
+            <span className="text-[10px] font-bold uppercase text-zinc-600 dark:text-zinc-400">
+              Contratada
+            </span>
+            <p className="font-semibold text-zinc-800 dark:text-zinc-200 truncate mt-0.5">
+              {String(c.companySignerName || c.signerName || "Empresa")}
+            </p>
+            <div className="mt-2 h-px w-full bg-zinc-300 dark:bg-zinc-700" />
+            <span className="text-[9px] text-zinc-400">Assinatura da Empresa</span>
+          </div>
         </div>
       );
     default:

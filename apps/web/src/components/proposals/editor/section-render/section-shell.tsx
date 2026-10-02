@@ -155,7 +155,10 @@ export function SectionShell({
   const textColor = toOptionalString(fields["textColor"]) ?? toOptionalString(defaults?.textColor);
   const primaryColor = toOptionalString(defaults?.primaryColor);
   const secondaryColor = toOptionalString(defaults?.secondaryColor);
-  const backgroundImage = resolveDisplayAssetUrl(toOptionalString(fields["backgroundImage"]));
+  const backgroundImage =
+    section.type === "signature"
+      ? undefined
+      : resolveDisplayAssetUrl(toOptionalString(fields["backgroundImage"]));
   const backgroundColor =
     toOptionalString(fields["backgroundColor"]) ?? toOptionalString(defaults?.backgroundColor);
   const overlayColor = toOptionalString(fields["overlayColor"]);

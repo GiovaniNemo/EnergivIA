@@ -65,7 +65,9 @@ export function createBaseDocument(
       content:
         index === 0
           ? "<p>Bem-vindo(a) a sua proposta.</p>"
-          : '<p>Caro(a) <span data-variable-token="nome_cliente">{{nome_cliente}}</span>, esta seção pode ser personalizada para sua narrativa comercial.</p>',
+          : type === "signature"
+            ? "<p>Ao confirmar esta proposta comercial, as partes reconhecem a conformidade do dimensionamento técnico, valores e condições acordadas.</p>"
+            : '<p>Caro(a) <span data-variable-token="nome_cliente">{{nome_cliente}}</span>, esta seção pode ser personalizada para sua narrativa comercial.</p>',
       fields: { ...SECTION_DEFAULT_FIELDS[type] },
     };
   });

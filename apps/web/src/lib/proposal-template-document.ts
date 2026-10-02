@@ -35,6 +35,10 @@ function normalizeSectionFields(
         typeof row["photo"] === "string" ? normalizePutPresignedUrl(row["photo"]) : row["photo"],
     }));
   }
+  if (sectionType === "signature") {
+    delete normalized["backgroundImage"];
+    delete normalized["coverImage"];
+  }
   return normalized;
 }
 
