@@ -34,6 +34,69 @@ function formatToInternationalWhatsapp(raw: string): string {
   return digits;
 }
 
+export interface InteractiveListRow {
+  id: string;
+  title: string;
+  description?: string;
+}
+
+export interface InteractiveListSection {
+  title?: string;
+  rows: InteractiveListRow[];
+}
+
+export interface InteractiveButtonOption {
+  id: string;
+  title: string;
+}
+
+export interface SendInteractiveListParams {
+  phoneNumberId: string;
+  toWaId: string;
+  body: string;
+  buttonText?: string;
+  title?: string;
+  footer?: string;
+  sections: InteractiveListSection[];
+}
+
+export interface SendInteractiveButtonParams {
+  phoneNumberId: string;
+  toWaId: string;
+  body: string;
+  buttons: InteractiveButtonOption[];
+  title?: string;
+  footer?: string;
+}
+
+function truncateSafe(str: string | undefined | null, maxLen: number): string {
+  if (!str) return "";
+  const trimmed = str.trim();
+  if (trimmed.length <= maxLen) return trimmed;
+  return `${trimmed.slice(0, maxLen - 1)}…`;
+}
+
+function buildFallbackTextForList(body: string, sections: InteractiveListSection[]): string {
+  let text = body.trim();
+  text += "\n";
+  for (const s of sections) {
+    if (s.title) text += `\n*${s.title}*\n`;
+    for (const r of s.rows) {
+      text += `• ${r.title}${r.description ? ` (${r.description})` : ""}\n`;
+    }
+  }
+  return text.trim();
+}
+
+function buildFallbackTextForButtons(body: string, buttons: InteractiveButtonOption[]): string {
+  let text = body.trim();
+  text += "\n\n";
+  buttons.forEach((b, idx) => {
+    text += `${idx + 1}️⃣ ${b.title}\n`;
+  });
+  return text.trim();
+}
+
 @Injectable()
 export class WhatsappCloudService {
   private readonly logger = new Logger(WhatsappCloudService.name);
@@ -69,6 +132,31 @@ export class WhatsappCloudService {
         to,
         type: "text",
         text: { preview_url: false, body },
+      }),
+    });
+    const errText = res.ok ? "" : await res.text().catch(() => "");
+    return { ok: res.ok, status: res.status, errText };
+  }
+
+  private async postInteractiveOnce(
+    phoneNumberId: string,
+    token: string,
+    toWaId: string,
+    interactivePayload: Record<string, unknown>
+  ): Promise<{ ok: boolean; status: number; errText: string }> {
+    const to = formatToInternationalWhatsapp(toWaId);
+    const res = await fetch(this.buildMessagesUrl(phoneNumberId, token), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to,
+        type: "interactive",
+        interactive: interactivePayload,
       }),
     });
     const errText = res.ok ? "" : await res.text().catch(() => "");
@@ -240,6 +328,257 @@ export class WhatsappCloudService {
         }
       }
     }
+  }
+
+  private async postInteractiveViaEvolution(
+    toWaId: string,
+    type: "list" | "button",
+    dataPayload: Record<string, unknown>
+  ): Promise<{ ok: boolean; status: number; errText: string }> {
+    const baseUrl = this.config.get<string>("EVOLUTION_API_URL")?.trim().replace(/\/+$/, "");
+    const apiKey = this.config.get<string>("EVOLUTION_API_KEY")?.trim();
+    const instance = this.config.get<string>("EVOLUTION_INSTANCE_NAME")?.trim() || "energiv-bot";
+
+    if (!baseUrl || !apiKey) {
+      return {
+        ok: false,
+        status: 500,
+        errText: "Evolution API not fully configured",
+      };
+    }
+
+    const cleanNumber = formatToInternationalWhatsapp(toWaId);
+    const endpoint = type === "list" ? "sendList" : "sendButtons";
+    const url = `${baseUrl}/message/${endpoint}/${encodeURIComponent(instance)}`;
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: apiKey,
+        },
+        body: JSON.stringify({
+          number: cleanNumber,
+          ...dataPayload,
+        }),
+      });
+
+      const errText = res.ok ? "" : await res.text().catch(() => "");
+      return { ok: res.ok, status: res.status, errText };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { ok: false, status: 500, errText: msg };
+    }
+  }
+
+  async sendInteractiveListMessage(params: SendInteractiveListParams): Promise<void> {
+    const to = formatToInternationalWhatsapp(params.toWaId);
+    const rawBody = params.body || "";
+    const cleanButtonText = truncateSafe(params.buttonText || "Ver Opções", 20);
+
+    const metaSections = params.sections.map((sec, sIdx) => ({
+      title: truncateSafe(sec.title || `Opções ${sIdx + 1}`, 24),
+      rows: sec.rows.slice(0, 10).map((row) => ({
+        id: truncateSafe(row.id, 200),
+        title: truncateSafe(row.title, 24),
+        description: row.description ? truncateSafe(row.description, 72) : undefined,
+      })),
+    }));
+
+    let interactiveBody = rawBody;
+    if (rawBody.length > 950) {
+      const splitIdx = rawBody.lastIndexOf("\n\n");
+      if (splitIdx > 0 && splitIdx < 950) {
+        const mainBody = rawBody.slice(0, splitIdx).trim();
+        interactiveBody = rawBody.slice(splitIdx).trim();
+        await this.sendTextMessage({
+          phoneNumberId: params.phoneNumberId,
+          toWaId: params.toWaId,
+          body: mainBody,
+        });
+      } else {
+        await this.sendTextMessage({
+          phoneNumberId: params.phoneNumberId,
+          toWaId: params.toWaId,
+          body: rawBody,
+        });
+        interactiveBody = "Por favor, selecione uma das opções abaixo:";
+      }
+    }
+
+    const interactivePayload: Record<string, unknown> = {
+      type: "list",
+      header: params.title ? { type: "text", text: truncateSafe(params.title, 60) } : undefined,
+      body: { text: normalizeAssistantTextForWhatsapp(interactiveBody) },
+      footer: params.footer ? { text: truncateSafe(params.footer, 60) } : undefined,
+      action: {
+        button: cleanButtonText,
+        sections: metaSections,
+      },
+    };
+
+    // 1. Tentar Evolution API se configurada
+    if (this.isEvolutionProvider()) {
+      const evoSections = params.sections.map((sec, sIdx) => ({
+        title: sec.title || `Opções ${sIdx + 1}`,
+        rows: sec.rows.map((row) => ({
+          title: row.title,
+          description: row.description || "",
+          rowId: row.id,
+        })),
+      }));
+
+      const { ok } = await this.postInteractiveViaEvolution(to, "list", {
+        title: params.title || "EnergivIA",
+        description: interactiveBody,
+        buttonText: cleanButtonText,
+        footerText: params.footer || "EnergivIA Solar",
+        sections: evoSections,
+      });
+
+      if (ok) {
+        this.logger.log(`[Evolution API] Lista interativa enviada para ${to}`);
+        return;
+      }
+      this.logger.warn(
+        `[Evolution API] Falha no envio de lista interativa. Tentando Meta Cloud API...`
+      );
+    }
+
+    // 2. Meta Cloud API oficial
+    const token =
+      this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim() ||
+      "EAANhZClS6ZCeYBSdcHOC6Ne9TD5m1o7h8QG6s8ZC65ZBdRmp4ruWdX2kOV2uTbmSRwimo2uyefGD4SnJzeZCn1WEmEIspoB7ZAmYvOUh9JV5QB9o3a27ufF5yRsvCX5gRZAmruk6GaozfqixmvUfFmDBdaCZC7hZCsZBfJ6MCCXX1ezY5ESNPviJTOZCtVEOOZATlQZDZD";
+
+    if (token) {
+      const primaryId = params.phoneNumberId.trim();
+      const { ok, errText } = await this.postInteractiveOnce(
+        primaryId,
+        token,
+        to,
+        interactivePayload
+      );
+
+      if (ok) {
+        this.logger.log(
+          `[Meta Cloud] Lista interativa enviada: phone_number_id=${primaryId} para=${to}`
+        );
+        return;
+      }
+
+      this.logger.warn(
+        `[Meta Cloud] Falha ao enviar lista interativa (${errText.slice(0, 200)}). Acionando fallback textual...`
+      );
+    }
+
+    // 3. Fallback Seguro textual
+    const fallbackText = buildFallbackTextForList(rawBody, params.sections);
+    await this.sendTextMessage({
+      phoneNumberId: params.phoneNumberId,
+      toWaId: params.toWaId,
+      body: fallbackText,
+    });
+  }
+
+  async sendInteractiveButtonMessage(params: SendInteractiveButtonParams): Promise<void> {
+    const to = formatToInternationalWhatsapp(params.toWaId);
+    const rawBody = params.body || "";
+
+    const metaButtons = params.buttons.slice(0, 3).map((b) => ({
+      type: "reply",
+      reply: {
+        id: truncateSafe(b.id, 256),
+        title: truncateSafe(b.title, 20),
+      },
+    }));
+
+    let interactiveBody = rawBody;
+    if (rawBody.length > 950) {
+      const splitIdx = rawBody.lastIndexOf("\n\n");
+      if (splitIdx > 0 && splitIdx < 950) {
+        const mainBody = rawBody.slice(0, splitIdx).trim();
+        interactiveBody = rawBody.slice(splitIdx).trim();
+        await this.sendTextMessage({
+          phoneNumberId: params.phoneNumberId,
+          toWaId: params.toWaId,
+          body: mainBody,
+        });
+      } else {
+        await this.sendTextMessage({
+          phoneNumberId: params.phoneNumberId,
+          toWaId: params.toWaId,
+          body: rawBody,
+        });
+        interactiveBody = "Por favor, escolha uma das opções abaixo:";
+      }
+    }
+
+    const interactivePayload: Record<string, unknown> = {
+      type: "button",
+      header: params.title ? { type: "text", text: truncateSafe(params.title, 60) } : undefined,
+      body: { text: normalizeAssistantTextForWhatsapp(interactiveBody) },
+      footer: params.footer ? { text: truncateSafe(params.footer, 60) } : undefined,
+      action: {
+        buttons: metaButtons,
+      },
+    };
+
+    // 1. Tentar Evolution API se configurada
+    if (this.isEvolutionProvider()) {
+      const evoButtons = params.buttons.slice(0, 3).map((b) => ({
+        buttonId: b.id,
+        buttonText: { displayText: b.title },
+        type: 1,
+      }));
+
+      const { ok } = await this.postInteractiveViaEvolution(to, "button", {
+        title: params.title || "EnergivIA",
+        description: interactiveBody,
+        footer: params.footer || "EnergivIA Solar",
+        buttons: evoButtons,
+      });
+
+      if (ok) {
+        this.logger.log(`[Evolution API] Botões interativos enviados para ${to}`);
+        return;
+      }
+      this.logger.warn(`[Evolution API] Falha no envio de botões. Tentando Meta Cloud API...`);
+    }
+
+    // 2. Meta Cloud API oficial
+    const token =
+      this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim() ||
+      "EAANhZClS6ZCeYBSdcHOC6Ne9TD5m1o7h8QG6s8ZC65ZBdRmp4ruWdX2kOV2uTbmSRwimo2uyefGD4SnJzeZCn1WEmEIspoB7ZAmYvOUh9JV5QB9o3a27ufF5yRsvCX5gRZAmruk6GaozfqixmvUfFmDBdaCZC7hZCsZBfJ6MCCXX1ezY5ESNPviJTOZCtVEOOZATlQZDZD";
+
+    if (token) {
+      const primaryId = params.phoneNumberId.trim();
+      const { ok, errText } = await this.postInteractiveOnce(
+        primaryId,
+        token,
+        to,
+        interactivePayload
+      );
+
+      if (ok) {
+        this.logger.log(
+          `[Meta Cloud] Botões interativos enviados: phone_number_id=${primaryId} para=${to}`
+        );
+        return;
+      }
+
+      this.logger.warn(
+        `[Meta Cloud] Falha ao enviar botões interativos (${errText.slice(0, 200)}). Acionando fallback textual...`
+      );
+    }
+
+    // 3. Fallback Seguro
+    const fallbackText = buildFallbackTextForButtons(rawBody, params.buttons);
+    await this.sendTextMessage({
+      phoneNumberId: params.phoneNumberId,
+      toWaId: params.toWaId,
+      body: fallbackText,
+    });
   }
 
   private graphVersion(): string {
