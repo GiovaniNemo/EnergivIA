@@ -644,6 +644,23 @@ html.hide-scrollbar,
 }
 
 @media print {
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  .print\:hidden,
+  .no-print {
+    display: none !important;
+  }
+
   .cookie-consent-banner,
   [role="region"][aria-label="Consentimento de Cookies"],
   [data-cookie-banner="true"] {

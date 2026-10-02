@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Printer } from "lucide-react";
 import { PreviewDocument } from "@/components/proposals/editor/preview-document";
 import { LoadingState } from "@/components/ui/loading-state";
 import { getPublicProposal, type PublicProposalPayload } from "@/lib/public-proposals-api";
@@ -87,21 +88,39 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
   return (
     <main className="min-h-screen bg-[var(--color-background)]">
       {!isPdf && (
-        <div className={`bg-[var(--color-background)] py-4 ${publicColumnClass}`}>
-          <div className="flex flex-wrap items-center gap-2">
-            {data.proposalNumber ? (
-              <span className="inline-flex items-center rounded-md border border-[var(--color-border)] bg-[var(--color-muted)] px-2.5 py-0.5 font-mono text-xs font-semibold text-[var(--color-foreground)]">
-                #{data.proposalNumber}
-              </span>
-            ) : null}
-            <h1 className="text-xl font-semibold text-[var(--color-foreground)]">{data.title}</h1>
+        <div className={`bg-[var(--color-background)] py-4 ${publicColumnClass} print:hidden`}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                {data.proposalNumber ? (
+                  <span className="inline-flex items-center rounded-md border border-[var(--color-border)] bg-[var(--color-muted)] px-2.5 py-0.5 font-mono text-xs font-semibold text-[var(--color-foreground)]">
+                    #{data.proposalNumber}
+                  </span>
+                ) : null}
+                <h1 className="text-xl font-semibold text-[var(--color-foreground)]">
+                  {data.title}
+                </h1>
+              </div>
+              <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+                Cliente: {data.deal?.lead?.name ?? "Cliente"} · Válida até{" "}
+                {data.validUntil && !Number.isNaN(new Date(data.validUntil).getTime())
+                  ? new Date(data.validUntil).toLocaleDateString("pt-BR")
+                  : "30 dias"}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3.5 py-2 text-xs font-medium text-[var(--color-foreground)] hover:bg-[var(--color-accent)] transition-all shadow-sm cursor-pointer"
+                title="Imprimir ou Salvar como PDF"
+              >
+                <Printer className="h-4 w-4 text-emerald-500" />
+                <span>Imprimir / Salvar PDF</span>
+              </button>
+            </div>
           </div>
-          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-            Cliente: {data.deal?.lead?.name ?? "Cliente"} · Válida até{" "}
-            {data.validUntil && !Number.isNaN(new Date(data.validUntil).getTime())
-              ? new Date(data.validUntil).toLocaleDateString("pt-BR")
-              : "30 dias"}
-          </p>
         </div>
       )}
       <div className={isPdf ? "w-full" : `${publicColumnClass} pt-5 pb-8`}>
