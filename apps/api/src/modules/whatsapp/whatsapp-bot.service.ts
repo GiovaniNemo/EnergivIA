@@ -2,11 +2,7 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
-import {
-  WhatsappCloudService,
-  InteractiveListSection,
-  InteractiveButtonOption,
-} from "./whatsapp-cloud.service";
+import { WhatsappCloudService } from "./whatsapp-cloud.service";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { computeProjectCostSection } from "@energivia/proposal-economia";
 import pdfParse from "pdf-parse";
@@ -30,33 +26,6 @@ import {
 } from "./services/bill-extractor.service";
 import { getHsp, isLocationInput, GeoIrradianceService } from "./services/geo-irradiance.service";
 
-export interface BotResponsePayload {
-  text: string;
-  interactive?:
-    | {
-        type: "list";
-        buttonText?: string;
-        title?: string;
-        footer?: string;
-        sections: InteractiveListSection[];
-      }
-    | {
-        type: "button";
-        title?: string;
-        footer?: string;
-        buttons: InteractiveButtonOption[];
-      };
-}
-
-export type BotResponseResult = string | BotResponsePayload;
-
-function truncateSafe(str: string | undefined | null, maxLen: number): string {
-  if (!str) return "";
-  const trimmed = str.trim();
-  if (trimmed.length <= maxLen) return trimmed;
-  return `${trimmed.slice(0, maxLen - 1)}…`;
-}
-
 interface WebhookMessage {
   id?: string;
   from?: string;
@@ -66,11 +35,6 @@ interface WebhookMessage {
   image?: { id?: string; caption?: string; mime_type?: string };
   audio?: { id?: string };
   voice?: { id?: string };
-  interactive?: {
-    type?: "list_reply" | "button_reply";
-    list_reply?: { id: string; title: string; description?: string };
-    button_reply?: { id: string; title: string };
-  };
 }
 
 interface WebhookPayload {
@@ -560,61 +524,14 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     if (!payload) return;
 
     // Normalização: a Evolution pode enviar { event: "messages.upsert", data: { ... } }
-    // ou { event: "pollUpdateMessage", data: { ... } } ou array de dados ou payload direto
+    // ou array de dados ou payload direto
     const event = payload.event;
-    if (
-      event &&
-      event !== "messages.upsert" &&
-      event !== "pollUpdateMessage" &&
-      event !== "messages.update"
-    ) {
+    if (event && event !== "messages.upsert") {
       // Ignora status de conexão, contatos, etc.
       return;
     }
 
     const data = payload.data || payload;
-
-    // Tratamento de voto em Enquete (Poll Update)
-    const pollUpdate = data.pollUpdate || data.message?.pollUpdateMessage || payload.pollUpdate;
-
-    if (pollUpdate) {
-      const vote = pollUpdate.vote || pollUpdate;
-      const selectedOptions: string[] = Array.isArray(vote.selectedOptions)
-        ? vote.selectedOptions
-        : Array.isArray(vote.options)
-          ? vote.options
-          : [];
-
-      if (selectedOptions.length > 0) {
-        const chosenText = selectedOptions[0];
-        const remoteJid =
-          data.key?.remoteJid ||
-          pollUpdate.pollCreationMessageKey?.remoteJid ||
-          data.sender ||
-          pollUpdate.sender ||
-          "";
-        const senderWaId = remoteJid.replace(/@.*$/, "").replace(/\D/g, "");
-        if (senderWaId && chosenText) {
-          const mappedPollMsg: WebhookMessage = {
-            id: data.key?.id || `poll_${Date.now()}`,
-            from: senderWaId,
-            type: "interactive",
-            interactive: {
-              type: "list_reply",
-              list_reply: { id: chosenText, title: chosenText },
-            },
-            text: { body: chosenText },
-          };
-          await this.processSingleMessage({
-            message: mappedPollMsg,
-            phoneNumberId: (payload.instance || "energiv-bot").toString(),
-            contactName: data.pushName || "Integrador",
-          });
-          return;
-        }
-      }
-    }
-
     const key = data.key;
     if (!key) return;
 
@@ -706,55 +623,6 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
           Buffer.from(cleanB64, "base64"),
           messageContent.audioMessage.mimetype || "audio/ogg; codecs=opus"
         );
-      }
-    }
-    // 5. Resposta Interativa (Lista ou Botões da Evolution API)
-    else if (messageContent.listResponseMessage) {
-      msgType = "interactive";
-      mappedMessage.type = "interactive";
-      const sel = messageContent.listResponseMessage.singleSelectReply;
-      const rowId = sel?.selectedRowId || "";
-      const rowTitle = messageContent.listResponseMessage.title || rowId;
-      mappedMessage.interactive = {
-        type: "list_reply",
-        list_reply: { id: rowId, title: rowTitle },
-      };
-      mappedMessage.text = { body: rowId || rowTitle };
-    } else if (messageContent.buttonsResponseMessage) {
-      msgType = "interactive";
-      mappedMessage.type = "interactive";
-      const btnId = messageContent.buttonsResponseMessage.selectedButtonId || "";
-      const btnTitle = messageContent.buttonsResponseMessage.selectedDisplayText || btnId;
-      mappedMessage.interactive = {
-        type: "button_reply",
-        button_reply: { id: btnId, title: btnTitle },
-      };
-      mappedMessage.text = { body: btnId || btnTitle };
-    } else if (messageContent.templateButtonReplyMessage) {
-      msgType = "interactive";
-      mappedMessage.type = "interactive";
-      const btnId = messageContent.templateButtonReplyMessage.selectedId || "";
-      const btnTitle = messageContent.templateButtonReplyMessage.selectedDisplayText || btnId;
-      mappedMessage.interactive = {
-        type: "button_reply",
-        button_reply: { id: btnId, title: btnTitle },
-      };
-      mappedMessage.text = { body: btnId || btnTitle };
-    } else if (messageContent.interactiveResponseMessage) {
-      msgType = "interactive";
-      mappedMessage.type = "interactive";
-      try {
-        const bodyObj = JSON.parse(
-          messageContent.interactiveResponseMessage.nativeFlowResponseMessage?.paramsJson || "{}"
-        );
-        const id = String(bodyObj?.id || "");
-        mappedMessage.text = { body: id };
-        mappedMessage.interactive = {
-          type: "list_reply",
-          list_reply: { id, title: id },
-        };
-      } catch {
-        // ignore
       }
     }
 
@@ -892,15 +760,6 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     let incomingText = "";
     if (msgType === "text") {
       incomingText = (message.text?.body || "").trim();
-    } else if (msgType === "interactive") {
-      const inter = message.interactive;
-      if (inter?.list_reply) {
-        incomingText = (inter.list_reply.id || inter.list_reply.title || "").trim();
-      } else if (inter?.button_reply) {
-        incomingText = (inter.button_reply.id || inter.button_reply.title || "").trim();
-      } else {
-        incomingText = (message.text?.body || "").trim();
-      }
     }
 
     // 3. Verificação de Código de Pareamento (Token de Ativação)
@@ -1106,15 +965,6 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         });
         return;
       }
-    } else if (msgType === "interactive") {
-      const inter = message.interactive;
-      if (inter?.list_reply) {
-        incomingText = inter.list_reply.id || inter.list_reply.title || "";
-      } else if (inter?.button_reply) {
-        incomingText = inter.button_reply.id || inter.button_reply.title || "";
-      } else {
-        incomingText = message.text?.body || "";
-      }
     } else if (msgType === "document") {
       const doc = message.document;
       incomingText = `[Documento enviado: ${doc?.filename || "fatura.pdf"}]`;
@@ -1161,9 +1011,9 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     });
 
     // 6. Gera a resposta pelo motor de estado do bot e gera a proposta real
-    let botResult: BotResponseResult = "";
+    let replyText = "";
     try {
-      botResult = await this.generateBotResponse({
+      replyText = await this.generateBotResponse({
         conversation: freshConversation || conversation,
         incomingText,
         extractionResult,
@@ -1171,12 +1021,9 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       });
     } catch (err: any) {
       this.logger.error(`Erro ao gerar resposta do bot para ${fromWaId}:`, err);
-      botResult =
+      replyText =
         "Desculpe, ocorreu um erro inesperado ao processar sua solicitação. Por favor, tente novamente (digite '0' ou 'novo').";
     }
-
-    const replyText = typeof botResult === "string" ? botResult : botResult.text;
-    const interactive = typeof botResult === "object" ? botResult.interactive : undefined;
 
     if (replyText) {
       await this.prisma.message.create({
@@ -1188,32 +1035,11 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      if (interactive?.type === "list") {
-        await this.whatsappCloud.sendInteractiveListMessage({
-          phoneNumberId,
-          toWaId: fromWaId,
-          body: replyText,
-          buttonText: interactive.buttonText,
-          title: interactive.title,
-          footer: interactive.footer,
-          sections: interactive.sections,
-        });
-      } else if (interactive?.type === "button") {
-        await this.whatsappCloud.sendInteractiveButtonMessage({
-          phoneNumberId,
-          toWaId: fromWaId,
-          body: replyText,
-          buttons: interactive.buttons,
-          title: interactive.title,
-          footer: interactive.footer,
-        });
-      } else {
-        await this.whatsappCloud.sendTextMessage({
-          phoneNumberId,
-          toWaId: fromWaId,
-          body: replyText,
-        });
-      }
+      await this.whatsappCloud.sendTextMessage({
+        phoneNumberId,
+        toWaId: fromWaId,
+        body: replyText,
+      });
 
       // Se acabou de gerar a proposta, descarrega alertas pendentes de visualização
       if (replyText.includes("Proposta comercial gerada com sucesso")) {
@@ -2214,216 +2040,20 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     return `${saudacao}${firstName}! Tudo bem? ☀️`;
   }
 
-  private buildGreetingMenu(contactName?: string): BotResponsePayload {
+  private buildGreetingMenu(contactName?: string): string {
     const greeting = this.getGreetingText(contactName);
-    const text =
+    return (
       `${greeting}\n` +
       `Sou seu assistente de vendas e dimensionamento da *EnergivIA*.\n\n` +
       `Como posso ajudar você a gerar orçamentos e propostas para seus clientes hoje?\n\n` +
-      `*Escolha uma opção no menu interativo abaixo ou responda com o número:*\n` +
+      `*Escolha uma opção digitando o número:*\n` +
       `1️⃣ Enviar fatura de energia (PDF ou foto)\n` +
       `2️⃣ Simular por consumo mensal (ex: 450 kWh)\n` +
       `3️⃣ Simular por potência de pico (ex: 5 kWp)\n` +
       `4️⃣ Simular por quantidade de placas (ex: 10 módulos)\n` +
       `5️⃣ Dúvidas sobre equipamentos e preços de catálogo\n\n` +
-      `_(Ou me envie diretamente a conta de luz em PDF/foto ou sua dúvida)_`;
-
-    return {
-      text,
-      interactive: {
-        type: "list",
-        buttonText: "Ver Opções",
-        title: "Menu Principal EnergivIA",
-        footer: "EnergivIA Solar",
-        sections: [
-          {
-            title: "Simulação e Cotação",
-            rows: [
-              {
-                id: "1",
-                title: "1. Enviar Fatura",
-                description: "Enviar PDF ou foto da fatura de luz",
-              },
-              {
-                id: "2",
-                title: "2. Simular por Consumo",
-                description: "Dimensionar pelo consumo em kWh",
-              },
-              {
-                id: "3",
-                title: "3. Simular por Potência",
-                description: "Dimensionar pela potência em kWp",
-              },
-              {
-                id: "4",
-                title: "4. Simular por Placas",
-                description: "Dimensionar por número de módulos",
-              },
-              {
-                id: "5",
-                title: "5. Catálogo de Produtos",
-                description: "Consultar modelos e preços cadastrados",
-              },
-            ],
-          },
-        ],
-      },
-    };
-  }
-
-  private buildGridInteractiveList(): BotResponsePayload["interactive"] {
-    return {
-      type: "list",
-      buttonText: "Selecionar Padrão",
-      title: "Padrão de Entrada",
-      footer: "EnergivIA Solar",
-      sections: [
-        {
-          title: "Padrão Elétrico da Instalação",
-          rows: [
-            { id: "1", title: "1. Monofásico 220V", description: "Padrão residencial comum" },
-            {
-              id: "2",
-              title: "2. Bifásico 127V/220V",
-              description: "Padrão residencial/comercial",
-            },
-            { id: "3", title: "3. Trifásico 220V", description: "Padrão comercial trifásico 220V" },
-            { id: "4", title: "4. Trifásico 380V", description: "Padrão trifásico 380V" },
-          ],
-        },
-      ],
-    };
-  }
-
-  private buildRoofInteractiveList(): BotResponsePayload["interactive"] {
-    return {
-      type: "list",
-      buttonText: "Selecionar Telhado",
-      title: "Estrutura do Telhado",
-      footer: "EnergivIA Solar",
-      sections: [
-        {
-          title: "Estrutura de Fixação",
-          rows: [
-            {
-              id: "1",
-              title: "1. Cerâmica (Colonial)",
-              description: "Telhas cerâmicas convencionais",
-            },
-            { id: "2", title: "2. Fibrocimento", description: "Telhas de fibrocimento em madeira" },
-            {
-              id: "3",
-              title: "3. Metálico",
-              description: "Telhas metálicas trapezoidais ou zipadas",
-            },
-            { id: "4", title: "4. Solo", description: "Estrutura para usina de solo" },
-            { id: "5", title: "5. Laje", description: "Laje plana de concreto com triângulos" },
-            { id: "6", title: "6. Fibrometal", description: "Fibrocimento em vigas metálicas" },
-            {
-              id: "7",
-              title: "7. Sem estrutura",
-              description: "Apenas equipamentos (sem fixação)",
-            },
-          ],
-        },
-      ],
-    };
-  }
-
-  private buildRateDecisionButtons(): BotResponsePayload["interactive"] {
-    return {
-      type: "button",
-      title: "Taxa por kWp",
-      footer: "EnergivIA Solar",
-      buttons: [
-        { id: "1", title: "Usar Taxa Padrão" },
-        { id: "2", title: "Outro Valor" },
-      ],
-    };
-  }
-
-  private buildQuotesInteractive(quotes: any[]): BotResponsePayload["interactive"] {
-    if (!quotes || quotes.length === 0) return undefined;
-    if (quotes.length <= 3) {
-      return {
-        type: "button",
-        title: "Opções de Kits",
-        footer: "EnergivIA Solar",
-        buttons: quotes.map((q, idx) => ({
-          id: String(idx + 1),
-          title: truncateSafe(`Opção ${idx + 1} - ${q.distributorName}`, 20),
-        })),
-      };
-    }
-    return {
-      type: "list",
-      buttonText: "Escolher Kit",
-      title: "Kits Dimensionados",
-      footer: "EnergivIA Solar",
-      sections: [
-        {
-          title: "Selecione o Kit Desejado",
-          rows: quotes.slice(0, 10).map((q, idx) => ({
-            id: String(idx + 1),
-            title: truncateSafe(`${idx + 1}. ${q.distributorName} (${q.kwp}kWp)`, 24),
-            description: truncateSafe(
-              `R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-              72
-            ),
-          })),
-        },
-      ],
-    };
-  }
-
-  private buildTemplateInteractiveList(
-    templates: Array<{ id: string; name: string }>
-  ): BotResponsePayload["interactive"] {
-    return {
-      type: "list",
-      buttonText: "Escolher Modelo",
-      title: "Modelos de Proposta",
-      footer: "EnergivIA Solar",
-      sections: [
-        {
-          title: "Modelos Disponíveis",
-          rows: templates.slice(0, 10).map((t, idx) => ({
-            id: String(idx + 1),
-            title: truncateSafe(`${idx + 1}. ${t.name}`, 24),
-            description: "Proposta comercial digital com PDF",
-          })),
-        },
-      ],
-    };
-  }
-
-  private buildCorrectionInteractiveList(): BotResponsePayload["interactive"] {
-    return {
-      type: "list",
-      buttonText: "Escolher Ajuste",
-      title: "Corrigir Informações",
-      footer: "EnergivIA Solar",
-      sections: [
-        {
-          title: "O que deseja alterar?",
-          rows: [
-            {
-              id: "1",
-              title: "1. Cidade e Estado",
-              description: "Alterar município da instalação",
-            },
-            { id: "2", title: "2. Consumo ou Potência", description: "Alterar kWh ou kWp" },
-            { id: "3", title: "3. Padrão de Entrada", description: "Mono, bifásico ou trifásico" },
-            {
-              id: "4",
-              title: "4. Estrutura do Telhado",
-              description: "Cerâmico, fibrocimento, solo, etc.",
-            },
-            { id: "5", title: "5. Reiniciar do início", description: "Começar uma nova simulação" },
-          ],
-        },
-      ],
-    };
+      `_(Ou me envie diretamente a conta de luz em PDF/foto ou sua dúvida)_`
+    );
   }
 
   private async searchCatalogProducts(query: string, limit = 5) {
@@ -2642,7 +2272,7 @@ ${catalogContext}`;
     incomingText: string;
     extractionResult: BillExtractionResult | null;
     contactName?: string;
-  }): Promise<BotResponseResult> {
+  }): Promise<string> {
     const lower = incomingText.toLowerCase().trim();
     const messages = conversation?.messages || [];
     const resolvedContactName =
@@ -2967,15 +2597,11 @@ ${catalogContext}`;
 
       const conexaoInfo = tipoConexao ? `\nPadrão de rede identificado: *${tipoConexao}*` : "";
 
-      const text =
+      return (
         `Legal, dados extraídos com precisão!\n` +
         `Consumo médio de *${kwh} kWh/mês* em *${cidade}* (${baseTexto}).${conexaoInfo}\n\n` +
-        `Qual a estrutura do telhado onde os módulos serão instalados?`;
-
-      return {
-        text,
-        interactive: this.buildRoofInteractiveList(),
-      };
+        this.ROOF_OPTIONS_TEXT
+      );
     }
 
     // Recupera a última mensagem do bot para saber o estado atual da conversa
@@ -3046,13 +2672,10 @@ ${catalogContext}`;
       }
 
       if (lastBotMsg.includes("Qual a estrutura do telhado?")) {
-        const text =
+        return (
           `Sem problemas! Vamos corrigir o padrão elétrico da instalação. ⚡\n\n` +
-          `Qual o padrão de entrada da instalação?`;
-        return {
-          text,
-          interactive: this.buildGridInteractiveList(),
-        };
+          this.GRID_OPTIONS_TEXT
+        );
       }
 
       if (
@@ -3060,11 +2683,7 @@ ${catalogContext}`;
         lastBotMsg.includes("Como deseja prosseguir para esta cotação") ||
         lastBotMsg.includes("taxa padrão configurada")
       ) {
-        const text = `Certo! Vamos alterar a estrutura do telhado. 🏠\n\nQual a estrutura do telhado onde os módulos serão instalados?`;
-        return {
-          text,
-          interactive: this.buildRoofInteractiveList(),
-        };
+        return `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
       }
 
       if (
@@ -3084,7 +2703,7 @@ ${catalogContext}`;
           ? ` para o consumo de *${sessionCtx.consumptionKwh} kWh/mês*`
           : "";
 
-        const text =
+        return (
           `Estrutura registrada: *${sessionCtx.roofType || "Cerâmica (Colonial)"}*. 🏠\n\n` +
           `☀️ *Dimensionamento calculado${consumoRef}:*\n` +
           `• *Potência do sistema:* ${sizing.realSystemKwp} kWp (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
@@ -3094,12 +2713,8 @@ ${catalogContext}`;
           `1️⃣ Seguir com a taxa padrão (*R$ ${formattedRate}/kWp*)\n` +
           `2️⃣ Informar outro valor por kWp (ou digite o valor diretamente, ex: *2500*, *R$ 3.200*)\n` +
           `0️⃣ Voltar / Alterar estrutura\n\n` +
-          `(Responda 1 para seguir, 2 para editar ou envie o valor desejado)`;
-
-        return {
-          text,
-          interactive: this.buildRateDecisionButtons(),
-        };
+          `(Responda 1 para seguir, 2 para editar ou envie o valor desejado)`
+        );
       }
 
       if (lastBotMsg.includes("Qual opção você prefere para o seu cliente?")) {
@@ -3116,7 +2731,7 @@ ${catalogContext}`;
           ? ` para o consumo de *${sessionCtx.consumptionKwh} kWh/mês*`
           : "";
 
-        const text =
+        return (
           `Estrutura registrada: *${sessionCtx.roofType || "Cerâmica (Colonial)"}*. 🏠\n\n` +
           `☀️ *Dimensionamento calculado${consumoRef}:*\n` +
           `• *Potência do sistema:* ${sizing.realSystemKwp} kWp (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
@@ -3126,12 +2741,8 @@ ${catalogContext}`;
           `1️⃣ Seguir com a taxa padrão (*R$ ${formattedRate}/kWp*)\n` +
           `2️⃣ Informar outro valor por kWp (ou digite o valor diretamente, ex: *2500*, *R$ 3.200*)\n` +
           `0️⃣ Voltar / Alterar estrutura\n\n` +
-          `(Responda 1 para seguir, 2 para editar ou envie o valor desejado)`;
-
-        return {
-          text,
-          interactive: this.buildRateDecisionButtons(),
-        };
+          `(Responda 1 para seguir, 2 para editar ou envie o valor desejado)`
+        );
       }
 
       const isClientNameQuestion =
@@ -3154,17 +2765,9 @@ ${catalogContext}`;
         });
 
         if (quotes.length > 0) {
-          const text = this.formatQuotesListText(quotes, sessionCtx);
-          return {
-            text,
-            interactive: this.buildQuotesInteractive(quotes),
-          };
+          return this.formatQuotesListText(quotes, sessionCtx);
         }
-        const text = `Certo! Vamos alterar a estrutura do telhado. 🏠\n\nQual a estrutura do telhado onde os módulos serão instalados?`;
-        return {
-          text,
-          interactive: this.buildRoofInteractiveList(),
-        };
+        return `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
       }
 
       if (
@@ -3180,18 +2783,14 @@ ${catalogContext}`;
         return `Certo! Qual o WhatsApp correto do cliente com DDD? (ou digite 0️⃣ para voltar ao nome)`;
       }
 
-      const text =
+      return (
         `O que você gostaria de alterar ou corrigir? 📝\n\n` +
         `1️⃣ Cidade e Estado (ex: digite *Cuiabá/MT*)\n` +
         `2️⃣ Consumo ou Potência (ex: digite *500 kWh* ou *6 kWp*)\n` +
         `3️⃣ Padrão de Entrada (ex: digite *mono*, *bi* ou *tri 380V*)\n` +
         `4️⃣ Estrutura do Telhado (ex: digite *solo*, *laje* ou *fibrocimento*)\n` +
-        `5️⃣ Reiniciar do início (digite *novo*)`;
-
-      return {
-        text,
-        interactive: this.buildCorrectionInteractiveList(),
-      };
+        `5️⃣ Reiniciar do início (digite *novo*)`
+      );
     }
 
     // ESTADO A: O Bot acabou de apresentar os distribuidores e pediu para escolher a opção (1 ou 2)
@@ -3242,16 +2841,12 @@ ${catalogContext}`;
         });
         templateListText += `0️⃣ Voltar / Rever dados\n`;
 
-        const text =
+        return (
           `Cliente *${effectiveName}* e WhatsApp *${formatPhone(phone)}* registrados com sucesso! 👤✨\n\n` +
           `Qual modelo de proposta comercial você deseja usar para o seu cliente?\n` +
           `${templateListText}\n` +
-          `(Responda com o número da opção desejada ou digite 0️⃣ para corrigir o nome/telefone)`;
-
-        return {
-          text,
-          interactive: this.buildTemplateInteractiveList(templates),
-        };
+          `(Responda com o número da opção desejada ou digite 0️⃣ para corrigir o nome/telefone)`
+        );
       }
 
       // Se enviou apenas o telefone sem nome
@@ -3295,16 +2890,12 @@ ${catalogContext}`;
 
       const phoneDisplay = phone ? ` e WhatsApp *${formatPhone(phone)}*` : "";
 
-      const text =
+      return (
         `Cliente *${clientName}*${phoneDisplay} anotado com sucesso! 👤✨\n\n` +
         `Qual modelo de proposta comercial você deseja usar para o seu cliente?\n` +
         `${templateListText}\n` +
-        `(Responda com o número da opção desejada)`;
-
-      return {
-        text,
-        interactive: this.buildTemplateInteractiveList(templates),
-      };
+        `(Responda com o número da opção desejada)`
+      );
     }
 
     // ESTADO D: O Bot pediu para escolher o modelo de proposta -> GERA PROPOSTA COMPLETA!
@@ -3679,7 +3270,7 @@ ${catalogContext}`;
           ? ` para o consumo de *${sessionCtx.consumptionKwh} kWh/mês*`
           : "";
 
-        const text =
+        return (
           `Estrutura registrada: *${selectedRoof}*. 🏠\n\n` +
           `☀️ *Dimensionamento calculado${consumoRef}:*\n` +
           `• *Potência do sistema:* ${sizing.realSystemKwp} kWp (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
@@ -3689,20 +3280,14 @@ ${catalogContext}`;
           `1️⃣ Seguir com a taxa padrão (*R$ ${formattedRate}/kWp*)\n` +
           `2️⃣ Informar outro valor por kWp (ou digite o valor diretamente, ex: *2500*, *R$ 3.200*)\n` +
           `0️⃣ Voltar / Alterar estrutura\n\n` +
-          `(Responda 1 para seguir, 2 para editar ou envie o valor desejado)`;
-
-        return {
-          text,
-          interactive: this.buildRateDecisionButtons(),
-        };
+          `(Responda 1 para seguir, 2 para editar ou envie o valor desejado)`
+        );
       }
 
-      const text = `Opção de telhado não reconhecida. Por favor, selecione uma opção abaixo ou envie 0️⃣ para voltar:\n\nQual a estrutura do telhado onde os módulos serão instalados?`;
-
-      return {
-        text,
-        interactive: this.buildRoofInteractiveList(),
-      };
+      return (
+        `Opção de telhado não reconhecida. Por favor, responda com o número da opção (1 a 7) ou envie 0️⃣ para voltar:\n\n` +
+        this.ROOF_OPTIONS_TEXT
+      );
     }
 
     // ESTADO E.1: O Bot perguntou se deseja seguir com a taxa padrão configurada ou informar outro valor
@@ -3748,15 +3333,10 @@ ${catalogContext}`;
           );
         }
 
-        const text = this.formatQuotesListText(quotes, {
+        return this.formatQuotesListText(quotes, {
           ...sessionCtx,
           customRatePerKwp: orgDefaultRate,
         });
-
-        return {
-          text,
-          interactive: this.buildQuotesInteractive(quotes),
-        };
       }
 
       // Opção 2: Deseja informar outro valor por kWp
@@ -3816,14 +3396,10 @@ ${catalogContext}`;
           ? `Entendido! Convertemos seu valor informado para *R$ ${formattedRate}/kWp* (com base no sistema de ${sizing.realSystemKwp} kWp)! ☀️💰\n\n`
           : `Taxa personalizada de *R$ ${formattedRate}/kWp* aplicada para esta cotação! ☀️💰\n\n`;
 
-        const text =
+        return (
           prefixMsg +
-          this.formatQuotesListText(quotes, { ...sessionCtx, customRatePerKwp: finalRate });
-
-        return {
-          text,
-          interactive: this.buildQuotesInteractive(quotes),
-        };
+          this.formatQuotesListText(quotes, { ...sessionCtx, customRatePerKwp: finalRate })
+        );
       }
 
       const formattedRate = orgDefaultRate.toLocaleString("pt-BR", {
@@ -3831,16 +3407,12 @@ ${catalogContext}`;
         maximumFractionDigits: 2,
       });
 
-      const text =
+      return (
         `Opção não reconhecida. Como você prefere seguir com a taxa por kWp para esta cotação?\n\n` +
         `1️⃣ Seguir com a taxa padrão (*R$ ${formattedRate}/kWp*)\n` +
         `2️⃣ Informar outro valor por kWp (ex: *2500*, *R$ 3.200* ou *total 18500*)\n` +
-        `0️⃣ Voltar / Alterar estrutura`;
-
-      return {
-        text,
-        interactive: this.buildRateDecisionButtons(),
-      };
+        `0️⃣ Voltar / Alterar estrutura`
+      );
     }
 
     // ESTADO E.2: O Bot pediu especificamente para digitar o valor por kWp
@@ -3880,14 +3452,10 @@ ${catalogContext}`;
           ? `Entendido! Convertemos seu valor informado para *R$ ${formattedRate}/kWp* (com base no sistema de ${sizing.realSystemKwp} kWp)! ☀️💰\n\n`
           : `Taxa personalizada de *R$ ${formattedRate}/kWp* aplicada para esta cotação! ☀️💰\n\n`;
 
-        const text =
+        return (
           prefixMsg +
-          this.formatQuotesListText(quotes, { ...sessionCtx, customRatePerKwp: finalRate });
-
-        return {
-          text,
-          interactive: this.buildQuotesInteractive(quotes),
-        };
+          this.formatQuotesListText(quotes, { ...sessionCtx, customRatePerKwp: finalRate })
+        );
       }
 
       return (
@@ -3908,13 +3476,10 @@ ${catalogContext}`;
       ) {
         const hspRes = getHsp(incomingText);
         if (hspRes.city) {
-          const text =
+          return (
             `Perfeito! Localização corrigida para: *${hspRes.city}/${hspRes.uf}* (Irradiação solar de ${hspRes.hsp.toFixed(2)} kWh/m²/dia calculada com precisão). 📍☀️\n\n` +
-            `Qual o padrão de entrada da instalação?`;
-          return {
-            text,
-            interactive: this.buildGridInteractiveList(),
-          };
+            this.GRID_OPTIONS_TEXT
+          );
         }
       }
 
@@ -3949,18 +3514,13 @@ ${catalogContext}`;
       }
 
       if (chosenGrid) {
-        const text = `Legal! Padrão registrado: *${chosenGrid}*. ⚡\n\nQual a estrutura do telhado onde os módulos serão instalados?`;
-        return {
-          text,
-          interactive: this.buildRoofInteractiveList(),
-        };
+        return `Legal! Padrão registrado: *${chosenGrid}*. ⚡\n\n` + this.ROOF_OPTIONS_TEXT;
       }
 
-      const text = `Opção não reconhecida. Por favor, selecione uma opção ou envie 0️⃣ para voltar:\n\nQual o padrão de entrada da instalação?`;
-      return {
-        text,
-        interactive: this.buildGridInteractiveList(),
-      };
+      return (
+        `Opção não reconhecida. Por favor, responda com o número da opção desejada (1 a 4) ou envie 0️⃣ para voltar:\n\n` +
+        this.GRID_OPTIONS_TEXT
+      );
     }
 
     // ESTADO G: O Bot perguntou a cidade da instalação
@@ -3970,13 +3530,10 @@ ${catalogContext}`;
       lastBotMsg.includes("Vamos corrigir a localização")
     ) {
       const hspRes = getHsp(incomingText);
-      const text =
+      return (
         `Perfeito! Localização identificada: *${hspRes.city}/${hspRes.uf}* (Irradiação solar de ${hspRes.hsp.toFixed(2)} kWh/m²/dia calculada com precisão). 📍☀️\n\n` +
-        `Qual o padrão de entrada da instalação?`;
-      return {
-        text,
-        interactive: this.buildGridInteractiveList(),
-      };
+        this.GRID_OPTIONS_TEXT
+      );
     }
 
     // Opções do menu inicial (1 a 5) quando não estiver em fluxos específicos
@@ -4059,11 +3616,7 @@ ${catalogContext}`;
     if (kwpDirectMatch && kwpDirectMatch[1]) {
       const targetKWp = parseFloat(kwpDirectMatch[1].replace(",", "."));
       if (targetKWp > 0) {
-        const text = `Legal! Potência solicitada: *${targetKWp} kWp*. ☀️\n\nQual o padrão de entrada da instalação?`;
-        return {
-          text,
-          interactive: this.buildGridInteractiveList(),
-        };
+        return `Legal! Potência solicitada: *${targetKWp} kWp*. ☀️\n\n` + this.GRID_OPTIONS_TEXT;
       }
     }
 
@@ -4079,11 +3632,10 @@ ${catalogContext}`;
       const kwpCalculado = modPower ? ((modCount * modPower) / 1000).toFixed(2) : undefined;
       const extraInfo = modPower ? ` de ${modPower}W (${kwpCalculado} kWp)` : "";
 
-      const text = `Legal! Quantidade solicitada: *${modCount} placas${extraInfo}*. ☀️\n\nQual o padrão de entrada da instalação?`;
-      return {
-        text,
-        interactive: this.buildGridInteractiveList(),
-      };
+      return (
+        `Legal! Quantidade solicitada: *${modCount} placas${extraInfo}*. ☀️\n\n` +
+        this.GRID_OPTIONS_TEXT
+      );
     }
 
     // ESTADO K: Entrada por Consumo em kWh (ex: "300 kwh", "300kw", "500 kwh/mes")
@@ -4108,11 +3660,10 @@ ${catalogContext}`;
                 : "")
           ).trim();
           const hspRes = getHsp(cand);
-          const text = `Legal, consumo registrado: *${consumo} kWh/mês* em *${hspRes.city}/${hspRes.uf}*! ☀️📍\n\nQual o padrão de entrada da instalação?`;
-          return {
-            text,
-            interactive: this.buildGridInteractiveList(),
-          };
+          return (
+            `Legal, consumo registrado: *${consumo} kWh/mês* em *${hspRes.city}/${hspRes.uf}*! ☀️📍\n\n` +
+            this.GRID_OPTIONS_TEXT
+          );
         }
 
         return (
