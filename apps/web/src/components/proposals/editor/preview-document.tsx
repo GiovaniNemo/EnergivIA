@@ -435,7 +435,13 @@ export function PreviewDocument({
     subtitle: replaceTemplateText(coverFields["subtitle"], templateVars),
     clientName: previewVariables.nome_cliente,
     highlight: replaceTemplateText(coverFields["highlight"], templateVars),
-    companyName: previewVariables.nome_empresa || styles.footer.companyName,
+    companyName:
+      (typeof coverFields["companyName"] === "string" &&
+      coverFields["companyName"].trim().length > 0
+        ? replaceTemplateText(coverFields["companyName"].trim(), templateVars)
+        : undefined) ||
+      previewVariables.nome_empresa ||
+      styles.footer.companyName,
     showCompanyName: Boolean(coverFields["showCompanyName"] ?? true),
     companyNamePlacement: resolveCoverPlacement(coverFields["companyNamePlacement"]),
     companyNameAlign:

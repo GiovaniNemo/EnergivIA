@@ -249,7 +249,7 @@ export function Cover({
         ) : null}
         {headerCompanyName ? (
           <p
-            data-editor-field-path="showCompanyName"
+            data-editor-field-path="companyName"
             className={`text-sm font-semibold text-white/90 ${companyAlign.item} ${companyAlign.text}`}
           >
             {headerCompanyName}
@@ -278,7 +278,7 @@ export function Cover({
         ) : null}
         {contentCompanyName ? (
           <p
-            data-editor-field-path="showCompanyName"
+            data-editor-field-path="companyName"
             className={`text-xs font-semibold text-white/90 ${companyAlign.item} ${companyAlign.text}`}
           >
             {contentCompanyName}
@@ -306,7 +306,7 @@ export function Cover({
         ) : null}
         {footerCompanyName ? (
           <p
-            data-editor-field-path="showCompanyName"
+            data-editor-field-path="companyName"
             className={`text-xs font-semibold text-white/85 ${companyAlign.item} ${companyAlign.text}`}
           >
             {footerCompanyName}

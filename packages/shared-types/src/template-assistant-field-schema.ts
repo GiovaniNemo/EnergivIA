@@ -70,6 +70,12 @@ export const TEMPLATE_ASSISTANT_FIELD_SCHEMA: TemplateAssistantSectionFieldSchem
       aliases: ["companyNameVisible"],
       invertBooleanAliases: ["hideCompanyName", "removeCompanyName"],
     },
+    {
+      name: "companyName",
+      valueType: "string",
+      editableByAi: true,
+      aliases: ["company_name", "nomeEmpresa", "nome_empresa"],
+    },
     { name: "backgroundImage", valueType: "url", editableByAi: true },
     { name: "overlayOpacity", valueType: "number", editableByAi: true },
     { name: "overlayColor", valueType: "string", editableByAi: true },

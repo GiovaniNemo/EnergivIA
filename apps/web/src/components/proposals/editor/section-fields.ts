@@ -41,6 +41,7 @@ export interface DynamicField {
   numberMode?: "int" | "decimal";
   unit?: string;
   helperText?: string;
+  placeholder?: string;
   group?: string;
   visibleWhen?: {
     field: string;
@@ -1089,6 +1090,7 @@ export const SECTION_DEFAULT_FIELDS: Record<SectionType, Record<string, unknown>
     title: "Template de Proposta Solar Residencial",
     subtitle: "<p>Preparado para {{nome_cliente}} em {{data_proposta}}</p>",
     highlight: "Proposta",
+    companyName: "",
     showCompanyName: true,
     companyNamePlacement: "header",
     companyNameAlign: "center",

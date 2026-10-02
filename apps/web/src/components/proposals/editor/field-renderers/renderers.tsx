@@ -115,6 +115,7 @@ export function renderTextField({
         <textarea
           data-editor-field-path={field.name}
           value={String(fieldValue ?? "")}
+          placeholder={field.placeholder}
           onChange={(event) => onSectionFieldChange(field.name, event.target.value)}
           rows={4}
           className="mt-1 min-h-20 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-2 py-1.5 text-xs text-[var(--color-foreground)]"
@@ -137,6 +138,7 @@ export function renderTextField({
         data-editor-field-path={field.name}
         type={field.type === "number" ? "number" : "text"}
         value={String(fieldValue ?? "")}
+        placeholder={field.placeholder}
         onChange={(event) =>
           onSectionFieldChange(
             field.name,

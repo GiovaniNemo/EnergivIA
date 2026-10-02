@@ -87,6 +87,15 @@ export const COVER_FIELD_CONFIG: DynamicField[] = [
   },
   { name: "showCompanyName", label: "Exibir nome da empresa", type: "toggle", group: "Branding" },
   {
+    name: "companyName",
+    label: "Nome da empresa",
+    type: "text",
+    group: "Branding",
+    visibleWhen: { field: "showCompanyName", equals: true },
+    placeholder: "Deixe em branco para usar o nome padrão",
+    helperText: "Nome exibido na capa. Se não preenchido, usa o nome padrão da organização.",
+  },
+  {
     name: "companyNamePlacement",
     label: "Posição do nome da empresa",
     type: "select",
