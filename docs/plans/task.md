@@ -10,3 +10,6 @@
 | task-8  | Remover seções cta (aceite/recusa) e video no modo PDF                         | completed | visibleSections filtra cta e video quando mode === "pdf"                                                          |
 | task-9  | Fazer Capa ocupar 100% da altura do A4 sem fundo em branco                     | completed | Cover.tsx e todas as variantes atualizadas com h-full min-h-full flex-1                                           |
 | task-10 | Ajustar fluxo de seções no PDF para eliminar páginas em branco artificiais     | completed | Removido aspect-[210/297] forçado e pageBreakAfter always por seção em preview-document e proposal-puppeteer-html |
+| task-11 | Suprimir notificações de visualização ao baixar/gerar PDF                      | completed | Adicionado flag isPdf via query/header/user-agent e desativado handlePublicProposalView na geração de PDF         |
+| task-12 | Executar testes unitários e verificar regressão                                | completed | Todos os 11 arquivos de teste e 91 testes passaram com sucesso                                                    |
+| task-13 | Commit e push das alterações                                                   | completed | Enviado para origin/main                                                                                          |

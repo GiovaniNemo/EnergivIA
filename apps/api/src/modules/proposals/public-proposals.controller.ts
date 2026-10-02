@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, Headers } from "@nestjs/common";
 import { ProposalsService } from "./proposals.service";
 import { Public } from "../../common/decorators/public.decorator";
 import { RespondPublicProposalDto } from "./dto/respond-public-proposal.dto";
@@ -9,8 +9,18 @@ export class PublicProposalsController {
   constructor(private readonly proposalsService: ProposalsService) {}
 
   @Get(":id")
-  findPublic(@Param("id") id: string) {
-    return this.proposalsService.findPublicById(id);
+  findPublic(
+    @Param("id") id: string,
+    @Query("pdf") isPdfQuery?: string,
+    @Headers("x-is-pdf") isPdfHeader?: string,
+    @Headers("user-agent") userAgent?: string
+  ) {
+    const isPdf =
+      isPdfQuery === "true" ||
+      isPdfQuery === "1" ||
+      isPdfHeader === "true" ||
+      Boolean(userAgent && /HeadlessChrome|Puppeteer|wkhtmltopdf/i.test(userAgent));
+    return this.proposalsService.findPublicById(id, { isPdf });
   }
 
   @Post(":id/respond")

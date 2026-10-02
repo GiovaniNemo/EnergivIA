@@ -25,6 +25,11 @@ describe("Proposals RBAC & Commercial Protection", () => {
       leadId: "lead-789",
       lead: { name: "Empresa Solar Teste" },
     },
+    proposalTemplate: {
+      id: "tpl-1",
+      name: "Modelo Padrão",
+      config: {},
+    },
     simulation: {
       input: { investmentAmount: 50000 },
     },
@@ -80,6 +85,15 @@ describe("Proposals RBAC & Commercial Protection", () => {
       },
       simulation: {
         findFirst: vi.fn(),
+      },
+      proposalTemplate: {
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+      proposalTemplateBlueprint: {
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+      product: {
+        findMany: vi.fn().mockResolvedValue([]),
       },
     };
 
@@ -263,6 +277,19 @@ describe("Proposals RBAC & Commercial Protection", () => {
           }),
         })
       );
+    });
+  });
+
+  describe("findPublicById - PDF notification suppression", () => {
+    it("calls handlePublicProposalView when isPdf is not specified", async () => {
+      await service.findPublicById("prop-123");
+      expect(mockNotifications.handlePublicProposalView).toHaveBeenCalledWith("prop-123");
+    });
+
+    it("does NOT call handlePublicProposalView when isPdf is true", async () => {
+      mockNotifications.handlePublicProposalView.mockClear();
+      await service.findPublicById("prop-123", { isPdf: true });
+      expect(mockNotifications.handlePublicProposalView).not.toHaveBeenCalled();
     });
   });
 });

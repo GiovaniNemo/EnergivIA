@@ -1,16 +1,17 @@
 import type { ProposalTemplateConfig } from "@energivia/shared-types";
 import type { FinancialSimulationInputJson, FinancialSimulationResultJson } from "@/lib/leads-api";
 
-function getPublicProposalFetchUrl(id: string): string {
+function getPublicProposalFetchUrl(id: string, isPdf?: boolean): string {
   const cleanId = encodeURIComponent(id.trim());
+  const query = isPdf ? "?pdf=true" : "";
   if (typeof window !== "undefined") {
-    return `/api/proxy/public/proposals/${cleanId}`;
+    return `/api/proxy/public/proposals/${cleanId}${query}`;
   }
   const apiBase = (process.env["NEXT_PUBLIC_API_URL"] || "http://localhost:4000/api").replace(
     /\/$/,
     ""
   );
-  return `${apiBase}/public/proposals/${cleanId}`;
+  return `${apiBase}/public/proposals/${cleanId}${query}`;
 }
 
 export interface PublicProposalPayload {
@@ -65,10 +66,18 @@ export interface PublicProposalPayload {
   } | null;
 }
 
-export async function getPublicProposal(id: string): Promise<PublicProposalPayload> {
-  const url = getPublicProposalFetchUrl(id);
+export async function getPublicProposal(
+  id: string,
+  options?: { isPdf?: boolean }
+): Promise<PublicProposalPayload> {
+  const url = getPublicProposalFetchUrl(id, options?.isPdf);
+  const headers: Record<string, string> = {};
+  if (options?.isPdf) {
+    headers["x-is-pdf"] = "true";
+  }
   const res = await fetch(url, {
     method: "GET",
+    headers,
     credentials: "omit",
   });
   if (!res.ok) {

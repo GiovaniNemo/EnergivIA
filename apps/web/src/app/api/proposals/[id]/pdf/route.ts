@@ -57,10 +57,13 @@ export async function GET(
   }
 
   try {
-    const apiUrl = `${BACKEND_URL}/public/proposals/${id}`;
+    const apiUrl = `${BACKEND_URL}/public/proposals/${id}?pdf=true`;
     const apiResponse = await fetch(apiUrl, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-is-pdf": "true",
+      },
     });
 
     if (!apiResponse.ok) {

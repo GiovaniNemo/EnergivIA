@@ -18,12 +18,12 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
 
   useEffect(() => {
     if (!proposalId) return;
-    getPublicProposal(proposalId)
+    getPublicProposal(proposalId, { isPdf })
       .then(setData)
       .catch((e) =>
         setError(e instanceof Error ? e.message : "Não foi possível carregar proposta.")
       );
-  }, [proposalId]);
+  }, [proposalId, isPdf]);
 
   const documentState = useMemo(() => {
     if (!data?.proposalTemplate?.config) return null;

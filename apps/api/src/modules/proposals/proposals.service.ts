@@ -359,7 +359,7 @@ export class ProposalsService {
     return proposal;
   }
 
-  async findPublicById(idOrToken: string) {
+  async findPublicById(idOrToken: string, options?: { isPdf?: boolean }) {
     try {
       const proposal = await this.prisma.proposal.findFirst({
         where: {
@@ -395,7 +395,9 @@ export class ProposalsService {
           };
         }
       }
-      await this.notificationsService.handlePublicProposalView(proposal.id);
+      if (!options?.isPdf) {
+        await this.notificationsService.handlePublicProposalView(proposal.id);
+      }
 
       let renderedData = (proposal.renderedData as Record<string, unknown> | null) ?? null;
       const integrator = parseIntegratorFromRendered(renderedData);
