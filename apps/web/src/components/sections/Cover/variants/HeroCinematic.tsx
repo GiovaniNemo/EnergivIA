@@ -53,7 +53,7 @@ export function HeroCinematic({
 
   return (
     <section
-      className="relative flex flex-col overflow-hidden"
+      className="relative flex flex-col justify-between overflow-hidden h-full min-h-full flex-1"
       style={{
         minHeight: minHeightPx,
         backgroundColor: style.backgroundColor,

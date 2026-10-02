@@ -62,7 +62,7 @@ export function FullImage({
 
   return (
     <section
-      className="relative flex min-h-[250px] flex-col overflow-hidden"
+      className="relative flex min-h-[250px] flex-col overflow-hidden h-full min-h-full flex-1"
       style={{
         minHeight: `${minHeightPx}px`,
         backgroundColor: style.backgroundColor,

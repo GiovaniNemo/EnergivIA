@@ -32,7 +32,7 @@ export function SplitEditorial({
 
   return (
     <section
-      className="flex flex-col md:grid"
+      className="flex flex-col md:grid h-full min-h-full flex-1"
       style={{
         minHeight: minHeightPx,
         gridTemplateColumns: "55% 45%",

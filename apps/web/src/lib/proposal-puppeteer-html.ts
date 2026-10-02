@@ -81,20 +81,42 @@ export function proposalPuppeteerDocumentCss(): string {
       margin: 0 !important;
     }
 
-    [data-preview-scroll="true"] > div > article {
+    /* Cover page is always full A4 page */
+    .proposal-cover-page,
+    [data-preview-scroll="true"] > div > article:first-child {
       page-break-after: always !important;
       break-after: page !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
+      min-height: 100vh !important;
+      height: 100vh !important;
+      aspect-ratio: auto !important;
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      border: 0 !important;
+      overflow: hidden !important;
+    }
+
+    /* Content sections flow naturally without forcing individual blank pages */
+    .proposal-content-section,
+    [data-preview-scroll="true"] > div > article:not(:first-child) {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      page-break-after: auto !important;
+      break-after: auto !important;
       min-height: auto !important;
       height: auto !important;
       aspect-ratio: auto !important;
       width: 100% !important;
       max-width: none !important;
-      margin: 0 !important;
-      padding-bottom: 0 !important;
+      margin: 0 0 1rem 0 !important;
       border-radius: 0 !important;
       box-shadow: none !important;
+      border: 0 !important;
       overflow: visible !important;
     }
 

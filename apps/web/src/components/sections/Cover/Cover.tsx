@@ -316,8 +316,8 @@ export function Cover({
     ) : null;
 
   return (
-    <div className="relative">
-      <div className="relative">{renderVariant()}</div>
+    <div className="relative h-full w-full flex flex-col flex-1">
+      <div className="relative h-full w-full flex flex-col flex-1">{renderVariant()}</div>
       {showSectionDivider ? (
         <div
           className="pointer-events-none absolute left-1/2 z-20 w-28 border-t-2 opacity-95"

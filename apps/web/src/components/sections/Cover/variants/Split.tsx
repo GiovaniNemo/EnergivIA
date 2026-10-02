@@ -57,7 +57,7 @@ export function Split({
 
   return (
     <section
-      className="grid min-h-[250px] gap-0 overflow-hidden md:grid-cols-2"
+      className="grid min-h-[250px] gap-0 overflow-hidden md:grid-cols-2 h-full min-h-full flex-1"
       style={{
         minHeight: `${minHeightPx}px`,
         backgroundColor: style.backgroundColor,

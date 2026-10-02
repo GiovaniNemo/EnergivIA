@@ -520,6 +520,7 @@ export function PreviewDocument({
   };
   const visibleSections = documentState.sections.filter((section) => {
     if (section.hidden || section.type === "cover") return false;
+    if (mode === "pdf" && (section.type === "cta" || section.type === "video")) return false;
     if (section.type !== "diagnostic_energy") return true;
     return previewVariables.hasDiagnosticData;
   });
@@ -533,11 +534,11 @@ export function PreviewDocument({
         <div className="space-y-4">
           <article
             data-preview-capture-target="true"
-            className="mx-auto aspect-[210/297] w-full max-w-[794px] overflow-hidden rounded-2xl border border-zinc-700/80"
+            className="proposal-cover-page mx-auto aspect-[210/297] w-full max-w-[794px] overflow-hidden rounded-2xl border border-zinc-700/80 flex flex-col"
             style={{
               fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
               fontSize: `${styles.typography.bodySize}px`,
-              backgroundColor: styles.branding.backgroundColor,
+              backgroundColor: coverStyle.backgroundColor || styles.branding.backgroundColor,
               color: styles.branding.textColor,
               borderRadius: `${styles.layout.borderRadius}px`,
               boxShadow: `0 ${styles.layout.shadowIntensity * 8}px ${styles.layout.shadowIntensity * 26}px rgba(0,0,0,0.28)`,
@@ -561,10 +562,10 @@ export function PreviewDocument({
             />
           </article>
 
-          {visibleSections.map((section, index) => (
+          {visibleSections.map((section) => (
             <article
               key={section.id}
-              className={`mx-auto aspect-[210/297] w-full max-w-[794px] overflow-hidden rounded-2xl border border-zinc-700/80 ${
+              className={`proposal-content-section mx-auto w-full max-w-[794px] overflow-hidden rounded-2xl border border-zinc-700/80 ${
                 sectionPaddingClass[styles.layout.spacing]
               }`}
               style={{
@@ -574,8 +575,6 @@ export function PreviewDocument({
                 color: styles.branding.textColor,
                 borderRadius: `${styles.layout.borderRadius}px`,
                 boxShadow: `0 ${styles.layout.shadowIntensity * 8}px ${styles.layout.shadowIntensity * 26}px rgba(0,0,0,0.28)`,
-                pageBreakAfter: index === visibleSections.length - 1 ? "avoid" : "always",
-                breakAfter: index === visibleSections.length - 1 ? "avoid" : "page",
                 pageBreakInside: "avoid",
                 breakInside: "avoid",
               }}
