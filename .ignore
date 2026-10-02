@@ -34,7 +34,6 @@ apps/api/prisma/data/
 apps/api/prisma/migrations/
 
 # Mídias e binários
-apps/web/public/
 *.png
 *.jpg
 *.jpeg
