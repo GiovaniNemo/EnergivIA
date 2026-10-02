@@ -13,6 +13,7 @@ const repoRoot = path.dirname(fileURLToPath(import.meta.url));
 const apiTypeAware = {
   // Only Nest `src` is in `apps/api/tsconfig.json`; prisma scripts live outside `include`.
   files: ["apps/api/src/**/*.ts"],
+  ignores: ["apps/api/src/**/__tests__/**", "apps/api/src/**/*.spec.ts"],
   languageOptions: {
     parser: tsParser,
     parserOptions: {

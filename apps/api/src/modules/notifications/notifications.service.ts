@@ -168,6 +168,13 @@ export class NotificationsService {
 
       const prevCount = p.clientViewCount;
       const now = new Date();
+      const lastViewedAt = p.clientLastViewedAt;
+
+      // Evita contagem duplicada por reloads imediatos ou prefetch do navegador (janela de 15s)
+      const isRapidReload = lastViewedAt && now.getTime() - lastViewedAt.getTime() < 15 * 1000;
+      if (isRapidReload) {
+        return null;
+      }
 
       const updated = await tx.proposal.update({
         where: { id: proposalId },
@@ -204,12 +211,13 @@ export class NotificationsService {
     const fullProposalUrl = `${webBaseUrl.replace(/\/$/, "")}/propostas/${p.id}`;
 
     const isFirstView = prevCount === 0;
-    const lastRev = p.lastRevisitNotifiedAt;
-    const cooldownMs = 5 * 60 * 1000; // 5 minutos de cooldown para revisitas
-    const canNotifyRevisit =
-      !isFirstView && (!lastRev || now.getTime() - lastRev.getTime() >= cooldownMs);
+    const viewCount = p.clientViewCount;
 
-    if (isFirstView || canNotifyRevisit) {
+    // Limite de notificações de visualização:
+    // Apenas 2 vezes (1ª e 2ª visualização); após isso, somente se abrir uma 5ª vez.
+    const shouldNotify = viewCount === 1 || viewCount === 2 || viewCount === 5;
+
+    if (shouldNotify) {
       const notifType: NotificationType = isFirstView ? "PROPOSAL_VIEWED" : "PROPOSAL_REVISITED";
       const notifTitle = isFirstView
         ? `👀 ${lead?.name || "Cliente"} está visualizando a proposta!`
