@@ -25,6 +25,16 @@ function parseAmount(
 const BASE_LINE_LABEL = "Sistema solar";
 const BASE_LINE_DESCRIPTION = "Solução fotovoltaica completa";
 
+export const DEFAULT_DEMO_KIT_ITEMS = [
+  "16X PAINEL SOLAR LONGI LR8-66HGD-620M HPDC 620W 132 CEL N-TYPE BIF 23% EFIC. (LONGi Solar)",
+  "1X INVERSOR 220V SAJ 3MPPT MONOFASICO 10KW R6-10K-S3-18 WIFI NEW AFCI - (SAJ)",
+  "4X ESTRUTURA P/ 4 MOD. ONDULADA/FIBROMADEIRA (S/ PERFIL) (Genérico)",
+  "2X CABO SOLAR 6MM VERMELHO - BOBINA 25MTS (Genérico)",
+  "2X CABO SOLAR 6MM PRETO - BOBINA 25MTS (Genérico)",
+  "8X CONECTOR MC4 (Genérico)",
+  "16X PERFIL DE ALUMÍNIO 2,40M (Genérico)",
+].join("\n");
+
 /** Parseia kit_itens_lista (texto multiline) em array de objetos para exibição */
 function parseKitItems(
   raw: string | number | undefined | null
@@ -141,7 +151,13 @@ export function PricingSectionPreview({
       }
     : undefined;
 
-  const kitItems = parseKitItems(vars.kit_itens_lista as string | undefined);
+  const rawKitList =
+    typeof vars.kit_itens_lista === "string" && vars.kit_itens_lista.trim()
+      ? vars.kit_itens_lista
+      : vars.kit_itens_lista === undefined
+        ? DEFAULT_DEMO_KIT_ITEMS
+        : "";
+  const kitItems = parseKitItems(rawKitList);
   const hasKitItems = kitItems.length > 0;
 
   return (
