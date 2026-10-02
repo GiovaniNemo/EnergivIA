@@ -625,7 +625,7 @@ export function PreviewDocument({
     <div data-preview-scroll="true" data-preview-viewport={viewport} className={scrollShellClass}>
       <article
         data-preview-capture-target="true"
-        className={articleFrameClass}
+        className={`${articleFrameClass} proposal-content-document`}
         style={{
           ...articleWidthStyle,
           fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
@@ -655,7 +655,7 @@ export function PreviewDocument({
               : undefined
           }
           onMouseLeave={interactive ? clearHoverHighlight : undefined}
-          className={`preview-editable-hint relative overflow-hidden border border-transparent transition ${
+          className={`preview-editable-hint proposal-cover-page relative overflow-hidden border border-transparent transition ${
             coverSection?.id && selectedSectionId === coverSection.id
               ? "border-dashed"
               : interactive
@@ -722,7 +722,7 @@ export function PreviewDocument({
           {visibleSections.map((section) => (
             <div
               key={section.id}
-              className={`relative border border-transparent transition ${
+              className={`proposal-content-section relative border border-transparent transition ${
                 selectedSectionId === section.id
                   ? "border-dashed"
                   : interactive
@@ -746,9 +746,11 @@ export function PreviewDocument({
                   : undefined
               }
               onMouseLeave={interactive ? clearHoverHighlight : undefined}
-              style={
-                selectedSectionId === section.id ? { borderColor: activeBorderColor } : undefined
-              }
+              style={{
+                pageBreakInside: "avoid",
+                breakInside: "avoid",
+                ...(selectedSectionId === section.id ? { borderColor: activeBorderColor } : {}),
+              }}
             >
               {selectedSectionId === section.id ? (
                 <span
