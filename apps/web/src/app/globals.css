@@ -654,4 +654,29 @@ html.hide-scrollbar,
     width: 0 !important;
     pointer-events: none !important;
   }
+
+  .proposal-cover-page {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    min-height: 100vh !important;
+  }
+
+  .proposal-content-document {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .proposal-content-section {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
 }

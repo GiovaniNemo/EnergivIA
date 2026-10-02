@@ -195,7 +195,7 @@ export function TestimonialsSectionPreview({
   return (
     <div className="space-y-4">
       {intro}
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
         {items.map((item, index) => {
           const name = tpl(item.name ?? "Cliente", vars);
           const subtitle = tpl(item.subtitle ?? "", vars);

@@ -529,19 +529,17 @@ export function PreviewDocument({
     return (
       <div
         data-preview-scroll="true"
-        className="h-full overflow-y-auto overflow-x-hidden rounded-2xl bg-[#060b16]"
+        className="h-full overflow-y-auto overflow-x-hidden bg-transparent"
       >
-        <div className="space-y-4">
+        <div>
           <article
             data-preview-capture-target="true"
-            className="proposal-cover-page mx-auto aspect-[210/297] w-full max-w-[794px] overflow-hidden rounded-2xl border border-zinc-700/80 flex flex-col"
+            className="proposal-cover-page mx-auto aspect-[210/297] w-full max-w-[794px] overflow-hidden flex flex-col"
             style={{
               fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
               fontSize: `${styles.typography.bodySize}px`,
               backgroundColor: coverStyle.backgroundColor || styles.branding.backgroundColor,
               color: styles.branding.textColor,
-              borderRadius: `${styles.layout.borderRadius}px`,
-              boxShadow: `0 ${styles.layout.shadowIntensity * 8}px ${styles.layout.shadowIntensity * 26}px rgba(0,0,0,0.28)`,
               pageBreakAfter: "always",
               breakAfter: "page",
               pageBreakInside: "avoid",
@@ -562,41 +560,43 @@ export function PreviewDocument({
             />
           </article>
 
-          {visibleSections.map((section) => (
-            <article
-              key={section.id}
-              className={`proposal-content-section mx-auto w-full max-w-[794px] overflow-hidden rounded-2xl border border-zinc-700/80 ${
-                sectionPaddingClass[styles.layout.spacing]
-              }`}
-              style={{
-                fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
-                fontSize: `${styles.typography.bodySize}px`,
-                backgroundColor: styles.branding.backgroundColor,
-                color: styles.branding.textColor,
-                borderRadius: `${styles.layout.borderRadius}px`,
-                boxShadow: `0 ${styles.layout.shadowIntensity * 8}px ${styles.layout.shadowIntensity * 26}px rgba(0,0,0,0.28)`,
-                pageBreakInside: "avoid",
-                breakInside: "avoid",
-              }}
-            >
-              <SectionShell
-                section={section}
-                subtitleSize={styles.typography.subtitleSize}
-                vars={previewVariables}
-                defaults={{
-                  textColor: styles.branding.textColor,
-                  backgroundColor: styles.branding.backgroundColor,
-                  primaryColor: styles.branding.primaryColor,
-                  secondaryColor: styles.branding.secondaryColor,
+          <article
+            className="proposal-content-document mx-auto w-full max-w-[794px] overflow-hidden"
+            style={{
+              fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
+              fontSize: `${styles.typography.bodySize}px`,
+              backgroundColor: styles.branding.backgroundColor,
+              color: styles.branding.textColor,
+            }}
+          >
+            {visibleSections.map((section) => (
+              <div
+                key={section.id}
+                className={`proposal-content-section ${sectionPaddingClass[styles.layout.spacing]}`}
+                style={{
+                  pageBreakInside: "avoid",
+                  breakInside: "avoid",
                 }}
               >
-                {renderSectionContent(section, previewVariables, {
-                  ...sectionContentOptions,
-                  mode,
-                })}
-              </SectionShell>
-            </article>
-          ))}
+                <SectionShell
+                  section={section}
+                  subtitleSize={styles.typography.subtitleSize}
+                  vars={previewVariables}
+                  defaults={{
+                    textColor: styles.branding.textColor,
+                    backgroundColor: styles.branding.backgroundColor,
+                    primaryColor: styles.branding.primaryColor,
+                    secondaryColor: styles.branding.secondaryColor,
+                  }}
+                >
+                  {renderSectionContent(section, previewVariables, {
+                    ...sectionContentOptions,
+                    mode,
+                  })}
+                </SectionShell>
+              </div>
+            ))}
+          </article>
         </div>
       </div>
     );

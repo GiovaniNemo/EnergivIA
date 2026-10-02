@@ -160,7 +160,9 @@ export function SectionShell({
     toOptionalString(fields["backgroundColor"]) ?? toOptionalString(defaults?.backgroundColor);
   const overlayColor = toOptionalString(fields["overlayColor"]);
   const overlayOpacity = overlayColor ? toOverlayOpacity(fields["overlayOpacity"]) : 0;
-  const sectionMinHeightPx = toSectionMinHeightPx(fields["coverHeight"]);
+  const sectionMinHeightPx = backgroundImage
+    ? toSectionMinHeightPx(fields["coverHeight"])
+    : undefined;
   const showSectionDivider = Boolean(fields["showSectionDivider"]);
   const themeBackgroundRgb = toRgbTriplet(toOptionalString(defaults?.backgroundColor));
   const contentStyle: CSSProperties & Record<string, string> = textColor
@@ -174,7 +176,7 @@ export function SectionShell({
     <section
       className="relative rounded-xl"
       style={{
-        minHeight: `${sectionMinHeightPx}px`,
+        minHeight: sectionMinHeightPx ? `${sectionMinHeightPx}px` : undefined,
         backgroundColor,
         ...(backgroundImage
           ? {
