@@ -152,6 +152,10 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
   const [laborOverrideDraft, setLaborOverrideDraft] = useState<number | null>(null);
   const [laborOverrideSaving, setLaborOverrideSaving] = useState(false);
 
+  const [isEditingKwpRate, setIsEditingKwpRate] = useState(false);
+  const [kwpRateDraft, setKwpRateDraft] = useState<number | null>(null);
+  const [kwpRateSaving, setKwpRateSaving] = useState(false);
+
   const integrator = useMemo(
     () => (proposal ? extractIntegrator(proposal.renderedData) : null),
     [proposal]
@@ -528,6 +532,33 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
     }
   }
 
+  async function saveKwpRateOverride(explicitRate?: number): Promise<void> {
+    const targetRate = explicitRate ?? kwpRateDraft;
+    if (!currentOrganizationId || !proposal || targetRate == null || systemKw <= 0) return;
+    if (targetRate < 500) {
+      alert("O preço por kWp deve ser de no mínimo R$ 500.");
+      return;
+    }
+    const currentDiscount = proposal.discountBrl ?? 0;
+    const targetQuotedSale = Math.round(targetRate * systemKw + currentDiscount);
+    const targetMargin = Math.max(0, targetQuotedSale - (integrator?.equipmentSubtotalBrl ?? 0));
+    setKwpRateSaving(true);
+    try {
+      const { publicToken } = await updateProposalMarginOverride(
+        currentOrganizationId,
+        proposal.id,
+        targetMargin
+      );
+      setRegeneratedPublicUrl(`${window.location.origin}/proposta/${publicToken}`);
+      setIsEditingKwpRate(false);
+      await reload();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Não foi possível salvar o preço por kWp.");
+    } finally {
+      setKwpRateSaving(false);
+    }
+  }
+
   async function saveTemplateBinding(targetTemplateId?: string): Promise<void> {
     if (!currentOrganizationId || !proposal) return;
     const templateIdToSave = targetTemplateId !== undefined ? targetTemplateId : selectedTemplateId;
@@ -680,6 +711,16 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
                   ? `${inverterItem.brandName || ""} ${inverterItem.productName}`.trim()
                   : null
               }
+              isEditingKwpRate={isEditingKwpRate}
+              onEditKwpRateClick={() => {
+                setKwpRateDraft(ratePerKwp);
+                setIsEditingKwpRate(true);
+              }}
+              kwpRateDraft={kwpRateDraft}
+              onKwpRateDraftChange={setKwpRateDraft}
+              kwpRateSaving={kwpRateSaving}
+              onSaveKwpRate={() => void saveKwpRateOverride()}
+              onCancelKwpRateEdit={() => setIsEditingKwpRate(false)}
             />
           ) : (
             <ProposalBusinessHeroCard
@@ -760,6 +801,10 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
           organizationId={currentOrganizationId}
           proposalId={proposal.id}
           onSaved={handleEquipmentSaved}
+          ratePerKwp={ratePerKwp}
+          systemKw={systemKw}
+          onSaveKwpRate={saveKwpRateOverride}
+          savingKwpRate={kwpRateSaving}
         />
       ) : null}
 

@@ -921,6 +921,13 @@ export type ProposalKwpRateBusinessCardProps = {
   monthlyGenerationKwh?: number | null;
   moduleQuantity?: number | null;
   inverterInfo?: string | null;
+  isEditingKwpRate?: boolean;
+  onEditKwpRateClick?: () => void;
+  kwpRateDraft?: number | null;
+  onKwpRateDraftChange?: (val: number | null) => void;
+  kwpRateSaving?: boolean;
+  onSaveKwpRate?: () => void;
+  onCancelKwpRateEdit?: () => void;
 };
 
 export function ProposalKwpRateBusinessCard({
@@ -930,6 +937,13 @@ export function ProposalKwpRateBusinessCard({
   monthlyGenerationKwh,
   moduleQuantity,
   inverterInfo,
+  isEditingKwpRate,
+  onEditKwpRateClick,
+  kwpRateDraft,
+  onKwpRateDraftChange,
+  kwpRateSaving,
+  onSaveKwpRate,
+  onCancelKwpRateEdit,
 }: ProposalKwpRateBusinessCardProps): JSX.Element {
   const [hideSensitiveValues, setHideSensitiveValues] = useState(false);
 
@@ -965,10 +979,88 @@ export function ProposalKwpRateBusinessCard({
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4 p-5 pt-0 pl-5">
         <div className="border-b border-[var(--color-border)]/70 pb-3">
-          <p className="text-xs font-medium text-[var(--color-muted-foreground)]">Preço por kWp</p>
-          <p className="mt-0.5 text-3xl font-bold tabular-nums sm:text-4xl text-emerald-600 dark:text-emerald-400">
-            {hideSensitiveValues ? "••••" : `${formatBRL(ratePerKwp)}/kWp`}
-          </p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
+              Preço por kWp
+            </p>
+            {!hideSensitiveValues && !isEditingKwpRate && onEditKwpRateClick ? (
+              <button
+                type="button"
+                onClick={onEditKwpRateClick}
+                className="rounded-md bg-[var(--color-accent)] p-1 text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+                title="Editar Preço por kWp"
+              >
+                <svg
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                  />
+                </svg>
+              </button>
+            ) : null}
+          </div>
+
+          {isEditingKwpRate ? (
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="relative w-36">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--color-muted-foreground)]">
+                    R$
+                  </span>
+                  <input
+                    id="kwp-rate-override-input"
+                    type="number"
+                    step="50"
+                    min="500"
+                    value={kwpRateDraft ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value === "" ? null : parseFloat(e.target.value);
+                      onKwpRateDraftChange?.(val);
+                    }}
+                    className="h-8 w-full rounded-md border border-emerald-500/40 bg-[var(--color-background)] pl-8 pr-2.5 py-1 text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="2800"
+                    autoFocus
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  className="h-8 bg-emerald-600 text-xs font-semibold text-white hover:bg-emerald-700"
+                  disabled={kwpRateSaving || kwpRateDraft == null || kwpRateDraft <= 0}
+                  onClick={onSaveKwpRate}
+                >
+                  {kwpRateSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Salvar"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  disabled={kwpRateSaving}
+                  onClick={onCancelKwpRateEdit}
+                >
+                  Cancelar
+                </Button>
+              </div>
+              {kwpRateDraft && systemKw > 0 ? (
+                <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                  Novo valor fechado ao cliente:{" "}
+                  <span className="font-semibold text-[var(--color-foreground)]">
+                    {formatBRL(Math.round(kwpRateDraft * systemKw))}
+                  </span>
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="mt-0.5 text-3xl font-bold tabular-nums sm:text-4xl text-emerald-600 dark:text-emerald-400">
+              {hideSensitiveValues ? "••••" : `${formatBRL(ratePerKwp)}/kWp`}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

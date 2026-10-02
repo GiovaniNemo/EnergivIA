@@ -41,7 +41,6 @@ type LineRole = "module" | "inverter" | "locked_bos" | "bos";
 function roleOf(categoryName: string | null): LineRole {
   if (categoryName === "module") return "module";
   if (categoryName === "inverter" || categoryName === "microinverter") return "inverter";
-  if (categoryName === "structure_kit" || categoryName === "profile") return "locked_bos";
   return "bos";
 }
 
@@ -75,12 +74,20 @@ interface ProposalEquipmentEditorCardProps {
   organizationId: string;
   proposalId: string;
   onSaved: (publicToken: string) => void;
+  ratePerKwp?: number;
+  systemKw?: number;
+  onSaveKwpRate?: (newRate: number) => Promise<void>;
+  savingKwpRate?: boolean;
 }
 
 export function ProposalEquipmentEditorCard({
   organizationId,
   proposalId,
   onSaved,
+  ratePerKwp,
+  systemKw: _systemKw,
+  onSaveKwpRate,
+  savingKwpRate,
 }: ProposalEquipmentEditorCardProps): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -101,6 +108,14 @@ export function ProposalEquipmentEditorCard({
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  const [kwpRateDraft, setKwpRateDraft] = useState<number | string>(ratePerKwp ?? 2800);
+
+  useEffect(() => {
+    if (ratePerKwp != null) {
+      setKwpRateDraft(ratePerKwp);
+    }
+  }, [ratePerKwp]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -218,19 +233,21 @@ export function ProposalEquipmentEditorCard({
       }
       if (role === "inverter") return line.quantity;
 
-      if (role === "locked_bos") {
+      const isCalculatedBos =
+        line.categoryName === "structure_kit" || line.categoryName === "profile";
+      let baseQty = line.quantity;
+      if (isCalculatedBos) {
         const moduleLine = lines.find((l) => roleOf(l.categoryName) === "module");
         if (moduleLine && moduleLine.quantity > 0) {
           const targetModQty = moduleQtyOverrides[moduleLine.productId] ?? moduleLine.quantity;
-          return calculateLockedBosQty(line, targetModQty, moduleLine.quantity);
+          baseQty = calculateLockedBosQty(line, targetModQty, moduleLine.quantity);
         }
-        return line.quantity;
       }
 
       const raw = qtyDrafts[line.productId];
-      if (raw == null) return line.quantity;
+      if (raw == null) return baseQty;
       const parsed = parseInt(raw, 10);
-      return Number.isFinite(parsed) && parsed >= 1 ? parsed : line.quantity;
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : baseQty;
     },
     [moduleQtyOverrides, qtyDrafts, lines, calculateLockedBosQty]
   );
@@ -584,29 +601,80 @@ export function ProposalEquipmentEditorCard({
               Ajuste itens ou quantidades do kit da proposta.
             </p>
 
-            {/* Modalidade de Cotação: Preço por kWp (Compacto) */}
-            <div className="rounded-xl border border-emerald-500/35 bg-emerald-500/[0.04] p-3 select-none">
-              <div className="flex items-center justify-between gap-2">
+            {/* Modalidade de Cotação: Preço por kWp com ajuste editável */}
+            <div className="rounded-xl border border-emerald-500/35 bg-emerald-500/[0.04] p-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
-                    <Calculator className="h-3.5 w-3.5" />
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <Calculator className="h-4 w-4" />
                   </span>
-                  <span className="text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
-                    Preço por kWp
-                  </span>
-                  <span className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700 dark:text-emerald-300">
-                    Perfil do Integrador
-                  </span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
+                        Preço por kWp
+                      </span>
+                      <span className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700 dark:text-emerald-300">
+                        Perfil do Integrador
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[var(--color-muted-foreground)] mt-0.5">
+                      Dimensionamento de equipamentos reais com orçamento comercial por R$/kWp da
+                      sua região.
+                    </p>
+                  </div>
                 </div>
-                <span className="h-4.5 w-4.5 shrink-0 rounded-full border border-emerald-500 bg-emerald-500 text-white flex items-center justify-center">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                </span>
-              </div>
 
-              <p className="mt-2 text-xs text-[var(--color-muted-foreground)] leading-relaxed">
-                Dimensionamento de equipamentos reais com orçamento comercial por R$/kWp da sua
-                região, incluindo projeto completo e instalação.
-              </p>
+                {onSaveKwpRate ? (
+                  <div className="flex items-center gap-2 shrink-0 self-start sm:self-center bg-[var(--color-background)] border border-emerald-500/30 rounded-xl px-3 py-1.5 shadow-xs">
+                    <label
+                      htmlFor="kwp-rate-card-input"
+                      className="text-xs font-semibold text-[var(--color-foreground)] whitespace-nowrap flex items-center gap-1.5"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-emerald-500" />
+                      Preço R$/kWp:
+                    </label>
+                    <div className="relative w-28 sm:w-32">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--color-muted-foreground)] font-bold">
+                        R$
+                      </span>
+                      <Input
+                        id="kwp-rate-card-input"
+                        type="number"
+                        min={500}
+                        step={50}
+                        value={kwpRateDraft}
+                        onChange={(e) => setKwpRateDraft(e.target.value)}
+                        className="pl-8 h-8 font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 bg-[var(--color-card)]"
+                        placeholder="2800"
+                      />
+                    </div>
+                    {Number(kwpRateDraft) !== ratePerKwp && Number(kwpRateDraft) > 0 ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={savingKwpRate}
+                        className="h-8 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+                        onClick={async () => {
+                          const val = Number(kwpRateDraft);
+                          if (val > 0) {
+                            await onSaveKwpRate(val);
+                          }
+                        }}
+                      >
+                        {savingKwpRate ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          "Salvar"
+                        )}
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <span className="h-5 w-5 shrink-0 rounded-full border border-emerald-500 bg-emerald-500 text-white flex items-center justify-center self-start sm:self-center">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -820,9 +888,9 @@ export function ProposalEquipmentEditorCard({
                                   +
                                 </button>
                               </span>
-                            ) : role === "inverter" || role === "locked_bos" ? (
+                            ) : role === "inverter" ? (
                               <span
-                                title="Quantidade definida pelo dimensionamento do kit"
+                                title="Quantidade definida pelo dimensionamento do kit (troque o modelo no card acima se necessário)"
                                 className="cursor-help underline decoration-dotted underline-offset-2"
                               >
                                 {qty}
