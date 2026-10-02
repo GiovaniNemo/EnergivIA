@@ -1931,25 +1931,25 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
   }
 
   private readonly ROOF_OPTIONS_TEXT =
-    `Qual a estrutura do telhado?\n` +
-    `1️⃣ Cerâmica (Colonial)\n` +
-    `2️⃣ Fibrocimento\n` +
-    `3️⃣ Metálico\n` +
-    `4️⃣ Solo\n` +
-    `5️⃣ Laje\n` +
-    `6️⃣ Fibrometal\n` +
-    `7️⃣ Sem estrutura\n` +
-    `0️⃣ Voltar / Corrigir padrão elétrico\n\n` +
-    `(Responda com o número da opção)`;
+    `*_Qual a estrutura do telhado onde os módulos serão instalados?_*\n\n` +
+    `> 1️⃣ *Cerâmica (Colonial)* (Telhas cerâmicas convencionais)\n` +
+    `> 2️⃣ *Fibrocimento* (Telhas de fibrocimento em madeira)\n` +
+    `> 3️⃣ *Metálico* (Telhas trapezoidais ou zipadas)\n` +
+    `> 4️⃣ *Solo* (Estrutura para usina de solo)\n` +
+    `> 5️⃣ *Laje* (Laje plana de concreto com triângulos)\n` +
+    `> 6️⃣ *Fibrometal* (Fibrocimento em vigas metálicas)\n` +
+    `> 7️⃣ *Sem estrutura* (Apenas equipamentos (sem fixação))\n` +
+    `> 0️⃣ *Voltar / Corrigir padrão elétrico*\n\n` +
+    `_(Responda com o número da opção)_`;
 
   private readonly GRID_OPTIONS_TEXT =
-    `Qual o padrão de entrada da instalação?\n` +
-    `1️⃣ Monofásico 220V\n` +
-    `2️⃣ Bifásico 127V/220V\n` +
-    `3️⃣ Trifásico 220V\n` +
-    `4️⃣ Trifásico 380V\n` +
-    `0️⃣ Voltar / Corrigir localização ou consumo\n\n` +
-    `(Responda com o número da opção)`;
+    `*_Qual o padrão de entrada da instalação?_* ⚡\n\n` +
+    `> 1️⃣ *Monofásico 220V*\n` +
+    `> 2️⃣ *Bifásico 127V/220V*\n` +
+    `> 3️⃣ *Trifásico 220V*\n` +
+    `> 4️⃣ *Trifásico 380V*\n` +
+    `> 0️⃣ *Voltar / Corrigir localização ou consumo*\n\n` +
+    `_(Responda com o número da opção)_`;
 
   private formatQuotesListText(
     quotes: any[],
@@ -1964,25 +1964,38 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
   ): string {
     const localidade =
       sessionCtx.cidade && sessionCtx.estado
-        ? ` em *${sessionCtx.cidade}/${sessionCtx.estado}*`
+        ? ` em \`${sessionCtx.cidade}/${sessionCtx.estado}\``
         : sessionCtx.cidade
-          ? ` em *${sessionCtx.cidade}*`
+          ? ` em \`${sessionCtx.cidade}\``
           : "";
 
     const infoCabecalho = sessionCtx.targetKWp
-      ? `para a potência de *${sessionCtx.targetKWp} kWp*${localidade}`
+      ? `para a potência de \`${sessionCtx.targetKWp} kWp\`${localidade}`
       : sessionCtx.targetModules
-        ? `para *${sessionCtx.targetModules} módulos*${localidade}`
-        : `para o consumo de *${sessionCtx.consumptionKwh || 300} kWh/mês*${localidade}`;
+        ? `para \`${sessionCtx.targetModules} módulos\`${localidade}`
+        : `para o consumo de \`${sessionCtx.consumptionKwh || 300} kWh/mês\`${localidade}`;
 
     const taxaInfo = sessionCtx.customRatePerKwp
-      ? `\n💰 *Taxa aplicada:* R$ ${sessionCtx.customRatePerKwp.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kWp\n`
+      ? `> Taxa aplicada: \`R$ ${sessionCtx.customRatePerKwp.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kWp\`\n`
       : "";
 
-    let quoteText = `Excelente! Seguem as melhores opções de kits dimensionados ${infoCabecalho}:${taxaInfo}\n`;
+    let quoteText = `Excelente! Seguem as melhores opções de kits dimensionados ${infoCabecalho}:\n`;
+    if (taxaInfo) {
+      quoteText += `\n${taxaInfo}\n`;
+    } else {
+      quoteText += `\n`;
+    }
 
     quotes.forEach((q, index) => {
-      quoteText += `${this.numToEmoji(index + 1)} *${q.distributorName}* - R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+      const isTop = index === 0;
+      const tag = isTop ? " - MAIS RECOMENDADO" : "";
+      const trophy = isTop ? " 🏆" : "";
+      const priceFormatted = `R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      quoteText += `*_Opção ${index + 1}${tag}:_* \`${priceFormatted}\` 💵${trophy}\n`;
+      quoteText += `> Distribuidor: *${q.distributorName}*\n`;
+      quoteText += `> Potência: \`${q.kwp} kWp\` | Geração estimada: \`${q.estimatedGeneration} kWh/mês\`\n`;
+
       const items: string[] =
         q.items && q.items.length > 0
           ? q.items
@@ -1992,15 +2005,18 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
               )
             : [];
       if (items.length > 0) {
-        quoteText += `Itens do Kit:\n`;
         items.forEach((item: string) => {
-          quoteText += `${item}\n`;
+          quoteText += `> ${item}\n`;
         });
       }
-      quoteText += `Potência: ${q.kwp} kWp | Geração Estimada: ${q.estimatedGeneration} kWh/mês\n\n`;
+      quoteText += `\n`;
     });
 
-    quoteText += `Qual opção você prefere para o seu cliente?\n(Responda com o número da opção ou envie 0️⃣ para voltar/alterar estrutura)`;
+    quoteText += `> *_Validade das cotações: 3 dias úteis_*\n\n`;
+    quoteText += `*_Dividimos o valor em até 12x no cartão ou até 120x no financiamento solar_* 💳\n\n`;
+    quoteText += `Qual opção você prefere para o seu cliente?\n`;
+    quoteText += `_(Responda com o número da opção ou envie 0️⃣ para voltar/alterar estrutura)_\n\n`;
+    quoteText += `Equipe *_EnergivIA Solar._*`;
     return quoteText;
   }
 
@@ -2043,16 +2059,16 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
   private buildGreetingMenu(contactName?: string): string {
     const greeting = this.getGreetingText(contactName);
     return (
-      `${greeting}\n` +
-      `Sou seu assistente de vendas e dimensionamento da *EnergivIA*.\n\n` +
-      `Como posso ajudar você a gerar orçamentos e propostas para seus clientes hoje?\n\n` +
-      `*Escolha uma opção digitando o número:*\n` +
-      `1️⃣ Enviar fatura de energia (PDF ou foto)\n` +
-      `2️⃣ Simular por consumo mensal (ex: 450 kWh)\n` +
-      `3️⃣ Simular por potência de pico (ex: 5 kWp)\n` +
-      `4️⃣ Simular por quantidade de placas (ex: 10 módulos)\n` +
-      `5️⃣ Dúvidas sobre equipamentos e preços de catálogo\n\n` +
-      `_(Ou me envie diretamente a conta de luz em PDF/foto ou sua dúvida)_`
+      `${greeting}\n\n` +
+      `Sou seu assistente de vendas e dimensionamento da *_EnergivIA Solar._*\n\n` +
+      `*_Como posso ajudar você a gerar orçamentos hoje?_*\n\n` +
+      `> 1️⃣ *Enviar fatura de energia* (PDF ou foto)\n` +
+      `> 2️⃣ *Simular por consumo mensal* (ex: \`450 kWh\`)\n` +
+      `> 3️⃣ *Simular por potência de pico* (ex: \`5 kWp\`)\n` +
+      `> 4️⃣ *Simular por quantidade de placas* (ex: \`10 módulos\`)\n` +
+      `> 5️⃣ *Dúvidas sobre equipamentos e preços de catálogo*\n\n` +
+      `_(Responda com o número da opção ou envie a conta de luz diretamente)_\n\n` +
+      `Equipe *_EnergivIA Solar._*`
     );
   }
 
@@ -2595,11 +2611,12 @@ ${catalogContext}`;
           ? `baseado no histórico de ${meses} meses da fatura`
           : `baseado no consumo do mês atual da fatura`;
 
-      const conexaoInfo = tipoConexao ? `\nPadrão de rede identificado: *${tipoConexao}*` : "";
+      const conexaoInfo = tipoConexao ? `\n> Padrão de rede identificado: *${tipoConexao}*` : "";
 
       return (
-        `Legal, dados extraídos com precisão!\n` +
-        `Consumo médio de *${kwh} kWh/mês* em *${cidade}* (${baseTexto}).${conexaoInfo}\n\n` +
+        `*_Fatura Analisada com Precisão!_* 📄⚡\n\n` +
+        `Consumo médio de \`${kwh.toLocaleString("pt-BR")} kWh/mês\` em \`${cidade}\`.\n\n` +
+        `> Histórico: *${baseTexto}*${conexaoInfo}\n\n` +
         this.ROOF_OPTIONS_TEXT
       );
     }
@@ -2662,12 +2679,12 @@ ${catalogContext}`;
         if (sessionCtx.consumptionKwh) {
           return (
             `Certo! Vamos alterar a localização ou o consumo. 📍\n\n` +
-            `Para qual cidade e estado será a instalação? (Ex: Cuiabá/MT, Maringá/PR, São Paulo/SP)`
+            `Para qual cidade e estado será a instalação? (Ex: \`Cuiabá/MT\`, \`Maringá/PR\`, \`São Paulo/SP\`)`
           );
         }
         return (
           `Certo! Vamos alterar o dimensionamento. ☀️\n\n` +
-          `Envie a potência desejada (ex: *5 kWp*), a quantidade de placas (ex: *10 placas*) ou o consumo médio (ex: *450 kWh*).`
+          `Envie a potência desejada (ex: \`5 kWp\`), a quantidade de placas (ex: \`10 placas\`) ou o consumo médio (ex: \`450 kWh\`).`
         );
       }
 
@@ -2700,20 +2717,20 @@ ${catalogContext}`;
         const sizing = this.getSystemSizingSummary(sessionCtx);
         const totalEstimado = Math.round(sizing.realSystemKwp * orgDefaultRate);
         const consumoRef = sessionCtx.consumptionKwh
-          ? ` para o consumo de *${sessionCtx.consumptionKwh} kWh/mês*`
+          ? ` para \`${sessionCtx.consumptionKwh} kWh/mês\``
           : "";
 
         return (
-          `Estrutura registrada: *${sessionCtx.roofType || "Cerâmica (Colonial)"}*. 🏠\n\n` +
-          `☀️ *Dimensionamento calculado${consumoRef}:*\n` +
-          `• *Potência do sistema:* ${sizing.realSystemKwp} kWp (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
-          `• *Geração estimada:* ${sizing.estimatedGeneration} kWh/mês\n` +
-          `• *Sua taxa padrão:* R$ ${formattedRate}/kWp (Valor aprox: *R$ ${totalEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}*)\n\n` +
-          `Como você deseja prosseguir para esta cotação?\n` +
-          `1️⃣ Seguir com a taxa padrão (*R$ ${formattedRate}/kWp*)\n` +
-          `2️⃣ Informar outro valor por kWp (ou digite o valor diretamente, ex: *2500*, *R$ 3.200*)\n` +
-          `0️⃣ Voltar / Alterar estrutura\n\n` +
-          `(Responda 1 para seguir, 2 para editar ou envie o valor desejado)`
+          `*_Estrutura Selecionada:_* \`${sessionCtx.roofType || "Cerâmica (Colonial)"}\` 🏠\n\n` +
+          `*_Dimensionamento Solar Calculado${consumoRef}:_* ☀️\n` +
+          `> ⚡ Potência: \`${sizing.realSystemKwp} kWp\` (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
+          `> 📈 Geração estimada: \`${sizing.estimatedGeneration} kWh/mês\`\n` +
+          `> 💵 Sua taxa padrão: \`R$ ${formattedRate}/kWp\` (Total aprox: \`R$ ${totalEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\`)\n\n` +
+          `*_Como você deseja prosseguir para esta cotação?_*\n\n` +
+          `> 1️⃣ *Seguir com a taxa padrão* (\`R$ ${formattedRate}/kWp\`)\n` +
+          `> 2️⃣ *Informar outro valor por kWp* (ou digite o valor, ex: \`2500\`, \`R$ 3.200\`)\n` +
+          `> 0️⃣ *Voltar / Alterar estrutura*\n\n` +
+          `_(Responda 1 para seguir, 2 para editar ou envie o valor desejado)_`
         );
       }
 
@@ -2728,20 +2745,20 @@ ${catalogContext}`;
         const sizing = this.getSystemSizingSummary(sessionCtx);
         const totalEstimado = Math.round(sizing.realSystemKwp * orgDefaultRate);
         const consumoRef = sessionCtx.consumptionKwh
-          ? ` para o consumo de *${sessionCtx.consumptionKwh} kWh/mês*`
+          ? ` para \`${sessionCtx.consumptionKwh} kWh/mês\``
           : "";
 
         return (
-          `Estrutura registrada: *${sessionCtx.roofType || "Cerâmica (Colonial)"}*. 🏠\n\n` +
-          `☀️ *Dimensionamento calculado${consumoRef}:*\n` +
-          `• *Potência do sistema:* ${sizing.realSystemKwp} kWp (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
-          `• *Geração estimada:* ${sizing.estimatedGeneration} kWh/mês\n` +
-          `• *Sua taxa padrão:* R$ ${formattedRate}/kWp (Valor aprox: *R$ ${totalEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}*)\n\n` +
-          `Como você deseja prosseguir para esta cotação?\n` +
-          `1️⃣ Seguir com a taxa padrão (*R$ ${formattedRate}/kWp*)\n` +
-          `2️⃣ Informar outro valor por kWp (ou digite o valor diretamente, ex: *2500*, *R$ 3.200*)\n` +
-          `0️⃣ Voltar / Alterar estrutura\n\n` +
-          `(Responda 1 para seguir, 2 para editar ou envie o valor desejado)`
+          `*_Estrutura Selecionada:_* \`${sessionCtx.roofType || "Cerâmica (Colonial)"}\` 🏠\n\n` +
+          `*_Dimensionamento Solar Calculado${consumoRef}:_* ☀️\n` +
+          `> ⚡ Potência: \`${sizing.realSystemKwp} kWp\` (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
+          `> 📈 Geração estimada: \`${sizing.estimatedGeneration} kWh/mês\`\n` +
+          `> 💵 Sua taxa padrão: \`R$ ${formattedRate}/kWp\` (Total aprox: \`R$ ${totalEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\`)\n\n` +
+          `*_Como você deseja prosseguir para esta cotação?_*\n\n` +
+          `> 1️⃣ *Seguir com a taxa padrão* (\`R$ ${formattedRate}/kWp\`)\n` +
+          `> 2️⃣ *Informar outro valor por kWp* (ou digite o valor, ex: \`2500\`, \`R$ 3.200\`)\n` +
+          `> 0️⃣ *Voltar / Alterar estrutura*\n\n` +
+          `_(Responda 1 para seguir, 2 para editar ou envie o valor desejado)_`
         );
       }
 
@@ -2784,12 +2801,13 @@ ${catalogContext}`;
       }
 
       return (
-        `O que você gostaria de alterar ou corrigir? 📝\n\n` +
-        `1️⃣ Cidade e Estado (ex: digite *Cuiabá/MT*)\n` +
-        `2️⃣ Consumo ou Potência (ex: digite *500 kWh* ou *6 kWp*)\n` +
-        `3️⃣ Padrão de Entrada (ex: digite *mono*, *bi* ou *tri 380V*)\n` +
-        `4️⃣ Estrutura do Telhado (ex: digite *solo*, *laje* ou *fibrocimento*)\n` +
-        `5️⃣ Reiniciar do início (digite *novo*)`
+        `*_O que você gostaria de alterar ou corrigir?_* 📝\n\n` +
+        `> 1️⃣ *Cidade e Estado* (ex: digite \`Cuiabá/MT\`)\n` +
+        `> 2️⃣ *Consumo ou Potência* (ex: digite \`500 kWh\` ou \`6 kWp\`)\n` +
+        `> 3️⃣ *Padrão de Entrada* (ex: digite \`mono\`, \`bi\` ou \`tri 380V\`)\n` +
+        `> 4️⃣ *Estrutura do Telhado* (ex: digite \`solo\`, \`laje\` ou \`fibrocimento\`)\n` +
+        `> 5️⃣ *Reiniciar do início* (digite \`novo\`)\n\n` +
+        `_(Responda com o número da opção desejada ou o comando)_`
       );
     }
 
@@ -2799,7 +2817,8 @@ ${catalogContext}`;
       if (choiceMatch) {
         return (
           `Ótima escolha! Kit selecionado com sucesso. ☀️\n\n` +
-          `Qual o nome do cliente final para registrarmos no seu CRM? (ou digite 0️⃣ para voltar às opções de kits)`
+          `*_Qual o nome do cliente final para registrarmos no seu CRM?_*\n` +
+          `_(ou digite 0️⃣ para voltar às opções de kits)_`
         );
       }
       return `Por favor, responda com o número da opção do kit desejado (ex: 1 ou 2) ou envie 0️⃣ para voltar e alterar a estrutura.`;
@@ -2837,21 +2856,21 @@ ${catalogContext}`;
         const templates = await this.getAvailableTemplates(conversation.organizationId);
         let templateListText = "";
         templates.forEach((t, i) => {
-          templateListText += `${this.numToEmoji(i + 1)} ${t.name}\n`;
+          templateListText += `> ${this.numToEmoji(i + 1)} *${t.name}*\n`;
         });
-        templateListText += `0️⃣ Voltar / Rever dados\n`;
+        templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
 
         return (
-          `Cliente *${effectiveName}* e WhatsApp *${formatPhone(phone)}* registrados com sucesso! 👤✨\n\n` +
-          `Qual modelo de proposta comercial você deseja usar para o seu cliente?\n` +
+          `Cliente *${effectiveName}* e WhatsApp \`${formatPhone(phone)}\` registrados com sucesso! 👤✨\n\n` +
+          `*_Qual modelo de proposta comercial você deseja usar para o seu cliente?_*\n\n` +
           `${templateListText}\n` +
-          `(Responda com o número da opção desejada ou digite 0️⃣ para corrigir o nome/telefone)`
+          `_(Responda com o número da opção desejada ou digite 0️⃣ para corrigir o nome/telefone)_`
         );
       }
 
       // Se enviou apenas o telefone sem nome
       if (phone && !name) {
-        return `Anotado o WhatsApp *${formatPhone(phone)}*! E qual o *nome* do cliente final para registrarmos no seu CRM?`;
+        return `Anotado o WhatsApp \`${formatPhone(phone)}\`! E qual o *nome* do cliente final para registrarmos no seu CRM?`;
       }
 
       // Se enviou apenas o nome
@@ -2884,17 +2903,17 @@ ${catalogContext}`;
       const templates = await this.getAvailableTemplates(conversation.organizationId);
       let templateListText = "";
       templates.forEach((t, i) => {
-        templateListText += `${this.numToEmoji(i + 1)} ${t.name}\n`;
+        templateListText += `> ${this.numToEmoji(i + 1)} *${t.name}*\n`;
       });
-      templateListText += `0️⃣ Voltar / Rever dados\n`;
+      templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
 
-      const phoneDisplay = phone ? ` e WhatsApp *${formatPhone(phone)}*` : "";
+      const phoneDisplay = phone ? ` e WhatsApp \`${formatPhone(phone)}\`` : "";
 
       return (
         `Cliente *${clientName}*${phoneDisplay} anotado com sucesso! 👤✨\n\n` +
-        `Qual modelo de proposta comercial você deseja usar para o seu cliente?\n` +
+        `*_Qual modelo de proposta comercial você deseja usar para o seu cliente?_*\n\n` +
         `${templateListText}\n` +
-        `(Responda com o número da opção desejada)`
+        `_(Responda com o número da opção desejada)_`
       );
     }
 
@@ -3211,14 +3230,16 @@ ${catalogContext}`;
         : `${appBaseUrl}/propostas`;
 
       return (
-        `Perfeito! Proposta comercial gerada com sucesso para o cliente *${clientName}*! 📋✅\n\n` +
-        `☀️ *Potência:* \`${selectedQuote.kwp} kWp\`\n` +
-        `🏠 *Estrutura:* \`${sessionCtx.roofType || "Cerâmica (Colonial)"}\`\n` +
-        `🎨 *Modelo:* \`${chosenTemplate?.name || "Comercial Moderno"}\`\n` +
-        `💰 *Valor Total:* \`R$ ${quotedSaleBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\`\n\n` +
-        `📄 *Acesse a Proposta Pronta no link:*\n` +
+        `*_Proposta Comercial Gerada com Sucesso!_* 📋✨\n\n` +
+        `Cliente: *${clientName}*\n\n` +
+        `> ☀️ *Potência:* \`${selectedQuote.kwp} kWp\`\n` +
+        `> 🏠 *Estrutura:* \`${sessionCtx.roofType || "Cerâmica (Colonial)"}\`\n` +
+        `> 🎨 *Modelo:* \`${chosenTemplate?.name || "Comercial Moderno"}\`\n` +
+        `> 💰 *Valor Total:* \`R$ ${quotedSaleBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\`\n\n` +
+        `*_Acesse a Proposta no link abaixo:_* 🔗\n` +
         `${proposalLink}\n\n` +
-        `Ela já está disponível no seu painel CRM da EnergivIA. ☀️`
+        `_Ela também já está disponível no seu painel CRM da EnergivIA._\n\n` +
+        `Equipe *_EnergivIA Solar._*`
       );
     }
 
@@ -3267,20 +3288,20 @@ ${catalogContext}`;
         const sizing = this.getSystemSizingSummary({ ...sessionCtx, roofType: selectedRoof });
         const totalEstimado = Math.round(sizing.realSystemKwp * orgDefaultRate);
         const consumoRef = sessionCtx.consumptionKwh
-          ? ` para o consumo de *${sessionCtx.consumptionKwh} kWh/mês*`
+          ? ` para \`${sessionCtx.consumptionKwh} kWh/mês\``
           : "";
 
         return (
-          `Estrutura registrada: *${selectedRoof}*. 🏠\n\n` +
-          `☀️ *Dimensionamento calculado${consumoRef}:*\n` +
-          `• *Potência do sistema:* ${sizing.realSystemKwp} kWp (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
-          `• *Geração estimada:* ${sizing.estimatedGeneration} kWh/mês\n` +
-          `• *Sua taxa padrão:* R$ ${formattedRate}/kWp (Valor aprox: *R$ ${totalEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}*)\n\n` +
-          `Como você deseja prosseguir para esta cotação?\n` +
-          `1️⃣ Seguir com a taxa padrão (*R$ ${formattedRate}/kWp*)\n` +
-          `2️⃣ Informar outro valor por kWp (ou digite o valor diretamente, ex: *2500*, *R$ 3.200*)\n` +
-          `0️⃣ Voltar / Alterar estrutura\n\n` +
-          `(Responda 1 para seguir, 2 para editar ou envie o valor desejado)`
+          `*_Estrutura Selecionada:_* \`${selectedRoof}\` 🏠\n\n` +
+          `*_Dimensionamento Solar Calculado${consumoRef}:_* ☀️\n` +
+          `> ⚡ Potência: \`${sizing.realSystemKwp} kWp\` (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
+          `> 📈 Geração estimada: \`${sizing.estimatedGeneration} kWh/mês\`\n` +
+          `> 💵 Sua taxa padrão: \`R$ ${formattedRate}/kWp\` (Total aprox: \`R$ ${totalEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\`)\n\n` +
+          `*_Como você deseja prosseguir para esta cotação?_*\n\n` +
+          `> 1️⃣ *Seguir com a taxa padrão* (\`R$ ${formattedRate}/kWp\`)\n` +
+          `> 2️⃣ *Informar outro valor por kWp* (ou digite o valor, ex: \`2500\`, \`R$ 3.200\`)\n` +
+          `> 0️⃣ *Voltar / Alterar estrutura*\n\n` +
+          `_(Responda 1 para seguir, 2 para editar ou envie o valor desejado)_`
         );
       }
 
@@ -3355,11 +3376,13 @@ ${catalogContext}`;
       if (isChoice2) {
         const sizing = this.getSystemSizingSummary(sessionCtx);
         return (
-          `Perfeito! O sistema dimensionado é de *${sizing.realSystemKwp} kWp* (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W). ☀️\n\n` +
-          `Qual valor você deseja utilizar para esta cotação? 💰\n\n` +
-          `• *Por kWp:* ex: *2500*, *R$ 3.200,00* ou *2.850/kWp*\n` +
-          `• *Ou valor total do projeto:* ex: *total 18500* (calculamos o R$/kWp automaticamente)\n\n` +
-          `(Envie o valor desejado ou 0️⃣ para voltar)`
+          `*_Personalização de Margem / Taxa_* 💰\n\n` +
+          `Sistema dimensionado: \`${sizing.realSystemKwp} kWp\` (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n\n` +
+          `*_Qual valor você deseja utilizar para esta cotação?_*\n\n` +
+          `> 💵 *Por kWp:* ex: \`2500\`, \`R$ 3.200,00\` ou \`2.850/kWp\`\n` +
+          `> 🏷️ *Ou valor total do projeto:* ex: \`total 18500\` (calculado automaticamente)\n` +
+          `> 0️⃣ *Voltar*\n\n` +
+          `_(Envie o valor desejado ou 0️⃣ para voltar)_`
         );
       }
 
@@ -3393,8 +3416,8 @@ ${catalogContext}`;
           maximumFractionDigits: 2,
         });
         const prefixMsg = directParsed.isDerivedFromTotal
-          ? `Entendido! Convertemos seu valor informado para *R$ ${formattedRate}/kWp* (com base no sistema de ${sizing.realSystemKwp} kWp)! ☀️💰\n\n`
-          : `Taxa personalizada de *R$ ${formattedRate}/kWp* aplicada para esta cotação! ☀️💰\n\n`;
+          ? `Entendido! Convertemos seu valor informado para \`R$ ${formattedRate}/kWp\` (com base no sistema de \`${sizing.realSystemKwp} kWp\`)! ☀️💰\n\n`
+          : `Taxa personalizada de \`R$ ${formattedRate}/kWp\` aplicada para esta cotação! ☀️💰\n\n`;
 
         return (
           prefixMsg +
@@ -3408,10 +3431,11 @@ ${catalogContext}`;
       });
 
       return (
-        `Opção não reconhecida. Como você prefere seguir com a taxa por kWp para esta cotação?\n\n` +
-        `1️⃣ Seguir com a taxa padrão (*R$ ${formattedRate}/kWp*)\n` +
-        `2️⃣ Informar outro valor por kWp (ex: *2500*, *R$ 3.200* ou *total 18500*)\n` +
-        `0️⃣ Voltar / Alterar estrutura`
+        `*_Como você deseja prosseguir para esta cotação?_*\n\n` +
+        `> 1️⃣ *Seguir com a taxa padrão* (\`R$ ${formattedRate}/kWp\`)\n` +
+        `> 2️⃣ *Informar outro valor por kWp* (ex: \`2500\`, \`R$ 3.200\` ou \`total 18500\`)\n` +
+        `> 0️⃣ *Voltar / Alterar estrutura*\n\n` +
+        `_(Responda com 1 ou 2 ou digite o valor diretamente)_`
       );
     }
 
@@ -3449,8 +3473,8 @@ ${catalogContext}`;
           maximumFractionDigits: 2,
         });
         const prefixMsg = parsedRateObj.isDerivedFromTotal
-          ? `Entendido! Convertemos seu valor informado para *R$ ${formattedRate}/kWp* (com base no sistema de ${sizing.realSystemKwp} kWp)! ☀️💰\n\n`
-          : `Taxa personalizada de *R$ ${formattedRate}/kWp* aplicada para esta cotação! ☀️💰\n\n`;
+          ? `Entendido! Convertemos seu valor informado para \`R$ ${formattedRate}/kWp\` (com base no sistema de \`${sizing.realSystemKwp} kWp\`)! ☀️💰\n\n`
+          : `Taxa personalizada de \`R$ ${formattedRate}/kWp\` aplicada para esta cotação! ☀️💰\n\n`;
 
         return (
           prefixMsg +
@@ -3459,8 +3483,10 @@ ${catalogContext}`;
       }
 
       return (
-        `Valor não reconhecido. Por favor, informe o valor por kWp desejado (ex: *2500*, *R$ 3.200,00* ou *total 18500*) ou envie 0️⃣ para voltar:\n\n` +
-        `(O valor configurado na sua plataforma continuará preservado)`
+        `Valor não reconhecido. Por favor, informe o valor por kWp desejado:\n\n` +
+        `> Ex: \`2500\`, \`R$ 3.200,00\` ou \`total 18500\`\n` +
+        `> Envie 0️⃣ para voltar\n\n` +
+        `_(Qual valor você deseja utilizar para esta cotação?)_`
       );
     }
 
@@ -3477,7 +3503,9 @@ ${catalogContext}`;
         const hspRes = getHsp(incomingText);
         if (hspRes.city) {
           return (
-            `Perfeito! Localização corrigida para: *${hspRes.city}/${hspRes.uf}* (Irradiação solar de ${hspRes.hsp.toFixed(2)} kWh/m²/dia calculada com precisão). 📍☀️\n\n` +
+            `*_Localização Corrigida com Sucesso!_* 📍☀️\n\n` +
+            `> Cidade: \`${hspRes.city}/${hspRes.uf}\`\n` +
+            `> Irradiação Solar: \`${hspRes.hsp.toFixed(2)} kWh/m²/dia\`\n\n` +
             this.GRID_OPTIONS_TEXT
           );
         }
@@ -3514,7 +3542,7 @@ ${catalogContext}`;
       }
 
       if (chosenGrid) {
-        return `Legal! Padrão registrado: *${chosenGrid}*. ⚡\n\n` + this.ROOF_OPTIONS_TEXT;
+        return `*_Padrão Elétrico Registrado:_* \`${chosenGrid}\` ⚡\n\n` + this.ROOF_OPTIONS_TEXT;
       }
 
       return (
@@ -3531,7 +3559,9 @@ ${catalogContext}`;
     ) {
       const hspRes = getHsp(incomingText);
       return (
-        `Perfeito! Localização identificada: *${hspRes.city}/${hspRes.uf}* (Irradiação solar de ${hspRes.hsp.toFixed(2)} kWh/m²/dia calculada com precisão). 📍☀️\n\n` +
+        `*_Localização Identificada!_* 📍☀️\n\n` +
+        `> Cidade: \`${hspRes.city}/${hspRes.uf}\`\n` +
+        `> Irradiação Solar: \`${hspRes.hsp.toFixed(2)} kWh/m²/dia\`\n\n` +
         this.GRID_OPTIONS_TEXT
       );
     }
@@ -3553,32 +3583,37 @@ ${catalogContext}`;
     if (!isChoosingOtherOption) {
       if (lower === "1" || lower === "1." || lower === "opcao 1" || lower === "opção 1") {
         return (
-          `Perfeito! 📄 Envie o arquivo em *PDF* ou a *foto da conta de luz* do seu cliente por aqui mesmo.\n\n` +
-          `Nossa inteligência artificial vai extrair automaticamente todos os dados de consumo e histórico!`
+          `*_Envio de Fatura de Energia_* 📄⚡\n\n` +
+          `Envie o arquivo em *PDF* ou a *foto da conta de luz* do seu cliente por aqui mesmo.\n\n` +
+          `> Nossa inteligência artificial vai extrair automaticamente todos os dados de consumo, histórico e padrão de rede!`
         );
       }
       if (lower === "2" || lower === "2." || lower === "opcao 2" || lower === "opção 2") {
         return (
-          `Legal! ⚡ Qual é o *consumo médio mensal* do seu cliente em kWh?\n\n` +
-          `(Exemplo: digite *450 kWh* ou *600 kWh*)`
+          `*_Simulação por Consumo Mensal_* ⚡\n\n` +
+          `Qual é o *consumo médio mensal* do seu cliente em kWh?\n\n` +
+          `> Exemplo: digite \`450 kWh\` ou \`600 kWh\``
         );
       }
       if (lower === "3" || lower === "3." || lower === "opcao 3" || lower === "opção 3") {
         return (
-          `Excelente! ☀️ Qual a *potência de pico* desejada para o sistema solar?\n\n` +
-          `(Exemplo: digite *5 kWp* ou *7.5 kWp*)`
+          `*_Simulação por Potência de Pico_* ☀️\n\n` +
+          `Qual a *potência de pico* desejada para o sistema solar?\n\n` +
+          `> Exemplo: digite \`5 kWp\` ou \`7.5 kWp\``
         );
       }
       if (lower === "4" || lower === "4." || lower === "opcao 4" || lower === "opção 4") {
         return (
-          `Ótimo! 🔌 Quantas *placas solares* você deseja no kit e qual a potência delas?\n\n` +
-          `(Exemplo: digite *10 placas de 590W* ou *12 módulos*)`
+          `*_Simulação por Quantidade de Módulos_* 🔌\n\n` +
+          `Quantas *placas solares* você deseja no kit e qual a potência delas?\n\n` +
+          `> Exemplo: digite \`10 placas de 590W\` ou \`12 módulos\``
         );
       }
       if (lower === "5" || lower === "5." || lower === "opcao 5" || lower === "opção 5") {
         return (
-          `Com certeza! 🔎 Você pode me perguntar sobre modelos, marcas e preços dos inversores, módulos ou estruturas cadastrados no nosso catálogo da EnergivIA.\n\n` +
-          `(Exemplo: *"qual o valor do inversor de 5kw?"* ou *"quais marcas de módulos estão disponíveis?"*)`
+          `*_Consulta de Catálogo e Equipamentos_* 🔎\n\n` +
+          `Você pode me perguntar sobre modelos, marcas e preços dos inversores, módulos ou estruturas cadastrados no nosso catálogo da EnergivIA.\n\n` +
+          `> Exemplo: _"qual o valor do inversor de 5kw?"_ ou _"quais marcas de módulos estão disponíveis?"_`
         );
       }
     }
@@ -3616,7 +3651,7 @@ ${catalogContext}`;
     if (kwpDirectMatch && kwpDirectMatch[1]) {
       const targetKWp = parseFloat(kwpDirectMatch[1].replace(",", "."));
       if (targetKWp > 0) {
-        return `Legal! Potência solicitada: *${targetKWp} kWp*. ☀️\n\n` + this.GRID_OPTIONS_TEXT;
+        return `*_Potência Solicitada:_* \`${targetKWp} kWp\` ☀️\n\n` + this.GRID_OPTIONS_TEXT;
       }
     }
 
@@ -3630,10 +3665,10 @@ ${catalogContext}`;
       const modPower =
         modPowerMatch && modPowerMatch[1] ? parseInt(modPowerMatch[1], 10) : undefined;
       const kwpCalculado = modPower ? ((modCount * modPower) / 1000).toFixed(2) : undefined;
-      const extraInfo = modPower ? ` de ${modPower}W (${kwpCalculado} kWp)` : "";
+      const extraInfo = modPower ? ` de \`${modPower}W\` (\`${kwpCalculado} kWp\`)` : "";
 
       return (
-        `Legal! Quantidade solicitada: *${modCount} placas${extraInfo}*. ☀️\n\n` +
+        `*_Quantidade Solicitada:_* \`${modCount} placas\`${extraInfo} ☀️\n\n` +
         this.GRID_OPTIONS_TEXT
       );
     }
@@ -3661,14 +3696,14 @@ ${catalogContext}`;
           ).trim();
           const hspRes = getHsp(cand);
           return (
-            `Legal, consumo registrado: *${consumo} kWh/mês* em *${hspRes.city}/${hspRes.uf}*! ☀️📍\n\n` +
+            `*_Consumo Registrado:_* \`${consumo} kWh/mês\` em \`${hspRes.city}/${hspRes.uf}\` ☀️📍\n\n` +
             this.GRID_OPTIONS_TEXT
           );
         }
 
         return (
-          `Legal, consumo registrado: *${consumo} kWh/mês*. ☀️\n\n` +
-          `Para qual cidade e estado será a instalação? (Ex: Maringá/PR, Presidente Prudente/SP)`
+          `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n\n` +
+          `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
         );
       }
     }
