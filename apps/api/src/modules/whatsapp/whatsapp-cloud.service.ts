@@ -77,6 +77,9 @@ function truncateSafe(str: string | undefined | null, maxLen: number): string {
 }
 
 function buildFallbackTextForList(body: string, sections: InteractiveListSection[]): string {
+  if (body.includes("1️⃣") || body.includes("1.")) {
+    return body.trim();
+  }
   let text = body.trim();
   text += "\n";
   for (const s of sections) {
@@ -89,6 +92,9 @@ function buildFallbackTextForList(body: string, sections: InteractiveListSection
 }
 
 function buildFallbackTextForButtons(body: string, buttons: InteractiveButtonOption[]): string {
+  if (body.includes("1️⃣") || body.includes("1.")) {
+    return body.trim();
+  }
   let text = body.trim();
   text += "\n\n";
   buttons.forEach((b, idx) => {
@@ -186,6 +192,56 @@ export class WhatsappCloudService {
     return !!this.config.get<string>("EVOLUTION_API_URL")?.trim();
   }
 
+  private async sendEvolutionWithNumberRetry(
+    url: string,
+    toWaId: string,
+    payloadData: Record<string, unknown>
+  ): Promise<{ ok: boolean; status: number; errText: string }> {
+    const apiKey = this.config.get<string>("EVOLUTION_API_KEY")?.trim();
+    const cleanNumber = formatToInternationalWhatsapp(toWaId);
+
+    const sendTo = async (num: string) => {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: apiKey || "",
+          },
+          body: JSON.stringify({
+            number: num,
+            ...payloadData,
+          }),
+        });
+        const errText = res.ok ? "" : await res.text().catch(() => "");
+        return { ok: res.ok, status: res.status, errText };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { ok: false, status: 500, errText: msg };
+      }
+    };
+
+    let result = await sendTo(cleanNumber);
+    if (!result.ok && cleanNumber.startsWith("55")) {
+      let altNumber: string | null = null;
+      if (cleanNumber.length === 12) {
+        altNumber = `${cleanNumber.slice(0, 4)}9${cleanNumber.slice(4)}`;
+      } else if (cleanNumber.length === 13 && cleanNumber.charAt(4) === "9") {
+        altNumber = `${cleanNumber.slice(0, 4)}${cleanNumber.slice(5)}`;
+      }
+      if (altNumber) {
+        this.logger.warn(
+          `[Evolution API] Falha para ${cleanNumber} (${result.status}): ${result.errText.slice(0, 100)}. Tentando variante ${altNumber}...`
+        );
+        const altResult = await sendTo(altNumber);
+        if (altResult.ok) {
+          return altResult;
+        }
+      }
+    }
+    return result;
+  }
+
   private async postTextViaEvolution(
     toWaId: string,
     body: string
@@ -203,50 +259,8 @@ export class WhatsappCloudService {
       };
     }
 
-    const cleanNumber = formatToInternationalWhatsapp(toWaId);
     const url = `${baseUrl}/message/sendText/${encodeURIComponent(instance)}`;
-
-    const sendToNumber = async (num: string) => {
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: apiKey,
-          },
-          body: JSON.stringify({
-            number: num,
-            text: body,
-          }),
-        });
-
-        const errText = res.ok ? "" : await res.text().catch(() => "");
-        return { ok: res.ok, status: res.status, errText };
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return { ok: false, status: 500, errText: msg };
-      }
-    };
-
-    let result = await sendToNumber(cleanNumber);
-    if (!result.ok && cleanNumber.startsWith("55")) {
-      let altNumber: string | null = null;
-      if (cleanNumber.length === 12) {
-        altNumber = `${cleanNumber.slice(0, 4)}9${cleanNumber.slice(4)}`;
-      } else if (cleanNumber.length === 13 && cleanNumber.charAt(4) === "9") {
-        altNumber = `${cleanNumber.slice(0, 4)}${cleanNumber.slice(5)}`;
-      }
-      if (altNumber) {
-        this.logger.warn(
-          `[Evolution API] Falha para ${cleanNumber} (${result.status}): ${result.errText.slice(0, 100)}. Tentando variante ${altNumber}...`
-        );
-        const altResult = await sendToNumber(altNumber);
-        if (altResult.ok) {
-          return altResult;
-        }
-      }
-    }
-    return result;
+    return this.sendEvolutionWithNumberRetry(url, toWaId, { text: body });
   }
 
   async sendTextMessage(params: {
@@ -330,6 +344,39 @@ export class WhatsappCloudService {
     }
   }
 
+  private async postPollViaEvolution(
+    toWaId: string,
+    question: string,
+    options: string[]
+  ): Promise<{ ok: boolean; status: number; errText: string }> {
+    const baseUrl = this.config.get<string>("EVOLUTION_API_URL")?.trim().replace(/\/+$/, "");
+    const apiKey = this.config.get<string>("EVOLUTION_API_KEY")?.trim();
+    const instance = this.config.get<string>("EVOLUTION_INSTANCE_NAME")?.trim() || "energiv-bot";
+
+    if (!baseUrl || !apiKey) {
+      return {
+        ok: false,
+        status: 500,
+        errText: "Evolution API not fully configured",
+      };
+    }
+
+    const url = `${baseUrl}/message/sendPoll/${encodeURIComponent(instance)}`;
+    const validValues = options.slice(0, 12).map((opt) => truncateSafe(opt, 32));
+    const title = truncateSafe(question, 255);
+
+    return this.sendEvolutionWithNumberRetry(url, toWaId, {
+      name: title,
+      values: validValues,
+      selectableOptionsCount: 1,
+      poll: {
+        name: title,
+        values: validValues,
+        selectableOptionsCount: 1,
+      },
+    });
+  }
+
   private async postInteractiveViaEvolution(
     toWaId: string,
     type: "list" | "button",
@@ -347,29 +394,9 @@ export class WhatsappCloudService {
       };
     }
 
-    const cleanNumber = formatToInternationalWhatsapp(toWaId);
     const endpoint = type === "list" ? "sendList" : "sendButtons";
     const url = `${baseUrl}/message/${endpoint}/${encodeURIComponent(instance)}`;
-
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: apiKey,
-        },
-        body: JSON.stringify({
-          number: cleanNumber,
-          ...dataPayload,
-        }),
-      });
-
-      const errText = res.ok ? "" : await res.text().catch(() => "");
-      return { ok: res.ok, status: res.status, errText };
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return { ok: false, status: 500, errText: msg };
-    }
+    return this.sendEvolutionWithNumberRetry(url, toWaId, dataPayload);
   }
 
   async sendInteractiveListMessage(params: SendInteractiveListParams): Promise<void> {
@@ -426,14 +453,17 @@ export class WhatsappCloudService {
           title: row.title,
           description: row.description || "",
           rowId: row.id,
+          id: row.id,
         })),
       }));
 
-      const { ok } = await this.postInteractiveViaEvolution(to, "list", {
+      // Tenta sendList primeiro
+      const { ok, status, errText } = await this.postInteractiveViaEvolution(to, "list", {
         title: params.title || "EnergivIA",
         description: interactiveBody,
         buttonText: cleanButtonText,
         footerText: params.footer || "EnergivIA Solar",
+        footer: params.footer || "EnergivIA Solar",
         sections: evoSections,
       });
 
@@ -441,9 +471,34 @@ export class WhatsappCloudService {
         this.logger.log(`[Evolution API] Lista interativa enviada para ${to}`);
         return;
       }
+
       this.logger.warn(
-        `[Evolution API] Falha no envio de lista interativa. Tentando Meta Cloud API...`
+        `[Evolution API] Falha no envio de lista (HTTP ${status} err=${errText.slice(0, 150)}). Tentando via Enquete (Poll)...`
       );
+
+      // Se falhar (ex: Baileys/WhatsApp Web sem suporte a listas), envia Enquete interativa nativa!
+      const pollOptions = params.sections.flatMap((s) => s.rows.map((r) => r.title));
+      if (pollOptions.length > 0) {
+        if (interactiveBody && interactiveBody.length > 0) {
+          await this.sendTextMessage({
+            phoneNumberId: params.phoneNumberId,
+            toWaId: params.toWaId,
+            body: interactiveBody,
+          });
+        }
+        const pollRes = await this.postPollViaEvolution(
+          to,
+          params.title || "Selecione uma opção:",
+          pollOptions
+        );
+        if (pollRes.ok) {
+          this.logger.log(`[Evolution API] Enquete interativa enviada com sucesso para ${to}`);
+          return;
+        }
+        this.logger.warn(
+          `[Evolution API] Falha também no envio da enquete (HTTP ${pollRes.status} err=${pollRes.errText.slice(0, 150)}). Tentando Meta Cloud API...`
+        );
+      }
     }
 
     // 2. Meta Cloud API oficial
@@ -452,7 +507,11 @@ export class WhatsappCloudService {
       "EAANhZClS6ZCeYBSdcHOC6Ne9TD5m1o7h8QG6s8ZC65ZBdRmp4ruWdX2kOV2uTbmSRwimo2uyefGD4SnJzeZCn1WEmEIspoB7ZAmYvOUh9JV5QB9o3a27ufF5yRsvCX5gRZAmruk6GaozfqixmvUfFmDBdaCZC7hZCsZBfJ6MCCXX1ezY5ESNPviJTOZCtVEOOZATlQZDZD";
 
     if (token) {
-      const primaryId = params.phoneNumberId.trim();
+      const fallbackId = this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID")?.trim();
+      const primaryId = /^\d+$/.test(params.phoneNumberId.trim())
+        ? params.phoneNumberId.trim()
+        : fallbackId || params.phoneNumberId.trim();
+
       const { ok, errText } = await this.postInteractiveOnce(
         primaryId,
         token,
@@ -528,14 +587,17 @@ export class WhatsappCloudService {
     if (this.isEvolutionProvider()) {
       const evoButtons = params.buttons.slice(0, 3).map((b) => ({
         buttonId: b.id,
+        id: b.id,
         buttonText: { displayText: b.title },
+        displayText: b.title,
         type: 1,
       }));
 
-      const { ok } = await this.postInteractiveViaEvolution(to, "button", {
+      const { ok, status, errText } = await this.postInteractiveViaEvolution(to, "button", {
         title: params.title || "EnergivIA",
         description: interactiveBody,
         footer: params.footer || "EnergivIA Solar",
+        footerText: params.footer || "EnergivIA Solar",
         buttons: evoButtons,
       });
 
@@ -543,7 +605,34 @@ export class WhatsappCloudService {
         this.logger.log(`[Evolution API] Botões interativos enviados para ${to}`);
         return;
       }
-      this.logger.warn(`[Evolution API] Falha no envio de botões. Tentando Meta Cloud API...`);
+
+      this.logger.warn(
+        `[Evolution API] Falha no envio de botões (HTTP ${status} err=${errText.slice(0, 150)}). Tentando via Enquete (Poll)...`
+      );
+
+      // Fallback para Enquete Interativa
+      const pollOptions = params.buttons.map((b) => b.title);
+      if (pollOptions.length > 0) {
+        if (interactiveBody && interactiveBody.length > 0) {
+          await this.sendTextMessage({
+            phoneNumberId: params.phoneNumberId,
+            toWaId: params.toWaId,
+            body: interactiveBody,
+          });
+        }
+        const pollRes = await this.postPollViaEvolution(
+          to,
+          params.title || "Selecione uma opção:",
+          pollOptions
+        );
+        if (pollRes.ok) {
+          this.logger.log(`[Evolution API] Enquete interativa de botões enviada para ${to}`);
+          return;
+        }
+        this.logger.warn(
+          `[Evolution API] Falha também na enquete (HTTP ${pollRes.status} err=${pollRes.errText.slice(0, 150)}). Tentando Meta Cloud API...`
+        );
+      }
     }
 
     // 2. Meta Cloud API oficial
@@ -552,7 +641,11 @@ export class WhatsappCloudService {
       "EAANhZClS6ZCeYBSdcHOC6Ne9TD5m1o7h8QG6s8ZC65ZBdRmp4ruWdX2kOV2uTbmSRwimo2uyefGD4SnJzeZCn1WEmEIspoB7ZAmYvOUh9JV5QB9o3a27ufF5yRsvCX5gRZAmruk6GaozfqixmvUfFmDBdaCZC7hZCsZBfJ6MCCXX1ezY5ESNPviJTOZCtVEOOZATlQZDZD";
 
     if (token) {
-      const primaryId = params.phoneNumberId.trim();
+      const fallbackId = this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID")?.trim();
+      const primaryId = /^\d+$/.test(params.phoneNumberId.trim())
+        ? params.phoneNumberId.trim()
+        : fallbackId || params.phoneNumberId.trim();
+
       const { ok, errText } = await this.postInteractiveOnce(
         primaryId,
         token,

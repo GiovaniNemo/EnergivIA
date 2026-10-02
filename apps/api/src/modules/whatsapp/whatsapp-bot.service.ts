@@ -560,14 +560,61 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     if (!payload) return;
 
     // Normalização: a Evolution pode enviar { event: "messages.upsert", data: { ... } }
-    // ou array de dados ou payload direto
+    // ou { event: "pollUpdateMessage", data: { ... } } ou array de dados ou payload direto
     const event = payload.event;
-    if (event && event !== "messages.upsert") {
+    if (
+      event &&
+      event !== "messages.upsert" &&
+      event !== "pollUpdateMessage" &&
+      event !== "messages.update"
+    ) {
       // Ignora status de conexão, contatos, etc.
       return;
     }
 
     const data = payload.data || payload;
+
+    // Tratamento de voto em Enquete (Poll Update)
+    const pollUpdate = data.pollUpdate || data.message?.pollUpdateMessage || payload.pollUpdate;
+
+    if (pollUpdate) {
+      const vote = pollUpdate.vote || pollUpdate;
+      const selectedOptions: string[] = Array.isArray(vote.selectedOptions)
+        ? vote.selectedOptions
+        : Array.isArray(vote.options)
+          ? vote.options
+          : [];
+
+      if (selectedOptions.length > 0) {
+        const chosenText = selectedOptions[0];
+        const remoteJid =
+          data.key?.remoteJid ||
+          pollUpdate.pollCreationMessageKey?.remoteJid ||
+          data.sender ||
+          pollUpdate.sender ||
+          "";
+        const senderWaId = remoteJid.replace(/@.*$/, "").replace(/\D/g, "");
+        if (senderWaId && chosenText) {
+          const mappedPollMsg: WebhookMessage = {
+            id: data.key?.id || `poll_${Date.now()}`,
+            from: senderWaId,
+            type: "interactive",
+            interactive: {
+              type: "list_reply",
+              list_reply: { id: chosenText, title: chosenText },
+            },
+            text: { body: chosenText },
+          };
+          await this.processSingleMessage({
+            message: mappedPollMsg,
+            phoneNumberId: (payload.instance || "energiv-bot").toString(),
+            contactName: data.pushName || "Integrador",
+          });
+          return;
+        }
+      }
+    }
+
     const key = data.key;
     if (!key) return;
 
@@ -2923,7 +2970,7 @@ ${catalogContext}`;
       const text =
         `Legal, dados extraídos com precisão!\n` +
         `Consumo médio de *${kwh} kWh/mês* em *${cidade}* (${baseTexto}).${conexaoInfo}\n\n` +
-        this.ROOF_OPTIONS_TEXT;
+        `Qual a estrutura do telhado onde os módulos serão instalados?`;
 
       return {
         text,
@@ -3001,7 +3048,7 @@ ${catalogContext}`;
       if (lastBotMsg.includes("Qual a estrutura do telhado?")) {
         const text =
           `Sem problemas! Vamos corrigir o padrão elétrico da instalação. ⚡\n\n` +
-          this.GRID_OPTIONS_TEXT;
+          `Qual o padrão de entrada da instalação?`;
         return {
           text,
           interactive: this.buildGridInteractiveList(),
@@ -3013,7 +3060,7 @@ ${catalogContext}`;
         lastBotMsg.includes("Como deseja prosseguir para esta cotação") ||
         lastBotMsg.includes("taxa padrão configurada")
       ) {
-        const text = `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
+        const text = `Certo! Vamos alterar a estrutura do telhado. 🏠\n\nQual a estrutura do telhado onde os módulos serão instalados?`;
         return {
           text,
           interactive: this.buildRoofInteractiveList(),
@@ -3113,7 +3160,7 @@ ${catalogContext}`;
             interactive: this.buildQuotesInteractive(quotes),
           };
         }
-        const text = `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
+        const text = `Certo! Vamos alterar a estrutura do telhado. 🏠\n\nQual a estrutura do telhado onde os módulos serão instalados?`;
         return {
           text,
           interactive: this.buildRoofInteractiveList(),
@@ -3650,9 +3697,7 @@ ${catalogContext}`;
         };
       }
 
-      const text =
-        `Opção de telhado não reconhecida. Por favor, responda com o número da opção (1 a 7) ou envie 0️⃣ para voltar:\n\n` +
-        this.ROOF_OPTIONS_TEXT;
+      const text = `Opção de telhado não reconhecida. Por favor, selecione uma opção abaixo ou envie 0️⃣ para voltar:\n\nQual a estrutura do telhado onde os módulos serão instalados?`;
 
       return {
         text,
@@ -3865,7 +3910,7 @@ ${catalogContext}`;
         if (hspRes.city) {
           const text =
             `Perfeito! Localização corrigida para: *${hspRes.city}/${hspRes.uf}* (Irradiação solar de ${hspRes.hsp.toFixed(2)} kWh/m²/dia calculada com precisão). 📍☀️\n\n` +
-            this.GRID_OPTIONS_TEXT;
+            `Qual o padrão de entrada da instalação?`;
           return {
             text,
             interactive: this.buildGridInteractiveList(),
@@ -3904,16 +3949,14 @@ ${catalogContext}`;
       }
 
       if (chosenGrid) {
-        const text = `Legal! Padrão registrado: *${chosenGrid}*. ⚡\n\n` + this.ROOF_OPTIONS_TEXT;
+        const text = `Legal! Padrão registrado: *${chosenGrid}*. ⚡\n\nQual a estrutura do telhado onde os módulos serão instalados?`;
         return {
           text,
           interactive: this.buildRoofInteractiveList(),
         };
       }
 
-      const text =
-        `Opção não reconhecida. Por favor, responda com o número da opção desejada (1 a 4) ou envie 0️⃣ para voltar:\n\n` +
-        this.GRID_OPTIONS_TEXT;
+      const text = `Opção não reconhecida. Por favor, selecione uma opção ou envie 0️⃣ para voltar:\n\nQual o padrão de entrada da instalação?`;
       return {
         text,
         interactive: this.buildGridInteractiveList(),
@@ -3929,7 +3972,7 @@ ${catalogContext}`;
       const hspRes = getHsp(incomingText);
       const text =
         `Perfeito! Localização identificada: *${hspRes.city}/${hspRes.uf}* (Irradiação solar de ${hspRes.hsp.toFixed(2)} kWh/m²/dia calculada com precisão). 📍☀️\n\n` +
-        this.GRID_OPTIONS_TEXT;
+        `Qual o padrão de entrada da instalação?`;
       return {
         text,
         interactive: this.buildGridInteractiveList(),
@@ -4016,8 +4059,7 @@ ${catalogContext}`;
     if (kwpDirectMatch && kwpDirectMatch[1]) {
       const targetKWp = parseFloat(kwpDirectMatch[1].replace(",", "."));
       if (targetKWp > 0) {
-        const text =
-          `Legal! Potência solicitada: *${targetKWp} kWp*. ☀️\n\n` + this.GRID_OPTIONS_TEXT;
+        const text = `Legal! Potência solicitada: *${targetKWp} kWp*. ☀️\n\nQual o padrão de entrada da instalação?`;
         return {
           text,
           interactive: this.buildGridInteractiveList(),
@@ -4037,9 +4079,7 @@ ${catalogContext}`;
       const kwpCalculado = modPower ? ((modCount * modPower) / 1000).toFixed(2) : undefined;
       const extraInfo = modPower ? ` de ${modPower}W (${kwpCalculado} kWp)` : "";
 
-      const text =
-        `Legal! Quantidade solicitada: *${modCount} placas${extraInfo}*. ☀️\n\n` +
-        this.GRID_OPTIONS_TEXT;
+      const text = `Legal! Quantidade solicitada: *${modCount} placas${extraInfo}*. ☀️\n\nQual o padrão de entrada da instalação?`;
       return {
         text,
         interactive: this.buildGridInteractiveList(),
@@ -4068,9 +4108,7 @@ ${catalogContext}`;
                 : "")
           ).trim();
           const hspRes = getHsp(cand);
-          const text =
-            `Legal, consumo registrado: *${consumo} kWh/mês* em *${hspRes.city}/${hspRes.uf}*! ☀️📍\n\n` +
-            this.GRID_OPTIONS_TEXT;
+          const text = `Legal, consumo registrado: *${consumo} kWh/mês* em *${hspRes.city}/${hspRes.uf}*! ☀️📍\n\nQual o padrão de entrada da instalação?`;
           return {
             text,
             interactive: this.buildGridInteractiveList(),

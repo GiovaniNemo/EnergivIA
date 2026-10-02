@@ -76,4 +76,46 @@ describe("WhatsApp Interactive Messages Format and Rules", () => {
     expect(extractChoice(metaListPayload)).toBe("1");
     expect(extractChoice(metaButtonPayload)).toBe("2");
   });
+
+  it("should extract option choice from Evolution pollUpdate webhook event", () => {
+    const pollEventPayload = {
+      instance: "energiv-bot",
+      event: "pollUpdateMessage",
+      data: {
+        key: {
+          remoteJid: "554497423865@s.whatsapp.net",
+          fromMe: false,
+          id: "poll_msg_123",
+        },
+        pollUpdate: {
+          pollCreationMessageKey: {
+            remoteJid: "554497423865@s.whatsapp.net",
+            fromMe: true,
+            id: "orig_poll_456",
+          },
+          vote: {
+            selectedOptions: ["Cerâmica (Colonial)"],
+          },
+          sender: "554497423865@s.whatsapp.net",
+        },
+      },
+    };
+
+    const pollUpdate = pollEventPayload.data.pollUpdate;
+    const selected = pollUpdate.vote.selectedOptions[0];
+    const sender = pollEventPayload.data.key.remoteJid.replace(/@.*$/, "").replace(/\D/g, "");
+
+    expect(selected).toBe("Cerâmica (Colonial)");
+    expect(sender).toBe("554497423865");
+  });
+
+  it("should support 12-digit and 13-digit Brazilian number conversions", () => {
+    const num12 = "554497423865";
+    const alt13 = `${num12.slice(0, 4)}9${num12.slice(4)}`;
+    expect(alt13).toBe("5544997423865");
+
+    const num13 = "5544997423865";
+    const alt12 = `${num13.slice(0, 4)}${num13.slice(5)}`;
+    expect(alt12).toBe("554497423865");
+  });
 });

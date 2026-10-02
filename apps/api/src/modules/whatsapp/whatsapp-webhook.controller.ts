@@ -62,7 +62,11 @@ export class WhatsappWebhookController {
         : null;
     if (
       body &&
-      (body["event"] === "messages.upsert" || body["instance"] || (dataObj && "key" in dataObj))
+      (body["event"] === "messages.upsert" ||
+        body["event"] === "pollUpdateMessage" ||
+        body["event"] === "messages.update" ||
+        body["instance"] ||
+        (dataObj && "key" in dataObj))
     ) {
       this.botService.handleEvolutionWebhookPayload(body).catch((err) => {
         this.logger.error("Erro no processamento do webhook Evolution WhatsApp:", err);
