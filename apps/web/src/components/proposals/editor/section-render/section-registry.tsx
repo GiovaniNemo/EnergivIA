@@ -2875,7 +2875,14 @@ export function renderSectionContent(
       );
     }
     case "signature":
-      return <SignatureSectionPreview section={section} vars={vars} mode={renderMode} />;
+      return (
+        <SignatureSectionPreview
+          section={section}
+          vars={vars}
+          mode={renderMode}
+          branding={options?.branding}
+        />
+      );
     case "comparison":
       return (
         <div className="space-y-2">
