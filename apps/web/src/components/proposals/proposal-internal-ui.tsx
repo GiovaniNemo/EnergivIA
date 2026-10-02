@@ -19,7 +19,9 @@ import {
   MoreVertical,
   Send,
   Calculator,
+  Pencil,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -921,6 +923,8 @@ export type ProposalKwpRateBusinessCardProps = {
   monthlyGenerationKwh?: number | null;
   moduleQuantity?: number | null;
   inverterInfo?: string | null;
+  canEdit?: boolean;
+  onSaveKwpRate?: (newRate: number) => Promise<void>;
 };
 
 export function ProposalKwpRateBusinessCard({
@@ -930,8 +934,35 @@ export function ProposalKwpRateBusinessCard({
   monthlyGenerationKwh,
   moduleQuantity,
   inverterInfo,
+  canEdit,
+  onSaveKwpRate,
 }: ProposalKwpRateBusinessCardProps): JSX.Element {
   const [hideSensitiveValues, setHideSensitiveValues] = useState(false);
+  const [isEditingRate, setIsEditingRate] = useState(false);
+  const [rateDraft, setRateDraft] = useState(String(ratePerKwp));
+  const [savingRate, setSavingRate] = useState(false);
+
+  useEffect(() => {
+    setRateDraft(String(ratePerKwp));
+  }, [ratePerKwp]);
+
+  const handleSaveRate = async () => {
+    if (!onSaveKwpRate) return;
+    const parsed = parseFloat(rateDraft.replace(",", "."));
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      alert("Informe um valor válido por kWp.");
+      return;
+    }
+    setSavingRate(true);
+    try {
+      await onSaveKwpRate(parsed);
+      setIsEditingRate(false);
+    } catch {
+      // Handled by parent
+    } finally {
+      setSavingRate(false);
+    }
+  };
 
   return (
     <Card className="relative flex h-full flex-col overflow-hidden border-[var(--color-border)] bg-[var(--color-card)] shadow-none">
@@ -965,10 +996,85 @@ export function ProposalKwpRateBusinessCard({
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4 p-5 pt-0 pl-5">
         <div className="border-b border-[var(--color-border)]/70 pb-3">
-          <p className="text-xs font-medium text-[var(--color-muted-foreground)]">Preço por kWp</p>
-          <p className="mt-0.5 text-3xl font-bold tabular-nums sm:text-4xl text-emerald-600 dark:text-emerald-400">
-            {hideSensitiveValues ? "••••" : `${formatBRL(ratePerKwp)}/kWp`}
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
+              Preço por kWp
+            </p>
+            {canEdit && onSaveKwpRate && !isEditingRate && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setRateDraft(String(ratePerKwp));
+                  setIsEditingRate(true);
+                }}
+                className="h-7 px-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:bg-emerald-500/10"
+              >
+                <Pencil className="mr-1 h-3.5 w-3.5" />
+                Editar valor
+              </Button>
+            )}
+          </div>
+
+          {isEditingRate ? (
+            <div className="mt-2 space-y-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.04] p-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-[var(--color-foreground)]">R$</span>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={rateDraft}
+                  onChange={(e) => setRateDraft(e.target.value)}
+                  className="h-9 w-36 bg-[var(--color-background)] font-bold tabular-nums"
+                  placeholder="2800"
+                  autoFocus
+                />
+                <span className="text-xs text-[var(--color-muted-foreground)]">/kWp</span>
+              </div>
+              <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                Novo valor comercial projetado:{" "}
+                <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                  {formatBRL(
+                    Math.round((parseFloat(rateDraft.replace(",", ".")) || 0) * (systemKw || 1))
+                  )}
+                </strong>
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={savingRate}
+                  onClick={() => void handleSaveRate()}
+                  className="h-8 bg-emerald-600 px-3 text-xs text-white hover:bg-emerald-700"
+                >
+                  {savingRate ? (
+                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Check className="mr-1 h-3.5 w-3.5" />
+                  )}
+                  Salvar
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={savingRate}
+                  onClick={() => {
+                    setRateDraft(String(ratePerKwp));
+                    setIsEditingRate(false);
+                  }}
+                  className="h-8 px-3 text-xs"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-0.5 text-3xl font-bold tabular-nums sm:text-4xl text-emerald-600 dark:text-emerald-400">
+              {hideSensitiveValues ? "••••" : `${formatBRL(ratePerKwp)}/kWp`}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

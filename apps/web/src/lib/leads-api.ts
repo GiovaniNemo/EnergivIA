@@ -486,6 +486,24 @@ export async function updateProposalLaborOverride(
   return res.json() as Promise<{ publicToken: string }>;
 }
 
+export async function updateProposalKwpRate(
+  organizationId: string,
+  proposalId: string,
+  kwpRate: number
+): Promise<{ publicToken: string }> {
+  const res = await apiProxy(
+    "PATCH",
+    `/proposals/${proposalId}/kwp-rate`,
+    { kwpRate },
+    organizationId
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<{ publicToken: string }>;
+}
+
 export async function setProposalTemplate(
   organizationId: string,
   proposalId: string,

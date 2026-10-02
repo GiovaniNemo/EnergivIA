@@ -86,6 +86,17 @@ export class ProposalOperationsController {
     return this.proposalsService.updateLaborOverride(tenantId, id, body.laborBrl, user);
   }
 
+  @Patch(":id/kwp-rate")
+  @UseGuards(OrgOwnerOrAdminGuard)
+  updateKwpRate(
+    @TenantId() tenantId: string,
+    @Param("id") id: string,
+    @Body() body: { kwpRate: number },
+    @CurrentUser() user?: JwtPayload
+  ) {
+    return this.proposalsService.updateKwpRate(tenantId, id, body.kwpRate, user);
+  }
+
   @Post(":id/template")
   setTemplate(
     @TenantId() tenantId: string,

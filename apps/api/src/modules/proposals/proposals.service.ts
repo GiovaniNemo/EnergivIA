@@ -805,6 +805,91 @@ export class ProposalsService {
     };
   }
 
+  async updateKwpRate(tenantId: string, id: string, kwpRate: number, user?: JwtPayload) {
+    if (user?.role === "SALES" || user?.role === "VIEWER") {
+      throw new ForbiddenException(
+        "Apenas proprietários e administradores podem alterar o valor do kWp."
+      );
+    }
+
+    const proposal = await this.findOne(tenantId, id);
+    if (!Number.isFinite(kwpRate) || kwpRate <= 0) {
+      throw new BadRequestException("Valor do kWp inválido.");
+    }
+
+    const integrator = parseIntegratorFromRendered(proposal.renderedData);
+    if (!integrator) {
+      throw new BadRequestException(
+        "Proposta não possui dados de integrador para alterar o valor do kWp."
+      );
+    }
+
+    const systemKw = integrator.systemPowerKw ?? 1;
+    const newQuotedSaleBrl = Math.round(systemKw * kwpRate * 100) / 100;
+
+    integrator.sourceType = "kwp_rate";
+    integrator.quotedSaleBrl = newQuotedSaleBrl;
+    integrator.computedSaleFromCostRulesBrl = newQuotedSaleBrl;
+    integrator.equipmentSubtotalBrl = newQuotedSaleBrl;
+
+    if (integrator.kitItems && integrator.kitItems.length > 0) {
+      const items = integrator.kitItems;
+      const currentSum = items.reduce((s, it) => s + (it.lineTotal || 0), 0) || 1;
+      let allocated = 0;
+      integrator.kitItems = items.map((it, idx) => {
+        const ratio = (it.lineTotal || 1) / currentSum;
+        const lineTotal =
+          idx === items.length - 1
+            ? Math.round((newQuotedSaleBrl - allocated) * 100) / 100
+            : Math.round(newQuotedSaleBrl * ratio * 100) / 100;
+        allocated += lineTotal;
+        const qty = Math.max(1, it.quantity);
+        const unitPrice = Math.round((lineTotal / qty) * 100) / 100;
+        return {
+          ...it,
+          unitPrice,
+          lineTotal,
+        };
+      });
+    }
+
+    const nextPublicToken = randomUUID();
+    const renderedData = {
+      ...(proposal.renderedData as Record<string, unknown>),
+      integrator,
+    };
+
+    const updated = await this.prisma.proposal.update({
+      where: { id },
+      data: {
+        renderedData: renderedData as unknown as Prisma.InputJsonValue,
+        publicToken: nextPublicToken,
+      },
+    });
+
+    if (proposal.deal?.leadId) {
+      await this.leadActivityLog.append({
+        tenantId,
+        leadId: proposal.deal.leadId,
+        kind: "NOTE_ADDED",
+        label: `Valor do kWp ajustado manualmente para R$ ${kwpRate.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}/kWp (Total: R$ ${newQuotedSaleBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2 })})`,
+        meta: {
+          proposalId: id,
+          kwpRate,
+          newQuotedSaleBrl,
+          updatedByUserId: user?.sub,
+          updatedByUserEmail: user?.email,
+          updatedByUserRole: user?.role,
+        },
+      });
+    }
+
+    return {
+      id: updated.id,
+      publicToken: nextPublicToken,
+    };
+  }
+
   async setTemplate(tenantId: string, id: string, proposalTemplateId: string | null) {
     await this.findOne(tenantId, id);
 

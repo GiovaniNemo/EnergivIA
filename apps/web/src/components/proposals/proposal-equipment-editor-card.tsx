@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState, type JSX } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
 import {
   AlertTriangle,
   Check,
@@ -22,7 +22,74 @@ import {
 } from "@/lib/leads-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { LoadingState } from "@/components/ui/loading-state";
+import {
+  generateDistributorTiers,
+  generateKitWhatsAppPreview,
+  type GenerateKitRequest,
+  type GenerateKitResult,
+} from "@/lib/kit-api";
+import { fetchDistributorProducts, fetchProducts } from "@/lib/admin-api";
+
+type RoofType = "ceramic" | "metal" | "fibromadeira" | "fibrometal" | "ground" | "laje" | "none";
+
+const ROOF_TYPE_SELECT_OPTIONS: { value: RoofType; label: string }[] = [
+  { value: "fibromadeira", label: "Fibromadeira" },
+  { value: "ceramic", label: "Colonial / cerâmico" },
+  { value: "metal", label: "Metálico (mini trilho)" },
+  { value: "fibrometal", label: "Fibrometal (autobrocante)" },
+  { value: "ground", label: "Solo" },
+  { value: "laje", label: "Laje" },
+  { value: "none", label: "Sem estrutura" },
+];
+
+const POPULAR_MODULE_BRANDS = [
+  "LONGi Solar",
+  "Canadian Solar",
+  "Jinko Solar",
+  "JA Solar",
+  "Trina Solar",
+  "Astronergy",
+  "DAH Solar",
+  "Risen Energy",
+];
+
+interface KitDraftState {
+  systemKw: string;
+  roof: RoofType;
+  brandPreset: string;
+  brandCustom: string;
+  inverterType: "string" | "microinverter" | "hybrid" | "off_grid";
+  gridTopology: "auto" | "mono_220" | "biphasic_127_220" | "tri_220" | "tri_380";
+  stringBoxId: string;
+}
+
+function categorizeKitItem(
+  it: { product_id: string; product_name: string },
+  result: GenerateKitResult
+): string {
+  if (it.product_id === result.modules?.product_id) return "module";
+  if (it.product_id === result.inverter?.product_id) {
+    return result.inverter.product_name.toLowerCase().includes("micro")
+      ? "microinverter"
+      : "inverter";
+  }
+  const name = it.product_name.toLowerCase();
+  if (
+    name.includes("estrutura") ||
+    name.includes("perfil") ||
+    name.includes("trilho") ||
+    name.includes("grampo")
+  ) {
+    return "structure_kit";
+  }
+  if (name.includes("cabo")) return "dc_cable";
+  if (name.includes("conector") || name.includes("mc4")) return "connector";
+  if (name.includes("string box")) return "string_box";
+  return "bos";
+}
 
 interface EditableLine {
   productId: string;
@@ -102,6 +169,20 @@ export function ProposalEquipmentEditorCard({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const [kitDraft, setKitDraft] = useState<KitDraftState>({
+    systemKw: "9.75",
+    roof: "fibromadeira",
+    brandPreset: "",
+    brandCustom: "",
+    inverterType: "string",
+    gridTopology: "auto",
+    stringBoxId: "none",
+  });
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const [kitRecalcError, setKitRecalcError] = useState<string | null>(null);
+  const [stringBoxOptions, setStringBoxOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const hasUserEditedKitSpecs = useRef(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
@@ -124,11 +205,90 @@ export function ProposalEquipmentEditorCard({
           specs: (i as any).specs ?? null,
         }))
       );
-      setDistributorId(data.distributorId);
+      const distId = data.distributorId || data.alternateDistributors?.[0]?.id || null;
+      setDistributorId(distId);
       setFreightState(data.freightState ?? "");
       setQtyDrafts({});
       setModuleQtyOverrides({});
       setQtyResetNotice(false);
+
+      let initialRoof: RoofType = "fibromadeira";
+      const structItem = data.items.find(
+        (i) =>
+          i.categoryName === "structure_kit" || i.productName.toLowerCase().includes("estrutura")
+      );
+      if (structItem) {
+        const sName = structItem.productName.toLowerCase();
+        if (
+          sName.includes("cerâmica") ||
+          sName.includes("colonial") ||
+          sName.includes("ceramico")
+        ) {
+          initialRoof = "ceramic";
+        } else if (
+          sName.includes("metálico") ||
+          sName.includes("metalico") ||
+          sName.includes("trapezoidal")
+        ) {
+          initialRoof = "metal";
+        } else if (sName.includes("fibromadeira") || sName.includes("ondulada")) {
+          initialRoof = "fibromadeira";
+        } else if (sName.includes("fibrometal")) {
+          initialRoof = "fibrometal";
+        } else if (sName.includes("solo")) {
+          initialRoof = "ground";
+        } else if (sName.includes("laje")) {
+          initialRoof = "laje";
+        }
+      }
+
+      const modItem = data.items.find(
+        (i) =>
+          i.categoryName === "module" ||
+          i.productName.toLowerCase().includes("módulo") ||
+          i.productName.toLowerCase().includes("painel")
+      );
+      const modBrand = modItem?.brandName || "";
+
+      const invItem = data.items.find(
+        (i) => i.categoryName === "inverter" || i.categoryName === "microinverter"
+      );
+      const initialInvType =
+        invItem?.categoryName === "microinverter" ||
+        invItem?.productName.toLowerCase().includes("micro")
+          ? "microinverter"
+          : "string";
+
+      let initialGridTopo: "auto" | "mono_220" | "biphasic_127_220" | "tri_220" | "tri_380" =
+        "auto";
+      if (invItem) {
+        const n = invItem.productName.toLowerCase();
+        if (n.includes("tri") && n.includes("380")) initialGridTopo = "tri_380";
+        else if (n.includes("tri") && n.includes("220")) initialGridTopo = "tri_220";
+        else if (n.includes("mono")) initialGridTopo = "mono_220";
+      }
+
+      const strBoxItem = data.items.find(
+        (i) => i.categoryName === "string_box" || i.productName.toLowerCase().includes("string box")
+      );
+
+      const sysKw =
+        data.systemPowerKw != null && data.systemPowerKw > 0
+          ? String(data.systemPowerKw)
+          : modItem
+            ? String(Math.round(((modItem.quantity * 600) / 1000) * 100) / 100)
+            : "9.75";
+
+      setKitDraft({
+        systemKw: sysKw,
+        roof: initialRoof,
+        brandPreset: modBrand,
+        brandCustom: "",
+        inverterType: initialInvType,
+        gridTopology: initialGridTopo,
+        stringBoxId: strBoxItem ? strBoxItem.productId : "none",
+      });
+      hasUserEditedKitSpecs.current = false;
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Não foi possível carregar os equipamentos.");
     } finally {
@@ -139,6 +299,119 @@ export function ProposalEquipmentEditorCard({
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadStringBoxes() {
+      try {
+        if (distributorId) {
+          const res = await fetchDistributorProducts(distributorId, {
+            category: "string_box",
+            limit: 50,
+          });
+          if (cancelled) return;
+          setStringBoxOptions(res.data.map((p) => ({ id: p.product.id, name: p.product.name })));
+        } else {
+          const res = await fetchProducts({ category: "string_box", pageSize: 50, active: true });
+          if (cancelled) return;
+          setStringBoxOptions((res.data || []).map((p) => ({ id: p.id, name: p.name })));
+        }
+      } catch {
+        if (!cancelled) setStringBoxOptions([]);
+      }
+    }
+    void loadStringBoxes();
+    return () => {
+      cancelled = true;
+    };
+  }, [distributorId]);
+
+  useEffect(() => {
+    if (!hasUserEditedKitSpecs.current) return;
+    const kw = parseFloat(kitDraft.systemKw.replace(",", "."));
+    if (!Number.isFinite(kw) || kw < 0.5 || kw > 1000) return;
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setIsRecalculating(true);
+      setKitRecalcError(null);
+      try {
+        const preferredBrand =
+          kitDraft.brandPreset === "__custom__"
+            ? kitDraft.brandCustom.trim() || undefined
+            : kitDraft.brandPreset.trim() || undefined;
+
+        const reqPayload: GenerateKitRequest = {
+          system_kw: kw,
+          roof_type: kitDraft.roof,
+          ...(preferredBrand ? { preferred_brand: preferredBrand } : {}),
+          ...(distributorId ? { supplier_id: distributorId } : {}),
+          inverter_type: kitDraft.inverterType,
+          ...(kitDraft.gridTopology && kitDraft.gridTopology !== "auto"
+            ? { grid_topology: kitDraft.gridTopology }
+            : {}),
+          ...(kitDraft.stringBoxId && kitDraft.stringBoxId !== "none"
+            ? { string_box_id: kitDraft.stringBoxId }
+            : {}),
+        };
+
+        let resultKit: GenerateKitResult | null = null;
+        try {
+          const tiersRes = await generateDistributorTiers(reqPayload);
+          if (tiersRes.tiers && tiersRes.tiers.length > 0) {
+            resultKit = tiersRes.tiers[1]?.kit_result || tiersRes.tiers[0]?.kit_result || null;
+          }
+        } catch {
+          try {
+            const prev = await generateKitWhatsAppPreview(reqPayload);
+            resultKit = prev.json;
+          } catch (e2) {
+            throw e2;
+          }
+        }
+
+        if (cancelled) return;
+        if (!resultKit) throw new Error("Não foi possível recalcular o kit.");
+
+        const resKit = resultKit;
+        const newLines: EditableLine[] = resKit.kit_items.map((it) => ({
+          productId: it.product_id,
+          productName: it.product_name,
+          brandName: it.brand_name,
+          categoryName: categorizeKitItem(it, resKit),
+          quantity: it.quantity,
+          unitPrice: it.unit_price,
+          changed: true,
+          unavailable: false,
+          specs:
+            it.product_id === resKit.modules?.product_id
+              ? {
+                  power_w: Math.round(
+                    (resKit.system_power_kw / Math.max(1, resKit.modules.quantity)) * 1000
+                  ),
+                }
+              : null,
+        }));
+
+        setLines(newLines);
+        setQtyDrafts({});
+        setModuleQtyOverrides({});
+      } catch (err) {
+        if (!cancelled) {
+          setKitRecalcError(err instanceof Error ? err.message : "Falha ao recalcular o kit.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsRecalculating(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [kitDraft, distributorId]);
 
   const calculateLockedBosQty = useCallback(
     (targetLine: EditableLine, targetModuleQty: number, currentModuleQty: number): number => {
@@ -607,6 +880,225 @@ export function ProposalEquipmentEditorCard({
                 Dimensionamento de equipamentos reais com orçamento comercial por R$/kWp da sua
                 região, incluindo projeto completo e instalação.
               </p>
+            </div>
+
+            {/* Ajustar Especificações do Kit */}
+            <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-xs">
+              <div className="relative space-y-4 p-4 sm:p-5">
+                <div className="flex flex-wrap items-start justify-between gap-2 border-b border-[var(--color-border)]/60 pb-3">
+                  <div>
+                    <h3 className="text-base font-bold text-[var(--color-foreground)]">
+                      Ajustar Especificações do Kit
+                    </h3>
+                    <p className="mt-0.5 max-w-xl text-xs sm:text-sm text-[var(--color-muted-foreground)]">
+                      Altere potência, tipo de telhado, marca dos módulos ou padrão de rede — o
+                      sistema recalcula os dados automaticamente.
+                    </p>
+                  </div>
+                  {isRecalculating ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Recalculando kit...
+                    </span>
+                  ) : null}
+                </div>
+
+                {kitRecalcError ? (
+                  <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400">
+                    {kitRecalcError}
+                  </p>
+                ) : null}
+
+                <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+                  {/* Potência do sistema (kWp) */}
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="proposal-kit-kw"
+                      className="text-xs font-semibold text-[var(--color-foreground)]"
+                    >
+                      Potência do sistema (kWp)
+                    </Label>
+                    <Input
+                      id="proposal-kit-kw"
+                      type="text"
+                      inputMode="decimal"
+                      className="h-11 border-[var(--color-border)] bg-[var(--color-background)] font-medium tabular-nums focus-visible:ring-emerald-500"
+                      value={kitDraft.systemKw}
+                      onChange={(e) => {
+                        hasUserEditedKitSpecs.current = true;
+                        setKitDraft((d) => ({ ...d, systemKw: e.target.value }));
+                      }}
+                    />
+                  </div>
+
+                  {/* Tipo de telhado */}
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="proposal-kit-roof"
+                      className="text-xs font-semibold text-[var(--color-foreground)]"
+                    >
+                      Tipo de telhado
+                    </Label>
+                    <Select
+                      id="proposal-kit-roof"
+                      className="h-11 border-[var(--color-border)]"
+                      value={kitDraft.roof}
+                      onChange={(e) => {
+                        hasUserEditedKitSpecs.current = true;
+                        setKitDraft((d) => ({
+                          ...d,
+                          roof: e.target.value as RoofType,
+                        }));
+                      }}
+                    >
+                      {ROOF_TYPE_SELECT_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  {/* Marca dos painéis */}
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="proposal-kit-brand"
+                      className="text-xs font-semibold text-[var(--color-foreground)]"
+                    >
+                      Marca dos painéis
+                    </Label>
+                    <Select
+                      id="proposal-kit-brand"
+                      className="h-11 border-[var(--color-border)]"
+                      value={kitDraft.brandPreset}
+                      onChange={(e) => {
+                        hasUserEditedKitSpecs.current = true;
+                        setKitDraft((d) => ({
+                          ...d,
+                          brandPreset: e.target.value,
+                        }));
+                      }}
+                    >
+                      <option value="">Melhor custo (qualquer marca)</option>
+                      {POPULAR_MODULE_BRANDS.map((b) => (
+                        <option key={b} value={b}>
+                          {b}
+                        </option>
+                      ))}
+                      <option value="__custom__">Outra (digitar)</option>
+                    </Select>
+                  </div>
+
+                  {kitDraft.brandPreset === "__custom__" ? (
+                    <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
+                      <Label
+                        htmlFor="proposal-kit-brand-custom"
+                        className="text-xs font-semibold text-[var(--color-foreground)]"
+                      >
+                        Nome da marca
+                      </Label>
+                      <Input
+                        id="proposal-kit-brand-custom"
+                        type="text"
+                        placeholder="Ex.: Canadian Solar"
+                        className="h-11 border-[var(--color-border)]"
+                        value={kitDraft.brandCustom}
+                        onChange={(e) => {
+                          hasUserEditedKitSpecs.current = true;
+                          setKitDraft((d) => ({
+                            ...d,
+                            brandCustom: e.target.value,
+                          }));
+                        }}
+                      />
+                    </div>
+                  ) : null}
+
+                  {/* Tipo de Inversor */}
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="proposal-kit-inverter-type"
+                      className="text-xs font-semibold text-[var(--color-foreground)]"
+                    >
+                      Tipo de Inversor
+                    </Label>
+                    <Select
+                      id="proposal-kit-inverter-type"
+                      className="h-11 w-full border-[var(--color-border)]"
+                      value={kitDraft.inverterType}
+                      onChange={(e) => {
+                        hasUserEditedKitSpecs.current = true;
+                        setKitDraft((d) => ({
+                          ...d,
+                          inverterType: e.target.value as KitDraftState["inverterType"],
+                        }));
+                      }}
+                    >
+                      <option value="string">String Inverter</option>
+                      <option value="microinverter">Microinversor</option>
+                      <option value="hybrid">Híbrido</option>
+                      <option value="off_grid">Off-Grid</option>
+                    </Select>
+                  </div>
+
+                  {/* Padrão da rede / Tensão */}
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="proposal-kit-grid-topology"
+                      className="text-xs font-semibold text-[var(--color-foreground)]"
+                    >
+                      Padrão da rede / Tensão
+                    </Label>
+                    <Select
+                      id="proposal-kit-grid-topology"
+                      className="h-11 w-full border-[var(--color-border)]"
+                      value={kitDraft.gridTopology}
+                      onChange={(e) => {
+                        hasUserEditedKitSpecs.current = true;
+                        setKitDraft((d) => ({
+                          ...d,
+                          gridTopology: e.target.value as KitDraftState["gridTopology"],
+                        }));
+                      }}
+                    >
+                      <option value="auto">Automático / Qualquer</option>
+                      <option value="mono_220">Monofásico 220V</option>
+                      <option value="biphasic_127_220">Bifásico 127V / 220V</option>
+                      <option value="tri_220">Trifásico 220V (ou Mono 220V)</option>
+                      <option value="tri_380">Trifásico 380V (ou Mono 220V)</option>
+                    </Select>
+                  </div>
+
+                  {/* String Box (Opcional) */}
+                  <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+                    <Label
+                      htmlFor="proposal-kit-string-box"
+                      className="text-xs font-semibold text-[var(--color-foreground)]"
+                    >
+                      String Box (Opcional)
+                    </Label>
+                    <Select
+                      id="proposal-kit-string-box"
+                      className="h-11 w-full border-[var(--color-border)]"
+                      value={kitDraft.stringBoxId}
+                      onChange={(e) => {
+                        hasUserEditedKitSpecs.current = true;
+                        setKitDraft((d) => ({
+                          ...d,
+                          stringBoxId: e.target.value || "none",
+                        }));
+                      }}
+                    >
+                      <option value="none">Sem String Box (Padrão)</option>
+                      {stringBoxOptions.map((sb) => (
+                        <option key={sb.id} value={sb.id}>
+                          {sb.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">

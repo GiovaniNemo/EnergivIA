@@ -593,18 +593,31 @@ export class ProposalEquipmentService {
           ]
         : [];
 
+    const isKwpRate = integrator.sourceType === "kwp_rate";
+    let finalQuotedSaleBrl = quotedSaleBrl;
+    let finalEquipmentSubtotalBrl = equipmentSubtotalBrl;
+    let finalProjectCostLines = [...cost.projectCostLines, ...freightCostLines];
+
+    if (isKwpRate) {
+      const prevKw = integrator.systemPowerKw ?? 1;
+      const rate = prevKw > 0 ? (integrator.quotedSaleBrl ?? 0) / prevKw : 2800;
+      finalQuotedSaleBrl = Math.round(systemPowerKw * (rate || 2800));
+      finalEquipmentSubtotalBrl = finalQuotedSaleBrl;
+      finalProjectCostLines = integrator.projectCostLines ?? [];
+    }
+
     const renderedData = (proposal.renderedData ?? {}) as Record<string, unknown>;
     const nextIntegrator: ProposalIntegratorSnapshot = {
       ...integrator,
       version: PROPOSAL_INTEGRATOR_SNAPSHOT_VERSION,
       kitItems: newKitItems,
-      equipmentSubtotalBrl,
-      sourceType: "distributor",
+      equipmentSubtotalBrl: finalEquipmentSubtotalBrl,
+      sourceType: isKwpRate ? "kwp_rate" : "distributor",
       distributorId: distributor.id,
       systemPowerKw,
-      quotedSaleBrl,
-      projectCostLines: [...cost.projectCostLines, ...freightCostLines],
-      computedSaleFromCostRulesBrl: computedWithFreightBrl,
+      quotedSaleBrl: finalQuotedSaleBrl,
+      projectCostLines: finalProjectCostLines,
+      computedSaleFromCostRulesBrl: isKwpRate ? finalQuotedSaleBrl : computedWithFreightBrl,
       freightState: freightState ?? undefined,
       freightBrl: freightState ? freightBrl : undefined,
       ...(cost.defaultEssentialCostNames.length > 0

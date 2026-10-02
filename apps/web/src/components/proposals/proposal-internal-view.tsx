@@ -22,6 +22,7 @@ import {
   updateProposalDiscount,
   updateProposalMarginOverride,
   updateProposalLaborOverride,
+  updateProposalKwpRate,
   downloadProposalPdf,
   patchDeal,
   waMeUrl,
@@ -528,6 +529,22 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
     }
   }
 
+  async function handleSaveKwpRate(newRate: number): Promise<void> {
+    if (!currentOrganizationId || !proposal) return;
+    try {
+      const { publicToken } = await updateProposalKwpRate(
+        currentOrganizationId,
+        proposal.id,
+        newRate
+      );
+      setRegeneratedPublicUrl(`${window.location.origin}/proposta/${publicToken}`);
+      await reload();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Não foi possível salvar o novo valor do kWp.");
+      throw e;
+    }
+  }
+
   async function saveTemplateBinding(targetTemplateId?: string): Promise<void> {
     if (!currentOrganizationId || !proposal) return;
     const templateIdToSave = targetTemplateId !== undefined ? targetTemplateId : selectedTemplateId;
@@ -680,6 +697,8 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
                   ? `${inverterItem.brandName || ""} ${inverterItem.productName}`.trim()
                   : null
               }
+              canEdit={isOwnerOrAdmin}
+              onSaveKwpRate={handleSaveKwpRate}
             />
           ) : (
             <ProposalBusinessHeroCard
