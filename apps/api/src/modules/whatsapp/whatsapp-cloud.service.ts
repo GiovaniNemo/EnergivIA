@@ -84,10 +84,11 @@ function buildFallbackTextForList(body: string, sections: InteractiveListSection
   text += "\n";
   for (const s of sections) {
     if (s.title) text += `\n*${s.title}*\n`;
-    for (const r of s.rows) {
-      text += `• ${r.title}${r.description ? ` (${r.description})` : ""}\n`;
+    for (const [idx, r] of s.rows.entries()) {
+      text += ` · ${idx + 1}. ${r.title}${r.description ? ` (${r.description})` : ""}\n`;
     }
   }
+  text += "\n(Responda com o número ou nome da opção)";
   return text.trim();
 }
 
@@ -100,6 +101,7 @@ function buildFallbackTextForButtons(body: string, buttons: InteractiveButtonOpt
   buttons.forEach((b, idx) => {
     text += `${idx + 1}️⃣ ${b.title}\n`;
   });
+  text += "\n(Responda com o número ou nome da opção)";
   return text.trim();
 }
 
