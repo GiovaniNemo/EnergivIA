@@ -373,25 +373,25 @@ export function RadarFilters({
               value="ALL"
               className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
             >
-              Todas as Oportunidades
+              Todas as Conexões
             </option>
             <option
-              value="UPGRADE_BATTERY"
+              value="CONSOLIDATED"
               className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
             >
-              🔋 Retrofit / Baterias (&gt;3 anos)
-            </option>
-            <option
-              value="NEW_NEIGHBORS"
-              className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
-            >
-              👥 Vizinhança Solar
+              Mercado Maduro (&gt;3 anos)
             </option>
             <option
               value="RECENT"
               className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
             >
-              ⚡ Conexões Recentes
+              Conexões Recentes (&le;1 ano)
+            </option>
+            <option
+              value="NEW_NEIGHBORS"
+              className="bg-white dark:bg-neutral-900 text-slate-900 dark:text-white"
+            >
+              Potencial de Vizinhança
             </option>
           </select>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Zap, Activity, BatteryCharging, SunMedium } from "lucide-react";
+import { Zap, Activity, ShieldCheck, SunMedium } from "lucide-react";
 
 interface RadarStatsHeaderProps {
   stats: {
@@ -93,15 +93,15 @@ export function RadarStatsHeader({ stats, loading }: RadarStatsHeaderProps) {
         </div>
       </div>
 
-      {/* Alvos de Upgrade & Baterias */}
+      {/* Mercado Maduro / Usinas Consolidadas */}
       <div className="bg-white dark:bg-gradient-to-br dark:from-neutral-900/90 dark:to-neutral-950 p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 dark:border-neutral-800/80 shadow-sm dark:shadow-md relative overflow-hidden group transition-all">
         <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all" />
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-purple-600 dark:text-purple-300 uppercase tracking-wider">
-            Alvos de Retrofit
+            Mercado Maduro
           </span>
           <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400">
-            <BatteryCharging className="w-4 h-4" />
+            <ShieldCheck className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-2 flex items-baseline gap-2">
@@ -111,7 +111,7 @@ export function RadarStatsHeader({ stats, loading }: RadarStatsHeaderProps) {
           <span className="text-xs text-slate-500 dark:text-neutral-400">usinas &gt; 3 anos</span>
         </div>
         <div className="mt-1 text-[11px] text-purple-600 dark:text-purple-300/90 font-medium">
-          Oportunidade p/ baterias & ampliação
+          Histórico solar consolidado na região
         </div>
       </div>
 

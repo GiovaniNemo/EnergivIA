@@ -17,6 +17,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+function cleanText(str?: string | null): string {
+  if (!str) return "";
+  try {
+    if (/[\u00C2\u00C3]/.test(str)) {
+      return Buffer.from(str, "binary").toString("utf-8");
+    }
+  } catch {
+    // fallback
+  }
+  return str;
+}
+
 export default function RadarPage() {
   const { currentOrganization, user } = useOrganization();
   const [uf, setUf] = useState("SP");
@@ -85,8 +97,8 @@ export default function RadarPage() {
             Radar Solar ANEEL
           </h1>
           <p className="text-sm text-slate-600 dark:text-neutral-400 mt-1">
-            Mapeamento de usinas conectadas, identificação de vizinhança e oportunidades de
-            retrofit/baterias.
+            Mapeamento de usinas conectadas, concentração de potência solar e inteligência de
+            mercado por região.
           </p>
         </div>
 
@@ -277,8 +289,10 @@ export default function RadarPage() {
                     <td className="p-3.5">
                       <div className="font-semibold text-slate-900 dark:text-white">
                         {item.holderName && item.holderName !== "***"
-                          ? item.holderName
-                          : "Pessoa Física (Residencial)"}
+                          ? cleanText(item.holderName)
+                          : item.classType === "RESIDENTIAL"
+                            ? "Pessoa Física (Não divulgado por LGPD)"
+                            : "Unidade Comercial"}
                       </div>
                       {item.documentNumber && item.documentNumber !== "***" && (
                         <div className="text-[11px] font-mono text-slate-500 dark:text-neutral-400">
@@ -291,10 +305,10 @@ export default function RadarPage() {
                     </td>
                     <td className="p-3.5">
                       <div className="font-medium text-slate-900 dark:text-white">
-                        {item.neighborhood}
+                        {cleanText(item.neighborhood)}
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-neutral-400">
-                        {item.city} - {item.uf}
+                        {cleanText(item.city)} - {item.uf}
                       </div>
                     </td>
                     <td className="p-3.5">
@@ -311,14 +325,22 @@ export default function RadarPage() {
                     <td className="p-3.5">
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          item.opportunityType === "UPGRADE_BATTERY"
+                          item.opportunityType === "CONSOLIDATED" ||
+                          item.opportunityType === "UPGRADE_BATTERY" ||
+                          item.yearsConnected >= 3
                             ? "bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30"
-                            : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                            : item.opportunityType === "RECENT" || item.yearsConnected <= 1
+                              ? "bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30"
+                              : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
                         }`}
                       >
-                        {item.opportunityType === "UPGRADE_BATTERY"
-                          ? "Retrofit / Bateria"
-                          : "Vizinhança"}
+                        {item.opportunityType === "CONSOLIDATED" ||
+                        item.opportunityType === "UPGRADE_BATTERY" ||
+                        item.yearsConnected >= 3
+                          ? "Mercado Maduro"
+                          : item.opportunityType === "RECENT" || item.yearsConnected <= 1
+                            ? "Conexão Recente"
+                            : "Vizinhança"}
                       </span>
                     </td>
                     <td className="p-3.5 text-right">
@@ -335,7 +357,7 @@ export default function RadarPage() {
                         className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs h-8 px-3"
                       >
                         {isLocked ? <Lock className="w-3 h-3 mr-1" /> : null}
-                        <span>{isLocked ? "Desbloquear" : "Gerar Lead"}</span>
+                        <span>{isLocked ? "Desbloquear" : "Salvar Alvo"}</span>
                         {!isLocked && <ArrowUpRight className="w-3 h-3 ml-1" />}
                       </Button>
                     </td>
@@ -366,8 +388,8 @@ export default function RadarPage() {
             </DialogTitle>
             <DialogDescription className="pt-2 text-sm text-slate-600 dark:text-neutral-400 leading-relaxed">
               No plano Start você tem acesso à demonstração do Radar Solar. Para pesquisar usinas
-              por cidades, bairros e classes, navegar livremente pelo mapa satélite de alta
-              resolução e prospectar diretamente no CRM, faça upgrade para o{" "}
+              por cidades, bairros e classes, navegar livremente pelo mapa de satélite em alta
+              resolução e prospectar alvos diretamente no CRM, faça upgrade para o{" "}
               <strong className="text-slate-900 dark:text-white">Plano Pro</strong> ou superior.
             </DialogDescription>
           </DialogHeader>

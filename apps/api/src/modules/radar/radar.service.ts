@@ -4,6 +4,18 @@ import { QueryRadarDto, ConvertRadarLeadDto } from "./dto/radar.dto";
 import { LeadsService } from "../leads/leads.service";
 import { DealsService } from "../deals/deals.service";
 
+export function fixMojibake(str?: string | null): string {
+  if (!str) return "";
+  try {
+    if (/[\u00C2\u00C3]/.test(str)) {
+      return Buffer.from(str, "binary").toString("utf-8");
+    }
+  } catch {
+    // fallback
+  }
+  return str;
+}
+
 export interface SolarInstallationPoint {
   id: string;
   codeAneel: string;
@@ -18,7 +30,7 @@ export interface SolarInstallationPoint {
   invertersCount: number;
   connectionDate: string;
   yearsConnected: number;
-  opportunityType: "UPGRADE_BATTERY" | "NEW_NEIGHBORS" | "RECENT";
+  opportunityType: "CONSOLIDATED" | "UPGRADE_BATTERY" | "NEW_NEIGHBORS" | "RECENT";
   estimatedMonthlyGenKwh: number;
   estimatedMonthlySavingsBrl: number;
   holderName?: string | null;
@@ -283,19 +295,22 @@ export class RadarService {
         const connectionYear = plant.connectionDate.getFullYear();
         const yearsConnected = Math.max(1, new Date().getFullYear() - connectionYear);
 
-        let opportunityType: "UPGRADE_BATTERY" | "NEW_NEIGHBORS" | "RECENT" = "NEW_NEIGHBORS";
+        const isMature = yearsConnected >= 3;
+        const isRecent = yearsConnected <= 1;
+        const opportunityType: "CONSOLIDATED" | "UPGRADE_BATTERY" | "NEW_NEIGHBORS" | "RECENT" =
+          isMature ? "CONSOLIDATED" : isRecent ? "RECENT" : "NEW_NEIGHBORS";
         let leadPotentialScore = 75;
-        const nName = plant.neighborhood || "Centro";
-        let recommendedPitch = `Prospecção de vizinhos: usina de ${powerKwp} kWp conectada em ${nName}, ${cityName}.`;
 
-        if (yearsConnected >= 3) {
-          opportunityType = "UPGRADE_BATTERY";
-          leadPotentialScore = 92;
-          recommendedPitch = `Cliente antigo (${yearsConnected} anos conectado). Grande potencial para venda de aumento de potência (novos módulos), baterias ou higienização periódica.`;
-        } else if (yearsConnected <= 1) {
-          opportunityType = "RECENT";
+        const cleanNeighborhood = fixMojibake(plant.neighborhood) || "Bairro local";
+        const cleanCityName = fixMojibake(plant.cityName) || cityName;
+        let recommendedPitch = `Prospecção territorial em ${cleanNeighborhood}, ${cleanCityName}: região com usina de ${powerKwp} kWp conectada à rede.`;
+
+        if (isMature) {
+          leadPotentialScore = 85;
+          recommendedPitch = `Região com histórico solar consolidado (${yearsConnected} anos de conexão). Alta maturidade e receptividade dos vizinhos para geração própria de energia.`;
+        } else if (isRecent) {
           leadPotentialScore = 80;
-          recommendedPitch = `Instalação recente. Momento ideal para abordar vizinhos imediatos que acompanharam a instalação.`;
+          recommendedPitch = `Instalação recente no bairro. Momento ideal para prospectar imóveis e empresas vizinhas aproveitando o interesse gerado pela novidade.`;
         }
 
         // 1. Geocodificação de Alta Precisão por CEP Real
@@ -340,7 +355,7 @@ export class RadarService {
 
           // Raio ajustado com densidade urbana central: 80% das usinas ficam no perímetro urbano central (~300m a 1.8km)
           const isRural = plant.classType === "RURAL";
-          const maxRadiusDeg = isRural ? 0.035 : totalCountInCity > 2000 ? 0.05 : 0.015; // ~1.3km para cidades normais / ~4km para metrópoles
+          const maxRadiusDeg = isRural ? 0.035 : totalCountInCity > 2000 ? 0.05 : 0.015;
           const normalizedRadius =
             Math.sqrt((index + 1) / Math.max(1, realPlants.length)) * maxRadiusDeg;
 
@@ -354,26 +369,40 @@ export class RadarService {
         const estimatedMonthlyGenKwh = Math.round(powerKwp * 125);
         const estimatedMonthlySavingsBrl = Math.round(estimatedMonthlyGenKwh * 0.92);
 
-        const neighborhoodDisplay =
+        const neighborhoodDisplay = fixMojibake(
           postalHit?.neighborhood ||
-          (plant.neighborhood && plant.neighborhood.trim() !== ""
-            ? plant.neighborhood
-            : plant.zipCode
-              ? `CEP ${plant.zipCode}`
-              : "Área Urbana");
+            (plant.neighborhood && plant.neighborhood.trim() !== ""
+              ? plant.neighborhood
+              : plant.zipCode
+                ? `CEP ${plant.zipCode}`
+                : "Área Urbana")
+        );
 
         const streetDisplay = postalHit?.street
-          ? `${postalHit.street}, nº ***`
+          ? `${fixMojibake(postalHit.street)}, nº ***`
           : `Instalação Solar, nº *** - ${neighborhoodDisplay}`;
+
+        // Trata titular: Se for residencial, o dado pessoal não é divulgado por LGPD (null)
+        // Se for comercial/industrial, só preenche se for uma razão social real
+        const isResidential = plant.classType === "RESIDENTIAL";
+        const rawHolder = plant.holderName ? fixMojibake(plant.holderName).trim() : null;
+        const isGenericHolder =
+          !rawHolder ||
+          rawHolder === "***" ||
+          rawHolder.toLowerCase().includes("pessoa física") ||
+          rawHolder.toLowerCase().includes("titular comercial") ||
+          rawHolder.toLowerCase().includes("não informado");
+
+        const cleanHolderName = !isResidential && !isGenericHolder ? rawHolder : null;
 
         return {
           id: plant.id,
           codeAneel: plant.codeAneel,
           uf: plant.uf,
-          city: plant.cityName,
+          city: cleanCityName,
           neighborhood: neighborhoodDisplay,
           addressMasked: streetDisplay,
-          distributor: plant.distributor,
+          distributor: fixMojibake(plant.distributor),
           classType:
             (plant.classType as "RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL" | "RURAL") ||
             "RESIDENTIAL",
@@ -385,15 +414,11 @@ export class RadarService {
           opportunityType,
           estimatedMonthlyGenKwh,
           estimatedMonthlySavingsBrl,
-          holderName:
-            plant.holderName ||
-            (plant.classType === "RESIDENTIAL"
-              ? "Pessoa Física (Residencial)"
-              : "Titular Comercial"),
+          holderName: cleanHolderName,
           documentNumber: plant.documentNumber,
-          consumerType: plant.consumerType || (plant.classType === "RESIDENTIAL" ? "PF" : "PJ"),
-          substation: plant.substation,
-          modality: plant.modality || "Geração na própria UC",
+          consumerType: plant.consumerType || (isResidential ? "PF" : "PJ"),
+          substation: plant.substation ? fixMojibake(plant.substation) : null,
+          modality: plant.modality ? fixMojibake(plant.modality) : "Geração na própria UC",
           latitude: Math.round(lat * 1000000) / 1000000,
           longitude: Math.round(lng * 1000000) / 1000000,
           leadPotentialScore,
@@ -415,12 +440,21 @@ export class RadarService {
       if (query.classType && query.classType !== "ALL" && item.classType !== query.classType) {
         return false;
       }
-      if (
-        query.opportunityType &&
-        query.opportunityType !== "ALL" &&
-        item.opportunityType !== query.opportunityType
-      ) {
-        return false;
+      if (query.opportunityType && query.opportunityType !== "ALL") {
+        if (
+          query.opportunityType === "CONSOLIDATED" ||
+          query.opportunityType === "UPGRADE_BATTERY"
+        ) {
+          if (
+            item.opportunityType !== "CONSOLIDATED" &&
+            item.opportunityType !== "UPGRADE_BATTERY" &&
+            item.yearsConnected < 3
+          ) {
+            return false;
+          }
+        } else if (item.opportunityType !== query.opportunityType) {
+          return false;
+        }
       }
       if (query.minKwp && item.powerKwp < query.minKwp) {
         return false;
@@ -467,8 +501,8 @@ export class RadarService {
       temperature: "WARM",
       nextActionType:
         dto.whatsapp && dto.whatsapp.replace(/\D/g, "").length >= 10
-          ? "Mensagem WhatsApp de Vizinhança / Retrofit"
-          : "Visita de Campo / Obtenção de Contato",
+          ? "Abordagem Comercial / Vizinhança"
+          : "Prospecção Territorial / Visita de Bairro",
       nextActionAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     });
 
@@ -504,7 +538,12 @@ export class RadarService {
     }
 
     const totalPower = items.reduce((acc, curr) => acc + curr.powerKwp, 0);
-    const upgradeCount = items.filter((i) => i.opportunityType === "UPGRADE_BATTERY").length;
+    const upgradeCount = items.filter(
+      (i) =>
+        i.opportunityType === "CONSOLIDATED" ||
+        i.opportunityType === "UPGRADE_BATTERY" ||
+        i.yearsConnected >= 3
+    ).length;
     const residentialCount = items.filter((i) => i.classType === "RESIDENTIAL").length;
     const commercialCount = items.filter((i) => i.classType === "COMMERCIAL").length;
     const ruralCount = items.filter((i) => i.classType === "RURAL").length;

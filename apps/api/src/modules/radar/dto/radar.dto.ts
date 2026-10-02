@@ -24,7 +24,7 @@ export class QueryRadarDto {
 
   @IsOptional()
   @IsString()
-  opportunityType?: "ALL" | "UPGRADE_BATTERY" | "NEW_NEIGHBORS" | "RECENT";
+  opportunityType?: "ALL" | "CONSOLIDATED" | "UPGRADE_BATTERY" | "NEW_NEIGHBORS" | "RECENT";
 
   @IsOptional()
   @Type(() => Number)
