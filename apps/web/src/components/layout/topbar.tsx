@@ -7,17 +7,7 @@ import { useOrganization } from "@/components/providers/organization-provider";
 import { useSidebar } from "@/components/layout/sidebar-inset";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { Button } from "@/components/ui/button";
-import {
-  Moon,
-  Sun,
-  LogOut,
-  Menu,
-  UserRound,
-  Timer,
-  AlertTriangle,
-  Search,
-  Compass,
-} from "lucide-react";
+import { Moon, Sun, LogOut, Menu, UserRound, Timer, AlertTriangle, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { OrganizationSwitcher } from "@/components/layout/organization-switcher";
 import { NotificationsBell } from "@/components/layout/notifications-bell";
@@ -45,11 +35,7 @@ function userInitials(name?: string | null, email?: string | null): string {
 
 function UserMenu(): JSX.Element {
   const { user: auth0User } = useUser();
-  const { user: profile, currentOrganization } = useOrganization();
-  const isAdmin =
-    currentOrganization?.role === "ADMIN" ||
-    currentOrganization?.role === "OWNER" ||
-    profile?.role === "ADMIN";
+  const { user: profile } = useOrganization();
   const [open, setOpen] = useState(false);
   const [pictureError, setPictureError] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -115,19 +101,6 @@ function UserMenu(): JSX.Element {
             <UserRound className="h-4 w-4 text-[var(--color-muted-foreground)]" />
             Editar perfil
           </Link>
-          {isAdmin && (
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 border-t border-[var(--color-border)] px-3.5 py-2.5 text-left text-sm text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-muted)]/40"
-              onClick={() => {
-                setOpen(false);
-                window.dispatchEvent(new CustomEvent("energivia_trigger_onboarding_tour"));
-              }}
-            >
-              <Compass className="h-4 w-4 text-[var(--color-primary)]" />
-              Tutorial da plataforma
-            </button>
-          )}
           <a
             href="/auth/logout"
             className="flex items-center gap-2 border-t border-[var(--color-border)] px-3.5 py-2.5 text-sm text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"

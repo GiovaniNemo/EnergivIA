@@ -2994,7 +2994,6 @@ export const ProposalEconomicsModal = forwardRef<
         <DialogContent
           muiMaxWidth="lg"
           allowOverflow
-          data-tour="proposal-study-simulation"
           className="max-h-[min(92vh,calc(100dvh-2rem))] overflow-y-auto max-w-5xl"
         >
           <DialogHeader className="pb-1">
@@ -4384,7 +4383,6 @@ export const ProposalEconomicsModal = forwardRef<
               <div className="w-full sm:w-auto">
                 <Button
                   type="button"
-                  data-tour="btn-generate-proposal"
                   className="h-11 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-base font-semibold text-white shadow-sm hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-60 sm:w-auto"
                   disabled={
                     proposalCreateLoading ||

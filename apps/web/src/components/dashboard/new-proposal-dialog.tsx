@@ -160,11 +160,7 @@ export function NewProposalDialog({ open, onClose }: NewProposalDialogProps): JS
         if (!value && !submitting) onClose();
       }}
     >
-      <DialogContent
-        muiMaxWidth="sm"
-        data-tour="new-proposal-dialog"
-        className="overflow-hidden rounded-2xl p-0"
-      >
+      <DialogContent muiMaxWidth="sm" className="overflow-hidden rounded-2xl p-0">
         <DialogHeader className="space-y-1 border-b border-[var(--color-border)] px-6 py-5">
           <DialogTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight">
             <FileText className="h-5 w-5 text-[var(--color-primary)]" />
