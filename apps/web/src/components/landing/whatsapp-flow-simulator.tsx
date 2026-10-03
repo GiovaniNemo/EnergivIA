@@ -32,41 +32,45 @@ const MILESTONES: Milestone[] = [
     id: 0,
     title: "Início & Menu Interativo",
     tag: "Passo 1",
-    description: "O cliente manda 'Boa tarde' e o bot apresenta as opções comerciais.",
+    description: "O cliente manda 'Boa tarde' e o bot apresenta o menu com opções comerciais.",
     stepStartIndex: 0,
     stepEndIndex: 3,
   },
   {
     id: 1,
-    title: "Leitura da Fatura de Energia",
+    title: "Leitura da Fatura & Estrutura",
     tag: "Passo 2",
-    description: "Envio do PDF da fatura e extração por IA do consumo (257 kWh/mês) e telhado.",
+    description:
+      "Envio do PDF da fatura, extração automática com IA (257 kWh/mês em Maringá/PR) e escolha do telhado.",
     stepStartIndex: 4,
     stepEndIndex: 6,
   },
   {
     id: 2,
-    title: "Seleção do Kit Solar",
+    title: "Dimensionamento & Kits",
     tag: "Passo 3",
-    description: "Cálculo da potência (3,15 kWp), preço dos equipamentos e escolha do integrador.",
+    description:
+      "Cálculo da potência (3,15 kWp), taxa padrão e cotação dos kits Standard, Elite e Premium.",
     stepStartIndex: 7,
-    stepEndIndex: 8,
+    stepEndIndex: 10,
   },
   {
     id: 3,
     title: "Dados do Cliente no CRM",
     tag: "Passo 4",
-    description: "Coleta do nome (Marcelo), WhatsApp fictício e template desejado.",
-    stepStartIndex: 9,
-    stepEndIndex: 14,
+    description:
+      "Registro de Marcelo Santana, WhatsApp com DDD e seleção do modelo de proposta executivo.",
+    stepStartIndex: 11,
+    stepEndIndex: 16,
   },
   {
     id: 4,
     title: "Proposta Pronta com Link",
     tag: "Passo 5",
-    description: "Entrega do link elegante da proposta pronto para enviar ao cliente.",
-    stepStartIndex: 15,
-    stepEndIndex: 15,
+    description:
+      "Geração instantânea da proposta oficial com link interativo e registro automático no CRM.",
+    stepStartIndex: 17,
+    stepEndIndex: 17,
   },
 ];
 
@@ -80,6 +84,7 @@ interface ChatMessage {
     | "welcome"
     | "ask_bill"
     | "ocr_result"
+    | "tax_rate"
     | "kit_distribuidor"
     | "ask_name"
     | "ask_phone"
@@ -100,37 +105,37 @@ interface StepConfig {
 
 // Pacing calibrated for natural, comfortable human reading
 const FLOW_STEPS: StepConfig[] = [
-  // Passo 1: Início
+  // Passo 1: Início & Menu Interativo
   {
     milestoneId: 0,
     userDraft: "Boa tarde",
-    draftDurationMs: 700,
+    draftDurationMs: 650,
     message: { id: "m1", type: "user", text: "Boa tarde", time: "09:41" },
     readPauseMs: 1200,
   },
   {
     milestoneId: 0,
     botTypingLabel: "EnergivIA está digitando...",
-    botTypingDurationMs: 1600,
+    botTypingDurationMs: 1500,
     message: { id: "m2", type: "bot", kind: "welcome", time: "09:41" },
-    readPauseMs: 4500,
+    readPauseMs: 4600,
   },
   {
     milestoneId: 0,
     userDraft: "1",
-    draftDurationMs: 500,
-    message: { id: "m3", type: "user", text: "1", time: "09:42" },
+    draftDurationMs: 450,
+    message: { id: "m3", type: "user", text: "1", time: "09:41" },
     readPauseMs: 1000,
   },
   {
     milestoneId: 0,
     botTypingLabel: "EnergivIA está digitando...",
-    botTypingDurationMs: 1300,
-    message: { id: "m4", type: "bot", kind: "ask_bill", time: "09:42" },
+    botTypingDurationMs: 1200,
+    message: { id: "m4", type: "bot", kind: "ask_bill", time: "09:41" },
     readPauseMs: 3200,
   },
 
-  // Passo 2: Fatura & OCR
+  // Passo 2: Leitura da Fatura & Estrutura
   {
     milestoneId: 1,
     message: {
@@ -147,82 +152,96 @@ const FLOW_STEPS: StepConfig[] = [
     botTypingLabel: "EnergivIA analisando fatura com IA...",
     botTypingDurationMs: 2400,
     message: { id: "m6", type: "bot", kind: "ocr_result", time: "09:42" },
-    readPauseMs: 5500,
+    readPauseMs: 5200,
   },
   {
     milestoneId: 1,
-    userDraft: "2",
-    draftDurationMs: 500,
-    message: { id: "m7", type: "user", text: "2", time: "09:42" },
+    userDraft: "1",
+    draftDurationMs: 450,
+    message: { id: "m7", type: "user", text: "1", time: "09:42" },
     readPauseMs: 1000,
   },
 
-  // Passo 3: Kit Solar
+  // Passo 3: Dimensionamento & Kits Solares
   {
     milestoneId: 2,
-    botTypingLabel: "EnergivIA calculando melhor kit solar...",
-    botTypingDurationMs: 2400,
-    message: { id: "m8", type: "bot", kind: "kit_distribuidor", time: "09:43" },
-    readPauseMs: 6000,
+    botTypingLabel: "EnergivIA calculando dimensionamento...",
+    botTypingDurationMs: 1800,
+    message: { id: "m8", type: "bot", kind: "tax_rate", time: "09:42" },
+    readPauseMs: 4600,
   },
   {
     milestoneId: 2,
     userDraft: "1",
-    draftDurationMs: 500,
+    draftDurationMs: 450,
     message: { id: "m9", type: "user", text: "1", time: "09:43" },
     readPauseMs: 1000,
   },
-
-  // Passo 4: Dados no CRM
   {
-    milestoneId: 3,
-    botTypingLabel: "EnergivIA está digitando...",
-    botTypingDurationMs: 1200,
-    message: { id: "m10", type: "bot", kind: "ask_name", time: "09:43" },
-    readPauseMs: 2500,
+    milestoneId: 2,
+    botTypingLabel: "EnergivIA cotando kits em distribuidores...",
+    botTypingDurationMs: 2400,
+    message: { id: "m10", type: "bot", kind: "kit_distribuidor", time: "09:43" },
+    readPauseMs: 6500,
   },
   {
-    milestoneId: 3,
-    userDraft: "Marcelo",
-    draftDurationMs: 750,
-    message: { id: "m11", type: "user", text: "Marcelo", time: "09:43" },
+    milestoneId: 2,
+    userDraft: "1",
+    draftDurationMs: 450,
+    message: { id: "m11", type: "user", text: "1", time: "09:43" },
     readPauseMs: 1000,
   },
+
+  // Passo 4: Dados do Cliente no CRM
   {
     milestoneId: 3,
     botTypingLabel: "EnergivIA está digitando...",
     botTypingDurationMs: 1200,
-    message: { id: "m12", type: "bot", kind: "ask_phone", time: "09:43" },
-    readPauseMs: 2500,
+    message: { id: "m12", type: "bot", kind: "ask_name", time: "09:43" },
+    readPauseMs: 2600,
+  },
+  {
+    milestoneId: 3,
+    userDraft: "Marcelo Santana",
+    draftDurationMs: 800,
+    message: { id: "m13", type: "user", text: "Marcelo Santana", time: "09:43" },
+    readPauseMs: 1100,
+  },
+  {
+    milestoneId: 3,
+    botTypingLabel: "EnergivIA está digitando...",
+    botTypingDurationMs: 1200,
+    message: { id: "m14", type: "bot", kind: "ask_phone", time: "09:44" },
+    readPauseMs: 2600,
   },
   {
     milestoneId: 3,
     userDraft: "(44) 99888-0000",
     draftDurationMs: 850,
-    message: { id: "m13", type: "user", text: "(44) 99888-0000", time: "09:44" },
+    message: { id: "m15", type: "user", text: "(44) 99888-0000", time: "09:44" },
     readPauseMs: 1200,
   },
   {
     milestoneId: 3,
     botTypingLabel: "EnergivIA está digitando...",
     botTypingDurationMs: 1200,
-    message: { id: "m14", type: "bot", kind: "ask_template", time: "09:44" },
-    readPauseMs: 3500,
+    message: { id: "m16", type: "bot", kind: "ask_template", time: "09:44" },
+    readPauseMs: 3800,
   },
   {
     milestoneId: 3,
     userDraft: "1",
-    draftDurationMs: 500,
-    message: { id: "m15", type: "user", text: "1", time: "09:44" },
+    draftDurationMs: 450,
+    message: { id: "m17", type: "user", text: "1", time: "09:44" },
     readPauseMs: 1000,
   },
 
-  // Passo 5: Proposta Final
+  // Passo 5: Proposta Pronta com Link
   {
     milestoneId: 4,
-    botTypingLabel: "EnergivIA gerando proposta em PDF...",
+    botTypingLabel: "EnergivIA gerando proposta oficial...",
     botTypingDurationMs: 2600,
-    message: { id: "m16", type: "bot", kind: "final_proposal", time: "09:45" },
+    message: { id: "m18", type: "bot", kind: "final_proposal", time: "09:45" },
     readPauseMs: 8500,
   },
 ];
@@ -574,163 +593,331 @@ export function WhatsappFlowSimulator(): JSX.Element {
                     >
                       <div className="relative max-w-[92%] rounded-[16px] rounded-tl-[4px] bg-white p-3.5 text-black shadow-[0_1px_1px_rgba(0,0,0,0.08)] space-y-2">
                         {msg.kind === "welcome" && (
-                          <div className="text-[15px] leading-[21px] space-y-2 text-black font-normal">
+                          <div className="text-[14.5px] leading-[20px] space-y-2 text-black font-normal">
                             <p>
-                              Boa tarde Giovani! Tudo bem?
+                              Olá Giovani! Tudo bem?
                               <br />
-                              Sou seu assistente de dimensionamento e vendas da <b>EnergivIA</b>.
+                              Sou seu assistente de vendas e dimensionamento da{" "}
+                              <b>EnergivIA Solar</b>.
                             </p>
-                            <p>
-                              Como posso ajudar você a gerar orçamentos e propostas solares hoje?
+                            <p className="font-semibold text-black">
+                              Como posso ajudar você a gerar orçamentos hoje?
                             </p>
-                            <div className="mt-2 space-y-1.5 rounded-xl bg-[#f8f9fa] p-2.5 border border-slate-200/80 text-[13.5px] text-black">
-                              <p className="font-semibold text-black">
-                                Escolha uma opção digitando o número:
+                            <div className="space-y-1.5 rounded-xl bg-[#f8f9fa] p-2.5 border border-slate-200/80 text-[13px] text-black">
+                              <p className="border-l-2 border-emerald-500 pl-2">
+                                <span className="font-bold text-slate-800">[1]</span>{" "}
+                                <b>Enviar fatura de energia</b> (PDF ou foto)
                               </p>
-                              <p>[1] Enviar fatura de energia (PDF ou foto)</p>
-                              <p>[2] Simular por consumo mensal (ex: 450 kWh)</p>
-                              <p>[3] Simular por potência de pico (ex: 5 kWp)</p>
-                              <p>[4] Simular por quantidade de placas</p>
-                              <p>[5] Dúvidas sobre kits e preços</p>
+                              <p className="border-l-2 border-slate-300 pl-2 text-slate-600">
+                                <span className="font-bold text-slate-700">[2]</span> Simular por
+                                consumo mensal (ex: 450 kWh)
+                              </p>
+                              <p className="border-l-2 border-slate-300 pl-2 text-slate-600">
+                                <span className="font-bold text-slate-700">[3]</span> Simular por
+                                potência de pico (ex: 5 kWp)
+                              </p>
+                              <p className="border-l-2 border-slate-300 pl-2 text-slate-600">
+                                <span className="font-bold text-slate-700">[4]</span> Simular por
+                                quantidade de placas (ex: 10 módulos)
+                              </p>
+                              <p className="border-l-2 border-slate-300 pl-2 text-slate-600">
+                                <span className="font-bold text-slate-700">[5]</span> Dúvidas sobre
+                                equipamentos e preços de catálogo
+                              </p>
                             </div>
-                            <p className="text-[12px] text-[#8696a0] italic">
-                              (Ou me envie diretamente a conta de luz)
+                            <p className="text-[11.5px] text-[#8696a0] italic">
+                              (Responda com o número da opção ou envie a conta de luz diretamente)
+                            </p>
+                            <p className="text-[12px] font-semibold text-slate-700">
+                              Equipe <i>EnergivIA Solar</i>
                             </p>
                           </div>
                         )}
 
                         {msg.kind === "ask_bill" && (
-                          <div className="text-[15px] leading-[21px] space-y-1 text-black font-normal">
+                          <div className="text-[14.5px] leading-[20px] space-y-1.5 text-black font-normal">
+                            <p className="font-bold text-black">Envio de Fatura de Energia</p>
                             <p>
-                              Perfeito! Envie o arquivo em <b>PDF</b> ou a{" "}
-                              <b>foto da conta de luz</b> do seu cliente por aqui mesmo.
+                              Envie o arquivo em <b>PDF</b> ou a <b>foto da conta de luz</b> do seu
+                              cliente por aqui mesmo.
                             </p>
-                            <p className="text-[13px] text-[#8696a0]">
+                            <div className="rounded-lg bg-emerald-50/70 border-l-2 border-emerald-500 p-2 text-[12.5px] text-emerald-900 leading-snug">
                               Nossa inteligência artificial vai extrair automaticamente todos os
-                              dados de consumo e histórico!
-                            </p>
+                              dados de consumo, histórico e padrão de rede!
+                            </div>
                           </div>
                         )}
 
                         {msg.kind === "ocr_result" && (
-                          <div className="text-[15px] leading-[21px] space-y-2 text-black font-normal">
-                            <p className="font-semibold text-black">
-                              Legal, dados extraídos com precisão:
-                            </p>
-                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2.5 border border-slate-200/80 text-[13.5px]">
+                          <div className="text-[14.5px] leading-[20px] space-y-2 text-black font-normal">
+                            <div className="flex items-center justify-between">
+                              <p className="font-bold text-black">Fatura Analisada com Precisão!</p>
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                IA Concluída
+                              </span>
+                            </div>
+                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2.5 border border-slate-200/80 text-[13px]">
                               <p className="flex justify-between">
-                                <span className="text-black/80">Concessionária:</span>
-                                <span className="font-semibold text-black">Copel (PR)</span>
-                              </p>
-                              <p className="flex justify-between">
-                                <span className="text-black/80">Consumo Médio:</span>
+                                <span className="text-slate-600">Consumo Médio:</span>
                                 <span className="font-semibold text-black">257 kWh/mês</span>
                               </p>
                               <p className="flex justify-between">
-                                <span className="text-black/80">Tipo de Ligação:</span>
-                                <span className="font-semibold text-black">Monofásico (127V)</span>
+                                <span className="text-slate-600">Localização:</span>
+                                <span className="font-semibold text-black">Maringá / PR</span>
                               </p>
                               <p className="flex justify-between">
-                                <span className="text-black/80">Potência Estimada:</span>
-                                <span className="font-bold text-black">3,15 kWp</span>
+                                <span className="text-slate-600">Histórico Fatura:</span>
+                                <span className="font-medium text-slate-800">
+                                  12 meses conferidos
+                                </span>
+                              </p>
+                              <p className="flex justify-between">
+                                <span className="text-slate-600">Padrão de Rede:</span>
+                                <span className="font-semibold text-black">Monofásico 220V</span>
                               </p>
                             </div>
-                            <p className="text-[13.5px] font-medium text-black">
-                              Qual o tipo de telhado para fixação dos módulos?
+                            <p className="text-[13.5px] font-semibold text-black">
+                              Qual a estrutura do telhado?
                             </p>
-                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2 border border-slate-200/80 text-[13px]">
-                              <p>[1] Fibrocimento / Metálico</p>
+                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2 border border-slate-200/80 text-[12.5px]">
                               <p className="font-semibold text-black bg-emerald-100/90 border border-emerald-400 rounded-md px-2 py-0.5">
-                                [2] Cerâmico (Colonial)
+                                [1] Cerâmica (Colonial) (Telhas convencionais)
                               </p>
-                              <p>[3] Solo / Carport</p>
+                              <p className="px-2 py-0.5 text-slate-600">
+                                [2] Fibrocimento (Em madeira)
+                              </p>
+                              <p className="px-2 py-0.5 text-slate-600">
+                                [3] Metálico (Trapezoidal / Zipada)
+                              </p>
+                              <p className="px-2 py-0.5 text-slate-600">[4] Solo (Usina de solo)</p>
+                              <p className="px-2 py-0.5 text-slate-600">
+                                [5] Laje (Plana com triângulos)
+                              </p>
+                              <p className="px-2 py-0.5 text-slate-600">
+                                [6] Fibrometal (Vigas metálicas)
+                              </p>
+                              <p className="px-2 py-0.5 text-slate-600">
+                                [7] Sem estrutura (Apenas equipamentos)
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {msg.kind === "tax_rate" && (
+                          <div className="text-[14.5px] leading-[20px] space-y-2 text-black font-normal">
+                            <div className="flex items-center justify-between border-b border-slate-200/80 pb-1.5">
+                              <span className="text-[12px] font-semibold text-slate-600">
+                                Estrutura Registrada:
+                              </span>
+                              <span className="text-[12px] font-bold text-black bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                Cerâmica (Colonial)
+                              </span>
+                            </div>
+
+                            <p className="font-bold text-black text-[13.5px]">
+                              Dimensionamento Solar Calculado (257 kWh/mês):
+                            </p>
+                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2.5 border border-slate-200/80 text-[13px]">
+                              <p className="flex justify-between">
+                                <span className="text-slate-600">Potência Estimada:</span>
+                                <span className="font-bold text-black">3,15 kWp (5x 630W)</span>
+                              </p>
+                              <p className="flex justify-between">
+                                <span className="text-slate-600">Geração Estimada:</span>
+                                <span className="font-semibold text-black">268 kWh/mês</span>
+                              </p>
+                              <p className="flex justify-between border-t border-slate-200 pt-1">
+                                <span className="text-slate-600">Sua taxa padrão:</span>
+                                <span className="font-bold text-emerald-700">R$ 2.850,00/kWp</span>
+                              </p>
+                              <p className="flex justify-between text-[12px]">
+                                <span className="text-slate-500">Valor aprox. venda:</span>
+                                <span className="font-semibold text-slate-800">R$ 8.977,50</span>
+                              </p>
+                            </div>
+
+                            <p className="text-[13px] font-semibold text-black">
+                              Como você deseja prosseguir para esta cotação?
+                            </p>
+                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2 border border-slate-200/80 text-[12.5px]">
+                              <p className="font-semibold text-black bg-emerald-100/90 border border-emerald-400 rounded-md px-2 py-0.5">
+                                [1] Seguir com a taxa padrão (R$ 2.850,00/kWp)
+                              </p>
+                              <p className="px-2 py-0.5 text-slate-600">
+                                [2] Informar outro valor por kWp
+                              </p>
+                              <p className="px-2 py-0.5 text-slate-500">
+                                [0] Voltar / Alterar estrutura
+                              </p>
                             </div>
                           </div>
                         )}
 
                         {msg.kind === "kit_distribuidor" && (
-                          <div className="text-[15px] leading-[21px] space-y-2 text-black font-normal">
-                            <p className="font-semibold text-black">
-                              Kit Solar Selecionado com Sucesso:
+                          <div className="text-[14.5px] leading-[20px] space-y-2 text-black font-normal">
+                            <p className="text-[13.5px] font-semibold text-black">
+                              Melhores opções dimensionadas (257 kWh/mês):
                             </p>
-                            <div className="rounded-xl border border-emerald-300/80 bg-emerald-50/40 p-2.5 space-y-1 text-[13.5px]">
+                            <p className="text-[11.5px] text-[#8696a0]">
+                              Taxa aplicada: R$ 2.850,00/kWp em Maringá/PR
+                            </p>
+
+                            {/* Opção 1: Standard (Mais Recomendado) */}
+                            <div className="rounded-xl border border-emerald-400/90 bg-emerald-50/50 p-2.5 space-y-1 text-[13px]">
                               <div className="flex items-center justify-between">
                                 <span className="font-bold text-black text-xs uppercase tracking-wide">
-                                  Kit Solar Homologado 3,15 kWp
+                                  Opção 1 — Standard (Mais Recomendado)
                                 </span>
-                                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
-                                  Em Estoque
+                                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-2xs">
+                                  R$ 8.977,50
                                 </span>
                               </div>
-                              <p className="text-xs text-black font-normal">
-                                • 5x Módulos 630W N-Type TopCon
-                                <br />• 1x Inversor Micro/String 3kW Monofásico
+                              <p className="text-[11.5px] text-slate-600 font-medium">
+                                Potência: 3,15 kWp | Geração: 268 kWh/mês
                               </p>
-                              <div className="border-t border-slate-200 pt-1 flex justify-between items-center text-xs">
-                                <span className="text-black/80">Custo dos Equipamentos:</span>
-                                <span className="font-semibold text-black">R$ 4.290,00</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="font-semibold text-black">
-                                  Margem Sugerida (35%):
-                                </span>
-                                <span className="font-bold text-black">R$ 6.600,00</span>
-                              </div>
+                              <p className="text-[11.5px] text-slate-800 leading-snug">
+                                • 5x Módulo Solar 630W N-Type TopCon
+                                <br />• 1x Inversor String 3kW Monofásico 220V
+                                <br />• Estrutura Cerâmica Completa + Cabos e Conectores
+                              </p>
                             </div>
-                            <p className="text-[13.5px] font-medium text-black">
-                              Deseja aplicar essa margem de 35% na proposta comercial?
-                            </p>
-                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2 border border-slate-200/80 text-[13px]">
-                              <p className="font-semibold text-black bg-emerald-100/90 border border-emerald-400 rounded-md px-2 py-0.5">
-                                [1] Sim, avançar com 35%
+
+                            {/* Opção 2: Elite */}
+                            <div className="rounded-xl border border-slate-200 bg-[#f8f9fa] p-2 space-y-0.5 text-[12.5px]">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-slate-800 text-xs">
+                                  Opção 2 — Elite
+                                </span>
+                                <span className="font-bold text-slate-900 text-xs">
+                                  R$ 9.450,00
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500">
+                                3,15 kWp • 275 kWh/mês • 5x 630W Bifacial + Microinversor Hoymiles
                               </p>
-                              <p>[2] Ajustar valor final manualmente</p>
+                            </div>
+
+                            {/* Opção 3: Premium */}
+                            <div className="rounded-xl border border-slate-200 bg-[#f8f9fa] p-2 space-y-0.5 text-[12.5px]">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-slate-800 text-xs">
+                                  Opção 3 — Premium
+                                </span>
+                                <span className="font-bold text-slate-900 text-xs">
+                                  R$ 10.200,00
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500">
+                                3,40 kWp • 290 kWh/mês • 5x 680W N-Type + Inversor Híbrido Bateria
+                              </p>
+                            </div>
+
+                            <p className="text-[13px] font-semibold text-black pt-1">
+                              Qual opção você prefere para o seu cliente?
+                            </p>
+                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2 border border-slate-200/80 text-[12.5px]">
+                              <p className="font-semibold text-black bg-emerald-100/90 border border-emerald-400 rounded-md px-2 py-0.5">
+                                [1] Standard (Mais Recomendado)
+                              </p>
+                              <p className="px-2 py-0.5 text-slate-600">[2] Elite</p>
+                              <p className="px-2 py-0.5 text-slate-600">[3] Premium</p>
                             </div>
                           </div>
                         )}
 
                         {msg.kind === "ask_name" && (
-                          <div className="text-[15px] leading-[21px] space-y-1 text-black font-normal">
-                            <p>Excelente margem definida!</p>
+                          <div className="text-[14.5px] leading-[20px] space-y-1.5 text-black font-normal">
+                            <p className="font-semibold text-emerald-800">
+                              Ótima escolha! Kit selecionado com sucesso.
+                            </p>
                             <p>
-                              Qual o <b>nome do cliente</b> para personalizar a proposta?
+                              Qual o <b>nome do cliente final</b> para registrarmos no seu CRM?
+                            </p>
+                            <p className="text-[11.5px] text-[#8696a0] italic">
+                              (ou digite 0 para voltar às opções de kits)
                             </p>
                           </div>
                         )}
 
                         {msg.kind === "ask_phone" && (
-                          <div className="text-[15px] leading-[21px] space-y-1 text-black font-normal">
-                            <p>Prazer, Marcelo!</p>
+                          <div className="text-[14.5px] leading-[20px] space-y-1.5 text-black font-normal">
                             <p>
-                              Qual o <b>WhatsApp com DDD</b> dele para registro no CRM?
+                              Certo, vou registrar o cliente <b>Marcelo Santana</b>.
+                            </p>
+                            <p>
+                              E qual o <b>WhatsApp dele com DDD</b>?
+                            </p>
+                            <p className="text-[11.5px] text-[#8696a0] italic">
+                              (ou digite 0 para voltar)
                             </p>
                           </div>
                         )}
 
                         {msg.kind === "ask_template" && (
-                          <div className="text-[15px] leading-[21px] space-y-2 text-black font-normal">
-                            <p>Contato cadastrado no CRM!</p>
-                            <p>
-                              Qual <b>modelo de proposta</b> você deseja gerar?
+                          <div className="text-[14.5px] leading-[20px] space-y-2 text-black font-normal">
+                            <div className="rounded-lg bg-emerald-50 border-l-2 border-emerald-500 p-2 text-[12.5px] text-emerald-950 font-medium">
+                              Cliente <b>Marcelo Santana</b> e WhatsApp <b>(44) 99888-0000</b>{" "}
+                              registrados com sucesso!
+                            </div>
+                            <p className="text-[13.5px] font-semibold text-black">
+                              Qual modelo de proposta comercial você deseja usar para o seu cliente?
                             </p>
-                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2 border border-slate-200/80 text-[13px]">
+                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2 border border-slate-200/80 text-[12.5px]">
                               <p className="font-semibold text-black bg-emerald-100/90 border border-emerald-400 rounded-md px-2 py-0.5">
-                                [1] Modelo Premium Executivo (Gráficos + Payback)
+                                [1] Modelo Premium Executivo
                               </p>
-                              <p>[2] Modelo Express Resumido (1 Página)</p>
-                              <p>[3] Modelo Técnico Detalhado</p>
+                              <p className="px-2 py-0.5 text-slate-600">
+                                [2] Modelo Express Comercial
+                              </p>
+                              <p className="px-2 py-0.5 text-slate-600">
+                                [3] Modelo Técnico Detalhado
+                              </p>
+                              <p className="px-2 py-0.5 text-slate-500">[0] Voltar / Rever dados</p>
                             </div>
                           </div>
                         )}
 
                         {msg.kind === "final_proposal" && (
-                          <div className="text-[15px] leading-[21px] space-y-2 text-black font-normal">
-                            <p className="font-semibold text-black">
-                              Proposta Gerada com Sucesso em 12 Segundos!
-                            </p>
+                          <div className="text-[14.5px] leading-[20px] space-y-2.5 text-black font-normal">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-black text-[14px]">
+                                Proposta Comercial Gerada com Sucesso!
+                              </span>
+                              <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 border border-emerald-200">
+                                Pronta
+                              </span>
+                            </div>
 
-                            {/* Proposal Card in WhatsApp */}
-                            <div className="rounded-xl border border-emerald-300 bg-[#f8f9fa] p-2.5 shadow-2xs space-y-2">
+                            {/* Summary specs from real bot text */}
+                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2.5 border border-slate-200/80 text-[12.5px]">
+                              <p className="flex justify-between">
+                                <span className="text-slate-600">Cliente:</span>
+                                <span className="font-semibold text-black">Marcelo Santana</span>
+                              </p>
+                              <p className="flex justify-between">
+                                <span className="text-slate-600">Potência:</span>
+                                <span className="font-bold text-black">3,15 kWp</span>
+                              </p>
+                              <p className="flex justify-between">
+                                <span className="text-slate-600">Estrutura:</span>
+                                <span className="font-medium text-slate-800">
+                                  Cerâmica (Colonial)
+                                </span>
+                              </p>
+                              <p className="flex justify-between">
+                                <span className="text-slate-600">Modelo:</span>
+                                <span className="font-medium text-slate-800">
+                                  Modelo Premium Executivo
+                                </span>
+                              </p>
+                              <p className="flex justify-between border-t border-slate-200 pt-1 text-[13px]">
+                                <span className="font-bold text-slate-800">Valor Total:</span>
+                                <span className="font-extrabold text-emerald-700">R$ 8.977,50</span>
+                              </p>
+                            </div>
+
+                            {/* Interactive Proposal Card in WhatsApp */}
+                            <div className="rounded-xl border border-emerald-300 bg-white p-2.5 shadow-2xs space-y-2">
                               <div className="flex items-center gap-2.5">
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300">
                                   <FileText className="h-5 w-5" />
@@ -740,22 +927,26 @@ export function WhatsappFlowSimulator(): JSX.Element {
                                     Proposta_Solar_Marcelo_Santana.pdf
                                   </p>
                                   <p className="text-[11.5px] text-[#8696a0] font-normal mt-0.5">
-                                    3,15 kWp • Economia de R$ 74.800 em 25 anos
+                                    3,15 kWp • Payback de 2,7 anos • Economia R$ 74.800
                                   </p>
                                 </div>
                               </div>
 
                               <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2 text-[12px]">
-                                <span className="text-black font-semibold">Payback: 2,7 anos</span>
-                                <span className="flex items-center gap-1 font-semibold bg-emerald-600 text-white px-2.5 py-1 rounded-md text-[11.5px] shadow-xs">
+                                <span className="font-mono text-emerald-700 text-[11px] truncate max-w-[150px]">
+                                  energivia.com.br/p/8921a9f
+                                </span>
+                                <span className="flex items-center gap-1 font-semibold bg-emerald-600 text-white px-2.5 py-1 rounded-md text-[11.5px] shadow-xs cursor-pointer hover:bg-emerald-700 transition">
                                   Abrir Proposta <ExternalLink className="h-3 w-3" />
                                 </span>
                               </div>
                             </div>
 
-                            <p className="text-[12px] text-[#8696a0] leading-relaxed">
-                              O cliente também já recebeu o link interativo no WhatsApp dele e a
-                              oportunidade foi criada no seu CRM!
+                            <p className="text-[11.5px] text-[#8696a0] leading-snug">
+                              Ela também já está disponível no seu painel CRM da EnergivIA.
+                            </p>
+                            <p className="text-[12px] font-semibold text-slate-700">
+                              Equipe <i>EnergivIA Solar</i>
                             </p>
                           </div>
                         )}
