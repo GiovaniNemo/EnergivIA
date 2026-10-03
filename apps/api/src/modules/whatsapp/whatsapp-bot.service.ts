@@ -2000,7 +2000,6 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       const priceFormatted = `R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
       quoteText += `*_Opção ${index + 1}${tag}:_* \`${priceFormatted}\` 💵${trophy}\n`;
-      quoteText += `> Distribuidor: *${q.distributorName}*\n`;
       quoteText += `> Potência: \`${q.kwp} kWp\` | Geração estimada: \`${q.estimatedGeneration} kWh/mês\`\n`;
 
       const items: string[] =
@@ -3365,7 +3364,7 @@ ${catalogContext}`;
 
         if (quotes.length === 0) {
           return (
-            `No momento não encontramos kits com todos os componentes e estrutura (${sessionCtx.roofType || "padrão"}) disponíveis nos distribuidores cadastrados com estoque compatível.\n\n` +
+            `No momento não encontramos kits com todos os componentes e estrutura (${sessionCtx.roofType || "padrão"}) disponíveis em estoque compatível.\n\n` +
             `Você pode selecionar a opção "7️⃣ Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado (ou envie 0️⃣ para voltar).`
           );
         }
@@ -3422,7 +3421,7 @@ ${catalogContext}`;
 
         if (quotes.length === 0) {
           return (
-            `No momento não encontramos kits com todos os componentes e estrutura (${sessionCtx.roofType || "padrão"}) disponíveis nos distribuidores cadastrados com estoque compatível.\n\n` +
+            `No momento não encontramos kits com todos os componentes e estrutura (${sessionCtx.roofType || "padrão"}) disponíveis em estoque compatível.\n\n` +
             `Você pode selecionar a opção "7️⃣ Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado (ou envie 0️⃣ para voltar).`
           );
         }
@@ -3479,7 +3478,7 @@ ${catalogContext}`;
 
         if (quotes.length === 0) {
           return (
-            `No momento não encontramos kits com todos os componentes e estrutura (${sessionCtx.roofType || "padrão"}) disponíveis nos distribuidores cadastrados com estoque compatível.\n\n` +
+            `No momento não encontramos kits com todos os componentes e estrutura (${sessionCtx.roofType || "padrão"}) disponíveis em estoque compatível.\n\n` +
             `Você pode selecionar a opção "7️⃣ Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado (ou envie 0️⃣ para voltar).`
           );
         }
