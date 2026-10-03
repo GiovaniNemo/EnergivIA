@@ -7,10 +7,12 @@ function getPublicProposalFetchUrl(id: string, isPdf?: boolean): string {
   if (typeof window !== "undefined") {
     return `/api/proxy/public/proposals/${cleanId}${query}`;
   }
-  const apiBase = (process.env["NEXT_PUBLIC_API_URL"] || "http://localhost:4000/api").replace(
-    /\/$/,
-    ""
-  );
+  const apiBase = (
+    process.env["INTERNAL_API_URL"] ||
+    process.env["API_URL"] ||
+    process.env["NEXT_PUBLIC_API_URL"] ||
+    "http://localhost:4000/api"
+  ).replace(/\/$/, "");
   return `${apiBase}/public/proposals/${cleanId}${query}`;
 }
 
@@ -23,6 +25,7 @@ export interface PublicProposalPayload {
   publicToken?: string | null;
   discountBrl?: number | null;
   companyName?: string | null;
+  companyLogoUrl?: string | null;
   renderedData?: {
     integrator?: {
       version: number;

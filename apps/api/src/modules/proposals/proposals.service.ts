@@ -370,7 +370,7 @@ export class ProposalsService {
           deal: { include: { lead: true } },
           simulation: true,
           proposalTemplate: true,
-          tenant: { select: { name: true } },
+          tenant: { select: { name: true, logoUrl: true } },
         },
       });
       if (!proposal) throw new NotFoundException("Proposta não encontrada.");
@@ -445,6 +445,7 @@ export class ProposalsService {
         createdAt: proposal.createdAt,
         discountBrl: proposal.discountBrl ?? null,
         companyName: proposal.tenant?.name ?? null,
+        companyLogoUrl: proposal.tenant?.logoUrl ?? null,
         deal: { lead: { name: proposal.deal?.lead?.name ?? "Cliente" } },
         simulation: proposal.simulation
           ? { input: proposal.simulation.input, result: proposal.simulation.result }

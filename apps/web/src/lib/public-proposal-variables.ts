@@ -21,6 +21,14 @@ export function mergePublicProposalVariables(
   merged["numero_proposta"] = payload.proposalNumber
     ? `#${payload.proposalNumber}`
     : payload.publicToken || payload.id;
+  if (payload.companyLogoUrl) {
+    merged["logo_empresa"] = payload.companyLogoUrl;
+    merged["logo_integrador"] = payload.companyLogoUrl;
+  }
+  if (payload.companyName) {
+    merged["nome_empresa"] = payload.companyName;
+    merged["nome_integrador"] = payload.companyName;
+  }
 
   // Integrator snapshot: kit items and project costs
   const integrator = payload.renderedData?.integrator;
