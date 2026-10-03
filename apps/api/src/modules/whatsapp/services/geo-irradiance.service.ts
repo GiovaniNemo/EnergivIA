@@ -283,9 +283,24 @@ export class GeoIrradianceService {
 
     // 5. Fallback final padrão
     const finalUf = searchUf || "SP";
+    const invalidWords = new Set([
+      "NENHUMA",
+      "NENHUM",
+      "NADA",
+      "NAO",
+      "NAO SEI",
+      "CANCELAR",
+      "MENU",
+      "VOLTAR",
+      "0",
+      "SIM",
+      "OK",
+      "TESTE",
+    ]);
+    const safeCity = invalidWords.has(normSearchCity) || !searchCity ? "São Paulo" : searchCity;
     return {
       hsp: UF_FALLBACK[finalUf] || 5.0,
-      city: searchCity || "São Paulo",
+      city: safeCity,
       uf: finalUf,
       exact: false,
     };

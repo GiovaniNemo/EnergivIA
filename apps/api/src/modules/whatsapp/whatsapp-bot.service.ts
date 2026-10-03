@@ -2837,7 +2837,10 @@ ${catalogContext}`;
         lastBotMsg.includes("Simulação por Potência de Pico") ||
         lastBotMsg.includes("potência de pico desejada") ||
         lastBotMsg.includes("Simulação por Quantidade de Módulos") ||
-        lastBotMsg.includes("placas solares você deseja no kit")
+        lastBotMsg.includes("placas solares você deseja no kit") ||
+        lastBotMsg.includes("Para qual cidade e estado será a instalação?") ||
+        lastBotMsg.includes("Vamos alterar a localização") ||
+        lastBotMsg.includes("Vamos corrigir a localização")
       ) {
         return this.buildGreetingMenu(resolvedContactName);
       }
@@ -3507,16 +3510,16 @@ ${catalogContext}`;
 
     // ESTADO F: O Bot perguntou o padrão de entrada da rede elétrica
     if (lastBotMsg.includes("Qual o padrão de entrada da instalação?")) {
-      // Verifica se o usuário enviou uma localização para corrigir (ex: "Cuiabá, mt")
-      if (
-        isLocationInput(incomingText) ||
-        incomingText.includes("/") ||
-        incomingText.includes(",") ||
+      // Verifica se o usuário enviou explicitamente uma localização para corrigir (ex: "Cuiabá/MT", "mudar cidade para Curitiba")
+      const wantsToChangeLocation =
         lower.startsWith("mudar cidade") ||
-        lower.startsWith("trocar cidade")
-      ) {
+        lower.startsWith("trocar cidade") ||
+        lower.startsWith("alterar cidade") ||
+        isLocationInput(incomingText);
+
+      if (wantsToChangeLocation) {
         const hspRes = getHsp(incomingText);
-        if (hspRes.city) {
+        if (hspRes && (isLocationInput(incomingText) || hspRes.exact)) {
           return (
             `*_Localização Corrigida com Sucesso!_* 📍☀️\n\n` +
             `> Cidade: \`${hspRes.city}/${hspRes.uf}\`\n` +
@@ -3572,12 +3575,68 @@ ${catalogContext}`;
       lastBotMsg.includes("Vamos alterar a localização") ||
       lastBotMsg.includes("Vamos corrigir a localização")
     ) {
+      // Se o usuário digitou "nenhuma", "manter", "mesma", etc. e já tinha uma cidade registrada:
+      const keepExistingCity =
+        (lower === "nenhuma" ||
+          lower === "nenhum" ||
+          lower === "manter" ||
+          lower === "mesma" ||
+          lower === "não" ||
+          lower === "nao" ||
+          lower.includes("manter") ||
+          lower.includes("nao mudar") ||
+          lower.includes("não mudar") ||
+          lower.includes("deixar como")) &&
+        Boolean(sessionCtx.cidade && sessionCtx.estado);
+
+      if (keepExistingCity) {
+        const hspRes = getHsp(sessionCtx.cidade, sessionCtx.estado);
+        return (
+          `*_Localização Mantida:_* \`${sessionCtx.cidade}/${sessionCtx.estado}\` 📍☀️\n\n` +
+          `> Irradiação Solar: \`${hspRes.hsp.toFixed(2)} kWh/m²/dia\`\n\n` +
+          this.GRID_OPTIONS_TEXT
+        );
+      }
+
+      const invalidWords = new Set([
+        "nenhuma",
+        "nenhum",
+        "nada",
+        "nao",
+        "não",
+        "sei nao",
+        "sei não",
+        "nao sei",
+        "não sei",
+        "sei la",
+        "sei lá",
+        "ok",
+        "sim",
+        "teste",
+        "cancelar",
+        "voltar",
+      ]);
+
       const hspRes = getHsp(incomingText);
+      const isRecognizedLocation =
+        !invalidWords.has(lower) &&
+        (isLocationInput(incomingText) || hspRes.exact) &&
+        !invalidWords.has(hspRes.city.toLowerCase());
+
+      if (isRecognizedLocation) {
+        return (
+          `*_Localização Identificada!_* 📍☀️\n\n` +
+          `> Cidade: \`${hspRes.city}/${hspRes.uf}\`\n` +
+          `> Irradiação Solar: \`${hspRes.hsp.toFixed(2)} kWh/m²/dia\`\n\n` +
+          this.GRID_OPTIONS_TEXT
+        );
+      }
+
       return (
-        `*_Localização Identificada!_* 📍☀️\n\n` +
-        `> Cidade: \`${hspRes.city}/${hspRes.uf}\`\n` +
-        `> Irradiação Solar: \`${hspRes.hsp.toFixed(2)} kWh/m²/dia\`\n\n` +
-        this.GRID_OPTIONS_TEXT
+        `Não identifiquei o município "*${incomingText.trim()}*". 📍\n\n` +
+        `Por favor, informe a cidade e a sigla do estado onde será a instalação:\n` +
+        `> Exemplo: \`Cuiabá/MT\`, \`Maringá/PR\` ou \`São Paulo/SP\`\n\n` +
+        `_(Ou envie 0️⃣ para voltar ao menu inicial)_`
       );
     }
 
