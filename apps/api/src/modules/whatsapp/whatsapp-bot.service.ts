@@ -298,47 +298,54 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
   private isFlowActive(lastBotContent: string): boolean {
     if (!lastBotContent) return false;
+    const lowerContent = lastBotContent.toLowerCase();
     // Se a proposta já foi concluída, não há lembretes nem encerramento
     if (
-      lastBotContent.includes("Proposta comercial gerada com sucesso") ||
-      lastBotContent.includes("Acesse a Proposta Pronta no link") ||
-      lastBotContent.includes("Disponível no seu painel CRM")
+      lowerContent.includes("proposta comercial gerada com sucesso") ||
+      lowerContent.includes("acesse a proposta") ||
+      lowerContent.includes("painel crm")
     ) {
       return false;
     }
     // Se já foi encerrado por inatividade ou reiniciado
     if (
-      lastBotContent.includes("encerramos este atendimento") ||
-      lastBotContent.includes("estou encerrando este atendimento") ||
-      lastBotContent.includes("Sessão reiniciada com sucesso")
+      lowerContent.includes("encerramos este atendimento") ||
+      lowerContent.includes("estou encerrando este atendimento") ||
+      lowerContent.includes("sessão reiniciada com sucesso")
     ) {
       return false;
     }
     // Se está apenas no menu inicial (antes de qualquer fluxo ser iniciado)
     if (
-      lastBotContent.includes("Escolha uma opção digitando o número:") &&
-      !lastBotContent.includes("Qual opção você prefere para o seu cliente?")
+      (lowerContent.includes("como posso ajudar você a gerar orçamentos") ||
+        lowerContent.includes("escolha uma opção digitando o número:")) &&
+      !lowerContent.includes("qual opção você prefere para o seu cliente")
     ) {
       return false;
     }
 
     // Verifica etapas ativas de atendimento / simulação
     return (
-      lastBotContent.includes("Para qual cidade e estado será a instalação?") ||
-      lastBotContent.includes("Qual o padrão de entrada da instalação?") ||
-      lastBotContent.includes("Qual a estrutura do telhado?") ||
-      lastBotContent.includes("taxa padrão configurada") ||
-      lastBotContent.includes("Qual valor por kWp") ||
-      lastBotContent.includes("Como deseja prosseguir para esta cotação") ||
-      lastBotContent.includes("Qual opção você prefere para o seu cliente?") ||
-      lastBotContent.includes("cliente final") ||
-      lastBotContent.includes("Qual o nome do cliente final") ||
-      lastBotContent.includes("E qual o WhatsApp dele") ||
-      lastBotContent.includes("Qual modelo de proposta comercial você deseja usar") ||
-      lastBotContent.includes("Qual é o *consumo médio mensal*") ||
-      lastBotContent.includes("Qual a *potência de pico*") ||
-      lastBotContent.includes("Quantas *placas solares* você deseja") ||
-      lastBotContent.includes("dados extraídos com precisão")
+      lowerContent.includes("para qual cidade e estado será a instalação") ||
+      lowerContent.includes("qual o padrão de entrada da instalação") ||
+      lowerContent.includes("qual a estrutura do telhado") ||
+      lowerContent.includes("estrutura do telhado") ||
+      lowerContent.includes("taxa padrão configurada") ||
+      lowerContent.includes("taxa padrão") ||
+      lowerContent.includes("qual valor por kwp") ||
+      lowerContent.includes("qual valor você deseja utilizar") ||
+      lowerContent.includes("como deseja prosseguir para esta cotação") ||
+      lowerContent.includes("como você deseja prosseguir para esta cotação") ||
+      lowerContent.includes("qual opção você prefere para o seu cliente") ||
+      lowerContent.includes("cliente final") ||
+      lowerContent.includes("qual o nome do cliente final") ||
+      lowerContent.includes("qual o whatsapp dele") ||
+      lowerContent.includes("qual modelo de proposta comercial você deseja usar") ||
+      lowerContent.includes("consumo médio mensal") ||
+      lowerContent.includes("potência de pico") ||
+      lowerContent.includes("placas solares") ||
+      lowerContent.includes("fatura analisada com precisão") ||
+      lowerContent.includes("dados extraídos com precisão")
     );
   }
 
@@ -1931,7 +1938,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
   }
 
   private readonly ROOF_OPTIONS_TEXT =
-    `*_Qual a estrutura do telhado onde os módulos serão instalados?_*\n\n` +
+    `*_Qual a estrutura do telhado?_* 🏠\n\n` +
     `> 1️⃣ *Cerâmica (Colonial)* (Telhas cerâmicas convencionais)\n` +
     `> 2️⃣ *Fibrocimento* (Telhas de fibrocimento em madeira)\n` +
     `> 3️⃣ *Metálico* (Telhas trapezoidais ou zipadas)\n` +
@@ -2013,7 +2020,6 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     });
 
     quoteText += `> *_Validade das cotações: 3 dias úteis_*\n\n`;
-    quoteText += `*_Dividimos o valor em até 12x no cartão ou até 120x no financiamento solar_* 💳\n\n`;
     quoteText += `Qual opção você prefere para o seu cliente?\n`;
     quoteText += `_(Responda com o número da opção ou envie 0️⃣ para voltar/alterar estrutura)_\n\n`;
     quoteText += `Equipe *_EnergivIA Solar._*`;
@@ -2488,7 +2494,7 @@ ${catalogContext}`;
           lowerC.includes("mono 220") ||
           lowerC.includes("mono")
         ) {
-          if (messages[i - 1]?.content?.includes("Qual o padrão de entrada da instalação?")) {
+          if (messages[i - 1]?.content?.includes("Qual o padrão de entrada da instalação")) {
             gridVoltage = "Monofásico 220V";
           }
         } else if (
@@ -2499,7 +2505,7 @@ ${catalogContext}`;
           lowerC.includes("127/220") ||
           lowerC.includes("bi 220")
         ) {
-          if (messages[i - 1]?.content?.includes("Qual o padrão de entrada da instalação?")) {
+          if (messages[i - 1]?.content?.includes("Qual o padrão de entrada da instalação")) {
             gridVoltage = "Bifásico 127V/220V";
           }
         } else if (
@@ -2510,7 +2516,7 @@ ${catalogContext}`;
           lowerC.includes("tri 220") ||
           lowerC.includes("tri_220")
         ) {
-          if (messages[i - 1]?.content?.includes("Qual o padrão de entrada da instalação?")) {
+          if (messages[i - 1]?.content?.includes("Qual o padrão de entrada da instalação")) {
             gridVoltage = "Trifásico 220V";
           }
         } else if (
@@ -2522,12 +2528,16 @@ ${catalogContext}`;
           lowerC.includes("tri_380") ||
           lowerC.includes("380v")
         ) {
-          if (messages[i - 1]?.content?.includes("Qual o padrão de entrada da instalação?")) {
+          if (messages[i - 1]?.content?.includes("Qual o padrão de entrada da instalação")) {
             gridVoltage = "Trifásico 380V";
           }
         }
 
         // 6. Extração de Tipo de Telhado
+        const isRoofQuestion =
+          messages[i - 1]?.content?.includes("Qual a estrutura do telhado") ||
+          messages[i - 1]?.content?.includes("estrutura do telhado");
+
         if (
           lowerC === "1" ||
           lowerC.includes("1️⃣") ||
@@ -2535,7 +2545,7 @@ ${catalogContext}`;
           lowerC.includes("ceramica") ||
           lowerC.includes("colonial")
         ) {
-          if (messages[i - 1]?.content?.includes("Qual a estrutura do telhado?")) {
+          if (isRoofQuestion) {
             roofType = "Cerâmica (Colonial)";
           }
         } else if (
@@ -2544,7 +2554,7 @@ ${catalogContext}`;
           lowerC.includes("fibrocimento") ||
           lowerC.includes("fibromadeira")
         ) {
-          if (messages[i - 1]?.content?.includes("Qual a estrutura do telhado?")) {
+          if (isRoofQuestion) {
             roofType = "Fibrocimento";
           }
         } else if (
@@ -2553,19 +2563,19 @@ ${catalogContext}`;
           lowerC.includes("metálico") ||
           lowerC.includes("metalico")
         ) {
-          if (messages[i - 1]?.content?.includes("Qual a estrutura do telhado?")) {
+          if (isRoofQuestion) {
             roofType = "Metálico";
           }
         } else if (lowerC === "4" || lowerC.includes("4️⃣") || lowerC.includes("solo")) {
-          if (messages[i - 1]?.content?.includes("Qual a estrutura do telhado?")) {
+          if (isRoofQuestion) {
             roofType = "Solo";
           }
         } else if (lowerC === "5" || lowerC.includes("5️⃣") || lowerC.includes("laje")) {
-          if (messages[i - 1]?.content?.includes("Qual a estrutura do telhado?")) {
+          if (isRoofQuestion) {
             roofType = "Laje";
           }
         } else if (lowerC === "6" || lowerC.includes("6️⃣") || lowerC.includes("fibrometal")) {
-          if (messages[i - 1]?.content?.includes("Qual a estrutura do telhado?")) {
+          if (isRoofQuestion) {
             roofType = "Fibrometal";
           }
         } else if (
@@ -2574,7 +2584,7 @@ ${catalogContext}`;
           lowerC.includes("sem estrutura") ||
           lowerC.includes("nenhuma")
         ) {
-          if (messages[i - 1]?.content?.includes("Qual a estrutura do telhado?")) {
+          if (isRoofQuestion) {
             roofType = "Sem estrutura";
           }
         }
@@ -2688,7 +2698,10 @@ ${catalogContext}`;
         );
       }
 
-      if (lastBotMsg.includes("Qual a estrutura do telhado?")) {
+      if (
+        lastBotMsg.includes("Qual a estrutura do telhado") ||
+        lastBotMsg.includes("estrutura do telhado")
+      ) {
         return (
           `Sem problemas! Vamos corrigir o padrão elétrico da instalação. ⚡\n\n` +
           this.GRID_OPTIONS_TEXT
@@ -3275,7 +3288,10 @@ ${catalogContext}`;
       { key: "nenhuma", name: "Sem estrutura" },
     ].find((r) => lower === r.key || lower.includes(r.key));
 
-    if (lastBotMsg.includes("Qual a estrutura do telhado?")) {
+    if (
+      lastBotMsg.includes("Qual a estrutura do telhado") ||
+      lastBotMsg.includes("estrutura do telhado")
+    ) {
       if (roofMatch) {
         const selectedRoof = roofMatch.name;
         const orgDefaultRate = await this.getOrganizationDefaultKwpRate(
@@ -3568,9 +3584,10 @@ ${catalogContext}`;
 
     // Opções do menu inicial (1 a 5) quando não estiver em fluxos específicos
     const isChoosingOtherOption =
-      lastBotMsg.includes("Qual opção você prefere para o seu cliente?") ||
-      lastBotMsg.includes("Qual o padrão de entrada da instalação?") ||
-      lastBotMsg.includes("Qual a estrutura do telhado?") ||
+      lastBotMsg.includes("Qual opção você prefere para o seu cliente") ||
+      lastBotMsg.includes("Qual o padrão de entrada da instalação") ||
+      lastBotMsg.includes("Qual a estrutura do telhado") ||
+      lastBotMsg.includes("estrutura do telhado") ||
       lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar") ||
       lastBotMsg.includes("cliente final") ||
       lastBotMsg.includes("taxa padrão configurada") ||
