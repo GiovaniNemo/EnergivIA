@@ -1994,12 +1994,14 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     }
 
     quotes.forEach((q, index) => {
+      const tierName =
+        q.distributorName || (index === 0 ? "Standard" : index === 1 ? "Elite" : "Premium");
       const isTop = index === 0;
-      const tag = isTop ? " - MAIS RECOMENDADO" : "";
+      const tag = isTop ? " (Mais Recomendado)" : "";
       const trophy = isTop ? " 🏆" : "";
       const priceFormatted = `R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-      quoteText += `*_Opção ${index + 1}${tag}:_* \`${priceFormatted}\` 💵${trophy}\n`;
+      quoteText += `*_Opção ${index + 1} — ${tierName}${tag}:_* \`${priceFormatted}\` 💵${trophy}\n`;
       quoteText += `> Potência: \`${q.kwp} kWp\` | Geração estimada: \`${q.estimatedGeneration} kWh/mês\`\n`;
 
       const items: string[] =
@@ -2020,7 +2022,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
     quoteText += `> *_Validade das cotações: 3 dias úteis_*\n\n`;
     quoteText += `Qual opção você prefere para o seu cliente?\n`;
-    quoteText += `_(Responda com o número da opção ou envie 0️⃣ para voltar/alterar estrutura)_\n\n`;
+    quoteText += `_(Responda com o número ou nome da opção: 1 Standard, 2 Elite ou 3 Premium)_\n\n`;
     quoteText += `Equipe *_EnergivIA Solar._*`;
     return quoteText;
   }
@@ -2823,17 +2825,21 @@ ${catalogContext}`;
       );
     }
 
-    // ESTADO A: O Bot acabou de apresentar os distribuidores e pediu para escolher a opção (1 ou 2)
-    if (lastBotMsg.includes("Qual opção você prefere para o seu cliente?")) {
+    // ESTADO A: O Bot acabou de apresentar os kits (Standard, Elite, Premium) e pediu para escolher
+    if (lastBotMsg.includes("Qual opção você prefere para o seu cliente")) {
+      const isStandard = lower.includes("standard") || lower === "1" || lower.includes("1️⃣");
+      const isElite = lower.includes("elite") || lower === "2" || lower.includes("2️⃣");
+      const isPremium = lower.includes("premium") || lower === "3" || lower.includes("3️⃣");
       const choiceMatch = incomingText.match(/\b([1-9]|10)\b/);
-      if (choiceMatch) {
+
+      if (choiceMatch || isStandard || isElite || isPremium) {
         return (
           `Ótima escolha! Kit selecionado com sucesso. ☀️\n\n` +
           `*_Qual o nome do cliente final para registrarmos no seu CRM?_*\n` +
           `_(ou digite 0️⃣ para voltar às opções de kits)_`
         );
       }
-      return `Por favor, responda com o número da opção do kit desejado (ex: 1 ou 2) ou envie 0️⃣ para voltar e alterar a estrutura.`;
+      return `Por favor, responda com o número ou nome da opção desejada (1 Standard, 2 Elite ou 3 Premium) ou envie 0️⃣ para voltar e alterar a estrutura.`;
     }
 
     // ESTADO B: O Bot pediu o nome do cliente final (ou o nome correto)
@@ -2976,7 +2982,8 @@ ${catalogContext}`;
 
         if (
           m.role === "assistant" &&
-          content.includes("Qual opção você prefere para o seu cliente?")
+          (content.includes("Qual opção você prefere para o seu cliente") ||
+            content.includes("qual opção você prefere"))
         ) {
           for (let j = i + 1; j < messages.length; j++) {
             const nextUserMsg = messages[j];
@@ -2985,10 +2992,19 @@ ${catalogContext}`;
               nextUserMsg.role === "user" &&
               typeof nextUserMsg.content === "string"
             ) {
-              const numMatch = nextUserMsg.content.match(/\b([1-9])\b/);
-              if (numMatch && numMatch[1]) {
-                const idx = parseInt(numMatch[1], 10) - 1;
-                if (idx >= 0) chosenQuoteIndex = idx;
+              const uText = nextUserMsg.content.toLowerCase();
+              if (uText.includes("standard")) {
+                chosenQuoteIndex = 0;
+              } else if (uText.includes("elite")) {
+                chosenQuoteIndex = 1;
+              } else if (uText.includes("premium")) {
+                chosenQuoteIndex = 2;
+              } else {
+                const numMatch = nextUserMsg.content.match(/\b([1-9])\b/);
+                if (numMatch && numMatch[1]) {
+                  const idx = parseInt(numMatch[1], 10) - 1;
+                  if (idx >= 0) chosenQuoteIndex = idx;
+                }
               }
               break;
             }
