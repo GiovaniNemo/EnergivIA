@@ -2124,8 +2124,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       `> 1️⃣ *Enviar fatura de energia* (PDF ou foto)\n` +
       `> 2️⃣ *Simular por consumo mensal* (ex: \`450 kWh\`)\n` +
       `> 3️⃣ *Simular por potência de pico* (ex: \`5 kWp\`)\n` +
-      `> 4️⃣ *Simular por quantidade de placas* (ex: \`10 módulos\`)\n` +
-      `> 5️⃣ *Dúvidas sobre equipamentos e preços de catálogo*\n\n` +
+      `> 4️⃣ *Simular por quantidade de placas* (ex: \`10 módulos\`)\n\n` +
       `_(Responda com o número da opção ou envie a conta de luz diretamente)_\n\n` +
       `Equipe *_EnergivIA Solar._*`
     );
@@ -3782,22 +3781,23 @@ ${catalogContext}`;
         );
       }
       if (lower === "5" || lower === "5." || lower === "opcao 5" || lower === "opção 5") {
-        return (
-          `*_Consulta de Catálogo e Equipamentos_* 🔎\n\n` +
-          `Você pode me perguntar sobre modelos, marcas e preços dos inversores, módulos ou estruturas cadastrados no nosso catálogo da EnergivIA.\n\n` +
-          `> Exemplo: _"qual o valor do inversor de 5kw?"_ ou _"quais marcas de módulos estão disponíveis?"_`
-        );
+        return this.buildGreetingMenu(resolvedContactName);
       }
     }
 
-    // ESTADO H: Saudação inicial / Menu
+    // ESTADO H: Saudação inicial / Iniciar fluxo de proposta
     const greetingTriggers = [
       "oi",
       "olá",
       "ola",
+      "opa",
+      "eai",
+      "e aí",
+      "eaí",
       "bom dia",
       "boa tarde",
       "boa noite",
+      "boa",
       "start",
       "ajuda",
       "help",
@@ -3808,13 +3808,43 @@ ${catalogContext}`;
       "começar",
       "opcoes",
       "opções",
+      "novo",
+      "nova",
+      "reiniciar",
+      "reset",
+      "voltar",
+      "gerar",
+      "orçamento",
+      "orcamento",
+      "proposta",
+      "cotar",
+      "cotação",
+      "cotacao",
+      "simular",
+      "simulação",
+      "simulacao",
     ];
-    if (
+
+    const isStartOrGreeting =
       greetingTriggers.includes(lower) ||
       lower.startsWith("bom dia") ||
       lower.startsWith("boa tarde") ||
-      lower.startsWith("boa noite")
-    ) {
+      lower.startsWith("boa noite") ||
+      lower.startsWith("opa") ||
+      lower.startsWith("olá") ||
+      lower.startsWith("ola") ||
+      lower.startsWith("oi") ||
+      lower.startsWith("gerar") ||
+      lower.startsWith("novo") ||
+      lower.startsWith("quero gerar") ||
+      lower.startsWith("quero fazer") ||
+      lower.startsWith("fazer orcamento") ||
+      lower.startsWith("fazer orçamento") ||
+      lower.startsWith("fazer proposta") ||
+      lower.startsWith("criar proposta") ||
+      lower.startsWith("simular");
+
+    if (isStartOrGreeting) {
       return this.buildGreetingMenu(resolvedContactName);
     }
 
@@ -3898,14 +3928,97 @@ ${catalogContext}`;
       }
     }
 
-    // Fallback Inteligente: Pergunta livre respondida com IA confinada ao catálogo
-    if (incomingText.trim().length >= 3) {
-      return await this.answerFreeformQuestion({
-        userQuestion: incomingText,
-        organizationId: conversation.organizationId,
-      });
+    // Fallback Estruturado: Sem IA conversacional aleatória. Sempre orienta o integrador no fluxo do bot!
+    if (isChoosingOtherOption) {
+      if (lastBotMsg.includes("Para qual cidade e estado será a instalação")) {
+        return (
+          `Não identifiquei a cidade informada. 📍\n\n` +
+          `Por favor, informe a *cidade e estado* da instalação solar:\n` +
+          `> Exemplo: \`Maringá/PR\` ou \`Presidente Prudente/SP\`\n\n` +
+          `_(Ou digite *novo* para reiniciar o fluxo)_`
+        );
+      }
+      if (lastBotMsg.includes("Qual o padrão de entrada da instalação")) {
+        return (
+          `Opção não reconhecida. Por favor, selecione o *padrão de entrada* da instalação:\n\n` +
+          this.GRID_OPTIONS_TEXT
+        );
+      }
+      if (
+        lastBotMsg.includes("Qual a estrutura do telhado") ||
+        lastBotMsg.includes("estrutura do telhado")
+      ) {
+        return (
+          `Opção não reconhecida. Por favor, selecione a *estrutura do telhado* (1 a 7):\n\n` +
+          this.ROOF_OPTIONS_TEXT
+        );
+      }
+      if (lastBotMsg.includes("Qual opção você prefere para o seu cliente")) {
+        return (
+          `Opção não reconhecida. Por favor, escolha qual kit você deseja para o cliente:\n\n` +
+          `> 1️⃣ *Standard*\n` +
+          `> 2️⃣ *Elite*\n` +
+          `> 3️⃣ *Premium*\n\n` +
+          `_(Envie 1, 2 ou 3, ou digite 0️⃣ para voltar)_`
+        );
+      }
+      if (
+        lastBotMsg.includes("Qual preço você deseja utilizar") ||
+        lastBotMsg.includes("preço padrão") ||
+        lastBotMsg.includes("Como deseja prosseguir para esta cotação") ||
+        lastBotMsg.includes("Como você deseja prosseguir para esta cotação")
+      ) {
+        return (
+          `Preço não reconhecido. Por favor, informe o preço por kWp desejado:\n\n` +
+          `> Exemplo: digite \`2500\`, \`R$ 3.200,00\` ou \`4000\`\n` +
+          `> 1️⃣ Para usar o preço padrão da sua conta\n` +
+          `> 0️⃣ Para voltar à seleção de kits`
+        );
+      }
+      if (
+        lastBotMsg.includes("cliente final") &&
+        (lastBotMsg.includes("nome") || lastBotMsg.includes("Nome"))
+      ) {
+        return (
+          `Por favor, informe o *nome do cliente final* para registrarmos na proposta comercial:\n\n` +
+          `> Exemplo: \`João da Silva\`\n` +
+          `_(Ou digite 0️⃣ para voltar e alterar o preço)_`
+        );
+      }
+      if (
+        lastBotMsg.includes("WhatsApp") ||
+        lastBotMsg.includes("whatsapp") ||
+        lastBotMsg.includes("qual o WhatsApp") ||
+        lastBotMsg.includes("E qual o WhatsApp dele")
+      ) {
+        return (
+          `Por favor, informe o número de *WhatsApp com DDD* do cliente final:\n\n` +
+          `> Exemplo: \`44 99999-8888\`\n` +
+          `_(Ou digite 0️⃣ para corrigir o nome do cliente)_`
+        );
+      }
+      if (lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar")) {
+        const templates = await this.getAvailableTemplates(conversation.organizationId);
+        let templateListText = "";
+        templates.forEach((t, i) => {
+          templateListText += `> ${this.numToEmoji(i + 1)} *${t.name}*\n`;
+        });
+        templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
+        return (
+          `Opção não reconhecida. Por favor, selecione o *modelo de proposta*:\n\n` +
+          templateListText +
+          `\n_(Responda com o número do modelo desejado)_`
+        );
+      }
     }
 
-    return this.buildGreetingMenu(resolvedContactName);
+    return (
+      `Não compreendi sua mensagem. Para gerar uma proposta solar, escolha como deseja iniciar:\n\n` +
+      `> 1️⃣ *Enviar fatura de energia* (PDF ou foto da conta de luz)\n` +
+      `> 2️⃣ *Simular por consumo mensal* (ex: digite \`450 kWh\`)\n` +
+      `> 3️⃣ *Simular por potência de pico* (ex: \`5 kWp\`)\n` +
+      `> 4️⃣ *Simular por quantidade de placas* (ex: \`10 módulos\`)\n\n` +
+      `_(Responda com o número da opção desejada ou envie os dados diretamente)_`
+    );
   }
 }
