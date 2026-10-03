@@ -195,9 +195,9 @@ function parseKwpRate(
     clean.includes("total") || clean.includes("valor final") || clean.includes("preço final");
 
   // Padrão monetário / numérico geral
-  // Ex: "R$ 2.800,00", "2800", "2.800", "2800,50", "3200/kwp", "r$3.000", "3.200 por kwp"
+  // Ex: "4000", "4000,00", "4.000", "4.000,00", "R$ 3.200,00", "2500", "2800,50", "3200/kwp", "r$3.000", "3.200 por kwp"
   const match = clean.match(
-    /(?:r\$\s*)?(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)(?:\s*(?:\/|\s*por\s*)?kwp)?/i
+    /(?:r\$\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)(?:\s*(?:reais)?(?:\s*(?:\/|\s*por\s*|\s*o\s*)?\s*kwp)?)?/i
   );
   if (!match || !match[1]) return null;
 
@@ -238,9 +238,14 @@ function parseKwpRate(
     return { rate: Math.round(val * 1000) };
   }
 
-  // Se explicitamente informou como valor total OU se for um valor total acima de 4.800 e não especificou /kwp
+  // Se explicitamente informou como valor total OU se for um valor total acima de R$ 6.800 e não especificou /kwp
   if (
-    (isExplicitTotal || (val > 4800 && !clean.includes("/kwp") && !clean.includes("por kwp"))) &&
+    (isExplicitTotal ||
+      (val > 6800 &&
+        !clean.includes("/kwp") &&
+        !clean.includes("por kwp") &&
+        !clean.includes("o kwp") &&
+        !clean.includes("kwp"))) &&
     systemKwp &&
     systemKwp > 0
   ) {
@@ -2341,6 +2346,35 @@ ${catalogContext}`;
 
         // 7. Nome e WhatsApp do Cliente (pode ser detectado pelas confirmações do assistente)
         if (m.role === "assistant") {
+          const consM = content.match(
+            /(?:Consumo Registrado|Consumo m[ée]dio de):\s*\*?`?(\d+[\d.,]*)`?\s*kWh/i
+          );
+          if (consM && consM[1]) {
+            const cVal = Math.round(Number(consM[1].replace(/\./g, "").replace(",", ".")));
+            if (cVal >= 20 && cVal <= 500000) {
+              consumptionKwh = cVal;
+            }
+          }
+
+          const potM = content.match(/Potência Solicitada:\s*\*?`?([\d.,]+)`?\s*kWp/i);
+          if (potM && potM[1]) {
+            targetKWp = parseFloat(potM[1].replace(",", "."));
+          }
+
+          const qtyM = content.match(/Quantidade Solicitada:\s*\*?`?(\d+)`?\s*placas/i);
+          if (qtyM && qtyM[1]) {
+            targetModules = parseInt(qtyM[1], 10);
+            const pM = content.match(/`?(\d{3,4})`?\s*w/i);
+            if (pM && pM[1]) {
+              modPowerWUser = parseInt(pM[1], 10);
+            }
+          }
+
+          const gridM = content.match(/Padrão Elétrico Registrado:\s*\*?`?([^`*]+?)`?\s*⚡/i);
+          if (gridM && gridM[1]) {
+            gridVoltage = gridM[1].trim();
+          }
+
           const rateMatch =
             content.match(
               /Taxa (?:personalizada|aplicada|padrão aplicada|definida):\s*\*?R\$\s*([\d.,]+)\/kWp\*?/i
@@ -2414,6 +2448,18 @@ ${catalogContext}`;
         const kwpM = content.match(/(\d+(?:[.,]\d+)?)\s*kwp/i);
         if (kwpM && kwpM[1]) {
           targetKWp = parseFloat(kwpM[1].replace(",", "."));
+        } else if (
+          prevAssistantForLead.includes("Simulação por Potência de Pico") ||
+          prevAssistantForLead.includes("potência de pico") ||
+          prevAssistantForLead.includes("potência (kWp)")
+        ) {
+          const numM = content.match(/(\d+(?:[.,]\d+)?)/);
+          if (numM && numM[1]) {
+            const pVal = parseFloat(numM[1].replace(",", "."));
+            if (pVal >= 0.5 && pVal <= 5000) {
+              targetKWp = pVal;
+            }
+          }
         }
 
         // 2. Extração de Módulos
@@ -2424,6 +2470,17 @@ ${catalogContext}`;
           if (pM && pM[1]) {
             modPowerWUser = parseInt(pM[1], 10);
           }
+        } else if (
+          prevAssistantForLead.includes("Simulação por Quantidade de Módulos") ||
+          prevAssistantForLead.includes("placas solares você deseja no kit")
+        ) {
+          const numM = content.match(/(\d+)/);
+          if (numM && numM[1]) {
+            const mVal = parseInt(numM[1], 10);
+            if (mVal >= 1 && mVal <= 10000) {
+              targetModules = mVal;
+            }
+          }
         }
 
         // 3. Extração de Consumo kWh
@@ -2431,14 +2488,27 @@ ${catalogContext}`;
           /(?:consumo registrado:\s*|consumo m[ée]dio de\s*|consumo\s+(?:de\s+)?|gasto\s+(?:de\s+)?)?(\d+[\d.,]*)\s*(?:kwh|kw)(?:\/m[eê]s)?/i
         );
         if (kwhM && kwhM[1] && !kwpM) {
-          const val = Math.round(Number(kwhM[1].replace(",", ".")));
-          if (val >= 30 && val <= 500000) {
+          const val = Math.round(Number(kwhM[1].replace(/\./g, "").replace(",", ".")));
+          if (val >= 20 && val <= 500000) {
             consumptionKwh = val;
+          }
+        } else if (
+          prevAssistantForLead.includes("Simulação por Consumo Mensal") ||
+          prevAssistantForLead.includes("consumo médio mensal") ||
+          prevAssistantForLead.includes("consumo em kWh") ||
+          prevAssistantForLead.includes("consumo (kWh)")
+        ) {
+          const numM = content.match(/(\d+[\d.,]*)/);
+          if (numM && numM[1]) {
+            const val = Math.round(Number(numM[1].replace(/\./g, "").replace(",", ".")));
+            if (val >= 20 && val <= 500000) {
+              consumptionKwh = val;
+            }
           }
         }
 
         // 4. Extração de Cidade e Estado
-        const prevContent = i > 0 ? messages[i - 1]?.content || "" : "";
+        const prevContent = prevAssistantForLead;
         if (
           prevContent.includes("Para qual cidade e estado será a instalação?") ||
           prevContent.includes("Vamos alterar a localização") ||
@@ -2686,6 +2756,17 @@ ${catalogContext}`;
       lower === "opção 0";
 
     if (isBackCommand) {
+      if (
+        lastBotMsg.includes("Simulação por Consumo Mensal") ||
+        lastBotMsg.includes("consumo médio mensal") ||
+        lastBotMsg.includes("Simulação por Potência de Pico") ||
+        lastBotMsg.includes("potência de pico desejada") ||
+        lastBotMsg.includes("Simulação por Quantidade de Módulos") ||
+        lastBotMsg.includes("placas solares você deseja no kit")
+      ) {
+        return this.buildGreetingMenu(resolvedContactName);
+      }
+
       if (lastBotMsg.includes("Qual o padrão de entrada da instalação?")) {
         if (sessionCtx.consumptionKwh) {
           return (
@@ -3597,6 +3678,149 @@ ${catalogContext}`;
       );
     }
 
+    // ESTADO: O Bot perguntou o consumo médio mensal em kWh
+    const isAskingConsumption =
+      lastBotMsg.includes("Simulação por Consumo Mensal") ||
+      lastBotMsg.includes("consumo médio mensal") ||
+      lastBotMsg.includes("consumo em kWh") ||
+      lastBotMsg.includes("informe seu consumo (kWh)") ||
+      lastBotMsg.includes("qual é o consumo") ||
+      lastBotMsg.includes("qual o consumo");
+
+    if (isAskingConsumption) {
+      const kwhMatch = incomingText.match(/(\d+[\d.,]*)\s*(?:kwh|kw)?(?:\/m[eê]s)?/i);
+      if (kwhMatch && kwhMatch[1]) {
+        const rawKwh = Number(kwhMatch[1].replace(/\./g, "").replace(",", "."));
+        if (rawKwh >= 20 && rawKwh <= 500000) {
+          const consumo = Math.round(rawKwh);
+
+          const cityInSameMsg = incomingText.match(
+            /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
+          );
+          if (cityInSameMsg && cityInSameMsg[1]) {
+            const cand = (
+              cityInSameMsg[1] +
+              (cityInSameMsg[2]
+                ? `/${cityInSameMsg[2]}`
+                : cityInSameMsg[3]
+                  ? `/${cityInSameMsg[3]}`
+                  : "")
+            ).trim();
+            const hspRes = getHsp(cand);
+            return (
+              `*_Consumo Registrado:_* \`${consumo} kWh/mês\` em \`${hspRes.city}/${hspRes.uf}\` ☀️📍\n\n` +
+              this.GRID_OPTIONS_TEXT
+            );
+          }
+
+          if (sessionCtx.cidade && sessionCtx.estado) {
+            return (
+              `*_Consumo Registrado:_* \`${consumo} kWh/mês\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
+              this.GRID_OPTIONS_TEXT
+            );
+          }
+
+          return (
+            `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n\n` +
+            `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+          );
+        }
+      }
+
+      return (
+        `Não consegui identificar o consumo em kWh.\n\n` +
+        `Por favor, informe o consumo médio mensal do seu cliente em kWh (ex: \`450\` ou \`450 kWh\`) ou envie 0️⃣ para voltar ao menu inicial:`
+      );
+    }
+
+    // ESTADO: O Bot perguntou a potência de pico (kWp)
+    const isAskingKwp =
+      lastBotMsg.includes("Simulação por Potência de Pico") ||
+      lastBotMsg.includes("potência de pico") ||
+      lastBotMsg.includes("potência desejada") ||
+      lastBotMsg.includes("potência (kWp)");
+
+    if (isAskingKwp) {
+      const kwpMatch = incomingText.match(/(\d+(?:[.,]\d+)?)\s*(?:kwp|kw)?/i);
+      if (kwpMatch && kwpMatch[1]) {
+        const targetKWp = parseFloat(kwpMatch[1].replace(",", "."));
+        if (targetKWp >= 0.5 && targetKWp <= 5000) {
+          const cityInSameMsg = incomingText.match(
+            /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
+          );
+          if (cityInSameMsg && cityInSameMsg[1]) {
+            const cand = (
+              cityInSameMsg[1] +
+              (cityInSameMsg[2]
+                ? `/${cityInSameMsg[2]}`
+                : cityInSameMsg[3]
+                  ? `/${cityInSameMsg[3]}`
+                  : "")
+            ).trim();
+            const hspRes = getHsp(cand);
+            return (
+              `*_Potência Solicitada:_* \`${targetKWp} kWp\` em \`${hspRes.city}/${hspRes.uf}\` ☀️📍\n\n` +
+              this.GRID_OPTIONS_TEXT
+            );
+          }
+
+          if (sessionCtx.cidade && sessionCtx.estado) {
+            return (
+              `*_Potência Solicitada:_* \`${targetKWp} kWp\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
+              this.GRID_OPTIONS_TEXT
+            );
+          }
+
+          return (
+            `*_Potência Solicitada:_* \`${targetKWp} kWp\` ☀️\n\n` +
+            `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+          );
+        }
+      }
+
+      return (
+        `Não consegui identificar a potência desejada.\n\n` +
+        `Por favor, informe a potência de pico desejada em kWp (ex: \`5\` ou \`7.5 kWp\`) ou envie 0️⃣ para voltar ao menu inicial:`
+      );
+    }
+
+    // ESTADO: O Bot perguntou a quantidade de placas/módulos
+    const isAskingModules =
+      lastBotMsg.includes("Simulação por Quantidade de Módulos") ||
+      lastBotMsg.includes("placas solares você deseja no kit") ||
+      lastBotMsg.includes("quantidade de placas");
+
+    if (isAskingModules) {
+      const modMatch = incomingText.match(/(\d+)\s*(?:placas?|m[oó]dulos?|paineis?|pain[eé]is)?/i);
+      if (modMatch && modMatch[1]) {
+        const modCount = parseInt(modMatch[1], 10);
+        if (modCount >= 1 && modCount <= 10000) {
+          const modPowerMatch = incomingText.match(/(\d{3,4})\s*w/i);
+          const modPower =
+            modPowerMatch && modPowerMatch[1] ? parseInt(modPowerMatch[1], 10) : undefined;
+          const kwpCalculado = modPower ? ((modCount * modPower) / 1000).toFixed(2) : undefined;
+          const extraInfo = modPower ? ` de \`${modPower}W\` (\`${kwpCalculado} kWp\`)` : "";
+
+          if (sessionCtx.cidade && sessionCtx.estado) {
+            return (
+              `*_Quantidade Solicitada:_* \`${modCount} placas\`${extraInfo} em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
+              this.GRID_OPTIONS_TEXT
+            );
+          }
+
+          return (
+            `*_Quantidade Solicitada:_* \`${modCount} placas\`${extraInfo} ☀️\n\n` +
+            `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+          );
+        }
+      }
+
+      return (
+        `Não consegui identificar a quantidade de módulos.\n\n` +
+        `Por favor, informe a quantidade de placas (ex: \`10 placas de 590W\` ou \`12\`) ou envie 0️⃣ para voltar ao menu inicial:`
+      );
+    }
+
     // Opções do menu inicial (1 a 5) quando não estiver em fluxos específicos
     const isChoosingOtherOption =
       lastBotMsg.includes("Qual opção você prefere para o seu cliente") ||
@@ -3607,10 +3831,19 @@ ${catalogContext}`;
       lastBotMsg.includes("cliente final") ||
       lastBotMsg.includes("taxa padrão configurada") ||
       lastBotMsg.includes("Qual valor por kWp") ||
+      lastBotMsg.includes("Qual valor você deseja utilizar") ||
       lastBotMsg.includes("Como deseja prosseguir para esta cotação") ||
       lastBotMsg.includes("Como você deseja prosseguir para esta cotação") ||
       lastBotMsg.includes("WhatsApp") ||
-      lastBotMsg.includes("whatsapp");
+      lastBotMsg.includes("whatsapp") ||
+      lastBotMsg.includes("Simulação por Consumo Mensal") ||
+      lastBotMsg.includes("consumo médio mensal") ||
+      lastBotMsg.includes("Simulação por Potência de Pico") ||
+      lastBotMsg.includes("potência de pico") ||
+      lastBotMsg.includes("potência desejada") ||
+      lastBotMsg.includes("Simulação por Quantidade de Módulos") ||
+      lastBotMsg.includes("placas solares você deseja no kit") ||
+      lastBotMsg.includes("Para qual cidade e estado será a instalação");
 
     if (!isChoosingOtherOption) {
       if (lower === "1" || lower === "1." || lower === "opcao 1" || lower === "opção 1") {
@@ -3735,6 +3968,24 @@ ${catalogContext}`;
 
         return (
           `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n\n` +
+          `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+        );
+      }
+    }
+
+    // Se o usuário digitou apenas um número avulso (ex: 450, 600, 1000) e não foi capturado acima
+    const pureNumMatch = incomingText.trim().match(/^(\d{2,5})$/);
+    if (pureNumMatch && pureNumMatch[1]) {
+      const pureVal = parseInt(pureNumMatch[1], 10);
+      if (pureVal >= 30 && pureVal <= 50000) {
+        if (sessionCtx.cidade && sessionCtx.estado) {
+          return (
+            `*_Consumo Registrado:_* \`${pureVal} kWh/mês\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
+            this.GRID_OPTIONS_TEXT
+          );
+        }
+        return (
+          `*_Consumo Registrado:_* \`${pureVal} kWh/mês\` ☀️\n\n` +
           `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
         );
       }
