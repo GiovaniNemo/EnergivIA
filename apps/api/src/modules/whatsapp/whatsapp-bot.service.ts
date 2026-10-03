@@ -1843,11 +1843,11 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     ];
 
     const results = tiers.map((cfg) => {
+      // O preço por kWp informado pelo integrador é o PREÇO DE VENDA do kit escolhido.
+      // Valor total = potência (kWp) x preço aplicado — idêntico para qualquer grupo de kit.
       const baseEquipmentRate = ratePerKwp * 0.55;
-      const baseMarginAndServices = ratePerKwp - baseEquipmentRate;
       const tierEquipmentRate = baseEquipmentRate * cfg.materialCostFactor;
-      const ratePerKwpEffective = tierEquipmentRate + baseMarginAndServices;
-      const totalPrice = Math.round(realSystemKwp * ratePerKwpEffective);
+      const totalPrice = Math.round(realSystemKwp * ratePerKwp * 100) / 100;
 
       const baseEquipmentBudget = Math.round(realSystemKwp * tierEquipmentRate);
       const modTotal = baseEquipmentBudget * 0.5;
@@ -1899,6 +1899,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         distributorName: cfg.distributorName,
         distributorId: cfg.distributorId,
         totalPrice,
+        ratePerKwp,
+        materialsTotal: baseEquipmentBudget,
         kwp: realSystemKwp,
         estimatedGeneration: Math.round(realSystemKwp * geracaoPorKwp),
         items: kitItems,
@@ -1963,6 +1965,58 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     `> 0️⃣ *Voltar / Corrigir localização ou consumo*\n\n` +
     `_(Responda com o número da opção)_`;
 
+  private formatBrl(value: number): string {
+    return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  private resolveQuoteIndexFromText(text: string, max: number): number | null {
+    const l = text.toLowerCase();
+    let idx: number | null = null;
+    if (l.includes("standard")) idx = 0;
+    else if (l.includes("elite")) idx = 1;
+    else if (l.includes("premium")) idx = 2;
+    else {
+      const m = l.match(/\b([1-9])\b/);
+      if (m && m[1]) idx = parseInt(m[1], 10) - 1;
+    }
+    if (idx === null || idx < 0 || idx >= max) return null;
+    return idx;
+  }
+
+  /** Etapa 2: kit escolhido -> pergunta o preço de venda por kWp */
+  private buildPriceQuestionText(quote: any, orgDefaultRate: number): string {
+    const total = Math.round(quote.kwp * orgDefaultRate * 100) / 100;
+    const items: string[] = Array.isArray(quote.items) ? quote.items : [];
+    return (
+      `*_Kit ${quote.distributorName} selecionado!_* ☀️\n\n` +
+      `> ⚡ Potência: \`${quote.kwp} kWp\` | Geração estimada: \`${quote.estimatedGeneration} kWh/mês\`\n` +
+      items.map((i) => `> ${i}\n`).join("") +
+      `\n*_Como você deseja prosseguir para esta cotação?_*\n\n` +
+      `> 1️⃣ *Seguir com o preço padrão* (\`R$ ${this.formatBrl(orgDefaultRate)}/kWp\` — Total: \`R$ ${this.formatBrl(total)}\`)\n` +
+      `> 2️⃣ *Informar outro preço por kWp* (ex: \`2500\`, \`R$ 3.200\` ou \`total 18500\`)\n` +
+      `> 0️⃣ *Voltar / Escolher outro kit*\n\n` +
+      `_(Responda 1, 2 ou digite o preço por kWp diretamente)_`
+    );
+  }
+
+  /** Etapa 3: preço definido -> resumo com valor total e pergunta o nome do cliente */
+  private buildPriceAppliedText(quote: any, rate: number, isDerivedFromTotal?: boolean): string {
+    const total = Math.round(quote.kwp * rate * 100) / 100;
+    const derivedNote = isDerivedFromTotal
+      ? `\n_(Convertido a partir do valor total informado)_`
+      : "";
+    return (
+      `*_Preço aplicado:_* \`R$ ${this.formatBrl(rate)}/kWp\` ✅${derivedNote}\n\n` +
+      `*_Resumo da cotação — Kit ${quote.distributorName}:_*\n` +
+      `> ⚡ Potência: \`${quote.kwp} kWp\`\n` +
+      `> 💰 Valor total: \`R$ ${this.formatBrl(total)}\` (${quote.kwp} kWp × R$ ${this.formatBrl(rate)})\n` +
+      `> _Validade da cotação: 3 dias úteis_\n\n` +
+      `*_Qual o nome do cliente final para registrarmos no seu CRM?_*\n` +
+      `_(ou digite 0️⃣ para alterar o preço)_`
+    );
+  }
+
+  /** Etapa 1: lista os grupos de kits (sem preço) para o integrador escolher */
   private formatQuotesListText(
     quotes: any[],
     sessionCtx: {
@@ -1987,15 +2041,10 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         ? `para \`${sessionCtx.targetModules} módulos\`${localidade}`
         : `para o consumo de \`${sessionCtx.consumptionKwh || 300} kWh/mês\`${localidade}`;
 
-    const taxaInfo = sessionCtx.customRatePerKwp
-      ? `> Taxa aplicada: \`R$ ${sessionCtx.customRatePerKwp.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kWp\`\n`
-      : "";
-
-    let quoteText = `Excelente! Seguem as melhores opções de kits dimensionados ${infoCabecalho}:\n`;
-    if (taxaInfo) {
-      quoteText += `\n${taxaInfo}\n`;
-    } else {
-      quoteText += `\n`;
+    let quoteText = `Excelente! Seguem os grupos de kits dimensionados ${infoCabecalho}:\n\n`;
+    const first = quotes[0];
+    if (first) {
+      quoteText += `> ⚡ Potência: \`${first.kwp} kWp\` | Geração estimada: \`${first.estimatedGeneration} kWh/mês\`\n\n`;
     }
 
     quotes.forEach((q, index) => {
@@ -2004,10 +2053,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       const isTop = index === 0;
       const tag = isTop ? " (Mais Recomendado)" : "";
       const trophy = isTop ? " 🏆" : "";
-      const priceFormatted = `R$ ${q.totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-      quoteText += `*_Opção ${index + 1} — ${tierName}${tag}:_* \`${priceFormatted}\` 💵${trophy}\n`;
-      quoteText += `> Potência: \`${q.kwp} kWp\` | Geração estimada: \`${q.estimatedGeneration} kWh/mês\`\n`;
+      quoteText += `*_Opção ${index + 1} — ${tierName}${tag}_*${trophy}\n`;
 
       const items: string[] =
         q.items && q.items.length > 0
@@ -2025,9 +2072,9 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       quoteText += `\n`;
     });
 
-    quoteText += `> *_Validade das cotações: 3 dias úteis_*\n\n`;
     quoteText += `Qual opção você prefere para o seu cliente?\n`;
-    quoteText += `_(Responda com o número ou nome da opção: 1 Standard, 2 Elite ou 3 Premium)_\n\n`;
+    quoteText += `_(Responda com o número ou nome da opção: 1 Standard, 2 Elite ou 3 Premium. Na sequência você define o preço por kWp)_\n`;
+    quoteText += `> 0️⃣ *Voltar / Alterar estrutura*\n\n`;
     quoteText += `Equipe *_EnergivIA Solar._*`;
     return quoteText;
   }
@@ -2346,6 +2393,17 @@ ${catalogContext}`;
 
         // 7. Nome e WhatsApp do Cliente (pode ser detectado pelas confirmações do assistente)
         if (m.role === "assistant") {
+          const kitSelM = content.match(/Kit (Standard|Elite|Premium) selecionado/i);
+          if (kitSelM && kitSelM[1]) {
+            const kn = kitSelM[1].toLowerCase();
+            chosenQuoteIndex = kn === "standard" ? 0 : kn === "elite" ? 1 : 2;
+          }
+
+          const precoM = content.match(/Preço aplicado:[_*\s]*`?R\$\s*([\d.,]+)\/kWp/i);
+          if (precoM && precoM[1]) {
+            const parsedPreco = parseKwpRate(precoM[1]);
+            if (parsedPreco) customRatePerKwp = parsedPreco.rate;
+          }
           const consM = content.match(
             /(?:Consumo Registrado|Consumo m[ée]dio de):\s*\*?`?(\d+[\d.,]*)`?\s*kWh/i
           );
@@ -2679,6 +2737,24 @@ ${catalogContext}`;
 
     const sessionCtx = extractContextFromSession();
 
+    // Helper: recalcula os grupos de kits para a sessão atual
+    const kitsFor = (overrides: { roofType?: string; customRatePerKwp?: number } = {}) =>
+      this.calculateDistributorKits({
+        consumptionKwh: sessionCtx.consumptionKwh,
+        targetKWp: sessionCtx.targetKWp,
+        targetModules: sessionCtx.targetModules,
+        modPowerWUser: sessionCtx.modPowerWUser,
+        cidade: sessionCtx.cidade || "São Paulo",
+        estado: sessionCtx.estado || "SP",
+        roofType: overrides.roofType || sessionCtx.roofType || "Cerâmica (Colonial)",
+        gridVoltage: sessionCtx.gridVoltage || "Monofásico 220V",
+        organizationId: conversation.organizationId,
+        customRatePerKwp: overrides.customRatePerKwp,
+      });
+    const NO_KITS_TEXT =
+      `No momento não encontramos kits com todos os componentes e estrutura (${sessionCtx.roofType || "padrão"}) disponíveis em estoque compatível.\n\n` +
+      `Você pode selecionar a opção "7️⃣ Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado (ou envie 0️⃣ para voltar).`;
+
     // 1. Se acabou de extrair a fatura com sucesso
     if (extractionResult && extractionResult.exactAverageKwh > 0) {
       const cidade = extractionResult.data.cidade
@@ -2795,66 +2871,29 @@ ${catalogContext}`;
         lastBotMsg.includes("Como deseja prosseguir para esta cotação") ||
         lastBotMsg.includes("taxa padrão configurada")
       ) {
-        return `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
+        const quotes = await kitsFor();
+        if (quotes.length === 0) return NO_KITS_TEXT;
+        return (
+          `Certo! Vamos escolher outro kit. ☀️\n\n` + this.formatQuotesListText(quotes, sessionCtx)
+        );
       }
 
       if (
         lastBotMsg.includes("Qual valor por kWp") ||
         lastBotMsg.includes("Qual valor você deseja utilizar")
       ) {
+        const quotes = await kitsFor();
+        if (quotes.length === 0) return NO_KITS_TEXT;
+        const quote = quotes[sessionCtx.chosenQuoteIndex] || quotes[0];
+        if (!quote) return NO_KITS_TEXT;
         const orgDefaultRate = await this.getOrganizationDefaultKwpRate(
           conversation.organizationId
         );
-        const formattedRate = orgDefaultRate.toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        });
-        const sizing = this.getSystemSizingSummary(sessionCtx);
-        const totalEstimado = Math.round(sizing.realSystemKwp * orgDefaultRate);
-        const consumoRef = sessionCtx.consumptionKwh
-          ? ` para \`${sessionCtx.consumptionKwh} kWh/mês\``
-          : "";
-
-        return (
-          `*_Estrutura Selecionada:_* \`${sessionCtx.roofType || "Cerâmica (Colonial)"}\` 🏠\n\n` +
-          `*_Dimensionamento Solar Calculado${consumoRef}:_* ☀️\n` +
-          `> ⚡ Potência: \`${sizing.realSystemKwp} kWp\` (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
-          `> 📈 Geração estimada: \`${sizing.estimatedGeneration} kWh/mês\`\n` +
-          `> 💵 Sua taxa padrão: \`R$ ${formattedRate}/kWp\` (Total aprox: \`R$ ${totalEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\`)\n\n` +
-          `*_Como você deseja prosseguir para esta cotação?_*\n\n` +
-          `> 1️⃣ *Seguir com a taxa padrão* (\`R$ ${formattedRate}/kWp\`)\n` +
-          `> 2️⃣ *Informar outro valor por kWp* (ou digite o valor, ex: \`2500\`, \`R$ 3.200\`)\n` +
-          `> 0️⃣ *Voltar / Alterar estrutura*\n\n` +
-          `_(Responda 1 para seguir, 2 para editar ou envie o valor desejado)_`
-        );
+        return this.buildPriceQuestionText(quote, orgDefaultRate);
       }
 
-      if (lastBotMsg.includes("Qual opção você prefere para o seu cliente?")) {
-        const orgDefaultRate = await this.getOrganizationDefaultKwpRate(
-          conversation.organizationId
-        );
-        const formattedRate = orgDefaultRate.toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        });
-        const sizing = this.getSystemSizingSummary(sessionCtx);
-        const totalEstimado = Math.round(sizing.realSystemKwp * orgDefaultRate);
-        const consumoRef = sessionCtx.consumptionKwh
-          ? ` para \`${sessionCtx.consumptionKwh} kWh/mês\``
-          : "";
-
-        return (
-          `*_Estrutura Selecionada:_* \`${sessionCtx.roofType || "Cerâmica (Colonial)"}\` 🏠\n\n` +
-          `*_Dimensionamento Solar Calculado${consumoRef}:_* ☀️\n` +
-          `> ⚡ Potência: \`${sizing.realSystemKwp} kWp\` (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
-          `> 📈 Geração estimada: \`${sizing.estimatedGeneration} kWh/mês\`\n` +
-          `> 💵 Sua taxa padrão: \`R$ ${formattedRate}/kWp\` (Total aprox: \`R$ ${totalEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\`)\n\n` +
-          `*_Como você deseja prosseguir para esta cotação?_*\n\n` +
-          `> 1️⃣ *Seguir com a taxa padrão* (\`R$ ${formattedRate}/kWp\`)\n` +
-          `> 2️⃣ *Informar outro valor por kWp* (ou digite o valor, ex: \`2500\`, \`R$ 3.200\`)\n` +
-          `> 0️⃣ *Voltar / Alterar estrutura*\n\n` +
-          `_(Responda 1 para seguir, 2 para editar ou envie o valor desejado)_`
-        );
+      if (lastBotMsg.includes("Qual opção você prefere para o seu cliente")) {
+        return `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
       }
 
       const isClientNameQuestion =
@@ -2863,21 +2902,15 @@ ${catalogContext}`;
         lastBotMsg.includes("nome correto do cliente final");
 
       if (isClientNameQuestion) {
-        const quotes = await this.calculateDistributorKits({
-          consumptionKwh: sessionCtx.consumptionKwh,
-          targetKWp: sessionCtx.targetKWp,
-          targetModules: sessionCtx.targetModules,
-          modPowerWUser: sessionCtx.modPowerWUser,
-          cidade: sessionCtx.cidade || "São Paulo",
-          estado: sessionCtx.estado || "SP",
-          roofType: sessionCtx.roofType || "Cerâmica (Colonial)",
-          gridVoltage: sessionCtx.gridVoltage || "Monofásico 220V",
-          organizationId: conversation.organizationId,
-          customRatePerKwp: sessionCtx.customRatePerKwp,
-        });
-
+        const quotes = await kitsFor();
         if (quotes.length > 0) {
-          return this.formatQuotesListText(quotes, sessionCtx);
+          const quote = quotes[sessionCtx.chosenQuoteIndex] || quotes[0];
+          if (quote) {
+            const orgDefaultRate = await this.getOrganizationDefaultKwpRate(
+              conversation.organizationId
+            );
+            return this.buildPriceQuestionText(quote, orgDefaultRate);
+          }
         }
         return `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
       }
@@ -2888,7 +2921,7 @@ ${catalogContext}`;
         lastBotMsg.includes("qual o whatsapp") ||
         lastBotMsg.includes("WhatsApp correto")
       ) {
-        return `Sem problemas! Qual o nome do cliente final para registrarmos no seu CRM? (ou digite 0️⃣ para voltar às opções de kits)`;
+        return `Sem problemas! Qual o nome do cliente final para registrarmos no seu CRM? (ou digite 0️⃣ para alterar o preço)`;
       }
 
       if (lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar")) {
@@ -2906,21 +2939,22 @@ ${catalogContext}`;
       );
     }
 
-    // ESTADO A: O Bot acabou de apresentar os kits (Standard, Elite, Premium) e pediu para escolher
+    // ESTADO A: O Bot apresentou os grupos de kits (Standard, Elite, Premium) -> escolhido o kit, pergunta o preço por kWp
     if (lastBotMsg.includes("Qual opção você prefere para o seu cliente")) {
-      const isStandard = lower.includes("standard") || lower === "1" || lower.includes("1️⃣");
-      const isElite = lower.includes("elite") || lower === "2" || lower.includes("2️⃣");
-      const isPremium = lower.includes("premium") || lower === "3" || lower.includes("3️⃣");
-      const choiceMatch = incomingText.match(/\b([1-9]|10)\b/);
-
-      if (choiceMatch || isStandard || isElite || isPremium) {
-        return (
-          `Ótima escolha! Kit selecionado com sucesso. ☀️\n\n` +
-          `*_Qual o nome do cliente final para registrarmos no seu CRM?_*\n` +
-          `_(ou digite 0️⃣ para voltar às opções de kits)_`
+      const quotes = await kitsFor();
+      if (quotes.length === 0) return NO_KITS_TEXT;
+      const idx = this.resolveQuoteIndexFromText(incomingText, quotes.length);
+      if (idx !== null && quotes[idx]) {
+        const orgDefaultRate = await this.getOrganizationDefaultKwpRate(
+          conversation.organizationId
         );
+        return this.buildPriceQuestionText(quotes[idx], orgDefaultRate);
       }
-      return `Por favor, responda com o número ou nome da opção desejada (1 Standard, 2 Elite ou 3 Premium) ou envie 0️⃣ para voltar e alterar a estrutura.`;
+      return (
+        `Opção não reconhecida.\n\n` +
+        `Qual opção você prefere para o seu cliente?\n` +
+        `_(Responda 1 Standard, 2 Elite ou 3 Premium, ou envie 0️⃣ para voltar e alterar a estrutura)_`
+      );
     }
 
     // ESTADO B: O Bot pediu o nome do cliente final (ou o nome correto)
@@ -3029,7 +3063,7 @@ ${catalogContext}`;
         sessionCtx.clientWhatsapp && sessionCtx.clientWhatsapp !== "WhatsApp"
           ? sessionCtx.clientWhatsapp
           : "WhatsApp";
-      let chosenQuoteIndex = 0;
+      const chosenQuoteIndex = sessionCtx.chosenQuoteIndex || 0;
 
       // Recupera escolhas das mensagens
       for (let i = messages.length - 1; i >= 0; i--) {
@@ -3055,37 +3089,6 @@ ${catalogContext}`;
               const digits = nextUserMsg.content.replace(/\D/g, "");
               if (digits.length >= 8) {
                 clientWhatsapp = digits;
-              }
-              break;
-            }
-          }
-        }
-
-        if (
-          m.role === "assistant" &&
-          (content.includes("Qual opção você prefere para o seu cliente") ||
-            content.includes("qual opção você prefere"))
-        ) {
-          for (let j = i + 1; j < messages.length; j++) {
-            const nextUserMsg = messages[j];
-            if (
-              nextUserMsg &&
-              nextUserMsg.role === "user" &&
-              typeof nextUserMsg.content === "string"
-            ) {
-              const uText = nextUserMsg.content.toLowerCase();
-              if (uText.includes("standard")) {
-                chosenQuoteIndex = 0;
-              } else if (uText.includes("elite")) {
-                chosenQuoteIndex = 1;
-              } else if (uText.includes("premium")) {
-                chosenQuoteIndex = 2;
-              } else {
-                const numMatch = nextUserMsg.content.match(/\b([1-9])\b/);
-                if (numMatch && numMatch[1]) {
-                  const idx = parseInt(numMatch[1], 10) - 1;
-                  if (idx >= 0) chosenQuoteIndex = idx;
-                }
               }
               break;
             }
@@ -3148,15 +3151,17 @@ ${catalogContext}`;
           maxKwp: r.maxKwp?.toNumber() ?? null,
           percentageBase: r.percentageBase ?? null,
         }));
+        const materialsSubtotal =
+          (selectedQuote as any).materialsTotal > 0
+            ? (selectedQuote as any).materialsTotal
+            : selectedQuote.totalPrice;
         const costCalc = computeProjectCostSection(
-          selectedQuote.totalPrice,
+          materialsSubtotal,
           selectedQuote.kwp,
           organizationRules
         );
-        quotedSaleBrl =
-          costCalc.computedSaleFromCostRulesBrl > 0
-            ? Math.round(costCalc.computedSaleFromCostRulesBrl * 100) / 100
-            : selectedQuote.totalPrice;
+        // Valor de venda = potência (kWp) x preço aplicado pelo integrador
+        quotedSaleBrl = selectedQuote.totalPrice;
 
         // 3. Cria Deal
         const deal = await this.prisma.deal.create({
@@ -3295,7 +3300,7 @@ ${catalogContext}`;
               integrator: {
                 version: 1,
                 kitItems: rawKitItems,
-                equipmentSubtotalBrl: selectedQuote.totalPrice,
+                equipmentSubtotalBrl: materialsSubtotal,
                 quotedSaleBrl: quotedSaleBrl,
                 systemPowerKw: selectedQuote.kwp,
                 sourceType: "kwp_rate",
@@ -3390,30 +3395,12 @@ ${catalogContext}`;
     ) {
       if (roofMatch) {
         const selectedRoof = roofMatch.name;
-        const orgDefaultRate = await this.getOrganizationDefaultKwpRate(
-          conversation.organizationId
-        );
-        const formattedRate = orgDefaultRate.toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        });
-        const sizing = this.getSystemSizingSummary({ ...sessionCtx, roofType: selectedRoof });
-        const totalEstimado = Math.round(sizing.realSystemKwp * orgDefaultRate);
-        const consumoRef = sessionCtx.consumptionKwh
-          ? ` para \`${sessionCtx.consumptionKwh} kWh/mês\``
-          : "";
+        const quotes = await kitsFor({ roofType: selectedRoof });
+        if (quotes.length === 0) return NO_KITS_TEXT;
 
         return (
           `*_Estrutura Selecionada:_* \`${selectedRoof}\` 🏠\n\n` +
-          `*_Dimensionamento Solar Calculado${consumoRef}:_* ☀️\n` +
-          `> ⚡ Potência: \`${sizing.realSystemKwp} kWp\` (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n` +
-          `> 📈 Geração estimada: \`${sizing.estimatedGeneration} kWh/mês\`\n` +
-          `> 💵 Sua taxa padrão: \`R$ ${formattedRate}/kWp\` (Total aprox: \`R$ ${totalEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\`)\n\n` +
-          `*_Como você deseja prosseguir para esta cotação?_*\n\n` +
-          `> 1️⃣ *Seguir com a taxa padrão* (\`R$ ${formattedRate}/kWp\`)\n` +
-          `> 2️⃣ *Informar outro valor por kWp* (ou digite o valor, ex: \`2500\`, \`R$ 3.200\`)\n` +
-          `> 0️⃣ *Voltar / Alterar estrutura*\n\n` +
-          `_(Responda 1 para seguir, 2 para editar ou envie o valor desejado)_`
+          this.formatQuotesListText(quotes, sessionCtx)
         );
       }
 
@@ -3423,15 +3410,20 @@ ${catalogContext}`;
       );
     }
 
-    // ESTADO E.1: O Bot perguntou se deseja seguir com a taxa padrão configurada ou informar outro valor
+    // ESTADO E.1: O Bot perguntou se deseja seguir com o preço padrão configurado ou informar outro preço por kWp
     if (
+      lastBotMsg.includes("preço padrão") ||
       lastBotMsg.includes("taxa padrão configurada") ||
       lastBotMsg.includes("Como você deseja prosseguir para esta cotação?") ||
       lastBotMsg.includes("Como deseja prosseguir para esta cotação")
     ) {
       const orgDefaultRate = await this.getOrganizationDefaultKwpRate(conversation.organizationId);
+      const quotes = await kitsFor();
+      if (quotes.length === 0) return NO_KITS_TEXT;
+      const quote = quotes[sessionCtx.chosenQuoteIndex] || quotes[0];
+      if (!quote) return NO_KITS_TEXT;
 
-      // Opção 1: Seguir com a taxa padrão da conta
+      // Opção 1: Seguir com o preço padrão da conta
       const isChoice1 =
         lower === "1" ||
         lower === "1." ||
@@ -3446,33 +3438,10 @@ ${catalogContext}`;
         lower === "continuar";
 
       if (isChoice1) {
-        const quotes = await this.calculateDistributorKits({
-          consumptionKwh: sessionCtx.consumptionKwh,
-          targetKWp: sessionCtx.targetKWp,
-          targetModules: sessionCtx.targetModules,
-          modPowerWUser: sessionCtx.modPowerWUser,
-          cidade: sessionCtx.cidade || "São Paulo",
-          estado: sessionCtx.estado || "SP",
-          roofType: sessionCtx.roofType || "Cerâmica (Colonial)",
-          gridVoltage: sessionCtx.gridVoltage || "Monofásico 220V",
-          organizationId: conversation.organizationId,
-          customRatePerKwp: orgDefaultRate,
-        });
-
-        if (quotes.length === 0) {
-          return (
-            `No momento não encontramos kits com todos os componentes e estrutura (${sessionCtx.roofType || "padrão"}) disponíveis em estoque compatível.\n\n` +
-            `Você pode selecionar a opção "7️⃣ Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado (ou envie 0️⃣ para voltar).`
-          );
-        }
-
-        return this.formatQuotesListText(quotes, {
-          ...sessionCtx,
-          customRatePerKwp: orgDefaultRate,
-        });
+        return this.buildPriceAppliedText(quote, orgDefaultRate);
       }
 
-      // Opção 2: Deseja informar outro valor por kWp
+      // Opção 2: Deseja informar outro preço por kWp
       const isChoice2 =
         lower === "2" ||
         lower === "2." ||
@@ -3486,119 +3455,54 @@ ${catalogContext}`;
         lower === "trocar";
 
       if (isChoice2) {
-        const sizing = this.getSystemSizingSummary(sessionCtx);
         return (
-          `*_Personalização de Margem / Taxa_* 💰\n\n` +
-          `Sistema dimensionado: \`${sizing.realSystemKwp} kWp\` (${sizing.moduleQty} módulos de ${sizing.modulePowerW}W)\n\n` +
-          `*_Qual valor você deseja utilizar para esta cotação?_*\n\n` +
-          `> 💵 *Por kWp:* ex: \`2500\`, \`R$ 3.200,00\` ou \`2.850/kWp\`\n` +
+          `*_Personalização de Preço por kWp_* 💰\n\n` +
+          `Kit selecionado: *${quote.distributorName}* (\`${quote.kwp} kWp\`)\n\n` +
+          `*_Qual preço você deseja utilizar para esta cotação?_*\n\n` +
+          `> 💵 *Por kWp:* ex: \`2500\`, \`R$ 3.200,00\` ou \`4000\`\n` +
           `> 🏷️ *Ou valor total do projeto:* ex: \`total 18500\` (calculado automaticamente)\n` +
           `> 0️⃣ *Voltar*\n\n` +
           `_(Envie o valor desejado ou 0️⃣ para voltar)_`
         );
       }
 
-      // Usuário digitou o valor diretamente (ex: "2500", "R$ 3.200", "2.850/kwp", "3k", etc. ou valor total)
-      const sizing = this.getSystemSizingSummary(sessionCtx);
-      const directParsed = parseKwpRate(incomingText, sizing.realSystemKwp);
+      // Usuário digitou o valor diretamente (ex: "4000", "2500", "R$ 3.200", "4.000/kwp", "total 18500")
+      const directParsed = parseKwpRate(incomingText, quote.kwp);
       if (directParsed) {
-        const finalRate = directParsed.rate;
-        const quotes = await this.calculateDistributorKits({
-          consumptionKwh: sessionCtx.consumptionKwh,
-          targetKWp: sessionCtx.targetKWp,
-          targetModules: sessionCtx.targetModules,
-          modPowerWUser: sessionCtx.modPowerWUser,
-          cidade: sessionCtx.cidade || "São Paulo",
-          estado: sessionCtx.estado || "SP",
-          roofType: sessionCtx.roofType || "Cerâmica (Colonial)",
-          gridVoltage: sessionCtx.gridVoltage || "Monofásico 220V",
-          organizationId: conversation.organizationId,
-          customRatePerKwp: finalRate,
-        });
-
-        if (quotes.length === 0) {
-          return (
-            `No momento não encontramos kits com todos os componentes e estrutura (${sessionCtx.roofType || "padrão"}) disponíveis em estoque compatível.\n\n` +
-            `Você pode selecionar a opção "7️⃣ Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado (ou envie 0️⃣ para voltar).`
-          );
-        }
-
-        const formattedRate = finalRate.toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        });
-        const prefixMsg = directParsed.isDerivedFromTotal
-          ? `Entendido! Convertemos seu valor informado para \`R$ ${formattedRate}/kWp\` (com base no sistema de \`${sizing.realSystemKwp} kWp\`)! ☀️💰\n\n`
-          : `Taxa personalizada de \`R$ ${formattedRate}/kWp\` aplicada para esta cotação! ☀️💰\n\n`;
-
-        return (
-          prefixMsg +
-          this.formatQuotesListText(quotes, { ...sessionCtx, customRatePerKwp: finalRate })
+        return this.buildPriceAppliedText(
+          quote,
+          directParsed.rate,
+          directParsed.isDerivedFromTotal
         );
       }
 
-      const formattedRate = orgDefaultRate.toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-
-      return (
-        `*_Como você deseja prosseguir para esta cotação?_*\n\n` +
-        `> 1️⃣ *Seguir com a taxa padrão* (\`R$ ${formattedRate}/kWp\`)\n` +
-        `> 2️⃣ *Informar outro valor por kWp* (ex: \`2500\`, \`R$ 3.200\` ou \`total 18500\`)\n` +
-        `> 0️⃣ *Voltar / Alterar estrutura*\n\n` +
-        `_(Responda com 1 ou 2 ou digite o valor diretamente)_`
-      );
+      return `Opção não reconhecida.\n\n` + this.buildPriceQuestionText(quote, orgDefaultRate);
     }
 
-    // ESTADO E.2: O Bot pediu especificamente para digitar o valor por kWp
+    // ESTADO E.2: O Bot pediu especificamente para digitar o preço por kWp
     if (
+      lastBotMsg.includes("Qual preço você deseja utilizar") ||
       lastBotMsg.includes("Qual valor por kWp") ||
       lastBotMsg.includes("Qual valor você deseja utilizar")
     ) {
-      const sizing = this.getSystemSizingSummary(sessionCtx);
-      const parsedRateObj = parseKwpRate(incomingText, sizing.realSystemKwp);
+      const quotes = await kitsFor();
+      if (quotes.length === 0) return NO_KITS_TEXT;
+      const quote = quotes[sessionCtx.chosenQuoteIndex] || quotes[0];
+      if (!quote) return NO_KITS_TEXT;
+      const parsedRateObj = parseKwpRate(incomingText, quote.kwp);
       if (parsedRateObj) {
-        const finalRate = parsedRateObj.rate;
-        const quotes = await this.calculateDistributorKits({
-          consumptionKwh: sessionCtx.consumptionKwh,
-          targetKWp: sessionCtx.targetKWp,
-          targetModules: sessionCtx.targetModules,
-          modPowerWUser: sessionCtx.modPowerWUser,
-          cidade: sessionCtx.cidade || "São Paulo",
-          estado: sessionCtx.estado || "SP",
-          roofType: sessionCtx.roofType || "Cerâmica (Colonial)",
-          gridVoltage: sessionCtx.gridVoltage || "Monofásico 220V",
-          organizationId: conversation.organizationId,
-          customRatePerKwp: finalRate,
-        });
-
-        if (quotes.length === 0) {
-          return (
-            `No momento não encontramos kits com todos os componentes e estrutura (${sessionCtx.roofType || "padrão"}) disponíveis em estoque compatível.\n\n` +
-            `Você pode selecionar a opção "7️⃣ Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado (ou envie 0️⃣ para voltar).`
-          );
-        }
-
-        const formattedRate = finalRate.toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        });
-        const prefixMsg = parsedRateObj.isDerivedFromTotal
-          ? `Entendido! Convertemos seu valor informado para \`R$ ${formattedRate}/kWp\` (com base no sistema de \`${sizing.realSystemKwp} kWp\`)! ☀️💰\n\n`
-          : `Taxa personalizada de \`R$ ${formattedRate}/kWp\` aplicada para esta cotação! ☀️💰\n\n`;
-
-        return (
-          prefixMsg +
-          this.formatQuotesListText(quotes, { ...sessionCtx, customRatePerKwp: finalRate })
+        return this.buildPriceAppliedText(
+          quote,
+          parsedRateObj.rate,
+          parsedRateObj.isDerivedFromTotal
         );
       }
 
       return (
-        `Valor não reconhecido. Por favor, informe o valor por kWp desejado:\n\n` +
-        `> Ex: \`2500\`, \`R$ 3.200,00\` ou \`total 18500\`\n` +
+        `Valor não reconhecido. Por favor, informe o preço por kWp desejado:\n\n` +
+        `> Ex: \`2500\`, \`R$ 3.200,00\`, \`4000\` ou \`total 18500\`\n` +
         `> Envie 0️⃣ para voltar\n\n` +
-        `_(Qual valor você deseja utilizar para esta cotação?)_`
+        `_(Qual preço você deseja utilizar para esta cotação?)_`
       );
     }
 
@@ -3830,6 +3734,9 @@ ${catalogContext}`;
       lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar") ||
       lastBotMsg.includes("cliente final") ||
       lastBotMsg.includes("taxa padrão configurada") ||
+      lastBotMsg.includes("preço padrão") ||
+      lastBotMsg.includes("Preço aplicado") ||
+      lastBotMsg.includes("Qual preço você deseja utilizar") ||
       lastBotMsg.includes("Qual valor por kWp") ||
       lastBotMsg.includes("Qual valor você deseja utilizar") ||
       lastBotMsg.includes("Como deseja prosseguir para esta cotação") ||
