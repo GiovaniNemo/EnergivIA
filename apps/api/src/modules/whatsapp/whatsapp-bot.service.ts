@@ -3640,14 +3640,17 @@ ${catalogContext}`;
       );
     }
 
+    const isMainMenu = lastBotMsg.includes("Como posso ajudar você a gerar orçamentos hoje");
+
     // ESTADO: O Bot perguntou o consumo médio mensal em kWh
     const isAskingConsumption =
-      lastBotMsg.includes("Simulação por Consumo Mensal") ||
-      lastBotMsg.includes("consumo médio mensal") ||
-      lastBotMsg.includes("consumo em kWh") ||
-      lastBotMsg.includes("informe seu consumo (kWh)") ||
-      lastBotMsg.includes("qual é o consumo") ||
-      lastBotMsg.includes("qual o consumo");
+      !isMainMenu &&
+      (lastBotMsg.includes("Simulação por Consumo Mensal") ||
+        lastBotMsg.includes("consumo médio mensal") ||
+        lastBotMsg.includes("consumo em kWh") ||
+        lastBotMsg.includes("informe seu consumo (kWh)") ||
+        lastBotMsg.includes("qual é o consumo") ||
+        lastBotMsg.includes("qual o consumo"));
 
     if (isAskingConsumption) {
       const kwhMatch = incomingText.match(/(\d+[\d.,]*)\s*(?:kwh|kw)?(?:\/m[eê]s)?/i);
@@ -3697,10 +3700,11 @@ ${catalogContext}`;
 
     // ESTADO: O Bot perguntou a potência de pico (kWp)
     const isAskingKwp =
-      lastBotMsg.includes("Simulação por Potência de Pico") ||
-      lastBotMsg.includes("potência de pico") ||
-      lastBotMsg.includes("potência desejada") ||
-      lastBotMsg.includes("potência (kWp)");
+      !isMainMenu &&
+      (lastBotMsg.includes("Simulação por Potência de Pico") ||
+        lastBotMsg.includes("potência de pico") ||
+        lastBotMsg.includes("potência desejada") ||
+        lastBotMsg.includes("potência (kWp)"));
 
     if (isAskingKwp) {
       const kwpMatch = incomingText.match(/(\d+(?:[.,]\d+)?)\s*(?:kwp|kw)?/i);
@@ -3748,9 +3752,10 @@ ${catalogContext}`;
 
     // ESTADO: O Bot perguntou a quantidade de placas/módulos
     const isAskingModules =
-      lastBotMsg.includes("Simulação por Quantidade de Módulos") ||
-      lastBotMsg.includes("placas solares você deseja no kit") ||
-      lastBotMsg.includes("quantidade de placas");
+      !isMainMenu &&
+      (lastBotMsg.includes("Simulação por Quantidade de Módulos") ||
+        lastBotMsg.includes("placas solares você deseja no kit") ||
+        lastBotMsg.includes("quantidade de placas"));
 
     if (isAskingModules) {
       const modMatch = incomingText.match(/(\d+)\s*(?:placas?|m[oó]dulos?|paineis?|pain[eé]is)?/i);
@@ -3785,30 +3790,31 @@ ${catalogContext}`;
 
     // Opções do menu inicial (1 a 5) quando não estiver em fluxos específicos
     const isChoosingOtherOption =
-      lastBotMsg.includes("Qual opção você prefere para o seu cliente") ||
-      lastBotMsg.includes("Qual o padrão de entrada da instalação") ||
-      lastBotMsg.includes("Qual a estrutura do telhado") ||
-      lastBotMsg.includes("estrutura do telhado") ||
-      lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar") ||
-      lastBotMsg.includes("cliente final") ||
-      lastBotMsg.includes("taxa padrão configurada") ||
-      lastBotMsg.includes("preço padrão") ||
-      lastBotMsg.includes("Preço aplicado") ||
-      lastBotMsg.includes("Qual preço você deseja utilizar") ||
-      lastBotMsg.includes("Qual valor por kWp") ||
-      lastBotMsg.includes("Qual valor você deseja utilizar") ||
-      lastBotMsg.includes("Como deseja prosseguir para esta cotação") ||
-      lastBotMsg.includes("Como você deseja prosseguir para esta cotação") ||
-      lastBotMsg.includes("WhatsApp") ||
-      lastBotMsg.includes("whatsapp") ||
-      lastBotMsg.includes("Simulação por Consumo Mensal") ||
-      lastBotMsg.includes("consumo médio mensal") ||
-      lastBotMsg.includes("Simulação por Potência de Pico") ||
-      lastBotMsg.includes("potência de pico") ||
-      lastBotMsg.includes("potência desejada") ||
-      lastBotMsg.includes("Simulação por Quantidade de Módulos") ||
-      lastBotMsg.includes("placas solares você deseja no kit") ||
-      lastBotMsg.includes("Para qual cidade e estado será a instalação");
+      !isMainMenu &&
+      (lastBotMsg.includes("Qual opção você prefere para o seu cliente") ||
+        lastBotMsg.includes("Qual o padrão de entrada da instalação") ||
+        lastBotMsg.includes("Qual a estrutura do telhado") ||
+        lastBotMsg.includes("estrutura do telhado") ||
+        lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar") ||
+        lastBotMsg.includes("cliente final") ||
+        lastBotMsg.includes("taxa padrão configurada") ||
+        lastBotMsg.includes("preço padrão") ||
+        lastBotMsg.includes("Preço aplicado") ||
+        lastBotMsg.includes("Qual preço você deseja utilizar") ||
+        lastBotMsg.includes("Qual valor por kWp") ||
+        lastBotMsg.includes("Qual valor você deseja utilizar") ||
+        lastBotMsg.includes("Como deseja prosseguir para esta cotação") ||
+        lastBotMsg.includes("Como você deseja prosseguir para esta cotação") ||
+        lastBotMsg.includes("WhatsApp") ||
+        lastBotMsg.includes("whatsapp") ||
+        lastBotMsg.includes("Simulação por Consumo Mensal") ||
+        lastBotMsg.includes("consumo médio mensal") ||
+        lastBotMsg.includes("Simulação por Potência de Pico") ||
+        lastBotMsg.includes("potência de pico") ||
+        lastBotMsg.includes("potência desejada") ||
+        lastBotMsg.includes("Simulação por Quantidade de Módulos") ||
+        lastBotMsg.includes("placas solares você deseja no kit") ||
+        lastBotMsg.includes("Para qual cidade e estado será a instalação"));
 
     if (!isChoosingOtherOption) {
       if (lower === "1" || lower === "1." || lower === "opcao 1" || lower === "opção 1") {
