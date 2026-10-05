@@ -122,6 +122,7 @@ export class StripeController {
       durationInMonths?: number;
       maxRedemptions?: number;
       expiresAt?: string;
+      targetPlan?: "all" | "plus";
     }
   ) {
     if (!body.code || !body.discountValue || !body.discountType) {
@@ -148,6 +149,7 @@ export class StripeController {
       durationInMonths?: number;
       maxRedemptions?: number;
       expiresAt?: string;
+      targetPlan?: "all" | "plus";
     }
   ) {
     if (!id) {
@@ -172,11 +174,11 @@ export class StripeController {
 
   @Post("validate-coupon")
   @HttpCode(HttpStatus.OK)
-  async validateCoupon(@Body() body: { code: string }) {
+  async validateCoupon(@Body() body: { code: string; planId?: string }) {
     if (!body.code) {
       throw new BadRequestException("Código de cupom obrigatório.");
     }
-    return this.stripeService.validateCouponCode(body.code);
+    return this.stripeService.validateCouponCode(body.code, body.planId);
   }
 
   @Post("redeem-coupon")

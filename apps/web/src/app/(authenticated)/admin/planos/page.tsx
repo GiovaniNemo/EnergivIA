@@ -65,6 +65,8 @@ interface Coupon {
   expiresAt?: string | null;
   createdAt: string;
   isLifetimeAdmin?: boolean;
+  targetPlan?: "all" | "plus";
+  isPlusOnly?: boolean;
 }
 
 const PREDEFINED_BENEFITS = [
@@ -147,6 +149,7 @@ export default function AdminPlanosPage() {
     durationInMonths: "3",
     maxRedemptions: "",
     expiresAt: "",
+    targetPlan: "all" as "all" | "plus",
   });
   const [couponSubmitting, setCouponSubmitting] = useState(false);
   const [couponModalError, setCouponModalError] = useState<string | null>(null);
@@ -568,6 +571,7 @@ export default function AdminPlanosPage() {
       durationInMonths: "3",
       maxRedemptions: "",
       expiresAt: "",
+      targetPlan: "all",
     });
     setCouponModalError(null);
     setIsCouponModalOpen(true);
@@ -592,6 +596,7 @@ export default function AdminPlanosPage() {
       durationInMonths: coupon.durationInMonths ? String(coupon.durationInMonths) : "3",
       maxRedemptions: coupon.maxRedemptions ? String(coupon.maxRedemptions) : "",
       expiresAt: formattedExpires,
+      targetPlan: coupon.targetPlan || (coupon.isPlusOnly ? "plus" : "all"),
     });
     setCouponModalError(null);
     setIsCouponModalOpen(true);
@@ -620,6 +625,7 @@ export default function AdminPlanosPage() {
             : undefined,
         maxRedemptions: couponForm.maxRedemptions ? Number(couponForm.maxRedemptions) : undefined,
         expiresAt: couponForm.expiresAt || undefined,
+        targetPlan: couponForm.targetPlan,
       };
 
       const isEditing = Boolean(editingCoupon);
@@ -1264,6 +1270,7 @@ export default function AdminPlanosPage() {
                       <th className="px-6 py-4">Código do Cupom</th>
                       <th className="px-6 py-4">Desconto</th>
                       <th className="px-6 py-4">Aplicação / Duração</th>
+                      <th className="px-6 py-4">Plano Permitido</th>
                       <th className="px-6 py-4">Usos / Limite</th>
                       <th className="px-6 py-4">Validade</th>
                       <th className="px-6 py-4">Status</th>
@@ -1338,6 +1345,22 @@ export default function AdminPlanosPage() {
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-bold">
                               <ShieldCheck className="w-3 h-3" /> Vitalício
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          {coupon.isPlusOnly ||
+                          coupon.targetPlan === "plus" ||
+                          coupon.discountValue >= 100 ||
+                          (coupon.duration === "repeating" &&
+                            (coupon.durationInMonths === 2 || coupon.durationInMonths === 3)) ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 text-xs font-bold">
+                              Exclusivo PLUS
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[var(--color-muted)] text-[var(--color-muted-foreground)] border border-[var(--color-border)] text-xs">
+                              Todos os Planos
                             </span>
                           )}
                         </td>
@@ -2058,12 +2081,16 @@ export default function AdminPlanosPage() {
                   </label>
                   <select
                     value={couponForm.discountType}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const newType = e.target.value as "percent" | "amount";
+                      const numVal = Number(couponForm.discountValue);
+                      const isPlusRestricted = newType === "amount" && numVal >= 100;
                       setCouponForm({
                         ...couponForm,
-                        discountType: e.target.value as "percent" | "amount",
-                      })
-                    }
+                        discountType: newType,
+                        ...(isPlusRestricted ? { targetPlan: "plus" } : {}),
+                      });
+                    }}
                     className="w-full bg-[var(--color-background)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded-xl p-3 text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition"
                   >
                     <option value="percent">Porcentagem (%)</option>
@@ -2083,9 +2110,17 @@ export default function AdminPlanosPage() {
                       required
                       placeholder={couponForm.discountType === "percent" ? "20" : "50.00"}
                       value={couponForm.discountValue}
-                      onChange={(e) =>
-                        setCouponForm({ ...couponForm, discountValue: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const numVal = Number(val);
+                        const isPlusRestricted =
+                          couponForm.discountType === "amount" && numVal >= 100;
+                        setCouponForm({
+                          ...couponForm,
+                          discountValue: val,
+                          ...(isPlusRestricted ? { targetPlan: "plus" } : {}),
+                        });
+                      }}
                       className="w-full bg-[var(--color-background)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none transition pr-10"
                     />
                     <span className="absolute right-3 top-3 text-sm font-bold text-[var(--color-muted-foreground)]">
@@ -2159,6 +2194,70 @@ export default function AdminPlanosPage() {
                     />
                   </div>
                 )}
+              </div>
+
+              {/* PLAN ELIGIBILITY SELECTOR */}
+              <div className="p-4 bg-[var(--color-background)] rounded-2xl border border-[var(--color-border)] space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="block text-xs font-bold text-[var(--color-foreground)] uppercase tracking-wider">
+                    Plano Permitido (Elegibilidade) *
+                  </label>
+                  {couponForm.discountType === "amount" &&
+                    Number(couponForm.discountValue) >= 100 && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                        Exclusivo PLUS Obrigatório (Valor ≥ R$ 100)
+                      </span>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCouponForm({ ...couponForm, targetPlan: "all" })}
+                    disabled={
+                      couponForm.discountType === "amount" &&
+                      Number(couponForm.discountValue) >= 100
+                    }
+                    className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                      couponForm.targetPlan === "all"
+                        ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-300 ring-2 ring-emerald-500/20"
+                        : "bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                    } ${
+                      couponForm.discountType === "amount" &&
+                      Number(couponForm.discountValue) >= 100
+                        ? "opacity-40 cursor-not-allowed"
+                        : ""
+                    }`}
+                  >
+                    <span className="font-bold text-xs">Todos os Planos</span>
+                    <span className="text-[10px] opacity-75 mt-1">Essencial, Pro e Plus</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCouponForm({ ...couponForm, targetPlan: "plus" })}
+                    className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                      couponForm.targetPlan === "plus"
+                        ? "bg-purple-500/10 border-purple-500/40 text-purple-300 ring-2 ring-purple-500/20"
+                        : "bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                    }`}
+                  >
+                    <span className="font-bold text-xs flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+                      Exclusivo Plano PLUS
+                    </span>
+                    <span className="text-[10px] opacity-75 mt-1">
+                      Bloqueia uso em Essencial e Pro
+                    </span>
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-[var(--color-muted-foreground)] leading-relaxed">
+                  🛡️ <strong>Proteção contra gratuidade indevida:</strong> Cupons de valor fixo de
+                  R$ 100 ou R$ 200 (60 e 90 dias) são restritos exclusivamente ao Plano PLUS,
+                  impedindo que os planos Essencial (R$ 99,99) ou Pro (R$ 199,99) saiam de graça no
+                  checkout.
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

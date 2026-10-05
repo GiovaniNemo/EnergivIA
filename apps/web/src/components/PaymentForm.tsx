@@ -19,6 +19,7 @@ interface AppliedCoupon {
   duration: string;
   message: string;
   isLifetimeAdmin?: boolean;
+  isPlusExclusive?: boolean;
 }
 
 export default function PaymentForm({
@@ -50,7 +51,10 @@ export default function PaymentForm({
       const res = await fetch("/api/proxy/stripe/validate-coupon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: couponCode.trim() }),
+        body: JSON.stringify({
+          code: couponCode.trim(),
+          planId,
+        }),
       });
 
       const data = await res.json();
@@ -221,6 +225,11 @@ export default function PaymentForm({
                       ? "1ª Parcela"
                       : "Ativo"}
                 </span>
+                {appliedCoupon.isPlusExclusive && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold uppercase border border-purple-500/30">
+                    Exclusivo PLUS
+                  </span>
+                )}
               </div>
               {appliedCoupon.isLifetimeAdmin ? (
                 <p className="text-[11px] text-emerald-400 font-bold">
