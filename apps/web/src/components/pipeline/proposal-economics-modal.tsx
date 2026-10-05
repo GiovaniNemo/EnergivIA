@@ -149,17 +149,17 @@ function extractPowerBadge(text?: string | null): string | null {
   }
   return null;
 }
-
 function kitRequestEquals(a: ProposalKitRequest | null, b: ProposalKitRequest): boolean {
   return (
     a !== null &&
     a.systemKw === b.systemKw &&
     a.roof === b.roof &&
     a.preferredBrand === b.preferredBrand &&
-    Boolean(a.ownStock) === Boolean(b.ownStock) &&
+    Boolean(a.ownStock) === Boolean(a.ownStock) &&
     a.supplierId === b.supplierId &&
     a.pinnedModuleId === b.pinnedModuleId &&
     a.inverterType === b.inverterType &&
+    a.targetInverterQty === b.targetInverterQty &&
     a.gridTopology === b.gridTopology &&
     a.stringBoxId === b.stringBoxId
   );
@@ -210,6 +210,7 @@ type ProposalKitDraft = {
   source: ProposalKitSource;
   pins: { moduleId?: string; inverterId?: string };
   inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
+  targetInverterQty?: string;
   gridTopology?: "auto" | "mono_220" | "biphasic_127_220" | "tri_220" | "tri_380";
   stringBoxId?: string;
 };
@@ -223,6 +224,7 @@ type ProposalKitRequest = {
   pinnedModuleId?: string;
   pinnedInverterId?: string;
   inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
+  targetInverterQty?: number;
   gridTopology?: "auto" | "mono_220" | "biphasic_127_220" | "tri_220" | "tri_380";
   stringBoxId?: string;
 };
@@ -858,12 +860,35 @@ export const ProposalEconomicsModal = forwardRef<
   const computedDistributorCards = useMemo(() => {
     if (!distributorTiers || distributorTiers.length === 0) return [];
     const baseRate = Math.max(500, Number(kwpRateValue) || 2800);
+
+    const eliteTier =
+      distributorTiers.find((t) => t.tier_id === "cost_benefit") || distributorTiers[0]!;
+    const eliteSysKw = eliteTier.kit_result.system_power_kw;
+    const eliteBasePrice = Math.round(eliteSysKw * baseRate);
+
     return distributorTiers.map((tier) => {
       const isSelected = selectedDistributorTierId === tier.tier_id;
       const sysKw = tier.kit_result.system_power_kw;
 
-      const ratePerKwpEffective = baseRate;
-      const commercialPrice = Math.round(sysKw * ratePerKwpEffective);
+      let commercialPrice: number;
+      let ratePerKwpEffective: number;
+
+      if (tier.tier_id === "economic") {
+        // Standard (Econômico): preço mais competitivo de entrada (-4% na taxa de referência)
+        ratePerKwpEffective = Math.round(baseRate * 0.96);
+        commercialPrice = Math.round(sysKw * ratePerKwpEffective);
+      } else if (tier.tier_id === "premium") {
+        // Premium: reflete equipamentos de alta tecnologia e garantia estendida (+7%)
+        // Garante que o valor final nunca fique abaixo do Elite
+        ratePerKwpEffective = Math.round(baseRate * 1.07);
+        const calculatedPrice = Math.round(sysKw * ratePerKwpEffective);
+        commercialPrice = Math.max(calculatedPrice, Math.round(eliteBasePrice * 1.03));
+        ratePerKwpEffective = sysKw > 0 ? Math.round(commercialPrice / sysKw) : ratePerKwpEffective;
+      } else {
+        // Elite (Custo-Benefício): referência comercial
+        ratePerKwpEffective = baseRate;
+        commercialPrice = Math.round(sysKw * ratePerKwpEffective);
+      }
 
       return {
         ...tier,
@@ -1095,6 +1120,7 @@ export const ProposalEconomicsModal = forwardRef<
       source: { kind: "auto" },
       pins: {},
       inverterType: "string",
+      targetInverterQty: "auto",
       gridTopology: initialGridTopo,
       stringBoxId: "none",
     });
@@ -1125,6 +1151,7 @@ export const ProposalEconomicsModal = forwardRef<
           ...(req.pinnedModuleId ? { pinned_module_id: req.pinnedModuleId } : {}),
           ...(req.pinnedInverterId ? { pinned_inverter_id: req.pinnedInverterId } : {}),
           ...(req.inverterType ? { inverter_type: req.inverterType } : {}),
+          ...(req.targetInverterQty ? { target_inverter_qty: req.targetInverterQty } : {}),
           ...(req.gridTopology && req.gridTopology !== "auto"
             ? { grid_topology: req.gridTopology }
             : {}),
@@ -1211,6 +1238,9 @@ export const ProposalEconomicsModal = forwardRef<
           ? { pinnedInverterId: proposalKitDraft.pins.inverterId }
           : {}),
         inverterType: proposalKitDraft.inverterType,
+        ...(proposalKitDraft.targetInverterQty && proposalKitDraft.targetInverterQty !== "auto"
+          ? { targetInverterQty: parseInt(proposalKitDraft.targetInverterQty, 10) }
+          : {}),
         gridTopology: proposalKitDraft.gridTopology,
         stringBoxId: proposalKitDraft.stringBoxId,
       };
@@ -1284,6 +1314,9 @@ export const ProposalEconomicsModal = forwardRef<
       ...(currentInverterPin ? { pinned_inverter_id: currentInverterPin } : {}),
       ...(proposalKitRequest.inverterType
         ? { inverter_type: proposalKitRequest.inverterType }
+        : {}),
+      ...(proposalKitRequest.targetInverterQty
+        ? { target_inverter_qty: proposalKitRequest.targetInverterQty }
         : {}),
       ...(proposalKitRequest.stringBoxId ? { string_box_id: proposalKitRequest.stringBoxId } : {}),
     })
@@ -2011,6 +2044,7 @@ export const ProposalEconomicsModal = forwardRef<
           source: { kind: "auto" },
           pins: {},
           inverterType: "string",
+          targetInverterQty: "auto",
           gridTopology: "auto",
           stringBoxId: "none",
         });
@@ -2528,8 +2562,9 @@ export const ProposalEconomicsModal = forwardRef<
                             if (!fallbackReason) return null;
                             return (
                               <div className="rounded-lg border border-purple-500/20 bg-purple-500/10 p-2.5 text-[0.7rem] text-purple-900 dark:text-purple-200">
-                                <span className="font-semibold">
-                                  ℹ️ Motivo do acionamento da IA:
+                                <span className="font-semibold inline-flex items-center gap-1">
+                                  <Info className="h-3 w-3 shrink-0" />
+                                  Motivo do acionamento da IA:
                                 </span>{" "}
                                 {fallbackReason}
                               </div>
@@ -3067,10 +3102,11 @@ export const ProposalEconomicsModal = forwardRef<
                   <p className="text-base sm:text-2xl font-bold tabular-nums text-[var(--color-foreground)]">
                     ~
                     {Math.round(
-                      (isBelowMinModules
-                        ? adjustedKw
-                        : (proposalKitResult?.system_power_kw ??
-                          clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0))) * 130
+                      activeDistributorCard?.estimated_monthly_generation_kwh ??
+                        (isBelowMinModules
+                          ? adjustedKw * 130
+                          : (proposalKitResult?.system_power_kw ??
+                              clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0)) * 130)
                     ).toLocaleString("pt-BR")}{" "}
                     <span className="text-[0.65rem] sm:text-sm font-normal text-[var(--color-muted-foreground)] block sm:inline">
                       kWh/mês
@@ -3318,6 +3354,34 @@ export const ProposalEconomicsModal = forwardRef<
                         <option value="microinverter">Microinversor</option>
                         <option value="hybrid">Híbrido</option>
                         <option value="off_grid">Off-Grid</option>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="proposal-kit-target-inverter-qty"
+                        className="text-xs font-semibold text-[var(--color-foreground)]"
+                      >
+                        Qtd. de Inversores
+                      </Label>
+                      <Select
+                        id="proposal-kit-target-inverter-qty"
+                        className="h-11 w-full border-[var(--color-border)]"
+                        value={proposalKitDraft.targetInverterQty || "auto"}
+                        onChange={(e) =>
+                          setProposalKitDraft((d) => ({
+                            ...d,
+                            targetInverterQty: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="auto">Automático (recomendado)</option>
+                        <option value="1">1 inversor (prioritário)</option>
+                        <option value="2">2 inversores idênticos</option>
+                        <option value="3">3 inversores idênticos</option>
+                        <option value="4">4 inversores idênticos</option>
+                        <option value="5">5 inversores idênticos</option>
+                        <option value="6">6 inversores idênticos</option>
                       </Select>
                     </div>
 
@@ -4210,12 +4274,66 @@ export const ProposalEconomicsModal = forwardRef<
                                         +
                                       </button>
                                     </span>
-                                  ) : isInverterRow || isLockedBos ? (
+                                  ) : isLockedBos ? (
                                     <span
-                                      title="Quantidade definida pelo dimensionamento"
+                                      title="Estrutura e fixação calculada automaticamente"
                                       className="cursor-help underline decoration-dotted underline-offset-2 font-medium text-xs sm:text-sm"
                                     >
                                       {item.quantity}
+                                    </span>
+                                  ) : isInverterRow ? (
+                                    <span className="inline-flex items-center gap-1 sm:gap-1.5 justify-center sm:justify-end">
+                                      <button
+                                        type="button"
+                                        disabled={item.quantity <= 1}
+                                        aria-label="Um inversor a menos"
+                                        title={
+                                          item.quantity <= 1
+                                            ? "Mínimo: 1 inversor"
+                                            : "Um inversor a menos"
+                                        }
+                                        className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:bg-transparent"
+                                        onClick={() => {
+                                          const cur =
+                                            proposalKitDraft.targetInverterQty &&
+                                            proposalKitDraft.targetInverterQty !== "auto"
+                                              ? Number(proposalKitDraft.targetInverterQty)
+                                              : item.quantity;
+                                          const nextQty = Math.max(1, cur - 1);
+                                          setProposalKitDraft((d) => ({
+                                            ...d,
+                                            targetInverterQty: String(nextQty),
+                                          }));
+                                        }}
+                                      >
+                                        −
+                                      </button>
+                                      <span
+                                        className="min-w-[1.6ch] sm:min-w-[2.2ch] text-center font-bold text-xs sm:text-sm cursor-help"
+                                        title={`Quantidade de inversores (${proposalKitDraft.targetInverterQty === "auto" || !proposalKitDraft.targetInverterQty ? "Dimensionamento Automático" : "Manual"})`}
+                                      >
+                                        {item.quantity}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        aria-label="Um inversor a mais"
+                                        title="Adicionar mais 1 inversor idêntico"
+                                        className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
+                                        onClick={() => {
+                                          const cur =
+                                            proposalKitDraft.targetInverterQty &&
+                                            proposalKitDraft.targetInverterQty !== "auto"
+                                              ? Number(proposalKitDraft.targetInverterQty)
+                                              : item.quantity;
+                                          const nextQty = cur + 1;
+                                          setProposalKitDraft((d) => ({
+                                            ...d,
+                                            targetInverterQty: String(nextQty),
+                                          }));
+                                        }}
+                                      >
+                                        +
+                                      </button>
                                     </span>
                                   ) : (
                                     <span className="inline-flex items-center gap-1 sm:gap-1.5 justify-center sm:justify-end">

@@ -464,7 +464,66 @@ export class KitGenerationService {
       return a.pricePerW - b.pricePerW;
     });
 
-    const sortInverters = <T extends { brandName: string; price: number }>(inverters: T[]): T[] => {
+    const getInverterPowerKw = (inv: ProductWithSpecs<StringInverterSpec>): number => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const specs = inv.specs as any;
+      if (specs && typeof specs.nominal_power_w === "number" && specs.nominal_power_w > 0) {
+        return specs.nominal_power_w / 1000;
+      }
+      const match = inv.name.match(/(\d+(?:[.,]\d+)?)\s*(?:kw|k)\b/i);
+      if (match) return parseFloat(match[1].replace(",", "."));
+      return 5;
+    };
+
+    const minInvPowerKw =
+      input.system_kw >= 200
+        ? 40
+        : input.system_kw >= 80
+          ? 20
+          : input.system_kw >= 35
+            ? 10
+            : input.system_kw >= 15
+              ? 5
+              : 1;
+
+    const scaleCompatibleString = allStringInverters.filter(
+      (inv) => getInverterPowerKw(inv) >= minInvPowerKw
+    );
+    const effectiveStringInverters =
+      scaleCompatibleString.length > 0 ? scaleCompatibleString : allStringInverters;
+
+    const calcInverterUnitsNeeded = (inv: ProductWithSpecs<StringInverterSpec>): number => {
+      const p = getInverterPowerKw(inv);
+      if (p <= 0) return 9999;
+      return Math.ceil(input.system_kw / (p * 1.35));
+    };
+
+    const sortStringInverters = (inverters: ProductWithSpecs<StringInverterSpec>[]) => {
+      return [...inverters].sort((a, b) => {
+        const aBrand = (a.brandName || "").toLowerCase().trim();
+        const bBrand = (b.brandName || "").toLowerCase().trim();
+        const aIdx = preferredInverterBrands.findIndex(
+          (p) => aBrand.includes(p) || p.includes(aBrand)
+        );
+        const bIdx = preferredInverterBrands.findIndex(
+          (p) => bBrand.includes(p) || p.includes(bBrand)
+        );
+        const aRank = aIdx === -1 ? 9999 : aIdx;
+        const bRank = bIdx === -1 ? 9999 : bIdx;
+        if (aRank !== bRank) return aRank - bRank;
+
+        // Entre modelos da mesma marca/prioridade, prefere aquele com quantidade coerente para a usina
+        const aUnits = calcInverterUnitsNeeded(a);
+        const bUnits = calcInverterUnitsNeeded(b);
+        if (aUnits !== bUnits) return aUnits - bUnits;
+
+        return a.price - b.price;
+      });
+    };
+
+    const sortOtherInverters = <T extends { brandName: string; price: number }>(
+      inverters: T[]
+    ): T[] => {
       return [...inverters].sort((a, b) => {
         const aBrand = (a.brandName || "").toLowerCase().trim();
         const bBrand = (b.brandName || "").toLowerCase().trim();
@@ -481,9 +540,9 @@ export class KitGenerationService {
       });
     };
 
-    const sortedString = sortInverters(allStringInverters);
-    const sortedMicro = sortInverters(allMicroInverters);
-    const sortedHybrid = sortInverters(allHybridInverters);
+    const sortedString = sortStringInverters(effectiveStringInverters);
+    const sortedMicro = sortOtherInverters(allMicroInverters);
+    const sortedHybrid = sortOtherInverters(allHybridInverters);
 
     // Module candidates fallback
     const economicCandidateModule = modulesWithPower[0]?.module;
@@ -494,7 +553,9 @@ export class KitGenerationService {
     const costBenefitCandidateModule =
       modulesWithPower.length > 2
         ? modulesWithPower[Math.floor(modulesWithPower.length / 2)]?.module
-        : modulesWithPower[0]?.module;
+        : modulesWithPower.length > 1
+          ? modulesWithPower[1]?.module
+          : modulesWithPower[0]?.module;
 
     const findModuleForBrands = (
       brands: string[] | undefined,
@@ -605,7 +666,7 @@ export class KitGenerationService {
     );
     const premiumInverterId = findInverterForBrands(
       inverterTiersConfig?.premium,
-      sortedString.length > 1 ? sortedString[sortedString.length - 1]?.id : sortedString[0]?.id
+      sortedString[0]?.id
     );
 
     let premiumBuilt: BuiltKit | null = null;
