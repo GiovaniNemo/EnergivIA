@@ -65,8 +65,11 @@ interface Coupon {
   expiresAt?: string | null;
   createdAt: string;
   isLifetimeAdmin?: boolean;
-  targetPlan?: "all" | "plus";
+  targetPlan?: "all" | "plus" | "specific";
   isPlusOnly?: boolean;
+  applicablePlanIds?: string[];
+  applicablePlanNames?: string[];
+  allowedPlanNamesDescription?: string;
 }
 
 const PREDEFINED_BENEFITS = [
@@ -149,7 +152,8 @@ export default function AdminPlanosPage() {
     durationInMonths: "3",
     maxRedemptions: "",
     expiresAt: "",
-    targetPlan: "all" as "all" | "plus",
+    targetPlan: "all" as "all" | "plus" | "specific",
+    applicablePlanIds: [] as string[],
   });
   const [couponSubmitting, setCouponSubmitting] = useState(false);
   const [couponModalError, setCouponModalError] = useState<string | null>(null);
@@ -562,6 +566,7 @@ export default function AdminPlanosPage() {
 
   const handleOpenCreateCoupon = () => {
     setEditingCoupon(null);
+    const activePlanIds = plans.filter((p) => p.active !== false).map((p) => p.id);
     setCouponForm({
       code: "",
       name: "",
@@ -572,6 +577,7 @@ export default function AdminPlanosPage() {
       maxRedemptions: "",
       expiresAt: "",
       targetPlan: "all",
+      applicablePlanIds: activePlanIds.length > 0 ? activePlanIds : plans.map((p) => p.id),
     });
     setCouponModalError(null);
     setIsCouponModalOpen(true);
@@ -587,6 +593,17 @@ export default function AdminPlanosPage() {
         formattedExpires = "";
       }
     }
+
+    let initialPlanIds: string[] = [];
+    if (coupon.applicablePlanIds && coupon.applicablePlanIds.length > 0) {
+      initialPlanIds = coupon.applicablePlanIds;
+    } else if (coupon.isPlusOnly || coupon.targetPlan === "plus") {
+      const plusPlan = plans.find((p) => p.name.toLowerCase().includes("plus"));
+      initialPlanIds = plusPlan ? [plusPlan.id] : [];
+    } else {
+      initialPlanIds = plans.map((p) => p.id);
+    }
+
     setCouponForm({
       code: coupon.code,
       name: coupon.name || "",
@@ -597,6 +614,7 @@ export default function AdminPlanosPage() {
       maxRedemptions: coupon.maxRedemptions ? String(coupon.maxRedemptions) : "",
       expiresAt: formattedExpires,
       targetPlan: coupon.targetPlan || (coupon.isPlusOnly ? "plus" : "all"),
+      applicablePlanIds: initialPlanIds,
     });
     setCouponModalError(null);
     setIsCouponModalOpen(true);
@@ -611,8 +629,36 @@ export default function AdminPlanosPage() {
       return;
     }
 
+    if (couponForm.applicablePlanIds.length === 0) {
+      setCouponModalError("Selecione pelo menos um plano permitido para este cupom.");
+      showToast("Selecione pelo menos um plano permitido para este cupom.", "error");
+      return;
+    }
+
+    if (couponForm.discountType === "amount") {
+      const discountNum = Number(couponForm.discountValue);
+      const invalidPlan = plans.find(
+        (p) => couponForm.applicablePlanIds.includes(p.id) && Number(p.price) <= discountNum
+      );
+      if (invalidPlan) {
+        const errorMsg = `O desconto de R$ ${discountNum.toFixed(2)} é maior ou igual à mensalidade do plano ${invalidPlan.name} (R$ ${Number(invalidPlan.price).toFixed(2)}). Desmarque este plano para evitar que a assinatura saia de graça.`;
+        setCouponModalError(errorMsg);
+        showToast(errorMsg, "error");
+        return;
+      }
+    }
+
     setCouponSubmitting(true);
     try {
+      const isOnlyPlus =
+        couponForm.applicablePlanIds.length === 1 &&
+        Boolean(
+          plans
+            .find((p) => p.id === couponForm.applicablePlanIds[0])
+            ?.name.toLowerCase()
+            .includes("plus")
+        );
+
       const payload = {
         code: couponForm.code.trim().toUpperCase(),
         name: couponForm.name.trim() || undefined,
@@ -625,7 +671,8 @@ export default function AdminPlanosPage() {
             : undefined,
         maxRedemptions: couponForm.maxRedemptions ? Number(couponForm.maxRedemptions) : undefined,
         expiresAt: couponForm.expiresAt || undefined,
-        targetPlan: couponForm.targetPlan,
+        targetPlan: isOnlyPlus ? "plus" : "all",
+        applicablePlanIds: couponForm.applicablePlanIds,
       };
 
       const isEditing = Boolean(editingCoupon);
@@ -1350,11 +1397,39 @@ export default function AdminPlanosPage() {
                         </td>
 
                         <td className="px-6 py-4">
-                          {coupon.isPlusOnly ||
-                          coupon.targetPlan === "plus" ||
-                          coupon.discountValue >= 100 ||
-                          (coupon.duration === "repeating" &&
-                            (coupon.durationInMonths === 2 || coupon.durationInMonths === 3)) ? (
+                          {coupon.applicablePlanNames && coupon.applicablePlanNames.length > 0 ? (
+                            coupon.applicablePlanNames.length >=
+                            (plans.filter((p) => p.active !== false).length || 3) ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[var(--color-muted)] text-[var(--color-muted-foreground)] border border-[var(--color-border)] text-xs font-medium">
+                                Todos os Planos
+                              </span>
+                            ) : (
+                              <div className="flex flex-wrap gap-1 max-w-[220px]">
+                                {coupon.applicablePlanNames.map((name) => {
+                                  const isPlus = name.toLowerCase().includes("plus");
+                                  const isPro = name.toLowerCase().includes("pro");
+                                  return (
+                                    <span
+                                      key={name}
+                                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold border ${
+                                        isPlus
+                                          ? "bg-purple-500/15 text-purple-300 border-purple-500/30"
+                                          : isPro
+                                            ? "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                                            : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                                      }`}
+                                    >
+                                      {name}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )
+                          ) : coupon.isPlusOnly ||
+                            coupon.targetPlan === "plus" ||
+                            coupon.discountValue >= 100 ||
+                            (coupon.duration === "repeating" &&
+                              (coupon.durationInMonths === 2 || coupon.durationInMonths === 3)) ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 text-xs font-bold">
                               Exclusivo PLUS
                             </span>
@@ -2084,11 +2159,17 @@ export default function AdminPlanosPage() {
                     onChange={(e) => {
                       const newType = e.target.value as "percent" | "amount";
                       const numVal = Number(couponForm.discountValue);
-                      const isPlusRestricted = newType === "amount" && numVal >= 100;
+                      let updatedPlanIds = couponForm.applicablePlanIds;
+                      if (newType === "amount" && numVal > 0) {
+                        updatedPlanIds = updatedPlanIds.filter((id) => {
+                          const p = plans.find((plan) => plan.id === id);
+                          return !p || Number(p.price) > numVal;
+                        });
+                      }
                       setCouponForm({
                         ...couponForm,
                         discountType: newType,
-                        ...(isPlusRestricted ? { targetPlan: "plus" } : {}),
+                        applicablePlanIds: updatedPlanIds,
                       });
                     }}
                     className="w-full bg-[var(--color-background)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded-xl p-3 text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition"
@@ -2113,12 +2194,17 @@ export default function AdminPlanosPage() {
                       onChange={(e) => {
                         const val = e.target.value;
                         const numVal = Number(val);
-                        const isPlusRestricted =
-                          couponForm.discountType === "amount" && numVal >= 100;
+                        let updatedPlanIds = couponForm.applicablePlanIds;
+                        if (couponForm.discountType === "amount" && numVal > 0) {
+                          updatedPlanIds = updatedPlanIds.filter((id) => {
+                            const p = plans.find((plan) => plan.id === id);
+                            return !p || Number(p.price) > numVal;
+                          });
+                        }
                         setCouponForm({
                           ...couponForm,
                           discountValue: val,
-                          ...(isPlusRestricted ? { targetPlan: "plus" } : {}),
+                          applicablePlanIds: updatedPlanIds,
                         });
                       }}
                       className="w-full bg-[var(--color-background)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none transition pr-10"
@@ -2196,67 +2282,182 @@ export default function AdminPlanosPage() {
                 )}
               </div>
 
-              {/* PLAN ELIGIBILITY SELECTOR */}
+              {/* PLAN SELECTION CHECKLIST */}
               <div className="p-4 bg-[var(--color-background)] rounded-2xl border border-[var(--color-border)] space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="block text-xs font-bold text-[var(--color-foreground)] uppercase tracking-wider">
-                    Plano Permitido (Elegibilidade) *
-                  </label>
-                  {couponForm.discountType === "amount" &&
-                    Number(couponForm.discountValue) >= 100 && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                        Exclusivo PLUS Obrigatório (Valor ≥ R$ 100)
-                      </span>
-                    )}
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--color-foreground)] uppercase tracking-wider">
+                      Planos Onde o Cupom Funcionará *
+                    </label>
+                    <p className="text-[11px] text-[var(--color-muted-foreground)] mt-0.5">
+                      Selecione quais planos aceitarão este cupom no checkout
+                    </p>
+                  </div>
+
+                  {/* QUICK BUTTONS */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const discountNum =
+                          couponForm.discountType === "amount"
+                            ? Number(couponForm.discountValue) || 0
+                            : 0;
+                        const eligibleIds = plans
+                          .filter((p) => p.active !== false)
+                          .filter((p) =>
+                            couponForm.discountType === "amount" && discountNum > 0
+                              ? Number(p.price) > discountNum
+                              : true
+                          )
+                          .map((p) => p.id);
+                        setCouponForm({ ...couponForm, applicablePlanIds: eligibleIds });
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition"
+                    >
+                      Todos os Elegíveis
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const plusPlan = plans.find((p) => p.name.toLowerCase().includes("plus"));
+                        if (plusPlan) {
+                          setCouponForm({
+                            ...couponForm,
+                            applicablePlanIds: [plusPlan.id],
+                          });
+                        }
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20 transition"
+                    >
+                      Apenas PLUS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCouponForm({ ...couponForm, applicablePlanIds: [] });
+                      }}
+                      className="px-2 py-1 rounded-lg text-xs font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition"
+                    >
+                      Limpar
+                    </button>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setCouponForm({ ...couponForm, targetPlan: "all" })}
-                    disabled={
-                      couponForm.discountType === "amount" &&
-                      Number(couponForm.discountValue) >= 100
-                    }
-                    className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
-                      couponForm.targetPlan === "all"
-                        ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-300 ring-2 ring-emerald-500/20"
-                        : "bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-                    } ${
-                      couponForm.discountType === "amount" &&
-                      Number(couponForm.discountValue) >= 100
-                        ? "opacity-40 cursor-not-allowed"
-                        : ""
-                    }`}
-                  >
-                    <span className="font-bold text-xs">Todos os Planos</span>
-                    <span className="text-[10px] opacity-75 mt-1">Essencial, Pro e Plus</span>
-                  </button>
+                <div className="space-y-2 mt-2">
+                  {plans
+                    .filter((p) => p.active !== false)
+                    .map((plan) => {
+                      const planPrice = Number(plan.price) || 0;
+                      const discountNum =
+                        couponForm.discountType === "amount"
+                          ? Number(couponForm.discountValue) || 0
+                          : 0;
+                      const isPricedOut =
+                        couponForm.discountType === "amount" &&
+                        discountNum > 0 &&
+                        planPrice <= discountNum;
+                      const isSelected = couponForm.applicablePlanIds.includes(plan.id);
+                      const isPlus = plan.name.toLowerCase().includes("plus");
+                      const isPro = plan.name.toLowerCase().includes("pro");
 
-                  <button
-                    type="button"
-                    onClick={() => setCouponForm({ ...couponForm, targetPlan: "plus" })}
-                    className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
-                      couponForm.targetPlan === "plus"
-                        ? "bg-purple-500/10 border-purple-500/40 text-purple-300 ring-2 ring-purple-500/20"
-                        : "bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-                    }`}
-                  >
-                    <span className="font-bold text-xs flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
-                      Exclusivo Plano PLUS
-                    </span>
-                    <span className="text-[10px] opacity-75 mt-1">
-                      Bloqueia uso em Essencial e Pro
-                    </span>
-                  </button>
+                      return (
+                        <div
+                          key={plan.id}
+                          onClick={() => {
+                            if (isPricedOut) return;
+                            const newIds = isSelected
+                              ? couponForm.applicablePlanIds.filter((id) => id !== plan.id)
+                              : [...couponForm.applicablePlanIds, plan.id];
+                            setCouponForm({ ...couponForm, applicablePlanIds: newIds });
+                          }}
+                          className={`p-3.5 rounded-xl border transition cursor-pointer select-none flex items-center justify-between gap-3 ${
+                            isPricedOut
+                              ? "opacity-50 bg-red-500/5 border-red-500/20 cursor-not-allowed"
+                              : isSelected
+                                ? isPlus
+                                  ? "bg-purple-500/10 border-purple-500/50 ring-1 ring-purple-500/30"
+                                  : isPro
+                                    ? "bg-blue-500/10 border-blue-500/50 ring-1 ring-blue-500/30"
+                                    : "bg-emerald-500/10 border-emerald-500/50 ring-1 ring-emerald-500/30"
+                                : "bg-[var(--color-card)] border-[var(--color-border)] hover:border-[var(--color-border-hover)]"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={`w-5 h-5 rounded-md flex items-center justify-center border transition shrink-0 ${
+                                isPricedOut
+                                  ? "bg-red-500/10 border-red-500/30 text-red-400"
+                                  : isSelected
+                                    ? isPlus
+                                      ? "bg-purple-600 border-purple-600 text-white"
+                                      : isPro
+                                        ? "bg-blue-600 border-blue-600 text-white"
+                                        : "bg-emerald-600 border-emerald-600 text-white"
+                                    : "border-[var(--color-border)] bg-[var(--color-background)]"
+                              }`}
+                            >
+                              {isSelected && !isPricedOut && <Check className="w-3.5 h-3.5" />}
+                              {isPricedOut && <X className="w-3.5 h-3.5" />}
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm text-[var(--color-foreground)]">
+                                  {plan.name}
+                                </span>
+                                <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-[var(--color-muted)] text-[var(--color-foreground)]">
+                                  R$ {planPrice.toFixed(2)}/mês
+                                </span>
+                              </div>
+                              {isPricedOut ? (
+                                <p className="text-[11px] text-red-400 font-medium mt-0.5">
+                                  ⚠️ Desconto de R$ {discountNum.toFixed(2)} excede ou iguala a
+                                  mensalidade de R$ {planPrice.toFixed(2)} (sairia de graça).
+                                </p>
+                              ) : (
+                                <p className="text-[11px] text-[var(--color-muted-foreground)] mt-0.5">
+                                  {isSelected
+                                    ? "Cupom ativo para este plano no checkout."
+                                    : "Cupom não poderá ser utilizado por quem escolher este plano."}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="shrink-0 text-right">
+                            {isPricedOut ? (
+                              <span className="text-[10px] uppercase font-bold px-2 py-1 rounded bg-red-500/15 text-red-400 border border-red-500/20">
+                                Incompatível
+                              </span>
+                            ) : isSelected ? (
+                              <span
+                                className={`text-[10px] uppercase font-extrabold px-2 py-1 rounded border ${
+                                  isPlus
+                                    ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+                                    : isPro
+                                      ? "bg-blue-500/20 text-blue-300 border-blue-500/30"
+                                      : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                                }`}
+                              >
+                                Permitido
+                              </span>
+                            ) : (
+                              <span className="text-[10px] uppercase font-medium px-2 py-1 rounded bg-[var(--color-muted)] text-[var(--color-muted-foreground)]">
+                                Bloqueado
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
 
-                <p className="text-[11px] text-[var(--color-muted-foreground)] leading-relaxed">
-                  🛡️ <strong>Proteção contra gratuidade indevida:</strong> Cupons de valor fixo de
-                  R$ 100 ou R$ 200 (60 e 90 dias) são restritos exclusivamente ao Plano PLUS,
-                  impedindo que os planos Essencial (R$ 99,99) ou Pro (R$ 199,99) saiam de graça no
-                  checkout.
+                <p className="text-[11px] text-[var(--color-muted-foreground)] leading-relaxed pt-1">
+                  🛡️ <strong>Proteção financeira ativa:</strong> Para proteger seu faturamento,
+                  cupons com valor fixo em reais (como R$ 100 ou R$ 200) não podem ser ativados em
+                  planos cujo valor mensal seja inferior ou igual ao desconto, impedindo checkout
+                  com valor zerado.
                 </p>
               </div>
 

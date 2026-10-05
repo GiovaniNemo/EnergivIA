@@ -123,6 +123,7 @@ export class StripeController {
       maxRedemptions?: number;
       expiresAt?: string;
       targetPlan?: "all" | "plus";
+      applicablePlanIds?: string[];
     }
   ) {
     if (!body.code || !body.discountValue || !body.discountType) {
@@ -150,6 +151,7 @@ export class StripeController {
       maxRedemptions?: number;
       expiresAt?: string;
       targetPlan?: "all" | "plus";
+      applicablePlanIds?: string[];
     }
   ) {
     if (!id) {

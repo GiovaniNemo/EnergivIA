@@ -103,45 +103,74 @@ export class StripeService {
       ""
     ).toLowerCase();
 
-    // Identifica se o cupom é classificado como exclusivo do Plano PLUS:
-    const isPlusExclusive =
-      metadataTarget === "plus" ||
-      coupon.metadata?.["onlyPlus"] === "true" ||
-      discountAmountInBrl >= 100 || // Cupons de R$ 100 e R$ 200
-      (coupon.duration === "repeating" &&
-        (coupon.duration_in_months === 2 || coupon.duration_in_months === 3)) || // 60 dias (2 meses) e 90 dias (3 meses)
-      cleanCode.includes("PLUS") ||
-      cleanCode.includes("60") ||
-      cleanCode.includes("90") ||
-      couponName.includes("PLUS") ||
-      couponName.includes("60") ||
-      couponName.includes("90");
+    // 1. Se o cupom tiver uma lista explícita de planos permitidos em metadata:
+    const rawAllowedPlanIds = coupon.metadata?.["allowedPlanIds"];
+    const rawAllowedPlanNames = coupon.metadata?.["allowedPlanNames"];
 
-    // 1. Se for classificado como exclusivo do Plus e o plano selecionado não for Plus:
-    if (isPlusExclusive && !isPlus) {
-      return {
-        allowed: false,
-        reason:
-          "Este cupom promocional (desconto exclusivo para o Plano PLUS) não pode ser utilizado no plano selecionado. Faça upgrade para o Plano PLUS para utilizar este cupom!",
-      };
+    if (rawAllowedPlanIds && rawAllowedPlanIds !== "all") {
+      const allowedIds = rawAllowedPlanIds
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      const allowedNames = (rawAllowedPlanNames || "")
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+
+      const planIdMatch = Boolean(plan.id && allowedIds.includes(plan.id.toLowerCase()));
+      const planNameMatch = Boolean(
+        plan.name &&
+        (allowedNames.includes(plan.name.toLowerCase()) ||
+          allowedIds.includes(plan.name.toLowerCase()))
+      );
+
+      if (!planIdMatch && !planNameMatch) {
+        const readableNames = rawAllowedPlanNames || "outros planos específicos";
+        return {
+          allowed: false,
+          reason: `Este cupom é válido exclusivamente para o(s) plano(s): ${readableNames}. Ele não pode ser aplicado ao plano ${plan.name}.`,
+        };
+      }
+    } else {
+      // 2. Fallback para cupons criados sem allowedPlanIds (ou exclusivos do Plus por valor/duração/nome):
+      const isPlusExclusive =
+        metadataTarget === "plus" ||
+        coupon.metadata?.["onlyPlus"] === "true" ||
+        discountAmountInBrl >= 100 || // Cupons de R$ 100 e R$ 200
+        (coupon.duration === "repeating" &&
+          (coupon.duration_in_months === 2 || coupon.duration_in_months === 3)) || // 60 dias (2 meses) e 90 dias (3 meses)
+        cleanCode.includes("PLUS") ||
+        cleanCode.includes("60") ||
+        cleanCode.includes("90") ||
+        couponName.includes("PLUS") ||
+        couponName.includes("60") ||
+        couponName.includes("90");
+
+      if (isPlusExclusive && !isPlus) {
+        return {
+          allowed: false,
+          reason:
+            "Este cupom promocional (desconto exclusivo para o Plano PLUS) não pode ser utilizado no plano selecionado. Faça upgrade para o Plano PLUS para utilizar este cupom!",
+        };
+      }
     }
 
-    // 2. Proteção contra valor zerado ou negativo:
-    // Se o desconto em reais for maior ou igual ao preço do plano selecionado e não for o plano Plus:
-    if (!isPlus && discountAmountInBrl > 0 && discountAmountInBrl >= planPrice) {
-      return {
-        allowed: false,
-        reason: `Este cupom de R$ ${discountAmountInBrl.toFixed(2)} não pode ser aplicado a este plano, pois o desconto excede o valor da mensalidade (R$ ${planPrice.toFixed(2)}).`,
-      };
-    }
-
-    // 3. Se for desconto percentual de 100% que não seja o cupom de admin vitalício:
+    // 3. Proteção financeira geral contra valor zerado ou negativo:
+    // Se o desconto em reais for maior ou igual ao preço do plano selecionado (a menos que seja o cupom de admin):
     if (
-      !isPlus &&
-      discountPercent >= 100 &&
       cleanCode !== "V1T4L1C10" &&
-      cleanCode !== "VITALICIOADMINS"
+      cleanCode !== "VITALICIOADMINS" &&
+      discountAmountInBrl > 0 &&
+      discountAmountInBrl >= planPrice
     ) {
+      return {
+        allowed: false,
+        reason: `Este cupom de R$ ${discountAmountInBrl.toFixed(2)} não pode ser aplicado ao plano ${plan.name}, pois o desconto excede o valor da mensalidade (R$ ${planPrice.toFixed(2)}).`,
+      };
+    }
+
+    // 4. Se for desconto percentual de 100% que não seja o cupom de admin vitalício:
+    if (cleanCode !== "V1T4L1C10" && cleanCode !== "VITALICIOADMINS" && discountPercent >= 100) {
       return {
         allowed: false,
         reason: "Cupons de gratuidade total não são permitidos para este plano.",
@@ -380,6 +409,7 @@ export class StripeService {
     maxRedemptions?: number;
     expiresAt?: string | Date;
     targetPlan?: "all" | "plus";
+    applicablePlanIds?: string[];
   }) {
     const cleanCode = params.code
       .trim()
@@ -400,15 +430,54 @@ export class StripeService {
       }
     }
 
-    const isPlusOnly =
-      params.targetPlan === "plus" ||
-      (params.discountType === "amount" && Number(params.discountValue) >= 100) ||
-      (duration === "repeating" &&
-        (params.durationInMonths === 2 || params.durationInMonths === 3)) ||
-      cleanCode.includes("PLUS");
+    let allowedPlanIds = "all";
+    let allowedPlanNames = "all";
+    let isPlusOnly = params.targetPlan === "plus";
+
+    if (params.applicablePlanIds && params.applicablePlanIds.length > 0) {
+      const allActivePlans = await this.prisma.plan.findMany({
+        where: { active: true },
+        select: { id: true, name: true },
+      });
+      if (params.applicablePlanIds.length < allActivePlans.length) {
+        allowedPlanIds = params.applicablePlanIds.join(",");
+        const matched = allActivePlans.filter((p) => params.applicablePlanIds!.includes(p.id));
+        allowedPlanNames = matched.map((p) => p.name).join(", ");
+        if (matched.length > 0 && matched.every((p) => this.isPlusPlan(p))) {
+          isPlusOnly = true;
+        }
+      }
+    } else if (params.targetPlan === "plus") {
+      isPlusOnly = true;
+      const plusPlan = await this.prisma.plan.findFirst({
+        where: { name: { contains: "Plus", mode: "insensitive" } },
+      });
+      if (plusPlan) {
+        allowedPlanIds = plusPlan.id;
+        allowedPlanNames = plusPlan.name;
+      }
+    }
+
+    if (
+      !isPlusOnly &&
+      params.discountType === "amount" &&
+      Number(params.discountValue) >= 100 &&
+      allowedPlanIds === "all"
+    ) {
+      isPlusOnly = true;
+      const plusPlan = await this.prisma.plan.findFirst({
+        where: { name: { contains: "Plus", mode: "insensitive" } },
+      });
+      if (plusPlan) {
+        allowedPlanIds = plusPlan.id;
+        allowedPlanNames = plusPlan.name;
+      }
+    }
 
     const metadata: Record<string, string> = {
-      targetPlan: isPlusOnly ? "plus" : params.targetPlan || "all",
+      allowedPlanIds,
+      allowedPlanNames,
+      targetPlan: isPlusOnly ? "plus" : allowedPlanIds === "all" ? "all" : "specific",
       onlyPlus: isPlusOnly ? "true" : "false",
     };
 
@@ -460,8 +529,10 @@ export class StripeService {
       active: coupon.valid,
       expiresAt: coupon.redeem_by ? new Date(coupon.redeem_by * 1000) : null,
       createdAt: new Date(coupon.created * 1000),
-      targetPlan: isPlusOnly ? "plus" : "all",
+      targetPlan: isPlusOnly ? "plus" : allowedPlanIds === "all" ? "all" : "specific",
       isPlusOnly,
+      applicablePlanIds: allowedPlanIds !== "all" ? allowedPlanIds.split(",") : [],
+      applicablePlanNames: allowedPlanNames !== "all" ? allowedPlanNames.split(", ") : [],
     };
   }
 
@@ -481,8 +552,11 @@ export class StripeService {
       expiresAt?: Date | null;
       createdAt: Date;
       isLifetimeAdmin?: boolean;
-      targetPlan?: "all" | "plus";
+      targetPlan?: "all" | "plus" | "specific";
       isPlusOnly?: boolean;
+      applicablePlanIds?: string[];
+      applicablePlanNames?: string[];
+      allowedPlanNamesDescription?: string;
     }> = [];
 
     let lifetimeRedemptionsCount = 0;
@@ -523,9 +597,28 @@ export class StripeService {
           coupon.metadata?.["plan"] ||
           ""
         ).toLowerCase();
+        const rawAllowedIds = coupon.metadata?.["allowedPlanIds"];
+        const rawAllowedNames = coupon.metadata?.["allowedPlanNames"];
+        const applicablePlanIds =
+          rawAllowedIds && rawAllowedIds !== "all"
+            ? rawAllowedIds
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : [];
+        const applicablePlanNames =
+          rawAllowedNames && rawAllowedNames !== "all"
+            ? rawAllowedNames
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : [];
+
         const isPlusOnly =
           metaTarget === "plus" ||
           coupon.metadata?.["onlyPlus"] === "true" ||
+          (applicablePlanNames.length > 0 &&
+            applicablePlanNames.every((n) => n.toLowerCase().includes("plus"))) ||
           discountValue >= 100 ||
           (coupon.duration === "repeating" &&
             (coupon.duration_in_months === 2 || coupon.duration_in_months === 3)) ||
@@ -551,8 +644,16 @@ export class StripeService {
           expiresAt: coupon.redeem_by ? new Date(coupon.redeem_by * 1000) : null,
           createdAt: new Date(coupon.created * 1000),
           isLifetimeAdmin: isLifetime,
-          targetPlan: isPlusOnly ? "plus" : "all",
+          targetPlan: isPlusOnly ? "plus" : applicablePlanIds.length > 0 ? "specific" : "all",
           isPlusOnly,
+          applicablePlanIds,
+          applicablePlanNames,
+          allowedPlanNamesDescription:
+            rawAllowedNames && rawAllowedNames !== "all"
+              ? rawAllowedNames
+              : isPlusOnly
+                ? "Exclusivo Plus"
+                : "Todos os Planos",
         };
       });
     } catch (error) {
@@ -597,6 +698,7 @@ export class StripeService {
       maxRedemptions?: number;
       expiresAt?: string;
       targetPlan?: "all" | "plus";
+      applicablePlanIds?: string[];
     }
   ) {
     if (!id || !id.trim()) {
@@ -653,18 +755,42 @@ export class StripeService {
             : existingCoupon?.max_redemptions || undefined,
         expiresAt: params.expiresAt,
         targetPlan: params.targetPlan,
+        applicablePlanIds: params.applicablePlanIds,
       });
     }
 
     // Se já teve utilizações no Stripe, atualiza o nome e metadados
-    if (params.name || params.targetPlan) {
-      const isPlusOnly =
+    if (params.name || params.targetPlan || params.applicablePlanIds) {
+      let allowedPlanIds = existingCoupon?.metadata?.["allowedPlanIds"] || "all";
+      let allowedPlanNames = existingCoupon?.metadata?.["allowedPlanNames"] || "all";
+      let isPlusOnly =
         params.targetPlan === "plus" ||
         Boolean(existingCoupon?.amount_off && existingCoupon.amount_off >= 10000);
+
+      if (params.applicablePlanIds && params.applicablePlanIds.length > 0) {
+        const allActivePlans = await this.prisma.plan.findMany({
+          where: { active: true },
+          select: { id: true, name: true },
+        });
+        if (params.applicablePlanIds.length < allActivePlans.length) {
+          allowedPlanIds = params.applicablePlanIds.join(",");
+          const matched = allActivePlans.filter((p) => params.applicablePlanIds!.includes(p.id));
+          allowedPlanNames = matched.map((p) => p.name).join(", ");
+          if (matched.length > 0 && matched.every((p) => this.isPlusPlan(p))) {
+            isPlusOnly = true;
+          }
+        } else {
+          allowedPlanIds = "all";
+          allowedPlanNames = "all";
+        }
+      }
+
       await this.stripe.coupons.update(cleanId, {
         ...(params.name ? { name: params.name.trim() } : {}),
         metadata: {
-          targetPlan: isPlusOnly ? "plus" : params.targetPlan || "all",
+          allowedPlanIds,
+          allowedPlanNames,
+          targetPlan: isPlusOnly ? "plus" : allowedPlanIds === "all" ? "all" : "specific",
           onlyPlus: isPlusOnly ? "true" : "false",
         },
       });
@@ -833,6 +959,8 @@ export class StripeService {
           durationInMonths: coupon.duration_in_months,
           isLifetimeAdmin: false,
           isPlusExclusive: isPlusOnly,
+          allowedPlanIds: coupon.metadata?.["allowedPlanIds"],
+          allowedPlanNames: coupon.metadata?.["allowedPlanNames"],
           message:
             coupon.duration === "once"
               ? discountType === "percent"
