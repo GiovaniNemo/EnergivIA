@@ -155,9 +155,10 @@ function kitRequestEquals(a: ProposalKitRequest | null, b: ProposalKitRequest): 
     a.systemKw === b.systemKw &&
     a.roof === b.roof &&
     a.preferredBrand === b.preferredBrand &&
-    Boolean(a.ownStock) === Boolean(a.ownStock) &&
+    Boolean(a.ownStock) === Boolean(b.ownStock) &&
     a.supplierId === b.supplierId &&
     a.pinnedModuleId === b.pinnedModuleId &&
+    a.pinnedInverterId === b.pinnedInverterId &&
     a.inverterType === b.inverterType &&
     a.targetInverterQty === b.targetInverterQty &&
     a.gridTopology === b.gridTopology &&
@@ -705,6 +706,12 @@ export const ProposalEconomicsModal = forwardRef<
   const [kitSourceLoading, setKitSourceLoading] = useState(false);
   const autoSourceAppliedRef = useRef(false);
   const [kitSwapCategory, setKitSwapCategory] = useState<KitSwapCategory | null>(null);
+  const [swapBrandFilter, setSwapBrandFilter] = useState<string>("all");
+
+  useEffect(() => {
+    setSwapBrandFilter("all");
+  }, [kitSwapCategory]);
+
   const [kitAlternatives, setKitAlternatives] = useState<KitAlternativeOption[] | null>(null);
   const [_kitCrossAlternatives, setKitCrossAlternatives] = useState<
     KitCrossSourceAlternative[] | null
@@ -814,10 +821,15 @@ export const ProposalEconomicsModal = forwardRef<
     const matchesPref = (brand: string) =>
       preferredList.some((p) => brand && brand.toLowerCase().includes(p.toLowerCase()));
 
-    const currentId =
+    const activePinId =
       kitSwapCategory === "module"
+        ? proposalKitDraft.pins.moduleId
+        : proposalKitDraft.pins.inverterId;
+    const currentId =
+      activePinId ||
+      (kitSwapCategory === "module"
         ? proposalKitResult?.modules?.product_id
-        : proposalKitResult?.inverter?.product_id;
+        : proposalKitResult?.inverter?.product_id);
 
     return allAlts.sort((a, b) => {
       const aIsCurrent = a.product_id === currentId ? 1 : 0;
@@ -840,8 +852,114 @@ export const ProposalEconomicsModal = forwardRef<
     kitSwapCategory,
     currentOrganization?.preferredModuleBrands,
     currentOrganization?.preferredInverterBrands,
+    proposalKitDraft.pins.moduleId,
+    proposalKitDraft.pins.inverterId,
     proposalKitResult?.modules?.product_id,
     proposalKitResult?.inverter?.product_id,
+  ]);
+
+  const activeSwapCurrentId = useMemo(() => {
+    const activePinId =
+      kitSwapCategory === "module"
+        ? proposalKitDraft.pins.moduleId
+        : proposalKitDraft.pins.inverterId;
+    return (
+      activePinId ||
+      (kitSwapCategory === "module"
+        ? proposalKitResult?.modules?.product_id
+        : proposalKitResult?.inverter?.product_id)
+    );
+  }, [
+    kitSwapCategory,
+    proposalKitDraft.pins.moduleId,
+    proposalKitDraft.pins.inverterId,
+    proposalKitResult?.modules?.product_id,
+    proposalKitResult?.inverter?.product_id,
+  ]);
+
+  const availableSwapBrands = useMemo(() => {
+    if (!displayedAlternatives || displayedAlternatives.length === 0) return [];
+    const counts = new Map<string, number>();
+    for (const alt of displayedAlternatives) {
+      const b = (alt.brand_name || "").trim();
+      if (b) counts.set(b, (counts.get(b) || 0) + 1);
+    }
+    const preferredList =
+      kitSwapCategory === "module"
+        ? (currentOrganization?.preferredModuleBrands ?? [])
+        : (currentOrganization?.preferredInverterBrands ?? []);
+
+    return Array.from(counts.entries())
+      .map(([name, count]) => {
+        const isPreferred = preferredList.some((p) => name.toLowerCase().includes(p.toLowerCase()));
+        return { name, count, isPreferred };
+      })
+      .sort((a, b) => {
+        if (a.isPreferred !== b.isPreferred) return a.isPreferred ? -1 : 1;
+        return b.count - a.count;
+      });
+  }, [displayedAlternatives, kitSwapCategory, currentOrganization]);
+
+  const groupedSwapAlternatives = useMemo(() => {
+    if (!displayedAlternatives) return [];
+    const preferredList =
+      kitSwapCategory === "module"
+        ? (currentOrganization?.preferredModuleBrands ?? [])
+        : (currentOrganization?.preferredInverterBrands ?? []);
+
+    const filtered =
+      swapBrandFilter === "all"
+        ? displayedAlternatives
+        : displayedAlternatives.filter(
+            (a) =>
+              (a.brand_name || "").toLowerCase().trim() === swapBrandFilter.toLowerCase().trim()
+          );
+
+    const map = new Map<string, KitAlternativeOption[]>();
+    for (const alt of filtered) {
+      const brand = alt.brand_name?.trim() || "Outras Marcas";
+      if (!map.has(brand)) map.set(brand, []);
+      map.get(brand)!.push(alt);
+    }
+
+    const groups: {
+      brand: string;
+      items: KitAlternativeOption[];
+      isPreferred: boolean;
+    }[] = [];
+
+    for (const [brand, items] of map.entries()) {
+      const isPreferred = preferredList.some((p) => brand.toLowerCase().includes(p.toLowerCase()));
+      // Sort items inside each brand: current first, then compatible, then by power descending, then price
+      const sortedItems = [...items].sort((a, b) => {
+        const aIsCurrent = a.product_id === activeSwapCurrentId ? 1 : 0;
+        const bIsCurrent = b.product_id === activeSwapCurrentId ? 1 : 0;
+        if (aIsCurrent !== bIsCurrent) return bIsCurrent - aIsCurrent;
+        if (a.compatible !== b.compatible) return a.compatible ? -1 : 1;
+        const aKw = parseFloat(extractPowerBadge(a.product_name) || "0") || 0;
+        const bKw = parseFloat(extractPowerBadge(b.product_name) || "0") || 0;
+        if (aKw !== bKw) return bKw - aKw;
+        return (a.unit_price || 0) - (b.unit_price || 0);
+      });
+      groups.push({ brand, items: sortedItems, isPreferred });
+    }
+
+    // Sort groups: group containing current item first, then preferred brands, then by number of items descending
+    groups.sort((a, b) => {
+      const aHasCurrent = a.items.some((i) => i.product_id === activeSwapCurrentId) ? 1 : 0;
+      const bHasCurrent = b.items.some((i) => i.product_id === activeSwapCurrentId) ? 1 : 0;
+      if (aHasCurrent !== bHasCurrent) return bHasCurrent - aHasCurrent;
+      if (a.isPreferred !== b.isPreferred) return a.isPreferred ? -1 : 1;
+      return b.items.length - a.items.length;
+    });
+
+    return groups;
+  }, [
+    displayedAlternatives,
+    swapBrandFilter,
+    activeSwapCurrentId,
+    kitSwapCategory,
+    currentOrganization,
   ]);
 
   useEffect(() => {
@@ -3962,36 +4080,92 @@ export const ProposalEconomicsModal = forwardRef<
                     </div>
 
                     {kitSwapCategory ? (
-                      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/10">
+                      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/10 overflow-hidden">
                         <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-3.5 py-2.5">
-                          <p className="text-xs font-medium text-[var(--color-foreground)]">
+                          <p className="text-xs font-semibold text-[var(--color-foreground)]">
                             {kitSwapCategory === "module"
                               ? "Trocar módulo — alternativas compatíveis"
                               : "Trocar inversor — alternativas compatíveis"}
                           </p>
-                          {(kitSwapCategory === "module" && proposalKitDraft.pins.moduleId) ||
-                          (kitSwapCategory === "inverter" && proposalKitDraft.pins.inverterId) ? (
+                          <div className="flex items-center gap-3">
+                            {(kitSwapCategory === "module" && proposalKitDraft.pins.moduleId) ||
+                            (kitSwapCategory === "inverter" && proposalKitDraft.pins.inverterId) ? (
+                              <button
+                                type="button"
+                                className="text-xs text-emerald-700 hover:underline dark:text-emerald-300 font-medium"
+                                onClick={() => {
+                                  const cat = kitSwapCategory;
+                                  setProposalKitDraft((d) => ({
+                                    ...d,
+                                    pins: {
+                                      ...d.pins,
+                                      ...(cat === "module"
+                                        ? { moduleId: undefined }
+                                        : { inverterId: undefined }),
+                                    },
+                                  }));
+                                }}
+                              >
+                                Voltar à seleção automática
+                              </button>
+                            ) : null}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs px-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                              onClick={() => setKitSwapCategory(null)}
+                            >
+                              Fechar
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Filtro por Marca em Pills */}
+                        {availableSwapBrands.length > 1 ? (
+                          <div className="flex items-center gap-1.5 overflow-x-auto border-b border-[var(--color-border)]/60 px-3.5 py-2 bg-[var(--color-muted)]/15">
+                            <span className="text-[10px] font-bold text-[var(--color-muted-foreground)] uppercase tracking-wider mr-1 shrink-0">
+                              Marca:
+                            </span>
                             <button
                               type="button"
-                              className="text-xs text-emerald-700 hover:underline dark:text-emerald-300"
-                              onClick={() => {
-                                const cat = kitSwapCategory;
-                                setKitSwapCategory(null);
-                                setProposalKitDraft((d) => ({
-                                  ...d,
-                                  pins: {
-                                    ...d.pins,
-                                    ...(cat === "module"
-                                      ? { moduleId: undefined }
-                                      : { inverterId: undefined }),
-                                  },
-                                }));
-                              }}
+                              onClick={() => setSwapBrandFilter("all")}
+                              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold shrink-0 transition ${
+                                swapBrandFilter === "all"
+                                  ? "bg-emerald-600 text-white shadow-xs"
+                                  : "bg-[var(--color-background)] text-[var(--color-foreground)] hover:bg-[var(--color-muted)]/30 border border-[var(--color-border)]/60"
+                              }`}
                             >
-                              Voltar à seleção automática
+                              Todas
+                              <span className="text-[10px] opacity-80">
+                                ({displayedAlternatives?.length ?? 0})
+                              </span>
                             </button>
-                          ) : null}
-                        </div>
+                            {availableSwapBrands.map((b) => {
+                              const isActive =
+                                swapBrandFilter.toLowerCase() === b.name.toLowerCase();
+                              return (
+                                <button
+                                  key={b.name}
+                                  type="button"
+                                  onClick={() => setSwapBrandFilter(b.name)}
+                                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold shrink-0 transition ${
+                                    isActive
+                                      ? "bg-emerald-600 text-white shadow-xs"
+                                      : "bg-[var(--color-background)] text-[var(--color-foreground)] hover:bg-[var(--color-muted)]/30 border border-[var(--color-border)]/60"
+                                  }`}
+                                >
+                                  {b.name}
+                                  <span className="text-[10px] opacity-80">({b.count})</span>
+                                  {b.isPreferred && !isActive ? (
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                  ) : null}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+
                         {kitAlternativesLoading ? (
                           <p className="flex items-center gap-2 px-3.5 py-3 text-xs text-[var(--color-muted-foreground)]">
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -4003,133 +4177,161 @@ export const ProposalEconomicsModal = forwardRef<
                             {kitAlternativesError}
                           </p>
                         ) : null}
-                        {displayedAlternatives?.map((alt) => {
-                          const currentId =
-                            kitSwapCategory === "module"
-                              ? proposalKitResult.modules.product_id
-                              : proposalKitResult.inverter.product_id;
-                          const isCurrent = alt.product_id === currentId;
-                          const preferredList =
-                            kitSwapCategory === "module"
-                              ? (currentOrganization?.preferredModuleBrands ?? [])
-                              : (currentOrganization?.preferredInverterBrands ?? []);
-                          const isPreferred =
-                            Boolean(alt.brand_name) &&
-                            preferredList.some((p) =>
-                              alt.brand_name.toLowerCase().includes(p.toLowerCase())
-                            );
+
+                        {/* Listagem agrupada por marcas */}
+                        {groupedSwapAlternatives?.map((group) => {
                           return (
-                            <button
-                              key={alt.product_id}
-                              type="button"
-                              disabled={!alt.compatible || isCurrent}
-                              className={`flex w-full items-start gap-2.5 border-b border-[var(--color-border)]/60 px-3 sm:px-3.5 py-2.5 text-left last:border-0 ${
-                                isCurrent
-                                  ? "bg-emerald-500/[0.06]"
-                                  : alt.compatible
-                                    ? "transition-colors hover:bg-emerald-500/[0.04]"
-                                    : "opacity-60"
-                              }`}
-                              onClick={() => {
-                                if (!alt.compatible || isCurrent) return;
-                                const cat = kitSwapCategory;
-                                setKitSwapCategory(null);
-                                setProposalKitDraft((d) => ({
-                                  ...d,
-                                  source: { kind: "auto" },
-                                  pins: {
-                                    ...d.pins,
-                                    ...(cat === "module"
-                                      ? { moduleId: alt.product_id }
-                                      : { inverterId: alt.product_id }),
-                                  },
-                                }));
-                              }}
+                            <div
+                              key={group.brand}
+                              className="border-b border-[var(--color-border)]/60 last:border-b-0"
                             >
-                              {isCurrent ? (
-                                <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                              ) : (
-                                <span
-                                  className={`h-4 w-4 mt-0.5 shrink-0 rounded-full border ${
-                                    alt.compatible
-                                      ? "border-[var(--color-border)]"
-                                      : "border-dashed border-[var(--color-border)]"
-                                  }`}
-                                  aria-hidden
-                                />
-                              )}
-                              <span className="min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  {extractPowerBadge(alt.product_name) ? (
-                                    <span
-                                      className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold ${
-                                        kitSwapCategory === "module"
-                                          ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
-                                          : "bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30"
-                                      }`}
-                                    >
-                                      <Zap className="h-3 w-3 shrink-0" />
-                                      {extractPowerBadge(alt.product_name)}
-                                    </span>
-                                  ) : null}
-                                  {kitSwapCategory === "module" &&
-                                  (isModuleTier1(alt) ||
-                                    (isCurrent && isModuleTier1(proposalKitResult.modules))) ? (
-                                    <img
-                                      src="/badges/tier1.png"
-                                      alt="Tier 1"
-                                      title="Módulo certificado Tier 1 (BloombergNEF)"
-                                      className="h-4.5 sm:h-5 w-auto object-contain shrink-0"
-                                    />
-                                  ) : null}
-                                  <span className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] leading-snug break-words">
-                                    {alt.brand_name ? `${alt.brand_name} ` : ""}
-                                    {alt.product_name}
+                              <div className="flex items-center justify-between bg-[var(--color-muted)]/25 px-3.5 py-1.5 border-y border-[var(--color-border)]/40 text-[11px] font-bold text-[var(--color-foreground)]">
+                                <div className="flex items-center gap-2">
+                                  <span className="uppercase tracking-wider font-extrabold">
+                                    {group.brand}
                                   </span>
-                                  {isCurrent ? (
-                                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[0.62rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                                      atual
-                                    </span>
-                                  ) : isPreferred ? (
-                                    <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[0.62rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                                      Preferência
-                                    </span>
-                                  ) : null}
+                                  <span className="font-normal text-[var(--color-muted-foreground)] text-[10px]">
+                                    ({group.items.length}{" "}
+                                    {group.items.length === 1
+                                      ? "modelo compatível"
+                                      : "modelos compatíveis"}
+                                    )
+                                  </span>
                                 </div>
-                                <span className="mt-0.5 block text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)] leading-tight break-words">
-                                  {alt.compatible
-                                    ? kitSwapCategory === "module"
-                                      ? `${alt.quantity} módulos${alt.string_summary ? ` · ${alt.string_summary}` : ""}`
-                                      : alt.quantity > 1
-                                        ? `${alt.quantity}x inversores · ${alt.string_summary}`
-                                        : alt.string_summary
-                                    : alt.reason}
-                                </span>
-                              </span>
-                              <div className="shrink-0 text-right ml-2 self-center">
-                                <div className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)]">
-                                  {formatCurrency(
-                                    kitSwapCategory === "inverter" && alt.quantity > 1
-                                      ? alt.unit_price * alt.quantity
-                                      : alt.unit_price
-                                  )}
-                                </div>
-                                {alt.compatible ? (
-                                  <div className="text-[0.62rem] text-[var(--color-muted-foreground)]">
-                                    {kitSwapCategory === "inverter" && alt.quantity > 1 ? (
-                                      <span>
-                                        {alt.quantity}x de {formatCurrency(alt.unit_price)}
-                                        {alt.kit_total != null
-                                          ? ` · Kit: ${formatCurrency(alt.kit_total)}`
-                                          : ""}
-                                      </span>
-                                    ) : alt.kit_total != null ? (
-                                      <span>Kit: {formatCurrency(alt.kit_total)}</span>
-                                    ) : null}
-                                  </div>
+                                {group.isPreferred ? (
+                                  <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[0.62rem] font-semibold text-emerald-700 dark:text-emerald-300">
+                                    Preferência
+                                  </span>
                                 ) : null}
                               </div>
-                            </button>
+                              <div className="divide-y divide-[var(--color-border)]/40">
+                                {group.items.map((alt) => {
+                                  const isCurrent = alt.product_id === activeSwapCurrentId;
+                                  const preferredList =
+                                    kitSwapCategory === "module"
+                                      ? (currentOrganization?.preferredModuleBrands ?? [])
+                                      : (currentOrganization?.preferredInverterBrands ?? []);
+                                  const isPreferred =
+                                    Boolean(alt.brand_name) &&
+                                    preferredList.some((p) =>
+                                      alt.brand_name.toLowerCase().includes(p.toLowerCase())
+                                    );
+                                  return (
+                                    <button
+                                      key={alt.product_id}
+                                      type="button"
+                                      disabled={!alt.compatible || isCurrent}
+                                      className={`flex w-full items-start gap-2.5 px-3 sm:px-3.5 py-2.5 text-left transition-colors ${
+                                        isCurrent
+                                          ? "bg-emerald-500/[0.08]"
+                                          : alt.compatible
+                                            ? "hover:bg-emerald-500/[0.04] cursor-pointer"
+                                            : "opacity-60 cursor-not-allowed"
+                                      }`}
+                                      onClick={() => {
+                                        if (!alt.compatible || isCurrent) return;
+                                        const cat = kitSwapCategory;
+                                        setProposalKitDraft((d) => ({
+                                          ...d,
+                                          source: { kind: "auto" },
+                                          pins: {
+                                            ...d.pins,
+                                            ...(cat === "module"
+                                              ? { moduleId: alt.product_id }
+                                              : { inverterId: alt.product_id }),
+                                          },
+                                        }));
+                                      }}
+                                    >
+                                      {isCurrent ? (
+                                        <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                      ) : (
+                                        <span
+                                          className={`h-4 w-4 mt-0.5 shrink-0 rounded-full border ${
+                                            alt.compatible
+                                              ? "border-[var(--color-border)]"
+                                              : "border-dashed border-[var(--color-border)]"
+                                          }`}
+                                          aria-hidden
+                                        />
+                                      )}
+                                      <span className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                          {extractPowerBadge(alt.product_name) ? (
+                                            <span
+                                              className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold ${
+                                                kitSwapCategory === "module"
+                                                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                                                  : "bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30"
+                                              }`}
+                                            >
+                                              <Zap className="h-3 w-3 shrink-0" />
+                                              {extractPowerBadge(alt.product_name)}
+                                            </span>
+                                          ) : null}
+                                          {kitSwapCategory === "module" &&
+                                          (isModuleTier1(alt) ||
+                                            (isCurrent &&
+                                              isModuleTier1(proposalKitResult.modules))) ? (
+                                            <img
+                                              src="/badges/tier1.png"
+                                              alt="Tier 1"
+                                              title="Módulo certificado Tier 1 (BloombergNEF)"
+                                              className="h-4.5 sm:h-5 w-auto object-contain shrink-0"
+                                            />
+                                          ) : null}
+                                          <span className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] leading-snug break-words">
+                                            {alt.brand_name ? `${alt.brand_name} ` : ""}
+                                            {alt.product_name}
+                                          </span>
+                                          {isCurrent ? (
+                                            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[0.62rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                              atual
+                                            </span>
+                                          ) : isPreferred ? (
+                                            <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[0.62rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                              Preferência
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                        <span className="mt-0.5 block text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)] leading-tight break-words">
+                                          {alt.compatible
+                                            ? kitSwapCategory === "module"
+                                              ? `${alt.quantity} módulos${alt.string_summary ? ` · ${alt.string_summary}` : ""}`
+                                              : alt.quantity > 1
+                                                ? `${alt.quantity}x inversores · ${alt.string_summary}`
+                                                : alt.string_summary
+                                            : alt.reason}
+                                        </span>
+                                      </span>
+                                      <div className="shrink-0 text-right ml-2 self-center">
+                                        <div className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)]">
+                                          {formatCurrency(
+                                            kitSwapCategory === "inverter" && alt.quantity > 1
+                                              ? alt.unit_price * alt.quantity
+                                              : alt.unit_price
+                                          )}
+                                        </div>
+                                        {alt.compatible ? (
+                                          <div className="text-[0.62rem] text-[var(--color-muted-foreground)]">
+                                            {kitSwapCategory === "inverter" && alt.quantity > 1 ? (
+                                              <span>
+                                                {alt.quantity}x de {formatCurrency(alt.unit_price)}
+                                                {alt.kit_total != null
+                                                  ? ` · Kit: ${formatCurrency(alt.kit_total)}`
+                                                  : ""}
+                                              </span>
+                                            ) : alt.kit_total != null ? (
+                                              <span>Kit: {formatCurrency(alt.kit_total)}</span>
+                                            ) : null}
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
                           );
                         })}
                         {displayedAlternatives && displayedAlternatives.length === 0 ? (

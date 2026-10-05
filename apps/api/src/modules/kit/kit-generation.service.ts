@@ -632,16 +632,20 @@ export class KitGenerationService {
     };
 
     // 3. Assemble Economic kit (Standard)
-    const economicModule = findModuleForBrands(
-      moduleTiersConfig?.standard,
-      economicCandidateModule
-    );
+    const pinnedModule = input.pinned_module_id
+      ? allModules.find((m) => m.id === input.pinned_module_id)
+      : undefined;
+    const pinnedInverterId = input.pinned_inverter_id;
+
+    const economicModule =
+      pinnedModule || findModuleForBrands(moduleTiersConfig?.standard, economicCandidateModule);
     const economicInverterId =
-      input.inverter_type === "microinverter"
+      pinnedInverterId ||
+      (input.inverter_type === "microinverter"
         ? sortedMicro[0]?.id
         : input.inverter_type === "hybrid"
           ? sortedHybrid[0]?.id
-          : findInverterForBrands(inverterTiersConfig?.standard, sortedString[0]?.id);
+          : findInverterForBrands(inverterTiersConfig?.standard, sortedString[0]?.id));
 
     let economicBuilt: BuiltKit | null = null;
     if (economicModule) {
@@ -661,18 +665,22 @@ export class KitGenerationService {
       ? [inverterTiersConfig.priority, ...(inverterTiersConfig.elite || [])]
       : inverterTiersConfig?.elite;
 
-    const costBenefitModule = findModuleForBrands(
-      eliteModBrands,
-      costBenefitCandidateModule && costBenefitCandidateModule.id !== economicCandidateModule?.id
-        ? costBenefitCandidateModule
-        : modulesWithPower[Math.min(1, modulesWithPower.length - 1)]?.module
-    );
-    const costBenefitInverterId = findInverterForBrands(
-      eliteInvBrands,
-      sortedString.length > 1
-        ? sortedString[Math.floor(sortedString.length / 2)]?.id
-        : sortedString[0]?.id
-    );
+    const costBenefitModule =
+      pinnedModule ||
+      findModuleForBrands(
+        eliteModBrands,
+        costBenefitCandidateModule && costBenefitCandidateModule.id !== economicCandidateModule?.id
+          ? costBenefitCandidateModule
+          : modulesWithPower[Math.min(1, modulesWithPower.length - 1)]?.module
+      );
+    const costBenefitInverterId =
+      pinnedInverterId ||
+      findInverterForBrands(
+        eliteInvBrands,
+        sortedString.length > 1
+          ? sortedString[Math.floor(sortedString.length / 2)]?.id
+          : sortedString[0]?.id
+      );
 
     let costBenefitBuilt: BuiltKit | null = null;
     if (costBenefitModule) {
@@ -685,14 +693,14 @@ export class KitGenerationService {
     if (!costBenefitBuilt) costBenefitBuilt = baseBuilt;
 
     // 5. Assemble Premium kit
-    const premiumModule = findModuleForBrands(
-      moduleTiersConfig?.premium,
-      premiumCandidateModule || modulesWithPower[modulesWithPower.length - 1]?.module
-    );
-    const premiumInverterId = findInverterForBrands(
-      inverterTiersConfig?.premium,
-      sortedString[0]?.id
-    );
+    const premiumModule =
+      pinnedModule ||
+      findModuleForBrands(
+        moduleTiersConfig?.premium,
+        premiumCandidateModule || modulesWithPower[modulesWithPower.length - 1]?.module
+      );
+    const premiumInverterId =
+      pinnedInverterId || findInverterForBrands(inverterTiersConfig?.premium, sortedString[0]?.id);
 
     let premiumBuilt: BuiltKit | null = null;
     const requestedInverterType = input.inverter_type;
