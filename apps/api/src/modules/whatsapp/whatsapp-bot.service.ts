@@ -2520,7 +2520,7 @@ ${catalogContext}`;
             if (parsedPreco) customRatePerKwp = parsedPreco.rate;
           }
           const consM = content.match(
-            /(?:Consumo Registrado|Consumo m[ée]dio de):\s*\*?`?(\d+[\d.,]*)`?\s*kWh/i
+            /(?:Consumo Registrado|Consumo m[ée]dio(?: de)?):?[_*\s]*`?(\d+[\d.,]*)`?\s*kWh/i
           );
           if (consM && consM[1]) {
             const cVal = Math.round(Number(consM[1].replace(/\./g, "").replace(",", ".")));
@@ -2529,12 +2529,16 @@ ${catalogContext}`;
             }
           }
 
-          const potM = content.match(/Potência Solicitada:\s*\*?`?([\d.,]+)`?\s*kWp/i);
+          const potM = content.match(
+            /(?:Potência Solicitada|Potência Registrada):?[_*\s]*`?([\d.,]+)`?\s*kWp/i
+          );
           if (potM && potM[1]) {
             targetKWp = parseFloat(potM[1].replace(",", "."));
           }
 
-          const qtyM = content.match(/Quantidade Solicitada:\s*\*?`?(\d+)`?\s*placas/i);
+          const qtyM = content.match(
+            /(?:Quantidade Solicitada|Módulos Registrados):?[_*\s]*`?(\d+)`?\s*(?:placas|m[oó]dulos)/i
+          );
           if (qtyM && qtyM[1]) {
             targetModules = parseInt(qtyM[1], 10);
             const pM = content.match(/`?(\d{3,4})`?\s*w/i);
@@ -2543,7 +2547,7 @@ ${catalogContext}`;
             }
           }
 
-          const gridM = content.match(/Padrão Elétrico Registrado:\s*\*?`?([^`*]+?)`?\s*⚡/i);
+          const gridM = content.match(/Padrão Elétrico Registrado:?[_*\s]*`?([^`*]+?)`?\s*⚡/i);
           if (gridM && gridM[1]) {
             gridVoltage = gridM[1].trim();
           }
@@ -2557,9 +2561,10 @@ ${catalogContext}`;
             if (parsed) customRatePerKwp = parsed.rate;
           }
 
-          const roofM = content.match(
-            /Estrutura(?: registrada)?:\s*\*?([^*]+?)\*?(?:\s*🏠|\.|\n|$)/i
-          );
+          const roofM =
+            content.match(
+              /Estrutura(?: registrada)?:?[_*\s]*`?\*?([^*`🏠\n]+?)\*?`?(?:\s*🏠|\.|\n|$)/i
+            ) || content.match(/Estrutura Selecionada:?[_*\s]*`?\*?([^*`🏠\n]+?)\*?`?/i);
           if (roofM && roofM[1]) {
             roofType = roofM[1].replace(/\*/g, "").trim();
           }
@@ -2576,11 +2581,15 @@ ${catalogContext}`;
           }
 
           const locM =
-            content.match(/Localização identificada:\s*\*([^*\/]+)\/([A-Za-z]{2})\*/i) ||
-            content.match(/Localização corrigida para:\s*\*([^*\/]+)\/([A-Za-z]{2})\*/i);
+            content.match(
+              /(?:Localização Identificada|Localização Corrigida|Localização Mantida|Cidade):?[_*\s!]*`?\*?([^*\/`\n]+)\/([A-Za-z]{2})\*?`?/i
+            ) ||
+            content.match(
+              /(?:em|para)\s+`?\*?([^*\/`\n]{3,40})\/([A-Za-z]{2})\*?`?\s*(?:☀️|📍|\n|$)/i
+            );
           if (locM && locM[1] && locM[2]) {
-            cidade = locM[1].trim();
-            estado = locM[2].trim().toUpperCase();
+            cidade = locM[1].replace(/[*_`]/g, "").trim();
+            estado = locM[2].replace(/[*_`]/g, "").trim().toUpperCase();
           }
 
           continue; // Não analisa mensagens do bot para evitar capturar exemplos de texto
@@ -2683,12 +2692,16 @@ ${catalogContext}`;
         // 4. Extração de Cidade e Estado
         const prevContent = prevAssistantForLead;
         if (
-          prevContent.includes("Para qual cidade e estado será a instalação?") ||
+          prevContent.includes("Para qual cidade e estado será a instalação") ||
           prevContent.includes("Vamos alterar a localização") ||
-          prevContent.includes("Vamos corrigir a localização")
+          prevContent.includes("Vamos corrigir a localização") ||
+          prevContent.includes("Não identifiquei o município") ||
+          prevContent.includes("Não identifiquei a cidade") ||
+          prevContent.includes("informe a cidade e a sigla do estado") ||
+          prevContent.includes("informe a cidade e estado")
         ) {
           const hspRes = getHsp(content);
-          if (hspRes.city) {
+          if (hspRes.city && (isLocationInput(content) || hspRes.exact)) {
             cidade = hspRes.city;
             estado = hspRes.uf;
           }
@@ -2954,9 +2967,13 @@ ${catalogContext}`;
         lastBotMsg.includes("potência de pico desejada") ||
         lastBotMsg.includes("Simulação por Quantidade de Módulos") ||
         lastBotMsg.includes("placas solares você deseja no kit") ||
-        lastBotMsg.includes("Para qual cidade e estado será a instalação?") ||
+        lastBotMsg.includes("Para qual cidade e estado será a instalação") ||
         lastBotMsg.includes("Vamos alterar a localização") ||
-        lastBotMsg.includes("Vamos corrigir a localização")
+        lastBotMsg.includes("Vamos corrigir a localização") ||
+        lastBotMsg.includes("Não identifiquei o município") ||
+        lastBotMsg.includes("Não identifiquei a cidade") ||
+        lastBotMsg.includes("informe a cidade e a sigla do estado") ||
+        lastBotMsg.includes("informe a cidade e estado")
       ) {
         return this.buildGreetingMenu(resolvedContactName);
       }
@@ -3686,11 +3703,18 @@ ${catalogContext}`;
     }
 
     // ESTADO G: O Bot perguntou a cidade da instalação
-    if (
-      lastBotMsg.includes("Para qual cidade e estado será a instalação?") ||
+    const isAskingCity =
+      lastBotMsg.includes("Para qual cidade e estado será a instalação") ||
       lastBotMsg.includes("Vamos alterar a localização") ||
-      lastBotMsg.includes("Vamos corrigir a localização")
-    ) {
+      lastBotMsg.includes("Vamos corrigir a localização") ||
+      lastBotMsg.includes("Não identifiquei o município") ||
+      lastBotMsg.includes("Não identifiquei a cidade") ||
+      lastBotMsg.includes("informe a cidade e a sigla do estado") ||
+      lastBotMsg.includes("informe a cidade e estado") ||
+      lastBotMsg.includes("cidade e a sigla do estado onde será a instalação") ||
+      lastBotMsg.includes("cidade e estado da instalação solar");
+
+    if (isAskingCity) {
       // Se o usuário digitou "nenhuma", "manter", "mesma", etc. e já tinha uma cidade registrada:
       const keepExistingCity =
         (lower === "nenhuma" ||
@@ -3930,7 +3954,11 @@ ${catalogContext}`;
         lastBotMsg.includes("potência desejada") ||
         lastBotMsg.includes("Simulação por Quantidade de Módulos") ||
         lastBotMsg.includes("placas solares você deseja no kit") ||
-        lastBotMsg.includes("Para qual cidade e estado será a instalação"));
+        lastBotMsg.includes("Para qual cidade e estado será a instalação") ||
+        lastBotMsg.includes("Não identifiquei o município") ||
+        lastBotMsg.includes("Não identifiquei a cidade") ||
+        lastBotMsg.includes("informe a cidade e a sigla do estado") ||
+        lastBotMsg.includes("informe a cidade e estado"));
 
     if (!isChoosingOtherOption) {
       if (lower === "1" || lower === "1." || lower === "opcao 1" || lower === "opção 1") {
@@ -4111,12 +4139,18 @@ ${catalogContext}`;
 
     // Fallback Estruturado: Sem IA conversacional aleatória. Sempre orienta o integrador no fluxo do bot!
     if (isChoosingOtherOption) {
-      if (lastBotMsg.includes("Para qual cidade e estado será a instalação")) {
+      if (
+        lastBotMsg.includes("Para qual cidade e estado será a instalação") ||
+        lastBotMsg.includes("Não identifiquei o município") ||
+        lastBotMsg.includes("Não identifiquei a cidade") ||
+        lastBotMsg.includes("informe a cidade e a sigla do estado") ||
+        lastBotMsg.includes("informe a cidade e estado")
+      ) {
         return (
-          `Não identifiquei a cidade informada. 📍\n\n` +
-          `Por favor, informe a *cidade e estado* da instalação solar:\n` +
-          `> Exemplo: \`Maringá/PR\` ou \`Presidente Prudente/SP\`\n\n` +
-          `_(Ou digite *novo* para reiniciar o fluxo)_`
+          `Não identifiquei o município "*${incomingText.trim()}*". 📍\n\n` +
+          `Por favor, informe a cidade e a sigla do estado onde será a instalação:\n` +
+          `> Exemplo: \`Cuiabá/MT\`, \`Maringá/PR\` ou \`São Paulo/SP\`\n\n` +
+          `_(Ou envie 0️⃣ para voltar ao menu inicial)_`
         );
       }
       if (lastBotMsg.includes("Qual o padrão de entrada da instalação")) {

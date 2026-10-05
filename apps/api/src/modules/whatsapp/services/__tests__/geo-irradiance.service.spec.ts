@@ -39,6 +39,29 @@ describe("GeoIrradianceService - Municipal Solar Irradiation Suite", () => {
     it("should handle cities without UF returning empty UF", () => {
       expect(parseLocationString("Goiânia")).toEqual({ city: "Goiânia", uf: "" });
     });
+
+    it("should sanitize invisible Unicode characters (LTR/RTL/ZWSP)", () => {
+      expect(parseLocationString("\u200EMaringá/PR\u200E")).toEqual({ city: "Maringá", uf: "PR" });
+      expect(parseLocationString("Maringá/\u200EPR")).toEqual({ city: "Maringá", uf: "PR" });
+      expect(parseLocationString("\u200BCuiabá\u200B/\u200BMT\u200B")).toEqual({
+        city: "Cuiabá",
+        uf: "MT",
+      });
+    });
+
+    it("should handle trailing periods, commas and enclosing quotes", () => {
+      expect(parseLocationString("Maringá/PR.")).toEqual({ city: "Maringá", uf: "PR" });
+      expect(parseLocationString('"Maringá/PR"')).toEqual({ city: "Maringá", uf: "PR" });
+      expect(parseLocationString("'Maringá/PR'")).toEqual({ city: "Maringá", uf: "PR" });
+      expect(parseLocationString("`Maringá/PR`")).toEqual({ city: "Maringá", uf: "PR" });
+      expect(parseLocationString("Maringá/PR,")).toEqual({ city: "Maringá", uf: "PR" });
+    });
+
+    it("should handle space-separated UF and full state names", () => {
+      expect(parseLocationString("Maringá PR")).toEqual({ city: "Maringá", uf: "PR" });
+      expect(parseLocationString("Maringá - Paraná")).toEqual({ city: "Maringá", uf: "PR" });
+      expect(parseLocationString("Maringá/Parana")).toEqual({ city: "Maringá", uf: "PR" });
+    });
   });
 
   describe("getHsp", () => {
@@ -47,6 +70,22 @@ describe("GeoIrradianceService - Municipal Solar Irradiation Suite", () => {
       expect(result.hsp).toBeGreaterThan(4.0);
       expect(result.hsp).toBeLessThan(7.0);
       expect(result.uf).toBe("PR");
+    });
+
+    it("should recognize combined single-string inputs with slash and invisible characters", () => {
+      const result = service.getHsp("\u200EMaringá/PR\u200E");
+      expect(result.exact).toBe(true);
+      expect(result.city).toBe("Maringá");
+      expect(result.uf).toBe("PR");
+      expect(result.hsp).toBe(4.89);
+    });
+
+    it("should recognize city with trailing dot", () => {
+      const result = service.getHsp("Maringá/PR.");
+      expect(result.exact).toBe(true);
+      expect(result.city).toBe("Maringá");
+      expect(result.uf).toBe("PR");
+      expect(result.hsp).toBe(4.89);
     });
 
     it("should return official state fallback when city is not found in municipal database", () => {
