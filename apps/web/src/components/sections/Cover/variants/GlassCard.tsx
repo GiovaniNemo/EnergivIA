@@ -1,7 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { CoverContent, CoverStyle, CoverTypographySizes } from "../cover-utils";
+import {
+  safeHtml,
+  type CoverContent,
+  type CoverStyle,
+  type CoverTypographySizes,
+} from "../cover-utils";
 
 interface GlassCardProps {
   content: CoverContent;
@@ -101,7 +106,7 @@ export function GlassCard({
             data-editor-field-path="subtitle"
             className="mt-2 text-sm leading-relaxed"
             style={{ color: "#5c6776" }}
-            dangerouslySetInnerHTML={{ __html: content.subtitle }}
+            dangerouslySetInnerHTML={safeHtml(content.subtitle)}
           />
         ) : null}
 

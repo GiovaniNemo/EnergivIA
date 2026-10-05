@@ -23,6 +23,7 @@ import {
   type ProposalEquipmentProductSnapshot,
 } from "../proposal-equipment-model";
 import type { ProposalSection } from "../types";
+import { safeHtml } from "@energivia/utils";
 import { SystemPerformanceSection } from "@/components/proposals/sections/system-performance/SystemPerformanceSection";
 import { parseGenerationConsumptionFields } from "@/components/proposals/sections/system-performance/parse-generation-fields";
 import { TestimonialsSectionPreview } from "@/components/proposals/sections/testimonials/testimonials-preview";
@@ -279,12 +280,7 @@ function renderRichText(value: unknown, vars: PreviewRenderVariables): JSX.Eleme
   const html = tpl(value, vars).trim();
   if (!html) return null;
   return (
-    <div
-      className="preview-rich-content max-w-none"
-      dangerouslySetInnerHTML={{
-        __html: html,
-      }}
-    />
+    <div className="preview-rich-content max-w-none" dangerouslySetInnerHTML={safeHtml(html)} />
   );
 }
 
@@ -863,12 +859,12 @@ export function renderSectionContent(
         <div
           data-editor-field-path="text"
           className="preview-rich-content max-w-none"
-          dangerouslySetInnerHTML={{
-            __html: replaceVariablesServerSafe(
+          dangerouslySetInnerHTML={safeHtml(
+            replaceVariablesServerSafe(
               String(f.text ?? section.content ?? "<p></p>"),
               vars as unknown as Record<string, string>
-            ),
-          }}
+            )
+          )}
         />
       );
     case "about_company": {
@@ -1696,9 +1692,7 @@ export function renderSectionContent(
                 <div
                   className="preview-rich-content max-w-none text-sm"
                   style={{ color: "currentColor" }}
-                  dangerouslySetInnerHTML={{
-                    __html: tpl(howItWorks, vars),
-                  }}
+                  dangerouslySetInnerHTML={safeHtml(tpl(howItWorks, vars))}
                 />
               ) : (
                 <p className="text-sm leading-relaxed" style={{ color: "currentColor" }}>
@@ -2657,7 +2651,7 @@ export function renderSectionContent(
           <div
             data-editor-field-path={fieldPath}
             className={`preview-rich-content ${className}`.trim()}
-            dangerouslySetInnerHTML={{ __html: html }}
+            dangerouslySetInnerHTML={safeHtml(html)}
           />
         ) : null;
 
@@ -3389,12 +3383,9 @@ export function renderSectionContent(
       return (
         <div
           className="preview-rich-content max-w-none"
-          dangerouslySetInnerHTML={{
-            __html: replaceVariablesServerSafe(
-              section.content,
-              vars as unknown as Record<string, string>
-            ),
-          }}
+          dangerouslySetInnerHTML={safeHtml(
+            replaceVariablesServerSafe(section.content, vars as unknown as Record<string, string>)
+          )}
         />
       );
   }

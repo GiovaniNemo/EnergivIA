@@ -1,6 +1,9 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { sanitizeHtml, safeHtml } from "@energivia/utils";
+
+export { sanitizeHtml, safeHtml };
 
 export type CoverVariant =
   | "full-image"

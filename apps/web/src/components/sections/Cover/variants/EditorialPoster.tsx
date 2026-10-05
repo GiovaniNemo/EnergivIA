@@ -1,7 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { CoverContent, CoverStyle, CoverTypographySizes } from "../cover-utils";
+import {
+  safeHtml,
+  type CoverContent,
+  type CoverStyle,
+  type CoverTypographySizes,
+} from "../cover-utils";
 
 interface EditorialPosterProps {
   content: CoverContent;
@@ -97,7 +102,7 @@ export function EditorialPoster({
               maxWidth: "80%",
               borderColor: `${style.textColor}1f`,
             }}
-            dangerouslySetInnerHTML={{ __html: content.subtitle }}
+            dangerouslySetInnerHTML={safeHtml(content.subtitle)}
           />
         ) : (
           <div className="mb-10 mt-6" />

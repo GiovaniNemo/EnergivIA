@@ -5,6 +5,7 @@ import {
   coverHighlightFontPx,
   coverSubtitleRichCssVars,
   resolveCoverAlignment,
+  safeHtml,
   type CoverContent,
   type CoverStyle,
   type CoverTypographySizes,
@@ -116,7 +117,7 @@ export function Minimal({
                 fontSize: `${typography.bodySize}px`,
                 ...coverSubtitleRichCssVars(typography),
               }}
-              dangerouslySetInnerHTML={{ __html: content.subtitle }}
+              dangerouslySetInnerHTML={safeHtml(content.subtitle)}
             />
           ) : null}
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { safeHtml } from "@energivia/utils";
 import type { ProposalBuilderSection } from "./types";
 
 interface PreviewContent {
@@ -84,7 +85,7 @@ export function renderSection(section: ProposalBuilderSection): JSX.Element {
     case "custom":
       return sectionCard(
         section.title,
-        <div dangerouslySetInnerHTML={{ __html: String(c.text ?? "") }} />
+        <div dangerouslySetInnerHTML={safeHtml(String(c.text ?? ""))} />
       );
     case "generation_consumption":
       return sectionCard(
@@ -94,7 +95,7 @@ export function renderSection(section: ProposalBuilderSection): JSX.Element {
             {String((c as { potencia?: number }).potencia ?? "—")} kWp
           </p>
           <p className="text-zinc-500">Chart: use the full template editor (Recharts preview).</p>
-          <div dangerouslySetInnerHTML={{ __html: String(c.text ?? "") }} />
+          <div dangerouslySetInnerHTML={safeHtml(String(c.text ?? ""))} />
         </div>
       );
     case "proposal_equipment":
@@ -102,7 +103,7 @@ export function renderSection(section: ProposalBuilderSection): JSX.Element {
         section.title,
         <div className="space-y-2 text-xs">
           {c.sectionSubtitle ? <p className="text-zinc-400">{String(c.sectionSubtitle)}</p> : null}
-          <div dangerouslySetInnerHTML={{ __html: String(c.text ?? "") }} />
+          <div dangerouslySetInnerHTML={safeHtml(String(c.text ?? ""))} />
           <p className="text-zinc-500">Configure equipment in the template editor.</p>
         </div>
       );
@@ -126,7 +127,7 @@ export function renderSection(section: ProposalBuilderSection): JSX.Element {
         <div className="space-y-2 text-xs">
           <p>Horizon: {horizon} years</p>
           <p>Items configured: {items.length}</p>
-          <div dangerouslySetInnerHTML={{ __html: String(c.text ?? "") }} />
+          <div dangerouslySetInnerHTML={safeHtml(String(c.text ?? ""))} />
         </div>
       );
     }

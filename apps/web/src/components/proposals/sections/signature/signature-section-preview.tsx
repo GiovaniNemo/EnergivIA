@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { safeHtml } from "@energivia/utils";
 import {
   Award,
   Building2,
@@ -142,7 +143,7 @@ function renderHtmlSafe(html: string, textColor: string): ReactNode {
     <div
       className="prose prose-sm max-w-none text-left"
       style={{ color: textColor }}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={safeHtml(html)}
     />
   );
 }

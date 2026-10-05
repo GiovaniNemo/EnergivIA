@@ -1,7 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { CoverContent, CoverStyle, CoverTypographySizes } from "../cover-utils";
+import {
+  safeHtml,
+  type CoverContent,
+  type CoverStyle,
+  type CoverTypographySizes,
+} from "../cover-utils";
 
 interface HeroCinematicProps {
   content: CoverContent;
@@ -130,7 +135,7 @@ export function HeroCinematic({
             data-editor-field-path="subtitle"
             className="mb-8 text-base leading-relaxed"
             style={{ color: style.textColor, opacity: 0.82, maxWidth: "92%" }}
-            dangerouslySetInnerHTML={{ __html: content.subtitle }}
+            dangerouslySetInnerHTML={safeHtml(content.subtitle)}
           />
         ) : null}
 

@@ -1,7 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { CoverContent, CoverStyle, CoverTypographySizes } from "../cover-utils";
+import {
+  safeHtml,
+  type CoverContent,
+  type CoverStyle,
+  type CoverTypographySizes,
+} from "../cover-utils";
 
 interface SplitEditorialProps {
   content: CoverContent;
@@ -83,7 +88,7 @@ export function SplitEditorial({
               data-editor-field-path="subtitle"
               className="mt-2 text-sm leading-relaxed"
               style={{ color: style.textColor, opacity: 0.65 }}
-              dangerouslySetInnerHTML={{ __html: content.subtitle }}
+              dangerouslySetInnerHTML={safeHtml(content.subtitle)}
             />
           ) : null}
 

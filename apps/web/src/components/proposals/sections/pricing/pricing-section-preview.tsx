@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { parseMoneyLike, replaceVariables } from "@/components/proposals/editor/utils";
 import type { PreviewRenderVariables } from "@/components/proposals/editor/section-render/types";
-import { cn } from "@energivia/utils";
+import { cn, safeHtml } from "@energivia/utils";
 
 function formatBRL(n: number | null | undefined): string {
   if (n == null || typeof n !== "number" || Number.isNaN(n)) return "R$ 0,00";
@@ -359,7 +359,7 @@ export function PricingSectionPreview({
             !palette && "text-[var(--color-muted-foreground)]"
           )}
           style={palette ? { color: palette.muted } : undefined}
-          dangerouslySetInnerHTML={{ __html: paymentHtml }}
+          dangerouslySetInnerHTML={safeHtml(paymentHtml)}
         />
       ) : null}
     </div>

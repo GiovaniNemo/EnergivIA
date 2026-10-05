@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { safeHtml } from "@energivia/utils";
 import type { ProposalSection } from "../../editor/types";
 import { parseMoneyLike, replaceVariables } from "../../editor/utils";
 import type { PreviewRenderVariables } from "../../editor/section-render/types";
@@ -187,7 +188,7 @@ function renderVerticalStack(
         <div
           data-editor-field-path="text"
           className="preview-rich-content mb-4 max-w-none"
-          dangerouslySetInnerHTML={{ __html: textHtml }}
+          dangerouslySetInnerHTML={safeHtml(textHtml)}
         />
       ) : null}
       <section
@@ -234,7 +235,7 @@ function renderVerticalStack(
             data-editor-field-path="description"
             className="preview-rich-content mx-auto mt-3 text-[15px] leading-[1.6] opacity-70"
             style={{ maxWidth: 540 }}
-            dangerouslySetInnerHTML={{ __html: texts.descriptionHtml }}
+            dangerouslySetInnerHTML={safeHtml(texts.descriptionHtml)}
           />
         ) : null}
         {items.length > 0 ? (
@@ -330,7 +331,7 @@ function renderSplit(
         <div
           data-editor-field-path="text"
           className="preview-rich-content mb-4 max-w-none"
-          dangerouslySetInnerHTML={{ __html: textHtml }}
+          dangerouslySetInnerHTML={safeHtml(textHtml)}
         />
       ) : null}
       <section
@@ -373,7 +374,7 @@ function renderSplit(
               data-editor-field-path="description"
               className="preview-rich-content mt-5 text-[15px] leading-[1.7] opacity-70"
               style={{ maxWidth: 380 }}
-              dangerouslySetInnerHTML={{ __html: texts.descriptionHtml }}
+              dangerouslySetInnerHTML={safeHtml(texts.descriptionHtml)}
             />
           ) : null}
         </div>
@@ -445,7 +446,7 @@ function renderInverted(
         <div
           data-editor-field-path="text"
           className="preview-rich-content mb-4 max-w-none"
-          dangerouslySetInnerHTML={{ __html: textHtml }}
+          dangerouslySetInnerHTML={safeHtml(textHtml)}
         />
       ) : null}
       <section className="py-2">
@@ -578,7 +579,7 @@ function renderNarrative(
         <div
           data-editor-field-path="text"
           className="preview-rich-content mb-4 max-w-none"
-          dangerouslySetInnerHTML={{ __html: textHtml }}
+          dangerouslySetInnerHTML={safeHtml(textHtml)}
         />
       ) : null}
       <section className="py-3">
@@ -587,7 +588,7 @@ function renderNarrative(
             data-editor-field-path="narrativeQuote"
             className="preview-rich-content mb-2 text-[26px] font-medium leading-[1.25] tracking-[-0.025em] md:text-[34px]"
             style={{ maxWidth: 880 }}
-            dangerouslySetInnerHTML={{ __html: quoteHtml }}
+            dangerouslySetInnerHTML={safeHtml(quoteHtml)}
           />
         ) : null}
         {texts.narrativeAction ? (
@@ -649,7 +650,7 @@ function renderNarrative(
           <div
             data-editor-field-path="narrativeFooter"
             className="preview-rich-content mt-5 text-right text-xs tracking-[.04em] opacity-70"
-            dangerouslySetInnerHTML={{ __html: texts.narrativeFooterHtml }}
+            dangerouslySetInnerHTML={safeHtml(texts.narrativeFooterHtml)}
           />
         ) : null}
       </section>

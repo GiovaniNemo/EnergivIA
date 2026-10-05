@@ -1,7 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { CoverContent, CoverStyle, CoverTypographySizes } from "../cover-utils";
+import {
+  safeHtml,
+  type CoverContent,
+  type CoverStyle,
+  type CoverTypographySizes,
+} from "../cover-utils";
 
 interface DataHeroProps {
   content: CoverContent;
@@ -138,7 +143,7 @@ export function DataHero({
                 data-editor-field-path="subtitle"
                 className="mt-2 max-w-xs text-[13px] leading-relaxed"
                 style={{ color: style.textColor, opacity: 0.7 }}
-                dangerouslySetInnerHTML={{ __html: content.subtitle }}
+                dangerouslySetInnerHTML={safeHtml(content.subtitle)}
               />
             ) : null}
           </div>
