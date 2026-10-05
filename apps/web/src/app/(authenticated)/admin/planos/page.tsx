@@ -88,7 +88,7 @@ const PREDEFINED_BENEFITS: PlanFeatureItem[] = [
   { text: "Usuários e vendedores ilimitados na equipe", included: true },
   { text: "1 Número de WhatsApp com atendimento IA", included: true },
   { text: "Até 2 números de WhatsApp com IA 24/7", included: true },
-  { text: "Múltiplos números de WhatsApp com IA", included: true },
+  { text: "Até 5 números de WhatsApp com IA", included: true },
   { text: "1 Template de proposta personalizado", included: true },
   { text: "Criação de templates personalizados ilimitados", included: true },
   { text: "CRM Solar e funil de vendas", included: true },
@@ -463,7 +463,7 @@ export default function AdminPlanosPage() {
       templateDefaults = [
         { text: "Propostas comerciais com IA ilimitadas", included: true },
         { text: "Usuários e vendedores ilimitados na equipe", included: true },
-        { text: "Múltiplos números de WhatsApp com IA", included: true },
+        { text: "Até 5 números de WhatsApp com IA", included: true },
         { text: "Criação de templates personalizados ilimitados", included: true },
         { text: "CRM Solar completo com histórico e follow-up", included: true },
         { text: "Radar Solar ANEEL Nacional Ilimitado", included: true },

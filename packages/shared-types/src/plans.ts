@@ -152,7 +152,7 @@ export const DEFAULT_PLUS_PLAN_FEATURES: PlanFeaturesConfig = {
   maxProposalsPerMonth: null, // ilimitado
   maxTeamMembers: null, // ilimitado
   maxCustomTemplates: null, // ilimitado
-  maxWhatsappNumbers: null, // ilimitado
+  maxWhatsappNumbers: 5,
   hasProposalViewAlerts: true,
   hasWhatsappBot: true,
   hasRadarSolar: true,
@@ -160,7 +160,7 @@ export const DEFAULT_PLUS_PLAN_FEATURES: PlanFeaturesConfig = {
   bulletPoints: [
     { text: "Propostas comerciais com IA ilimitadas", included: true },
     { text: "Usuários e vendedores ilimitados na equipe", included: true },
-    { text: "Múltiplos números de WhatsApp com IA", included: true },
+    { text: "Até 5 números de WhatsApp com IA", included: true },
     { text: "Criação de templates personalizados ilimitados", included: true },
     { text: "CRM Solar completo com histórico e follow-up", included: true },
     { text: "Radar Solar ANEEL Nacional Ilimitado", included: true },
