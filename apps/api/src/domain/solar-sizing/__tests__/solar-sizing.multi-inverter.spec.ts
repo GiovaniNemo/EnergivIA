@@ -172,4 +172,42 @@ describe("Solar Sizing - Multi-Inverter & Single Priority", () => {
       expect(result.inverter.id).toBe(inverter5k.id);
     }
   });
+
+  it("never fragments a commercial plant into dozens of small inverters in automatic mode", () => {
+    // 300 kWp system with 5k, 10k, 50k, 60k inverters
+    const inverter3k: ProductWithSpecs<StringInverterSpec> = {
+      id: "inv-3k-solplanet",
+      name: "Inversor Solplanet 3kW",
+      brandName: "Solplanet",
+      price: 1800,
+      specs: {
+        type: "string",
+        nominal_power_w: 3000,
+        max_dc_power: 4500,
+        max_dc_voltage: 550,
+        mppt_count: 1,
+        max_strings_per_mppt: 1,
+        mppt_voltage_min: 80,
+        mppt_voltage_max: 500,
+        max_input_current: 16,
+        recommended_dc_ac_ratio_min: 1.0,
+        recommended_dc_ac_ratio_max: 1.5,
+      },
+    };
+
+    const result = sizeSolarSystem({
+      system_kw: 300,
+      modules: [sampleModule],
+      stringInverters: [inverter3k, ...stringInverters],
+      microInverters: [],
+    });
+
+    expect(result).not.toBeNull();
+    if (result && "inverter_quantity" in result) {
+      // Must not be 67 or 100 inverters! Must be <= 6
+      expect(result.inverter_quantity).toBeLessThanOrEqual(6);
+      expect(result.inverter.id).not.toBe(inverter3k.id);
+      expect(["inv-50k-goodwe", "inv-60k-goodwe"]).toContain(result.inverter.id);
+    }
+  });
 });

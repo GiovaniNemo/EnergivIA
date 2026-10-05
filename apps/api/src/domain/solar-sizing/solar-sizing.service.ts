@@ -269,18 +269,28 @@ export function sizeSolarSystem(input: SolarSizingInput): SizingResult | null {
     if (singleResult) return singleResult;
 
     // 2. Fallback Automático: Apenas se exceder os limites do maior inversor cadastrado,
-    // calcula o menor N de inversores idênticos da mesma marca para cobrir a usina
-    const maxInvDc = Math.max(...input.stringInverters.map((i) => i.specs.max_dc_power || 0), 0);
+    // calcula o menor N de inversores idênticos da mesma marca para cobrir a usina.
+    // Trava de escala técnica: o dimensionamento automático NUNCA fragmenta usinas em dezenas de pequenos inversores.
+    // Limite máximo de inversores em paralelo: 4 unidades (ou 6 para usinas >= 200 kWp).
+    const maxAutoN = input.system_kw >= 200 ? 6 : 4;
+    const viableAutoInverters = input.stringInverters.filter(
+      (inv) => (inv.specs.max_dc_power || 0) * maxAutoN >= systemPowerW * 0.7
+    );
+
+    const maxInvDc = Math.max(...viableAutoInverters.map((i) => i.specs.max_dc_power || 0), 0);
     const minN = maxInvDc > 0 ? Math.max(2, Math.ceil(systemPowerW / maxInvDc)) : 2;
-    for (let n = minN; n <= Math.max(minN + 2, 6); n++) {
-      const multiResult = trySizeStringInverters(
-        modules,
-        input.stringInverters,
-        systemPowerW,
-        n,
-        preferredInvBrands
-      );
-      if (multiResult) return multiResult;
+
+    if (minN <= maxAutoN && viableAutoInverters.length > 0) {
+      for (let n = minN; n <= maxAutoN; n++) {
+        const multiResult = trySizeStringInverters(
+          modules,
+          viableAutoInverters,
+          systemPowerW,
+          n,
+          preferredInvBrands
+        );
+        if (multiResult) return multiResult;
+      }
     }
   }
 

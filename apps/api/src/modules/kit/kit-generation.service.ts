@@ -499,7 +499,16 @@ export class KitGenerationService {
     };
 
     const sortStringInverters = (inverters: ProductWithSpecs<StringInverterSpec>[]) => {
+      const maxAutoN = input.system_kw >= 200 ? 6 : 4;
       return [...inverters].sort((a, b) => {
+        // 1ª prioridade: unidades coerentes para o porte (modelos que precisam de <= maxAutoN unidades têm preferência absoluta)
+        const aUnits = calcInverterUnitsNeeded(a);
+        const bUnits = calcInverterUnitsNeeded(b);
+        const aScaleOk = aUnits <= maxAutoN ? 1 : 0;
+        const bScaleOk = bUnits <= maxAutoN ? 1 : 0;
+        if (aScaleOk !== bScaleOk) return bScaleOk - aScaleOk;
+
+        // 2ª prioridade: marcas preferidas configuradas
         const aBrand = (a.brandName || "").toLowerCase().trim();
         const bBrand = (b.brandName || "").toLowerCase().trim();
         const aIdx = preferredInverterBrands.findIndex(
@@ -512,9 +521,7 @@ export class KitGenerationService {
         const bRank = bIdx === -1 ? 9999 : bIdx;
         if (aRank !== bRank) return aRank - bRank;
 
-        // Entre modelos da mesma marca/prioridade, prefere aquele com quantidade coerente para a usina
-        const aUnits = calcInverterUnitsNeeded(a);
-        const bUnits = calcInverterUnitsNeeded(b);
+        // 3ª prioridade: menor quantidade de unidades
         if (aUnits !== bUnits) return aUnits - bUnits;
 
         return a.price - b.price;
@@ -596,13 +603,31 @@ export class KitGenerationService {
         ...(pinned.inverterId ? { pinned_inverter_id: pinned.inverterId } : {}),
         ...(pinned.inverterType ? { inverter_type: pinned.inverterType } : {}),
       };
-      const res = await this.buildKit(
+      let res = await this.buildKit(
         trialInput,
         roofType,
         source,
         preferredModuleBrands,
         preferredInverterBrands
       );
+      if (
+        !res &&
+        pinned.inverterId &&
+        sortedString[0]?.id &&
+        pinned.inverterId !== sortedString[0].id
+      ) {
+        const retryInput: GenerateKitInput = {
+          ...trialInput,
+          pinned_inverter_id: sortedString[0].id,
+        };
+        res = await this.buildKit(
+          retryInput,
+          roofType,
+          source,
+          preferredModuleBrands,
+          preferredInverterBrands
+        );
+      }
       return res || baseBuilt!;
     };
 
@@ -1259,6 +1284,30 @@ export class KitGenerationService {
     } else if (input.inverter_type === "off_grid") {
       stringInverters = adaptedOffGridInverters;
       microInverters = [];
+    }
+
+    // Trava de escala técnica: usinas de médio/grande porte nunca devem considerar
+    // inversores residenciais pequenos no dimensionamento automático
+    if (!input.target_inverter_qty && !input.pinned_inverter_id) {
+      const minInvPowerKw =
+        input.system_kw >= 200
+          ? 40
+          : input.system_kw >= 80
+            ? 20
+            : input.system_kw >= 35
+              ? 10
+              : input.system_kw >= 15
+                ? 5
+                : 1;
+      const scaled = stringInverters.filter((inv) => {
+        const pKw =
+          (inv.specs.nominal_power_w ? inv.specs.nominal_power_w / 1000 : 0) ||
+          inv.specs.max_dc_power / 1.3 / 1000;
+        return pKw >= minInvPowerKw;
+      });
+      if (scaled.length > 0) {
+        stringInverters = scaled;
+      }
     }
 
     if (input.grid_topology && input.grid_topology !== "auto" && input.grid_topology !== "any") {
