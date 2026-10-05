@@ -8,9 +8,10 @@ import { AiUsageModule } from "../ai-usage/ai-usage.module";
 
 import { GeoIrradianceService } from "./services/geo-irradiance.service";
 import { BillExtractorService } from "./services/bill-extractor.service";
+import { KitModule } from "../kit/kit.module";
 
 @Module({
-  imports: [PrismaModule, AiUsageModule],
+  imports: [PrismaModule, AiUsageModule, KitModule],
   controllers: [WhatsappWebhookController],
   providers: [
     WhatsappCloudService,

@@ -25,6 +25,7 @@ import {
   BillExtractorService,
 } from "./services/bill-extractor.service";
 import { getHsp, isLocationInput, GeoIrradianceService } from "./services/geo-irradiance.service";
+import { KitGenerationService } from "../kit/kit-generation.service";
 
 interface WebhookMessage {
   id?: string;
@@ -276,7 +277,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     private readonly whatsappPairing: WhatsappPairingService,
     private readonly aiUsage: AiUsageService,
     private readonly geoIrradiance: GeoIrradianceService,
-    private readonly billExtractor: BillExtractorService
+    private readonly billExtractor: BillExtractorService,
+    private readonly kitGeneration: KitGenerationService
   ) {
     const geminiKey =
       this.config.get<string>("GOOGLE_GEMINI_API_KEY") ||
@@ -1732,16 +1734,38 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
+  private mapRoofTypeToCatalog(roofType?: string): string {
+    const r = (roofType || "").toLowerCase();
+    if (r.includes("solo") || r.includes("ground") || r === "4") return "ground";
+    if (r.includes("metal") || r.includes("metálic") || r === "3") return "metal";
+    if (r.includes("laje") || r === "5") return "laje";
+    if (r.includes("fibrometal") || r === "6") return "fibrometal";
+    if (r.includes("fibro") || r === "2") return "fibromadeira";
+    if (r.includes("sem") || r === "7" || r === "none") return "none";
+    return "ceramic";
+  }
+
+  private getRoofLabel(roofType?: string): string {
+    const r = (roofType || "").toLowerCase();
+    if (r.includes("solo") || r.includes("ground") || r === "4") return "Solo";
+    if (r.includes("metal") || r.includes("metálic") || r === "3") return "Metálico";
+    if (r.includes("laje") || r === "5") return "Laje";
+    if (r.includes("fibrometal") || r === "6") return "Fibrometal";
+    if (r.includes("fibro") || r === "2") return "Fibrocimento";
+    if (r.includes("sem") || r === "7" || r === "none") return "Sem estrutura";
+    return "Cerâmico (Colonial)";
+  }
+
   private async calculateDistributorKits({
     consumptionKwh,
     targetKWp,
     targetModules,
     modPowerWUser,
-    cidade: _cidade,
-    estado: _estado,
+    cidade,
+    estado,
     roofType,
     gridVoltage: _gridVoltage,
-    inverterType: _inverterType,
+    inverterType,
     organizationId,
     customRatePerKwp,
   }: {
@@ -1757,13 +1781,10 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     organizationId?: string;
     customRatePerKwp?: number;
   }) {
-    void _cidade;
-    void _estado;
     void _gridVoltage;
-    void _inverterType;
 
     let finalTargetKWp = 3.0;
-    const geracaoPorKwp = 130; // média
+    const geracaoPorKwp = 130; // média nacional
     if (typeof targetKWp === "number" && targetKWp > 0) {
       finalTargetKWp = targetKWp;
     } else if (
@@ -1774,7 +1795,14 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     ) {
       finalTargetKWp = (targetModules * modPowerWUser) / 1000;
     } else if (typeof consumptionKwh === "number" && consumptionKwh > 0) {
-      finalTargetKWp = consumptionKwh / geracaoPorKwp;
+      let monthlyFactor = geracaoPorKwp;
+      if (cidade || estado) {
+        const hspRes = this.geoIrradiance.getHsp(cidade || "São Paulo", estado || "SP");
+        if (hspRes && hspRes.hsp > 0) {
+          monthlyFactor = Math.max(90, Math.min(180, Math.round(hspRes.hsp * 30 * 0.85)));
+        }
+      }
+      finalTargetKWp = consumptionKwh / monthlyFactor;
     }
     const safeKwp = Math.max(0.5, finalTargetKWp);
 
@@ -1785,23 +1813,97 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       ratePerKwp = await this.getOrganizationDefaultKwpRate(organizationId);
     }
 
+    const mappedRoofType = this.mapRoofTypeToCatalog(roofType);
+    const roofLabel = this.getRoofLabel(roofType);
+
+    // 1. Tenta gerar via KitGenerationService (mesmo serviço que abastece a plataforma web)
+    if (this.kitGeneration) {
+      try {
+        const tiersRes = await this.kitGeneration.generateDistributorTiers(
+          {
+            system_kw: safeKwp,
+            roof_type: mappedRoofType,
+            inverter_type: (inverterType as any) || "string",
+          },
+          organizationId
+        );
+
+        if (tiersRes && tiersRes.tiers && tiersRes.tiers.length > 0) {
+          return tiersRes.tiers.map((t) => {
+            const realSystemKwp = t.kit_result.system_power_kw;
+            const totalPrice = Math.round(realSystemKwp * ratePerKwp * 100) / 100;
+            const kitItems = [
+              `• ${t.module_qty}x Módulos ${t.module_brand} ${t.module_power_w}W`,
+              `• 1x Inversor ${t.inverter_brand} ${t.inverter_power_kw}kW`,
+            ];
+            if (roofLabel !== "Sem estrutura") {
+              kitItems.push(`• Estrutura: ${roofLabel}`);
+            }
+
+            const structuredItems = (t.kit_result.kit_items || []).map((it) => ({
+              productId: it.product_id,
+              productName: it.product_name,
+              brandName: it.brand_name || "",
+              categoryName: "equipment",
+              quantity: it.quantity,
+              unitPrice: it.unit_price,
+              lineTotal: Math.round(it.unit_price * it.quantity * 100) / 100,
+            }));
+
+            return {
+              distributorName: t.name,
+              distributorId: `kwp-${t.tier_id}`,
+              totalPrice,
+              ratePerKwp,
+              materialsTotal: t.equipment_total,
+              kwp: realSystemKwp,
+              estimatedGeneration: t.estimated_monthly_generation_kwh,
+              items: kitItems,
+              invName: t.inverter_brand,
+              modCount: t.module_qty,
+              modName: t.module_brand,
+              structuredItems,
+              kitResult: t.kit_result,
+            };
+          });
+        }
+      } catch (err) {
+        this.logger.warn(
+          "Erro ao gerar kits do catálogo real pelo KitGenerationService, usando fallback:",
+          err
+        );
+      }
+    }
+
+    // 2. Fallback de contingência caso não haja produtos ativos no catálogo
+    // Busca marcas preferenciais cadastradas pelo integrador no tenant.settings
+    let preferredModuleBrand = "DAH Solar";
+    let preferredInverterBrand = "Growatt";
+    if (organizationId) {
+      try {
+        const tenant = await this.prisma.tenant.findUnique({
+          where: { id: organizationId },
+          select: { settings: true },
+        });
+        const settings = (tenant?.settings as Record<string, unknown>) || {};
+        if (
+          Array.isArray(settings["preferredModuleBrands"]) &&
+          settings["preferredModuleBrands"].length > 0
+        ) {
+          preferredModuleBrand = String(settings["preferredModuleBrands"][0]);
+        }
+        if (
+          Array.isArray(settings["preferredInverterBrands"]) &&
+          settings["preferredInverterBrands"].length > 0
+        ) {
+          preferredInverterBrand = String(settings["preferredInverterBrands"][0]);
+        }
+      } catch {}
+    }
+
     const modulePowerW = 585;
     const moduleQty = Math.max(4, Math.round((safeKwp * 1000) / modulePowerW));
     const realSystemKwp = Math.round(((moduleQty * modulePowerW) / 1000) * 100) / 100;
-
-    let roofLabel = "Cerâmico";
-    const r = (roofType || "").toLowerCase();
-    if (r.includes("solo") || r.includes("ground") || r === "4") {
-      roofLabel = "Solo";
-    } else if (r.includes("metal") || r.includes("metálic") || r === "3") {
-      roofLabel = "Metálico";
-    } else if (r.includes("laje") || r === "5") {
-      roofLabel = "Laje";
-    } else if (r.includes("fibro") || r === "2" || r === "6") {
-      roofLabel = "Fibrocimento";
-    } else if (r.includes("sem") || r === "7" || r === "none") {
-      roofLabel = "Sem estrutura";
-    }
 
     const invPowerSizes = [3, 3.6, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 75, 100];
     let invPower = 3;
@@ -1821,16 +1923,16 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         distributorName: "Standard",
         distributorId: "kwp-standard",
         materialCostFactor: 0.88,
-        inverterBrand: "Growatt",
-        moduleBrand: "DAH Solar",
+        inverterBrand: preferredInverterBrand || "Growatt",
+        moduleBrand: preferredModuleBrand || "DAH Solar",
       },
       {
         id: "cost_benefit",
         distributorName: "Elite",
         distributorId: "kwp-elite",
         materialCostFactor: 1.0,
-        inverterBrand: "Deye",
-        moduleBrand: "Canadian Solar",
+        inverterBrand: preferredInverterBrand || "Growatt",
+        moduleBrand: preferredModuleBrand || "Canadian Solar",
       },
       {
         id: "premium",
@@ -1843,8 +1945,6 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     ];
 
     const results = tiers.map((cfg) => {
-      // O preço por kWp informado pelo integrador é o PREÇO DE VENDA do kit escolhido.
-      // Valor total = potência (kWp) x preço aplicado — idêntico para qualquer grupo de kit.
       const baseEquipmentRate = ratePerKwp * 0.55;
       const tierEquipmentRate = baseEquipmentRate * cfg.materialCostFactor;
       const totalPrice = Math.round(realSystemKwp * ratePerKwp * 100) / 100;

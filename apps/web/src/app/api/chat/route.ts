@@ -1285,6 +1285,8 @@ export async function POST(req: Request) {
 
     let integratorCompanyName = "EnergivIA";
     let defaultKwpRate = 2800;
+    let userAuthToken = "";
+    let currentOrgId = "";
     try {
       const session = await auth0.getSession();
       if (session) {
@@ -1297,6 +1299,7 @@ export async function POST(req: Request) {
         } catch (e) {
           token = session.idToken || session.accessToken || "";
         }
+        userAuthToken = token;
 
         if (token) {
           const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
@@ -1309,8 +1312,11 @@ export async function POST(req: Request) {
               const currentOrg =
                 meData.organizations.find((o: any) => o.id === meData.currentOrganizationId) ||
                 meData.organizations[0];
-              if (currentOrg && currentOrg.name) {
-                integratorCompanyName = currentOrg.name;
+              if (currentOrg) {
+                currentOrgId = currentOrg.id || "";
+                if (currentOrg.name) {
+                  integratorCompanyName = currentOrg.name;
+                }
                 if (currentOrg.defaultKwpRate) {
                   defaultKwpRate = currentOrg.defaultKwpRate;
                 }
@@ -1381,14 +1387,87 @@ export async function POST(req: Request) {
 
               const rate = Number(args.ratePerKwp) || defaultKwpRate;
 
-              const tiers = generateKwpRateTiers({
-                kwp,
-                ratePerKwp: rate,
-                roofType: args.roofType,
-                monthlyConsumption: Number(args.monthlyConsumption) || undefined,
-                cidade: args.cidade,
-                estado: args.estado,
-              });
+              let tiers: any = null;
+              try {
+                const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
+                const cleanRoof = (args.roofType || "").toLowerCase().trim();
+                let mappedRoof = "ceramic";
+                if (cleanRoof.includes("solo") || cleanRoof.includes("ground"))
+                  mappedRoof = "ground";
+                else if (cleanRoof.includes("metal")) mappedRoof = "metal";
+                else if (cleanRoof.includes("laje")) mappedRoof = "laje";
+                else if (cleanRoof.includes("fibrometal")) mappedRoof = "fibrometal";
+                else if (cleanRoof.includes("fibro")) mappedRoof = "fibromadeira";
+                else if (cleanRoof.includes("sem") || cleanRoof === "none") mappedRoof = "none";
+
+                const reqHeaders: Record<string, string> = { "Content-Type": "application/json" };
+                if (userAuthToken) reqHeaders["Authorization"] = `Bearer ${userAuthToken}`;
+                if (currentOrgId) reqHeaders["x-organization-id"] = currentOrgId;
+
+                const tiersRes = await fetch(`${baseURL}/generate-kit/distributor-tiers`, {
+                  method: "POST",
+                  headers: reqHeaders,
+                  body: JSON.stringify({
+                    system_kw: kwp,
+                    roof_type: mappedRoof,
+                  }),
+                });
+
+                if (tiersRes.ok) {
+                  const data = await tiersRes.json();
+                  if (data && data.tiers && data.tiers.length > 0) {
+                    tiers = data.tiers.map((t: any) => {
+                      const sysKw = t.kit_result?.system_power_kw || kwp;
+                      const totalPrice = Math.round(sysKw * rate);
+                      const modQty = t.module_qty || 4;
+                      const modPower = t.module_power_w || 585;
+                      const invPower = t.inverter_power_kw || 3;
+                      const lines = [
+                        `• Inversor: 1x ${t.inverter_brand} ${invPower}kW (${t.inverter_model || ""})`,
+                        `• Módulos: ${modQty}x ${t.module_brand} ${modPower}W (${t.module_model || ""})`,
+                      ];
+                      if (mappedRoof !== "none") {
+                        lines.push(`• Estrutura: ${args.roofType || "Cerâmica (Colonial)"}`);
+                      }
+                      lines.push(`• Cabos e Conectores: Inclusos`);
+
+                      return {
+                        id: t.tier_id,
+                        name: t.name,
+                        badge: t.badge,
+                        tagline: t.tagline,
+                        totalPrice,
+                        totalPriceFormatted: `R$ ${totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+                        systemKwp: sysKw,
+                        estimatedMonthlyGenerationKwh:
+                          t.estimated_monthly_generation_kwh || Math.round(sysKw * 130),
+                        kitSummaryLines: lines,
+                        structuredItems: t.kit_result?.kit_items || [],
+                        inverterBrand: t.inverter_brand,
+                        moduleBrand: t.module_brand,
+                        moduleQty: modQty,
+                        modulePowerW: modPower,
+                      };
+                    });
+                  }
+                }
+              } catch (tierErr) {
+                console.warn(
+                  "[chat/route.ts] Erro ao buscar tiers reais do backend, usando fallback:",
+                  tierErr
+                );
+              }
+
+              if (!tiers || tiers.length === 0) {
+                tiers = generateKwpRateTiers({
+                  kwp,
+                  ratePerKwp: rate,
+                  roofType: args.roofType,
+                  monthlyConsumption: Number(args.monthlyConsumption) || undefined,
+                  cidade: args.cidade,
+                  estado: args.estado,
+                });
+              }
 
               const formattedOptions = tiers
                 .map((t, idx) => {
