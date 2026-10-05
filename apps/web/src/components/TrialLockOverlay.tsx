@@ -3,8 +3,12 @@
 import React, { useEffect, useState } from "react";
 import { useOrganization } from "./providers/organization-provider";
 import PaymentWrapper from "./PaymentForm";
-import { Rocket, Gem, CheckCircle2, LockKeyhole, LogOut } from "lucide-react";
-import { normalizePlanFeatures } from "@energivia/shared-types";
+import { Rocket, Gem, CheckCircle2, XCircle, LockKeyhole, LogOut } from "lucide-react";
+import {
+  type PlanFeatureItem,
+  normalizePlanFeatures,
+  normalizeFeatureItem,
+} from "@energivia/shared-types";
 
 interface Plan {
   id: string;
@@ -251,28 +255,39 @@ export function TrialLockOverlay() {
                       <ul className="space-y-2.5">
                         {(() => {
                           const config = normalizePlanFeatures(plan?.features, plan?.name);
-                          const allFeats = config.bulletPoints || [];
-                          const feats = allFeats.slice(0, 5);
+                          const allFeats: PlanFeatureItem[] = (
+                            config.featureItems ||
+                            config.bulletPoints ||
+                            []
+                          ).map(normalizeFeatureItem);
+                          const feats = allFeats.slice(0, 7);
 
                           if (feats.length > 0) {
-                            return feats.map((feat: unknown, idx: number) => {
-                              const featStr = String(feat || "").trim();
-                              if (!featStr) return null;
+                            return feats.map((feat, idx) => {
+                              if (!feat.text) return null;
                               return (
                                 <li
                                   key={idx}
-                                  className="flex items-start gap-2 text-xs text-gray-300 leading-tight"
+                                  className={`flex items-start gap-2 text-xs leading-tight ${
+                                    feat.included
+                                      ? "text-gray-200"
+                                      : "text-gray-500 line-through decoration-neutral-600"
+                                  }`}
                                 >
-                                  <CheckCircle2
-                                    className={`w-4 h-4 shrink-0 mt-0.5 ${
-                                      isPlus
-                                        ? "text-purple-400"
-                                        : isHighlighted
-                                          ? "text-yellow-500"
-                                          : "text-emerald-500"
-                                    }`}
-                                  />
-                                  <span>{featStr}</span>
+                                  {feat.included ? (
+                                    <CheckCircle2
+                                      className={`w-4 h-4 shrink-0 mt-0.5 ${
+                                        isPlus
+                                          ? "text-purple-400"
+                                          : isHighlighted
+                                            ? "text-yellow-500"
+                                            : "text-emerald-500"
+                                      }`}
+                                    />
+                                  ) : (
+                                    <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-neutral-500" />
+                                  )}
+                                  <span>{feat.text}</span>
                                 </li>
                               );
                             });

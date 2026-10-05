@@ -9,6 +9,7 @@ import {
   Edit2,
   Trash2,
   CheckCircle2,
+  XCircle,
   AlertTriangle,
   Info,
   Boxes,
@@ -20,6 +21,7 @@ import {
   TrendingUp,
   X,
   RefreshCw,
+  RotateCcw,
   Clock,
   ShieldCheck,
   Sliders,
@@ -30,7 +32,12 @@ import {
   Pencil,
 } from "lucide-react";
 
-import { type PlanFeaturesConfig, normalizePlanFeatures } from "@energivia/shared-types";
+import {
+  type PlanFeaturesConfig,
+  type PlanFeatureItem,
+  normalizePlanFeatures,
+  normalizeFeatureItem,
+} from "@energivia/shared-types";
 import { useOrganization } from "@/components/providers/organization-provider";
 
 interface Plan {
@@ -72,24 +79,23 @@ interface Coupon {
   allowedPlanNamesDescription?: string;
 }
 
-const PREDEFINED_BENEFITS = [
-  "Até 50 propostas comerciais/mês",
-  "Propostas comerciais ilimitadas",
-  "Dimensionamento solar por IA (HSP)",
-  "OCR avançado de faturas de energia",
-  "Assistente WhatsApp IA integrado (1 número)",
-  "Múltiplos Bots de WhatsApp com IA",
-  "CRM Solar Completo & Pipeline",
-  "Templates padrão + 1 template personalizado",
-  "Criação e edição de templates ilimitada",
-  "Alertas em tempo real por Email e WhatsApp quando o cliente abre a proposta",
-  "Radar Solar ANEEL Completo (prospecção e lista)",
-  "Geração de PDF com logotipo próprio",
-  "Suporte prioritário via WhatsApp",
-  "Até 2 usuários na equipe (1 convidado)",
-  "Até 5 usuários na equipe",
-  "Usuários ilimitados na equipe",
-  "Whitelabel completo (Sua marca)",
+const PREDEFINED_BENEFITS: PlanFeatureItem[] = [
+  { text: "Até 50 propostas comerciais com IA por mês", included: true },
+  { text: "Até 120 propostas comerciais com IA por mês", included: true },
+  { text: "Propostas comerciais com IA ilimitadas", included: true },
+  { text: "2 Usuários na equipe (1 convidado)", included: true },
+  { text: "Até 5 usuários na equipe", included: true },
+  { text: "Usuários e vendedores ilimitados na equipe", included: true },
+  { text: "1 Número de WhatsApp com atendimento IA", included: true },
+  { text: "Até 2 números de WhatsApp com IA 24/7", included: true },
+  { text: "Múltiplos números de WhatsApp com IA", included: true },
+  { text: "1 Template de proposta personalizado", included: true },
+  { text: "Criação de templates personalizados ilimitados", included: true },
+  { text: "CRM Solar e funil de vendas", included: true },
+  { text: "CRM Solar com histórico e follow-up", included: true },
+  { text: "Radar Solar ANEEL Integrado na sua região", included: true },
+  { text: "Radar Solar ANEEL Nacional Ilimitado", included: true },
+  { text: "Alertas em tempo real quando o cliente abre a proposta", included: true },
 ];
 
 export default function AdminPlanosPage() {
@@ -118,8 +124,9 @@ export default function AdminPlanosPage() {
     description: "",
     price: "",
     interval: "month",
-    features: [] as string[],
+    features: [] as PlanFeatureItem[],
     newFeatureInput: "",
+    newFeatureIncluded: true,
     active: true,
     // Limites quantitativos
     maxProposalsPerMonth: "50",
@@ -286,15 +293,16 @@ export default function AdminPlanosPage() {
       price: "",
       interval: "month",
       features: [
-        "Até 50 propostas comerciais com IA por mês",
-        "2 Usuários na equipe (1 convidado)",
-        "1 Número de WhatsApp com atendimento IA integrado",
-        "1 Template de proposta personalizado (+ modelos padrão)",
-        "Dimensionamento solar fotovoltaico inteligente (HSP)",
-        "Leitura automática de faturas de energia (OCR IA)",
-        "CRM Solar completo e gestão de funil de vendas",
+        { text: "Até 50 propostas comerciais com IA por mês", included: true },
+        { text: "2 Usuários na equipe (1 convidado)", included: true },
+        { text: "1 Número de WhatsApp com atendimento IA", included: true },
+        { text: "1 Template de proposta personalizado", included: true },
+        { text: "CRM Solar e funil de vendas", included: true },
+        { text: "Radar Solar ANEEL (Prospecção ativa na sua região)", included: false },
+        { text: "Alertas quando o cliente abre a proposta", included: false },
       ],
       newFeatureInput: "",
+      newFeatureIncluded: true,
       active: true,
       maxProposalsPerMonth: "50",
       maxTeamMembers: "2",
@@ -315,15 +323,20 @@ export default function AdminPlanosPage() {
     setDraggedFeatureIndex(null);
     setDragOverFeatureIndex(null);
     const config = plan.featuresConfig || normalizePlanFeatures(plan.features, plan.name);
+    const parsedFeatures: PlanFeatureItem[] = (
+      config.featureItems ||
+      config.bulletPoints ||
+      []
+    ).map(normalizeFeatureItem);
 
     setPlanForm({
       name: plan.name,
       description: plan.description || "",
       price: String(plan.price),
       interval: plan.interval || "month",
-      features:
-        config.bulletPoints && config.bulletPoints.length > 0 ? [...config.bulletPoints] : [],
+      features: parsedFeatures,
       newFeatureInput: "",
+      newFeatureIncluded: true,
       active: plan.active !== false,
       maxProposalsPerMonth:
         config.maxProposalsPerMonth !== null && config.maxProposalsPerMonth !== undefined
@@ -349,17 +362,32 @@ export default function AdminPlanosPage() {
     setIsPlanModalOpen(true);
   };
 
-  const handleAddFeature = (feat: string) => {
-    if (!feat.trim()) return;
-    if (!planForm.features.includes(feat.trim())) {
-      setPlanForm({
-        ...planForm,
-        features: [...planForm.features, feat.trim()],
+  const handleAddFeature = (text: string, included = true) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const exists = planForm.features.some((f) => f.text.toLowerCase() === trimmed.toLowerCase());
+    if (!exists) {
+      setPlanForm((prev) => ({
+        ...prev,
+        features: [...prev.features, { text: trimmed, included }],
         newFeatureInput: "",
-      });
+      }));
     } else {
-      setPlanForm({ ...planForm, newFeatureInput: "" });
+      setPlanForm((prev) => ({ ...prev, newFeatureInput: "" }));
     }
+  };
+
+  const handleToggleFeatureIncluded = (index: number) => {
+    setPlanForm((prev) => {
+      const updated = [...prev.features];
+      if (updated[index]) {
+        updated[index] = {
+          ...updated[index],
+          included: !updated[index].included,
+        };
+      }
+      return { ...prev, features: updated };
+    });
   };
 
   const handleRemoveFeature = (index: number) => {
@@ -367,15 +395,15 @@ export default function AdminPlanosPage() {
       setEditingFeatureIndex(null);
       setEditingFeatureText("");
     }
-    setPlanForm({
-      ...planForm,
-      features: planForm.features.filter((_, i) => i !== index),
-    });
+    setPlanForm((prev) => ({
+      ...prev,
+      features: prev.features.filter((_, i) => i !== index),
+    }));
   };
 
   const handleStartEditFeature = (index: number) => {
     setEditingFeatureIndex(index);
-    setEditingFeatureText(planForm.features[index] || "");
+    setEditingFeatureText(planForm.features[index]?.text || "");
   };
 
   const handleSaveEditFeature = (index: number) => {
@@ -384,9 +412,13 @@ export default function AdminPlanosPage() {
       handleRemoveFeature(index);
       return;
     }
-    const updated = [...planForm.features];
-    updated[index] = trimmed;
-    setPlanForm({ ...planForm, features: updated });
+    setPlanForm((prev) => {
+      const updated = [...prev.features];
+      if (updated[index]) {
+        updated[index] = { ...updated[index], text: trimmed };
+      }
+      return { ...prev, features: updated };
+    });
     setEditingFeatureIndex(null);
     setEditingFeatureText("");
   };
@@ -406,10 +438,12 @@ export default function AdminPlanosPage() {
     ) {
       return;
     }
-    const updated = [...planForm.features];
-    const [moved] = updated.splice(fromIndex, 1);
-    updated.splice(toIndex, 0, moved);
-    setPlanForm({ ...planForm, features: updated });
+    setPlanForm((prev) => {
+      const updated = [...prev.features];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return { ...prev, features: updated };
+    });
 
     if (editingFeatureIndex === fromIndex) {
       setEditingFeatureIndex(toIndex);
@@ -422,6 +456,44 @@ export default function AdminPlanosPage() {
     }
   };
 
+  const handleResetToRecommendedFeatures = () => {
+    const nameLower = (planForm.name || editingPlan?.name || "").toLowerCase();
+    let templateDefaults: PlanFeatureItem[] = [];
+    if (nameLower.includes("plus") || nameLower.includes("enterprise")) {
+      templateDefaults = [
+        { text: "Propostas comerciais com IA ilimitadas", included: true },
+        { text: "Usuários e vendedores ilimitados na equipe", included: true },
+        { text: "Múltiplos números de WhatsApp com IA", included: true },
+        { text: "Criação de templates personalizados ilimitados", included: true },
+        { text: "CRM Solar completo com histórico e follow-up", included: true },
+        { text: "Radar Solar ANEEL Nacional Ilimitado", included: true },
+        { text: "Alertas instantâneos e rastreamento de abertura", included: true },
+      ];
+    } else if (nameLower.includes("pro") || nameLower.includes("profissional")) {
+      templateDefaults = [
+        { text: "Até 120 propostas comerciais com IA por mês", included: true },
+        { text: "Até 5 usuários na equipe", included: true },
+        { text: "Até 2 números de WhatsApp com IA 24/7", included: true },
+        { text: "Criação de templates personalizados ilimitados", included: true },
+        { text: "CRM Solar com histórico e follow-up", included: true },
+        { text: "Radar Solar ANEEL Integrado na sua região", included: true },
+        { text: "Alertas em tempo real quando o cliente abre a proposta", included: true },
+      ];
+    } else {
+      templateDefaults = [
+        { text: "Até 50 propostas comerciais com IA por mês", included: true },
+        { text: "2 Usuários na equipe (1 convidado)", included: true },
+        { text: "1 Número de WhatsApp com atendimento IA", included: true },
+        { text: "1 Template de proposta personalizado", included: true },
+        { text: "CRM Solar e funil de vendas", included: true },
+        { text: "Radar Solar ANEEL (Prospecção ativa na sua região)", included: false },
+        { text: "Alertas quando o cliente abre a proposta", included: false },
+      ];
+    }
+    setPlanForm((prev) => ({ ...prev, features: templateDefaults }));
+    showToast("Recursos recomendados aplicados ao formulário!");
+  };
+
   const handleSavePlan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!planForm.name.trim() || !planForm.price) {
@@ -432,15 +504,23 @@ export default function AdminPlanosPage() {
     setPlanSubmitting(true);
     try {
       // Garante que se o usuário estiver editando um item em linha ou digitou no input sem clicar em adicionar, o texto seja salvo
-      let featuresToSave = [...planForm.features];
+      let featuresToSave: PlanFeatureItem[] = [...planForm.features];
       if (editingFeatureIndex !== null && editingFeatureText.trim()) {
-        featuresToSave[editingFeatureIndex] = editingFeatureText.trim();
+        featuresToSave[editingFeatureIndex] = {
+          ...featuresToSave[editingFeatureIndex],
+          text: editingFeatureText.trim(),
+        };
       }
       if (
         planForm.newFeatureInput.trim() &&
-        !featuresToSave.includes(planForm.newFeatureInput.trim())
+        !featuresToSave.some(
+          (f) => f.text.toLowerCase() === planForm.newFeatureInput.trim().toLowerCase()
+        )
       ) {
-        featuresToSave.push(planForm.newFeatureInput.trim());
+        featuresToSave.push({
+          text: planForm.newFeatureInput.trim(),
+          included: planForm.newFeatureIncluded,
+        });
       }
 
       const featuresConfig: PlanFeaturesConfig = {
@@ -459,6 +539,7 @@ export default function AdminPlanosPage() {
         hasRadarSolar: planForm.hasRadarSolar,
         hasCustomBranding: planForm.hasCustomBranding,
         bulletPoints: featuresToSave,
+        featureItems: featuresToSave,
       };
 
       const payload = {
@@ -1028,15 +1109,13 @@ export default function AdminPlanosPage() {
                         typeof plan.price === "number"
                           ? plan.price
                           : parseFloat(String(plan.price) || "0");
-                      const rawFeats = plan.features;
-                      const featuresList: string[] = Array.isArray(rawFeats)
-                        ? rawFeats
-                        : typeof rawFeats === "string"
-                          ? rawFeats
-                              .split(",")
-                              .map((s) => s.trim())
-                              .filter(Boolean)
-                          : [];
+                      const config =
+                        plan.featuresConfig || normalizePlanFeatures(plan.features, plan.name);
+                      const featuresList: PlanFeatureItem[] = (
+                        config.featureItems ||
+                        config.bulletPoints ||
+                        []
+                      ).map(normalizeFeatureItem);
 
                       return (
                         <tr
@@ -1100,9 +1179,18 @@ export default function AdminPlanosPage() {
                                 featuresList.map((feat, idx) => (
                                   <span
                                     key={idx}
-                                    className="px-2.5 py-0.5 rounded-full bg-[var(--color-muted)] text-[var(--color-foreground)] border border-[var(--color-border)] text-xs"
+                                    className={`px-2.5 py-0.5 rounded-full border text-xs inline-flex items-center gap-1 ${
+                                      feat.included
+                                        ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+                                        : "bg-rose-500/10 text-rose-300 border-rose-500/20 opacity-75"
+                                    }`}
                                   >
-                                    {feat}
+                                    {feat.included ? (
+                                      <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                                    ) : (
+                                      <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                                    )}
+                                    <span className="truncate max-w-[200px]">{feat.text}</span>
                                   </span>
                                 ))
                               ) : (
@@ -1794,15 +1882,55 @@ export default function AdminPlanosPage() {
               {/* BENEFITS LIST BUILDER */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-[var(--color-foreground)] uppercase tracking-wider">
-                    Benefícios & Funcionalidades Inclusas ({planForm.features.length})
-                  </label>
-                  <span className="text-[11px] text-[var(--color-muted-foreground)]">
-                    Arraste para reordenar ou clique no lápis para editar
-                  </span>
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--color-foreground)] uppercase tracking-wider">
+                      Recursos & Funcionalidades ({planForm.features.length})
+                    </label>
+                    <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                      Alterne entre Incluso (✓) e Não incluso (✕), arraste para ordenar ou edite o
+                      texto
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResetToRecommendedFeatures}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--color-muted)] hover:bg-[var(--color-muted)]/80 text-[11px] font-semibold text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] border border-[var(--color-border)] transition"
+                    title="Preencher com os 7 recursos recomendados deste plano"
+                  >
+                    <RotateCcw className="w-3 h-3 text-[var(--color-primary)]" />
+                    Padrão Recomendado
+                  </button>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPlanForm((prev) => ({
+                        ...prev,
+                        newFeatureIncluded: !prev.newFeatureIncluded,
+                      }))
+                    }
+                    className={`px-3 py-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition border shrink-0 ${
+                      planForm.newFeatureIncluded
+                        ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
+                        : "bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
+                    }`}
+                    title="Clique para alternar o status do novo item"
+                  >
+                    {planForm.newFeatureIncluded ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>✓ Incluso</span>
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>✕ Não incluso</span>
+                      </>
+                    )}
+                  </button>
+
                   <input
                     type="text"
                     placeholder="Digite um novo benefício e clique em Adicionar"
@@ -1811,25 +1939,27 @@ export default function AdminPlanosPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
-                        handleAddFeature(planForm.newFeatureInput);
+                        handleAddFeature(planForm.newFeatureInput, planForm.newFeatureIncluded);
                       }
                     }}
-                    className="flex-1 bg-[var(--color-background)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded-xl p-3 text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition"
+                    className="flex-1 bg-[var(--color-background)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition"
                   />
                   <button
                     type="button"
-                    onClick={() => handleAddFeature(planForm.newFeatureInput)}
-                    className="px-4 py-3 rounded-xl bg-[var(--color-muted)] hover:bg-[var(--color-primary)] hover:text-white text-[var(--color-foreground)] font-bold text-sm transition shrink-0"
+                    onClick={() =>
+                      handleAddFeature(planForm.newFeatureInput, planForm.newFeatureIncluded)
+                    }
+                    className="px-4 py-2.5 rounded-xl bg-[var(--color-muted)] hover:bg-[var(--color-primary)] hover:text-white text-[var(--color-foreground)] font-bold text-xs transition shrink-0"
                   >
                     + Adicionar
                   </button>
                 </div>
 
                 {/* Reorderable & Editable Benefits List */}
-                <div className="space-y-2 p-3 bg-[var(--color-background)] rounded-2xl border border-[var(--color-border)] max-h-60 overflow-y-auto">
+                <div className="space-y-2 p-3 bg-[var(--color-background)] rounded-2xl border border-[var(--color-border)] max-h-64 overflow-y-auto">
                   {planForm.features.length === 0 ? (
                     <div className="py-6 text-center text-xs text-[var(--color-muted-foreground)]">
-                      Nenhum benefício adicionado. Adicione acima ou selecione as sugestões rápidas
+                      Nenhum recurso adicionado. Adicione acima ou selecione as sugestões rápidas
                       abaixo.
                     </div>
                   ) : (
@@ -1869,7 +1999,7 @@ export default function AdminPlanosPage() {
                             setDraggedFeatureIndex(null);
                             setDragOverFeatureIndex(null);
                           }}
-                          className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all duration-150 ${
+                          className={`flex items-center gap-2 p-2 rounded-xl border transition-all duration-150 ${
                             isDragging
                               ? "opacity-40 border-dashed border-[var(--color-primary)] bg-[var(--color-card)]"
                               : isDragOver
@@ -1896,6 +2026,33 @@ export default function AdminPlanosPage() {
                             #{idx + 1}
                           </span>
 
+                          {/* Toggle Included Badge Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleFeatureIncluded(idx);
+                            }}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 transition border shrink-0 ${
+                              feat.included
+                                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
+                                : "bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
+                            }`}
+                            title="Clique para alternar entre Incluso (✓) e Não incluso (✕)"
+                          >
+                            {feat.included ? (
+                              <>
+                                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                <span>Incluso</span>
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="w-3 h-3 text-rose-400" />
+                                <span>Não incluso</span>
+                              </>
+                            )}
+                          </button>
+
                           {/* Item Content: View vs Edit */}
                           {isEditing ? (
                             <div className="flex-1 flex items-center gap-2 min-w-0">
@@ -1913,12 +2070,12 @@ export default function AdminPlanosPage() {
                                     handleCancelEditFeature();
                                   }
                                 }}
-                                className="flex-1 bg-[var(--color-background)] text-[var(--color-foreground)] border border-[var(--color-primary)] rounded-lg px-2.5 py-1.5 text-xs font-medium outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                                className="flex-1 bg-[var(--color-background)] text-[var(--color-foreground)] border border-[var(--color-primary)] rounded-lg px-2.5 py-1 text-xs font-medium outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
                               />
                               <button
                                 type="button"
                                 onClick={() => handleSaveEditFeature(idx)}
-                                className="p-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold transition shrink-0"
+                                className="p-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold transition shrink-0"
                                 title="Salvar alteração (Enter)"
                               >
                                 <Check className="w-3.5 h-3.5" />
@@ -1926,7 +2083,7 @@ export default function AdminPlanosPage() {
                               <button
                                 type="button"
                                 onClick={handleCancelEditFeature}
-                                className="p-1.5 rounded-lg bg-[var(--color-muted)] hover:bg-[var(--color-muted)]/80 text-[var(--color-foreground)] transition shrink-0"
+                                className="p-1 rounded-lg bg-[var(--color-muted)] hover:bg-[var(--color-muted)]/80 text-[var(--color-foreground)] transition shrink-0"
                                 title="Cancelar (Esc)"
                               >
                                 <X className="w-3.5 h-3.5" />
@@ -1934,13 +2091,18 @@ export default function AdminPlanosPage() {
                             </div>
                           ) : (
                             <div
-                              className="flex-1 flex items-center gap-2 min-w-0 cursor-pointer"
+                              className="flex-1 min-w-0 cursor-pointer py-1"
                               onClick={() => handleStartEditFeature(idx)}
-                              title="Clique para editar este item"
+                              title="Clique para editar o texto deste item"
                             >
-                              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                              <span className="text-xs font-medium text-[var(--color-foreground)] truncate">
-                                {feat}
+                              <span
+                                className={`text-xs font-medium truncate block ${
+                                  feat.included
+                                    ? "text-[var(--color-foreground)]"
+                                    : "text-[var(--color-muted-foreground)] opacity-75 line-through decoration-rose-500/40"
+                                }`}
+                              >
+                                {feat.text}
                               </span>
                             </div>
                           )}
@@ -2000,21 +2162,24 @@ export default function AdminPlanosPage() {
                 {/* Quick suggestions */}
                 <div className="pt-1">
                   <span className="text-[11px] font-semibold text-[var(--color-muted-foreground)]">
-                    Sugestões rápidas (clique para incluir):
+                    Sugestões rápidas da plataforma (clique para incluir):
                   </span>
-                  <div className="flex flex-wrap gap-1.5 mt-1.5 max-h-20 overflow-y-auto">
-                    {PREDEFINED_BENEFITS.filter((b) => !planForm.features.includes(b)).map(
-                      (sug, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => handleAddFeature(sug)}
-                          className="text-[11px] px-2.5 py-1 rounded-lg bg-[var(--color-muted)]/50 hover:bg-[var(--color-muted)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] border border-[var(--color-border)] transition"
-                        >
-                          + {sug}
-                        </button>
-                      )
-                    )}
+                  <div className="flex flex-wrap gap-1.5 mt-1.5 max-h-24 overflow-y-auto">
+                    {PREDEFINED_BENEFITS.filter(
+                      (b) =>
+                        !planForm.features.some(
+                          (f) => f.text.toLowerCase() === b.text.toLowerCase()
+                        )
+                    ).map((sug, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleAddFeature(sug.text, sug.included)}
+                        className="text-[11px] px-2.5 py-1 rounded-lg bg-[var(--color-muted)]/50 hover:bg-[var(--color-muted)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] border border-[var(--color-border)] transition"
+                      >
+                        + {sug.text}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

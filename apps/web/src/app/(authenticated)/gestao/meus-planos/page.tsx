@@ -23,7 +23,11 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-import { normalizePlanFeatures } from "@energivia/shared-types";
+import {
+  type PlanFeatureItem,
+  normalizePlanFeatures,
+  normalizeFeatureItem,
+} from "@energivia/shared-types";
 import { getTrialDaysLeft } from "@/lib/business-days";
 
 interface Plan {
@@ -58,14 +62,19 @@ function parseFeatures(
   isBasic?: boolean,
   isPro?: boolean,
   isPlus?: boolean
-): string[] {
+): PlanFeatureItem[] {
   const effectiveName =
     planName || (isPlus ? "Plus" : isPro ? "Pro" : isBasic ? "Essencial" : "Essencial");
   const config = normalizePlanFeatures(features, effectiveName);
-  if (config.bulletPoints && config.bulletPoints.length > 0) {
-    return config.bulletPoints;
+  const items = (config.featureItems || config.bulletPoints || []).map(normalizeFeatureItem);
+  if (items.length > 0) {
+    return items;
   }
-  return ["Acesso total à plataforma", "Geração comercial com IA", "Suporte dedicado"];
+  return [
+    { text: "Acesso total à plataforma", included: true },
+    { text: "Geração comercial com IA", included: true },
+    { text: "Suporte dedicado", included: true },
+  ];
 }
 
 function MeusPlanosContent() {
@@ -593,24 +602,40 @@ function MeusPlanosContent() {
                   </div>
 
                   <div className="p-8 flex-grow flex flex-col justify-between">
-                    <ul className="space-y-4 mb-8">
+                    <ul className="space-y-3.5 mb-8">
                       {feats.map((feat, idx) => (
                         <li
                           key={idx}
-                          className="flex items-start gap-3 text-sm text-[var(--color-foreground)]"
+                          className={`flex items-start gap-3 text-sm transition-colors ${
+                            feat.included
+                              ? "text-[var(--color-foreground)]"
+                              : "text-[var(--color-muted-foreground)] opacity-75"
+                          }`}
                         >
-                          <CheckCircle2
-                            className={`w-5 h-5 shrink-0 mt-0.5 ${
-                              isCurrentPlan
-                                ? "text-emerald-400"
-                                : isPlus
-                                  ? "text-purple-400"
-                                  : isHighlighted
-                                    ? "text-yellow-400"
-                                    : "text-emerald-500"
+                          {feat.included ? (
+                            <CheckCircle2
+                              className={`w-5 h-5 shrink-0 mt-0.5 ${
+                                isCurrentPlan
+                                  ? "text-emerald-400"
+                                  : isPlus
+                                    ? "text-purple-400"
+                                    : isHighlighted
+                                      ? "text-yellow-400"
+                                      : "text-emerald-500"
+                              }`}
+                            />
+                          ) : (
+                            <XCircle className="w-5 h-5 shrink-0 mt-0.5 text-neutral-500/80 dark:text-neutral-400/70" />
+                          )}
+                          <span
+                            className={`leading-tight ${
+                              feat.included
+                                ? "font-normal"
+                                : "font-normal text-[var(--color-muted-foreground)] line-through decoration-neutral-500/40"
                             }`}
-                          />
-                          <span className="leading-tight">{feat}</span>
+                          >
+                            {feat.text}
+                          </span>
                         </li>
                       ))}
                     </ul>

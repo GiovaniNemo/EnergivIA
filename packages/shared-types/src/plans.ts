@@ -1,7 +1,12 @@
+export interface PlanFeatureItem {
+  text: string;
+  included: boolean;
+}
+
 export interface PlanFeaturesConfig {
   /**
    * Limite de propostas comerciais geradas por mês (null ou 0 = ilimitado).
-   * Free / Start = 20 total; Essencial = 50/mês; Pro/Plus = ilimitado.
+   * Free / Start = 20 total; Essencial = 50/mês; Pro = 120/mês; Plus = ilimitado.
    */
   maxProposalsPerMonth?: number | null;
 
@@ -19,7 +24,7 @@ export interface PlanFeaturesConfig {
 
   /**
    * Limite de números de WhatsApp conectados para bot e cotações (null = ilimitado).
-   * Free / Start = 0; Essencial = 1; Pro = 3; Plus = ilimitado.
+   * Free / Start = 0; Essencial = 1; Pro = 2; Plus = ilimitado.
    */
   maxWhatsappNumbers?: number | null;
 
@@ -36,19 +41,51 @@ export interface PlanFeaturesConfig {
 
   /**
    * Acesso completo ao Radar Solar ANEEL (lista, tabela, conversão de vizinhança).
-   * Free / Start e Essencial = false (modo demo); Pro e Plus = true.
+   * Free / Start e Essencial = false; Pro e Plus = true.
    */
   hasRadarSolar: boolean;
 
   /**
-   * Personalização de marca / Whitelabel.
+   * Personalização de marca / Logotipo da empresa na proposta.
    */
   hasCustomBranding?: boolean;
 
   /**
-   * Lista de benefícios em texto formatado para exibição nos cards de preços.
+   * Lista de benefícios estruturados (texto + se está incluso ou não com X).
    */
-  bulletPoints?: string[];
+  bulletPoints?: (string | PlanFeatureItem)[];
+
+  /**
+   * Versão garantidamente estruturada de bulletPoints.
+   */
+  featureItems?: PlanFeatureItem[];
+}
+
+export function normalizeFeatureItem(item: unknown): PlanFeatureItem {
+  if (typeof item === "object" && item !== null && "text" in item) {
+    const raw = item as { text?: unknown; included?: unknown };
+    return {
+      text: String(raw.text || "").trim(),
+      included: raw.included !== false,
+    };
+  }
+  const str = String(item || "").trim();
+  if (
+    str.startsWith("[x] ") ||
+    str.startsWith("[X] ") ||
+    str.startsWith("[-] ") ||
+    str.startsWith("(x) ") ||
+    str.startsWith("(X) ")
+  ) {
+    return {
+      text: str.slice(4).trim(),
+      included: false,
+    };
+  }
+  return {
+    text: str,
+    included: true,
+  };
 }
 
 export const DEFAULT_TRIAL_PLAN_FEATURES: PlanFeaturesConfig = {
@@ -61,13 +98,13 @@ export const DEFAULT_TRIAL_PLAN_FEATURES: PlanFeaturesConfig = {
   hasRadarSolar: false,
   hasCustomBranding: false,
   bulletPoints: [
-    "Até 20 propostas comerciais no período de teste (5 dias)",
-    "1 Usuário / Vendedor",
-    "Dimensionamento fotovoltaico inteligente (HSP)",
-    "Leitura automática de faturas de energia (OCR IA)",
-    "Modelos oficiais padrão EnergivIA",
-    "CRM Solar & Funil de Negociações básico",
-    "Radar Solar ANEEL (Demonstração)",
+    { text: "Até 20 propostas comerciais no período de teste", included: true },
+    { text: "1 Usuário na equipe", included: true },
+    { text: "1 Número de WhatsApp com atendimento IA", included: false },
+    { text: "1 Template de proposta personalizado", included: false },
+    { text: "CRM Solar e funil de vendas", included: true },
+    { text: "Radar Solar ANEEL (Prospecção ativa)", included: false },
+    { text: "Alertas quando o cliente abre a proposta", included: false },
   ],
 };
 
@@ -81,39 +118,33 @@ export const DEFAULT_ESSENCIAL_PLAN_FEATURES: PlanFeaturesConfig = {
   hasRadarSolar: false,
   hasCustomBranding: false,
   bulletPoints: [
-    "Até 50 propostas comerciais com IA por mês",
-    "2 Usuários na equipe (1 convidado)",
-    "1 Número de WhatsApp com atendimento IA integrado",
-    "1 Template de proposta personalizado (+ modelos padrão)",
-    "Dimensionamento solar fotovoltaico inteligente (HSP)",
-    "Leitura automática de faturas de energia (OCR IA)",
-    "CRM Solar completo e gestão de funil de vendas",
-    "Geração de PDF e proposta online com logotipo próprio",
-    "Cálculo financeiro completo (Payback, VPL, TIR e Economia)",
-    "Suporte via e-mail e chat",
+    { text: "Até 50 propostas comerciais com IA por mês", included: true },
+    { text: "2 Usuários na equipe (1 convidado)", included: true },
+    { text: "1 Número de WhatsApp com atendimento IA", included: true },
+    { text: "1 Template de proposta personalizado", included: true },
+    { text: "CRM Solar e funil de vendas", included: true },
+    { text: "Radar Solar ANEEL (Prospecção ativa na sua região)", included: false },
+    { text: "Alertas quando o cliente abre a proposta", included: false },
   ],
 };
 
 export const DEFAULT_PRO_PLAN_FEATURES: PlanFeaturesConfig = {
-  maxProposalsPerMonth: null, // ilimitado
+  maxProposalsPerMonth: 120,
   maxTeamMembers: 5,
   maxCustomTemplates: null, // ilimitado
-  maxWhatsappNumbers: 3,
+  maxWhatsappNumbers: 2,
   hasProposalViewAlerts: true,
   hasWhatsappBot: true,
   hasRadarSolar: true,
   hasCustomBranding: true,
   bulletPoints: [
-    "Propostas comerciais com IA ilimitadas",
-    "Radar Solar ANEEL Integrado (Prospecção ativa na sua região)",
-    "Alertas em tempo real (WhatsApp e Email) quando o cliente abre a proposta",
-    "Até 5 usuários / vendedores na equipe",
-    "Até 3 números de WhatsApp com IA 24/7",
-    "Criação de templates personalizados ilimitados",
-    "Simulador avançado de financiamentos bancários (BV, Santander, Solfácil)",
-    "Automação de follow-up e histórico de negociações",
-    "Leitura de faturas e dimensionamento ilimitados",
-    "Suporte prioritário via WhatsApp",
+    { text: "Até 120 propostas comerciais com IA por mês", included: true },
+    { text: "Até 5 usuários na equipe", included: true },
+    { text: "Até 2 números de WhatsApp com IA 24/7", included: true },
+    { text: "Criação de templates personalizados ilimitados", included: true },
+    { text: "CRM Solar com histórico e follow-up", included: true },
+    { text: "Radar Solar ANEEL Integrado na sua região", included: true },
+    { text: "Alertas em tempo real quando o cliente abre a proposta", included: true },
   ],
 };
 
@@ -127,16 +158,13 @@ export const DEFAULT_PLUS_PLAN_FEATURES: PlanFeaturesConfig = {
   hasRadarSolar: true,
   hasCustomBranding: true,
   bulletPoints: [
-    "Radar Solar ANEEL Nacional Ilimitado (Filtros avançados e exportação)",
-    "Whitelabel Completo (Domínio próprio, marca e identidade visual 100% suas)",
-    "Usuários e vendedores ilimitados na equipe",
-    "Múltiplos números de WhatsApp com IA multiatendimento",
-    "Propostas comerciais e dimensionamentos solares ilimitados",
-    "Templates e layouts de proposta exclusivos de alta conversão",
-    "Alertas instantâneos e rastreamento avançado de abertura de propostas",
-    "Gestão de metas e comissões da equipe comercial",
-    "Acesso à API de integrações e Webhooks",
-    "Gerente de contas dedicado e suporte VIP com SLA prioritário",
+    { text: "Propostas comerciais com IA ilimitadas", included: true },
+    { text: "Usuários e vendedores ilimitados na equipe", included: true },
+    { text: "Múltiplos números de WhatsApp com IA", included: true },
+    { text: "Criação de templates personalizados ilimitados", included: true },
+    { text: "CRM Solar completo com histórico e follow-up", included: true },
+    { text: "Radar Solar ANEEL Nacional Ilimitado", included: true },
+    { text: "Alertas instantâneos e rastreamento de abertura", included: true },
   ],
 };
 
@@ -168,8 +196,14 @@ export function normalizePlanFeatures(
     baseDefaults = DEFAULT_ESSENCIAL_PLAN_FEATURES;
   }
 
+  const defaultItems = (baseDefaults.bulletPoints || []).map(normalizeFeatureItem);
+
   if (!rawFeatures) {
-    return { ...baseDefaults };
+    return {
+      ...baseDefaults,
+      bulletPoints: defaultItems,
+      featureItems: defaultItems,
+    };
   }
 
   let parsed: Record<string, unknown> | null = null;
@@ -181,17 +215,22 @@ export function normalizePlanFeatures(
       const items = rawFeatures
         .split(",")
         .map((s) => s.trim())
-        .filter(Boolean);
+        .filter(Boolean)
+        .map(normalizeFeatureItem);
+      const finalItems = items.length > 0 ? items : defaultItems;
       return {
         ...baseDefaults,
-        bulletPoints: items.length > 0 ? items : baseDefaults.bulletPoints,
+        bulletPoints: finalItems,
+        featureItems: finalItems,
       };
     }
   } else if (typeof rawFeatures === "object" && rawFeatures !== null) {
     if (Array.isArray(rawFeatures)) {
+      const items = rawFeatures.map(normalizeFeatureItem);
       return {
         ...baseDefaults,
-        bulletPoints: rawFeatures.map(String).filter(Boolean),
+        bulletPoints: items,
+        featureItems: items,
       };
     }
     parsed = rawFeatures as Record<string, unknown>;
@@ -247,9 +286,11 @@ export function normalizePlanFeatures(
         ? Boolean(parsed["hasCustomBranding"])
         : Boolean(baseDefaults.hasCustomBranding);
 
-    let bulletPoints = baseDefaults.bulletPoints;
+    let structuredItems: PlanFeatureItem[] = defaultItems;
     if (Array.isArray(parsed["bulletPoints"])) {
-      bulletPoints = (parsed["bulletPoints"] as unknown[]).map(String);
+      structuredItems = (parsed["bulletPoints"] as unknown[]).map(normalizeFeatureItem);
+    } else if (Array.isArray(parsed["featureItems"])) {
+      structuredItems = (parsed["featureItems"] as unknown[]).map(normalizeFeatureItem);
     }
 
     return {
@@ -261,9 +302,14 @@ export function normalizePlanFeatures(
       hasWhatsappBot,
       hasRadarSolar,
       hasCustomBranding,
-      bulletPoints,
+      bulletPoints: structuredItems,
+      featureItems: structuredItems,
     };
   }
 
-  return { ...baseDefaults };
+  return {
+    ...baseDefaults,
+    bulletPoints: defaultItems,
+    featureItems: defaultItems,
+  };
 }
