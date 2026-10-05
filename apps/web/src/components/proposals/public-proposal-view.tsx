@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Printer } from "lucide-react";
 import { PreviewDocument } from "@/components/proposals/editor/preview-document";
 import { LoadingState } from "@/components/ui/loading-state";
-import { getPublicProposal, type PublicProposalPayload } from "@/lib/public-proposals-api";
+import {
+  getPublicProposal,
+  recordPublicProposalView,
+  type PublicProposalPayload,
+} from "@/lib/public-proposals-api";
 import { buildGenerationConsumptionChartFromSimulation } from "@/lib/generation-consumption-series";
 import { mergePublicProposalVariables } from "@/lib/public-proposal-variables";
 import { templateConfigToPreviewDocument } from "@/lib/proposal-template-document";
@@ -16,11 +20,18 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const isPdf = searchParams?.get("pdf") === "true";
+  const trackedRef = useRef(false);
 
   useEffect(() => {
     if (!proposalId) return;
     getPublicProposal(proposalId, { isPdf })
-      .then(setData)
+      .then((payload) => {
+        setData(payload);
+        if (!isPdf && !trackedRef.current) {
+          trackedRef.current = true;
+          recordPublicProposalView(proposalId);
+        }
+      })
       .catch((e) =>
         setError(e instanceof Error ? e.message : "Não foi possível carregar proposta.")
       );

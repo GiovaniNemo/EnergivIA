@@ -126,3 +126,28 @@ export async function submitPublicProposalResponse(
   }
   return res.json() as Promise<ProposalResponseResult>;
 }
+
+export async function recordPublicProposalView(
+  proposalId: string,
+  options?: { isPdf?: boolean }
+): Promise<{ tracked: boolean; reason?: string }> {
+  if (options?.isPdf || typeof window === "undefined") {
+    return { tracked: false, reason: "skipped_pdf_or_ssr" };
+  }
+  const cleanId = encodeURIComponent(proposalId.trim());
+  const baseUrl = `/api/proxy/public/proposals/${cleanId}/view`;
+
+  try {
+    const res = await fetch(baseUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "omit",
+    });
+    if (!res.ok) {
+      return { tracked: false, reason: `http_${res.status}` };
+    }
+    return (await res.json()) as { tracked: boolean; reason?: string };
+  } catch {
+    return { tracked: false, reason: "network_error" };
+  }
+}

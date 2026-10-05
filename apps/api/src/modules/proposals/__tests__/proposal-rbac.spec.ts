@@ -280,16 +280,57 @@ describe("Proposals RBAC & Commercial Protection", () => {
     });
   });
 
-  describe("findPublicById - PDF notification suppression", () => {
-    it("calls handlePublicProposalView when isPdf is not specified", async () => {
+  describe("findPublicById and trackPublicProposalView", () => {
+    it("does NOT call handlePublicProposalView by default on read (safe for SSR & link unfurls)", async () => {
+      mockNotifications.handlePublicProposalView.mockClear();
       await service.findPublicById("prop-123");
+      expect(mockNotifications.handlePublicProposalView).not.toHaveBeenCalled();
+    });
+
+    it("calls handlePublicProposalView when trackView is true and isPdf is false", async () => {
+      mockNotifications.handlePublicProposalView.mockClear();
+      await service.findPublicById("prop-123", { trackView: true });
       expect(mockNotifications.handlePublicProposalView).toHaveBeenCalledWith("prop-123");
     });
 
-    it("does NOT call handlePublicProposalView when isPdf is true", async () => {
+    it("does NOT call handlePublicProposalView when isPdf is true even if trackView is true", async () => {
       mockNotifications.handlePublicProposalView.mockClear();
-      await service.findPublicById("prop-123", { isPdf: true });
+      await service.findPublicById("prop-123", { isPdf: true, trackView: true });
       expect(mockNotifications.handlePublicProposalView).not.toHaveBeenCalled();
+    });
+
+    it("trackPublicProposalView ignores bots and crawlers (e.g. WhatsApp, Facebook)", async () => {
+      mockNotifications.handlePublicProposalView.mockClear();
+      const res = await service.trackPublicProposalView("prop-123", {
+        userAgent: "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+      });
+      expect(res.tracked).toBe(false);
+      expect(res.reason).toBe("bot_ignored");
+      expect(mockNotifications.handlePublicProposalView).not.toHaveBeenCalled();
+
+      const waRes = await service.trackPublicProposalView("prop-123", {
+        userAgent: "WhatsApp/2.23.20.76 i",
+      });
+      expect(waRes.tracked).toBe(false);
+      expect(mockNotifications.handlePublicProposalView).not.toHaveBeenCalled();
+    });
+
+    it("trackPublicProposalView suppresses tracking when isPdf is true", async () => {
+      mockNotifications.handlePublicProposalView.mockClear();
+      const res = await service.trackPublicProposalView("prop-123", { isPdf: true });
+      expect(res.tracked).toBe(false);
+      expect(res.reason).toBe("pdf_suppressed");
+      expect(mockNotifications.handlePublicProposalView).not.toHaveBeenCalled();
+    });
+
+    it("trackPublicProposalView calls handlePublicProposalView for real user browser", async () => {
+      mockNotifications.handlePublicProposalView.mockClear();
+      const res = await service.trackPublicProposalView("prop-123", {
+        userAgent:
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      });
+      expect(res.tracked).toBe(true);
+      expect(mockNotifications.handlePublicProposalView).toHaveBeenCalledWith("prop-123");
     });
   });
 });

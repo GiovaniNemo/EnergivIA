@@ -359,7 +359,7 @@ export class ProposalsService {
     return proposal;
   }
 
-  async findPublicById(idOrToken: string, options?: { isPdf?: boolean }) {
+  async findPublicById(idOrToken: string, options?: { isPdf?: boolean; trackView?: boolean }) {
     try {
       const proposal = await this.prisma.proposal.findFirst({
         where: {
@@ -395,7 +395,7 @@ export class ProposalsService {
           };
         }
       }
-      if (!options?.isPdf) {
+      if (options?.trackView && !options?.isPdf) {
         await this.notificationsService.handlePublicProposalView(proposal.id);
       }
 
@@ -459,6 +459,41 @@ export class ProposalsService {
       );
       return null;
     }
+  }
+
+  async trackPublicProposalView(
+    idOrToken: string,
+    options?: { isPdf?: boolean; userAgent?: string }
+  ): Promise<{ tracked: boolean; reason?: string }> {
+    if (options?.isPdf) {
+      return { tracked: false, reason: "pdf_suppressed" };
+    }
+
+    const ua = options?.userAgent || "";
+    const isBot =
+      Boolean(ua) &&
+      /bot|crawler|spider|facebookexternalhit|WhatsApp|TelegramBot|Twitterbot|Slackbot|LinkedInBot|Discordbot|Applebot|bingbot|Googlebot|HeadlessChrome|Puppeteer|wkhtmltopdf/i.test(
+        ua
+      );
+
+    if (isBot) {
+      return { tracked: false, reason: "bot_ignored" };
+    }
+
+    const proposal = await this.prisma.proposal.findFirst({
+      where: {
+        OR: [{ publicToken: idOrToken }, { id: idOrToken }],
+        ...soft,
+      },
+      select: { id: true },
+    });
+
+    if (!proposal) {
+      throw new NotFoundException("Proposta não encontrada.");
+    }
+
+    await this.notificationsService.handlePublicProposalView(proposal.id);
+    return { tracked: true };
   }
 
   async respondPublicById(idOrToken: string, dto: RespondPublicProposalDto) {
