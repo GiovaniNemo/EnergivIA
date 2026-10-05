@@ -4034,20 +4034,34 @@ export const ProposalEconomicsModal = forwardRef<
                                 </div>
                                 <span className="mt-0.5 block text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)] leading-tight break-words">
                                   {alt.compatible
-                                    ? `${alt.quantity} unidades${alt.string_summary ? ` · ${alt.string_summary}` : ""}`
+                                    ? kitSwapCategory === "module"
+                                      ? `${alt.quantity} módulos${alt.string_summary ? ` · ${alt.string_summary}` : ""}`
+                                      : alt.quantity > 1
+                                        ? `${alt.quantity}x inversores · ${alt.string_summary}`
+                                        : alt.string_summary
                                     : alt.reason}
                                 </span>
                               </span>
                               <div className="shrink-0 text-right ml-2 self-center">
                                 <div className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)]">
-                                  {formatCurrency(alt.unit_price)}
-                                  <span className="text-[0.62rem] font-normal text-[var(--color-muted-foreground)] ml-0.5">
-                                    /un
-                                  </span>
+                                  {formatCurrency(
+                                    kitSwapCategory === "inverter" && alt.quantity > 1
+                                      ? alt.unit_price * alt.quantity
+                                      : alt.unit_price
+                                  )}
                                 </div>
-                                {alt.compatible && alt.kit_total != null ? (
+                                {alt.compatible ? (
                                   <div className="text-[0.62rem] text-[var(--color-muted-foreground)]">
-                                    Kit: {formatCurrency(alt.kit_total)}
+                                    {kitSwapCategory === "inverter" && alt.quantity > 1 ? (
+                                      <span>
+                                        {alt.quantity}x de {formatCurrency(alt.unit_price)}
+                                        {alt.kit_total != null
+                                          ? ` · Kit: ${formatCurrency(alt.kit_total)}`
+                                          : ""}
+                                      </span>
+                                    ) : alt.kit_total != null ? (
+                                      <span>Kit: {formatCurrency(alt.kit_total)}</span>
+                                    ) : null}
                                   </div>
                                 ) : null}
                               </div>

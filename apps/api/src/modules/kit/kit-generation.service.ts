@@ -800,11 +800,38 @@ export class KitGenerationService {
   ): Promise<KitAlternativesResult> {
     const roofType = input.roof_type || DEFAULT_ROOF_TYPE;
 
+    const currentInverterId = input.pinned_inverter_id;
+    const currentModuleId = input.pinned_module_id;
+
+    let targetInverterType = input.inverter_type;
+    if (category === "inverter" && !targetInverterType) {
+      if (currentInverterId) {
+        const [microList, hybridList, offGridList] = await Promise.all([
+          this.productRepo.findActiveMicroInverters(),
+          this.productRepo.findActiveHybridInverters(),
+          this.productRepo.findActiveOffGridInverters(),
+        ]);
+        if (microList.some((m) => m.id === currentInverterId)) {
+          targetInverterType = "microinverter";
+        } else if (hybridList.some((h) => h.id === currentInverterId)) {
+          targetInverterType = "hybrid";
+        } else if (offGridList.some((o) => o.id === currentInverterId)) {
+          targetInverterType = "off_grid";
+        } else {
+          targetInverterType = "string";
+        }
+      } else if (input.system_kw && input.system_kw > 15) {
+        targetInverterType = "string";
+      }
+    }
+
     // Busca todos os candidatos ativos do catálogo geral para permitir troca entre distribuidores
     const candidates = await this.findSwapCandidates(
       undefined,
       input.stock_owner_org_id ? { stockOwnerOrgId: input.stock_owner_org_id } : {},
-      category
+      category,
+      targetInverterType,
+      input.system_kw
     );
 
     // Mapeia o distribuidor de cada candidato para exibir na listagem
@@ -831,14 +858,12 @@ export class KitGenerationService {
       }
     }
 
-    const currentInverterId = input.pinned_inverter_id;
-    const currentModuleId = input.pinned_module_id;
-
     const alternatives = await Promise.all(
       candidates.map(async (candidate): Promise<KitAlternativeOption> => {
         const distInfo = distMap.get(candidate.id);
         const pinnedInput: GenerateKitInput = {
           ...input,
+          ...(targetInverterType ? { inverter_type: targetInverterType } : {}),
           ...(category === "module"
             ? {
                 pinned_module_id: candidate.id,
@@ -924,11 +949,30 @@ export class KitGenerationService {
   private async findSwapCandidates(
     preferredBrand: string | undefined,
     source: KitProductSource,
-    category: KitSwapCategory
+    category: KitSwapCategory,
+    inverterType?: "string" | "microinverter" | "hybrid" | "off_grid",
+    systemKw?: number
   ) {
     if (category === "module") {
       return this.productRepo.findActiveModules(preferredBrand, source);
     }
+    if (inverterType === "string") {
+      return this.productRepo.findActiveStringInverters(source);
+    }
+    if (inverterType === "microinverter") {
+      return this.productRepo.findActiveMicroInverters(source);
+    }
+    if (inverterType === "hybrid") {
+      return this.productRepo.findActiveHybridInverters(source);
+    }
+    if (inverterType === "off_grid") {
+      return this.productRepo.findActiveOffGridInverters(source);
+    }
+
+    if (systemKw && systemKw > 15) {
+      return this.productRepo.findActiveStringInverters(source);
+    }
+
     const [stringInverters, microInverters, hybridInverters, offGridInverters] = await Promise.all([
       this.productRepo.findActiveStringInverters(source),
       this.productRepo.findActiveMicroInverters(source),
