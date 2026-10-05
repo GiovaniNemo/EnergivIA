@@ -13,6 +13,7 @@ export interface GenerateKitRequest {
   inverter_type?: "string" | "microinverter" | "hybrid" | "off_grid";
   grid_topology?: string;
   string_box_id?: string;
+  target_inverter_qty?: number;
 }
 
 export type KitSwapCategory = "module" | "inverter";
@@ -163,6 +164,7 @@ export interface DistributorTierKit {
   inverter_brand: string;
   inverter_model: string;
   inverter_power_kw: number;
+  inverter_qty?: number;
   module_brand: string;
   module_model: string;
   module_qty: number;

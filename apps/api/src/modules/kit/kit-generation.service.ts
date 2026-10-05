@@ -677,6 +677,7 @@ export class KitGenerationService {
         inverter_brand: built.kitItems[1]?.brand_name || built.sizingResult.inverter.brandName,
         inverter_model: built.kitItems[1]?.product_name || built.sizingResult.inverter.name,
         inverter_power_kw: invPowerKw,
+        inverter_qty: built.kitItems[1]?.quantity || 1,
         module_brand: built.kitItems[0]?.brand_name || built.sizingResult.module.brandName,
         module_model: built.kitItems[0]?.product_name || built.sizingResult.module.name,
         module_qty: built.kitItems[0]?.quantity || built.sizingResult.module_quantity,
@@ -1221,6 +1222,7 @@ export class KitGenerationService {
       system_kw: input.system_kw,
       preferred_module_brand: input.preferred_brand,
       preferred_inverter_brands: preferredInverterBrands,
+      target_inverter_qty: input.target_inverter_qty,
       modules,
       stringInverters,
       microInverters,
@@ -1245,7 +1247,7 @@ export class KitGenerationService {
     });
 
     const inverterQuantity = isStringSizingResult(sizingResult)
-      ? 1
+      ? sizingResult.inverter_quantity || 1
       : sizingResult.microinverter_quantity;
     kitItems.push({
       product_id: sizingResult.inverter.id,

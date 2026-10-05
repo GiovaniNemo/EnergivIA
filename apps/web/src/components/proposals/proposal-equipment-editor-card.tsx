@@ -62,6 +62,7 @@ interface KitDraftState {
   brandPreset: string;
   brandCustom: string;
   inverterType: "string" | "microinverter" | "hybrid" | "off_grid";
+  targetInverterQty: "auto" | "1" | "2" | "3" | "4";
   gridTopology: "auto" | "mono_220" | "biphasic_127_220" | "tri_220" | "tri_380";
   stringBoxId: string;
 }
@@ -175,6 +176,7 @@ export function ProposalEquipmentEditorCard({
     brandPreset: "",
     brandCustom: "",
     inverterType: "string",
+    targetInverterQty: "auto",
     gridTopology: "auto",
     stringBoxId: "none",
   });
@@ -347,6 +349,9 @@ export function ProposalEquipmentEditorCard({
           ...(preferredBrand ? { preferred_brand: preferredBrand } : {}),
           ...(distributorId ? { supplier_id: distributorId } : {}),
           inverter_type: kitDraft.inverterType,
+          ...(kitDraft.targetInverterQty && kitDraft.targetInverterQty !== "auto"
+            ? { target_inverter_qty: parseInt(kitDraft.targetInverterQty, 10) }
+            : {}),
           ...(kitDraft.gridTopology && kitDraft.gridTopology !== "auto"
             ? { grid_topology: kitDraft.gridTopology }
             : {}),
@@ -1041,6 +1046,34 @@ export function ProposalEquipmentEditorCard({
                     </Select>
                   </div>
 
+                  {/* Quantidade de Inversores */}
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="proposal-kit-inverter-qty"
+                      className="text-xs font-semibold text-[var(--color-foreground)]"
+                    >
+                      Qtd. de Inversores
+                    </Label>
+                    <Select
+                      id="proposal-kit-inverter-qty"
+                      className="h-11 w-full border-[var(--color-border)]"
+                      value={kitDraft.targetInverterQty}
+                      onChange={(e) => {
+                        hasUserEditedKitSpecs.current = true;
+                        setKitDraft((d) => ({
+                          ...d,
+                          targetInverterQty: e.target.value as KitDraftState["targetInverterQty"],
+                        }));
+                      }}
+                    >
+                      <option value="auto">Automático (1 ou múltiplos)</option>
+                      <option value="1">1 Inversor</option>
+                      <option value="2">2 Inversores (mesma marca)</option>
+                      <option value="3">3 Inversores (mesma marca)</option>
+                      <option value="4">4 Inversores (mesma marca)</option>
+                    </Select>
+                  </div>
+
                   {/* Padrão da rede / Tensão */}
                   <div className="space-y-1.5">
                     <Label
@@ -1312,7 +1345,54 @@ export function ProposalEquipmentEditorCard({
                                   +
                                 </button>
                               </span>
-                            ) : role === "inverter" || role === "locked_bos" ? (
+                            ) : role === "inverter" ? (
+                              <span className="inline-flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  disabled={qty <= 1 || isRecalculating}
+                                  title="Diminuir quantidade de inversores"
+                                  aria-label="Diminuir quantidade de inversores"
+                                  className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--color-border)] text-sm leading-none hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                  onClick={() => {
+                                    hasUserEditedKitSpecs.current = true;
+                                    const nextQty = Math.max(1, qty - 1);
+                                    setKitDraft((d) => ({
+                                      ...d,
+                                      targetInverterQty: String(
+                                        nextQty
+                                      ) as KitDraftState["targetInverterQty"],
+                                    }));
+                                  }}
+                                >
+                                  −
+                                </button>
+                                <span
+                                  className="min-w-[2.5ch] text-center font-medium"
+                                  title="Quantidade de inversores idênticos"
+                                >
+                                  {qty}
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={qty >= 4 || isRecalculating}
+                                  title="Adicionar mais um inversor idêntico"
+                                  aria-label="Adicionar mais um inversor idêntico"
+                                  className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--color-border)] text-sm leading-none hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                  onClick={() => {
+                                    hasUserEditedKitSpecs.current = true;
+                                    const nextQty = Math.min(4, qty + 1);
+                                    setKitDraft((d) => ({
+                                      ...d,
+                                      targetInverterQty: String(
+                                        nextQty
+                                      ) as KitDraftState["targetInverterQty"],
+                                    }));
+                                  }}
+                                >
+                                  +
+                                </button>
+                              </span>
+                            ) : role === "locked_bos" ? (
                               <span
                                 title="Quantidade definida pelo dimensionamento do kit"
                                 className="cursor-help underline decoration-dotted underline-offset-2"

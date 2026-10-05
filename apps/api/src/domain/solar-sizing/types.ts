@@ -29,6 +29,7 @@ export interface StringSizingResult {
   module: ProductWithSpecs<ModuleSpec>;
   inverter: ProductWithSpecs<StringInverterSpec>;
   module_quantity: number;
+  inverter_quantity: number;
   string_configuration: StringConfiguration;
   validated: {
     voltage: boolean;

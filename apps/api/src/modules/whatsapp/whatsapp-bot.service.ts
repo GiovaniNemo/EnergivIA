@@ -1832,9 +1832,11 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
           return tiersRes.tiers.map((t) => {
             const realSystemKwp = t.kit_result.system_power_kw;
             const totalPrice = Math.round(realSystemKwp * ratePerKwp * 100) / 100;
+            const invQty = t.inverter_qty || t.kit_result.inverter?.quantity || 1;
+            const invLabel = invQty > 1 ? `${invQty}x Inversores` : `1x Inversor`;
             const kitItems = [
               `• ${t.module_qty}x Módulos ${t.module_brand} ${t.module_power_w}W`,
-              `• 1x Inversor ${t.inverter_brand} ${t.inverter_power_kw}kW`,
+              `• ${invLabel} ${t.inverter_brand} ${t.inverter_power_kw}kW`,
             ];
             if (roofLabel !== "Sem estrutura") {
               kitItems.push(`• Estrutura: ${roofLabel}`);
@@ -1907,14 +1909,27 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
     const invPowerSizes = [3, 3.6, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 75, 100];
     let invPower = 3;
+    let invCount = 1;
     if (realSystemKwp > 3.8) {
-      for (const size of invPowerSizes) {
-        if (size * 1.3 >= realSystemKwp) {
-          invPower = size;
-          break;
+      if (realSystemKwp <= 130) {
+        for (const size of invPowerSizes) {
+          if (size * 1.3 >= realSystemKwp) {
+            invPower = size;
+            break;
+          }
+        }
+        if (invPower < realSystemKwp / 1.3) invPower = Math.ceil(realSystemKwp);
+      } else {
+        // Usina de grande porte: escala N inversores idênticos de teto 75kW ou 100kW
+        invCount = Math.max(2, Math.ceil(realSystemKwp / (75 * 1.3)));
+        const perInvKw = realSystemKwp / invCount;
+        for (const size of invPowerSizes) {
+          if (size * 1.3 >= perInvKw) {
+            invPower = size;
+            break;
+          }
         }
       }
-      if (invPower < realSystemKwp / 1.3) invPower = Math.ceil(realSystemKwp);
     }
 
     const tiers = [
@@ -1968,8 +1983,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
           productName: `Inversor ${cfg.inverterBrand} ${invPower}kW`,
           brandName: cfg.inverterBrand,
           categoryName: "inverter",
-          quantity: 1,
-          unitPrice: invTotal,
+          quantity: invCount,
+          unitPrice: invTotal / invCount,
           lineTotal: invTotal,
         },
       ];
@@ -1987,9 +2002,10 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         });
       }
 
+      const invLabel = invCount > 1 ? `${invCount}x Inversores` : `1x Inversor`;
       const kitItems = [
         `• ${moduleQty}x Módulos ${cfg.moduleBrand} ${modulePowerW}W`,
-        `• 1x Inversor ${cfg.inverterBrand} ${invPower}kW`,
+        `• ${invLabel} ${cfg.inverterBrand} ${invPower}kW`,
       ];
       if (roofLabel !== "Sem estrutura") {
         kitItems.push(`• Estrutura: ${roofLabel}`);
