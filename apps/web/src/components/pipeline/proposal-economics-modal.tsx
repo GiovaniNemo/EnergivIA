@@ -16,7 +16,6 @@ import { motion } from "framer-motion";
 import {
   CheckCircle2,
   ChevronDown,
-  ChevronUp,
   Copy,
   Cpu,
   ExternalLink,
@@ -733,7 +732,6 @@ export const ProposalEconomicsModal = forwardRef<
   const [shareMenuAnchor, setShareMenuAnchor] = useState<HTMLElement | null>(null);
   const [proposalCreateLoading, setProposalCreateLoading] = useState(false);
   const [proposalCreateError, setProposalCreateError] = useState<string | null>(null);
-  const [showDetailedComponents, setShowDetailedComponents] = useState(false);
   const [_quotingMode, _setQuotingMode] = useState<"kwp_rate" | "distributor">("kwp_rate");
   const [kwpRateValue, setKwpRateValue] = useState<number>(
     () => currentOrganization?.defaultKwpRate ?? 2800
@@ -3143,7 +3141,6 @@ export const ProposalEconomicsModal = forwardRef<
             setSelectedDistributorTierId("cost_benefit");
             setKitQtyDrafts({});
             setOptimisticModuleQty(null);
-            setShowDetailedComponents(false);
           }
         }}
       >
@@ -3153,56 +3150,46 @@ export const ProposalEconomicsModal = forwardRef<
           className="max-h-[min(92vh,calc(100dvh-2rem))] overflow-y-auto max-w-5xl"
         >
           <DialogHeader className="pb-1">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2.5 text-lg sm:text-xl font-bold">
-                <Package className="h-5 w-5 sm:h-6 sm:w-6 shrink-0 text-emerald-500" />
-                Simulação e Kit Solar
-              </DialogTitle>
-              {proposalKitLoading && proposalKitResult ? (
-                <span className="inline-flex items-center gap-1.5 text-xs font-normal text-[var(--color-muted-foreground)]">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-500" />
-                  Atualizando cotação…
-                </span>
-              ) : null}
-            </div>
-            <p className="text-xs sm:text-sm text-[var(--color-muted-foreground)]">
-              Configurações comerciais em tempo real a partir do consumo estimado. Escolha o kit
-              ideal e refine os parâmetros na mesma tela.
+            <DialogTitle className="flex items-center gap-2.5 text-xl font-bold">
+              <Package className="h-6 w-6 shrink-0 text-emerald-500" />
+              Simulação e kit solar
+            </DialogTitle>
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              Dimensionamento a partir do consumo estimado na etapa anterior. Escolha a estratégia
+              de cotação e ajuste os parâmetros técnicos para gerar a proposta.
             </p>
           </DialogHeader>
-
           {generatedProposal ? (
-            <div className="space-y-4 sm:space-y-4.5 py-1">
-              {/* Bloco 1: Resumo Executivo Compacto */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]/50 p-2.5 sm:p-3.5 shadow-2xs">
-                <div className="flex flex-col">
-                  <span className="text-[0.65rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+            <div className="space-y-4 sm:space-y-5 py-1">
+              {/* 1. Métricas do Dimensionamento Inicial */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 sm:p-5 shadow-xs">
+                <div className="space-y-0.5 sm:space-y-1">
+                  <p className="text-[0.65rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
                     Consumo
-                  </span>
-                  <span className="text-sm sm:text-lg font-bold tabular-nums text-[var(--color-foreground)]">
+                  </p>
+                  <p className="text-base sm:text-2xl font-bold tabular-nums text-[var(--color-foreground)]">
                     {generatedProposal.monthlyConsumptionKwh &&
                     generatedProposal.monthlyConsumptionKwh > 0 ? (
                       <>
                         {Math.round(generatedProposal.monthlyConsumptionKwh).toLocaleString(
                           "pt-BR"
                         )}{" "}
-                        <span className="text-[0.65rem] sm:text-xs font-normal text-[var(--color-muted-foreground)]">
+                        <span className="text-[0.65rem] sm:text-sm font-normal text-[var(--color-muted-foreground)] block sm:inline">
                           kWh/mês
                         </span>
                       </>
                     ) : (
-                      <span className="text-xs text-[var(--color-muted-foreground)] font-normal">
+                      <span className="text-sm sm:text-lg font-medium text-[var(--color-muted-foreground)]">
                         Não informado
                       </span>
                     )}
-                  </span>
+                  </p>
                 </div>
-
-                <div className="flex flex-col">
-                  <span className="text-[0.65rem] sm:text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                <div className="space-y-0.5 sm:space-y-1">
+                  <p className="text-[0.65rem] sm:text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                     {isBelowMinModules ? "Potência (Ajustada)" : "Potência"}
-                  </span>
-                  <span className="text-sm sm:text-lg font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400 flex items-baseline gap-1">
+                  </p>
+                  <p className="text-base sm:text-2xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
                     {(isBelowMinModules
                       ? adjustedKw
                       : (proposalKitResult?.system_power_kw ??
@@ -3211,22 +3198,26 @@ export const ProposalEconomicsModal = forwardRef<
                       minimumFractionDigits: 1,
                       maximumFractionDigits: 2,
                     }) ?? "0"}{" "}
-                    <span className="text-[0.65rem] sm:text-xs font-normal text-[var(--color-muted-foreground)]">
+                    <span className="text-[0.65rem] sm:text-sm font-normal text-[var(--color-muted-foreground)] block sm:inline">
                       kWp
                     </span>
-                    {isBelowMinModules && (
-                      <span className="ml-1 rounded bg-amber-500/15 border border-amber-500/30 px-1 py-0.2 text-[0.6rem] font-bold text-amber-700 dark:text-amber-300">
-                        mín. 4 mods
-                      </span>
-                    )}
-                  </span>
+                  </p>
+                  {isBelowMinModules && (
+                    <p className="text-[0.65rem] text-[var(--color-muted-foreground)] leading-tight">
+                      Calculada:{" "}
+                      {calculatedKw.toLocaleString("pt-BR", {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      kWp (mín. 4 mods)
+                    </p>
+                  )}
                 </div>
-
-                <div className="flex flex-col">
-                  <span className="text-[0.65rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                    Geração Estimada
-                  </span>
-                  <span className="text-sm sm:text-lg font-bold tabular-nums text-[var(--color-foreground)]">
+                <div className="space-y-0.5 sm:space-y-1">
+                  <p className="text-[0.65rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                    Geração
+                  </p>
+                  <p className="text-base sm:text-2xl font-bold tabular-nums text-[var(--color-foreground)]">
                     ~
                     {Math.round(
                       activeDistributorCard?.estimated_monthly_generation_kwh ??
@@ -3235,683 +3226,425 @@ export const ProposalEconomicsModal = forwardRef<
                           : (proposalKitResult?.system_power_kw ??
                               clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0)) * 130)
                     ).toLocaleString("pt-BR")}{" "}
-                    <span className="text-[0.65rem] sm:text-xs font-normal text-[var(--color-muted-foreground)]">
+                    <span className="text-[0.65rem] sm:text-sm font-normal text-[var(--color-muted-foreground)] block sm:inline">
                       kWh/mês
                     </span>
-                  </span>
+                  </p>
                 </div>
               </div>
 
               {generatedProposal.estimateNote ? (
-                <p className="text-xs text-amber-700 dark:text-amber-300 px-1">
+                <p className="text-xs text-amber-700 dark:text-amber-300">
                   {generatedProposal.estimateNote}
                 </p>
               ) : null}
 
-              {isBelowMinModules && (
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-2.5 sm:p-3 text-xs flex items-start gap-2">
-                  <Info className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-                  <div className="text-[0.72rem] sm:text-xs text-amber-800/90 dark:text-amber-300/90 leading-snug">
-                    Potência ajustada para{" "}
-                    <strong>
-                      {adjustedKw.toLocaleString("pt-BR", {
-                        minimumFractionDigits: 1,
-                        maximumFractionDigits: 2,
-                      })}{" "}
-                      kWp
-                    </strong>{" "}
-                    (calculada:{" "}
-                    {calculatedKw.toLocaleString("pt-BR", {
-                      minimumFractionDigits: 1,
-                      maximumFractionDigits: 2,
-                    })}{" "}
-                    kWp, {theoreticalModuleQty} {theoreticalModuleQty === 1 ? "módulo" : "módulos"}
-                    ). É exigido no mínimo 4 módulos para operação na faixa de partida do inversor.
-                  </div>
+              {/* 2. Seletor de Modo de Cotação */}
+              <div className="space-y-2.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 sm:p-4 shadow-xs">
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-[var(--color-foreground)] flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-emerald-500" />
+                    Modo de Cotação da Proposta
+                  </h3>
+                  <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
+                    Defina como você deseja estruturar o orçamento e os equipamentos para o cliente:
+                  </p>
                 </div>
-              )}
 
-              {/* Bloco 2: Protagonismo dos 3 Kits Solares */}
-              <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                  <div>
-                    <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[var(--color-foreground)] flex items-center gap-1.5">
-                      <Boxes className="h-4 w-4 text-emerald-500" />
-                      Opções Comerciais de Kits
-                    </h3>
-                    <p className="text-[11px] text-[var(--color-muted-foreground)]">
-                      3 configurações completas calculadas com base no consumo e catálogo ativo
-                    </p>
-                  </div>
-
-                  {/* Preço R$/kWp Input */}
-                  <div className="flex items-center gap-2 self-start sm:self-auto rounded-xl bg-[var(--color-card)] border border-[var(--color-border)] px-3 py-1.5 shadow-2xs">
-                    <Label
-                      htmlFor="kwp-rate-input"
-                      className="text-xs font-semibold text-[var(--color-foreground)] whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Calculator className="w-3.5 h-3.5 text-emerald-500" />
-                      Preço R$/kWp:
-                    </Label>
-                    <div className="relative w-28">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--color-muted-foreground)] font-bold">
-                        R$
+                {/* Card: Preço por kWp (Compacto) */}
+                <div className="rounded-xl border border-emerald-500/35 bg-emerald-500/[0.04] p-3 select-none">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                        <Calculator className="h-3.5 w-3.5" />
                       </span>
-                      <Input
-                        id="kwp-rate-input"
-                        type="number"
-                        min={500}
-                        step={50}
-                        value={kwpRateValue}
-                        onChange={(e) =>
-                          setKwpRateValue(Math.max(0, parseFloat(e.target.value) || 0))
-                        }
-                        className="pl-8 h-7.5 font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 bg-[var(--color-background)] border-[var(--color-border)]"
-                        placeholder="2800"
-                      />
+                      <span className="text-xs sm:text-sm font-bold text-[var(--color-foreground)] leading-tight">
+                        Preço por kWp
+                      </span>
+                      <span className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700 dark:text-emerald-300">
+                        Perfil do Integrador
+                      </span>
                     </div>
-                  </div>
-                </div>
-
-                {/* Loading dos Kits */}
-                {distributorTiersLoading &&
-                (!computedDistributorCards || computedDistributorCards.length === 0) ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]/50 p-4 animate-pulse space-y-3"
-                      >
-                        <div className="flex justify-between items-center">
-                          <div className="h-5 w-24 bg-[var(--color-muted)]/40 rounded-full" />
-                          <div className="h-4 w-20 bg-[var(--color-muted)]/30 rounded" />
-                        </div>
-                        <div className="h-7 w-32 bg-[var(--color-muted)]/40 rounded" />
-                        <div className="h-3 w-48 bg-[var(--color-muted)]/20 rounded" />
-                        <div className="pt-2 border-t border-[var(--color-border)]/40 space-y-1.5">
-                          <div className="h-3 w-36 bg-[var(--color-muted)]/30 rounded" />
-                          <div className="h-3 w-40 bg-[var(--color-muted)]/30 rounded" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : computedDistributorCards.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {computedDistributorCards.map((tier) => {
-                      const isSelected = tier.isSelected;
-                      const isElite = tier.tier_id === "cost_benefit";
-                      return (
-                        <div
-                          key={tier.tier_id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => {
-                            setSelectedDistributorTierId(tier.tier_id);
-                            setProposalKitResult(tier.kit_result);
-                            setOptimisticModuleQty(null);
-                            setKitQtyDrafts({});
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              setSelectedDistributorTierId(tier.tier_id);
-                              setProposalKitResult(tier.kit_result);
-                              setOptimisticModuleQty(null);
-                              setKitQtyDrafts({});
-                            }
-                          }}
-                          className={`group relative cursor-pointer rounded-xl border p-3.5 transition-all flex flex-col justify-between text-left select-none ${
-                            isSelected
-                              ? "border-emerald-500 bg-emerald-500/[0.06] ring-1 ring-emerald-500 shadow-xs"
-                              : "border-[var(--color-border)] bg-[var(--color-card)]/50 hover:border-emerald-500/40 hover:bg-[var(--color-card)]"
-                          }`}
-                        >
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span
-                                className={`text-[0.7rem] font-bold px-2.5 py-0.5 rounded-full ${
-                                  tier.tier_id === "economic"
-                                    ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
-                                    : isElite
-                                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                      : "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
-                                }`}
-                              >
-                                {tier.name}
-                              </span>
-                              <span className="text-[0.7rem] font-medium text-[var(--color-muted-foreground)]">
-                                {formatCurrency(tier.ratePerKwpEffective)}/kWp
-                              </span>
-                            </div>
-
-                            <div>
-                              <p className="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums leading-tight">
-                                {tier.commercialPriceFormatted}
-                              </p>
-                              <p className="text-[0.7rem] text-[var(--color-muted-foreground)] mt-0.5 line-clamp-1">
-                                {tier.tagline}
-                              </p>
-                            </div>
-
-                            <div className="pt-2 border-t border-[var(--color-border)]/60 text-xs space-y-1 text-[var(--color-muted-foreground)]">
-                              <p className="truncate">
-                                <strong className="text-[var(--color-foreground)] font-semibold">
-                                  Inversor:{" "}
-                                </strong>
-                                {tier.kit_result?.inverter?.quantity &&
-                                tier.kit_result.inverter.quantity > 1
-                                  ? `${tier.kit_result.inverter.quantity}x `
-                                  : ""}
-                                {tier.inverter_brand} ({tier.inverter_power_kw} kW)
-                              </p>
-                              <p className="flex items-center gap-1.5 flex-wrap">
-                                <strong className="text-[var(--color-foreground)] font-semibold">
-                                  Módulos:{" "}
-                                </strong>
-                                <span>
-                                  {tier.module_qty}x {tier.module_brand} ({tier.module_power_w}W)
-                                </span>
-                                {isModuleTier1({
-                                  brand_name: tier.module_brand,
-                                  product_name: tier.module_model,
-                                  is_tier_1:
-                                    tier.module_is_tier_1 || tier.kit_result?.modules?.is_tier_1,
-                                }) ? (
-                                  <img
-                                    src="/badges/tier1.png"
-                                    alt="Tier 1"
-                                    title="Módulo certificado Tier 1 (BloombergNEF)"
-                                    className="h-4 w-auto object-contain rounded shadow-2xs shrink-0"
-                                  />
-                                ) : null}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="pt-2.5 mt-2.5 border-t border-[var(--color-border)]/50 flex items-center justify-between">
-                            <span className="text-[0.7rem] text-[var(--color-muted-foreground)]">
-                              Geração:{" "}
-                              <strong className="text-[var(--color-foreground)]">
-                                ~{tier.estimated_monthly_generation_kwh} kWh/mês
-                              </strong>
-                            </span>
-                            <span
-                              className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center transition-colors ${
-                                isSelected
-                                  ? "border-emerald-500 bg-emerald-500 text-white"
-                                  : "border-[var(--color-border)] text-transparent"
-                              }`}
-                            >
-                              <CheckCircle2 className="h-3 w-3" />
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
-
-              {proposalKitError ? (
-                <p className="text-sm text-red-600 dark:text-red-400">{proposalKitError}</p>
-              ) : null}
-
-              {/* Bloco 3: Equipamentos Principais com Troca Rápida */}
-              {proposalKitResult ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[var(--color-foreground)] flex items-center gap-1.5">
-                      <Package className="h-4 w-4 text-emerald-500" />
-                      Equipamentos em Destaque
-                    </h3>
-                    <span className="text-[11px] text-[var(--color-muted-foreground)]">
-                      {activeDistributorCard?.name ?? "Kit Selecionado"} · Clique em Trocar para ver
-                      modelos compatíveis
+                    <span className="h-4.5 w-4.5 shrink-0 rounded-full border border-emerald-500 bg-emerald-500 text-white flex items-center justify-center">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Card Inversor */}
-                    <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]/50 p-3 sm:p-4 shadow-2xs">
-                      <div>
-                        <div className="flex items-center justify-between gap-1.5">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400">
-                              <Cpu className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)] block">
-                                Inversor Solar
-                              </span>
-                              <span className="text-xs font-semibold text-[var(--color-foreground)]">
-                                {proposalKitResult.inverter.brand_name}
-                              </span>
-                            </div>
-                          </div>
-                          {extractPowerBadge(proposalKitResult.inverter.product_name) ? (
-                            <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-bold bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30 shrink-0">
-                              <Zap className="h-3 w-3 shrink-0" />
-                              {extractPowerBadge(proposalKitResult.inverter.product_name)}
-                            </span>
-                          ) : null}
-                        </div>
-
-                        <div className="mt-2.5">
-                          <p className="text-xs sm:text-sm font-medium leading-snug text-[var(--color-foreground)] line-clamp-2">
-                            {proposalKitResult.inverter.product_name}
-                          </p>
-                          <p className="mt-1 text-xs text-violet-600 dark:text-violet-400 font-semibold tabular-nums">
-                            {proposalKitResult.inverter.quantity}x unidade
-                            {proposalKitResult.inverter.quantity > 1 ? "s" : ""}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 pt-2 border-t border-[var(--color-border)]/50 flex items-center justify-between gap-1">
-                        {(proposalKitResult.inverter as unknown as { datasheet_url?: string })
-                          .datasheet_url ? (
-                          <a
-                            href={
-                              (
-                                proposalKitResult.inverter as unknown as {
-                                  datasheet_url?: string;
-                                }
-                              ).datasheet_url
-                            }
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-violet-600 hover:text-violet-700 dark:text-violet-400 hover:underline font-medium"
-                          >
-                            Datasheet
-                          </a>
-                        ) : (
-                          <span />
-                        )}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs font-semibold px-2.5 border-[var(--color-border)] hover:border-violet-500/50 hover:bg-violet-500/10 hover:text-violet-700 dark:hover:text-violet-300"
-                          onClick={() =>
-                            setKitSwapCategory((c) => (c === "inverter" ? null : "inverter"))
-                          }
-                        >
-                          {kitSwapCategory === "inverter" ? "Fechar" : "Trocar Inversor"}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Card Módulos */}
-                    <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]/50 p-3 sm:p-4 shadow-2xs">
-                      <div>
-                        <div className="flex items-center justify-between gap-1.5">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                              <Sun className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)] block">
-                                Painéis Solares
-                              </span>
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-semibold text-[var(--color-foreground)]">
-                                  {proposalKitResult.modules.brand_name}
-                                </span>
-                                {isModuleTier1(proposalKitResult.modules) ? (
-                                  <img
-                                    src="/badges/tier1.png"
-                                    alt="Tier 1 Bloomberg"
-                                    title="Módulo certificado Tier 1 (BloombergNEF)"
-                                    className="h-4 w-auto object-contain shrink-0"
-                                  />
-                                ) : null}
-                              </div>
-                            </div>
-                          </div>
-                          {extractPowerBadge(proposalKitResult.modules.product_name) ? (
-                            <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 shrink-0">
-                              <Zap className="h-3 w-3 shrink-0" />
-                              {extractPowerBadge(proposalKitResult.modules.product_name)}
-                            </span>
-                          ) : null}
-                        </div>
-
-                        <div className="mt-2.5">
-                          <p className="text-xs sm:text-sm font-medium leading-snug text-[var(--color-foreground)] line-clamp-2">
-                            {proposalKitResult.modules.product_name}
-                          </p>
-                          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400 font-semibold tabular-nums">
-                            {optimisticModuleQty ?? proposalKitResult.modules.quantity}x módulos
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 pt-2 border-t border-[var(--color-border)]/50 flex items-center justify-between gap-1">
-                        {(proposalKitResult.modules as unknown as { datasheet_url?: string })
-                          .datasheet_url ? (
-                          <a
-                            href={
-                              (
-                                proposalKitResult.modules as unknown as {
-                                  datasheet_url?: string;
-                                }
-                              ).datasheet_url
-                            }
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 hover:underline font-medium"
-                          >
-                            Datasheet
-                          </a>
-                        ) : (
-                          <span />
-                        )}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs font-semibold px-2.5 border-[var(--color-border)] hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-700 dark:hover:text-amber-300"
-                          onClick={() =>
-                            setKitSwapCategory((c) => (c === "module" ? null : "module"))
-                          }
-                        >
-                          {kitSwapCategory === "module" ? "Fechar" : "Trocar Módulo"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Drawer / Lista de Troca Rápida de Equipamento */}
-                  {kitSwapCategory ? (
-                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] overflow-hidden shadow-xs">
-                      <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-3.5 py-2.5 bg-[var(--color-muted)]/10">
-                        <p className="text-xs font-semibold text-[var(--color-foreground)]">
-                          {kitSwapCategory === "module"
-                            ? "Trocar módulo — alternativas compatíveis"
-                            : "Trocar inversor — alternativas compatíveis"}
-                        </p>
-                        <div className="flex items-center gap-3">
-                          {(kitSwapCategory === "module" && proposalKitDraft.pins.moduleId) ||
-                          (kitSwapCategory === "inverter" && proposalKitDraft.pins.inverterId) ? (
-                            <button
-                              type="button"
-                              className="text-xs text-emerald-700 hover:underline dark:text-emerald-300 font-medium"
-                              onClick={() => {
-                                const cat = kitSwapCategory;
-                                setProposalKitDraft((d) => ({
-                                  ...d,
-                                  pins: {
-                                    ...d.pins,
-                                    ...(cat === "module"
-                                      ? { moduleId: undefined }
-                                      : { inverterId: undefined }),
-                                  },
-                                }));
-                              }}
-                            >
-                              Voltar à seleção automática
-                            </button>
-                          ) : null}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs px-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-                            onClick={() => setKitSwapCategory(null)}
-                          >
-                            Fechar
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Filtro por Marca em Pills */}
-                      {availableSwapBrands.length > 1 ? (
-                        <div className="flex items-center gap-1.5 overflow-x-auto border-b border-[var(--color-border)]/60 px-3.5 py-2 bg-[var(--color-muted)]/15">
-                          <span className="text-[10px] font-bold text-[var(--color-muted-foreground)] uppercase tracking-wider mr-1 shrink-0">
-                            Marca:
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setSwapBrandFilter("all")}
-                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold shrink-0 transition ${
-                              swapBrandFilter === "all"
-                                ? "bg-emerald-600 text-white shadow-xs"
-                                : "bg-[var(--color-background)] text-[var(--color-foreground)] hover:bg-[var(--color-muted)]/30 border border-[var(--color-border)]/60"
-                            }`}
-                          >
-                            Todas
-                            <span className="text-[10px] opacity-80">
-                              ({displayedAlternatives?.length ?? 0})
-                            </span>
-                          </button>
-                          {availableSwapBrands.map((b) => {
-                            const isActive = swapBrandFilter.toLowerCase() === b.name.toLowerCase();
-                            return (
-                              <button
-                                key={b.name}
-                                type="button"
-                                onClick={() => setSwapBrandFilter(b.name)}
-                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold shrink-0 transition ${
-                                  isActive
-                                    ? "bg-emerald-600 text-white shadow-xs"
-                                    : "bg-[var(--color-background)] text-[var(--color-foreground)] hover:bg-[var(--color-muted)]/30 border border-[var(--color-border)]/60"
-                                }`}
-                              >
-                                {b.name}
-                                <span className="text-[10px] opacity-80">({b.count})</span>
-                                {b.isPreferred && !isActive ? (
-                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                ) : null}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-
-                      {kitAlternativesLoading ? (
-                        <p className="flex items-center gap-2 px-3.5 py-3 text-xs text-[var(--color-muted-foreground)]">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          Simulando alternativas compatíveis…
-                        </p>
-                      ) : null}
-                      {kitAlternativesError ? (
-                        <p className="px-3.5 py-3 text-xs text-red-600 dark:text-red-400">
-                          {kitAlternativesError}
-                        </p>
-                      ) : null}
-
-                      {/* Listagem agrupada por marcas */}
-                      {groupedSwapAlternatives?.map((group) => {
-                        return (
-                          <div
-                            key={group.brand}
-                            className="border-b border-[var(--color-border)]/60 last:border-b-0"
-                          >
-                            <div className="flex items-center justify-between bg-[var(--color-muted)]/25 px-3.5 py-1.5 border-y border-[var(--color-border)]/40 text-[11px] font-bold text-[var(--color-foreground)]">
-                              <div className="flex items-center gap-2">
-                                <span className="uppercase tracking-wider font-extrabold">
-                                  {group.brand}
-                                </span>
-                                <span className="font-normal text-[var(--color-muted-foreground)] text-[10px]">
-                                  ({group.items.length}{" "}
-                                  {group.items.length === 1
-                                    ? "modelo compatível"
-                                    : "modelos compatíveis"}
-                                  )
-                                </span>
-                              </div>
-                              {group.isPreferred ? (
-                                <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[0.62rem] font-semibold text-emerald-700 dark:text-emerald-300">
-                                  Preferência
-                                </span>
-                              ) : null}
-                            </div>
-                            <div className="divide-y divide-[var(--color-border)]/40">
-                              {group.items.map((alt) => {
-                                const isCurrent = alt.product_id === activeSwapCurrentId;
-                                const preferredList =
-                                  kitSwapCategory === "module"
-                                    ? (currentOrganization?.preferredModuleBrands ?? [])
-                                    : (currentOrganization?.preferredInverterBrands ?? []);
-                                const isPreferred =
-                                  Boolean(alt.brand_name) &&
-                                  preferredList.some((p) =>
-                                    alt.brand_name.toLowerCase().includes(p.toLowerCase())
-                                  );
-                                return (
-                                  <button
-                                    key={alt.product_id}
-                                    type="button"
-                                    disabled={!alt.compatible || isCurrent}
-                                    className={`flex w-full items-start gap-2.5 px-3 sm:px-3.5 py-2.5 text-left transition-colors ${
-                                      isCurrent
-                                        ? "bg-emerald-500/[0.08]"
-                                        : alt.compatible
-                                          ? "hover:bg-emerald-500/[0.04] cursor-pointer"
-                                          : "opacity-60 cursor-not-allowed"
-                                    }`}
-                                    onClick={() => {
-                                      if (!alt.compatible || isCurrent) return;
-                                      const cat = kitSwapCategory;
-                                      setProposalKitDraft((d) => ({
-                                        ...d,
-                                        source: { kind: "auto" },
-                                        pins: {
-                                          ...d.pins,
-                                          ...(cat === "module"
-                                            ? { moduleId: alt.product_id }
-                                            : { inverterId: alt.product_id }),
-                                        },
-                                      }));
-                                    }}
-                                  >
-                                    {isCurrent ? (
-                                      <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                                    ) : (
-                                      <span
-                                        className={`h-4 w-4 mt-0.5 shrink-0 rounded-full border ${
-                                          alt.compatible
-                                            ? "border-[var(--color-border)]"
-                                            : "border-dashed border-[var(--color-border)]"
-                                        }`}
-                                        aria-hidden
-                                      />
-                                    )}
-                                    <span className="min-w-0 flex-1">
-                                      <div className="flex flex-wrap items-center gap-1.5">
-                                        {extractPowerBadge(alt.product_name) ? (
-                                          <span
-                                            className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold ${
-                                              kitSwapCategory === "module"
-                                                ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
-                                                : "bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30"
-                                            }`}
-                                          >
-                                            <Zap className="h-3 w-3 shrink-0" />
-                                            {extractPowerBadge(alt.product_name)}
-                                          </span>
-                                        ) : null}
-                                        {kitSwapCategory === "module" &&
-                                        (isModuleTier1(alt) ||
-                                          (isCurrent &&
-                                            isModuleTier1(proposalKitResult.modules))) ? (
-                                          <img
-                                            src="/badges/tier1.png"
-                                            alt="Tier 1"
-                                            title="Módulo certificado Tier 1 (BloombergNEF)"
-                                            className="h-4.5 sm:h-5 w-auto object-contain shrink-0"
-                                          />
-                                        ) : null}
-                                        <span className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] leading-snug break-words">
-                                          {alt.brand_name ? `${alt.brand_name} ` : ""}
-                                          {alt.product_name}
-                                        </span>
-                                        {isCurrent ? (
-                                          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[0.62rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                                            atual
-                                          </span>
-                                        ) : isPreferred ? (
-                                          <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[0.62rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                                            Preferência
-                                          </span>
-                                        ) : null}
-                                      </div>
-                                      <span className="mt-0.5 block text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)] leading-tight break-words">
-                                        {alt.compatible
-                                          ? kitSwapCategory === "module"
-                                            ? `${alt.quantity} módulos${alt.string_summary ? ` · ${alt.string_summary}` : ""}`
-                                            : alt.quantity > 1
-                                              ? `${alt.quantity}x inversores · ${alt.string_summary}`
-                                              : alt.string_summary
-                                          : alt.reason}
-                                      </span>
-                                    </span>
-                                    <div className="shrink-0 text-right ml-2 self-center">
-                                      <div className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)]">
-                                        {formatCurrency(
-                                          kitSwapCategory === "inverter" && alt.quantity > 1
-                                            ? alt.unit_price * alt.quantity
-                                            : alt.unit_price
-                                        )}
-                                      </div>
-                                      {alt.compatible ? (
-                                        <div className="text-[0.62rem] text-[var(--color-muted-foreground)]">
-                                          {kitSwapCategory === "inverter" && alt.quantity > 1 ? (
-                                            <span>
-                                              {alt.quantity}x de {formatCurrency(alt.unit_price)}
-                                              {alt.kit_total != null
-                                                ? ` · Kit: ${formatCurrency(alt.kit_total)}`
-                                                : ""}
-                                            </span>
-                                          ) : alt.kit_total != null ? (
-                                            <span>Kit: {formatCurrency(alt.kit_total)}</span>
-                                          ) : null}
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {displayedAlternatives && displayedAlternatives.length === 0 ? (
-                        <p className="px-3.5 py-3 text-xs text-[var(--color-muted-foreground)]">
-                          Nenhuma alternativa encontrada para esta categoria.
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : null}
+                  <p className="mt-2 text-xs text-[var(--color-muted-foreground)] leading-relaxed">
+                    Dimensionamento de equipamentos reais com orçamento comercial por R$/kWp da sua
+                    região, incluindo projeto completo e instalação.
+                  </p>
                 </div>
-              ) : null}
+              </div>
 
-              {/* Bloco 4: Parâmetros Técnicos & Instalação */}
-              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]/50 p-3 sm:p-4 shadow-2xs space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--color-border)]/50 pb-2.5">
-                  <div>
-                    <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[var(--color-foreground)] flex items-center gap-1.5">
-                      <Sliders className="h-4 w-4 text-emerald-500" />
-                      Parâmetros Técnicos & Instalação
-                    </h3>
-                    <p className="text-[11px] text-[var(--color-muted-foreground)]">
-                      Ajuste telhado, padrão de rede, quantidade de inversores ou origem dos itens
-                    </p>
+              {/* 3. Parâmetros Técnicos do Dimensionamento */}
+              <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-xs">
+                <div className="relative space-y-4 p-4 sm:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-2 border-b border-[var(--color-border)]/60 pb-3">
+                    <div>
+                      <h3 className="text-base font-bold text-[var(--color-foreground)]">
+                        Ajustar Especificações do Kit
+                      </h3>
+                      <p className="mt-0.5 max-w-xl text-xs sm:text-sm text-[var(--color-muted-foreground)]">
+                        Altere potência, tipo de telhado, marca dos módulos ou padrão de rede — o
+                        sistema recalcula os dados automaticamente.
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Origem do Kit: Perfil do Integrador vs Meu Estoque */}
-                  <div className="flex items-center gap-1.5 pt-0.5">
-                    {kitSourceLoading && !kitSourceOptions ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] text-[var(--color-muted-foreground)] mr-1">
-                        <Loader2 className="h-3 w-3 animate-spin text-emerald-500" />
-                        <span className="hidden sm:inline">Estoque…</span>
+                  <div
+                    className={`grid gap-3.5 sm:grid-cols-2 ${
+                      isBelowMinModules ? "lg:grid-cols-4" : "lg:grid-cols-3"
+                    }`}
+                  >
+                    {isBelowMinModules ? (
+                      <>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-1">
+                            <Label
+                              htmlFor="proposal-kit-kw"
+                              className="text-xs font-semibold text-[var(--color-foreground)]"
+                            >
+                              Potência Calculada (kWp)
+                            </Label>
+                            <span className="text-[0.65rem] font-medium text-[var(--color-muted-foreground)]">
+                              Teórico ({theoreticalModuleQty}{" "}
+                              {theoreticalModuleQty === 1 ? "mód." : "móds."})
+                            </span>
+                          </div>
+                          <Input
+                            id="proposal-kit-kw"
+                            type="text"
+                            inputMode="decimal"
+                            className="h-11 border-[var(--color-border)] bg-[var(--color-background)] font-medium tabular-nums focus-visible:ring-emerald-500"
+                            value={proposalKitDraft.systemKw}
+                            onChange={(e) =>
+                              setProposalKitDraft((d) => ({ ...d, systemKw: e.target.value }))
+                            }
+                          />
+                          <p className="text-[0.68rem] text-[var(--color-muted-foreground)]">
+                            Baseada no consumo/fatura.
+                          </p>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-1">
+                            <Label className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              Potência Ajustada (kWp)
+                            </Label>
+                            <span className="inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[0.65rem] font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                              Mín. 4 módulos
+                            </span>
+                          </div>
+                          <div className="flex h-11 items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-500/[0.06] px-3.5 font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+                            <span>
+                              {adjustedKw.toLocaleString("pt-BR", {
+                                minimumFractionDigits: 1,
+                                maximumFractionDigits: 2,
+                              })}{" "}
+                              kWp
+                            </span>
+                            <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                              4× {activeModuleWatts}W
+                            </span>
+                          </div>
+                          <p className="text-[0.68rem] text-emerald-600/90 dark:text-emerald-400/90">
+                            Mínimo operacional do kit/inversor.
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="proposal-kit-kw"
+                          className="text-xs font-semibold text-[var(--color-foreground)]"
+                        >
+                          Potência do sistema (kWp)
+                        </Label>
+                        <Input
+                          id="proposal-kit-kw"
+                          type="text"
+                          inputMode="decimal"
+                          className="h-11 border-[var(--color-border)] bg-[var(--color-background)] font-medium tabular-nums focus-visible:ring-emerald-500"
+                          value={proposalKitDraft.systemKw}
+                          onChange={(e) =>
+                            setProposalKitDraft((d) => ({ ...d, systemKw: e.target.value }))
+                          }
+                        />
+                      </div>
+                    )}
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="proposal-kit-roof"
+                        className="text-xs font-semibold text-[var(--color-foreground)]"
+                      >
+                        Tipo de telhado
+                      </Label>
+                      <Select
+                        id="proposal-kit-roof"
+                        className="h-11 border-[var(--color-border)]"
+                        value={proposalKitDraft.roof}
+                        onChange={(e) =>
+                          setProposalKitDraft((d) => ({
+                            ...d,
+                            roof: e.target.value as RoofType,
+                          }))
+                        }
+                      >
+                        {ROOF_TYPE_SELECT_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+                      <Label
+                        htmlFor="proposal-kit-brand"
+                        className="text-xs font-semibold text-[var(--color-foreground)]"
+                      >
+                        Marca dos painéis
+                      </Label>
+                      <Select
+                        id="proposal-kit-brand"
+                        className="h-11 border-[var(--color-border)]"
+                        value={proposalKitDraft.brandPreset}
+                        onChange={(e) =>
+                          setProposalKitDraft((d) => ({
+                            ...d,
+                            brandPreset: e.target.value,
+                            pins: { ...d.pins, moduleId: undefined },
+                          }))
+                        }
+                      >
+                        {moduleBrandOptions.map((o) => (
+                          <option key={o.value || "any"} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    {proposalKitDraft.brandPreset === "__custom__" ? (
+                      <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
+                        <Label
+                          htmlFor="proposal-kit-brand-custom"
+                          className="text-xs font-semibold text-[var(--color-foreground)]"
+                        >
+                          Nome da marca
+                        </Label>
+                        <Input
+                          id="proposal-kit-brand-custom"
+                          type="text"
+                          placeholder="Ex.: Canadian Solar"
+                          className="h-11 border-[var(--color-border)]"
+                          value={proposalKitDraft.brandCustom}
+                          onChange={(e) =>
+                            setProposalKitDraft((d) => ({
+                              ...d,
+                              brandCustom: e.target.value,
+                              pins: { ...d.pins, moduleId: undefined },
+                            }))
+                          }
+                        />
+                      </div>
+                    ) : null}
+
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="proposal-kit-inverter-type"
+                        className="text-xs font-semibold text-[var(--color-foreground)]"
+                      >
+                        Tipo de Inversor
+                      </Label>
+                      <Select
+                        id="proposal-kit-inverter-type"
+                        className="h-11 w-full border-[var(--color-border)]"
+                        value={proposalKitDraft.inverterType || "string"}
+                        onChange={(e) =>
+                          setProposalKitDraft((d) => ({
+                            ...d,
+                            inverterType: e.target.value as ProposalKitDraft["inverterType"],
+                            pins: { ...d.pins, inverterId: undefined },
+                          }))
+                        }
+                      >
+                        <option value="string">String Inverter</option>
+                        <option value="microinverter">Microinversor</option>
+                        <option value="hybrid">Híbrido</option>
+                        <option value="off_grid">Off-Grid</option>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="proposal-kit-target-inverter-qty"
+                        className="text-xs font-semibold text-[var(--color-foreground)]"
+                      >
+                        Qtd. de Inversores
+                      </Label>
+                      <Select
+                        id="proposal-kit-target-inverter-qty"
+                        className="h-11 w-full border-[var(--color-border)]"
+                        value={proposalKitDraft.targetInverterQty || "auto"}
+                        onChange={(e) =>
+                          setProposalKitDraft((d) => ({
+                            ...d,
+                            targetInverterQty: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="auto">Automático (recomendado)</option>
+                        <option value="1">1 inversor (prioritário)</option>
+                        <option value="2">2 inversores idênticos</option>
+                        <option value="3">3 inversores idênticos</option>
+                        <option value="4">4 inversores idênticos</option>
+                        <option value="5">5 inversores idênticos</option>
+                        <option value="6">6 inversores idênticos</option>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="proposal-kit-grid-topology"
+                        className="text-xs font-semibold text-[var(--color-foreground)]"
+                      >
+                        Padrão da rede / Tensão
+                      </Label>
+                      <Select
+                        id="proposal-kit-grid-topology"
+                        className="h-11 w-full border-[var(--color-border)]"
+                        value={proposalKitDraft.gridTopology || "auto"}
+                        onChange={(e) =>
+                          setProposalKitDraft((d) => ({
+                            ...d,
+                            gridTopology: e.target.value as ProposalKitDraft["gridTopology"],
+                            pins: { ...d.pins, inverterId: undefined },
+                          }))
+                        }
+                      >
+                        <option value="auto">Automático / Qualquer</option>
+                        <option value="mono_220">Monofásico 220V</option>
+                        <option value="biphasic_127_220">Bifásico 127V / 220V</option>
+                        <option value="tri_220">Trifásico 220V (ou Mono 220V)</option>
+                        <option value="tri_380">Trifásico 380V (ou Mono 220V)</option>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+                      <Label
+                        htmlFor="proposal-kit-string-box"
+                        className="text-xs font-semibold text-[var(--color-foreground)]"
+                      >
+                        String Box (Opcional)
+                        {proposalKitResult?.string_configuration ? (
+                          <span className="ml-1 text-[0.75rem] font-normal text-emerald-600 dark:text-emerald-400">
+                            (Sug.: {proposalKitResult.string_configuration.string_count}E/
+                            {Math.min(proposalKitResult.string_configuration.string_count, 2)}S)
+                          </span>
+                        ) : null}
+                      </Label>
+                      <Select
+                        id="proposal-kit-string-box"
+                        className="h-11 w-full border-[var(--color-border)]"
+                        value={proposalKitDraft.stringBoxId || "none"}
+                        onChange={(e) =>
+                          setProposalKitDraft((d) => ({
+                            ...d,
+                            stringBoxId: e.target.value || "none",
+                          }))
+                        }
+                      >
+                        <option value="none">Sem String Box (Padrão)</option>
+                        <option value="auto">Automático / Recomendado</option>
+                        {stringBoxOptions.map((sb) => (
+                          <option key={sb.id} value={sb.id}>
+                            {sb.brandName ? `${sb.brandName} - ` : ""}
+                            {sb.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  </div>
+
+                  {isBelowMinModules && (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.08] p-3 sm:p-4 text-xs">
+                      <div className="flex items-start gap-2.5">
+                        <Info className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                        <div className="space-y-1 text-amber-900 dark:text-amber-200">
+                          <p className="font-semibold text-xs sm:text-sm">
+                            Por que a potência foi ajustada para{" "}
+                            {adjustedKw.toLocaleString("pt-BR", {
+                              minimumFractionDigits: 1,
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                            kWp?
+                          </p>
+                          <p className="leading-relaxed text-[0.72rem] sm:text-xs text-amber-800/90 dark:text-amber-300/90">
+                            A potência calculada pelo consumo é de{" "}
+                            <strong>
+                              {calculatedKw.toLocaleString("pt-BR", {
+                                minimumFractionDigits: 1,
+                                maximumFractionDigits: 2,
+                              })}{" "}
+                              kWp
+                            </strong>
+                            , o que exigiria apenas{" "}
+                            <strong>
+                              {theoreticalModuleQty}{" "}
+                              {theoreticalModuleQty === 1 ? "módulo" : "módulos"}
+                            </strong>
+                            . No entanto, os inversores solares e a plataforma exigem no mínimo{" "}
+                            <strong>4 módulos</strong> em série para atingir a faixa de tensão
+                            mínima de operação (tensão de partida do inversor / MPPT).
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 4. Equipamentos do Kit Solar com Preço por kWp */}
+              <div className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-2.5 sm:p-5 shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)]/60 pb-3">
+                  <h3 className="flex items-center gap-2 text-base font-bold text-[var(--color-foreground)]">
+                    <Package className="h-4 w-4 text-emerald-500" />
+                    Equipamentos do Kit Solar
+                    {proposalKitLoading && proposalKitResult ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-normal text-[var(--color-muted-foreground)]">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Atualizando…
                       </span>
                     ) : null}
+                  </h3>
+                </div>
+
+                {/* Seletor de Origem do Kit */}
+                <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/15 p-3.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-foreground)]">
+                        Origem do kit
+                      </p>
+                      <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
+                        Selecione a fonte dos equipamentos para montar o kit da proposta:
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {kitSourceLoading && !kitSourceOptions ? (
+                      <span className="inline-flex animate-pulse items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3.5 py-1.5 text-xs text-[var(--color-muted-foreground)]">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Verificando estoque…
+                      </span>
+                    ) : null}
+
+                    {/* Opção 1: Perfil do Integrador (Catálogo Global) */}
                     <button
                       type="button"
-                      className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs sm:text-sm transition cursor-pointer ${
                         kitDraftSource.kind !== "own"
-                          ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                          ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
                           : "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300"
                       }`}
                       onClick={() =>
@@ -3922,25 +3655,26 @@ export const ProposalEconomicsModal = forwardRef<
                         }))
                       }
                     >
-                      <Sliders className="h-3 w-3 text-emerald-500" />
-                      Perfil Integrador
+                      <Sliders className="h-3.5 w-3.5 text-emerald-500" />
+                      Perfil do Integrador
                     </button>
 
+                    {/* Opção 2: Meu Estoque */}
                     {ownStockOption ? (
                       <button
                         type="button"
                         disabled={!ownStockOption.available}
                         title={
                           ownStockOption.available
-                            ? "Montar kit com itens do estoque próprio"
-                            : "Estoque ainda não cobre todos os equipamentos"
+                            ? "Montar o kit 100% com itens do seu estoque cadastrado"
+                            : "Seu estoque cadastrado ainda não cobre todos os equipamentos necessários para esta configuração"
                         }
-                        className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs sm:text-sm transition ${
                           kitDraftSource.kind === "own"
-                            ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                            ? "border-emerald-500 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
                             : ownStockOption.available
                               ? "border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:border-emerald-300 cursor-pointer"
-                              : "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-muted-foreground)] opacity-50"
+                              : "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-muted-foreground)] opacity-60"
                         }`}
                         onClick={() =>
                           setProposalKitDraft((d) => ({
@@ -3950,565 +3684,955 @@ export const ProposalEconomicsModal = forwardRef<
                           }))
                         }
                       >
-                        <Warehouse className="h-3 w-3" />
-                        Meu Estoque
+                        <Warehouse className="h-3.5 w-3.5" />
+                        Meu estoque
                         {ownStockOption.available && ownStockOption.total != null ? (
-                          <span className="text-[10px] text-[var(--color-muted-foreground)]">
+                          <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
                             ({formatCurrency(ownStockOption.total)})
                           </span>
-                        ) : null}
+                        ) : (
+                          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:text-amber-300">
+                            cobre {ownStockOption.covered_categories ?? 0}/
+                            {ownStockOption.required_categories ?? 5}
+                          </span>
+                        )}
                       </button>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  {/* Tipo de Telhado */}
-                  <div className="space-y-1">
-                    <Label
-                      htmlFor="proposal-kit-roof"
-                      className="text-[0.7rem] font-semibold text-[var(--color-muted-foreground)]"
-                    >
-                      Tipo de Telhado
-                    </Label>
-                    <Select
-                      id="proposal-kit-roof"
-                      className="h-9 text-xs border-[var(--color-border)] bg-[var(--color-background)]"
-                      value={proposalKitDraft.roof}
-                      onChange={(e) =>
-                        setProposalKitDraft((d) => ({
-                          ...d,
-                          roof: e.target.value as RoofType,
-                        }))
-                      }
-                    >
-                      {ROOF_TYPE_SELECT_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-
-                  {/* Padrão da Rede / Tensão */}
-                  <div className="space-y-1">
-                    <Label
-                      htmlFor="proposal-kit-grid-topology"
-                      className="text-[0.7rem] font-semibold text-[var(--color-muted-foreground)]"
-                    >
-                      Padrão de Rede / Tensão
-                    </Label>
-                    <Select
-                      id="proposal-kit-grid-topology"
-                      className="h-9 text-xs border-[var(--color-border)] bg-[var(--color-background)]"
-                      value={proposalKitDraft.gridTopology || "auto"}
-                      onChange={(e) =>
-                        setProposalKitDraft((d) => ({
-                          ...d,
-                          gridTopology: e.target.value as ProposalKitDraft["gridTopology"],
-                          pins: { ...d.pins, inverterId: undefined },
-                        }))
-                      }
-                    >
-                      <option value="auto">Automático / Qualquer</option>
-                      <option value="mono_220">Monofásico 220V</option>
-                      <option value="biphasic_127_220">Bifásico 127V / 220V</option>
-                      <option value="tri_220">Trifásico 220V</option>
-                      <option value="tri_380">Trifásico 380V</option>
-                    </Select>
-                  </div>
-
-                  {/* Qtd. de Inversores */}
-                  <div className="space-y-1">
-                    <Label
-                      htmlFor="proposal-kit-target-inverter-qty"
-                      className="text-[0.7rem] font-semibold text-[var(--color-muted-foreground)]"
-                    >
-                      Qtd. Inversores
-                    </Label>
-                    <Select
-                      id="proposal-kit-target-inverter-qty"
-                      className="h-9 text-xs border-[var(--color-border)] bg-[var(--color-background)]"
-                      value={proposalKitDraft.targetInverterQty || "auto"}
-                      onChange={(e) =>
-                        setProposalKitDraft((d) => ({
-                          ...d,
-                          targetInverterQty: e.target.value,
-                        }))
-                      }
-                    >
-                      <option value="auto">Auto (recomendado)</option>
-                      <option value="1">1 inversor (prioritário)</option>
-                      <option value="2">2 inversores idênticos</option>
-                      <option value="3">3 inversores idênticos</option>
-                      <option value="4">4 inversores idênticos</option>
-                      <option value="5">5 inversores idênticos</option>
-                      <option value="6">6 inversores idênticos</option>
-                    </Select>
-                  </div>
-
-                  {/* String Box */}
-                  <div className="space-y-1">
-                    <Label
-                      htmlFor="proposal-kit-string-box"
-                      className="text-[0.7rem] font-semibold text-[var(--color-muted-foreground)]"
-                    >
-                      String Box
-                    </Label>
-                    <Select
-                      id="proposal-kit-string-box"
-                      className="h-9 text-xs border-[var(--color-border)] bg-[var(--color-background)]"
-                      value={proposalKitDraft.stringBoxId || "none"}
-                      onChange={(e) =>
-                        setProposalKitDraft((d) => ({
-                          ...d,
-                          stringBoxId: e.target.value || "none",
-                        }))
-                      }
-                    >
-                      <option value="none">Sem String Box</option>
-                      <option value="auto">Automático / Recomendado</option>
-                      {stringBoxOptions.map((sb) => (
-                        <option key={sb.id} value={sb.id}>
-                          {sb.brandName ? `${sb.brandName} - ` : ""}
-                          {sb.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Linha secundária para Potência manual e Marca preferencial dos painéis */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 border-t border-[var(--color-border)]/40">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <Label
-                        htmlFor="proposal-kit-kw"
-                        className="text-[0.7rem] font-semibold text-[var(--color-muted-foreground)]"
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        title="Cadastre produtos no seu estoque para cotar a partir dos seus próprios itens"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-background)] px-3.5 py-1.5 text-xs sm:text-sm text-[var(--color-muted-foreground)] opacity-60 cursor-not-allowed"
                       >
-                        Potência do Sistema (kWp)
-                      </Label>
-                      {isBelowMinModules && (
-                        <span className="text-[0.65rem] text-amber-600 dark:text-amber-400 font-semibold">
-                          Ajustado para {adjustedKw} kWp
+                        <Warehouse className="h-3.5 w-3.5" />
+                        Meu estoque
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:text-amber-300">
+                          Sem itens cadastrados
                         </span>
-                      )}
-                    </div>
-                    <Input
-                      id="proposal-kit-kw"
-                      type="text"
-                      inputMode="decimal"
-                      className="h-8.5 text-xs font-semibold tabular-nums border-[var(--color-border)] bg-[var(--color-background)]"
-                      value={proposalKitDraft.systemKw}
-                      onChange={(e) =>
-                        setProposalKitDraft((d) => ({ ...d, systemKw: e.target.value }))
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label
-                      htmlFor="proposal-kit-brand"
-                      className="text-[0.7rem] font-semibold text-[var(--color-muted-foreground)]"
-                    >
-                      Preferência de Marca dos Painéis
-                    </Label>
-                    <Select
-                      id="proposal-kit-brand"
-                      className="h-8.5 text-xs border-[var(--color-border)] bg-[var(--color-background)]"
-                      value={proposalKitDraft.brandPreset}
-                      onChange={(e) =>
-                        setProposalKitDraft((d) => ({
-                          ...d,
-                          brandPreset: e.target.value,
-                          pins: { ...d.pins, moduleId: undefined },
-                        }))
-                      }
-                    >
-                      {moduleBrandOptions.map((o) => (
-                        <option key={o.value || "any"} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </Select>
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {proposalKitDraft.brandPreset === "__custom__" ? (
-                  <div className="space-y-1 pt-1 border-t border-[var(--color-border)]/40">
-                    <Label
-                      htmlFor="proposal-kit-brand-custom"
-                      className="text-[0.7rem] font-semibold text-[var(--color-muted-foreground)]"
-                    >
-                      Nome da marca personalizada
-                    </Label>
-                    <Input
-                      id="proposal-kit-brand-custom"
-                      type="text"
-                      placeholder="Ex.: Canadian Solar"
-                      className="h-8.5 text-xs border-[var(--color-border)] bg-[var(--color-background)]"
-                      value={proposalKitDraft.brandCustom}
-                      onChange={(e) =>
-                        setProposalKitDraft((d) => ({
-                          ...d,
-                          brandCustom: e.target.value,
-                          pins: { ...d.pins, moduleId: undefined },
-                        }))
-                      }
-                    />
+                {proposalKitError ? (
+                  <p className="text-sm text-red-600 dark:text-red-400">{proposalKitError}</p>
+                ) : null}
+
+                {proposalKitLoading && !proposalKitResult ? (
+                  <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-10">
+                    <div className="relative flex flex-col items-center gap-3 text-center">
+                      <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10">
+                        <Package className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                        <Loader2 className="absolute -bottom-0.5 -right-0.5 h-5 w-5 animate-spin text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                        Montando o kit
+                      </p>
+                      <p className="max-w-xs text-sm text-[var(--color-muted-foreground)]">
+                        Consultando catálogo e dimensionamento…
+                      </p>
+                    </div>
                   </div>
                 ) : null}
-              </div>
 
-              {/* Bloco 5: Accordion de Componentes Detalhados do Kit (BOM) */}
-              {proposalKitResult ? (
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowDetailedComponents((prev) => !prev)}
-                    className="flex w-full items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]/50 px-3.5 py-2.5 text-left text-xs font-semibold text-[var(--color-foreground)] transition hover:bg-[var(--color-card)] cursor-pointer shadow-2xs"
+                {proposalKitResult ? (
+                  <div
+                    className={`space-y-4 transition-opacity ${proposalKitLoading ? "pointer-events-none opacity-50" : ""}`}
                   >
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-emerald-500" />
-                      <span>
-                        Ver componentes completos do kit{" "}
-                        <span className="text-[var(--color-muted-foreground)] font-normal">
-                          ({distributedKitItems.length} itens inclusos: cabos, conectores,
-                          fixadores)
+                    {/* 3 Cards de Kits do Distribuidor Real (Standard, Elite, Premium) */}
+                    {distributorTiersLoading &&
+                    (!computedDistributorCards || computedDistributorCards.length === 0) ? (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+                        {[1, 2, 3].map((i) => (
+                          <div
+                            key={i}
+                            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4 animate-pulse space-y-3"
+                          >
+                            <div className="flex justify-between items-center">
+                              <div className="h-5 w-24 bg-[var(--color-muted)]/40 rounded-full" />
+                              <div className="h-4 w-20 bg-[var(--color-muted)]/30 rounded" />
+                            </div>
+                            <div className="h-7 w-32 bg-[var(--color-muted)]/40 rounded" />
+                            <div className="h-3 w-48 bg-[var(--color-muted)]/20 rounded" />
+                            <div className="pt-2 border-t border-[var(--color-border)]/40 space-y-1.5">
+                              <div className="h-3 w-36 bg-[var(--color-muted)]/30 rounded" />
+                              <div className="h-3 w-40 bg-[var(--color-muted)]/30 rounded" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : computedDistributorCards.length > 0 ? (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div>
+                            <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-foreground)] flex items-center gap-1.5">
+                              <Boxes className="h-3.5 w-3.5 text-emerald-500" />
+                              Opções de Kits por Preço por kWp
+                            </h4>
+                            <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                              3 configurações montadas com equipamentos do seu catálogo
+                            </span>
+                          </div>
+
+                          {/* Ajuste de Preço R$/kWp */}
+                          <div className="flex items-center gap-2.5 shrink-0 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] px-3 py-1.5 shadow-xs">
+                            <Label
+                              htmlFor="kwp-rate-input"
+                              className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] whitespace-nowrap flex items-center gap-1.5"
+                            >
+                              <Zap className="w-3.5 h-3.5 text-emerald-500" />
+                              Preço R$/kWp:
+                            </Label>
+                            <div className="relative w-28 sm:w-32">
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--color-muted-foreground)] font-bold">
+                                R$
+                              </span>
+                              <Input
+                                id="kwp-rate-input"
+                                type="number"
+                                min={500}
+                                step={50}
+                                value={kwpRateValue}
+                                onChange={(e) =>
+                                  setKwpRateValue(Math.max(0, parseFloat(e.target.value) || 0))
+                                }
+                                className="pl-8 h-8 font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 bg-[var(--color-card)]"
+                                placeholder="2800"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                          {computedDistributorCards.map((tier) => {
+                            const isSelected = tier.isSelected;
+                            return (
+                              <div
+                                key={tier.tier_id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => {
+                                  setSelectedDistributorTierId(tier.tier_id);
+                                  setProposalKitResult(tier.kit_result);
+                                  setOptimisticModuleQty(null);
+                                  setKitQtyDrafts({});
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    setSelectedDistributorTierId(tier.tier_id);
+                                    setProposalKitResult(tier.kit_result);
+                                    setOptimisticModuleQty(null);
+                                    setKitQtyDrafts({});
+                                  }
+                                }}
+                                className={`cursor-pointer rounded-xl border p-4 transition-all flex flex-col justify-between text-left select-none ${
+                                  isSelected
+                                    ? "border-emerald-500 bg-emerald-500/[0.05] ring-1 ring-emerald-500 shadow-xs"
+                                    : "border-[var(--color-border)] bg-[var(--color-background)] hover:border-[var(--color-border)] hover:bg-[var(--color-muted)]/10"
+                                }`}
+                              >
+                                <div className="space-y-2.5">
+                                  <div className="flex items-center justify-between">
+                                    <span
+                                      className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                                        tier.tier_id === "economic"
+                                          ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+                                          : tier.tier_id === "cost_benefit"
+                                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                            : "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
+                                      }`}
+                                    >
+                                      {tier.name}
+                                    </span>
+                                    <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                                      {formatCurrency(tier.ratePerKwpEffective)}/kWp
+                                    </span>
+                                  </div>
+
+                                  <div>
+                                    <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                      {tier.commercialPriceFormatted}
+                                    </p>
+                                    <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
+                                      {tier.tagline}
+                                    </p>
+                                  </div>
+
+                                  <div className="pt-2.5 border-t border-[var(--color-border)]/60 text-xs space-y-1 text-[var(--color-muted-foreground)]">
+                                    <p>
+                                      <strong className="text-[var(--color-foreground)] font-medium">
+                                        Inversor:{" "}
+                                      </strong>
+                                      {tier.kit_result?.inverter?.quantity &&
+                                      tier.kit_result.inverter.quantity > 1
+                                        ? `${tier.kit_result.inverter.quantity}x `
+                                        : ""}
+                                      {tier.inverter_brand} ({tier.inverter_power_kw} kW)
+                                    </p>
+                                    <p className="flex items-center gap-1.5 flex-wrap">
+                                      <strong className="text-[var(--color-foreground)] font-medium">
+                                        Módulos:{" "}
+                                      </strong>
+                                      <span>
+                                        {tier.module_qty}x {tier.module_brand} (
+                                        {tier.module_power_w}
+                                        W)
+                                      </span>
+                                      {isModuleTier1({
+                                        brand_name: tier.module_brand,
+                                        product_name: tier.module_model,
+                                        is_tier_1:
+                                          tier.module_is_tier_1 ||
+                                          tier.kit_result?.modules?.is_tier_1,
+                                      }) ? (
+                                        <img
+                                          src="/badges/tier1.png"
+                                          alt="Tier 1"
+                                          title="Módulo certificado Tier 1 (BloombergNEF)"
+                                          className="h-4.5 sm:h-5 w-auto object-contain rounded shadow-xs shrink-0"
+                                        />
+                                      ) : null}
+                                    </p>
+                                    <p className="text-[11px] text-[var(--color-muted-foreground)]/80">
+                                      + Estrutura, cabos e conectores inclusos
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="pt-3 mt-3 border-t border-[var(--color-border)]/50 flex items-center justify-between">
+                                  <span className="text-xs text-[var(--color-muted-foreground)]">
+                                    Geração:{" "}
+                                    <strong className="text-[var(--color-foreground)]">
+                                      ~{tier.estimated_monthly_generation_kwh} kWh/mês
+                                    </strong>
+                                  </span>
+                                  <span
+                                    className={`h-5 w-5 rounded-full border flex items-center justify-center transition-colors ${
+                                      isSelected
+                                        ? "border-emerald-500 bg-emerald-500 text-white"
+                                        : "border-[var(--color-border)]"
+                                    }`}
+                                  >
+                                    {isSelected ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {isBelowMinModules ? (
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="inline-flex items-center gap-1 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-300">
+                          Ajustado ao mín. de 4 módulos ({activeModuleWatts}W)
                         </span>
-                      </span>
+                      </div>
+                    ) : null}
+
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3.5">
+                      {/* Card Módulos */}
+                      <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-2.5 sm:p-3.5 shadow-xs">
+                        <div>
+                          <div className="flex items-center justify-between gap-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <div className="flex h-5 w-5 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                <Sun className="h-3.5 w-3.5" />
+                              </div>
+                              <span className="text-[0.7rem] sm:text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)] shrink-0">
+                                Módulos
+                              </span>
+                              {isModuleTier1(proposalKitResult.modules) ? (
+                                <img
+                                  src="/badges/tier1.png"
+                                  alt="Tier 1 Bloomberg"
+                                  title="Módulo certificado Tier 1 (BloombergNEF)"
+                                  className="h-4.5 sm:h-5 w-auto object-contain shrink-0"
+                                />
+                              ) : null}
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {extractPowerBadge(proposalKitResult.modules.product_name) ? (
+                                <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 shrink-0">
+                                  <Zap className="h-3 w-3 shrink-0" />
+                                  {extractPowerBadge(proposalKitResult.modules.product_name)}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          <div className="mt-1.5 space-y-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="tabular-nums text-amber-500 dark:text-amber-400 font-bold text-xs sm:text-sm">
+                                {optimisticModuleQty ?? proposalKitResult.modules.quantity}×
+                              </span>
+                              <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium">
+                                {proposalKitResult.modules.brand_name}
+                              </span>
+                            </div>
+                            <p className="text-[0.7rem] sm:text-xs font-semibold leading-snug text-[var(--color-foreground)] break-words">
+                              {proposalKitResult.modules.product_name}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-2.5 pt-1.5 border-t border-[var(--color-border)]/50 flex items-center justify-between gap-1">
+                          {(proposalKitResult.modules as unknown as { datasheet_url?: string })
+                            .datasheet_url ? (
+                            <a
+                              href={
+                                (
+                                  proposalKitResult.modules as unknown as {
+                                    datasheet_url?: string;
+                                  }
+                                ).datasheet_url
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[0.65rem] sm:text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 hover:underline font-medium"
+                            >
+                              Datasheet
+                            </a>
+                          ) : (
+                            <span />
+                          )}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-6 sm:h-7 shrink-0 rounded-md px-2 text-[0.68rem] sm:text-xs font-semibold"
+                            onClick={() =>
+                              setKitSwapCategory((c) => (c === "module" ? null : "module"))
+                            }
+                          >
+                            {kitSwapCategory === "module" ? "Fechar" : "Trocar"}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Card Inversor */}
+                      <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-2.5 sm:p-3.5 shadow-xs">
+                        <div>
+                          <div className="flex items-center justify-between gap-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <div className="flex h-5 w-5 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-md bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                                <Cpu className="h-3.5 w-3.5" />
+                              </div>
+                              <span className="text-[0.7rem] sm:text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)] truncate">
+                                Inversor
+                              </span>
+                            </div>
+                            {extractPowerBadge(proposalKitResult.inverter.product_name) ? (
+                              <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30 shrink-0">
+                                <Zap className="h-3 w-3 shrink-0" />
+                                {extractPowerBadge(proposalKitResult.inverter.product_name)}
+                              </span>
+                            ) : null}
+                          </div>
+
+                          <div className="mt-1.5 space-y-0.5">
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <span className="tabular-nums text-violet-600 dark:text-violet-400 font-bold text-xs sm:text-sm">
+                                {proposalKitResult.inverter.quantity}×
+                              </span>
+                              <span className="text-[0.65rem] sm:text-xs text-[var(--color-muted-foreground)] font-medium">
+                                {proposalKitResult.inverter.brand_name}
+                              </span>
+                            </div>
+                            <p className="text-[0.7rem] sm:text-xs font-semibold leading-snug text-[var(--color-foreground)] break-words">
+                              {proposalKitResult.inverter.product_name}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-2.5 pt-1.5 border-t border-[var(--color-border)]/50 flex items-center justify-between gap-1">
+                          {(proposalKitResult.inverter as unknown as { datasheet_url?: string })
+                            .datasheet_url ? (
+                            <a
+                              href={
+                                (
+                                  proposalKitResult.inverter as unknown as {
+                                    datasheet_url?: string;
+                                  }
+                                ).datasheet_url
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[0.65rem] sm:text-xs text-violet-600 hover:text-violet-700 dark:text-violet-400 hover:underline font-medium"
+                            >
+                              Datasheet
+                            </a>
+                          ) : (
+                            <span />
+                          )}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-6 sm:h-7 shrink-0 rounded-md px-2 text-[0.68rem] sm:text-xs font-semibold"
+                            onClick={() =>
+                              setKitSwapCategory((c) => (c === "inverter" ? null : "inverter"))
+                            }
+                          >
+                            {kitSwapCategory === "inverter" ? "Fechar" : "Trocar"}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                    {showDetailedComponents ? (
-                      <ChevronUp className="h-4 w-4 text-[var(--color-muted-foreground)]" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-[var(--color-muted-foreground)]" />
-                    )}
-                  </button>
 
-                  {showDetailedComponents ? (
-                    <div className="space-y-2 pt-1">
-                      {proposalKitResult.string_configuration ? (
-                        <p className="rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)]/15 px-3 py-1.5 text-xs text-[var(--color-muted-foreground)]">
-                          <strong className="text-[var(--color-foreground)]">Strings: </strong>
-                          {proposalKitResult.string_configuration.string_count} strings de{" "}
-                          {proposalKitResult.string_configuration.modules_per_string} módulos
-                        </p>
-                      ) : null}
+                    {kitSwapCategory ? (
+                      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/10 overflow-hidden">
+                        <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-3.5 py-2.5">
+                          <p className="text-xs font-semibold text-[var(--color-foreground)]">
+                            {kitSwapCategory === "module"
+                              ? "Trocar módulo — alternativas compatíveis"
+                              : "Trocar inversor — alternativas compatíveis"}
+                          </p>
+                          <div className="flex items-center gap-3">
+                            {(kitSwapCategory === "module" && proposalKitDraft.pins.moduleId) ||
+                            (kitSwapCategory === "inverter" && proposalKitDraft.pins.inverterId) ? (
+                              <button
+                                type="button"
+                                className="text-xs text-emerald-700 hover:underline dark:text-emerald-300 font-medium"
+                                onClick={() => {
+                                  const cat = kitSwapCategory;
+                                  setProposalKitDraft((d) => ({
+                                    ...d,
+                                    pins: {
+                                      ...d.pins,
+                                      ...(cat === "module"
+                                        ? { moduleId: undefined }
+                                        : { inverterId: undefined }),
+                                    },
+                                  }));
+                                }}
+                              >
+                                Voltar à seleção automática
+                              </button>
+                            ) : null}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs px-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                              onClick={() => setKitSwapCategory(null)}
+                            >
+                              Fechar
+                            </Button>
+                          </div>
+                        </div>
 
-                      <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] shadow-2xs">
-                        <table className="w-full text-xs sm:text-sm">
-                          <thead>
-                            <tr className="border-b border-[var(--color-border)] bg-[var(--color-muted)]/20">
-                              <th className="py-2 px-2.5 text-left text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                                Item
-                              </th>
-                              <th className="hidden sm:table-cell p-2.5 text-left text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                                Marca
-                              </th>
-                              <th className="py-2 px-1 text-center sm:text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-14 sm:w-20">
-                                Qtd
-                              </th>
-                              <th className="hidden sm:table-cell p-2.5 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                                Un.
-                              </th>
-                              <th className="py-2 px-2.5 text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-28 sm:w-32">
-                                Total
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {distributedKitItems.map((item, idx) => {
-                              const isModuleRow =
-                                item.product_id === proposalKitResult.modules.product_id;
-                              const isInverterRow =
-                                item.product_id === proposalKitResult.inverter.product_id;
-                              const qty = item.effectiveQty;
-                              const hasDraft = kitQtyDrafts[item.product_id] != null;
-                              const isAdjusted = hasDraft && qty !== item.quantity;
-                              const belowCalculated = isAdjusted && qty < item.quantity;
-                              const isLockedBos =
-                                (item as unknown as { category_name?: string }).category_name ===
-                                  "structure_kit" ||
-                                (item as unknown as { category_name?: string }).category_name ===
-                                  "profile" ||
-                                (!("category_name" in item) &&
-                                  (item.product_name.toUpperCase().includes("ESTRUTURA") ||
-                                    item.product_name.toUpperCase().includes("PERFIL")));
+                        {/* Filtro por Marca em Pills */}
+                        {availableSwapBrands.length > 1 ? (
+                          <div className="flex items-center gap-1.5 overflow-x-auto border-b border-[var(--color-border)]/60 px-3.5 py-2 bg-[var(--color-muted)]/15">
+                            <span className="text-[10px] font-bold text-[var(--color-muted-foreground)] uppercase tracking-wider mr-1 shrink-0">
+                              Marca:
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setSwapBrandFilter("all")}
+                              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold shrink-0 transition ${
+                                swapBrandFilter === "all"
+                                  ? "bg-emerald-600 text-white shadow-xs"
+                                  : "bg-[var(--color-background)] text-[var(--color-foreground)] hover:bg-[var(--color-muted)]/30 border border-[var(--color-border)]/60"
+                              }`}
+                            >
+                              Todas
+                              <span className="text-[10px] opacity-80">
+                                ({displayedAlternatives?.length ?? 0})
+                              </span>
+                            </button>
+                            {availableSwapBrands.map((b) => {
+                              const isActive =
+                                swapBrandFilter.toLowerCase() === b.name.toLowerCase();
                               return (
-                                <tr
-                                  key={item.product_id}
-                                  className={`border-b border-[var(--color-border)]/80 transition-colors last:border-0 hover:bg-emerald-500/[0.04] ${
-                                    idx % 2 === 1 ? "bg-[var(--color-muted)]/15" : ""
+                                <button
+                                  key={b.name}
+                                  type="button"
+                                  onClick={() => setSwapBrandFilter(b.name)}
+                                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold shrink-0 transition ${
+                                    isActive
+                                      ? "bg-emerald-600 text-white shadow-xs"
+                                      : "bg-[var(--color-background)] text-[var(--color-foreground)] hover:bg-[var(--color-muted)]/30 border border-[var(--color-border)]/60"
                                   }`}
                                 >
-                                  <td className="py-2 px-2.5 font-medium text-[var(--color-foreground)]">
-                                    <div className="min-w-0">
-                                      <div className="flex items-center gap-1.5 flex-wrap">
-                                        <p className="text-[0.7rem] sm:text-xs font-semibold leading-tight break-words text-[var(--color-foreground)]">
-                                          {item.product_name}
-                                        </p>
-                                        {isModuleRow && isModuleTier1(proposalKitResult.modules) ? (
-                                          <img
-                                            src="/badges/tier1.png"
-                                            alt="Tier 1"
-                                            title="Módulo certificado Tier 1 (BloombergNEF)"
-                                            className="h-4 sm:h-4.5 w-auto object-contain rounded shadow-2xs shrink-0"
-                                          />
-                                        ) : null}
-                                      </div>
-                                      {item.brand_name ? (
-                                        <p className="text-[0.62rem] sm:hidden text-[var(--color-muted-foreground)] font-normal mt-0.5 break-words">
-                                          {item.brand_name}
-                                        </p>
-                                      ) : null}
-                                      {isAdjusted ? (
-                                        <span className="mt-0.5 block text-[0.62rem] sm:text-xs font-normal text-[var(--color-muted-foreground)]">
-                                          calculado: {item.quantity}
-                                          {" · "}
-                                          <button
-                                            type="button"
-                                            className="text-emerald-700 hover:underline dark:text-emerald-300 font-medium"
-                                            onClick={() =>
-                                              setKitQtyDrafts((prev) => {
-                                                const next = { ...prev };
-                                                delete next[item.product_id];
-                                                return next;
-                                              })
-                                            }
-                                          >
-                                            restaurar
-                                          </button>
-                                          {belowCalculated ? (
-                                            <span className="text-red-600 font-semibold dark:text-red-400">
-                                              {" "}
-                                              · abaixo do calculado
+                                  {b.name}
+                                  <span className="text-[10px] opacity-80">({b.count})</span>
+                                  {b.isPreferred && !isActive ? (
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                  ) : null}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+
+                        {kitAlternativesLoading ? (
+                          <p className="flex items-center gap-2 px-3.5 py-3 text-xs text-[var(--color-muted-foreground)]">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Simulando alternativas compatíveis…
+                          </p>
+                        ) : null}
+                        {kitAlternativesError ? (
+                          <p className="px-3.5 py-3 text-xs text-red-600 dark:text-red-400">
+                            {kitAlternativesError}
+                          </p>
+                        ) : null}
+
+                        {/* Listagem agrupada por marcas */}
+                        {groupedSwapAlternatives?.map((group) => {
+                          return (
+                            <div
+                              key={group.brand}
+                              className="border-b border-[var(--color-border)]/60 last:border-b-0"
+                            >
+                              <div className="flex items-center justify-between bg-[var(--color-muted)]/25 px-3.5 py-1.5 border-y border-[var(--color-border)]/40 text-[11px] font-bold text-[var(--color-foreground)]">
+                                <div className="flex items-center gap-2">
+                                  <span className="uppercase tracking-wider font-extrabold">
+                                    {group.brand}
+                                  </span>
+                                  <span className="font-normal text-[var(--color-muted-foreground)] text-[10px]">
+                                    ({group.items.length}{" "}
+                                    {group.items.length === 1
+                                      ? "modelo compatível"
+                                      : "modelos compatíveis"}
+                                    )
+                                  </span>
+                                </div>
+                                {group.isPreferred ? (
+                                  <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[0.62rem] font-semibold text-emerald-700 dark:text-emerald-300">
+                                    Preferência
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="divide-y divide-[var(--color-border)]/40">
+                                {group.items.map((alt) => {
+                                  const isCurrent = alt.product_id === activeSwapCurrentId;
+                                  const preferredList =
+                                    kitSwapCategory === "module"
+                                      ? (currentOrganization?.preferredModuleBrands ?? [])
+                                      : (currentOrganization?.preferredInverterBrands ?? []);
+                                  const isPreferred =
+                                    Boolean(alt.brand_name) &&
+                                    preferredList.some((p) =>
+                                      alt.brand_name.toLowerCase().includes(p.toLowerCase())
+                                    );
+                                  return (
+                                    <button
+                                      key={alt.product_id}
+                                      type="button"
+                                      disabled={!alt.compatible || isCurrent}
+                                      className={`flex w-full items-start gap-2.5 px-3 sm:px-3.5 py-2.5 text-left transition-colors ${
+                                        isCurrent
+                                          ? "bg-emerald-500/[0.08]"
+                                          : alt.compatible
+                                            ? "hover:bg-emerald-500/[0.04] cursor-pointer"
+                                            : "opacity-60 cursor-not-allowed"
+                                      }`}
+                                      onClick={() => {
+                                        if (!alt.compatible || isCurrent) return;
+                                        const cat = kitSwapCategory;
+                                        setProposalKitDraft((d) => ({
+                                          ...d,
+                                          source: { kind: "auto" },
+                                          pins: {
+                                            ...d.pins,
+                                            ...(cat === "module"
+                                              ? { moduleId: alt.product_id }
+                                              : { inverterId: alt.product_id }),
+                                          },
+                                        }));
+                                      }}
+                                    >
+                                      {isCurrent ? (
+                                        <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                      ) : (
+                                        <span
+                                          className={`h-4 w-4 mt-0.5 shrink-0 rounded-full border ${
+                                            alt.compatible
+                                              ? "border-[var(--color-border)]"
+                                              : "border-dashed border-[var(--color-border)]"
+                                          }`}
+                                          aria-hidden
+                                        />
+                                      )}
+                                      <span className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                          {extractPowerBadge(alt.product_name) ? (
+                                            <span
+                                              className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] sm:text-xs font-bold ${
+                                                kitSwapCategory === "module"
+                                                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                                                  : "bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30"
+                                              }`}
+                                            >
+                                              <Zap className="h-3 w-3 shrink-0" />
+                                              {extractPowerBadge(alt.product_name)}
                                             </span>
                                           ) : null}
+                                          {kitSwapCategory === "module" &&
+                                          (isModuleTier1(alt) ||
+                                            (isCurrent &&
+                                              isModuleTier1(proposalKitResult.modules))) ? (
+                                            <img
+                                              src="/badges/tier1.png"
+                                              alt="Tier 1"
+                                              title="Módulo certificado Tier 1 (BloombergNEF)"
+                                              className="h-4.5 sm:h-5 w-auto object-contain shrink-0"
+                                            />
+                                          ) : null}
+                                          <span className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)] leading-snug break-words">
+                                            {alt.brand_name ? `${alt.brand_name} ` : ""}
+                                            {alt.product_name}
+                                          </span>
+                                          {isCurrent ? (
+                                            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[0.62rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                              atual
+                                            </span>
+                                          ) : isPreferred ? (
+                                            <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[0.62rem] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                              Preferência
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                        <span className="mt-0.5 block text-[0.68rem] sm:text-xs text-[var(--color-muted-foreground)] leading-tight break-words">
+                                          {alt.compatible
+                                            ? kitSwapCategory === "module"
+                                              ? `${alt.quantity} módulos${alt.string_summary ? ` · ${alt.string_summary}` : ""}`
+                                              : alt.quantity > 1
+                                                ? `${alt.quantity}x inversores · ${alt.string_summary}`
+                                                : alt.string_summary
+                                            : alt.reason}
                                         </span>
+                                      </span>
+                                      <div className="shrink-0 text-right ml-2 self-center">
+                                        <div className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)]">
+                                          {formatCurrency(
+                                            kitSwapCategory === "inverter" && alt.quantity > 1
+                                              ? alt.unit_price * alt.quantity
+                                              : alt.unit_price
+                                          )}
+                                        </div>
+                                        {alt.compatible ? (
+                                          <div className="text-[0.62rem] text-[var(--color-muted-foreground)]">
+                                            {kitSwapCategory === "inverter" && alt.quantity > 1 ? (
+                                              <span>
+                                                {alt.quantity}x de {formatCurrency(alt.unit_price)}
+                                                {alt.kit_total != null
+                                                  ? ` · Kit: ${formatCurrency(alt.kit_total)}`
+                                                  : ""}
+                                              </span>
+                                            ) : alt.kit_total != null ? (
+                                              <span>Kit: {formatCurrency(alt.kit_total)}</span>
+                                            ) : null}
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {displayedAlternatives && displayedAlternatives.length === 0 ? (
+                          <p className="px-3.5 py-3 text-xs text-[var(--color-muted-foreground)]">
+                            Nenhuma alternativa encontrada para esta categoria.
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {proposalKitResult.string_configuration ? (
+                      <p className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-3.5 py-2.5 text-xs text-[var(--color-muted-foreground)]">
+                        <span className="font-semibold text-[var(--color-foreground)]">
+                          Strings:
+                        </span>{" "}
+                        {proposalKitResult.string_configuration.string_count} strings de{" "}
+                        {proposalKitResult.string_configuration.modules_per_string} módulos
+                      </p>
+                    ) : null}
+                    <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] shadow-xs">
+                      <table className="w-full text-xs sm:text-sm">
+                        <thead>
+                          <tr className="border-b border-[var(--color-border)] bg-[var(--color-muted)]/20">
+                            <th className="py-2 px-2 sm:p-3 text-left text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                              Item
+                            </th>
+                            <th className="hidden sm:table-cell p-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                              Marca
+                            </th>
+                            <th className="py-2 px-1 sm:p-3 text-center sm:text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-14 sm:w-20">
+                              Qtd
+                            </th>
+                            <th className="hidden sm:table-cell p-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                              Un.
+                            </th>
+                            <th className="py-2 px-2 sm:p-3 text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-28 sm:w-32">
+                              Total
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {distributedKitItems.map((item, idx) => {
+                            const isModuleRow =
+                              item.product_id === proposalKitResult.modules.product_id;
+                            const isInverterRow =
+                              item.product_id === proposalKitResult.inverter.product_id;
+                            const qty = item.effectiveQty;
+                            const hasDraft = kitQtyDrafts[item.product_id] != null;
+                            const isAdjusted = hasDraft && qty !== item.quantity;
+                            const belowCalculated = isAdjusted && qty < item.quantity;
+                            const isLockedBos =
+                              (item as unknown as { category_name?: string }).category_name ===
+                                "structure_kit" ||
+                              (item as unknown as { category_name?: string }).category_name ===
+                                "profile" ||
+                              (!("category_name" in item) &&
+                                (item.product_name.toUpperCase().includes("ESTRUTURA") ||
+                                  item.product_name.toUpperCase().includes("PERFIL")));
+                            return (
+                              <tr
+                                key={item.product_id}
+                                className={`border-b border-[var(--color-border)]/80 transition-colors last:border-0 hover:bg-emerald-500/[0.04] ${
+                                  idx % 2 === 1 ? "bg-[var(--color-muted)]/15" : ""
+                                }`}
+                              >
+                                <td className="py-2 px-2 sm:p-3 font-medium text-[var(--color-foreground)]">
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <p className="text-[0.7rem] sm:text-xs font-semibold leading-tight break-words text-[var(--color-foreground)]">
+                                        {item.product_name}
+                                      </p>
+                                      {isModuleRow && isModuleTier1(proposalKitResult.modules) ? (
+                                        <img
+                                          src="/badges/tier1.png"
+                                          alt="Tier 1"
+                                          title="Módulo certificado Tier 1 (BloombergNEF)"
+                                          className="h-4 sm:h-4.5 w-auto object-contain rounded shadow-xs shrink-0"
+                                        />
                                       ) : null}
                                     </div>
-                                  </td>
-                                  <td className="hidden sm:table-cell p-2.5 text-[var(--color-muted-foreground)]">
-                                    {item.brand_name || "—"}
-                                  </td>
-                                  <td className="py-2 px-1 text-center sm:text-right tabular-nums text-[var(--color-foreground)] whitespace-nowrap">
-                                    {isModuleRow ? (
-                                      <span className="inline-flex items-center gap-1 sm:gap-1.5 justify-center sm:justify-end">
+                                    {item.brand_name ? (
+                                      <p className="text-[0.62rem] sm:hidden text-[var(--color-muted-foreground)] font-normal mt-0.5 break-words">
+                                        {item.brand_name}
+                                      </p>
+                                    ) : null}
+                                    {isAdjusted ? (
+                                      <span className="mt-0.5 block text-[0.62rem] sm:text-xs font-normal text-[var(--color-muted-foreground)]">
+                                        calculado: {item.quantity}
+                                        {" · "}
                                         <button
                                           type="button"
-                                          disabled={qty <= 4}
-                                          aria-label="Um módulo a menos"
-                                          title={
-                                            qty <= 4
-                                              ? "Mínimo permitido: 4 módulos"
-                                              : "Um módulo a menos"
+                                          className="text-emerald-700 hover:underline dark:text-emerald-300 font-medium"
+                                          onClick={() =>
+                                            setKitQtyDrafts((prev) => {
+                                              const next = { ...prev };
+                                              delete next[item.product_id];
+                                              return next;
+                                            })
                                           }
-                                          className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:bg-transparent"
-                                          onClick={() => adjustModuleQuantity(-1)}
                                         >
-                                          −
+                                          restaurar
                                         </button>
-                                        <span className="min-w-[1.6ch] sm:min-w-[2.2ch] text-center font-bold text-xs sm:text-sm">
-                                          {qty}
-                                        </span>
-                                        <button
-                                          type="button"
-                                          aria-label="Um módulo a mais"
-                                          className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
-                                          onClick={() => adjustModuleQuantity(1)}
-                                        >
-                                          +
-                                        </button>
+                                        {belowCalculated ? (
+                                          <span className="text-red-600 font-semibold dark:text-red-400">
+                                            {" "}
+                                            · abaixo do calculado
+                                          </span>
+                                        ) : null}
                                       </span>
-                                    ) : isLockedBos ? (
+                                    ) : null}
+                                  </div>
+                                </td>
+                                <td className="hidden sm:table-cell p-3 text-[var(--color-muted-foreground)]">
+                                  {item.brand_name || "—"}
+                                </td>
+                                <td className="py-2 px-1 sm:p-3 text-center sm:text-right tabular-nums text-[var(--color-foreground)] whitespace-nowrap">
+                                  {isModuleRow ? (
+                                    <span className="inline-flex items-center gap-1 sm:gap-1.5 justify-center sm:justify-end">
+                                      <button
+                                        type="button"
+                                        disabled={qty <= 4}
+                                        aria-label="Um módulo a menos"
+                                        title={
+                                          qty <= 4
+                                            ? "Mínimo permitido: 4 módulos"
+                                            : "Um módulo a menos"
+                                        }
+                                        className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:bg-transparent"
+                                        onClick={() => adjustModuleQuantity(-1)}
+                                      >
+                                        −
+                                      </button>
+                                      <span className="min-w-[1.6ch] sm:min-w-[2.2ch] text-center font-bold text-xs sm:text-sm">
+                                        {qty}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        aria-label="Um módulo a mais"
+                                        className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
+                                        onClick={() => adjustModuleQuantity(1)}
+                                      >
+                                        +
+                                      </button>
+                                    </span>
+                                  ) : isLockedBos ? (
+                                    <span
+                                      title="Estrutura e fixação calculada automaticamente"
+                                      className="cursor-help underline decoration-dotted underline-offset-2 font-medium text-xs sm:text-sm"
+                                    >
+                                      {item.quantity}
+                                    </span>
+                                  ) : isInverterRow ? (
+                                    <span className="inline-flex items-center gap-1 sm:gap-1.5 justify-center sm:justify-end">
+                                      <button
+                                        type="button"
+                                        disabled={item.quantity <= 1}
+                                        aria-label="Um inversor a menos"
+                                        title={
+                                          item.quantity <= 1
+                                            ? "Mínimo: 1 inversor"
+                                            : "Um inversor a menos"
+                                        }
+                                        className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:bg-transparent"
+                                        onClick={() => {
+                                          const cur =
+                                            proposalKitDraft.targetInverterQty &&
+                                            proposalKitDraft.targetInverterQty !== "auto"
+                                              ? Number(proposalKitDraft.targetInverterQty)
+                                              : item.quantity;
+                                          const nextQty = Math.max(1, cur - 1);
+                                          setProposalKitDraft((d) => ({
+                                            ...d,
+                                            targetInverterQty: String(nextQty),
+                                          }));
+                                        }}
+                                      >
+                                        −
+                                      </button>
                                       <span
-                                        title="Estrutura e fixação calculada automaticamente"
-                                        className="cursor-help underline decoration-dotted underline-offset-2 font-medium text-xs sm:text-sm"
+                                        className="min-w-[1.6ch] sm:min-w-[2.2ch] text-center font-bold text-xs sm:text-sm cursor-help"
+                                        title={`Quantidade de inversores (${proposalKitDraft.targetInverterQty === "auto" || !proposalKitDraft.targetInverterQty ? "Dimensionamento Automático" : "Manual"})`}
                                       >
                                         {item.quantity}
                                       </span>
-                                    ) : isInverterRow ? (
-                                      <span className="inline-flex items-center gap-1 sm:gap-1.5 justify-center sm:justify-end">
-                                        <button
-                                          type="button"
-                                          disabled={item.quantity <= 1}
-                                          aria-label="Um inversor a menos"
-                                          title={
-                                            item.quantity <= 1
-                                              ? "Mínimo: 1 inversor"
-                                              : "Um inversor a menos"
-                                          }
-                                          className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:bg-transparent"
-                                          onClick={() => {
-                                            const cur =
-                                              proposalKitDraft.targetInverterQty &&
-                                              proposalKitDraft.targetInverterQty !== "auto"
-                                                ? Number(proposalKitDraft.targetInverterQty)
-                                                : item.quantity;
-                                            const nextQty = Math.max(1, cur - 1);
-                                            setProposalKitDraft((d) => ({
-                                              ...d,
-                                              targetInverterQty: String(nextQty),
-                                            }));
-                                          }}
-                                        >
-                                          −
-                                        </button>
-                                        <span
-                                          className="min-w-[1.6ch] sm:min-w-[2.2ch] text-center font-bold text-xs sm:text-sm cursor-help"
-                                          title={`Quantidade de inversores (${proposalKitDraft.targetInverterQty === "auto" || !proposalKitDraft.targetInverterQty ? "Dimensionamento Automático" : "Manual"})`}
-                                        >
-                                          {item.quantity}
-                                        </span>
-                                        <button
-                                          type="button"
-                                          aria-label="Um inversor a mais"
-                                          title="Adicionar mais 1 inversor idêntico"
-                                          className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
-                                          onClick={() => {
-                                            const cur =
-                                              proposalKitDraft.targetInverterQty &&
-                                              proposalKitDraft.targetInverterQty !== "auto"
-                                                ? Number(proposalKitDraft.targetInverterQty)
-                                                : item.quantity;
-                                            const nextQty = cur + 1;
-                                            setProposalKitDraft((d) => ({
-                                              ...d,
-                                              targetInverterQty: String(nextQty),
-                                            }));
-                                          }}
-                                        >
-                                          +
-                                        </button>
+                                      <button
+                                        type="button"
+                                        aria-label="Um inversor a mais"
+                                        title="Adicionar mais 1 inversor idêntico"
+                                        className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
+                                        onClick={() => {
+                                          const cur =
+                                            proposalKitDraft.targetInverterQty &&
+                                            proposalKitDraft.targetInverterQty !== "auto"
+                                              ? Number(proposalKitDraft.targetInverterQty)
+                                              : item.quantity;
+                                          const nextQty = cur + 1;
+                                          setProposalKitDraft((d) => ({
+                                            ...d,
+                                            targetInverterQty: String(nextQty),
+                                          }));
+                                        }}
+                                      >
+                                        +
+                                      </button>
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 sm:gap-1.5 justify-center sm:justify-end">
+                                      <button
+                                        type="button"
+                                        aria-label={`Diminuir quantidade de ${item.product_name}`}
+                                        className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10 disabled:opacity-30 disabled:pointer-events-none"
+                                        disabled={qty <= 1}
+                                        onClick={() => {
+                                          setKitQtyResetNotice(false);
+                                          const nextQty = Math.max(1, qty - 1);
+                                          setKitQtyDrafts((prev) =>
+                                            nextQty === item.quantity
+                                              ? (() => {
+                                                  const next = { ...prev };
+                                                  delete next[item.product_id];
+                                                  return next;
+                                                })()
+                                              : { ...prev, [item.product_id]: String(nextQty) }
+                                          );
+                                        }}
+                                      >
+                                        −
+                                      </button>
+                                      <span className="min-w-[1.6ch] sm:min-w-[2.2ch] text-center font-bold text-xs sm:text-sm">
+                                        {qty}
                                       </span>
-                                    ) : (
-                                      <span className="inline-flex items-center gap-1 sm:gap-1.5 justify-center sm:justify-end">
-                                        <button
-                                          type="button"
-                                          aria-label={`Diminuir quantidade de ${item.product_name}`}
-                                          className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10 disabled:opacity-30 disabled:pointer-events-none"
-                                          disabled={qty <= 1}
-                                          onClick={() => {
-                                            setKitQtyResetNotice(false);
-                                            const nextQty = Math.max(1, qty - 1);
-                                            setKitQtyDrafts((prev) =>
-                                              nextQty === item.quantity
-                                                ? (() => {
-                                                    const next = { ...prev };
-                                                    delete next[item.product_id];
-                                                    return next;
-                                                  })()
-                                                : { ...prev, [item.product_id]: String(nextQty) }
-                                            );
-                                          }}
-                                        >
-                                          −
-                                        </button>
-                                        <span className="min-w-[1.6ch] sm:min-w-[2.2ch] text-center font-bold text-xs sm:text-sm">
-                                          {qty}
-                                        </span>
-                                        <button
-                                          type="button"
-                                          aria-label={`Aumentar quantidade de ${item.product_name}`}
-                                          className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
-                                          onClick={() => {
-                                            setKitQtyResetNotice(false);
-                                            const nextQty = qty + 1;
-                                            setKitQtyDrafts((prev) =>
-                                              nextQty === item.quantity
-                                                ? (() => {
-                                                    const next = { ...prev };
-                                                    delete next[item.product_id];
-                                                    return next;
-                                                  })()
-                                                : { ...prev, [item.product_id]: String(nextQty) }
-                                            );
-                                          }}
-                                        >
-                                          +
-                                        </button>
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="hidden sm:table-cell p-2.5 text-right tabular-nums text-[var(--color-muted-foreground)]">
-                                    {formatCurrency(item.distributedUnitPrice)}
-                                  </td>
-                                  <td className="py-2 px-2.5 text-right font-semibold tabular-nums text-[var(--color-foreground)] text-[0.72rem] sm:text-sm whitespace-nowrap">
-                                    {formatCurrency(item.distributedLineTotal)}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                          <tfoot>
-                            <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/20">
-                              <td
-                                colSpan={2}
-                                className="py-2.5 px-2.5 text-left sm:text-right text-[0.72rem] sm:text-xs font-bold text-[var(--color-foreground)]"
-                              >
-                                Total do Projeto ({activeDistributorCard?.name ?? "Padrão"} ·{" "}
-                                {formatCurrency(activeRatePerKwp)}/kWp)
-                              </td>
-                              <td className="hidden sm:table-cell" />
-                              <td className="hidden sm:table-cell" />
-                              <td className="py-2.5 px-2.5 text-right text-xs sm:text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                                {formatCurrency(activeCommercialPrice)}
-                              </td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
-
-                      {kitQtyResetNotice ? (
-                        <p className="rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-3 py-2 text-xs text-[var(--color-muted-foreground)]">
-                          O kit foi recalculado e os ajustes manuais de quantidade foram redefinidos
-                          para os valores dimensionados.
-                        </p>
-                      ) : null}
+                                      <button
+                                        type="button"
+                                        aria-label={`Aumentar quantidade de ${item.product_name}`}
+                                        className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded border border-[var(--color-border)] text-xs font-semibold transition hover:border-emerald-500 hover:bg-emerald-500/10"
+                                        onClick={() => {
+                                          setKitQtyResetNotice(false);
+                                          const nextQty = qty + 1;
+                                          setKitQtyDrafts((prev) =>
+                                            nextQty === item.quantity
+                                              ? (() => {
+                                                  const next = { ...prev };
+                                                  delete next[item.product_id];
+                                                  return next;
+                                                })()
+                                              : { ...prev, [item.product_id]: String(nextQty) }
+                                          );
+                                        }}
+                                      >
+                                        +
+                                      </button>
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="hidden sm:table-cell p-3 text-right tabular-nums text-[var(--color-muted-foreground)]">
+                                  {formatCurrency(item.distributedUnitPrice)}
+                                </td>
+                                <td className="py-2 px-2 sm:p-3 text-right font-semibold tabular-nums text-[var(--color-foreground)] text-[0.72rem] sm:text-sm whitespace-nowrap">
+                                  {formatCurrency(item.distributedLineTotal)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/20">
+                            <td
+                              colSpan={2}
+                              className="py-2.5 px-2 sm:p-3 text-left sm:text-right text-[0.72rem] sm:text-xs font-bold text-[var(--color-foreground)]"
+                            >
+                              Total do Projeto ({activeDistributorCard?.name ?? "Padrão"} ·{" "}
+                              {formatCurrency(activeRatePerKwp)}/kWp)
+                            </td>
+                            <td className="hidden sm:table-cell" />
+                            <td className="hidden sm:table-cell" />
+                            <td className="py-2.5 px-2 sm:p-3 text-right text-xs sm:text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                              {formatCurrency(activeCommercialPrice)}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
                     </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {/* Bloco 6: Sticky Action Bar no Rodapé */}
-          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-[var(--color-border)] pt-3.5 bg-[var(--color-background)]">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              {/* Resumo do Kit Selecionado no Rodapé */}
-              <div className="flex items-center gap-2.5">
-                <span
-                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                    activeDistributorCard?.tier_id === "economic"
-                      ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
-                      : activeDistributorCard?.tier_id === "premium"
-                        ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
-                        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                  }`}
-                >
-                  {activeDistributorCard?.name ?? "Kit Selecionado"}
-                </span>
-                <div className="flex flex-col">
-                  <span className="text-base sm:text-xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400 leading-tight">
-                    {formatCurrency(activeCommercialPrice)}
-                  </span>
-                  <span className="text-[10px] text-[var(--color-muted-foreground)]">
-                    {formatCurrency(activeRatePerKwp)}/kWp · ~
-                    {activeDistributorCard?.estimated_monthly_generation_kwh ??
-                      Math.round(adjustedKw * 130)}{" "}
-                    kWh/mês
-                  </span>
-                </div>
+                    {kitQtyResetNotice ? (
+                      <p className="rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)]/20 px-3 py-2 text-xs text-[var(--color-muted-foreground)]">
+                        O kit foi recalculado e os ajustes manuais de quantidade foram redefinidos
+                        para os valores dimensionados.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </div>
-
+          ) : null}
+          <DialogFooter className="flex-col-reverse gap-3 border-t border-[var(--color-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
               <Button
                 variant="outline"
-                className="w-full bg-[var(--color-background)] sm:w-auto h-10 text-xs font-semibold"
+                className="w-full bg-[var(--color-background)] sm:w-auto"
                 onClick={(e) => setShareMenuAnchor(e.currentTarget)}
               >
-                <Share2 className="mr-1.5 h-3.5 w-3.5" />
+                <Share2 className="mr-2 h-4 w-4" />
                 Compartilhar
                 <ChevronDown className="ml-1.5 h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
               </Button>
@@ -4582,46 +4706,46 @@ export const ProposalEconomicsModal = forwardRef<
               >
                 <Button
                   variant="ghost"
-                  className="w-full text-[var(--color-muted-foreground)] sm:w-auto h-10 text-xs"
+                  className="w-full text-[var(--color-muted-foreground)] sm:w-auto"
                 >
                   Abrir cliente
                   <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
                 </Button>
               </Link>
-              {proposalDeal ? (
-                <div className="w-full sm:w-auto">
-                  <Button
-                    type="button"
-                    className="h-10 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 text-sm font-semibold text-white shadow-xs hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-60 sm:w-auto"
-                    disabled={
-                      proposalCreateLoading ||
-                      proposalKitLoading ||
-                      !!proposalKitError ||
-                      !generatedProposal?.dealId ||
-                      !proposalKitResult
-                    }
-                    title="Ao concluir, você vai para a ficha do cliente com a proposta em destaque."
-                    onClick={() => void createProposalFromPipelineModal()}
-                  >
-                    {proposalCreateLoading ? (
-                      <>
-                        <Loader2 className="mr-1.5 h-4 w-4 shrink-0 animate-spin" />
-                        Criando proposta…
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="mr-1.5 h-4 w-4 shrink-0" />
-                        Criar proposta
-                      </>
-                    )}
-                  </Button>
-                </div>
-              ) : null}
             </div>
-            {proposalCreateError ? (
-              <p className="w-full text-xs text-red-600 sm:text-right dark:text-red-400">
-                {proposalCreateError}
-              </p>
+            {proposalDeal ? (
+              <div className="w-full sm:w-auto">
+                <Button
+                  type="button"
+                  className="h-11 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-base font-semibold text-white shadow-sm hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-60 sm:w-auto"
+                  disabled={
+                    proposalCreateLoading ||
+                    proposalKitLoading ||
+                    !!proposalKitError ||
+                    !generatedProposal?.dealId ||
+                    !proposalKitResult
+                  }
+                  title="Ao concluir, você vai para a ficha do cliente com a proposta em destaque."
+                  onClick={() => void createProposalFromPipelineModal()}
+                >
+                  {proposalCreateLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" />
+                      Criando proposta…
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="mr-2 h-4 w-4 shrink-0" />
+                      Criar proposta
+                    </>
+                  )}
+                </Button>
+                {proposalCreateError ? (
+                  <p className="mt-2 text-sm text-red-600 sm:text-right dark:text-red-400">
+                    {proposalCreateError}
+                  </p>
+                ) : null}
+              </div>
             ) : null}
           </DialogFooter>
         </DialogContent>
