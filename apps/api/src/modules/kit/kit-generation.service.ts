@@ -14,7 +14,7 @@ import type {
   DistributorTiersResult,
 } from "./types";
 import { isStringSizingResult, type ProductWithSpecs } from "../../domain/solar-sizing/types";
-import type { ModuleSpec } from "../../domain/product-specs";
+import type { ModuleSpec, StringInverterSpec } from "../../domain/product-specs";
 import { PrismaService } from "../../prisma/prisma.service";
 import { Decimal } from "@prisma/client/runtime/library";
 import { formatKitForWhatsApp } from "./whatsapp-formatter.service";
@@ -471,7 +471,7 @@ export class KitGenerationService {
         return specs.nominal_power_w / 1000;
       }
       const match = inv.name.match(/(\d+(?:[.,]\d+)?)\s*(?:kw|k)\b/i);
-      if (match) return parseFloat(match[1].replace(",", "."));
+      if (match && match[1]) return parseFloat(match[1].replace(",", "."));
       return 5;
     };
 
