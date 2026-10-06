@@ -15,7 +15,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "security:audit": "pnpm audit --audit-level high",
-    "prepare": "husky",
+    "prepare": "node -e \"if (!process.env.CI && process.env.NODE_ENV !== 'production') { try { require('child_process').execSync('husky', { stdio: 'inherit' }); } catch (e) {} }\"",
     "db:generate": "turbo run db:generate --filter=@energivia/api",
     "db:push": "turbo run db:push --filter=@energivia/api",
     "db:migrate": "turbo run db:migrate --filter=@energivia/api",
