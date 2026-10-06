@@ -16,6 +16,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@energivia/config": "workspace:*",
     "@energivia/proposal-economia": "workspace:*",
     "@energivia/shared-types": "workspace:*",
     "@energivia/solar-engine": "workspace:^",
@@ -63,7 +64,6 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@energivia/config": "workspace:*",
     "@types/node": "^22.10.2",
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^18.3.12",

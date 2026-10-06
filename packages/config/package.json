@@ -2,7 +2,11 @@
   "name": "@energivia/config",
   "version": "0.1.0",
   "private": true,
-  "main": "index.js",
+  "exports": {
+    "./typescript/*": "./typescript/*",
+    "./eslint/*": "./eslint/*",
+    "./*": "./*"
+  },
   "files": [
     "eslint",
     "typescript"
