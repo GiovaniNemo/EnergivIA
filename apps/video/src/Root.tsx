@@ -1,10 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import "./index.css";
 import { Composition } from "remotion";
-import {
-  EnergiviaSalesShowcase,
-  TOTAL_FRAMES,
-} from "./ClaudeCodeShowcase/EnergiviaSalesShowcase";
 import { InstitutionalVideo } from "./InstitutionalVideo";
 import { Scene1Hero } from "./InstitutionalVideo/Scene1Hero";
 import { Scene2OCR } from "./InstitutionalVideo/Scene2OCR";
@@ -27,17 +23,7 @@ const ScenePreview: React.FC<{ children: React.ReactNode }> = ({
 export const RemotionRoot: React.FC = () => {
   return (
     <>
-      {/* Principal: Vídeo Comercial de Vendas EnergivIA - Estilo Claude Code com Voz Neural (75s) */}
-      <Composition
-        id="EnergiviaSalesShowcase"
-        component={EnergiviaSalesShowcase as any}
-        durationInFrames={TOTAL_FRAMES}
-        fps={30}
-        width={1920}
-        height={1080}
-      />
-
-      {/* Vídeo Institucional EnergivIA (30s) */}
+      {/* Principal: Vídeo Institucional EnergivIA (30s) */}
       <Composition
         id="EnergiviaInstitucional"
         component={InstitutionalVideo as any}

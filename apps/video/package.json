@@ -27,8 +27,6 @@
   "scripts": {
     "dev": "remotion studio",
     "build": "remotion bundle",
-    "render:sales": "remotion render src/index.ts EnergiviaSalesShowcase out/energivia-apresentacao.mp4 --overwrite",
-    "voiceover": "python scripts/generate-voiceover.py",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc"
   },
