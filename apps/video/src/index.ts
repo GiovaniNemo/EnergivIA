@@ -4,4 +4,5 @@
 import { registerRoot } from "remotion";
 import { RemotionRoot } from "./Root";
 
-registerRoot(RemotionRoot);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+registerRoot(RemotionRoot as any);
