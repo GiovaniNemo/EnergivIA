@@ -269,9 +269,7 @@ export function TrialLockOverlay() {
                                 <li
                                   key={idx}
                                   className={`flex items-start gap-2 text-xs leading-tight ${
-                                    feat.included
-                                      ? "text-gray-200"
-                                      : "text-gray-500 line-through decoration-neutral-600"
+                                    feat.included ? "text-gray-200" : "text-gray-400"
                                   }`}
                                 >
                                   {feat.included ? (
@@ -285,7 +283,7 @@ export function TrialLockOverlay() {
                                       }`}
                                     />
                                   ) : (
-                                    <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-neutral-500" />
+                                    <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500 dark:text-red-400" />
                                   )}
                                   <span>{feat.text}</span>
                                 </li>

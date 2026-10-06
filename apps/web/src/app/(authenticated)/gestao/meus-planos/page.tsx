@@ -609,7 +609,7 @@ function MeusPlanosContent() {
                           className={`flex items-start gap-3 text-sm transition-colors ${
                             feat.included
                               ? "text-[var(--color-foreground)]"
-                              : "text-[var(--color-muted-foreground)] opacity-75"
+                              : "text-[var(--color-muted-foreground)]"
                           }`}
                         >
                           {feat.included ? (
@@ -625,17 +625,9 @@ function MeusPlanosContent() {
                               }`}
                             />
                           ) : (
-                            <XCircle className="w-5 h-5 shrink-0 mt-0.5 text-neutral-500/80 dark:text-neutral-400/70" />
+                            <XCircle className="w-5 h-5 shrink-0 mt-0.5 text-red-500 dark:text-red-400" />
                           )}
-                          <span
-                            className={`leading-tight ${
-                              feat.included
-                                ? "font-normal"
-                                : "font-normal text-[var(--color-muted-foreground)] line-through decoration-neutral-500/40"
-                            }`}
-                          >
-                            {feat.text}
-                          </span>
+                          <span className="leading-tight font-normal">{feat.text}</span>
                         </li>
                       ))}
                     </ul>
