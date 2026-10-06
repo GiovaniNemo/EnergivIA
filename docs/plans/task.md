@@ -57,3 +57,5 @@
 | task-58 | Corrigir regex de reconstrução de contexto de sessão para compatibilidade com formatação WhatsApp (_*...*_)                          | completed   | Regex de consumo, potência, módulos e cidade/UF agora cobrem todas as variações de formatação                          |
 | task-59 | Executar testes automatizados (backend Vitest) e validar build de produção                                                           | completed   | 73 testes no Vitest aprovados com 100% de sucesso e build NestJS compilado                                             |
 | task-60 | Commit e push para origin/main                                                                                                       | completed   | Alterações enviadas para origin/main com sucesso                                                                       |
+| task-61 | Corrigir erros do Sentry em produção: M.current.scrollTo is not a function e res.body.getReader no fluxo web/chat                    | completed   | Fallback universal de rolagem em whatsapp-flow-simulator, verificação defensiva de stream em ai-widget e sentry.client criado |
+

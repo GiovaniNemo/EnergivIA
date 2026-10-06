@@ -347,21 +347,6 @@ export function AIAssistantWidget() {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || `Status ${res.status}`);
       }
-      if (!res.body) throw new Error("Sem Reader");
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      const assistMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: "",
-      };
-      setMessages((prev) => [...prev, assistMsg]);
-
-      let fullStreamDump = "";
-
       const processLine = (line: string) => {
         const trimmed = line.trim();
         if (!trimmed) return "";
@@ -406,6 +391,39 @@ export function AIAssistantWidget() {
         // Plain text (no prefix) — return as-is
         return trimmed + "\n";
       };
+
+      // Fallback defensivo para navegadores/webviews sem suporte a ReadableStream/getReader
+      if (!res.body || typeof res.body.getReader !== "function") {
+        const fullResponseText = await res.text().catch(() => "");
+        if (!fullResponseText) {
+          throw new Error("Sem corpo de resposta do assistente.");
+        }
+        const lines = fullResponseText.split("\n");
+        let parsedContent = "";
+        for (const line of lines) {
+          parsedContent += processLine(line);
+        }
+        const assistMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: parsedContent || fullResponseText,
+        };
+        setMessages((prev) => [...prev, assistMsg]);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      const assistMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "",
+      };
+      setMessages((prev) => [...prev, assistMsg]);
+
+      let fullStreamDump = "";
 
       while (true) {
         const { done, value } = await reader.read();

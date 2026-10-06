@@ -279,14 +279,39 @@ export function WhatsappFlowSimulator(): JSX.Element {
     });
   }, [stepIndex]);
 
-  // Smooth scroll into view when messages change
+  // Smooth scroll into view when messages change (defensive against environments without Element.scrollTo)
   const scrollToBottom = useCallback(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTo({
-        top: chatContainerRef.current.scrollHeight,
-        behavior: "smooth",
-      });
+    const el = chatContainerRef.current;
+    if (!el) return;
+
+    if (typeof el.scrollTo === "function") {
+      try {
+        el.scrollTo({
+          top: el.scrollHeight,
+          behavior: "smooth",
+        });
+        return;
+      } catch {
+        // Fallback para navegadores antigos que aceitam apenas scrollTo(x, y)
+        try {
+          el.scrollTo(0, el.scrollHeight);
+          return;
+        } catch {
+          // Continua para os próximos fallbacks
+        }
+      }
     }
+
+    if (scrollAnchorRef.current && typeof scrollAnchorRef.current.scrollIntoView === "function") {
+      try {
+        scrollAnchorRef.current.scrollIntoView({ behavior: "smooth" });
+        return;
+      } catch {
+        // Continua para o fallback de scrollTop
+      }
+    }
+
+    el.scrollTop = el.scrollHeight;
   }, []);
 
   useEffect(() => {
