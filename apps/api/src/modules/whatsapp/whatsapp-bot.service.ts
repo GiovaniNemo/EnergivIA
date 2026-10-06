@@ -1717,12 +1717,15 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       sessionCtx.modPowerWUser > 0
     ) {
       finalTargetKWp = (sessionCtx.targetModules * sessionCtx.modPowerWUser) / 1000;
+    } else if (typeof sessionCtx.targetModules === "number" && sessionCtx.targetModules > 0) {
+      finalTargetKWp = (sessionCtx.targetModules * (sessionCtx.modPowerWUser || 585)) / 1000;
     } else if (typeof sessionCtx.consumptionKwh === "number" && sessionCtx.consumptionKwh > 0) {
       finalTargetKWp = sessionCtx.consumptionKwh / geracaoPorKwp;
     }
     const safeKwp = Math.max(0.5, finalTargetKWp);
-    const modulePowerW = 585;
-    const moduleQty = Math.max(4, Math.round((safeKwp * 1000) / modulePowerW));
+    const modulePowerW = sessionCtx.modPowerWUser || 585;
+    const moduleQty =
+      sessionCtx.targetModules || Math.max(4, Math.round((safeKwp * 1000) / modulePowerW));
     const realSystemKwp = Math.round(((moduleQty * modulePowerW) / 1000) * 100) / 100;
     const estimatedGeneration = Math.round(realSystemKwp * geracaoPorKwp);
 
@@ -1794,6 +1797,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       modPowerWUser > 0
     ) {
       finalTargetKWp = (targetModules * modPowerWUser) / 1000;
+    } else if (typeof targetModules === "number" && targetModules > 0) {
+      finalTargetKWp = (targetModules * (modPowerWUser || 585)) / 1000;
     } else if (typeof consumptionKwh === "number" && consumptionKwh > 0) {
       let monthlyFactor = geracaoPorKwp;
       if (cidade || estado) {
@@ -1903,8 +1908,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       } catch {}
     }
 
-    const modulePowerW = 585;
-    const moduleQty = Math.max(4, Math.round((safeKwp * 1000) / modulePowerW));
+    const modulePowerW = modPowerWUser || 585;
+    const moduleQty = targetModules || Math.max(4, Math.round((safeKwp * 1000) / modulePowerW));
     const realSystemKwp = Math.round(((moduleQty * modulePowerW) / 1000) * 100) / 100;
 
     const invPowerSizes = [3, 3.6, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 75, 100];
@@ -2508,6 +2513,37 @@ ${catalogContext}`;
 
         // 7. Nome e WhatsApp do Cliente (pode ser detectado pelas confirmações do assistente)
         if (m.role === "assistant") {
+          // Se o assistente exibiu o menu principal ou iniciou um novo fluxo, reseta o dimensionamento anterior
+          if (
+            content.includes("Como posso ajudar você a gerar orçamentos hoje") ||
+            content.includes("Sou seu assistente de vendas")
+          ) {
+            consumptionKwh = undefined;
+            targetKWp = undefined;
+            targetModules = undefined;
+            modPowerWUser = undefined;
+          } else if (
+            content.includes("Simulação por Quantidade de Módulos") ||
+            content.includes("placas solares você deseja no kit")
+          ) {
+            consumptionKwh = undefined;
+            targetKWp = undefined;
+          } else if (
+            content.includes("Simulação por Potência de Pico") ||
+            content.includes("Qual a *potência de pico* desejada")
+          ) {
+            consumptionKwh = undefined;
+            targetModules = undefined;
+            modPowerWUser = undefined;
+          } else if (
+            content.includes("Simulação por Consumo Mensal") ||
+            content.includes("consumo médio mensal")
+          ) {
+            targetKWp = undefined;
+            targetModules = undefined;
+            modPowerWUser = undefined;
+          }
+
           const kitSelM = content.match(/Kit (Standard|Elite|Premium) selecionado/i);
           if (kitSelM && kitSelM[1]) {
             const kn = kitSelM[1].toLowerCase();
@@ -2526,6 +2562,9 @@ ${catalogContext}`;
             const cVal = Math.round(Number(consM[1].replace(/\./g, "").replace(",", ".")));
             if (cVal >= 20 && cVal <= 500000) {
               consumptionKwh = cVal;
+              targetKWp = undefined;
+              targetModules = undefined;
+              modPowerWUser = undefined;
             }
           }
 
@@ -2534,6 +2573,9 @@ ${catalogContext}`;
           );
           if (potM && potM[1]) {
             targetKWp = parseFloat(potM[1].replace(",", "."));
+            consumptionKwh = undefined;
+            targetModules = undefined;
+            modPowerWUser = undefined;
           }
 
           const qtyM = content.match(
@@ -2545,6 +2587,8 @@ ${catalogContext}`;
             if (pM && pM[1]) {
               modPowerWUser = parseInt(pM[1], 10);
             }
+            consumptionKwh = undefined;
+            targetKWp = undefined;
           }
 
           const gridM = content.match(/Padrão Elétrico Registrado:?[_*\s]*`?([^`*]+?)`?\s*⚡/i);
@@ -2596,6 +2640,11 @@ ${catalogContext}`;
         }
 
         const prevAssistantForLead = i > 0 ? messages[i - 1]?.content || "" : "";
+        const isMainMenuMsg =
+          prevAssistantForLead.includes("Como posso ajudar você a gerar orçamentos hoje") ||
+          prevAssistantForLead.includes("Sou seu assistente de vendas") ||
+          prevAssistantForLead.includes("1️⃣ *Enviar fatura");
+
         if (
           prevAssistantForLead.includes("taxa padrão configurada") ||
           prevAssistantForLead.includes("Qual valor por kWp") ||
@@ -2630,16 +2679,24 @@ ${catalogContext}`;
         const kwpM = content.match(/(\d+(?:[.,]\d+)?)\s*kwp/i);
         if (kwpM && kwpM[1]) {
           targetKWp = parseFloat(kwpM[1].replace(",", "."));
+          targetModules = undefined;
+          modPowerWUser = undefined;
+          consumptionKwh = undefined;
         } else if (
-          prevAssistantForLead.includes("Simulação por Potência de Pico") ||
-          prevAssistantForLead.includes("potência de pico") ||
-          prevAssistantForLead.includes("potência (kWp)")
+          !isMainMenuMsg &&
+          (prevAssistantForLead.includes("Simulação por Potência de Pico") ||
+            prevAssistantForLead.includes("potência de pico desejada") ||
+            prevAssistantForLead.includes("potência desejada em kWp") ||
+            prevAssistantForLead.includes("potência (kWp)"))
         ) {
           const numM = content.match(/(\d+(?:[.,]\d+)?)/);
           if (numM && numM[1]) {
             const pVal = parseFloat(numM[1].replace(",", "."));
             if (pVal >= 0.5 && pVal <= 5000) {
               targetKWp = pVal;
+              targetModules = undefined;
+              modPowerWUser = undefined;
+              consumptionKwh = undefined;
             }
           }
         }
@@ -2652,15 +2709,25 @@ ${catalogContext}`;
           if (pM && pM[1]) {
             modPowerWUser = parseInt(pM[1], 10);
           }
+          targetKWp = undefined;
+          consumptionKwh = undefined;
         } else if (
-          prevAssistantForLead.includes("Simulação por Quantidade de Módulos") ||
-          prevAssistantForLead.includes("placas solares você deseja no kit")
+          !isMainMenuMsg &&
+          (prevAssistantForLead.includes("Simulação por Quantidade de Módulos") ||
+            prevAssistantForLead.includes("placas solares você deseja no kit") ||
+            prevAssistantForLead.includes("quantidade de placas"))
         ) {
           const numM = content.match(/(\d+)/);
           if (numM && numM[1]) {
             const mVal = parseInt(numM[1], 10);
             if (mVal >= 1 && mVal <= 10000) {
               targetModules = mVal;
+              const pM = content.match(/(\d{3,4})\s*w/i);
+              if (pM && pM[1]) {
+                modPowerWUser = parseInt(pM[1], 10);
+              }
+              targetKWp = undefined;
+              consumptionKwh = undefined;
             }
           }
         }
@@ -2673,18 +2740,25 @@ ${catalogContext}`;
           const val = Math.round(Number(kwhM[1].replace(/\./g, "").replace(",", ".")));
           if (val >= 20 && val <= 500000) {
             consumptionKwh = val;
+            targetKWp = undefined;
+            targetModules = undefined;
+            modPowerWUser = undefined;
           }
         } else if (
-          prevAssistantForLead.includes("Simulação por Consumo Mensal") ||
-          prevAssistantForLead.includes("consumo médio mensal") ||
-          prevAssistantForLead.includes("consumo em kWh") ||
-          prevAssistantForLead.includes("consumo (kWh)")
+          !isMainMenuMsg &&
+          (prevAssistantForLead.includes("Simulação por Consumo Mensal") ||
+            prevAssistantForLead.includes("consumo médio mensal") ||
+            prevAssistantForLead.includes("consumo em kWh") ||
+            prevAssistantForLead.includes("consumo (kWh)"))
         ) {
           const numM = content.match(/(\d+[\d.,]*)/);
           if (numM && numM[1]) {
             const val = Math.round(Number(numM[1].replace(/\./g, "").replace(",", ".")));
             if (val >= 20 && val <= 500000) {
               consumptionKwh = val;
+              targetKWp = undefined;
+              targetModules = undefined;
+              modPowerWUser = undefined;
             }
           }
         }
@@ -3246,14 +3320,28 @@ ${catalogContext}`;
 
       const effectiveConsumption =
         sessionCtx.consumptionKwh ||
-        (sessionCtx.targetKWp ? Math.round(sessionCtx.targetKWp * 130) : 300);
+        (sessionCtx.targetKWp
+          ? Math.round(sessionCtx.targetKWp * 130)
+          : sessionCtx.targetModules
+            ? Math.round(
+                ((sessionCtx.targetModules * (sessionCtx.modPowerWUser || 585)) / 1000) * 130
+              )
+            : 300);
+
+      const calculatedFallbackKwp =
+        sessionCtx.targetKWp ||
+        (sessionCtx.targetModules
+          ? Number(
+              ((sessionCtx.targetModules * (sessionCtx.modPowerWUser || 585)) / 1000).toFixed(2)
+            )
+          : Number((effectiveConsumption / 100).toFixed(2)));
 
       const selectedQuote = quotes[chosenQuoteIndex] ||
         quotes[0] || {
           distributorName: "Edeltec Solar",
           distributorId: undefined,
           totalPrice: Math.round(effectiveConsumption * 28),
-          kwp: sessionCtx.targetKWp || Number((effectiveConsumption / 100).toFixed(2)),
+          kwp: calculatedFallbackKwp,
           estimatedGeneration: effectiveConsumption,
           items: [],
           structuredItems: [],
@@ -4062,7 +4150,16 @@ ${catalogContext}`;
     if (kwpDirectMatch && kwpDirectMatch[1]) {
       const targetKWp = parseFloat(kwpDirectMatch[1].replace(",", "."));
       if (targetKWp > 0) {
-        return `*_Potência Solicitada:_* \`${targetKWp} kWp\` ☀️\n\n` + this.GRID_OPTIONS_TEXT;
+        if (sessionCtx.cidade && sessionCtx.estado) {
+          return (
+            `*_Potência Solicitada:_* \`${targetKWp} kWp\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
+            this.GRID_OPTIONS_TEXT
+          );
+        }
+        return (
+          `*_Potência Solicitada:_* \`${targetKWp} kWp\` ☀️\n\n` +
+          `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+        );
       }
     }
 
@@ -4078,9 +4175,16 @@ ${catalogContext}`;
       const kwpCalculado = modPower ? ((modCount * modPower) / 1000).toFixed(2) : undefined;
       const extraInfo = modPower ? ` de \`${modPower}W\` (\`${kwpCalculado} kWp\`)` : "";
 
+      if (sessionCtx.cidade && sessionCtx.estado) {
+        return (
+          `*_Quantidade Solicitada:_* \`${modCount} placas\`${extraInfo} em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
+          this.GRID_OPTIONS_TEXT
+        );
+      }
+
       return (
         `*_Quantidade Solicitada:_* \`${modCount} placas\`${extraInfo} ☀️\n\n` +
-        this.GRID_OPTIONS_TEXT
+        `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
       );
     }
 
