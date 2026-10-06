@@ -19,4 +19,8 @@ export class CreateProposalTemplateDto {
   @IsOptional()
   @IsObject()
   config?: ProposalTemplateConfig;
+
+  @IsOptional()
+  @IsBoolean()
+  isOfficial?: boolean;
 }

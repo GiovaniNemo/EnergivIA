@@ -14,6 +14,7 @@ import { UpdateMemberDto } from "./dto/update-member.dto";
 import { CreateWhatsappInboundPhoneDto } from "./dto/create-whatsapp-inbound-phone.dto";
 import { EmailService } from "../../common/email/email.service";
 import { getTenantPlanDetails } from "../../common/utils/plan-limits";
+import { DEFAULT_PROPOSAL_TEMPLATE_CONFIG } from "@energivia/shared-types";
 
 import { softDeleteWhere as soft } from "../../prisma/soft-delete";
 
@@ -413,6 +414,46 @@ export class OrganizationsService {
         joinedAt: new Date(),
       },
     });
+
+    // Inicializa o template padrão oficial da organização
+    try {
+      const blueprint = await this.prisma.proposalTemplateBlueprint.findFirst({
+        where: { published: true },
+        orderBy: { sortOrder: "asc" },
+      });
+
+      const templateConfig = blueprint?.document ?? DEFAULT_PROPOSAL_TEMPLATE_CONFIG;
+      const templateName = blueprint?.name ?? "Template de Proposta Padrão EnergivIA";
+      const templateDescription =
+        blueprint?.description ??
+        "Modelo oficial padrão da EnergivIA pronto para propostas solares.";
+
+      const initialTemplate = await this.prisma.proposalTemplate.create({
+        data: {
+          tenantId: org.id,
+          name: templateName,
+          description: templateDescription,
+          isDefault: true,
+          status: "PUBLISHED",
+          config: templateConfig as Prisma.InputJsonValue,
+        },
+      });
+
+      await this.prisma.proposalTemplateRevision.create({
+        data: {
+          proposalTemplateId: initialTemplate.id,
+          tenantId: org.id,
+          version: initialTemplate.version,
+          status: "PUBLISHED",
+          config: templateConfig as Prisma.InputJsonValue,
+          publishedAt: new Date(),
+        },
+      });
+    } catch (templateSeedErr) {
+      this.logger.warn(
+        `Falha não bloqueante ao inicializar template padrão para organização ${org.id}: ${templateSeedErr}`
+      );
+    }
     return {
       ...org,
       cnpj: extractCnpj(org.settings),

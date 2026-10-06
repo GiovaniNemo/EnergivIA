@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FilePenLine, LayoutTemplate, Lock, Info } from "lucide-react";
+import { Check, FilePenLine, LayoutTemplate, Lock, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/loading-state";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,7 @@ import {
   archiveProposalTemplate,
   createProposalTemplate,
   listProposalTemplates,
+  updateProposalTemplate,
   type ProposalTemplateEntity,
 } from "@/lib/proposal-templates-api";
 import {
@@ -88,6 +89,7 @@ export function TemplateListPage(): JSX.Element {
   const [importOpen, setImportOpen] = useState(false);
   const [catalogImportingId, setCatalogImportingId] = useState<string | null>(null);
   const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
+  const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   const {
@@ -109,7 +111,7 @@ export function TemplateListPage(): JSX.Element {
         setTemplates(data.filter((template) => template.status !== "ARCHIVED"));
         setError("");
       } catch {
-        setError("Nao foi possivel carregar os templates.");
+        setError("Não foi possível carregar os templates.");
       } finally {
         setLoading(false);
       }
@@ -121,6 +123,12 @@ export function TemplateListPage(): JSX.Element {
     if (mode === "preset") {
       setCreateDialogOpen(false);
       setImportOpen(true);
+      return;
+    }
+
+    if (isTrial || isLimitReached) {
+      setCreateDialogOpen(false);
+      setTemplateUpgradeModalOpen(true);
       return;
     }
 
@@ -139,7 +147,7 @@ export function TemplateListPage(): JSX.Element {
       );
       router.push(`/proposals/templates/${created.id}`);
     } catch {
-      setError("Nao foi possivel criar o template.");
+      setError("Não foi possível criar o template.");
     } finally {
       setCreating(false);
     }
@@ -154,16 +162,19 @@ export function TemplateListPage(): JSX.Element {
       const created = await createProposalTemplate(
         {
           name,
-          description: "Template carregado a partir de modelo.",
+          description: "Modelo oficial da EnergivIA carregado para uso.",
           config,
+          isOfficial: true,
         },
         currentOrganizationId
       );
       setImportOpen(false);
       setTemplates((prev) => [created, ...prev]);
-      router.push(`/proposals/templates/${created.id}`);
-    } catch {
-      setError("Nao foi possivel carregar o modelo.");
+      if (!isTrial) {
+        router.push(`/proposals/templates/${created.id}`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível carregar o modelo.");
     } finally {
       setCreating(false);
       setCatalogImportingId(null);
@@ -177,8 +188,27 @@ export function TemplateListPage(): JSX.Element {
       const detail = await getTemplateBlueprint(blueprintId, currentOrganizationId);
       await handleImportConfig(detail.document, detail.name);
     } catch {
-      setError("Nao foi possivel baixar o modelo do catálogo.");
+      setError("Não foi possível baixar o modelo do catálogo.");
       setCatalogImportingId(null);
+    }
+  }
+
+  async function handleSetDefault(template: ProposalTemplateEntity) {
+    if (!currentOrganizationId || settingDefaultId) return;
+    try {
+      setSettingDefaultId(template.id);
+      setError("");
+      await updateProposalTemplate(template.id, { isDefault: true }, currentOrganizationId);
+      setTemplates((prev) =>
+        prev.map((t) => ({
+          ...t,
+          isDefault: t.id === template.id,
+        }))
+      );
+    } catch {
+      setError("Não foi possível definir o template como padrão.");
+    } finally {
+      setSettingDefaultId(null);
     }
   }
 
@@ -195,7 +225,7 @@ export function TemplateListPage(): JSX.Element {
       await archiveProposalTemplate(template.id, currentOrganizationId);
       setTemplates((prev) => prev.filter((item) => item.id !== template.id));
     } catch {
-      setError("Nao foi possivel excluir o template.");
+      setError("Não foi possível excluir o template.");
     } finally {
       setDeletingTemplateId(null);
     }
@@ -227,33 +257,45 @@ export function TemplateListPage(): JSX.Element {
         </div>
       )}
 
-      <header className="flex items-center justify-between gap-4">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Templates de Proposta</h1>
           <p className="mt-1 text-[var(--color-muted-foreground)]">
-            Selecione um template para visualizar ou editar.
+            {isTrial
+              ? "Modelos oficiais disponíveis para uso em suas propostas."
+              : "Selecione um template para visualizar, usar ou personalizar."}
           </p>
         </div>
-        <Button
-          onClick={() => {
-            if (isTrial || isLimitReached) {
-              setTemplateUpgradeModalOpen(true);
-            } else {
-              setCreateDialogOpen(true);
-            }
-          }}
-          disabled={!currentOrganizationId || creating}
-        >
-          {creating ? (
-            "Criando..."
-          ) : isTrial || isLimitReached ? (
-            <span className="flex items-center gap-1.5">
-              <Lock className="h-4 w-4" /> Novo template
-            </span>
-          ) : (
-            "Novo template"
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setImportOpen(true)}
+            disabled={!currentOrganizationId || creating}
+            className="border-sky-500/40 text-sky-700 dark:text-sky-300 hover:bg-sky-500/10"
+          >
+            <LayoutTemplate className="mr-1.5 h-4 w-4" /> Carregar modelo oficial
+          </Button>
+          <Button
+            onClick={() => {
+              if (isTrial || isLimitReached) {
+                setTemplateUpgradeModalOpen(true);
+              } else {
+                setCreateDialogOpen(true);
+              }
+            }}
+            disabled={!currentOrganizationId || creating}
+          >
+            {creating ? (
+              "Criando..."
+            ) : isTrial || isLimitReached ? (
+              <span className="flex items-center gap-1.5">
+                <Lock className="h-4 w-4" /> Criar personalizado
+              </span>
+            ) : (
+              "Novo template"
+            )}
+          </Button>
+        </div>
       </header>
 
       {/* Modal de Upgrade para Criação/Edição de Templates */}
@@ -346,8 +388,7 @@ export function TemplateListPage(): JSX.Element {
                   Usar um modelo pré-definido
                 </span>
                 <span className="mt-0.5 block text-sm text-[var(--color-muted-foreground)]">
-                  Presets internos, modelos do catálogo Energivia ou templates salvos da
-                  organização.
+                  Presets internos e modelos oficiais do catálogo EnergivIA.
                 </span>
               </span>
             </button>
@@ -358,14 +399,25 @@ export function TemplateListPage(): JSX.Element {
               className="flex w-full items-start gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4 text-left transition hover:border-emerald-500/40 hover:bg-[var(--color-accent)] disabled:opacity-50"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-500/15 text-zinc-300">
-                <FilePenLine className="h-5 w-5" aria-hidden />
+                {isTrial || isLimitReached ? (
+                  <Lock className="h-5 w-5 text-amber-400" aria-hidden />
+                ) : (
+                  <FilePenLine className="h-5 w-5" aria-hidden />
+                )}
               </span>
               <span>
-                <span className="block font-semibold text-[var(--color-foreground)]">
+                <span className="flex items-center gap-1.5 font-semibold text-[var(--color-foreground)]">
                   Criar do zero
+                  {(isTrial || isLimitReached) && (
+                    <span className="rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-400">
+                      Pro / Essencial
+                    </span>
+                  )}
                 </span>
                 <span className="mt-0.5 block text-sm text-[var(--color-muted-foreground)]">
-                  Começa com uma estrutura básica de seções para você preencher manualmente.
+                  {isTrial
+                    ? "Exclusivo para planos pagos. Personalize seções e blocos do zero."
+                    : "Começa com uma estrutura básica de seções para você preencher manualmente."}
                 </span>
               </span>
             </button>
@@ -382,14 +434,28 @@ export function TemplateListPage(): JSX.Element {
         <Card className="border-[var(--color-border)] bg-[var(--color-card)]">
           <CardHeader>
             <CardTitle>Nenhum template encontrado</CardTitle>
-            <CardDescription>Crie um template inicial para comecar a edicao.</CardDescription>
-            <Button
-              className="mt-4 w-fit"
-              disabled={!currentOrganizationId || creating}
-              onClick={() => setCreateDialogOpen(true)}
-            >
-              Criar primeiro template
-            </Button>
+            <CardDescription>
+              {isTrial
+                ? "Carregue um dos modelos oficiais da EnergivIA para começar a enviar propostas."
+                : "Carregue um modelo oficial ou crie um template inicial para começar a edição."}
+            </CardDescription>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <Button
+                disabled={!currentOrganizationId || creating}
+                onClick={() => setImportOpen(true)}
+              >
+                <LayoutTemplate className="mr-1.5 h-4 w-4" /> Carregar modelo oficial
+              </Button>
+              {!isTrial && (
+                <Button
+                  variant="outline"
+                  disabled={!currentOrganizationId || creating}
+                  onClick={() => setCreateDialogOpen(true)}
+                >
+                  Criar do zero
+                </Button>
+              )}
+            </div>
           </CardHeader>
         </Card>
       ) : (
@@ -416,12 +482,17 @@ export function TemplateListPage(): JSX.Element {
                         </div>
                       )}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <CardTitle className="line-clamp-1">{template.name}</CardTitle>
                       <CardDescription className="mt-1 line-clamp-2">
-                        {template.description || "Template sem descricao"}
+                        {template.description || "Template sem descrição"}
                       </CardDescription>
-                      <div className="mt-2 flex items-center gap-1.5">
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        {template.isDefault && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/35 bg-sky-500/12 px-2 py-0.5 text-[10px] font-semibold text-sky-400">
+                            <Check className="h-3 w-3" /> Padrão
+                          </span>
+                        )}
                         <span
                           className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] ${getStatusBadgeClass(template.status)}`}
                         >
@@ -431,7 +502,17 @@ export function TemplateListPage(): JSX.Element {
                           v{template.version}
                         </span>
                       </div>
-                      <div className="mt-2 flex items-center gap-2">
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        {!template.isDefault && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={settingDefaultId === template.id}
+                            onClick={() => void handleSetDefault(template)}
+                          >
+                            {settingDefaultId === template.id ? "Definindo..." : "Usar como padrão"}
+                          </Button>
+                        )}
                         {isTrial ? (
                           <Button
                             size="sm"
@@ -450,13 +531,7 @@ export function TemplateListPage(): JSX.Element {
                           variant="outline"
                           className="border-red-500/40 text-red-300 hover:bg-red-500/15"
                           disabled={deletingTemplateId === template.id}
-                          onClick={() => {
-                            if (isTrial) {
-                              setTemplateUpgradeModalOpen(true);
-                            } else {
-                              void handleDeleteTemplate(template);
-                            }
-                          }}
+                          onClick={() => void handleDeleteTemplate(template)}
                         >
                           {deletingTemplateId === template.id ? "Excluindo..." : "Excluir"}
                         </Button>

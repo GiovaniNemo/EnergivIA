@@ -68,6 +68,7 @@ export async function createProposalTemplate(
     description?: string;
     config: ProposalTemplateConfig;
     isDefault?: boolean;
+    isOfficial?: boolean;
   },
   organizationId?: string
 ): Promise<ProposalTemplateEntity> {

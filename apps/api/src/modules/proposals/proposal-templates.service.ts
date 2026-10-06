@@ -38,8 +38,46 @@ export class ProposalTemplatesService implements OnModuleInit {
     }
   }
 
+  async seedDefaultOfficialTemplate(tenantId: string) {
+    const blueprint = await this.prisma.proposalTemplateBlueprint.findFirst({
+      where: { published: true },
+      orderBy: { sortOrder: "asc" },
+    });
+
+    const templateConfig = blueprint?.document ?? DEFAULT_PROPOSAL_TEMPLATE_CONFIG;
+    const templateName = blueprint?.name ?? "Template de Proposta Padrão EnergivIA";
+    const templateDescription =
+      blueprint?.description ?? "Modelo oficial padrão da EnergivIA pronto para propostas solares.";
+
+    return this.prisma.$transaction(async (tx) => {
+      const created = await tx.proposalTemplate.create({
+        data: {
+          tenantId,
+          name: templateName,
+          description: templateDescription,
+          isDefault: true,
+          status: "PUBLISHED",
+          config: templateConfig as Prisma.InputJsonValue,
+        },
+      });
+
+      await tx.proposalTemplateRevision.create({
+        data: {
+          proposalTemplateId: created.id,
+          tenantId,
+          version: created.version,
+          status: "PUBLISHED",
+          config: templateConfig as Prisma.InputJsonValue,
+          publishedAt: new Date(),
+        },
+      });
+
+      return created;
+    });
+  }
+
   async list(tenantId: string) {
-    return this.prisma.proposalTemplate.findMany({
+    const templates = await this.prisma.proposalTemplate.findMany({
       where: {
         tenantId,
         status: { not: "ARCHIVED" },
@@ -47,6 +85,17 @@ export class ProposalTemplatesService implements OnModuleInit {
       },
       orderBy: [{ isDefault: "desc" }, { updatedAt: "desc" }],
     });
+
+    if (templates.length === 0) {
+      try {
+        const seeded = await this.seedDefaultOfficialTemplate(tenantId);
+        if (seeded) return [seeded];
+      } catch {
+        // Fallback defensivo em caso de corrida
+      }
+    }
+
+    return templates;
   }
 
   async findOne(tenantId: string, id: string) {
@@ -71,18 +120,22 @@ export class ProposalTemplatesService implements OnModuleInit {
       const planDetails = getTenantPlanDetails(tenant);
       const templateLimit = planDetails.features.maxCustomTemplates;
       if (templateLimit !== null && templateLimit !== undefined) {
-        if (templateLimit === 0) {
-          throw new BadRequestException(
-            "No período de testes, você tem acesso aos modelos oficiais padrão da EnergivIA. A criação de templates personalizados é liberada no Plano Essencial (1 template) e Pro (ilimitado)."
-          );
-        }
-        const currentCount = await this.prisma.proposalTemplate.count({
-          where: { tenantId, deletedAt: null, status: { not: "ARCHIVED" } },
-        });
-        if (currentCount >= templateLimit) {
-          throw new BadRequestException(
-            `Limite de ${templateLimit} template(s) personalizado(s) atingido para o seu plano (${planDetails.planName}). Faça upgrade para o Plano Pro para criar templates ilimitados.`
-          );
+        const isOfficialModel = dto.isOfficial === true;
+
+        if (!isOfficialModel) {
+          if (templateLimit === 0) {
+            throw new BadRequestException(
+              "No período de testes, você tem acesso aos modelos oficiais padrão da EnergivIA. A criação de templates personalizados do zero é liberada no Plano Essencial (1 template) e Pro (ilimitado)."
+            );
+          }
+          const currentCount = await this.prisma.proposalTemplate.count({
+            where: { tenantId, deletedAt: null, status: { not: "ARCHIVED" } },
+          });
+          if (currentCount >= templateLimit) {
+            throw new BadRequestException(
+              `Limite de ${templateLimit} template(s) personalizado(s) atingido para o seu plano (${planDetails.planName}). Faça upgrade para o Plano Pro para criar templates ilimitados.`
+            );
+          }
         }
       }
     }
@@ -126,6 +179,27 @@ export class ProposalTemplatesService implements OnModuleInit {
 
   async update(tenantId: string, id: string, dto: UpdateProposalTemplateDto) {
     const current = await this.findOne(tenantId, id);
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: {
+        subscription: {
+          include: { plan: true },
+        },
+      },
+    });
+
+    if (tenant) {
+      const planDetails = getTenantPlanDetails(tenant);
+      const templateLimit = planDetails.features.maxCustomTemplates;
+      // No período de testes, impede modificação estrutural/conteúdo de templates
+      if (templateLimit === 0 && (dto.config !== undefined || dto.name !== undefined)) {
+        throw new BadRequestException(
+          "No período de testes, os modelos oficiais padrão não podem ser editados ou customizados. Faça upgrade para o Plano Essencial ou Pro para desbloquear o editor completo."
+        );
+      }
+    }
+
     const nextConfig = dto.config
       ? this.normalizeConfig(dto.config)
       : this.normalizeConfig(current.config as unknown as ProposalTemplateConfig);
@@ -154,6 +228,35 @@ export class ProposalTemplatesService implements OnModuleInit {
   }
 
   async duplicate(tenantId: string, id: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: {
+        subscription: {
+          include: { plan: true },
+        },
+      },
+    });
+
+    if (tenant) {
+      const planDetails = getTenantPlanDetails(tenant);
+      const templateLimit = planDetails.features.maxCustomTemplates;
+      if (templateLimit !== null && templateLimit !== undefined) {
+        if (templateLimit === 0) {
+          throw new BadRequestException(
+            "No período de testes, a duplicação e personalização de templates não está disponível. Faça upgrade para o Plano Essencial ou Pro."
+          );
+        }
+        const currentCount = await this.prisma.proposalTemplate.count({
+          where: { tenantId, deletedAt: null, status: { not: "ARCHIVED" } },
+        });
+        if (currentCount >= templateLimit) {
+          throw new BadRequestException(
+            `Limite de ${templateLimit} template(s) personalizado(s) atingido para o seu plano (${planDetails.planName}). Faça upgrade para o Plano Pro.`
+          );
+        }
+      }
+    }
+
     const template = await this.findOne(tenantId, id);
     return this.prisma.$transaction(async (tx) => {
       const duplicated = await tx.proposalTemplate.create({

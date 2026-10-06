@@ -16,6 +16,8 @@ import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
+import { Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useOrganization } from "@/components/providers/organization-provider";
 import type { Product } from "@/lib/admin-api";
 import {
@@ -86,7 +88,14 @@ export function ProposalTemplateEditor({
 }: ProposalTemplateEditorProps): JSX.Element {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { currentOrganizationId, currentOrganization } = useOrganization();
+  const { currentOrganizationId, currentOrganization, user } = useOrganization();
+  const isAdmin = user?.role === "ADMIN" || user?.role === "PLATFORM";
+  const hasPaidPlan =
+    user?.planTier === "PLUS" ||
+    user?.planTier === "PRO" ||
+    user?.planTier === "ESSENCIAL" ||
+    Boolean(user?.isTrial === false);
+  const isTrial = !isAdmin && (user?.isTrial ?? !hasPaidPlan);
   const previewPanelRef = useRef<HTMLElement | null>(null);
   const [title, setTitle] = useState("Template de Proposta Solar Residencial");
   const [selectedSectionId, setSelectedSectionId] = useState("");
@@ -662,6 +671,13 @@ export function ProposalTemplateEditor({
       return;
     }
 
+    if (isTrial && variant !== "blueprint") {
+      setStatusMessage(
+        "No período de testes, a edição e personalização de templates está bloqueada. Faça upgrade para salvar alterações."
+      );
+      return;
+    }
+
     const entry: SavedTemplate = {
       id: createId(),
       name: customName ?? title,
@@ -835,6 +851,13 @@ export function ProposalTemplateEditor({
         } else {
           setStatusMessage("Modelo publicado no catálogo.");
         }
+        return;
+      }
+
+      if (isTrial && variant !== "blueprint") {
+        setStatusMessage(
+          "No período de testes, a publicação de templates customizados está bloqueada. Faça upgrade para o Plano Essencial ou Pro."
+        );
         return;
       }
 
@@ -1064,6 +1087,28 @@ export function ProposalTemplateEditor({
           : "relative min-h-[calc(100vh-132px)] space-y-3 rounded-[24px] bg-[var(--color-background)] p-3 lg:space-y-4 lg:p-4"
       }
     >
+      {isTrial && variant !== "blueprint" && (
+        <div className="flex flex-col gap-2 rounded-xl border border-sky-500/30 bg-sky-50 dark:bg-sky-950/20 px-4 py-2.5 text-xs text-sky-950 dark:text-sky-200 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <Lock className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
+            <span>
+              <strong>Modo de Visualização (Teste):</strong> Você pode usar este modelo oficial em
+              suas propostas. A edição e personalização completa é liberada nos planos Essencial e
+              Pro.
+            </span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 shrink-0 border-sky-500/40 text-xs text-sky-900 dark:text-sky-300 hover:bg-sky-500/20"
+            onClick={() => {
+              window.location.href = "/gestao/meus-planos";
+            }}
+          >
+            Fazer Upgrade
+          </Button>
+        </div>
+      )}
       <HeaderBar
         title={title}
         templateStatus={headerTemplateStatus}
