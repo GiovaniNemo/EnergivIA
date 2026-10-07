@@ -66,33 +66,59 @@ export function proposalPuppeteerDocumentCss(): string {
       break-inside: auto;
     }
 
-    /* Paridade com preview PDF paginado (cada article = 1 página). */
-    [data-preview-scroll="true"] {
+    /* Paridade com preview PDF paginado (cada .proposal-pdf-page = 1 folha A4 física). */
+    [data-preview-scroll="true"],
+    .proposal-pdf-mode-root {
       border: 0 !important;
       background: transparent !important;
       padding: 0 !important;
+      margin: 0 !important;
       height: auto !important;
       overflow: visible !important;
     }
 
-    [data-preview-scroll="true"] > div {
+    [data-preview-scroll="true"] > div,
+    .proposal-pdf-mode-root > div {
       display: block !important;
       gap: 0 !important;
+      padding: 0 !important;
       margin: 0 !important;
     }
 
-    /* Cover page is always full A4 page */
-    .proposal-cover-page,
-    [data-preview-scroll="true"] > div > article:first-child {
+    /* Folhas A4 físicas */
+    .proposal-pdf-page {
+      width: 210mm !important;
+      min-height: 297mm !important;
+      height: 297mm !important;
+      max-height: 297mm !important;
       page-break-after: always !important;
       break-after: page !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
-      min-height: 100vh !important;
-      height: 100vh !important;
-      aspect-ratio: auto !important;
+      box-sizing: border-box !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      border: 0 !important;
+      overflow: hidden !important;
+      position: relative !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+    }
+
+    .proposal-pdf-page:last-child {
+      page-break-after: avoid !important;
+      break-after: avoid !important;
+    }
+
+    /* Compatibilidade para cover antiga caso renderizada fora de .proposal-pdf-page */
+    .proposal-cover-page {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
       width: 100% !important;
-      max-width: none !important;
+      height: 100% !important;
       margin: 0 !important;
       padding: 0 !important;
       border-radius: 0 !important;
@@ -101,30 +127,13 @@ export function proposalPuppeteerDocumentCss(): string {
       overflow: hidden !important;
     }
 
-    /* Content sections flow naturally without forcing individual blank pages */
-    .proposal-content-section,
-    [data-preview-scroll="true"] > div > article:not(:first-child) {
+    .proposal-content-section {
       page-break-inside: avoid !important;
       break-inside: avoid !important;
       page-break-after: auto !important;
       break-after: auto !important;
-      min-height: auto !important;
-      height: auto !important;
-      aspect-ratio: auto !important;
       width: 100% !important;
-      max-width: none !important;
-      margin: 0 0 1rem 0 !important;
-      border-radius: 0 !important;
-      box-shadow: none !important;
-      border: 0 !important;
-      overflow: visible !important;
-    }
-
-    [data-preview-scroll="true"] > div > article:last-child,
-    [data-preview-scroll="true"] > div > article:last-of-type {
-      page-break-after: avoid !important;
-      break-after: avoid !important;
-      margin-bottom: 0 !important;
+      margin: 0 !important;
     }
 
     a {
@@ -135,6 +144,16 @@ export function proposalPuppeteerDocumentCss(): string {
     @media print {
       body.proposal-puppeteer-body {
         background: var(--proposal-bg) !important;
+      }
+      .proposal-pdf-page {
+        width: 210mm !important;
+        height: 297mm !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      .proposal-pdf-page:last-child {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
       }
     }
   `;

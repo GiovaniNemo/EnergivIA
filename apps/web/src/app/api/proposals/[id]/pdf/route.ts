@@ -88,7 +88,7 @@ export async function GET(
     const browser = await getBrowser();
     try {
       const page = await browser.newPage();
-      await page.setViewport({ width: 1200, height: 800 });
+      await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
       await page.goto(proposalUrl, { waitUntil: "networkidle2", timeout: 45_000 });
 
       // Aguarda de modo explícito que o componente root renderize

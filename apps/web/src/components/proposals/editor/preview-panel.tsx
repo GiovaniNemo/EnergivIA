@@ -51,15 +51,21 @@ export function PreviewPanel({
   sectionRenderOptions,
 }: PreviewPanelProps): JSX.Element {
   const DESKTOP_PREVIEW_MIN_WIDTH = 980;
+  const PDF_CANVAS_WIDTH = 794;
   const [previewViewport, setPreviewViewport] = useState<"desktop" | "mobile" | "pdf">("desktop");
   const [isMaximized, setIsMaximized] = useState(false);
   const desktopMeasureRef = useRef<HTMLDivElement>(null);
   const desktopContentRef = useRef<HTMLDivElement>(null);
   const desktopScaleRef = useRef(1);
   const mobileFrameRef = useRef<HTMLDivElement>(null);
+  const pdfMeasureRef = useRef<HTMLDivElement>(null);
+  const pdfContentRef = useRef<HTMLDivElement>(null);
+  const pdfScaleRef = useRef(1);
   const [desktopScale, setDesktopScale] = useState(1);
   const [desktopScaledHeight, setDesktopScaledHeight] = useState(0);
   const [mobileScale, setMobileScale] = useState(1);
+  const [pdfScale, setPdfScale] = useState(1);
+  const [pdfScaledHeight, setPdfScaledHeight] = useState(0);
   const [previewReady, setPreviewReady] = useState(false);
   const renderMode = previewViewport === "pdf" ? "pdf" : "web";
   const desktopCanvasWidth = useMemo(() => {
@@ -141,6 +147,40 @@ export function PreviewPanel({
     return () => observer.disconnect();
   }, [previewViewport, previewReady]);
 
+  useLayoutEffect(() => {
+    if (previewViewport !== "pdf" || !previewReady) return;
+    const measure = pdfMeasureRef.current;
+    const content = pdfContentRef.current;
+    if (!measure || !content) return;
+
+    const applyFromMeasure = () => {
+      const available = Math.max(0, measure.clientWidth - 16);
+      const scale = roundScale(Math.min(1, Math.max(0.32, available / PDF_CANVAS_WIDTH)));
+      pdfScaleRef.current = scale;
+      const scaledH = Math.max(1, Math.round(content.scrollHeight * scale));
+      setPdfScale((prev) => (prev === scale ? prev : scale));
+      setPdfScaledHeight(scaledH);
+    };
+
+    const applyHeightOnly = () => {
+      const scale = pdfScaleRef.current;
+      const scaledH = Math.max(1, Math.round(content.scrollHeight * scale));
+      setPdfScaledHeight((prev) => (prev === scaledH ? prev : scaledH));
+    };
+
+    applyFromMeasure();
+    const roMeasure = new ResizeObserver(applyFromMeasure);
+    roMeasure.observe(measure);
+    const roContent = new ResizeObserver(() => {
+      applyHeightOnly();
+    });
+    roContent.observe(content);
+    return () => {
+      roMeasure.disconnect();
+      roContent.disconnect();
+    };
+  }, [previewViewport, previewReady, title, documentState, selectedSectionId]);
+
   return (
     <section
       ref={containerRef}
@@ -151,7 +191,14 @@ export function PreviewPanel({
       }
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-[var(--color-foreground)]">Preview</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-[var(--color-foreground)]">Preview</p>
+          {previewViewport === "pdf" ? (
+            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
+              A4 Executivo ({Math.round(pdfScale * 100)}%)
+            </span>
+          ) : null}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-1">
             {viewOptions.map((option) => {
@@ -261,17 +308,42 @@ export function PreviewPanel({
           <PreviewLoadingPlaceholder />
         )
       ) : previewReady ? (
-        <PreviewDocument
-          title={title}
-          documentState={documentState}
-          selectedSectionId={selectedSectionId}
-          onSelectSection={onSelectSection}
-          onSectionHeightChange={onSectionHeightChange}
-          interactionScale={1}
-          sectionRenderOptions={{ ...sectionRenderOptions, mode: renderMode }}
-          mode={renderMode}
-          viewport={previewViewport}
-        />
+        <div
+          ref={pdfMeasureRef}
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl bg-zinc-950/20 dark:bg-black/40 border border-[var(--color-border)]/60"
+        >
+          <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
+            <div
+              className="mx-auto"
+              style={{
+                width: `${PDF_CANVAS_WIDTH * pdfScale}px`,
+                height: `${pdfScaledHeight}px`,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                ref={pdfContentRef}
+                style={{
+                  width: `${PDF_CANVAS_WIDTH}px`,
+                  transform: `scale(${pdfScale})`,
+                  transformOrigin: "top left",
+                }}
+              >
+                <PreviewDocument
+                  title={title}
+                  documentState={documentState}
+                  selectedSectionId={selectedSectionId}
+                  onSelectSection={onSelectSection}
+                  onSectionHeightChange={onSectionHeightChange}
+                  interactionScale={pdfScale}
+                  sectionRenderOptions={{ ...sectionRenderOptions, mode: renderMode }}
+                  mode={renderMode}
+                  viewport={previewViewport}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       ) : (
         <PreviewLoadingPlaceholder />
       )}

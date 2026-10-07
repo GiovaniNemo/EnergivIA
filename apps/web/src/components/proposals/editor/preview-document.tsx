@@ -11,6 +11,8 @@ import type {
   SectionRenderOptions,
   SectionRenderMode,
 } from "./section-render/types";
+import { distributeSectionsIntoPdfPages } from "./pdf-pagination";
+import { PdfPageContainer, PdfPageHeader, PdfPageFooter } from "./pdf-page-chrome";
 
 interface PreviewDocumentProps {
   title: string;
@@ -526,77 +528,163 @@ export function PreviewDocument({
   });
 
   if (mode === "pdf") {
+    const pdfPages = distributeSectionsIntoPdfPages(visibleSections, 2);
+    const totalPages = 1 + pdfPages.length;
+
     return (
       <div
         data-preview-scroll="true"
-        className="h-full overflow-y-auto overflow-x-hidden bg-transparent"
+        className="h-full overflow-y-auto overflow-x-hidden bg-transparent proposal-pdf-mode-root"
       >
-        <div>
-          <article
-            data-preview-capture-target="true"
-            className="proposal-cover-page mx-auto aspect-[210/297] w-full max-w-[794px] overflow-hidden flex flex-col"
-            style={{
-              fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
-              fontSize: `${styles.typography.bodySize}px`,
-              backgroundColor: coverStyle.backgroundColor || styles.branding.backgroundColor,
-              color: styles.branding.textColor,
-              pageBreakAfter: "always",
-              breakAfter: "page",
-              pageBreakInside: "avoid",
-              breakInside: "avoid",
-            }}
+        <div className="flex flex-col items-center gap-8 py-6 print:gap-0 print:py-0">
+          {/* Folha 1: Capa Executiva A4 */}
+          <PdfPageContainer
+            pageNumber={1}
+            totalPages={totalPages}
+            isCover
+            branding={styles.branding}
           >
-            <Cover
-              variant={(coverSection?.variant ?? "hero-cinematic") as CoverVariant}
-              content={coverContent}
-              style={coverStyle}
-              typography={styles.typography}
-              organization={{
-                companyName: previewVariables.nome_empresa || styles.footer.companyName,
-                logo: hideLegacyLogo ? "" : resolveDisplayAssetUrl(styles.branding.logoUrl),
-                primaryColor: styles.branding.primaryColor,
+            <article
+              data-preview-capture-target="true"
+              data-preview-section-id={coverSection?.id}
+              onClick={
+                interactive
+                  ? (event) => {
+                      if (!coverSection?.id) return;
+                      const fieldName = resolveFieldPathFromTarget(event.target);
+                      onSelectSection?.(coverSection.id, fieldName);
+                    }
+                  : undefined
+              }
+              className={`proposal-cover-page relative flex h-full w-full flex-1 flex-col overflow-hidden transition ${
+                coverSection?.id && selectedSectionId === coverSection.id
+                  ? "ring-2 ring-emerald-500"
+                  : interactive
+                    ? "cursor-pointer hover:ring-1 hover:ring-white/20"
+                    : ""
+              }`}
+              style={{
+                fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
+                fontSize: `${styles.typography.bodySize}px`,
+                backgroundColor: coverStyle.backgroundColor || styles.branding.backgroundColor,
+                color: styles.branding.textColor,
               }}
-              showSectionDivider={resolveDividerToggle(coverFields["showSectionDivider"])}
-            />
-          </article>
-
-          <article
-            className="proposal-content-document mx-auto w-full max-w-[794px] overflow-hidden"
-            style={{
-              fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
-              fontSize: `${styles.typography.bodySize}px`,
-              backgroundColor: styles.branding.backgroundColor,
-              color: styles.branding.textColor,
-            }}
-          >
-            {visibleSections.map((section) => (
-              <div
-                key={section.id}
-                className={`proposal-content-section ${sectionPaddingClass[styles.layout.spacing]}`}
-                style={{
-                  pageBreakInside: "avoid",
-                  breakInside: "avoid",
-                }}
-              >
-                <SectionShell
-                  section={section}
-                  subtitleSize={styles.typography.subtitleSize}
-                  vars={previewVariables}
-                  defaults={{
-                    textColor: styles.branding.textColor,
-                    backgroundColor: styles.branding.backgroundColor,
-                    primaryColor: styles.branding.primaryColor,
-                    secondaryColor: styles.branding.secondaryColor,
+            >
+              {coverSection?.id && selectedSectionId === coverSection.id ? (
+                <span
+                  className="pointer-events-none absolute right-0 top-0 z-20 inline-flex h-5 items-center rounded-l-sm rounded-r-none px-2 text-[10px] font-semibold uppercase tracking-wide"
+                  style={{
+                    backgroundColor: activeBadgeBackground,
+                    color: styles.branding.textColor,
                   }}
                 >
-                  {renderSectionContent(section, previewVariables, {
-                    ...sectionContentOptions,
-                    mode,
-                  })}
-                </SectionShell>
+                  Ativa
+                </span>
+              ) : null}
+              <Cover
+                variant={(coverSection?.variant ?? "hero-cinematic") as CoverVariant}
+                content={coverContent}
+                style={coverStyle}
+                typography={styles.typography}
+                organization={{
+                  companyName: previewVariables.nome_empresa || styles.footer.companyName,
+                  logo: hideLegacyLogo ? "" : resolveDisplayAssetUrl(styles.branding.logoUrl),
+                  primaryColor: styles.branding.primaryColor,
+                }}
+                showSectionDivider={resolveDividerToggle(coverFields["showSectionDivider"])}
+              />
+            </article>
+          </PdfPageContainer>
+
+          {/* Folhas 2..N: Páginas de Conteúdo Executivas A4 */}
+          {pdfPages.map((pageDef) => (
+            <PdfPageContainer
+              key={`pdf-page-${pageDef.pageNumber}`}
+              pageNumber={pageDef.pageNumber}
+              totalPages={totalPages}
+              branding={styles.branding}
+            >
+              <PdfPageHeader
+                pageNumber={pageDef.pageNumber}
+                totalPages={totalPages}
+                title={title}
+                vars={previewVariables}
+                branding={styles.branding}
+                typography={styles.typography}
+              />
+
+              <div
+                className={`proposal-pdf-page-body flex-1 overflow-hidden px-8 py-4 flex flex-col justify-start ${
+                  pageDef.sections.length === 1 ? "gap-0" : "gap-4"
+                }`}
+                style={{
+                  fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
+                  fontSize: `${styles.typography.bodySize}px`,
+                }}
+              >
+                {pageDef.sections.map((section) => (
+                  <div
+                    key={section.id}
+                    data-preview-section-id={section.id}
+                    onClick={
+                      interactive
+                        ? (event) => {
+                            const fieldName = resolveFieldPathFromTarget(event.target);
+                            onSelectSection?.(section.id, fieldName);
+                          }
+                        : undefined
+                    }
+                    className={`proposal-content-section relative w-full shrink-0 transition ${
+                      selectedSectionId === section.id
+                        ? "ring-2 ring-emerald-500 rounded-xl"
+                        : interactive
+                          ? "cursor-pointer hover:ring-1 hover:ring-white/20 rounded-xl"
+                          : ""
+                    }`}
+                    style={{
+                      pageBreakInside: "avoid",
+                      breakInside: "avoid",
+                    }}
+                  >
+                    {selectedSectionId === section.id ? (
+                      <span
+                        className="pointer-events-none absolute right-0 top-0 z-20 inline-flex h-5 items-center rounded-l-sm rounded-r-none px-2 text-[10px] font-semibold uppercase tracking-wide"
+                        style={{
+                          backgroundColor: activeBadgeBackground,
+                          color: styles.branding.textColor,
+                        }}
+                      >
+                        Ativa
+                      </span>
+                    ) : null}
+                    <SectionShell
+                      section={section}
+                      subtitleSize={styles.typography.subtitleSize}
+                      vars={previewVariables}
+                      defaults={{
+                        textColor: styles.branding.textColor,
+                        backgroundColor: styles.branding.backgroundColor,
+                        primaryColor: styles.branding.primaryColor,
+                        secondaryColor: styles.branding.secondaryColor,
+                      }}
+                    >
+                      {renderSectionContent(section, previewVariables, {
+                        ...sectionContentOptions,
+                        mode,
+                      })}
+                    </SectionShell>
+                  </div>
+                ))}
               </div>
-            ))}
-          </article>
+
+              <PdfPageFooter
+                pageNumber={pageDef.pageNumber}
+                totalPages={totalPages}
+                vars={previewVariables}
+                branding={styles.branding}
+              />
+            </PdfPageContainer>
+          ))}
         </div>
       </div>
     );

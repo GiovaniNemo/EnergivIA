@@ -134,7 +134,7 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
           </div>
         </div>
       )}
-      <div className={isPdf ? "w-full" : `${publicColumnClass} pt-5 pb-8`}>
+      <div className={isPdf ? "w-full" : `${publicColumnClass} pt-5 pb-8 print:hidden`}>
         <PreviewDocument
           title={data.title}
           documentState={documentState}
@@ -146,6 +146,21 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
           }
         />
       </div>
+
+      {!isPdf && (
+        <div className="hidden print:block w-full">
+          <PreviewDocument
+            title={data.title}
+            documentState={documentState}
+            mode="pdf"
+            viewport="pdf"
+            publicLayout
+            sectionRenderOptions={
+              generationConsumptionChart ? { generationConsumptionChart } : undefined
+            }
+          />
+        </div>
+      )}
     </main>
   );
 }

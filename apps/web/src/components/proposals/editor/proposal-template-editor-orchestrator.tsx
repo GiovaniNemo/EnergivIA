@@ -45,6 +45,7 @@ import { HeaderBar } from "./header-bar";
 import { SidebarPanel } from "./sidebar-panel";
 import { EditorPanel } from "./editor-panel";
 import { PreviewPanel } from "./preview-panel";
+import { PreviewDocument } from "./preview-document";
 import {
   type ProposalDocumentJson,
   type ProposalSection,
@@ -97,6 +98,7 @@ export function ProposalTemplateEditor({
     Boolean(user?.isTrial === false);
   const isTrial = !isAdmin && (user?.isTrial ?? !hasPaidPlan);
   const previewPanelRef = useRef<HTMLElement | null>(null);
+  const hiddenPdfCaptureRef = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState("Template de Proposta Solar Residencial");
   const [selectedSectionId, setSelectedSectionId] = useState("");
   const [documentState, setDocumentState] = useState<ProposalDocumentJson>(() =>
@@ -1019,10 +1021,11 @@ export function ProposalTemplateEditor({
   async function downloadPdf(): Promise<void> {
     try {
       setStatusMessage("Gerando PDF...");
-      const previewRoot = previewPanelRef.current?.querySelector(
-        "[data-preview-scroll='true']"
-      ) as HTMLElement | null;
-      const bodyHtml = previewRoot?.innerHTML?.trim() ?? "";
+      const pdfTarget =
+        hiddenPdfCaptureRef.current?.querySelector("[data-preview-scroll='true']") ??
+        previewPanelRef.current?.querySelector(".proposal-pdf-mode-root") ??
+        previewPanelRef.current?.querySelector("[data-preview-scroll='true']");
+      const bodyHtml = (pdfTarget as HTMLElement | null)?.innerHTML?.trim() ?? "";
       if (!bodyHtml) {
         throw new Error("Nao foi possivel capturar o preview para gerar o PDF.");
       }
@@ -1313,6 +1316,28 @@ export function ProposalTemplateEditor({
         onPreviewRevision={handlePreviewRevision}
         onRestoreRevision={(revision) => void handleRestoreRevision(revision)}
       />
+      {/* Container invisível para captura e exportação de PDF sempre paginado e profissional */}
+      <div
+        style={{
+          position: "fixed",
+          left: "-99999px",
+          top: "-99999px",
+          width: "794px",
+          opacity: 0,
+          pointerEvents: "none",
+          visibility: "hidden",
+        }}
+        aria-hidden="true"
+      >
+        <div ref={hiddenPdfCaptureRef}>
+          <PreviewDocument
+            title={title}
+            documentState={previewDocumentState}
+            mode="pdf"
+            viewport="pdf"
+          />
+        </div>
+      </div>
     </div>
   );
 }
