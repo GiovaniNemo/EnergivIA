@@ -1,16 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
   FileText,
   Handshake,
-  Phone,
-  Mail,
-  IdCard,
-  Building2,
   Calendar,
   Sparkles,
   ExternalLink,
@@ -19,17 +15,9 @@ import {
   Plus,
   Trash2,
   Clock,
-  ArrowRight,
   Loader2,
-  Send,
-  AlertTriangle,
   Zap,
-  Info,
-  DollarSign,
-  UserCheck,
   CheckCircle2,
-  ChevronRight,
-  TrendingUp,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -61,12 +49,7 @@ import {
   proposalSystemPowerKw,
   proposalSystemSizeKwFromSimulation,
 } from "@/lib/proposal-card-meta";
-import {
-  formatCpfCnpjDigits,
-  maskCpfCnpj,
-  maskWhatsappBr,
-  formatBRL,
-} from "@energivia/utils";
+import { formatCpfCnpjDigits, maskWhatsappBr, formatBRL } from "@energivia/utils";
 import type { Deal, DealStage, ClosedDealStatus } from "@/lib/pipeline-deal";
 import {
   buildDealFromLeadDetail,
@@ -237,7 +220,9 @@ export function Deal360Drawer({
     try {
       const [leadData, simList, actList] = await Promise.all([
         getLead(organizationId, effectiveLeadId),
-        listSimulationsForLead(organizationId, effectiveLeadId).catch(() => [] as SimulationListItem[]),
+        listSimulationsForLead(organizationId, effectiveLeadId).catch(
+          () => [] as SimulationListItem[]
+        ),
         listLeadActivity(organizationId, effectiveLeadId).catch(() => [] as LeadActivityRow[]),
       ]);
       setLead(leadData);
@@ -422,7 +407,9 @@ export function Deal360Drawer({
   const displayName = lead?.name || deal?.clientName || "Oportunidade Comercial";
   const displayPhone = lead?.whatsapp || deal?.whatsapp || "";
   const cleanPhone = displayPhone.replace(/\D/g, "");
-  const waHref = cleanPhone ? waMeUrl(cleanPhone, `Olá, ${displayName.split(/\s+/)[0]}! Tudo bem?`) : null;
+  const waHref = cleanPhone
+    ? waMeUrl(cleanPhone, `Olá, ${displayName.split(/\s+/)[0]}! Tudo bem?`)
+    : null;
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -447,7 +434,8 @@ export function Deal360Drawer({
                       className={cn(
                         "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
                         temperature === "HOT" && "bg-red-500/15 text-red-600 dark:text-red-400",
-                        temperature === "WARM" && "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+                        temperature === "WARM" &&
+                          "bg-amber-500/15 text-amber-600 dark:text-amber-400",
                         temperature === "COLD" && "bg-blue-500/15 text-blue-600 dark:text-blue-400"
                       )}
                     >
@@ -588,7 +576,9 @@ export function Deal360Drawer({
 
                     <div className="grid gap-3.5 sm:grid-cols-2">
                       <div className="space-y-1.5 sm:col-span-2">
-                        <Label htmlFor="client-name" className="text-xs font-medium">Nome completo</Label>
+                        <Label htmlFor="client-name" className="text-xs font-medium">
+                          Nome completo
+                        </Label>
                         <Input
                           id="client-name"
                           value={clientName}
@@ -599,7 +589,9 @@ export function Deal360Drawer({
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="client-whatsapp" className="text-xs font-medium">WhatsApp</Label>
+                        <Label htmlFor="client-whatsapp" className="text-xs font-medium">
+                          WhatsApp
+                        </Label>
                         <Input
                           id="client-whatsapp"
                           value={clientWhatsapp}
@@ -610,7 +602,9 @@ export function Deal360Drawer({
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="client-email" className="text-xs font-medium">E-mail</Label>
+                        <Label htmlFor="client-email" className="text-xs font-medium">
+                          E-mail
+                        </Label>
                         <Input
                           id="client-email"
                           type="email"
@@ -622,7 +616,9 @@ export function Deal360Drawer({
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="client-cpf-cnpj" className="text-xs font-medium">CPF / CNPJ</Label>
+                        <Label htmlFor="client-cpf-cnpj" className="text-xs font-medium">
+                          CPF / CNPJ
+                        </Label>
                         <Input
                           id="client-cpf-cnpj"
                           value={clientCpfCnpj}
@@ -633,7 +629,9 @@ export function Deal360Drawer({
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="client-company" className="text-xs font-medium">Empresa (opcional)</Label>
+                        <Label htmlFor="client-company" className="text-xs font-medium">
+                          Empresa (opcional)
+                        </Label>
                         <Input
                           id="client-company"
                           value={clientCompany}
@@ -691,7 +689,9 @@ export function Deal360Drawer({
                       <div className="grid grid-cols-2 gap-3 text-xs">
                         {lead.energyBills[0]?.extractedData?.distributor ? (
                           <div>
-                            <span className="text-[var(--color-muted-foreground)]">Distribuidora:</span>
+                            <span className="text-[var(--color-muted-foreground)]">
+                              Distribuidora:
+                            </span>
                             <p className="font-semibold text-[var(--color-foreground)]">
                               {lead.energyBills[0].extractedData.distributor}
                             </p>
@@ -699,7 +699,9 @@ export function Deal360Drawer({
                         ) : null}
                         {lead.energyBills[0]?.extractedData?.monthlyConsumptionKwh ? (
                           <div>
-                            <span className="text-[var(--color-muted-foreground)]">Consumo Médio:</span>
+                            <span className="text-[var(--color-muted-foreground)]">
+                              Consumo Médio:
+                            </span>
                             <p className="font-semibold text-[var(--color-foreground)]">
                               {lead.energyBills[0].extractedData.monthlyConsumptionKwh} kWh/mês
                             </p>
@@ -752,7 +754,8 @@ export function Deal360Drawer({
                         Nenhuma proposta gerada ainda
                       </h4>
                       <p className="text-xs text-[var(--color-muted-foreground)] max-w-xs mt-1">
-                        Utilize o botão acima para criar o primeiro estudo solar e orçamento com inteligência artificial.
+                        Utilize o botão acima para criar o primeiro estudo solar e orçamento com
+                        inteligência artificial.
                       </p>
                     </div>
                   ) : (
@@ -867,7 +870,9 @@ export function Deal360Drawer({
 
                     <div className="space-y-3.5">
                       <div className="space-y-1.5">
-                        <Label htmlFor="deal-title" className="text-xs font-medium">Título da oportunidade</Label>
+                        <Label htmlFor="deal-title" className="text-xs font-medium">
+                          Título da oportunidade
+                        </Label>
                         <Input
                           id="deal-title"
                           value={title}
@@ -879,7 +884,9 @@ export function Deal360Drawer({
 
                       <div className="grid gap-3.5 sm:grid-cols-2">
                         <div className="space-y-1.5">
-                          <Label htmlFor="deal-value" className="text-xs font-medium">Valor Estimado (R$)</Label>
+                          <Label htmlFor="deal-value" className="text-xs font-medium">
+                            Valor Estimado (R$)
+                          </Label>
                           <CurrencyInput
                             id="deal-value"
                             value={dealValue}
@@ -889,11 +896,15 @@ export function Deal360Drawer({
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label htmlFor="deal-stage" className="text-xs font-medium">Estágio no Kanban</Label>
+                          <Label htmlFor="deal-stage" className="text-xs font-medium">
+                            Estágio no Kanban
+                          </Label>
                           <Select
                             id="deal-stage"
                             value={stageOption}
-                            onChange={(e) => setStageOption(e.target.value as DealDetailStageOption)}
+                            onChange={(e) =>
+                              setStageOption(e.target.value as DealDetailStageOption)
+                            }
                             disabled={submitting}
                           >
                             {STAGE_OPTIONS.map((opt) => (
@@ -907,7 +918,9 @@ export function Deal360Drawer({
 
                       <div className="grid gap-3.5 sm:grid-cols-2">
                         <div className="space-y-1.5">
-                          <Label htmlFor="deal-assignee" className="text-xs font-medium">Responsável</Label>
+                          <Label htmlFor="deal-assignee" className="text-xs font-medium">
+                            Responsável
+                          </Label>
                           <Select
                             id="deal-assignee"
                             value={assigneeUserId}
@@ -970,7 +983,9 @@ export function Deal360Drawer({
 
                     <div className="grid gap-3.5 sm:grid-cols-2">
                       <div className="space-y-1.5">
-                        <Label htmlFor="next-action-date" className="text-xs font-medium">Data e hora</Label>
+                        <Label htmlFor="next-action-date" className="text-xs font-medium">
+                          Data e hora
+                        </Label>
                         <Input
                           id="next-action-date"
                           type="datetime-local"
@@ -981,7 +996,9 @@ export function Deal360Drawer({
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="next-action-type" className="text-xs font-medium">Canal / Tipo</Label>
+                        <Label htmlFor="next-action-type" className="text-xs font-medium">
+                          Canal / Tipo
+                        </Label>
                         <Select
                           id="next-action-type"
                           value={nextActionType}
