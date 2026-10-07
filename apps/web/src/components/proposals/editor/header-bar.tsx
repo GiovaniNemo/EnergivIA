@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Check,
   Download,
+  Loader2,
   MoreHorizontal,
   PencilLine,
   Rocket,
@@ -19,6 +20,8 @@ interface HeaderBarProps {
   templateStatus: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   templateVersion: number;
   catalogEditor?: boolean;
+  isSaving?: boolean;
+  isSaved?: boolean;
   onTitleChange: (value: string) => void;
   onBack?: () => void;
   onSave: () => void;
@@ -34,6 +37,8 @@ export function HeaderBar({
   templateStatus,
   templateVersion,
   catalogEditor = false,
+  isSaving = false,
+  isSaved = false,
   onTitleChange,
   onBack,
   onSave,
@@ -146,6 +151,37 @@ export function HeaderBar({
         )}
       </div>
       <div className="ml-4 flex items-center gap-2">
+        <Button
+          type="button"
+          onClick={onSave}
+          disabled={isSaving}
+          className={`h-9 font-medium transition-all ${
+            isSaved
+              ? "border border-emerald-500/60 bg-emerald-500/20 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:bg-emerald-500/30"
+              : isSaving
+                ? "border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] opacity-80"
+                : "border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/60"
+          }`}
+          title="Salvar alterações no template"
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin text-emerald-400" />
+              <span>Salvando…</span>
+            </>
+          ) : isSaved ? (
+            <>
+              <Check className="mr-1.5 h-4 w-4 text-emerald-400" />
+              <span>Salvo com sucesso!</span>
+            </>
+          ) : (
+            <>
+              <Save className="mr-1.5 h-4 w-4" />
+              <span>Salvar</span>
+            </>
+          )}
+        </Button>
+
         <div ref={actionsMenuRef} className="relative">
           <Button
             variant="outline"
@@ -164,10 +200,17 @@ export function HeaderBar({
                   setIsActionsMenuOpen(false);
                   onSave();
                 }}
+                disabled={isSaving}
                 className="flex h-9 w-full items-center rounded-lg px-2.5 text-sm text-[var(--color-foreground)] transition hover:bg-[var(--color-accent)]"
               >
-                <Save className="mr-2 h-4 w-4" />
-                Salvar alterações
+                {isSaving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin text-emerald-400" />
+                ) : isSaved ? (
+                  <Check className="mr-2 h-4 w-4 text-emerald-400" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                {isSaving ? "Salvando…" : isSaved ? "Salvo com sucesso!" : "Salvar alterações"}
               </button>
               <button
                 type="button"
@@ -216,7 +259,7 @@ export function HeaderBar({
           ) : null}
         </div>
         <Button
-          className="h-9 border border-emerald-300/20 bg-gradient-to-r from-emerald-400 to-emerald-500 text-zinc-950 hover:from-emerald-300 hover:to-emerald-400"
+          className="h-9 border border-emerald-300/20 bg-gradient-to-r from-emerald-400 to-emerald-500 text-zinc-950 hover:from-emerald-300 hover:to-emerald-400 font-semibold"
           onClick={handlePublishClick}
         >
           <Rocket className="mr-2 h-4 w-4" />

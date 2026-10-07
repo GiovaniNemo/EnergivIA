@@ -18,6 +18,8 @@ import {
   Sun,
   Cpu,
   CheckCircle2,
+  Check,
+  Loader2,
   Save,
   DollarSign,
   TrendingUp,
@@ -52,6 +54,7 @@ export default function PerfilIntegradorPage(): JSX.Element {
     priority: null,
   });
 
+  const [savedSuccess, setSavedSuccess] = useState(false);
   const [snack, setSnack] = useState<{
     severity: "success" | "error" | "info";
     message: string;
@@ -147,6 +150,8 @@ export default function PerfilIntegradorPage(): JSX.Element {
       );
 
       await refetch();
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 4000);
       setSnack({
         severity: "success",
         message: "Perfil do Integrador e preferências atualizadas com sucesso!",
@@ -195,10 +200,22 @@ export default function PerfilIntegradorPage(): JSX.Element {
             type="button"
             onClick={handleSave}
             disabled={saving || !canEdit}
-            className="bg-[linear-gradient(90deg,#1b5e7c_0%,#1f7f9b_55%,#39d3bf_100%)] text-white shadow-[0_8px_18px_rgba(31,127,155,0.22)] hover:opacity-95 cursor-pointer"
+            className={`text-white transition-all duration-300 font-semibold cursor-pointer ${
+              savedSuccess
+                ? "bg-emerald-600 hover:bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.35)]"
+                : "bg-[linear-gradient(90deg,#1b5e7c_0%,#1f7f9b_55%,#39d3bf_100%)] shadow-[0_8px_18px_rgba(31,127,155,0.22)] hover:opacity-95"
+            }`}
           >
             {saving ? (
-              "Salvando..."
+              <span className="inline-flex items-center gap-1.5">
+                <Loader2 className="h-4 w-4 animate-spin text-white" />
+                Salvando…
+              </span>
+            ) : savedSuccess ? (
+              <span className="inline-flex items-center gap-1.5 text-white">
+                <Check className="h-4 w-4 text-white" />
+                Salvo com sucesso!
+              </span>
             ) : (
               <span className="inline-flex items-center gap-1.5">
                 <Save className="h-4 w-4" />
@@ -359,10 +376,22 @@ export default function PerfilIntegradorPage(): JSX.Element {
           type="button"
           onClick={handleSave}
           disabled={saving || !canEdit}
-          className="bg-[linear-gradient(90deg,#1b5e7c_0%,#1f7f9b_55%,#39d3bf_100%)] text-white shadow-[0_8px_18px_rgba(31,127,155,0.22)] hover:opacity-95 cursor-pointer px-6"
+          className={`text-white transition-all duration-300 font-semibold cursor-pointer px-6 ${
+            savedSuccess
+              ? "bg-emerald-600 hover:bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.35)]"
+              : "bg-[linear-gradient(90deg,#1b5e7c_0%,#1f7f9b_55%,#39d3bf_100%)] shadow-[0_8px_18px_rgba(31,127,155,0.22)] hover:opacity-95"
+          }`}
         >
           {saving ? (
-            "Salvando..."
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-white" />
+              Salvando…
+            </span>
+          ) : savedSuccess ? (
+            <span className="inline-flex items-center gap-2 text-white">
+              <Check className="h-4 w-4 text-white" />
+              Salvo com sucesso!
+            </span>
           ) : (
             <span className="inline-flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4" />

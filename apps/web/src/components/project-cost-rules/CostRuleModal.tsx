@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { maskMoneyBrlFromDigits, parseMoneyBrlDisplay } from "@energivia/utils";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import CloseIcon from "@mui/icons-material/Close";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
@@ -1039,9 +1040,18 @@ export function CostRuleModal({
         <Button
           type="submit"
           form={COST_RULE_MODAL_FORM_ID}
-          disabled={Boolean(formState.errors.root)}
+          disabled={Boolean(formState.errors.root) || formState.isSubmitting}
         >
-          {editing ? "Salvar" : "Criar regra"}
+          {formState.isSubmitting ? (
+            <span className="flex items-center gap-1.5">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Salvando...</span>
+            </span>
+          ) : editing ? (
+            "Salvar alterações"
+          ) : (
+            "Criar regra"
+          )}
         </Button>
       </DialogActions>
     </Dialog>

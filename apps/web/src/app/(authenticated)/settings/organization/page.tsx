@@ -157,6 +157,10 @@ function OrganizationSettingsContent() {
   const [isSearchingCep, setIsSearchingCep] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [cnpjAutofillInfo, setCnpjAutofillInfo] = useState<string | null>(null);
@@ -417,8 +421,14 @@ function OrganizationSettingsContent() {
       );
       await refetch();
       setSaved(true);
+      setToastMessage({ type: "success", text: "Dados da organização salvos com sucesso!" });
+      setTimeout(() => setSaved(false), 4000);
+      setTimeout(() => setToastMessage(null), 5000);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Falha ao salvar dados da empresa.");
+      const msg = e instanceof Error ? e.message : "Falha ao salvar dados da empresa.";
+      setError(msg);
+      setToastMessage({ type: "error", text: msg });
+      setTimeout(() => setToastMessage(null), 6000);
     } finally {
       setLoading(false);
     }
@@ -571,6 +581,32 @@ function OrganizationSettingsContent() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
+      {toastMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`fixed top-5 right-5 z-50 flex items-center gap-3 rounded-2xl border px-4 py-3 shadow-[0_12px_36px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${
+            toastMessage.type === "success"
+              ? "border-emerald-500/40 bg-zinc-950/95 text-emerald-300 shadow-emerald-950/30"
+              : "border-red-500/40 bg-zinc-950/95 text-red-300 shadow-red-950/30"
+          }`}
+        >
+          {toastMessage.type === "success" ? (
+            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+          ) : (
+            <AlertTriangle className="h-5 w-5 text-red-400 shrink-0" />
+          )}
+          <span className="text-sm font-medium">{toastMessage.text}</span>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            className="ml-2 rounded p-1 text-xs opacity-70 hover:opacity-100 transition"
+            aria-label="Fechar notificação"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* Header with Title and Create New Org Button */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
@@ -827,16 +863,30 @@ function OrganizationSettingsContent() {
         </Card>
 
         {error && <p className="text-sm text-[var(--color-destructive)]">{error}</p>}
-        {saved && (
-          <div className="flex items-center gap-2 text-sm font-medium text-[var(--color-primary)]">
-            <CheckCircle2 className="h-4 w-4" />
-            Alterações salvas com sucesso!
-          </div>
-        )}
 
         <div className="flex items-center gap-3">
-          <Button type="submit" disabled={loading}>
-            {loading ? "Salvando…" : "Salvar Alterações"}
+          <Button
+            type="submit"
+            disabled={loading}
+            className={`transition-all duration-300 font-semibold ${
+              saved
+                ? "border border-emerald-500/60 bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.35)]"
+                : ""
+            }`}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin text-emerald-400" />
+                Salvando…
+              </>
+            ) : saved ? (
+              <>
+                <CheckCircle2 className="mr-2 h-4 w-4 text-white" />
+                Alterações salvas com sucesso!
+              </>
+            ) : (
+              "Salvar Alterações"
+            )}
           </Button>
         </div>
       </form>

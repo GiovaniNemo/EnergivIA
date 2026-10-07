@@ -655,7 +655,14 @@ export function ProposalBusinessHeroCard({
                         }
                         onClick={onSaveMarginPct}
                       >
-                        {marginPctSaving ? "..." : "Salvar"}
+                        {marginPctSaving ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Salvando...
+                          </span>
+                        ) : (
+                          "Salvar"
+                        )}
                       </Button>
                       <Button
                         size="sm"
@@ -745,7 +752,14 @@ export function ProposalBusinessHeroCard({
                         disabled={marginOverrideSaving}
                         onClick={onSaveMarginOverride}
                       >
-                        {marginOverrideSaving ? "..." : "Salvar"}
+                        {marginOverrideSaving ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Salvando...
+                          </span>
+                        ) : (
+                          "Salvar"
+                        )}
                       </Button>
                       <Button
                         size="sm"
@@ -813,7 +827,14 @@ export function ProposalBusinessHeroCard({
                         disabled={laborOverrideSaving}
                         onClick={onSaveLaborOverride}
                       >
-                        {laborOverrideSaving ? "..." : "Salvar"}
+                        {laborOverrideSaving ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Salvando...
+                          </span>
+                        ) : (
+                          "Salvar"
+                        )}
                       </Button>
                       <Button
                         size="sm"

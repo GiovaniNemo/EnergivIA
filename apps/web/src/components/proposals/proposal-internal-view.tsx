@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Copy, LinkIcon } from "lucide-react";
+import { ArrowLeft, Copy, LinkIcon, AlertTriangle, CheckCircle2 } from "lucide-react";
 import {
   getDefaultEssentialRulesForSeeding,
   PROJECT_COST_ESSENTIAL_LABOR_NAME,
@@ -137,6 +137,16 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
   const [costDefaultsSaved, setCostDefaultsSaved] = useState(false);
   const [orgCostRulesExist, setOrgCostRulesExist] = useState(false);
   const [regeneratedPublicUrl, setRegeneratedPublicUrl] = useState<string | null>(null);
+  const [actionToast, setActionToast] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  const showToast = useCallback((type: "success" | "error", text: string) => {
+    setActionToast({ type, text });
+    window.setTimeout(() => setActionToast(null), 4000);
+  }, []);
+
   const [discountDraft, setDiscountDraft] = useState<number | null>(null);
   const [discountSaving, setDiscountSaving] = useState(false);
   const [discountError, setDiscountError] = useState<string | null>(null);
@@ -330,6 +340,7 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
 
   function handleEquipmentSaved(publicToken: string): void {
     setRegeneratedPublicUrl(`${window.location.origin}/proposta/${publicToken}`);
+    showToast("success", "Equipamentos salvos e proposta recalculada!");
     void reload();
   }
 
@@ -428,10 +439,12 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
         }
       }
       setCostDefaultsSaved(true);
+      showToast("success", "Regras padrão salvas nas configurações da empresa!");
     } catch (e) {
       setCostDefaultsError(
         e instanceof Error ? e.message : "Não foi possível guardar as regras na empresa."
       );
+      showToast("error", "Não foi possível guardar as regras na empresa.");
     } finally {
       setSavingCostDefaults(false);
     }
@@ -457,9 +470,12 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
           : null
       );
       setRegeneratedPublicUrl(null);
+      showToast("success", "Desconto aplicado e salvo com sucesso!");
       await reload();
     } catch (e) {
-      setDiscountError(e instanceof Error ? e.message : "Não foi possível salvar o desconto.");
+      const msg = e instanceof Error ? e.message : "Não foi possível salvar o desconto.";
+      setDiscountError(msg);
+      showToast("error", msg);
     } finally {
       setDiscountSaving(false);
     }
@@ -476,9 +492,10 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
       );
       setRegeneratedPublicUrl(`${window.location.origin}/proposta/${publicToken}`);
       setIsEditingMargin(false);
+      showToast("success", "Margem comercial atualizada com sucesso!");
       await reload();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Não foi possível salvar a margem.");
+      showToast("error", e instanceof Error ? e.message : "Não foi possível salvar a margem.");
     } finally {
       setMarginOverrideSaving(false);
     }
@@ -488,7 +505,7 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
     if (!currentOrganizationId || !proposal || marginPctDraft == null || nonMarginBaseCost == null)
       return;
     if (marginPctDraft < 0 || marginPctDraft >= 100) {
-      alert("A porcentagem de margem deve estar entre 0% e 99%.");
+      showToast("error", "A porcentagem de margem deve estar entre 0% e 99%.");
       return;
     }
     const p = marginPctDraft / 100;
@@ -502,9 +519,10 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
       );
       setRegeneratedPublicUrl(`${window.location.origin}/proposta/${publicToken}`);
       setIsEditingMarginPct(false);
+      showToast("success", "Margem comercial (%) atualizada com sucesso!");
       await reload();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Não foi possível salvar a margem.");
+      showToast("error", e instanceof Error ? e.message : "Não foi possível salvar a margem.");
     } finally {
       setMarginPctSaving(false);
     }
@@ -521,9 +539,10 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
       );
       setRegeneratedPublicUrl(`${window.location.origin}/proposta/${publicToken}`);
       setIsEditingLabor(false);
+      showToast("success", "Mão de obra atualizada com sucesso!");
       await reload();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Não foi possível salvar a mão de obra.");
+      showToast("error", e instanceof Error ? e.message : "Não foi possível salvar a mão de obra.");
     } finally {
       setLaborOverrideSaving(false);
     }
@@ -538,9 +557,13 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
         newRate
       );
       setRegeneratedPublicUrl(`${window.location.origin}/proposta/${publicToken}`);
+      showToast("success", "Valor do kWp atualizado com sucesso!");
       await reload();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Não foi possível salvar o novo valor do kWp.");
+      showToast(
+        "error",
+        e instanceof Error ? e.message : "Não foi possível salvar o novo valor do kWp."
+      );
       throw e;
     }
   }
@@ -552,9 +575,12 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
     setTemplateSaving(true);
     try {
       await setProposalTemplate(currentOrganizationId, proposal.id, templateIdToSave || null);
+      showToast("success", "Layout da proposta aplicado com sucesso!");
       await reload();
     } catch (e) {
-      setTemplateError(e instanceof Error ? e.message : "Não foi possível aplicar o layout.");
+      const msg = e instanceof Error ? e.message : "Não foi possível aplicar o layout.";
+      setTemplateError(msg);
+      showToast("error", msg);
     } finally {
       setTemplateSaving(false);
     }
@@ -640,6 +666,22 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
           Link copiado para a área de transferência
+        </div>
+      )}
+      {actionToast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-xl transition-all animate-in fade-in slide-in-from-bottom-2 ${
+            actionToast.type === "success"
+              ? "bg-emerald-600 border border-emerald-500 shadow-emerald-950/25"
+              : "bg-red-600 border border-red-500 shadow-red-950/25"
+          }`}
+        >
+          {actionToast.type === "success" ? (
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-white" />
+          ) : (
+            <AlertTriangle className="h-4 w-4 shrink-0 text-white" />
+          )}
+          <span>{actionToast.text}</span>
         </div>
       )}
       <ProposalInternalHeader

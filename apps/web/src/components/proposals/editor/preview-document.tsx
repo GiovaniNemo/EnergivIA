@@ -11,6 +11,11 @@ import type {
   SectionRenderOptions,
   SectionRenderMode,
 } from "./section-render/types";
+import { useOrganization } from "@/components/providers/organization-provider";
+import {
+  stripCnpjNumbersFromCompanyName,
+  isGenericOrEnergiviaCompanyName,
+} from "@/lib/company-name-utils";
 
 interface PreviewDocumentProps {
   title: string;
@@ -280,10 +285,26 @@ export function PreviewDocument({
     comparacao_antes: "",
     comparacao_depois: "",
   };
+  const { currentOrganization } = useOrganization();
+  const rawOrgProposalName =
+    (currentOrganization as unknown as { settings?: Record<string, unknown> })?.settings?.[
+      "proposalCompanyName"
+    ] || currentOrganization?.name;
+  const cleanOrgName = stripCnpjNumbersFromCompanyName(String(rawOrgProposalName || ""));
+
   const previewVariables = normalizePreviewVariables({
     ...(publicLayout ? emptyRuntimeData : mockRuntimeData),
     ...variables,
   });
+
+  if (
+    cleanOrgName &&
+    (!previewVariables.nome_empresa ||
+      isGenericOrEnergiviaCompanyName(previewVariables.nome_empresa) ||
+      previewVariables.nome_empresa.trim() === currentOrganization?.name)
+  ) {
+    previewVariables.nome_empresa = cleanOrgName;
+  }
 
   const sectionContentOptions = useMemo<SectionRenderOptions>(
     () => ({

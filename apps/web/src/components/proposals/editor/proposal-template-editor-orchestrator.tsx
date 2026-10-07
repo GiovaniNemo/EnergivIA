@@ -16,7 +16,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
-import { Lock } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useOrganization } from "@/components/providers/organization-provider";
 import type { Product } from "@/lib/admin-api";
@@ -181,7 +181,47 @@ export function ProposalTemplateEditor({
       ? extractTemplateThumbnail(selectedRemoteTemplate.config)
       : undefined;
   }, [variant, blueprintThumbnailUrl, selectedRemoteTemplate]);
-  const previewDocumentState = documentState;
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [saveBanner, setSaveBanner] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const rawProposalName =
+    (currentOrganization as unknown as { settings?: Record<string, unknown> })?.settings?.[
+      "proposalCompanyName"
+    ] || currentOrganization?.name;
+  const cleanOrgName = stripCnpjNumbersFromCompanyName(String(rawProposalName || ""));
+
+  const previewDocumentState = useMemo(() => {
+    if (!cleanOrgName) return documentState;
+    const currentVar = documentState.variables?.["nome_empresa"];
+    const currentFooter = documentState.styles?.footer?.companyName;
+    const needsVarSync =
+      !currentVar ||
+      isGenericOrEnergiviaCompanyName(currentVar) ||
+      currentVar.trim() === currentOrganization?.name;
+    const needsFooterSync =
+      !currentFooter ||
+      isGenericOrEnergiviaCompanyName(currentFooter) ||
+      currentFooter.trim() === currentOrganization?.name;
+
+    if (!needsVarSync && !needsFooterSync) return documentState;
+
+    return {
+      ...documentState,
+      variables: needsVarSync
+        ? { ...documentState.variables, ["nome_empresa"]: cleanOrgName }
+        : documentState.variables,
+      styles: needsFooterSync
+        ? {
+            ...documentState.styles,
+            footer: { ...documentState.styles.footer, companyName: cleanOrgName },
+          }
+        : documentState.styles,
+    };
+  }, [documentState, cleanOrgName, currentOrganization?.name]);
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -222,7 +262,28 @@ export function ProposalTemplateEditor({
         setSelectedTemplateId(selected.id);
         setTitle(selected.name);
         const doc = fromTemplateConfig(selected.config);
-        if (doc) setDocumentState(doc);
+        if (doc) {
+          if (
+            cleanOrgName &&
+            (!doc.variables?.["nome_empresa"] ||
+              isGenericOrEnergiviaCompanyName(doc.variables["nome_empresa"]) ||
+              doc.variables["nome_empresa"].trim() === currentOrganization?.name)
+          ) {
+            doc.variables = { ...doc.variables, ["nome_empresa"]: cleanOrgName };
+          }
+          if (
+            cleanOrgName &&
+            (!doc.styles?.footer?.companyName ||
+              isGenericOrEnergiviaCompanyName(doc.styles.footer.companyName) ||
+              doc.styles.footer.companyName.trim() === currentOrganization?.name)
+          ) {
+            doc.styles = {
+              ...doc.styles,
+              footer: { ...doc.styles.footer, companyName: cleanOrgName },
+            };
+          }
+          setDocumentState(doc);
+        }
         setSettingsOpen(true);
         setSelectedSectionId("");
         setActiveMobilePane("editor");
@@ -327,7 +388,7 @@ export function ProposalTemplateEditor({
           : prev.styles,
       };
     });
-  }, [currentOrganization?.name]);
+  }, [currentOrganization?.name, selectedTemplateId]);
 
   useEffect(() => {
     setDocumentState((prev) => {
@@ -629,150 +690,195 @@ export function ProposalTemplateEditor({
     if (issues.length) {
       setStatusMessage(`Checklist: ${issues[0]}`);
     }
-    const rawCapturedThumbnailUrl = await captureTemplateThumbnail(
-      previewPanelRef.current,
-      title,
-      previewDocumentState
-    );
-    const capturedThumbnailUrl = isLikelyInvalidThumbnailDataUrl(rawCapturedThumbnailUrl)
-      ? undefined
-      : rawCapturedThumbnailUrl;
-    const thumbnailUrl = await resolvePersistableThumbnailUrl(
-      capturedThumbnailUrl,
-      previousPersistedThumbnailUrl,
-      currentOrganizationId ?? undefined
-    );
-    console.info("[template-save] thumbnail decision", {
-      hasRawCapture: Boolean(rawCapturedThumbnailUrl),
-      rawCaptureLength: rawCapturedThumbnailUrl?.length ?? 0,
-      hasCapturedThumbnail: Boolean(capturedThumbnailUrl),
-      hasPreviousThumbnail: Boolean(previousPersistedThumbnailUrl),
-      usingPreviousThumbnail: !capturedThumbnailUrl && Boolean(previousPersistedThumbnailUrl),
-    });
+    setIsSaving(true);
+    setIsSaved(false);
+    setSaveBanner(null);
 
-    if (variant === "blueprint") {
-      if (!currentOrganizationId) {
-        setStatusMessage("Selecione uma organização para salvar o modelo de catálogo.");
-        return;
-      }
-      try {
-        const id = blueprintRecordId ?? templateBlueprintId;
-        if (id) {
-          const updated = await adminUpdateTemplateBlueprint(currentOrganizationId, id, {
-            name: customName ?? title,
-            document: documentState as unknown as BlueprintDocumentInput,
-            thumbnailUrl: thumbnailUrl ?? undefined,
-          });
-          setBlueprintThumbnailUrl(updated.thumbnailUrl);
-          setBlueprintPublished(updated.published);
-        } else {
-          const created = await adminCreateTemplateBlueprint(currentOrganizationId, {
-            name: customName ?? title,
-            document: documentState as unknown as BlueprintDocumentInput,
-            thumbnailUrl: thumbnailUrl ?? undefined,
-            published: false,
-            sortOrder: 0,
-          });
-          setBlueprintRecordId(created.id);
-          setBlueprintPublished(created.published);
-          setBlueprintThumbnailUrl(created.thumbnailUrl);
-          router.replace(`/admin/template-models/${created.id}`);
-        }
-        void queryClient.invalidateQueries({
-          queryKey: ["admin", "template-blueprints", currentOrganizationId],
-        });
-        void queryClient.invalidateQueries({
-          queryKey: ["admin", "template-blueprint", currentOrganizationId],
-        });
-        if (!capturedThumbnailUrl && previousPersistedThumbnailUrl) {
-          setStatusMessage("Modelo salvo. Preview mantido da versão anterior (falha na captura).");
-        } else if (!capturedThumbnailUrl && !previousPersistedThumbnailUrl) {
-          setStatusMessage("Modelo salvo. Não foi possível gerar preview agora.");
-        } else {
-          setStatusMessage("Modelo salvo.");
-        }
-      } catch (error) {
-        console.error("[blueprint-save] failed", { error });
-        setStatusMessage("Falha ao salvar modelo de catálogo no servidor.");
-      }
-      return;
-    }
-
-    if (isTrial && variant !== "blueprint") {
-      setStatusMessage(
-        "No período de testes, a edição e personalização de templates está bloqueada. Faça upgrade para salvar alterações."
-      );
-      return;
-    }
-
-    const entry: SavedTemplate = {
-      id: createId(),
-      name: customName ?? title,
-      createdAt: new Date().toISOString(),
-      payload: documentState,
-      thumbnailUrl,
+    const effectiveVariables = {
+      ...documentState.variables,
+      nome_empresa:
+        cleanOrgName &&
+        (!documentState.variables?.["nome_empresa"] ||
+          isGenericOrEnergiviaCompanyName(documentState.variables["nome_empresa"]) ||
+          documentState.variables["nome_empresa"].trim() === currentOrganization?.name)
+          ? cleanOrgName
+          : documentState.variables?.["nome_empresa"] || cleanOrgName,
     };
-    const next = [entry, ...savedTemplates];
-    setSavedTemplates(next);
-    window.localStorage.setItem(tenantStorageKey, JSON.stringify(next));
-    if (!currentOrganizationId) {
-      setStatusMessage("Template salvo localmente para esta organizacao.");
-      return;
-    }
+    const effectiveFooter = {
+      ...documentState.styles.footer,
+      companyName:
+        cleanOrgName &&
+        (!documentState.styles.footer.companyName ||
+          isGenericOrEnergiviaCompanyName(documentState.styles.footer.companyName) ||
+          documentState.styles.footer.companyName.trim() === currentOrganization?.name)
+          ? cleanOrgName
+          : documentState.styles.footer.companyName || cleanOrgName,
+    };
+    const docToPersist = {
+      ...documentState,
+      variables: effectiveVariables,
+      styles: {
+        ...documentState.styles,
+        footer: effectiveFooter,
+      },
+    };
 
     try {
-      const payloadConfig = proposalDocumentJsonToTemplateConfig(documentState, thumbnailUrl);
-      if (selectedTemplateId) {
-        const updated = await updateProposalTemplate(
-          selectedTemplateId,
-          { name: customName ?? title, config: payloadConfig },
-          currentOrganizationId
-        );
-        const updatedWithLatestConfig = {
-          ...updated,
-          config: payloadConfig,
-        };
-        setRemoteTemplates((prev) => {
-          const hasTemplate = prev.some((template) => template.id === updated.id);
-          if (hasTemplate) {
-            return prev.map((template) =>
-              template.id === updated.id ? updatedWithLatestConfig : template
-            );
+      const rawCapturedThumbnailUrl = await captureTemplateThumbnail(
+        previewPanelRef.current,
+        title,
+        previewDocumentState
+      );
+      const capturedThumbnailUrl = isLikelyInvalidThumbnailDataUrl(rawCapturedThumbnailUrl)
+        ? undefined
+        : rawCapturedThumbnailUrl;
+      const thumbnailUrl = await resolvePersistableThumbnailUrl(
+        capturedThumbnailUrl,
+        previousPersistedThumbnailUrl,
+        currentOrganizationId ?? undefined
+      );
+
+      if (variant === "blueprint") {
+        if (!currentOrganizationId) {
+          setStatusMessage("Selecione uma organização para salvar o modelo de catálogo.");
+          setSaveBanner({
+            type: "error",
+            message: "Selecione uma organização para salvar o modelo.",
+          });
+          return;
+        }
+        try {
+          const id = blueprintRecordId ?? templateBlueprintId;
+          if (id) {
+            const updated = await adminUpdateTemplateBlueprint(currentOrganizationId, id, {
+              name: customName ?? title,
+              document: docToPersist as unknown as BlueprintDocumentInput,
+              thumbnailUrl: thumbnailUrl ?? undefined,
+            });
+            setBlueprintThumbnailUrl(updated.thumbnailUrl);
+            setBlueprintPublished(updated.published);
+          } else {
+            const created = await adminCreateTemplateBlueprint(currentOrganizationId, {
+              name: customName ?? title,
+              document: docToPersist as unknown as BlueprintDocumentInput,
+              thumbnailUrl: thumbnailUrl ?? undefined,
+              published: false,
+              sortOrder: 0,
+            });
+            setBlueprintRecordId(created.id);
+            setBlueprintPublished(created.published);
+            setBlueprintThumbnailUrl(created.thumbnailUrl);
+            router.replace(`/admin/template-models/${created.id}`);
           }
-          return [updatedWithLatestConfig, ...prev];
-        });
-      } else {
-        const created = await createProposalTemplate(
-          {
-            name: customName ?? title,
-            description: "Editor visual de proposta SaaS",
-            config: payloadConfig,
-          },
-          currentOrganizationId
-        );
-        const createdWithLatestConfig = {
-          ...created,
-          config: payloadConfig,
-        };
-        setSelectedTemplateId(created.id);
-        setRemoteTemplates((prev) => [createdWithLatestConfig, ...prev]);
+          void queryClient.invalidateQueries({
+            queryKey: ["admin", "template-blueprints", currentOrganizationId],
+          });
+          void queryClient.invalidateQueries({
+            queryKey: ["admin", "template-blueprint", currentOrganizationId],
+          });
+          setIsSaved(true);
+          setSaveBanner({ type: "success", message: "Modelo salvo com sucesso!" });
+          setTimeout(() => setIsSaved(false), 3500);
+          setTimeout(() => setSaveBanner(null), 5000);
+          setStatusMessage("Modelo salvo.");
+        } catch (error) {
+          console.error("[blueprint-save] failed", { error });
+          setStatusMessage("Falha ao salvar modelo de catálogo no servidor.");
+          setSaveBanner({ type: "error", message: "Falha ao salvar modelo de catálogo." });
+          setTimeout(() => setSaveBanner(null), 7000);
+        }
+        return;
       }
-      if (!capturedThumbnailUrl && previousPersistedThumbnailUrl) {
+
+      if (isTrial && variant !== "blueprint") {
         setStatusMessage(
-          "Alterações salvas. Preview mantido da versão anterior (falha na captura)."
+          "No período de testes, a edição e personalização de templates está bloqueada. Faça upgrade para salvar alterações."
         );
-      } else if (!capturedThumbnailUrl && !previousPersistedThumbnailUrl) {
-        setStatusMessage("Alterações salvas. Não foi possível gerar preview agora.");
-      } else {
-        setStatusMessage("Alterações salvas.");
+        setSaveBanner({
+          type: "error",
+          message: "A personalização de templates é liberada nos planos Essencial e Pro.",
+        });
+        setTimeout(() => setSaveBanner(null), 6000);
+        return;
       }
-    } catch (error) {
-      console.error("[template-save] backend save failed", {
-        selectedTemplateId,
-        hasThumbnailUrl: Boolean(thumbnailUrl),
-        error,
-      });
-      setStatusMessage("Template salvo localmente, mas falhou no backend.");
+
+      const entry: SavedTemplate = {
+        id: createId(),
+        name: customName ?? title,
+        createdAt: new Date().toISOString(),
+        payload: docToPersist,
+        thumbnailUrl,
+      };
+      const next = [entry, ...savedTemplates];
+      setSavedTemplates(next);
+      window.localStorage.setItem(tenantStorageKey, JSON.stringify(next));
+      if (!currentOrganizationId) {
+        setIsSaved(true);
+        setSaveBanner({ type: "success", message: "Template salvo localmente!" });
+        setTimeout(() => setIsSaved(false), 3500);
+        setTimeout(() => setSaveBanner(null), 5000);
+        setStatusMessage("Template salvo localmente para esta organizacao.");
+        return;
+      }
+
+      try {
+        const payloadConfig = proposalDocumentJsonToTemplateConfig(docToPersist, thumbnailUrl);
+        if (selectedTemplateId) {
+          const updated = await updateProposalTemplate(
+            selectedTemplateId,
+            { name: customName ?? title, config: payloadConfig },
+            currentOrganizationId
+          );
+          const updatedWithLatestConfig = {
+            ...updated,
+            config: payloadConfig,
+          };
+          setRemoteTemplates((prev) => {
+            const hasTemplate = prev.some((template) => template.id === updated.id);
+            if (hasTemplate) {
+              return prev.map((template) =>
+                template.id === updated.id ? updatedWithLatestConfig : template
+              );
+            }
+            return [updatedWithLatestConfig, ...prev];
+          });
+        } else {
+          const created = await createProposalTemplate(
+            {
+              name: customName ?? title,
+              description: "Editor visual de proposta SaaS",
+              config: payloadConfig,
+            },
+            currentOrganizationId
+          );
+          const createdWithLatestConfig = {
+            ...created,
+            config: payloadConfig,
+          };
+          setSelectedTemplateId(created.id);
+          setRemoteTemplates((prev) => [createdWithLatestConfig, ...prev]);
+        }
+
+        setIsSaved(true);
+        setSaveBanner({ type: "success", message: "Template salvo com sucesso no servidor!" });
+        setTimeout(() => setIsSaved(false), 3500);
+        setTimeout(() => setSaveBanner(null), 5000);
+        setStatusMessage("Alterações salvas.");
+      } catch (error) {
+        console.error("[template-save] backend save failed", {
+          selectedTemplateId,
+          hasThumbnailUrl: Boolean(thumbnailUrl),
+          error,
+        });
+        setStatusMessage("Template salvo localmente, mas falhou no backend.");
+        setSaveBanner({
+          type: "error",
+          message: "Erro ao salvar no servidor. Verifique sua conexão.",
+        });
+        setTimeout(() => setSaveBanner(null), 7000);
+      }
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -1141,6 +1247,8 @@ export function ProposalTemplateEditor({
         templateStatus={headerTemplateStatus}
         templateVersion={selectedRemoteTemplate?.version ?? 1}
         catalogEditor={variant === "blueprint"}
+        isSaving={isSaving}
+        isSaved={isSaved}
         onTitleChange={setTitle}
         onBack={() =>
           router.push(variant === "blueprint" ? "/admin/template-models" : "/proposals/templates")
@@ -1159,6 +1267,33 @@ export function ProposalTemplateEditor({
         onDownloadPdf={() => void downloadPdf()}
         onPublish={() => void publishTemplate()}
       />
+
+      {saveBanner && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`fixed top-5 right-5 z-50 flex items-center gap-3 rounded-2xl border px-4 py-3 shadow-[0_12px_36px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${
+            saveBanner.type === "success"
+              ? "border-emerald-500/40 bg-zinc-950/95 text-emerald-300 shadow-emerald-950/30"
+              : "border-red-500/40 bg-zinc-950/95 text-red-300 shadow-red-950/30"
+          }`}
+        >
+          {saveBanner.type === "success" ? (
+            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+          ) : (
+            <AlertTriangle className="h-5 w-5 text-red-400 shrink-0" />
+          )}
+          <span className="text-sm font-medium">{saveBanner.message}</span>
+          <button
+            type="button"
+            onClick={() => setSaveBanner(null)}
+            className="ml-2 rounded p-1 text-xs opacity-70 hover:opacity-100 transition"
+            aria-label="Fechar notificação"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="lg:hidden">
         <div className="inline-flex w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-1">

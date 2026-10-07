@@ -15,6 +15,7 @@ import { CreateWhatsappInboundPhoneDto } from "./dto/create-whatsapp-inbound-pho
 import { EmailService } from "../../common/email/email.service";
 import { getTenantPlanDetails } from "../../common/utils/plan-limits";
 import { DEFAULT_PROPOSAL_TEMPLATE_CONFIG } from "@energivia/shared-types";
+import { stripCnpjNumbersFromCompanyName } from "@energivia/utils";
 
 import { softDeleteWhere as soft } from "../../prisma/soft-delete";
 
@@ -818,8 +819,12 @@ export class OrganizationsService {
       current?.settings && typeof current.settings === "object"
         ? (current.settings as Record<string, unknown>)
         : {};
+    const cleanProposalName =
+      dto.name && dto.name.trim() ? stripCnpjNumbersFromCompanyName(dto.name.trim()) : undefined;
+
     const nextSettings: Prisma.InputJsonObject = {
       ...(currentSettings as Prisma.InputJsonObject),
+      ...(cleanProposalName && { proposalCompanyName: cleanProposalName }),
       ...(dto.cnpj !== undefined && { cnpj: cleanCnpj(dto.cnpj) ?? null }),
       ...(dto.cep !== undefined && { cep: dto.cep.trim() || null }),
       ...(dto.street !== undefined && { street: dto.street.trim() || null }),
@@ -867,7 +872,8 @@ export class OrganizationsService {
       data: {
         ...(dto.name != null && { name: dto.name }),
         ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl }),
-        ...((dto.cnpj !== undefined ||
+        ...((dto.name !== undefined ||
+          dto.cnpj !== undefined ||
           dto.cep !== undefined ||
           dto.street !== undefined ||
           dto.number !== undefined ||
@@ -886,6 +892,46 @@ export class OrganizationsService {
           dto.inverterBrandTiers !== undefined) && { settings: nextSettings }),
       },
     });
+
+    if (cleanProposalName) {
+      try {
+        const templates = await this.prisma.proposalTemplate.findMany({
+          where: { tenantId: id },
+          select: { id: true, config: true },
+        });
+        for (const tpl of templates) {
+          const cfg = (tpl.config as Record<string, unknown>) || {};
+          const editor = (cfg["editor"] as Record<string, unknown>) || {};
+          const variables = (editor["variables"] as Record<string, unknown>) || {};
+          const styles = (editor["styles"] as Record<string, unknown>) || {};
+          const footer = (styles["footer"] as Record<string, unknown>) || {};
+
+          const nextCfg = {
+            ...cfg,
+            editor: {
+              ...editor,
+              variables: {
+                ...variables,
+                nome_empresa: cleanProposalName,
+              },
+              styles: {
+                ...styles,
+                footer: {
+                  ...footer,
+                  companyName: cleanProposalName,
+                },
+              },
+            },
+          };
+          await this.prisma.proposalTemplate.update({
+            where: { id: tpl.id },
+            data: { config: nextCfg as Prisma.InputJsonValue },
+          });
+        }
+      } catch (err) {
+        console.error("[organizations.service] Error auto-updating proposal templates:", err);
+      }
+    }
     return {
       ...org,
       cnpj: extractCnpj(org.settings),
