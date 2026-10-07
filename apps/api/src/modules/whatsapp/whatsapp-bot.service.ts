@@ -1834,9 +1834,15 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         );
 
         if (tiersRes && tiersRes.tiers && tiersRes.tiers.length > 0) {
+          const costBenefitTier =
+            tiersRes.tiers.find((t) => t.tier_id === "cost_benefit") || tiersRes.tiers[0]!;
+          const refKwp =
+            safeKwp > 0 ? safeKwp : costBenefitTier.kit_result?.system_power_kw || safeKwp;
+          const uniformTotalPrice = Math.round(refKwp * ratePerKwp * 100) / 100;
+
           return tiersRes.tiers.map((t) => {
             const realSystemKwp = t.kit_result.system_power_kw;
-            const totalPrice = Math.round(realSystemKwp * ratePerKwp * 100) / 100;
+            const totalPrice = uniformTotalPrice;
             const invQty = t.inverter_qty || t.kit_result.inverter?.quantity || 1;
             const invLabel = invQty > 1 ? `${invQty}x Inversores` : `1x Inversor`;
             const kitItems = [
@@ -1967,7 +1973,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     const results = tiers.map((cfg) => {
       const baseEquipmentRate = ratePerKwp * 0.55;
       const tierEquipmentRate = baseEquipmentRate * cfg.materialCostFactor;
-      const totalPrice = Math.round(realSystemKwp * ratePerKwp * 100) / 100;
+      const totalPrice = Math.round(safeKwp * ratePerKwp * 100) / 100;
 
       const baseEquipmentBudget = Math.round(realSystemKwp * tierEquipmentRate);
       const modTotal = baseEquipmentBudget * 0.5;

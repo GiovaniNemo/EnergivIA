@@ -1416,9 +1416,15 @@ export async function POST(req: Request) {
                 if (tiersRes.ok) {
                   const data = await tiersRes.json();
                   if (data && data.tiers && data.tiers.length > 0) {
+                    const costBenefitTier =
+                      data.tiers.find((t: any) => t.tier_id === "cost_benefit") || data.tiers[0];
+                    const refKw =
+                      kwp > 0 ? kwp : costBenefitTier?.kit_result?.system_power_kw || kwp;
+                    const uniformTotalPrice = Math.round(refKw * rate);
+
                     tiers = data.tiers.map((t: any) => {
                       const sysKw = t.kit_result?.system_power_kw || kwp;
-                      const totalPrice = Math.round(sysKw * rate);
+                      const totalPrice = uniformTotalPrice;
                       const modQty = t.module_qty || 4;
                       const modPower = t.module_power_w || 585;
                       const invPower = t.inverter_power_kw || 3;

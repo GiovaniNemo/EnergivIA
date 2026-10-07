@@ -975,29 +975,68 @@ export const ProposalEconomicsModal = forwardRef<
     };
   }, [currentOrganizationId, proposalResultOpen]);
 
+  // Cálculos de Potência Calculada vs. Potência Ajustada (mínimo técnico de 4 módulos)
+  const calculatedKw =
+    generatedProposal?.tamanhoSistemaKw ?? (parseFloat(proposalKitDraft.systemKw) || 0);
+
+  const catalogModuleW =
+    proposalKitResult && proposalKitResult.modules.quantity > 0
+      ? Math.round((proposalKitResult.system_power_kw / proposalKitResult.modules.quantity) * 1000)
+      : 585;
+
+  const activeModuleWatts = catalogModuleW;
+
+  const theoreticalModuleQty =
+    activeModuleWatts > 0 ? Math.round((calculatedKw * 1000) / activeModuleWatts) : 0;
+
+  // A função de potência ajustada só entra quando o kwp calculado não bate a quantidade mínima de 4 módulos:
+  const isBelowMinModules = theoreticalModuleQty < 4 && calculatedKw > 0;
+
+  const adjustedKw = isBelowMinModules
+    ? (proposalKitResult?.system_power_kw ?? Number(((4 * activeModuleWatts) / 1000).toFixed(2)))
+    : calculatedKw;
+
   const computedDistributorCards = useMemo(() => {
     if (!distributorTiers || distributorTiers.length === 0) return [];
     const baseRate = Math.max(500, Number(kwpRateValue) || 2800);
 
+    const eliteTier =
+      distributorTiers.find((t) => t.tier_id === "cost_benefit") || distributorTiers[0]!;
+
+    // Potência de referência definida para o dimensionamento do sistema:
+    // Garante que o valor final (preço em R$) seja igual e uniforme para todos os tiers,
+    // calculado com base na potência definida/dimensionada vezes o valor do kWp.
+    const referenceKw =
+      (isBelowMinModules
+        ? eliteTier?.kit_result.system_power_kw || adjustedKw
+        : proposalKitRequest?.systemKw ||
+          generatedProposal?.tamanhoSistemaKw ||
+          eliteTier?.kit_result.system_power_kw) ||
+      eliteTier?.kit_result.system_power_kw ||
+      3.0;
+
+    const uniformCommercialPrice = Math.round(referenceKw * baseRate);
+
     return distributorTiers.map((tier) => {
       const isSelected = selectedDistributorTierId === tier.tier_id;
-      const sysKw = tier.kit_result.system_power_kw;
-
-      let commercialPrice: number;
-      let ratePerKwpEffective: number;
-
-      ratePerKwpEffective = baseRate;
-      commercialPrice = Math.round(sysKw * ratePerKwpEffective);
 
       return {
         ...tier,
         isSelected,
-        commercialPrice,
-        commercialPriceFormatted: formatCurrency(commercialPrice),
-        ratePerKwpEffective,
+        commercialPrice: uniformCommercialPrice,
+        commercialPriceFormatted: formatCurrency(uniformCommercialPrice),
+        ratePerKwpEffective: baseRate,
       };
     });
-  }, [distributorTiers, selectedDistributorTierId, kwpRateValue]);
+  }, [
+    distributorTiers,
+    selectedDistributorTierId,
+    kwpRateValue,
+    isBelowMinModules,
+    adjustedKw,
+    proposalKitRequest?.systemKw,
+    generatedProposal?.tamanhoSistemaKw,
+  ]);
 
   const activeDistributorCard = useMemo(() => {
     return (
@@ -1010,6 +1049,9 @@ export const ProposalEconomicsModal = forwardRef<
   const activeRatePerKwp =
     activeDistributorCard?.ratePerKwpEffective ?? Math.round(kwpRateValue || 2800);
   const activeCommercialPrice = useMemo(() => {
+    if (activeDistributorCard?.commercialPrice && optimisticModuleQty == null) {
+      return activeDistributorCard.commercialPrice;
+    }
     let sysKw =
       proposalKitResult?.system_power_kw ??
       activeDistributorCard?.kit_result.system_power_kw ??
@@ -1024,6 +1066,7 @@ export const ProposalEconomicsModal = forwardRef<
     }
     return Math.round(sysKw * activeRatePerKwp);
   }, [
+    activeDistributorCard?.commercialPrice,
     proposalKitResult,
     optimisticModuleQty,
     activeDistributorCard,
@@ -2204,27 +2247,6 @@ export const ProposalEconomicsModal = forwardRef<
     kitDraftSource.kind === "supplier"
       ? (supplierOptions.find((s) => s.supplier_id === kitDraftSource.id)?.supplier_name ?? null)
       : null;
-
-  // Cálculos de Potência Calculada vs. Potência Ajustada (mínimo técnico de 4 módulos)
-  const calculatedKw =
-    generatedProposal?.tamanhoSistemaKw ?? (parseFloat(proposalKitDraft.systemKw) || 0);
-
-  const catalogModuleW =
-    proposalKitResult && proposalKitResult.modules.quantity > 0
-      ? Math.round((proposalKitResult.system_power_kw / proposalKitResult.modules.quantity) * 1000)
-      : 585;
-
-  const activeModuleWatts = catalogModuleW;
-
-  const theoreticalModuleQty =
-    activeModuleWatts > 0 ? Math.round((calculatedKw * 1000) / activeModuleWatts) : 0;
-
-  // A função de potência ajustada só entra quando o kwp calculado não bate a quantidade mínima de 4 módulos:
-  const isBelowMinModules = theoreticalModuleQty < 4 && calculatedKw > 0;
-
-  const adjustedKw = isBelowMinModules
-    ? (proposalKitResult?.system_power_kw ?? Number(((4 * activeModuleWatts) / 1000).toFixed(2)))
-    : calculatedKw;
 
   if (!currentOrganizationId) {
     return null;
