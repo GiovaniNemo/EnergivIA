@@ -330,14 +330,18 @@ export class OrganizationsService {
     const termsStatement =
       "Declaro que li e concordo com os Termos de Uso da ENERGIVIA LTDA (CNPJ 66.304.358/0001-16) e com a Política de Privacidade. Entendo que o sistema utiliza Inteligência Artificial que está sujeita a imprecisões e erros de leitura. Assumo total responsabilidade pela conferência técnica minuciosa dos dados e pela emissão de ART/TRT sobre toda e qualquer proposta gerada pela plataforma ou pelo WhatsApp.";
 
-    const slug = await this.generateUniqueOrganizationSlug(dto.name);
+    const commercialName = dto.proposalCompanyName?.trim() || dto.name.trim();
+    const legalName = dto.razaoSocial?.trim() || dto.name.trim();
+    const slug = await this.generateUniqueOrganizationSlug(commercialName);
     const templateSettings = buildTemplateSettings(dto);
     const org = await this.prisma.tenant.create({
       data: {
-        name: dto.name,
+        name: commercialName,
         slug,
         logoUrl: dto.logoUrl ?? undefined,
         settings: {
+          proposalCompanyName: commercialName,
+          razaoSocial: legalName,
           ...(dto.cnpj ? { cnpj: cleanCnpj(dto.cnpj) } : {}),
           ...(dto.cep ? { cep: dto.cep.trim() } : {}),
           ...(dto.street ? { street: dto.street.trim() } : {}),
@@ -422,11 +426,28 @@ export class OrganizationsService {
         orderBy: { sortOrder: "asc" },
       });
 
-      const templateConfig = blueprint?.document ?? DEFAULT_PROPOSAL_TEMPLATE_CONFIG;
-      const templateName = blueprint?.name ?? "Template de Proposta Padrão EnergivIA";
+      const rawTemplateConfig = blueprint?.document ?? DEFAULT_PROPOSAL_TEMPLATE_CONFIG;
+      const customConfig = JSON.parse(JSON.stringify(rawTemplateConfig)) as Record<string, unknown>;
+      if (customConfig && typeof customConfig === "object") {
+        const prevVars = (customConfig["variables"] as Record<string, unknown>) || {};
+        customConfig["variables"] = {
+          ...prevVars,
+          nome_empresa: commercialName,
+        };
+        const prevStyles = (customConfig["styles"] as Record<string, unknown>) || {};
+        const prevFooter = (prevStyles["footer"] as Record<string, unknown>) || {};
+        customConfig["styles"] = {
+          ...prevStyles,
+          footer: {
+            ...prevFooter,
+            companyName: commercialName,
+          },
+        };
+      }
+      const templateName = blueprint?.name ?? `Template de Proposta - ${commercialName}`;
       const templateDescription =
         blueprint?.description ??
-        "Modelo oficial padrão da EnergivIA pronto para propostas solares.";
+        `Modelo oficial pronto para propostas solares de ${commercialName}.`;
 
       const initialTemplate = await this.prisma.proposalTemplate.create({
         data: {
@@ -435,7 +456,7 @@ export class OrganizationsService {
           description: templateDescription,
           isDefault: true,
           status: "PUBLISHED",
-          config: templateConfig as Prisma.InputJsonValue,
+          config: customConfig as Prisma.InputJsonValue,
         },
       });
 
@@ -445,7 +466,7 @@ export class OrganizationsService {
           tenantId: org.id,
           version: initialTemplate.version,
           status: "PUBLISHED",
-          config: templateConfig as Prisma.InputJsonValue,
+          config: customConfig as Prisma.InputJsonValue,
           publishedAt: new Date(),
         },
       });

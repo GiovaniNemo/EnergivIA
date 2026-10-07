@@ -1,6 +1,7 @@
 import type { ProposalDocumentJson } from "@/components/proposals/editor/types";
 import type { FinancialSimulationInputJson, FinancialSimulationResultJson } from "@/lib/leads-api";
 import type { PublicProposalPayload } from "@/lib/public-proposals-api";
+import { stripCnpjNumbersFromCompanyName } from "@/lib/company-name-utils";
 
 function formatBRL(n: number | null | undefined): string {
   if (n == null || typeof n !== "number" || Number.isNaN(n)) return "R$ 0,00";
@@ -26,8 +27,9 @@ export function mergePublicProposalVariables(
     merged["logo_integrador"] = payload.companyLogoUrl;
   }
   if (payload.companyName) {
-    merged["nome_empresa"] = payload.companyName;
-    merged["nome_integrador"] = payload.companyName;
+    const cleanCompanyName = stripCnpjNumbersFromCompanyName(payload.companyName);
+    merged["nome_empresa"] = cleanCompanyName;
+    merged["nome_integrador"] = cleanCompanyName;
   }
 
   // Integrator snapshot: kit items and project costs
@@ -119,7 +121,7 @@ export function mergePublicProposalVariables(
   }
 
   if (payload.companyName && payload.companyName.trim()) {
-    merged["nome_empresa"] = payload.companyName.trim();
+    merged["nome_empresa"] = stripCnpjNumbersFromCompanyName(payload.companyName);
   }
 
   if (typeof payload.discountBrl === "number" && payload.discountBrl > 0) {

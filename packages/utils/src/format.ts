@@ -37,3 +37,11 @@ export function formatCpfCnpjDigits(digits: string): string {
   }
   return digits;
 }
+
+export function stripCnpjNumbersFromCompanyName(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const cleaned = raw
+    .replace(/^(\d{2}\.?\d{3}\.?\d{3}(\/?\d{4}-?\d{2})?|\d{14}|\d{8})\s*[-–—]?\s*/i, "")
+    .trim();
+  return cleaned || raw.trim();
+}

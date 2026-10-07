@@ -28,6 +28,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
+import { stripCnpjNumbersFromCompanyName } from "@/lib/company-name-utils";
 
 interface CnpjApiResponse {
   razao_social?: string;
@@ -258,7 +259,9 @@ function OrganizationSettingsContent() {
 
     try {
       const data = await fetchCnpjDetails(cleanCnpj);
-      const companyName = data.nome_fantasia || data.razao_social || "";
+      const companyName = stripCnpjNumbersFromCompanyName(
+        data.nome_fantasia || data.razao_social || ""
+      );
       const formattedCep = formatCep(data.cep || "");
 
       if (isModal) {
@@ -668,10 +671,11 @@ function OrganizationSettingsContent() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Input
-                label="Nome da organização"
+                label="Nome comercial da empresa (nas propostas)"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: SolarTech Engenharia"
+                helperText="Nome apresentado nas propostas comerciais e variáveis ({{nome_empresa}})."
                 required
               />
               <Input

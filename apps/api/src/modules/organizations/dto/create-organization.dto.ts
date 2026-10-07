@@ -17,6 +17,16 @@ export class CreateOrganizationDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(200)
+  proposalCompanyName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  razaoSocial?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(2000)
   logoUrl?: string;
 

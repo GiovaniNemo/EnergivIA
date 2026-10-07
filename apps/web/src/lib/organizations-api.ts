@@ -198,6 +198,8 @@ export interface TermsAcceptanceData {
 
 export async function createOrganization(data: {
   name: string;
+  proposalCompanyName?: string;
+  razaoSocial?: string;
   logoUrl?: string;
   cnpj?: string;
   cep?: string;

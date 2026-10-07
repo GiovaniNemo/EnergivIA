@@ -31,6 +31,10 @@ import {
   type ProposalTemplateRevisionEntity,
   type ProposalTemplateEntity,
 } from "@/lib/proposal-templates-api";
+import {
+  stripCnpjNumbersFromCompanyName,
+  isGenericOrEnergiviaCompanyName,
+} from "@/lib/company-name-utils";
 import { ImportTemplateModal } from "./import-template-modal";
 import { SettingsPanel } from "./settings-panel";
 import { TemplateHistoryModal } from "./template-history-modal";
@@ -289,23 +293,36 @@ export function ProposalTemplateEditor({
 
   useEffect(() => {
     if (!currentOrganization?.name) return;
+    const rawProposalName =
+      (currentOrganization as unknown as { settings?: Record<string, unknown> })?.settings?.[
+        "proposalCompanyName"
+      ] || currentOrganization.name;
+    const cleanOrgName = stripCnpjNumbersFromCompanyName(String(rawProposalName));
+    if (!cleanOrgName) return;
+
     setDocumentState((prev) => {
+      const currentVar = prev.variables["nome_empresa"];
+      const currentFooter = prev.styles.footer.companyName;
+
       const shouldSyncCompanyName =
-        !prev.variables["nome_empresa"] ||
-        prev.variables["nome_empresa"] === "Solar Energia Co." ||
-        prev.variables["nome_empresa"] === "Solar Prime Energia";
+        !currentVar ||
+        isGenericOrEnergiviaCompanyName(currentVar) ||
+        currentVar.trim() === currentOrganization.name;
       const shouldSyncFooterCompany =
-        !prev.styles.footer.companyName || prev.styles.footer.companyName === "Solar Energy Co.";
+        !currentFooter ||
+        isGenericOrEnergiviaCompanyName(currentFooter) ||
+        currentFooter.trim() === currentOrganization.name;
+
       if (!shouldSyncCompanyName && !shouldSyncFooterCompany) return prev;
       return {
         ...prev,
         variables: shouldSyncCompanyName
-          ? { ...prev.variables, ["nome_empresa"]: currentOrganization.name }
+          ? { ...prev.variables, ["nome_empresa"]: cleanOrgName }
           : prev.variables,
         styles: shouldSyncFooterCompany
           ? {
               ...prev.styles,
-              footer: { ...prev.styles.footer, companyName: currentOrganization.name },
+              footer: { ...prev.styles.footer, companyName: cleanOrgName },
             }
           : prev.styles,
       };

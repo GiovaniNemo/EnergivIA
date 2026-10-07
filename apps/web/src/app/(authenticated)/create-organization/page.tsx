@@ -12,6 +12,7 @@ import {
   type BrandTierSelection,
 } from "@/lib/organizations-api";
 import { BrandTierSelector } from "@/components/ui/brand-tier-selector";
+import { stripCnpjNumbersFromCompanyName } from "@/lib/company-name-utils";
 import { triggerWelcomeIntroSplash } from "@/components/layout/welcome-intro-splash";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -293,6 +294,8 @@ export default function CreateOrganizationPage() {
   const isBlockedFromCreatingMore = alreadyHasOrg && !isPrivileged && !isPlus;
 
   const [name, setName] = useState("");
+  const [proposalCompanyName, setProposalCompanyName] = useState("");
+  const [isProposalCompanyTouched, setIsProposalCompanyTouched] = useState(false);
   const [cnpj, setCnpj] = useState("");
   const [cep, setCep] = useState("");
   const [cityState, setCityState] = useState("");
@@ -465,6 +468,9 @@ export default function CreateOrganizationPage() {
           const companyName = data.nome_fantasia || data.razao_social || "";
           if (companyName) {
             setName(companyName);
+            if (!isProposalCompanyTouched) {
+              setProposalCompanyName(stripCnpjNumbersFromCompanyName(companyName));
+            }
           }
           if (data.cep) {
             setCep(formatCep(data.cep));
@@ -516,6 +522,12 @@ export default function CreateOrganizationPage() {
       return;
     }
 
+    const finalProposalCompanyName = proposalCompanyName.trim();
+    if (!finalProposalCompanyName) {
+      setError("Informe o nome da empresa que você deseja exibir nas propostas.");
+      return;
+    }
+
     const selectedSegmentsSnapshot = [...selectedSegments];
     if (!skipTemplateStep && selectedSegmentsSnapshot.length === 0) {
       setError("Selecione pelo menos um segmento para gerar suas propostas.");
@@ -530,7 +542,9 @@ export default function CreateOrganizationPage() {
     try {
       const termsAcceptedAt = new Date().toISOString();
       const organization = await createOrganization({
-        name: name.trim(),
+        name: finalProposalCompanyName,
+        proposalCompanyName: finalProposalCompanyName,
+        razaoSocial: name.trim() || finalProposalCompanyName,
         logoUrl: logoUrl || undefined,
         cnpj: cnpj.trim() || undefined,
         termsAccepted: true,
@@ -632,6 +646,12 @@ export default function CreateOrganizationPage() {
       setError(null);
       setDirection(1);
       setStep(3);
+      if (!isProposalCompanyTouched || !proposalCompanyName.trim()) {
+        const cleanSuggestion = stripCnpjNumbersFromCompanyName(name);
+        if (cleanSuggestion) {
+          setProposalCompanyName(cleanSuggestion);
+        }
+      }
       return;
     }
   };
@@ -924,9 +944,15 @@ export default function CreateOrganizationPage() {
                     />
 
                     <Input
-                      label="Nome da empresa *"
+                      label="Nome da empresa / Razão Social *"
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setName(val);
+                        if (!isProposalCompanyTouched) {
+                          setProposalCompanyName(stripCnpjNumbersFromCompanyName(val));
+                        }
+                      }}
                       placeholder="Ex: Integradora Solar Prime"
                       required
                       className="w-full"
@@ -1265,6 +1291,55 @@ export default function CreateOrganizationPage() {
                   aria-hidden={step !== 3}
                 >
                   <div className="space-y-3 pt-2">
+                    {/* NOME DA EMPRESA NAS PROPOSTAS (OBRIGATÓRIO) */}
+                    <div className="space-y-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#0f6b86]/10 text-[#0f6b86] dark:text-[#38bdf8]">
+                            <Building2 className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[var(--color-foreground)]">
+                              Nome da empresa nas propostas *
+                            </p>
+                          </div>
+                        </div>
+                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          Obrigatório
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-[var(--color-muted-foreground)] leading-relaxed">
+                        Qual nome comercial você quer que apareça nas propostas e contratos dos seus
+                        clientes quando utilizar as variáveis do sistema (ex:{" "}
+                        <strong className="font-mono text-[#0f6b86] dark:text-[#38bdf8]">
+                          {"{{nome_empresa}}"}
+                        </strong>
+                        )?
+                      </p>
+
+                      <Input
+                        value={proposalCompanyName}
+                        onChange={(e) => {
+                          setIsProposalCompanyTouched(true);
+                          setProposalCompanyName(e.target.value);
+                          if (error) setError(null);
+                        }}
+                        placeholder="Ex: Solar Prime Energia"
+                        required
+                        className="w-full font-medium"
+                        startAdornment={
+                          <Building2 className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                        }
+                        endAdornment={
+                          proposalCompanyName.trim() ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                          ) : null
+                        }
+                        helperText="Este é o nome comercial apresentado aos seus clientes em todas as propostas, capas e assinaturas (sem números ou códigos do CNPJ)."
+                      />
+                    </div>
+
                     <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
                       <p className="text-sm font-semibold text-[var(--color-foreground)]">
                         Segmentos de atuação
