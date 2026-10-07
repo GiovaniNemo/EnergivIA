@@ -187,6 +187,7 @@ type GeneratedProposal = {
   tamanhoSistemaKw: number;
   roofType: RoofType;
   monthlyConsumptionKwh?: number;
+  geracaoBase?: number;
 };
 
 type ProposalFieldErrors = {
@@ -504,6 +505,17 @@ export function buildGeneratedProposalFromSimulation(
   const roofType: RoofType = validRoofTypes.includes(roofTypeRaw as RoofType)
     ? (roofTypeRaw as RoofType)
     : "ceramic";
+  const roofF = ROOF_SOLAR_FACTOR[roofType as QuickEconomiaRoofType] ?? 1;
+  const geracaoBase =
+    typeof resultSizing?.["geracaoBase"] === "number" && (resultSizing["geracaoBase"] as number) > 0
+      ? (resultSizing["geracaoBase"] as number)
+      : typeof result?.["geracaoBase"] === "number" && (result["geracaoBase"] as number) > 0
+        ? (result["geracaoBase"] as number)
+        : Math.max(
+            40,
+            (typeof input?.["irradiacao"] === "number" ? (input["irradiacao"] as number) : 145) *
+              roofF
+          );
 
   return {
     id: simulation.id,
@@ -516,6 +528,7 @@ export function buildGeneratedProposalFromSimulation(
     tamanhoSistemaKw,
     roofType,
     monthlyConsumptionKwh,
+    geracaoBase,
   };
 }
 
@@ -975,6 +988,30 @@ export const ProposalEconomicsModal = forwardRef<
     };
   }, [currentOrganizationId, proposalResultOpen]);
 
+  const heuristicaIrradiacao = useMemo(() => {
+    const row = geoCities.find((c) => c.id === selectedCity?.id);
+    const fromDb = irradiacaoFromSolarResource(row?.solarResource);
+    if (fromDb != null) return fromDb;
+    if (selectedCity) return 145;
+    return 140;
+  }, [geoCities, selectedCity?.id]);
+
+  const localSolarYield = useMemo(() => {
+    if (generatedProposal?.geracaoBase && generatedProposal.geracaoBase > 40) {
+      return generatedProposal.geracaoBase;
+    }
+    const roof = (generatedProposal?.roofType ??
+      proposalKitDraft.roof ??
+      "ceramic") as QuickEconomiaRoofType;
+    const roofF = ROOF_SOLAR_FACTOR[roof] ?? 1;
+    return Math.max(40, (heuristicaIrradiacao || 145) * roofF);
+  }, [
+    generatedProposal?.geracaoBase,
+    generatedProposal?.roofType,
+    proposalKitDraft.roof,
+    heuristicaIrradiacao,
+  ]);
+
   // Cálculos de Potência Calculada vs. Potência Ajustada (mínimo técnico de 4 módulos)
   const calculatedKw =
     generatedProposal?.tamanhoSistemaKw ?? (parseFloat(proposalKitDraft.systemKw) || 0);
@@ -1019,6 +1056,7 @@ export const ProposalEconomicsModal = forwardRef<
 
     return distributorTiers.map((tier) => {
       const isSelected = selectedDistributorTierId === tier.tier_id;
+      const estimatedMonthlyGen = Math.round(tier.kit_result.system_power_kw * localSolarYield);
 
       return {
         ...tier,
@@ -1026,6 +1064,7 @@ export const ProposalEconomicsModal = forwardRef<
         commercialPrice: uniformCommercialPrice,
         commercialPriceFormatted: formatCurrency(uniformCommercialPrice),
         ratePerKwpEffective: baseRate,
+        estimated_monthly_generation_kwh: estimatedMonthlyGen,
       };
     });
   }, [
@@ -1036,6 +1075,7 @@ export const ProposalEconomicsModal = forwardRef<
     adjustedKw,
     proposalKitRequest?.systemKw,
     generatedProposal?.tamanhoSistemaKw,
+    localSolarYield,
   ]);
 
   const activeDistributorCard = useMemo(() => {
@@ -1298,6 +1338,7 @@ export const ProposalEconomicsModal = forwardRef<
             ? { grid_topology: req.gridTopology }
             : {}),
           ...(req.stringBoxId ? { string_box_id: req.stringBoxId } : {}),
+          monthly_yield: localSolarYield,
         };
         let tiersRes: DistributorTiersResult | null = null;
         let previewFallbackRes: WhatsAppPreviewResult | null = null;
@@ -1490,13 +1531,6 @@ export const ProposalEconomicsModal = forwardRef<
     proposalKitResult?.modules?.product_id,
     proposalKitResult?.inverter?.product_id,
   ]);
-  const heuristicaIrradiacao = useMemo(() => {
-    const row = geoCities.find((c) => c.id === selectedCity?.id);
-    const fromDb = irradiacaoFromSolarResource(row?.solarResource);
-    if (fromDb != null) return fromDb;
-    if (selectedCity) return 145;
-    return 140;
-  }, [geoCities, selectedCity?.id]);
 
   useEffect(() => {
     const state = {
@@ -2133,6 +2167,7 @@ export const ProposalEconomicsModal = forwardRef<
         tamanhoSistemaKw: result.tamanhoSistema,
         roofType: roof,
         monthlyConsumptionKwh: result.monthlyConsumptionKwh,
+        geracaoBase: result.geracaoBase,
       });
       setProposalResultOpen(true);
       setProposalFormOpen(false);
@@ -3224,10 +3259,11 @@ export const ProposalEconomicsModal = forwardRef<
                     ~
                     {Math.round(
                       activeDistributorCard?.estimated_monthly_generation_kwh ??
-                        (isBelowMinModules
-                          ? adjustedKw * 130
-                          : (proposalKitResult?.system_power_kw ??
-                              clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0)) * 130)
+                        (proposalKitResult?.system_power_kw ??
+                          (isBelowMinModules
+                            ? adjustedKw
+                            : clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0))) *
+                          localSolarYield
                     ).toLocaleString("pt-BR")}{" "}
                     <span className="text-[0.65rem] sm:text-sm font-normal text-[var(--color-muted-foreground)] block sm:inline">
                       kWh/mês

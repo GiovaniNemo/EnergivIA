@@ -781,7 +781,10 @@ export class KitGenerationService {
           built.kitItems[0]?.product_name || built.sizingResult.module.name,
           Boolean(moduleSpecs?.is_tier_1)
         ),
-        estimated_monthly_generation_kwh: Math.round(built.systemPowerKw * 130),
+        estimated_monthly_generation_kwh: Math.round(
+          built.systemPowerKw *
+            (input.monthly_yield && input.monthly_yield > 40 ? input.monthly_yield : 130)
+        ),
       };
     };
 

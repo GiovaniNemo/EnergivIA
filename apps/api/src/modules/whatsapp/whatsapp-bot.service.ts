@@ -1829,6 +1829,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
             system_kw: safeKwp,
             roof_type: mappedRoofType,
             inverter_type: (inverterType as any) || "string",
+            monthly_yield: monthlyFactor,
           },
           organizationId
         );

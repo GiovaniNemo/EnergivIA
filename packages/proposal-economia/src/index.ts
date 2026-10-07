@@ -48,6 +48,8 @@ export interface QuickEconomiaSimulationResult {
   payback: number;
   tamanhoSistema: number;
   monthlyConsumptionKwh?: number;
+  geracaoBase?: number;
+  geracaoEstimadaKwh?: number;
 }
 
 export function parseExtractedNumber(value: unknown): number {
@@ -274,6 +276,8 @@ export function simulateProposal(
     payback,
     tamanhoSistema,
     monthlyConsumptionKwh: isDirectPower ? consumo : safeConsumption,
+    geracaoBase,
+    geracaoEstimadaKwh: Math.round(tamanhoSistema * geracaoBase),
   };
 }
 
@@ -405,7 +409,7 @@ export function quickResultToPersistedSimulationDraft(
   const monthlyKwh =
     quick.monthlyConsumptionKwh && quick.monthlyConsumptionKwh > 0
       ? Math.max(1, Math.round(quick.monthlyConsumptionKwh))
-      : Math.round(quick.tamanhoSistema * 130);
+      : quick.geracaoEstimadaKwh || Math.round(quick.tamanhoSistema * (quick.geracaoBase || 140));
   const energyPrice =
     monthlyKwh > 0 && quick.economiaMensal > 0
       ? Math.min(2.5, Math.max(0.25, quick.economiaMensal / monthlyKwh))
