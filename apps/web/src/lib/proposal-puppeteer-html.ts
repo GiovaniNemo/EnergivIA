@@ -88,8 +88,9 @@ export function proposalPuppeteerDocumentCss(): string {
       break-after: page !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
-      min-height: 100vh !important;
-      height: 100vh !important;
+      min-height: 297mm !important;
+      height: 297mm !important;
+      max-height: 297mm !important;
       aspect-ratio: auto !important;
       width: 100% !important;
       max-width: none !important;
@@ -101,29 +102,34 @@ export function proposalPuppeteerDocumentCss(): string {
       overflow: hidden !important;
     }
 
-    /* Content sections flow naturally without forcing individual blank pages */
+    /* Dedicated A4 pages for each content section */
+    .proposal-pdf-page,
     .proposal-content-section,
     [data-preview-scroll="true"] > div > article:not(:first-child) {
+      page-break-after: always !important;
+      break-after: page !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
-      page-break-after: auto !important;
-      break-after: auto !important;
-      min-height: auto !important;
-      height: auto !important;
+      min-height: 297mm !important;
+      height: 297mm !important;
+      max-height: 297mm !important;
       aspect-ratio: auto !important;
       width: 100% !important;
       max-width: none !important;
-      margin: 0 0 1rem 0 !important;
+      margin: 0 !important;
+      box-sizing: border-box !important;
       border-radius: 0 !important;
       box-shadow: none !important;
       border: 0 !important;
-      overflow: visible !important;
+      overflow: hidden !important;
     }
 
     [data-preview-scroll="true"] > div > article:last-child,
-    [data-preview-scroll="true"] > div > article:last-of-type {
-      page-break-after: avoid !important;
-      break-after: avoid !important;
+    [data-preview-scroll="true"] > div > article:last-of-type,
+    .proposal-pdf-page:last-child,
+    .proposal-pdf-page:last-of-type {
+      page-break-after: auto !important;
+      break-after: auto !important;
       margin-bottom: 0 !important;
     }
 

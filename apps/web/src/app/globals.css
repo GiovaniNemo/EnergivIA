@@ -652,8 +652,8 @@ html.hide-scrollbar,
   }
 
   @page {
-    size: A4;
-    margin: 10mm;
+    size: A4 portrait;
+    margin: 0;
   }
 
   .print\:hidden,
@@ -673,7 +673,16 @@ html.hide-scrollbar,
   }
 
   html,
-  body,
+  body {
+    background: var(--proposal-bg, #060b16) !important;
+    color: var(--proposal-text, #f8fafc) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   main,
   article,
   .proposal-preview-cq,
@@ -683,15 +692,57 @@ html.hide-scrollbar,
     min-height: 0 !important;
     max-height: none !important;
     background: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
+  /* Capa A4 100% sangrada */
   .proposal-cover-page {
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
     page-break-after: always !important;
     break-after: page !important;
-    min-height: calc(100vh - 20mm) !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Cada página de seção dedicada no PDF */
+  .proposal-pdf-page {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    padding: 16mm 14mm !important;
+    background: var(--proposal-bg, #060b16) !important;
+  }
+
+  .proposal-pdf-page:last-child,
+  .proposal-pdf-page:last-of-type {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 
   .proposal-content-document {
@@ -710,7 +761,6 @@ html.hide-scrollbar,
     box-shadow: none !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    margin-bottom: 1.5rem !important;
   }
 
   /* Evita quebras no meio de parágrafos, frases e cards */
