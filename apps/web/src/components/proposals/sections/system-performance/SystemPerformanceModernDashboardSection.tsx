@@ -185,10 +185,10 @@ export function SystemPerformanceModernDashboardSection(
         aria-hidden
       />
 
-      <div className="relative z-10 space-y-8">
-        <div className="system-performance-dashboard-top grid grid-cols-1 items-stretch gap-6">
+      <div className="relative z-10 space-y-6">
+        <div className="system-performance-dashboard-top grid grid-cols-1 sm:grid-cols-2 print:grid-cols-2 items-stretch gap-4">
           <ModernHeroCapacityCard formatted={formatted} theme={theme} />
-          <div className="system-performance-metrics-grid grid gap-4">
+          <div className="system-performance-metrics-grid grid gap-3">
             <ModernGlassMetric
               accent="primary"
               footer="Estimativa mensal de geração"
@@ -234,7 +234,7 @@ export function SystemPerformanceModernDashboardSection(
           </div>
         ) : null}
 
-        <div className="w-full space-y-3">
+        <div className="w-full space-y-2">
           <p
             className="system-performance-chart-title text-center text-xs font-medium uppercase tracking-[0.12em]"
             style={{ color: `color-mix(in srgb, ${theme.text} 38%, transparent)` }}
@@ -243,7 +243,7 @@ export function SystemPerformanceModernDashboardSection(
           </p>
           <ConsumptionProductionChart
             consumoMensal={consumoMensal}
-            height={340}
+            height={240}
             meses={meses}
             producaoMensal={producaoMensal}
             theme={theme}

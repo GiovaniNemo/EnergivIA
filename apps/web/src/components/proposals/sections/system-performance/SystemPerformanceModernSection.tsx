@@ -203,7 +203,7 @@ export function SystemPerformanceModernSection({
           </p>
           <ConsumptionProductionChart
             consumoMensal={consumoMensal}
-            height={340}
+            height={240}
             meses={meses}
             producaoMensal={producaoMensal}
             theme={theme}

@@ -547,6 +547,10 @@ export function PreviewDocument({
   });
 
   if (mode === "pdf") {
+    const companyDisplayName =
+      previewVariables.nome_empresa || styles.footer.companyName || "EnergivIA Solar";
+    const logoSrc = hideLegacyLogo ? "" : resolveDisplayAssetUrl(styles.branding.logoUrl);
+
     return (
       <div
         data-preview-scroll="true"
@@ -555,7 +559,7 @@ export function PreviewDocument({
         <div>
           <article
             data-preview-capture-target="true"
-            className="proposal-cover-page mx-auto aspect-[210/297] w-full max-w-[794px] overflow-hidden flex flex-col"
+            className="proposal-cover-page mx-auto w-full overflow-hidden flex flex-col"
             style={{
               fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
               fontSize: `${styles.typography.bodySize}px`,
@@ -574,50 +578,88 @@ export function PreviewDocument({
               typography={styles.typography}
               organization={{
                 companyName: previewVariables.nome_empresa || styles.footer.companyName,
-                logo: hideLegacyLogo ? "" : resolveDisplayAssetUrl(styles.branding.logoUrl),
+                logo: logoSrc,
                 primaryColor: styles.branding.primaryColor,
               }}
               showSectionDivider={resolveDividerToggle(coverFields["showSectionDivider"])}
             />
           </article>
 
-          <article
-            className="proposal-content-document mx-auto w-full max-w-[794px] overflow-hidden"
-            style={{
-              fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
-              fontSize: `${styles.typography.bodySize}px`,
-              backgroundColor: styles.branding.backgroundColor,
-              color: styles.branding.textColor,
-            }}
-          >
-            {visibleSections.map((section) => (
-              <div
-                key={section.id}
-                className={`proposal-content-section ${sectionPaddingClass[styles.layout.spacing]}`}
-                style={{
-                  pageBreakInside: "avoid",
-                  breakInside: "avoid",
-                }}
-              >
-                <SectionShell
-                  section={section}
-                  subtitleSize={styles.typography.subtitleSize}
-                  vars={previewVariables}
-                  defaults={{
-                    textColor: styles.branding.textColor,
-                    backgroundColor: styles.branding.backgroundColor,
-                    primaryColor: styles.branding.primaryColor,
-                    secondaryColor: styles.branding.secondaryColor,
-                  }}
-                >
-                  {renderSectionContent(section, previewVariables, {
-                    ...sectionContentOptions,
-                    mode,
-                  })}
-                </SectionShell>
+          {visibleSections.map((section, idx) => (
+            <article
+              key={section.id}
+              className="proposal-pdf-page mx-auto w-full flex flex-col justify-between"
+              style={{
+                fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
+                fontSize: `${styles.typography.bodySize}px`,
+                backgroundColor: styles.branding.backgroundColor,
+                color: styles.branding.textColor,
+                pageBreakAfter: "always",
+                breakAfter: "page",
+                pageBreakInside: "avoid",
+                breakInside: "avoid",
+              }}
+            >
+              {/* Header executivo da folha de proposta */}
+              <header className="flex items-center justify-between pb-3 mb-3 border-b border-white/10 text-xs shrink-0">
+                <div className="flex items-center gap-2">
+                  {logoSrc ? (
+                    <img
+                      src={logoSrc}
+                      alt={companyDisplayName}
+                      className="h-6 w-auto max-w-[120px] object-contain"
+                    />
+                  ) : (
+                    <span
+                      className="font-semibold tracking-wide uppercase text-[11px]"
+                      style={{ color: styles.branding.primaryColor }}
+                    >
+                      {companyDisplayName}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider opacity-60">
+                  <span>Proposta Comercial</span>
+                  {previewVariables.nome_cliente ? (
+                    <>
+                      <span>·</span>
+                      <span>{String(previewVariables.nome_cliente)}</span>
+                    </>
+                  ) : null}
+                </div>
+              </header>
+
+              {/* Conteúdo central da página */}
+              <div className="flex-1 flex flex-col justify-center my-auto w-full overflow-hidden">
+                <div className="w-full">
+                  <SectionShell
+                    section={section}
+                    subtitleSize={styles.typography.subtitleSize}
+                    vars={previewVariables}
+                    defaults={{
+                      textColor: styles.branding.textColor,
+                      backgroundColor: styles.branding.backgroundColor,
+                      primaryColor: styles.branding.primaryColor,
+                      secondaryColor: styles.branding.secondaryColor,
+                    }}
+                  >
+                    {renderSectionContent(section, previewVariables, {
+                      ...sectionContentOptions,
+                      mode,
+                    })}
+                  </SectionShell>
+                </div>
               </div>
-            ))}
-          </article>
+
+              {/* Rodapé executivo com contato e numeração */}
+              <footer className="flex items-center justify-between pt-3 mt-3 border-t border-white/10 text-[10px] opacity-50 shrink-0">
+                <span>{styles.footer.contactInfo || `${companyDisplayName} · Energia Solar`}</span>
+                <span>
+                  Página {idx + 2} de {visibleSections.length + 1}
+                </span>
+              </footer>
+            </article>
+          ))}
         </div>
       </div>
     );
