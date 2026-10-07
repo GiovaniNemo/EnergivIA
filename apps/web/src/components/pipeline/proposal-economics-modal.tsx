@@ -979,11 +979,6 @@ export const ProposalEconomicsModal = forwardRef<
     if (!distributorTiers || distributorTiers.length === 0) return [];
     const baseRate = Math.max(500, Number(kwpRateValue) || 2800);
 
-    const eliteTier =
-      distributorTiers.find((t) => t.tier_id === "cost_benefit") || distributorTiers[0]!;
-    const eliteSysKw = eliteTier.kit_result.system_power_kw;
-    const eliteBasePrice = Math.round(eliteSysKw * baseRate);
-
     return distributorTiers.map((tier) => {
       const isSelected = selectedDistributorTierId === tier.tier_id;
       const sysKw = tier.kit_result.system_power_kw;
@@ -991,22 +986,8 @@ export const ProposalEconomicsModal = forwardRef<
       let commercialPrice: number;
       let ratePerKwpEffective: number;
 
-      if (tier.tier_id === "economic") {
-        // Standard (Econômico): preço mais competitivo de entrada (-4% na taxa de referência)
-        ratePerKwpEffective = Math.round(baseRate * 0.96);
-        commercialPrice = Math.round(sysKw * ratePerKwpEffective);
-      } else if (tier.tier_id === "premium") {
-        // Premium: reflete equipamentos de alta tecnologia e garantia estendida (+7%)
-        // Garante que o valor final nunca fique abaixo do Elite
-        ratePerKwpEffective = Math.round(baseRate * 1.07);
-        const calculatedPrice = Math.round(sysKw * ratePerKwpEffective);
-        commercialPrice = Math.max(calculatedPrice, Math.round(eliteBasePrice * 1.03));
-        ratePerKwpEffective = sysKw > 0 ? Math.round(commercialPrice / sysKw) : ratePerKwpEffective;
-      } else {
-        // Elite (Custo-Benefício): referência comercial
-        ratePerKwpEffective = baseRate;
-        commercialPrice = Math.round(sysKw * ratePerKwpEffective);
-      }
+      ratePerKwpEffective = baseRate;
+      commercialPrice = Math.round(sysKw * ratePerKwpEffective);
 
       return {
         ...tier,
@@ -4304,7 +4285,6 @@ export const ProposalEconomicsModal = forwardRef<
                                             : alt.reason}
                                         </span>
                                       </span>
-
                                     </button>
                                   );
                                 })}
@@ -4342,7 +4322,6 @@ export const ProposalEconomicsModal = forwardRef<
                             <th className="py-2 px-1 sm:p-3 text-center sm:text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-14 sm:w-20">
                               Qtd
                             </th>
-
                           </tr>
                         </thead>
                         <tbody>
@@ -4559,7 +4538,6 @@ export const ProposalEconomicsModal = forwardRef<
                                     </span>
                                   )}
                                 </td>
-
                               </tr>
                             );
                           })}
