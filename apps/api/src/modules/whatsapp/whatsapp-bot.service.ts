@@ -3349,9 +3349,14 @@ ${catalogContext}`;
           distributorName: "Edeltec Solar",
           distributorId: undefined,
           totalPrice: Math.round(effectiveConsumption * 28),
+          ratePerKwp: 0,
+          materialsTotal: Math.round(effectiveConsumption * 28),
           kwp: calculatedFallbackKwp,
           estimatedGeneration: effectiveConsumption,
-          items: [],
+          items: [] as string[],
+          invName: "",
+          modCount: 0,
+          modName: "",
           structuredItems: [],
         };
 
@@ -3531,10 +3536,10 @@ ${catalogContext}`;
                 productId: "",
                 productName: clean,
                 brandName:
-                  selectedQuote.modName && isMod
-                    ? selectedQuote.modName
-                    : selectedQuote.invName && isInv
-                      ? selectedQuote.invName
+                  (selectedQuote as any).modName && isMod
+                    ? (selectedQuote as any).modName
+                    : (selectedQuote as any).invName && isInv
+                      ? (selectedQuote as any).invName
                       : "",
                 categoryName: isMod ? "module" : isInv ? "inverter" : "equipment",
                 quantity,
