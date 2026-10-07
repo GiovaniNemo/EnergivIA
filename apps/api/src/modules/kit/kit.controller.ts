@@ -22,6 +22,8 @@ export class KitController {
         preferred_brand: dto.preferred_brand,
         inverter_type: dto.inverter_type,
         string_box_id: dto.string_box_id,
+        target_inverter_qty: dto.target_inverter_qty,
+        monthly_yield: dto.monthly_yield,
       },
       organizationId
     );
@@ -44,6 +46,8 @@ export class KitController {
         inverter_type: dto.inverter_type,
         grid_topology: dto.grid_topology,
         string_box_id: dto.string_box_id,
+        target_inverter_qty: dto.target_inverter_qty,
+        monthly_yield: dto.monthly_yield,
       },
       dto.category,
       {
@@ -70,6 +74,8 @@ export class KitController {
         inverter_type: dto.inverter_type,
         grid_topology: dto.grid_topology,
         string_box_id: dto.string_box_id,
+        target_inverter_qty: dto.target_inverter_qty,
+        monthly_yield: dto.monthly_yield,
       },
       organizationId
     );
@@ -96,6 +102,8 @@ export class KitController {
         inverter_type: dto.inverter_type,
         grid_topology: dto.grid_topology,
         string_box_id: dto.string_box_id,
+        target_inverter_qty: dto.target_inverter_qty,
+        monthly_yield: dto.monthly_yield,
       },
       organizationId
     );

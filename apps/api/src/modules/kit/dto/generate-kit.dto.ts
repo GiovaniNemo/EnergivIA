@@ -46,6 +46,10 @@ export class GenerateKitDto {
   @Min(1, { message: "A quantidade de inversores deve ser no mínimo 1." })
   @Max(10, { message: "A quantidade de inversores deve ser no máximo 10." })
   target_inverter_qty?: number;
+
+  @IsOptional()
+  @IsNumber()
+  monthly_yield?: number;
 }
 
 export class KitAlternativesDto extends GenerateKitDto {
