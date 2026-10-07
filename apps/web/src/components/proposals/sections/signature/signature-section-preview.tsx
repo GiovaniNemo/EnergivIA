@@ -148,109 +148,6 @@ function renderHtmlSafe(html: string, textColor: string): ReactNode {
   );
 }
 
-/**
- * Calligraphic handwritten signature path for authentic contract representation
- */
-function ClientHandwrittenSignature({
-  name,
-  strokeColor,
-  textColor,
-}: {
-  name: string;
-  strokeColor: string;
-  textColor: string;
-}) {
-  return (
-    <div className="relative flex h-14 w-full items-center justify-center select-none overflow-hidden">
-      <svg
-        className="absolute inset-0 h-full w-full opacity-65 pointer-events-none"
-        style={{ color: strokeColor }}
-        viewBox="0 0 280 60"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        preserveAspectRatio="xMidYMid meet"
-      >
-        <path
-          d="M 20,42 C 45,15 65,12 85,26 C 105,40 120,18 145,28 C 170,38 190,16 215,22 C 235,27 250,38 265,30"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M 50,48 C 80,44 140,50 240,42"
-          stroke="currentColor"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-          opacity="0.6"
-        />
-      </svg>
-      <span
-        className="relative z-10 font-serif italic text-xl tracking-wide select-none opacity-90 drop-shadow-sm"
-        style={{ color: textColor }}
-      >
-        {name}
-      </span>
-    </div>
-  );
-}
-
-function CompanyCorporateSignature({
-  companyName,
-  signerName,
-  strokeColor,
-  textColor,
-  subTextColor,
-}: {
-  companyName: string;
-  signerName: string;
-  strokeColor: string;
-  textColor: string;
-  subTextColor: string;
-}) {
-  return (
-    <div className="relative flex h-14 w-full items-center justify-center select-none overflow-hidden">
-      <svg
-        className="absolute inset-0 h-full w-full opacity-50 pointer-events-none"
-        style={{ color: strokeColor }}
-        viewBox="0 0 280 60"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        preserveAspectRatio="xMidYMid meet"
-      >
-        <path
-          d="M 25,35 C 55,8 80,48 115,20 C 145,-2 175,45 205,25 C 225,12 250,32 260,20"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M 40,46 C 90,44 180,48 245,40"
-          stroke="currentColor"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-          opacity="0.5"
-        />
-      </svg>
-      <div className="relative z-10 flex flex-col items-center">
-        <span
-          className="font-serif italic text-lg tracking-wide select-none opacity-90"
-          style={{ color: textColor }}
-        >
-          {signerName}
-        </span>
-        <span
-          className="text-[10px] uppercase tracking-widest font-sans font-semibold"
-          style={{ color: subTextColor }}
-        >
-          {companyName}
-        </span>
-      </div>
-    </div>
-  );
-}
-
 export function SignatureSectionPreview({
   section,
   vars,
@@ -749,7 +646,7 @@ export function SignatureSectionPreview({
 
           {/* Signature Canvas Box */}
           <div
-            className="mt-6 rounded-xl p-4 flex flex-col items-center justify-center min-h-[105px]"
+            className="mt-6 rounded-xl p-4 flex flex-col items-center justify-end min-h-[105px]"
             style={{
               backgroundColor: palette.canvasBg,
               borderColor: palette.canvasBorder,
@@ -757,17 +654,9 @@ export function SignatureSectionPreview({
               borderStyle: "dashed",
             }}
           >
-            <ClientHandwrittenSignature
-              name={clientSignerName}
-              strokeColor={palette.signatureStroke}
-              textColor={palette.textTitle}
-            />
-            <div
-              className="mt-1 h-px w-48 sm:w-56"
-              style={{ backgroundColor: palette.signatureLine }}
-            />
+            <div className="h-px w-48 sm:w-56" style={{ backgroundColor: palette.signatureLine }} />
             <span
-              className="mt-1 text-[10px] uppercase tracking-wider font-semibold"
+              className="mt-2 text-[10px] uppercase tracking-wider font-semibold"
               style={{ color: palette.textDoc }}
             >
               Assinatura do Contratante
@@ -792,10 +681,6 @@ export function SignatureSectionPreview({
               >
                 {signatureDate}
               </span>
-            </div>
-            <div className="flex items-center gap-1 font-medium" style={{ color: palette.primary }}>
-              <ShieldCheck className="h-3.5 w-3.5" />
-              <span>Identidade Verificada</span>
             </div>
           </div>
         </div>
@@ -862,7 +747,7 @@ export function SignatureSectionPreview({
 
           {/* Signature Canvas Box */}
           <div
-            className="mt-6 rounded-xl p-4 flex flex-col items-center justify-center min-h-[105px]"
+            className="mt-6 rounded-xl p-4 flex flex-col items-center justify-end min-h-[105px]"
             style={{
               backgroundColor: palette.canvasBg,
               borderColor: palette.canvasBorder,
@@ -870,19 +755,9 @@ export function SignatureSectionPreview({
               borderStyle: "dashed",
             }}
           >
-            <CompanyCorporateSignature
-              companyName={companyName}
-              signerName={companySignerName}
-              strokeColor={palette.textDoc}
-              textColor={palette.textTitle}
-              subTextColor={palette.textDoc}
-            />
-            <div
-              className="mt-1 h-px w-48 sm:w-56"
-              style={{ backgroundColor: palette.signatureLine }}
-            />
+            <div className="h-px w-48 sm:w-56" style={{ backgroundColor: palette.signatureLine }} />
             <span
-              className="mt-1 text-[10px] uppercase tracking-wider font-semibold"
+              className="mt-2 text-[10px] uppercase tracking-wider font-semibold"
               style={{ color: palette.textDoc }}
             >
               Assinatura da Contratada
@@ -907,10 +782,6 @@ export function SignatureSectionPreview({
               >
                 {signatureDate}
               </span>
-            </div>
-            <div className="flex items-center gap-1 font-medium" style={{ color: palette.primary }}>
-              <Award className="h-3.5 w-3.5" />
-              <span>Emissão Autorizada</span>
             </div>
           </div>
         </div>
