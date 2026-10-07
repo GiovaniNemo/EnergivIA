@@ -726,16 +726,13 @@ html.hide-scrollbar,
     break-inside: avoid !important;
     width: 100% !important;
     max-width: none !important;
-    height: 297mm !important;
     min-height: 297mm !important;
-    max-height: 297mm !important;
     margin: 0 !important;
     box-sizing: border-box !important;
-    overflow: hidden !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: center !important;
-    padding: 16mm 14mm !important;
+    padding: 14mm 16mm !important;
     background: var(--proposal-bg, #060b16) !important;
   }
 
