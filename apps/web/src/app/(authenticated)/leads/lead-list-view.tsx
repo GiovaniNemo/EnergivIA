@@ -52,7 +52,7 @@ import {
   type LeadFormValues,
 } from "@/lib/lead-form-schema";
 import { LeadContactFields } from "./lead-contact-fields";
-import { ClientLeadDrawer } from "./client-lead-drawer";
+import { Deal360Drawer } from "@/components/deal-360/Deal360Drawer";
 import { SetNextStepDialog } from "./set-next-step-dialog";
 
 type ViewMode = "clientes" | "pipeline";
@@ -762,13 +762,15 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
         />
       ) : null}
 
-      <ClientLeadDrawer
+      <Deal360Drawer
         open={Boolean(drawerLeadId)}
         onOpenChange={(o) => {
           if (!o) setDrawerLeadId(null);
         }}
         organizationId={currentOrganizationId}
         leadId={drawerLeadId}
+        initialTab="cliente"
+        onSaved={() => load()}
       />
     </div>
   );

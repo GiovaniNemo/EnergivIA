@@ -3383,8 +3383,8 @@ ${catalogContext}`;
           selectedQuote.kwp,
           organizationRules
         );
-        // Valor de venda = potência (kWp) x preço aplicado pelo integrador
-        quotedSaleBrl = selectedQuote.totalPrice;
+        // Valor de venda real baseado nas margens do integrador
+        quotedSaleBrl = costCalc.totalSaleValue;
 
         // 3. Cria Deal
         const deal = await this.prisma.deal.create({

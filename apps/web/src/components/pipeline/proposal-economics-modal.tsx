@@ -4304,29 +4304,7 @@ export const ProposalEconomicsModal = forwardRef<
                                             : alt.reason}
                                         </span>
                                       </span>
-                                      <div className="shrink-0 text-right ml-2 self-center">
-                                        <div className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)]">
-                                          {formatCurrency(
-                                            kitSwapCategory === "inverter" && alt.quantity > 1
-                                              ? alt.unit_price * alt.quantity
-                                              : alt.unit_price
-                                          )}
-                                        </div>
-                                        {alt.compatible ? (
-                                          <div className="text-[0.62rem] text-[var(--color-muted-foreground)]">
-                                            {kitSwapCategory === "inverter" && alt.quantity > 1 ? (
-                                              <span>
-                                                {alt.quantity}x de {formatCurrency(alt.unit_price)}
-                                                {alt.kit_total != null
-                                                  ? ` · Kit: ${formatCurrency(alt.kit_total)}`
-                                                  : ""}
-                                              </span>
-                                            ) : alt.kit_total != null ? (
-                                              <span>Kit: {formatCurrency(alt.kit_total)}</span>
-                                            ) : null}
-                                          </div>
-                                        ) : null}
-                                      </div>
+
                                     </button>
                                   );
                                 })}
@@ -4364,12 +4342,7 @@ export const ProposalEconomicsModal = forwardRef<
                             <th className="py-2 px-1 sm:p-3 text-center sm:text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-14 sm:w-20">
                               Qtd
                             </th>
-                            <th className="hidden sm:table-cell p-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                              Un.
-                            </th>
-                            <th className="py-2 px-2 sm:p-3 text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-28 sm:w-32">
-                              Total
-                            </th>
+
                           </tr>
                         </thead>
                         <tbody>
@@ -4586,12 +4559,7 @@ export const ProposalEconomicsModal = forwardRef<
                                     </span>
                                   )}
                                 </td>
-                                <td className="hidden sm:table-cell p-3 text-right tabular-nums text-[var(--color-muted-foreground)]">
-                                  {formatCurrency(item.distributedUnitPrice)}
-                                </td>
-                                <td className="py-2 px-2 sm:p-3 text-right font-semibold tabular-nums text-[var(--color-foreground)] text-[0.72rem] sm:text-sm whitespace-nowrap">
-                                  {formatCurrency(item.distributedLineTotal)}
-                                </td>
+
                               </tr>
                             );
                           })}
@@ -4605,8 +4573,7 @@ export const ProposalEconomicsModal = forwardRef<
                               Total do Projeto ({activeDistributorCard?.name ?? "Padrão"} ·{" "}
                               {formatCurrency(activeRatePerKwp)}/kWp)
                             </td>
-                            <td className="hidden sm:table-cell" />
-                            <td className="hidden sm:table-cell" />
+
                             <td className="py-2.5 px-2 sm:p-3 text-right text-xs sm:text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                               {formatCurrency(activeCommercialPrice)}
                             </td>

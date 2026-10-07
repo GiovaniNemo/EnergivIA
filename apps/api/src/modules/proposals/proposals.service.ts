@@ -175,6 +175,7 @@ export class ProposalsService {
         equipmentSubtotalBrl: isCommercial ? null : hasKit ? equip : null,
         marginBrl: isCommercial ? null : margin,
         kitLineCount: integrator?.kitItems?.length ?? 0,
+        systemPowerKw: integrator?.systemPowerKw ?? null,
       };
     });
   }

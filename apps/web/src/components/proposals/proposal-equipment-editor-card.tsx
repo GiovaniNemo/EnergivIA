@@ -544,15 +544,7 @@ export function ProposalEquipmentEditorCard({
     };
   }, [swapTargetIndex, distributorId, swapCategory, swapSearch, organizationId, proposalId]);
 
-  const subtotal = useMemo(
-    () =>
-      Math.round(
-        lines
-          .filter((l) => !l.unavailable)
-          .reduce((acc, l) => acc + effectiveQty(l) * l.unitPrice, 0) * 100
-      ) / 100,
-    [lines, effectiveQty]
-  );
+
 
   const unavailableCount = lines.filter((l) => l.unavailable).length;
 
@@ -1216,12 +1208,7 @@ export function ProposalEquipmentEditorCard({
                     <th className="p-3 text-right text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
                       Qtd
                     </th>
-                    <th className="hidden p-3 text-right text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] sm:table-cell">
-                      Un.
-                    </th>
-                    <th className="p-3 text-right text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-                      Total
-                    </th>
+
                   </tr>
                 </thead>
                 <tbody>
@@ -1470,16 +1457,7 @@ export function ProposalEquipmentEditorCard({
                               </span>
                             )}
                           </td>
-                          <td className="hidden p-3 text-right tabular-nums text-[var(--color-muted-foreground)] sm:table-cell">
-                            {line.unavailable ? "—" : formatBRL(line.unitPrice)}
-                          </td>
-                          <td className="p-3 text-right font-medium tabular-nums text-[var(--color-foreground)]">
-                            {line.unavailable ? (
-                              <span className="text-red-600 dark:text-red-400">—</span>
-                            ) : (
-                              formatBRL(Math.round(qty * line.unitPrice * 100) / 100)
-                            )}
-                          </td>
+
                         </tr>
                         {swapTargetIndex === idx && role === "bos" ? (
                           <tr className="bg-[var(--color-muted)]/15">
@@ -1502,20 +1480,7 @@ export function ProposalEquipmentEditorCard({
                     </tr>
                   )}
                 </tbody>
-                <tfoot>
-                  <tr className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/30">
-                    <td
-                      colSpan={3}
-                      className="p-3 text-right text-xs font-medium text-[var(--color-muted-foreground)]"
-                    >
-                      Total dos equipamentos
-                    </td>
-                    <td className="hidden p-3 sm:table-cell" />
-                    <td className="p-3 text-right text-sm font-semibold tabular-nums text-[var(--color-foreground)]">
-                      {formatBRL(subtotal)}
-                    </td>
-                  </tr>
-                </tfoot>
+
               </table>
             </div>
 

@@ -35,7 +35,7 @@ import { PipelineTableView } from "./PipelineTableView";
 import { PipelinePrioridadesView } from "./PipelinePrioridadesView";
 import type { ClosedDealStatus } from "@/lib/pipeline-deal";
 import { CloseDealModal } from "./CloseDealModal";
-import { DealDetailDialog } from "./DealDetailDialog";
+import { Deal360Drawer } from "@/components/deal-360/Deal360Drawer";
 
 const STAGE_ORDER: DealStage[] = ["novo", "contato", "proposta", "negociacao", "fechado"];
 
@@ -254,7 +254,7 @@ export default function PipelinePage(): JSX.Element {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const initialDealParamRef = useRef(searchParams?.get("id"));
+  const initialDealParamRef = useRef(searchParams?.get("dealId") || searchParams?.get("id"));
   const { currentOrganizationId, user, loading: orgLoading } = useOrganization();
   const { deals, setDeals, replaceDeals, updateDealStage, updateDealProposalStatus } = useDeals([]);
   const { openStudyForDeal, isProposalCreationLocked } = useProposalStudy();
@@ -400,11 +400,13 @@ export default function PipelinePage(): JSX.Element {
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    const current = params.get("id");
+    const current = params.get("dealId") || params.get("id");
     if (detailDealId === current) return;
     if (detailDealId) {
-      params.set("id", detailDealId);
+      params.set("dealId", detailDealId);
+      params.delete("id");
     } else {
+      params.delete("dealId");
       params.delete("id");
     }
     const next = params.toString();
@@ -995,12 +997,14 @@ export default function PipelinePage(): JSX.Element {
         onClose={handleCloseDealModalCancel}
         onConfirm={handleCloseDealModalConfirm}
       />
-      <DealDetailDialog
+      <Deal360Drawer
         open={detailDealId !== null}
         deal={deals.find((d) => d.id === detailDealId) ?? null}
         organizationId={currentOrganizationId}
         assignees={assignees}
-        onClose={() => setDetailDealId(null)}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) setDetailDealId(null);
+        }}
         onSaved={(patch) => {
           setDeals((prev) =>
             prev.map((d) => (d.id === detailDealId ? { ...d, ...patch, recentAt: new Date() } : d))

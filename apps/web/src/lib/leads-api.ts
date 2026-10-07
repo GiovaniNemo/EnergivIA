@@ -391,6 +391,7 @@ export interface ProposalListItem {
   equipmentSubtotalBrl: number | null;
   marginBrl: number | null;
   kitLineCount: number;
+  systemPowerKw: number | null;
 }
 
 export async function listProposals(

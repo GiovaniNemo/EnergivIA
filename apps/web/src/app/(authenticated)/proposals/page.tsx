@@ -276,13 +276,10 @@ export default function ProposalsPage(): JSX.Element {
               {items.map((p) => {
                 const dealStage = parseDealStage(p.deal.stage);
                 const hasValue = p.quotedValueBrl != null;
-                const equipLabel =
-                  p.equipmentSubtotalBrl != null
-                    ? formatBrl(p.equipmentSubtotalBrl)
-                    : p.kitLineCount > 0
-                      ? "—"
-                      : "Sem kit";
-                const marginLabel = p.marginBrl != null ? formatBrl(p.marginBrl) : "—";
+                const kwpLabel = p.quotedValueBrl != null && p.systemPowerKw != null && p.systemPowerKw > 0
+                  ? formatBrl(p.quotedValueBrl / p.systemPowerKw)
+                  : "—";
+
                 return (
                   <li key={p.id}>
                     <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/40 p-4 transition-colors hover:border-emerald-500/25 hover:bg-[var(--color-muted)]/[0.2] sm:p-5">
@@ -345,24 +342,18 @@ export default function ProposalsPage(): JSX.Element {
                         </div>
 
                         <div className="w-full shrink-0 space-y-2 lg:max-w-md lg:min-w-[300px]">
-                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-2.5">
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
                             <MetricTile
-                              label="Valor cliente"
+                              label="Valor da Proposta"
                               value={hasValue ? formatBrl(p.quotedValueBrl!) : "—"}
                               icon={CircleDollarSign}
                               muted={!hasValue}
                             />
                             <MetricTile
-                              label="Equipamentos"
-                              value={equipLabel}
-                              icon={Package}
-                              muted={p.equipmentSubtotalBrl == null}
-                            />
-                            <MetricTile
-                              label="Margem (est.)"
-                              value={marginLabel}
+                              label="Valor do kWp"
+                              value={kwpLabel}
                               icon={TrendingUp}
-                              muted={p.marginBrl == null}
+                              muted={kwpLabel === "—"}
                             />
                           </div>
                           <p className="text-center text-[0.7rem] text-[var(--color-muted-foreground)] sm:text-right">
