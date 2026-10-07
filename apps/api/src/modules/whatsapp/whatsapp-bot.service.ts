@@ -3502,15 +3502,46 @@ ${catalogContext}`;
 
         const rawKitItems = (selectedQuote as any).structuredItems?.length
           ? (selectedQuote as any).structuredItems
-          : selectedQuote.items.map((i) => ({
-              productId: "",
-              productName: i.replace(/^-\s*[^:]+:\s*(?:\d+x\s*)?/, "").trim() || i,
-              brandName: "",
-              categoryName: "equipment",
-              quantity: 1,
-              unitPrice: 0,
-              lineTotal: 0,
-            }));
+          : (selectedQuote.items || []).map((rawStr: string) => {
+              let clean = rawStr
+                .replace(/^[*_~`>•\-\s]+/, "")
+                .replace(/[*_~`\s]+$/, "")
+                .trim();
+              const prefixMatch = clean.match(
+                /^(?:inversor|microinversor|m[oó]dulos?|pain[eé]is?|estrutura|cabos?|conectores?)\s*:\s*(.*)$/i
+              );
+              if (prefixMatch && prefixMatch[1]) {
+                clean = prefixMatch[1].trim();
+              }
+              let quantity = 1;
+              const qMatch = clean.match(/^(\d+)x\s*(.*)$/i);
+              if (qMatch && qMatch[1] && qMatch[2]) {
+                quantity = parseInt(qMatch[1], 10);
+                clean = qMatch[2].trim();
+              }
+              const isMod =
+                /m[oó]dulo|painel|placa|astronergy|canadian|longi|jinko|ja solar|trina|osda|dah/i.test(
+                  clean
+                );
+              const isInv =
+                /inversor|micro|solplanet|growatt|deye|saj|solis|sungrow|huawei|goodwe/i.test(
+                  clean
+                );
+              return {
+                productId: "",
+                productName: clean,
+                brandName:
+                  selectedQuote.modName && isMod
+                    ? selectedQuote.modName
+                    : selectedQuote.invName && isInv
+                      ? selectedQuote.invName
+                      : "",
+                categoryName: isMod ? "module" : isInv ? "inverter" : "equipment",
+                quantity,
+                unitPrice: 0,
+                lineTotal: 0,
+              };
+            });
 
         // 7. Proposta Comercial
         const proposalNumber = await getNextProposalNumber(

@@ -59,35 +59,45 @@ import { extractEnergyBillFromPdfBuffer, extractEnergyBillFromImage } from "@/li
 
 export const maxDuration = 60;
 
-function extractQuotedKitFromMessages(messages: any[]) {
-  if (!Array.isArray(messages)) return null;
-
-  // Verifica se o usuário posterior escolheu uma opção específica (1, 2, 3 / Standard, Elite, Premium)
-  let chosenOptionIndex = 0;
+function detectChosenOptionIndex(messages: any[]): number {
+  if (!Array.isArray(messages)) return 0;
   for (let u = messages.length - 1; u >= 0; u--) {
     const um = messages[u];
-    if (um.role === "user" && typeof um.content === "string") {
-      const uText = um.content.toLowerCase();
-      if (/\b(op[çc][ãa]o\s*3|premium|terceira)\b/i.test(uText) || uText.trim() === "3") {
-        chosenOptionIndex = 2;
-        break;
+    if (um && um.role === "user" && typeof um.content === "string") {
+      const uText = um.content.toLowerCase().trim();
+      if (
+        /\b(op[çc][ãa]o\s*3|premium|terceira|alta efici[êe]ncia)\b/i.test(uText) ||
+        uText === "3" ||
+        uText === "3️⃣"
+      ) {
+        return 2;
       }
       if (
         /\b(op[çc][ãa]o\s*2|elite|segunda|custo-benef[íi]cio)\b/i.test(uText) ||
-        uText.trim() === "2"
+        uText === "2" ||
+        uText === "2️⃣"
       ) {
-        chosenOptionIndex = 1;
-        break;
+        return 1;
       }
       if (
-        /\b(op[çc][ãa]o\s*1|standard|primeira|econ[ôo]mic[ao])\b/i.test(uText) ||
-        uText.trim() === "1"
+        /\b(op[çc][ãa]o\s*1|standard|primeira|econ[ôo]mic[ao]|pre[çc]o mais baixo)\b/i.test(
+          uText
+        ) ||
+        uText === "1" ||
+        uText === "1️⃣"
       ) {
-        chosenOptionIndex = 0;
-        break;
+        return 0;
       }
     }
   }
+  return 0;
+}
+
+function extractQuotedKitFromMessages(messages: any[], explicitOptionIndex?: number) {
+  if (!Array.isArray(messages)) return null;
+
+  const chosenOptionIndex =
+    explicitOptionIndex !== undefined ? explicitOptionIndex : detectChosenOptionIndex(messages);
 
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
@@ -105,7 +115,7 @@ function extractQuotedKitFromMessages(messages: any[]) {
     // Se a mensagem contiver múltiplos grupos/opções de kits, isola apenas a opção selecionada
     let targetText = text;
     const optionHeaderRegex =
-      /(?:(?:\*|_|#|>|\s)*(?:Opção\s*\d+|Opcao\s*\d+|\b\d+\s*[-–—]\s*(?:Standard|Elite|Premium|Econômico|Econômica|Custo-Benefício))\b[^\n]*)/gi;
+      /(?:(?:\*|_|#|>|\s)*(?:[1-3]️⃣|[1-3]\s*[-–—\.]|Op[çc][ãa]o\s*[1-3]|\b(?:Standard|Elite|Premium|Econ[ôo]mic[ao]|Custo-Benef[íi]cio)\b)[^\n]*)/gi;
     const matches = Array.from(text.matchAll(optionHeaderRegex));
     if (matches.length > 1) {
       const targetMatchIndex = Math.min(chosenOptionIndex, matches.length - 1);
@@ -293,8 +303,21 @@ function extractQuotedKitFromMessages(messages: any[]) {
         }
       }
 
+      const finalModules = items.filter((it) => it.categoryName === "module");
+      const finalInverters = items.filter(
+        (it) => it.categoryName === "inverter" || it.categoryName === "microinverter"
+      );
+      const otherItems = items.filter(
+        (it) =>
+          it.categoryName !== "module" &&
+          it.categoryName !== "inverter" &&
+          it.categoryName !== "microinverter"
+      );
+
+      const singleKitItems = [finalModules[0], finalInverters[0], ...otherItems].filter(Boolean);
+
       return {
-        kitItems: items,
+        kitItems: singleKitItems.length > 0 ? singleKitItems : items,
         valorKitTotal: kitPrice,
         potenciaSistemaKw: kwp,
         isKwpRate,
@@ -302,6 +325,177 @@ function extractQuotedKitFromMessages(messages: any[]) {
     }
   }
   return null;
+}
+
+function sanitizeAndFilterKitItems(rawItems: any[], messages: any[]): any[] {
+  const chosenIndex = detectChosenOptionIndex(messages);
+
+  if (!Array.isArray(rawItems) || rawItems.length === 0) {
+    const fallbackExtracted = extractQuotedKitFromMessages(messages, chosenIndex);
+    return fallbackExtracted?.kitItems || [];
+  }
+
+  const cleanItems: any[] = [];
+  for (const item of rawItems) {
+    if (!item) continue;
+    let rawName = String(item.productName || item.name || "").trim();
+    // Limpa marcadores markdown
+    rawName = rawName
+      .replace(/^[*_~`>•\-\s]+/, "")
+      .replace(/[*_~`\s]+$/, "")
+      .trim();
+
+    if (
+      !rawName ||
+      /^(?:inclusos?$|[\d.,]+\s*kwh\/m[êe]s|[\d.,]+\s*kwp|obs:|info:)/i.test(rawName) ||
+      rawName.length < 3
+    ) {
+      continue;
+    }
+
+    const prefixMatch = rawName.match(
+      /^(?:inversor|microinversor|m[oó]dulos?|pain[eé]is?|estrutura|cabos?|conectores?)\s*:\s*(.*)$/i
+    );
+    if (prefixMatch && prefixMatch[1]) {
+      rawName = prefixMatch[1].trim();
+    }
+    rawName = rawName
+      .replace(/^[*_~`>•\-\s]+/, "")
+      .replace(/[*_~`\s]+$/, "")
+      .trim();
+
+    let quantity = Math.max(1, Math.floor(Number(item.quantity) || 1));
+    const multMatch = rawName.match(/^(\d+)x\s*(.*)$/i);
+    if (multMatch && multMatch[1]) {
+      if (!item.quantity || Number(item.quantity) <= 1) {
+        quantity = parseInt(multMatch[1], 10);
+      }
+      if (multMatch[2]) {
+        rawName = multMatch[2].trim();
+      }
+    }
+    rawName = rawName
+      .replace(/^[*_~`>•\-\s]+/, "")
+      .replace(/[*_~`\s]+$/, "")
+      .trim();
+
+    let cat = String(item.categoryName || "")
+      .toLowerCase()
+      .trim();
+    const searchCtx = `${rawName} ${cat}`.toLowerCase();
+    if (
+      searchCtx.includes("inversor") ||
+      searchCtx.includes("inverter") ||
+      /\b(solplanet|growatt|deye|saj|solis|sungrow|huawei|goodwe|weg|hoymiles|apsystems|sofar|foxess)\b/i.test(
+        searchCtx
+      )
+    ) {
+      cat = searchCtx.includes("micro") ? "microinverter" : "inverter";
+    } else if (
+      searchCtx.includes("modulo") ||
+      searchCtx.includes("módulo") ||
+      searchCtx.includes("painel") ||
+      searchCtx.includes("module") ||
+      /\b(astronergy|canadian|longi|jinko|ja solar|trina|risen|chint|dah|osda)\b/i.test(searchCtx)
+    ) {
+      cat = "module";
+    } else if (
+      searchCtx.includes("estrutura") ||
+      searchCtx.includes("colonial") ||
+      searchCtx.includes("cerâmica") ||
+      searchCtx.includes("fibro") ||
+      searchCtx.includes("metal") ||
+      searchCtx.includes("solo") ||
+      searchCtx.includes("laje")
+    ) {
+      cat = "structure_kit";
+    } else if (searchCtx.includes("cabo")) {
+      cat = "dc_cable";
+    } else if (searchCtx.includes("conector") || searchCtx.includes("mc4")) {
+      cat = "connector";
+    } else if (!cat) {
+      cat = "equipment";
+    }
+
+    let brand = String(item.brandName || "").trim();
+    if (!brand) {
+      const knownBrands: Record<string, string> = {
+        astronergy: "ASTRONERGY",
+        "canadian solar": "CANADIAN SOLAR",
+        canadian: "CANADIAN SOLAR",
+        longi: "LONGI",
+        jinko: "JINKO",
+        "ja solar": "JA SOLAR",
+        trina: "TRINA",
+        risen: "RISEN",
+        chint: "CHINT",
+        "dah solar": "DAH SOLAR",
+        dah: "DAH SOLAR",
+        osda: "OSDA",
+        solplanet: "Solplanet",
+        growatt: "Growatt",
+        deye: "Deye",
+        saj: "SAJ",
+        solis: "Solis",
+        sungrow: "Sungrow",
+        huawei: "Huawei",
+        goodwe: "GoodWe",
+        weg: "WEG",
+        hoymiles: "Hoymiles",
+        apsystems: "APsystems",
+        sofar: "Sofar",
+        foxess: "FoxESS",
+      };
+      for (const [k, v] of Object.entries(knownBrands)) {
+        if (new RegExp(`\\b${k}\\b`, "i").test(rawName)) {
+          brand = v;
+          break;
+        }
+      }
+    }
+
+    cleanItems.push({
+      productId: item.productId || "",
+      productName: rawName || "Equipamento",
+      brandName: brand,
+      quantity,
+      unitPrice: Number(item.unitPrice) || 0,
+      lineTotal: Number(item.lineTotal) || 0,
+      categoryName: cat,
+      imageUrl: item.imageUrl || undefined,
+      specs: item.specs || undefined,
+    });
+  }
+
+  const modules = cleanItems.filter((i) => i.categoryName === "module");
+  const inverters = cleanItems.filter(
+    (i) => i.categoryName === "inverter" || i.categoryName === "microinverter"
+  );
+
+  // Se houver múltiplos módulos ou múltiplos inversores (o bot/LLM misturou opções):
+  if (modules.length > 1 || inverters.length > 1) {
+    const extracted = extractQuotedKitFromMessages(messages, chosenIndex);
+    if (extracted && extracted.kitItems.length > 0) {
+      return extracted.kitItems;
+    }
+    const chosenMod = modules[Math.min(chosenIndex, modules.length - 1)] || modules[0];
+    const chosenInv = inverters[Math.min(chosenIndex, inverters.length - 1)] || inverters[0];
+    const others = cleanItems.filter(
+      (i) =>
+        i.categoryName !== "module" &&
+        i.categoryName !== "inverter" &&
+        i.categoryName !== "microinverter"
+    );
+    const seenCat = new Set<string>();
+    const uniqueOthers = others.filter((i) => {
+      if (seenCat.has(i.categoryName)) return false;
+      seenCat.add(i.categoryName);
+      return true;
+    });
+    return [chosenMod, chosenInv, ...uniqueOthers].filter(Boolean);
+  }
+
+  return cleanItems;
 }
 
 async function calculateDistributorQuotes({
@@ -1838,7 +2032,9 @@ export async function POST(req: Request) {
                 })
               )
               .optional()
-              .describe("Lista de itens do kit cotado na conversa."),
+              .describe(
+                "Lista de itens do kit EXCLUSIVAMENTE da opção/tier selecionada pelo usuário (ex: apenas o módulo e o inversor da opção escolhida). NUNCA envie itens de opções rejeitadas nem asteriscos markdown (**)."
+              ),
           }),
           execute: async (args: any) => {
             try {
@@ -1900,10 +2096,10 @@ export async function POST(req: Request) {
               // 2. Resolve Kit Items, Subtotal, SystemKwp and DistributorId
               let systemKwp = Number(args.potenciaSistemaKw) || 0;
               let equipmentSubtotalBrl = Number(args.valorKitTotal) || 0;
-              let rawKitItems: any[] = args.kitItems ?? [];
+              let rawKitItems: any[] = sanitizeAndFilterKitItems(args.kitItems || [], messages);
               let chosenDistributorId = args.distributorId || undefined;
 
-              // Priority 1: Extract the exact quote that was calculated and sent in the chat
+              // Priority 1: Extract the exact quote that was calculated and sent in the chat if missing
               if (rawKitItems.length === 0 || equipmentSubtotalBrl <= 0 || systemKwp <= 0) {
                 const extracted = extractQuotedKitFromMessages(messages);
                 if (extracted) {
@@ -1989,20 +2185,50 @@ export async function POST(req: Request) {
               const simData = await simRes.json();
 
               // 6. Build kitItems from conversation / distributor quote
-              const kitItemsMapped = rawKitItems.map((item: any) => ({
-                productId: item.productId || "",
-                productName: item.productName || "Equipamento",
-                brandName: item.brandName || "",
-                quantity: Number(item.quantity) || 1,
-                unitPrice: Number(item.unitPrice) || 0,
-                lineTotal:
-                  Number(item.lineTotal) ||
-                  (Number(item.unitPrice) || 0) * (Number(item.quantity) || 1) ||
-                  0,
-                categoryName: item.categoryName || "equipment",
-                imageUrl: item.imageUrl || undefined,
-                specs: item.specs || undefined,
-              }));
+              const hasZeroPrices = rawKitItems.every(
+                (i: any) => !i.unitPrice || Number(i.unitPrice) <= 0
+              );
+
+              const kitItemsMapped = rawKitItems.map((item: any) => {
+                let unitPrice = Number(item.unitPrice) || 0;
+                let lineTotal = Number(item.lineTotal) || 0;
+                const qty = Number(item.quantity) || 1;
+
+                if (hasZeroPrices && equipmentSubtotalBrl > 0) {
+                  if (item.categoryName === "module") {
+                    lineTotal = Math.round(equipmentSubtotalBrl * 0.45 * 100) / 100;
+                    unitPrice = Math.round((lineTotal / qty) * 100) / 100;
+                  } else if (
+                    item.categoryName === "inverter" ||
+                    item.categoryName === "microinverter"
+                  ) {
+                    lineTotal = Math.round(equipmentSubtotalBrl * 0.35 * 100) / 100;
+                    unitPrice = Math.round((lineTotal / qty) * 100) / 100;
+                  } else if (item.categoryName === "structure_kit") {
+                    lineTotal = Math.round(equipmentSubtotalBrl * 0.08 * 100) / 100;
+                    unitPrice = Math.round((lineTotal / qty) * 100) / 100;
+                  } else {
+                    lineTotal = Math.round(equipmentSubtotalBrl * 0.04 * 100) / 100;
+                    unitPrice = Math.round((lineTotal / qty) * 100) / 100;
+                  }
+                } else if (lineTotal <= 0 && unitPrice > 0) {
+                  lineTotal = Math.round(unitPrice * qty * 100) / 100;
+                } else if (unitPrice <= 0 && lineTotal > 0) {
+                  unitPrice = Math.round((lineTotal / qty) * 100) / 100;
+                }
+
+                return {
+                  productId: item.productId || "",
+                  productName: item.productName || "Equipamento",
+                  brandName: item.brandName || "",
+                  quantity: qty,
+                  unitPrice,
+                  lineTotal,
+                  categoryName: item.categoryName || "equipment",
+                  imageUrl: item.imageUrl || undefined,
+                  specs: item.specs || undefined,
+                };
+              });
 
               const integratorSnapshot = {
                 version: 1 as const,
