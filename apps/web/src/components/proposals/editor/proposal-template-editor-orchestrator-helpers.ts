@@ -13,7 +13,7 @@ import type {
   ProposalTemplateConfig,
 } from "@energivia/shared-types";
 import type { ProposalDocumentJson, ProposalSection } from "./types";
-import { createBaseDocument } from "./utils";
+import { createBaseDocument, inferSectionType } from "./utils";
 
 export function summarizeRichText(value: string | undefined, max = 90): string {
   if (!value) return "";
@@ -307,21 +307,50 @@ export function fromTemplateConfig(config: ProposalTemplateConfig): ProposalDocu
   if (!config.editor) return null;
   const sections = config.editor.sections.map((section) => {
     const rawType = String(section.type);
-    const resolvedType = resolveEditorSectionType(rawType);
+    let resolvedType = resolveEditorSectionType(rawType);
+
+    // Auto-heal legacy or scratch sections saved as 'custom' where title is a standard section
+    if (resolvedType === "custom" && section.title) {
+      const inferred = inferSectionType(section.title, 1);
+      if (inferred !== "custom") {
+        const c = section.content as Record<string, unknown> | undefined;
+        const textContent = typeof c?.text === "string" ? c.text : "";
+        const isPlaceholderText =
+          !c ||
+          Object.keys(c).length === 0 ||
+          textContent === "<p></p>" ||
+          textContent.trim() === "" ||
+          textContent.includes("esta seção pode ser personalizada") ||
+          textContent.includes("esta secao pode ser personalizada");
+
+        if (isPlaceholderText) {
+          resolvedType = inferred;
+        }
+      }
+    }
+
+    const resolvedTitle =
+      resolvedType === "solution" && section.title === "Solução proposta"
+        ? SECTION_TYPE_LABELS.solution
+        : section.title;
+
     const rawText =
       resolvedType === "introduction" || resolvedType === "custom"
         ? String((section.content as Record<string, unknown>)?.["text"] ?? "<p></p>")
         : "<p>Use os campos específicos da seção para configurar este bloco.</p>";
+
+    const isHealedFromCustom = rawType === "custom" && resolvedType !== "custom";
     const mergedContent =
       section.content && typeof section.content === "object"
         ? normalizeSectionFields(
             {
               ...SECTION_DEFAULT_FIELDS[resolvedType],
-              ...(section.content as Record<string, unknown>),
+              ...(isHealedFromCustom ? {} : (section.content as Record<string, unknown>)),
             },
             resolvedType
           )
         : { ...SECTION_DEFAULT_FIELDS[resolvedType] };
+
     if (rawType === "savings" && resolvedType === "economy_purchases") {
       const c = mergedContent as Record<string, unknown>;
       if (!String(c["title"] ?? "").trim() && String(c["headline"] ?? "").trim()) {
@@ -344,13 +373,16 @@ export function fromTemplateConfig(config: ProposalTemplateConfig): ProposalDocu
           ? "full-image"
           : resolvedType === "economy_purchases"
             ? "default"
-            : section.variant,
-      title: section.title,
+            : resolvedType === "solution" && (!section.variant || section.variant === "default")
+              ? "topics"
+              : section.variant,
+      title: resolvedTitle,
       content: rawText,
       fields: mergedContent,
       hidden: section.visible === false,
     };
   });
+
   return {
     sections,
     styles:

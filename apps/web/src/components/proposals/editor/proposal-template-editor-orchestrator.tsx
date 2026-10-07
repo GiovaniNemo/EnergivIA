@@ -40,6 +40,7 @@ import {
   getSectionVariantOptions,
   SECTION_DEFAULT_FIELDS,
   SECTION_TYPE_LABELS,
+  SECTION_TYPES_OWN_TITLE,
 } from "./section-fields";
 import { HeaderBar } from "./header-bar";
 import { SidebarPanel } from "./sidebar-panel";
@@ -104,7 +105,7 @@ export function ProposalTemplateEditor({
       "Capa",
       "Introdução",
       "Sobre a Empresa",
-      "Solução proposta",
+      "Solução",
       "Investimento",
       "Depoimentos",
       "Assinatura",
@@ -393,23 +394,32 @@ export function ProposalTemplateEditor({
     type: ProposalSection["type"],
     draft?: { content?: string; fieldsPatch?: Record<string, unknown>; variant?: string }
   ) {
+    const defaultTitle = SECTION_TYPE_LABELS[type] ?? "Seção";
+    const initialTitle =
+      (typeof draft?.fieldsPatch?.["title"] === "string" && draft.fieldsPatch["title"].trim()) ||
+      (typeof draft?.fieldsPatch?.["sectionTitle"] === "string" &&
+        draft.fieldsPatch["sectionTitle"].trim()) ||
+      defaultTitle;
+    const baseFields: Record<string, unknown> = {
+      ...SECTION_DEFAULT_FIELDS[type],
+      ...(draft?.fieldsPatch ?? {}),
+    };
+    if (!("title" in baseFields) && !SECTION_TYPES_OWN_TITLE.has(type)) {
+      baseFields.title = initialTitle;
+    }
     const section: ProposalSection = {
       id: createId(),
       type,
       variant:
         draft?.variant ??
         (type === "cover" ? "full-image" : (getSectionVariantOptions(type)[0]?.value ?? "default")),
-      title:
-        (typeof draft?.fieldsPatch?.["title"] === "string" && draft.fieldsPatch["title"].trim()) ||
-        (typeof draft?.fieldsPatch?.["sectionTitle"] === "string" &&
-          draft.fieldsPatch["sectionTitle"].trim()) ||
-        SECTION_TYPE_LABELS[type],
+      title: initialTitle,
       hidden: false,
       content:
         draft?.content ??
         ((typeof draft?.fieldsPatch?.["text"] === "string" && draft.fieldsPatch["text"].trim()) ||
           "<p>Use os campos específicos da seção para configurar este bloco.</p>"),
-      fields: { ...SECTION_DEFAULT_FIELDS[type], ...(draft?.fieldsPatch ?? {}) },
+      fields: baseFields,
     };
     const next = {
       ...section,
@@ -1205,7 +1215,21 @@ export function ProposalTemplateEditor({
               selectedSection={selectedSection}
               onSectionTitleChange={(value) => {
                 if (!selectedSectionId) return;
-                updateSection(selectedSectionId, { title: value });
+                setDocumentState((prev) => ({
+                  ...prev,
+                  sections: prev.sections.map((section) => {
+                    if (section.id !== selectedSectionId) return section;
+                    const nextFields = { ...section.fields };
+                    if ("title" in nextFields || !SECTION_TYPES_OWN_TITLE.has(section.type)) {
+                      nextFields.title = value;
+                    }
+                    return {
+                      ...section,
+                      title: value,
+                      fields: nextFields,
+                    };
+                  }),
+                }));
               }}
               onSectionVariantChange={(value) => {
                 if (!selectedSectionId) return;

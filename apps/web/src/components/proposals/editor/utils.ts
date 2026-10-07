@@ -1,7 +1,12 @@
 "use client";
 
 import type { ProposalDocumentJson, SectionType, TemplatePreset } from "./types";
-import { getSectionVariantOptions, SECTION_DEFAULT_FIELDS } from "./section-fields";
+import {
+  getSectionVariantOptions,
+  SECTION_DEFAULT_FIELDS,
+  SECTION_TYPE_LABELS,
+  SECTION_TYPES,
+} from "./section-fields";
 
 export function replaceVariables(html: string, values: Record<string, string | number>): string {
   return html.replace(/\{\{([^}]+)\}\}/g, (_, key: string) => {
@@ -48,27 +53,66 @@ export function createId(): string {
   return `id_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+export type BaseDocumentSectionSpec =
+  | string
+  | {
+      type: SectionType;
+      title?: string;
+      variant?: string;
+      content?: string;
+      fields?: Record<string, unknown>;
+    };
+
 export function createBaseDocument(
   coverTitle: string,
-  sectionTitles: string[]
+  sectionSpecs: (string | BaseDocumentSectionSpec)[]
 ): ProposalDocumentJson {
-  const sections = sectionTitles.map((title, index) => {
-    const type = inferSectionType(title, index);
-    const variant =
-      type === "cover" ? "full-image" : (getSectionVariantOptions(type)[0]?.value ?? "default");
+  const sections = sectionSpecs.map((spec, index) => {
+    let type: SectionType;
+    let title: string;
+    let variant: string | undefined;
+    let customFields: Record<string, unknown> | undefined;
+    let customContent: string | undefined;
+
+    if (typeof spec === "object" && spec !== null && "type" in spec) {
+      type = spec.type;
+      title = spec.title ?? SECTION_TYPE_LABELS[type] ?? "Seção";
+      variant = spec.variant;
+      customFields = spec.fields;
+      customContent = spec.content;
+    } else {
+      title = String(spec);
+      type = inferSectionType(title, index);
+    }
+
+    const resolvedVariant =
+      variant ??
+      (type === "cover" ? "full-image" : (getSectionVariantOptions(type)[0]?.value ?? "default"));
+
+    const defaultFields = SECTION_DEFAULT_FIELDS[type] ?? {};
+    const mergedFields: Record<string, unknown> = {
+      ...defaultFields,
+      ...(customFields ?? {}),
+    };
+
+    if ("title" in defaultFields && !mergedFields.title) {
+      mergedFields.title = title;
+    }
+
     return {
       id: createId(),
       type,
-      variant,
+      variant: resolvedVariant,
       title,
       hidden: false,
       content:
-        index === 0
+        customContent ??
+        (index === 0
           ? "<p>Bem-vindo(a) a sua proposta.</p>"
           : type === "signature"
             ? "<p>Ao confirmar esta proposta comercial, as partes reconhecem a conformidade do dimensionamento técnico, valores e condições acordadas.</p>"
-            : '<p>Caro(a) <span data-variable-token="nome_cliente">{{nome_cliente}}</span>, esta seção pode ser personalizada para sua narrativa comercial.</p>',
-      fields: { ...SECTION_DEFAULT_FIELDS[type] },
+            : '<p>Caro(a) <span data-variable-token="nome_cliente">{{nome_cliente}}</span>, esta seção pode ser personalizada para sua narrativa comercial.</p>'),
+      fields: mergedFields,
     };
   });
 
@@ -126,59 +170,254 @@ export function createBaseDocument(
   };
 }
 
-function inferSectionType(title: string, index: number): SectionType {
-  const normalized = title
+export function inferSectionType(title: string, index?: number): SectionType {
+  const raw = typeof title === "string" ? title : "";
+  const normalized = raw
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  if (index === 0 || normalized.includes("cover") || normalized.includes("capa")) return "cover";
+    .toLowerCase()
+    .trim();
+
+  if (index === 0 || normalized.includes("cover") || normalized.includes("capa")) {
+    return "cover";
+  }
+
+  // Exact type identifier match
+  if (SECTION_TYPES.includes(raw as SectionType)) {
+    return raw as SectionType;
+  }
+
+  // Exact match against official labels in SECTION_TYPE_LABELS
+  for (const [key, label] of Object.entries(SECTION_TYPE_LABELS)) {
+    const normLabel = label
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+    if (normalized === normLabel) {
+      return key as SectionType;
+    }
+  }
+
+  // Introduction
   if (
     normalized.includes("introduction") ||
     normalized.includes("introducao") ||
     normalized.includes("summary") ||
-    normalized.includes("resumo")
-  )
+    normalized.includes("resumo") ||
+    normalized.includes("carta") ||
+    normalized.includes("boas-vindas") ||
+    normalized.includes("boas vindas")
+  ) {
     return "introduction";
+  }
+
+  // About Company
   if (
     normalized.includes("company") ||
     normalized.includes("empresa") ||
-    normalized.includes("brand")
-  )
-    return "about_company";
-  if (
-    normalized.includes("equipamento") &&
-    (normalized.includes("proposta") ||
-      normalized.includes("projeto") ||
-      normalized.includes("sistema"))
+    normalized.includes("brand") ||
+    normalized.includes("quem somos") ||
+    normalized.includes("sobre nos") ||
+    normalized.includes("historia da marca") ||
+    normalized.includes("nossa historia")
   ) {
-    return "proposal_equipment";
+    return "about_company";
   }
+
+  // Diagnostic
+  if (
+    normalized.includes("diagnostico") ||
+    normalized.includes("diagnostic") ||
+    normalized.includes("pain points") ||
+    normalized.includes("cenario atual") ||
+    normalized.includes("panorama da conta") ||
+    normalized.includes("conta atual")
+  ) {
+    return "diagnostic_energy";
+  }
+
+  // Solution - handles "Solução", "Solução proposta", "Nossa Solução", "Arquitetura do Sistema", "Projeto do Sistema", etc.
+  if (
+    normalized.includes("solucao") ||
+    normalized.includes("solution") ||
+    normalized.includes("proposta de solucao") ||
+    normalized.includes("arquitetura do sistema") ||
+    normalized.includes("projeto do sistema") ||
+    normalized.includes("sistema") ||
+    normalized.includes("system")
+  ) {
+    return "solution";
+  }
+
+  // Generation & Consumption
   if (
     normalized.includes("geracao") ||
-    normalized.includes("geração") ||
     normalized.includes("consumo") ||
     normalized.includes("generation") ||
-    normalized.includes("performance")
+    normalized.includes("consumption") ||
+    normalized.includes("performance") ||
+    normalized.includes("desempenho") ||
+    normalized.includes("previsao de performance") ||
+    normalized.includes("base de consumo")
   ) {
     return "generation_consumption";
   }
-  if (normalized.includes("system") || normalized.includes("sistema")) return "solution";
+
+  // Proposal Equipment
   if (
+    normalized.includes("equipamento") ||
+    normalized.includes("equipment") ||
+    normalized.includes("inversor") ||
+    normalized.includes("modulo") ||
+    normalized.includes("materiais") ||
+    normalized.includes("componentes")
+  ) {
+    return "proposal_equipment";
+  }
+
+  // Gallery
+  if (
+    normalized.includes("galeria") ||
+    normalized.includes("gallery") ||
+    normalized.includes("fotos") ||
+    normalized.includes("portfolio") ||
+    normalized.includes("obras") ||
+    normalized.includes("instalacoes")
+  ) {
+    return "gallery";
+  }
+
+  // Economy / Purchasing Power
+  if (
+    normalized.includes("poder de compra") ||
+    normalized.includes("economia") ||
+    normalized.includes("savings") ||
+    normalized.includes("beneficio financeiro")
+  ) {
+    return "economy_purchases";
+  }
+
+  // Pricing / Investment
+  if (
+    normalized.includes("investimento") ||
     normalized.includes("investment") ||
     normalized.includes("pricing") ||
-    normalized.includes("investimento")
-  )
+    normalized.includes("preco") ||
+    normalized.includes("orcamento") ||
+    normalized.includes("impacto financeiro") ||
+    normalized.includes("valores")
+  ) {
     return "pricing";
-  if (normalized.includes("financing") || normalized.includes("financiamento")) return "financing";
-  if (normalized.includes("testimonial") || normalized.includes("depoimento"))
-    return "testimonials";
+  }
+
+  // Financing
   if (
-    normalized.includes("signature") ||
-    normalized.includes("approval") ||
+    normalized.includes("financiamento") ||
+    normalized.includes("financing") ||
+    normalized.includes("parcelamento") ||
+    normalized.includes("parcelas") ||
+    normalized.includes("simulacao")
+  ) {
+    return "financing";
+  }
+
+  // Testimonials
+  if (
+    normalized.includes("depoimento") ||
+    normalized.includes("testimonial") ||
+    normalized.includes("clientes") ||
+    normalized.includes("avaliacoes")
+  ) {
+    return "testimonials";
+  }
+
+  // Social Proof
+  if (
+    normalized.includes("prova social") ||
+    normalized.includes("social proof") ||
+    normalized.includes("numeros") ||
+    normalized.includes("estatisticas") ||
+    normalized.includes("metricas")
+  ) {
+    return "social_proof";
+  }
+
+  // Guarantees
+  if (
+    normalized.includes("garantia") ||
+    normalized.includes("guarantee") ||
+    normalized.includes("seguranca")
+  ) {
+    return "guarantees";
+  }
+
+  // Process Steps
+  if (
+    normalized.includes("etapa") ||
+    normalized.includes("processo") ||
+    normalized.includes("passo") ||
+    normalized.includes("roteiro") ||
+    normalized.includes("implementacao") ||
+    normalized.includes("linha do tempo") ||
+    normalized.includes("proximos passos")
+  ) {
+    return "process_steps";
+  }
+
+  // FAQ
+  if (
+    normalized.includes("faq") ||
+    normalized.includes("pergunta") ||
+    normalized.includes("duvida") ||
+    normalized.includes("question")
+  ) {
+    return "faq";
+  }
+
+  // CTA
+  if (
+    normalized.includes("cta") ||
+    normalized.includes("resposta") ||
+    normalized.includes("decisao") ||
+    normalized.includes("aceite") ||
+    normalized.includes("acao")
+  ) {
+    return "cta";
+  }
+
+  // Signature
+  if (
     normalized.includes("assinatura") ||
-    normalized.includes("aprovacao")
-  )
+    normalized.includes("signature") ||
+    normalized.includes("aprovacao") ||
+    normalized.includes("approval") ||
+    normalized.includes("contrato") ||
+    normalized.includes("termo") ||
+    normalized.includes("formalizacao")
+  ) {
     return "signature";
+  }
+
+  // Comparison
+  if (
+    normalized.includes("comparacao") ||
+    normalized.includes("comparativo") ||
+    normalized.includes("comparison") ||
+    normalized.includes("antes e depois") ||
+    normalized.includes("versus") ||
+    normalized.includes(" vs ") ||
+    normalized.endsWith(" vs") ||
+    normalized.startsWith("vs ")
+  ) {
+    return "comparison";
+  }
+
+  // Video
+  if (normalized.includes("video") || normalized.includes("tour virtual")) {
+    return "video";
+  }
+
   return "custom";
 }
 
@@ -190,8 +429,8 @@ export const BUILTIN_TEMPLATE_PRESETS: TemplatePreset[] = [
     payload: createBaseDocument("Template de Proposta Solar Residencial", [
       "Capa",
       "Introdução",
-      "Sobre Nossa Empresa",
-      "Solução proposta",
+      "Sobre a Empresa",
+      "Solução",
       "Investimento",
       "Depoimentos",
       "Assinatura",
