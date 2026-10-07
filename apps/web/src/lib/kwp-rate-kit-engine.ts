@@ -199,14 +199,88 @@ export function generateKwpRateTiers({
     ];
 
     if (roof.code !== "none") {
+      const numKits = Math.ceil(moduleQty / 4);
+      const estTotalPart1 = Math.round(estTotal * 0.6);
+      const estTotalPart2 = estTotal - estTotalPart1;
+
+      const unitPricePart1 = Math.round((estTotalPart1 / numKits) * 100) / 100;
+      const unitPricePart2 = Math.round((estTotalPart2 / numKits) * 100) / 100;
+
+      let part1Name = "";
+      let part2Name = "";
+      let part1Brand = "Aldo Solar";
+      let part2Brand = "Aldo Solar";
+
+      switch (roof.code) {
+        case "ceramic":
+          part1Name =
+            "086610-1 ESTRUTURA SOLAR GROUP ASMTC240X000MD04 4 PAINEIS FIXADOR GANCHO TELHA COLONIAL SMART TIGER";
+          part2Name =
+            "145232-5 ESTRUTURA SOLAR GROUP KSMTC240X815MD04 2 PARES PERFIL SMART-X 2,40M";
+          part1Brand = "Solar Group";
+          part2Brand = "Solar Group";
+          break;
+        case "laje":
+          part1Name = '361560-6 KSMTL240X000MD04 - KIT PERFIS SMART PARA TRIANGULO "L" 4 MODULOS';
+          part2Name = '361561-0 ASMTL240X000MD04 - KIT ACESSORIOS SMART PARA TRIANGULO "L" 4 MOD';
+          part1Brand = "Solar Group";
+          part2Brand = "Solar Group";
+          break;
+        case "metal":
+          part1Name =
+            "429252-2 KSPPC818X050MD04 KIT PERFIL MINITRILHO PLANO 3,5CM SMART MINI 50CM - 4";
+          part2Name = "459171-2 KSPPC818X050MD04 KIT PERFIL MINITRILHO BAIXO 1,5CM SMART 55CM";
+          part1Brand = "Solar Group";
+          part2Brand = "Solar Group";
+          break;
+        case "fibromadeira":
+          part1Name = "444791-5 ESTRUTURA PRATYC 2 PARES PERFIL HÍBRIDO ALUMINIO 2,40 M 4 PAINEIS";
+          part2Name = "444793-3 ESTRUTURA PRATYC KIT FIXACAO 4 PAINEIS FIBROMADEIRA 250MM INOX";
+          part1Brand = "Pratyc";
+          part2Brand = "Pratyc";
+          break;
+        case "fibrometal":
+          part1Name = "444791-5 ESTRUTURA PRATYC 2 PARES PERFIL HÍBRIDO ALUMINIO 2,40 M 4 PAINEIS";
+          part2Name =
+            "444794-7 ESTRUTURA PRATYC KIT FIXACAO 4 PAINEIS FIBROMETALICA PONTA BROCA 250MM INOX";
+          part1Brand = "Pratyc";
+          part2Brand = "Pratyc";
+          break;
+        case "ground":
+          part1Name = "446014-1 ESTRUTURA CCM KIT AÇO SOLO EASYLINE - 4 Módulos 1134x2384";
+          part2Name = "446015-5 ESTRUTURA CCM KIT ACESSÓRIOS SOLO EASYLINE AÇO - 4 Módulos";
+          part1Brand = "CCM";
+          part2Brand = "CCM";
+          break;
+        default:
+          part1Name =
+            "145232-5 ESTRUTURA SOLAR GROUP KSMTC240X815MD04 2 PARES PERFIL SMART-X 2,40M";
+          part2Name =
+            "086610-1 ESTRUTURA SOLAR GROUP ASMTC240X000MD04 4 PAINEIS FIXADOR GANCHO TELHA COLONIAL SMART TIGER";
+          part1Brand = "Solar Group";
+          part2Brand = "Solar Group";
+          break;
+      }
+
       structuredItems.push({
-        productId: `kwp-est-${cfg.id}`,
-        productName: `${roof.label} (Kit completo de perfis, grampos e fixadores para ${moduleQty} placas)`,
-        brandName: "Alumínio Solar",
+        productId: `kwp-est1-${cfg.id}`,
+        productName: part1Name,
+        brandName: part1Brand,
         categoryName: "structure_kit",
-        quantity: 1,
-        unitPrice: estTotal,
-        lineTotal: estTotal,
+        quantity: numKits,
+        unitPrice: unitPricePart1,
+        lineTotal: estTotalPart1,
+        specs: { roofType: roof.code, moduleQty },
+      });
+
+      structuredItems.push({
+        productId: `kwp-est2-${cfg.id}`,
+        productName: part2Name,
+        brandName: part2Brand,
+        categoryName: "structure_kit",
+        quantity: numKits,
+        unitPrice: unitPricePart2,
+        lineTotal: estTotalPart2,
         specs: { roofType: roof.code, moduleQty },
       });
     }
