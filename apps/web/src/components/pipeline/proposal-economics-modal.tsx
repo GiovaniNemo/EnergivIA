@@ -108,7 +108,9 @@ import {
   prepareQuickEconomiaFromExtracted,
   quickResultToPersistedSimulationDraft,
   resolveBillLocationString,
+  ROOF_SOLAR_FACTOR,
   simulateProposal,
+  type QuickEconomiaRoofType,
   type QuickEconomiaRoofType as RoofType,
   type QuickEconomiaSimulationInput as SimulationInput,
   type QuickEconomiaSimulationResult as SimulationResult,
@@ -123,6 +125,25 @@ const ROOF_TYPE_SELECT_OPTIONS: { value: RoofType; label: string }[] = [
   { value: "laje", label: "Laje" },
   { value: "none", label: "Sem estrutura" },
 ];
+
+const FALLBACK_ROOF_SOLAR_FACTOR: Record<string, number> = {
+  ceramic: 1,
+  metal: 0.94,
+  fibromadeira: 0.96,
+  fibrometal: 0.96,
+  ground: 1,
+  laje: 1,
+  none: 1,
+};
+
+function getRoofSolarFactor(roofType?: string | null): number {
+  if (!roofType) return 1;
+  const factorMap =
+    typeof ROOF_SOLAR_FACTOR !== "undefined" && ROOF_SOLAR_FACTOR
+      ? ROOF_SOLAR_FACTOR
+      : FALLBACK_ROOF_SOLAR_FACTOR;
+  return (factorMap as Record<string, number>)[roofType] ?? 1;
+}
 
 function clampSystemKw(kw: number): number {
   const rounded = Math.round(kw * 100) / 100;
@@ -505,7 +526,7 @@ export function buildGeneratedProposalFromSimulation(
   const roofType: RoofType = validRoofTypes.includes(roofTypeRaw as RoofType)
     ? (roofTypeRaw as RoofType)
     : "ceramic";
-  const roofF = ROOF_SOLAR_FACTOR[roofType as QuickEconomiaRoofType] ?? 1;
+  const roofF = getRoofSolarFactor(roofType);
   const geracaoBase =
     typeof resultSizing?.["geracaoBase"] === "number" && (resultSizing["geracaoBase"] as number) > 0
       ? (resultSizing["geracaoBase"] as number)
@@ -1003,7 +1024,7 @@ export const ProposalEconomicsModal = forwardRef<
     const roof = (generatedProposal?.roofType ??
       proposalKitDraft.roof ??
       "ceramic") as QuickEconomiaRoofType;
-    const roofF = ROOF_SOLAR_FACTOR[roof] ?? 1;
+    const roofF = getRoofSolarFactor(roof);
     return Math.max(40, (heuristicaIrradiacao || 145) * roofF);
   }, [
     generatedProposal?.geracaoBase,

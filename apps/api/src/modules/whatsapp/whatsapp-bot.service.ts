@@ -1788,6 +1788,14 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
     let finalTargetKWp = 3.0;
     const geracaoPorKwp = 130; // média nacional
+    let monthlyFactor = geracaoPorKwp;
+    if (cidade || estado) {
+      const hspRes = this.geoIrradiance.getHsp(cidade || "São Paulo", estado || "SP");
+      if (hspRes && hspRes.hsp > 0) {
+        monthlyFactor = Math.max(90, Math.min(180, Math.round(hspRes.hsp * 30 * 0.85)));
+      }
+    }
+
     if (typeof targetKWp === "number" && targetKWp > 0) {
       finalTargetKWp = targetKWp;
     } else if (
@@ -1800,13 +1808,6 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     } else if (typeof targetModules === "number" && targetModules > 0) {
       finalTargetKWp = (targetModules * (modPowerWUser || 585)) / 1000;
     } else if (typeof consumptionKwh === "number" && consumptionKwh > 0) {
-      let monthlyFactor = geracaoPorKwp;
-      if (cidade || estado) {
-        const hspRes = this.geoIrradiance.getHsp(cidade || "São Paulo", estado || "SP");
-        if (hspRes && hspRes.hsp > 0) {
-          monthlyFactor = Math.max(90, Math.min(180, Math.round(hspRes.hsp * 30 * 0.85)));
-        }
-      }
       finalTargetKWp = consumptionKwh / monthlyFactor;
     }
     const safeKwp = Math.max(0.5, finalTargetKWp);
