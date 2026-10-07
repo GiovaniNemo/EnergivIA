@@ -3384,7 +3384,7 @@ ${catalogContext}`;
           organizationRules
         );
         // Valor de venda real baseado nas margens do integrador
-        quotedSaleBrl = costCalc.totalSaleValue;
+        quotedSaleBrl = costCalc.computedSaleFromCostRulesBrl;
 
         // 3. Cria Deal
         const deal = await this.prisma.deal.create({
