@@ -61,6 +61,34 @@ export const maxDuration = 60;
 
 function extractQuotedKitFromMessages(messages: any[]) {
   if (!Array.isArray(messages)) return null;
+
+  // Verifica se o usuário posterior escolheu uma opção específica (1, 2, 3 / Standard, Elite, Premium)
+  let chosenOptionIndex = 0;
+  for (let u = messages.length - 1; u >= 0; u--) {
+    const um = messages[u];
+    if (um.role === "user" && typeof um.content === "string") {
+      const uText = um.content.toLowerCase();
+      if (/\b(op[çc][ãa]o\s*3|premium|terceira)\b/i.test(uText) || uText.trim() === "3") {
+        chosenOptionIndex = 2;
+        break;
+      }
+      if (
+        /\b(op[çc][ãa]o\s*2|elite|segunda|custo-benef[íi]cio)\b/i.test(uText) ||
+        uText.trim() === "2"
+      ) {
+        chosenOptionIndex = 1;
+        break;
+      }
+      if (
+        /\b(op[çc][ãa]o\s*1|standard|primeira|econ[ôo]mic[ao])\b/i.test(uText) ||
+        uText.trim() === "1"
+      ) {
+        chosenOptionIndex = 0;
+        break;
+      }
+    }
+  }
+
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
     if (m.role !== "assistant" && m.role !== "system") continue;
@@ -74,40 +102,68 @@ function extractQuotedKitFromMessages(messages: any[]) {
       continue;
     }
 
+    // Se a mensagem contiver múltiplos grupos/opções de kits, isola apenas a opção selecionada
+    let targetText = text;
+    const optionHeaderRegex =
+      /(?:(?:\*|_|#|>|\s)*(?:Opção\s*\d+|Opcao\s*\d+|\b\d+\s*[-–—]\s*(?:Standard|Elite|Premium|Econômico|Econômica|Custo-Benefício))\b[^\n]*)/gi;
+    const matches = Array.from(text.matchAll(optionHeaderRegex));
+    if (matches.length > 1) {
+      const targetMatchIndex = Math.min(chosenOptionIndex, matches.length - 1);
+      const startIdx = matches[targetMatchIndex]?.index ?? 0;
+      const nextMatch = matches[targetMatchIndex + 1];
+      const endIdx = nextMatch ? nextMatch.index : text.length;
+      targetText = text.substring(startIdx, endIdx);
+    }
+
     let kitPrice = 0;
-    const priceMatch = text.match(/R\$\s*([\d.,]+)/i);
+    const priceMatch = targetText.match(/R\$\s*([\d.,]+)/i) || text.match(/R\$\s*([\d.,]+)/i);
     if (priceMatch && priceMatch[1]) {
       kitPrice = parseFloat(priceMatch[1].replace(/\./g, "").replace(",", "."));
     }
 
     let kwp = 0;
     const kwpMatch =
+      targetText.match(/Pot[êe]ncia:\s*(\d+(?:[.,]\d+)?)\s*kWp/i) ||
+      targetText.match(/(\d+(?:[.,]\d+)?)\s*kWp/i) ||
       text.match(/Pot[êe]ncia:\s*(\d+(?:[.,]\d+)?)\s*kWp/i) ||
       text.match(/(\d+(?:[.,]\d+)?)\s*kWp/i);
     if (kwpMatch && kwpMatch[1]) {
       kwp = parseFloat(kwpMatch[1].replace(",", "."));
     }
 
-    const lines = text.split("\n");
+    const lines = targetText.split("\n");
     const items: any[] = [];
     for (const rawLine of lines) {
-      const line = rawLine.trim();
+      let cleanLine = rawLine.trim();
+      // Limpa marcadores iniciais como **, >, •, -, *
+      cleanLine = cleanLine
+        .replace(/^[*_~`>•\-\s]+/, "")
+        .replace(/[*_~`\s]+$/, "")
+        .trim();
+
       if (
-        !line.startsWith("•") &&
-        !line.startsWith("-") &&
-        !line.startsWith("*") &&
-        !line.toLowerCase().includes("inversor:") &&
-        !line.toLowerCase().includes("módulos:") &&
-        !line.toLowerCase().includes("estrutura:") &&
-        !line.toLowerCase().includes("perfil:")
+        !cleanLine.toLowerCase().includes("inversor:") &&
+        !cleanLine.toLowerCase().includes("módulos:") &&
+        !cleanLine.toLowerCase().includes("modulos:") &&
+        !cleanLine.toLowerCase().includes("módulo:") &&
+        !cleanLine.toLowerCase().includes("painel:") &&
+        !cleanLine.toLowerCase().includes("painéis:") &&
+        !cleanLine.toLowerCase().includes("estrutura:") &&
+        !cleanLine.toLowerCase().includes("perfil:") &&
+        !cleanLine.toLowerCase().includes("cabo:") &&
+        !cleanLine.toLowerCase().includes("conector:")
       ) {
         continue;
       }
-      const cleanLine = line.replace(/^[•\-\*]\s*/, "");
+
       const colonIdx = cleanLine.indexOf(":");
       if (colonIdx === -1) continue;
       const itemType = cleanLine.substring(0, colonIdx).trim().toLowerCase();
-      const itemRest = cleanLine.substring(colonIdx + 1).trim();
+      let itemRest = cleanLine.substring(colonIdx + 1).trim();
+      itemRest = itemRest
+        .replace(/^[*_~`>•\-\s]+/, "")
+        .replace(/[*_~`\s]+$/, "")
+        .trim();
 
       let quantity = 1;
       let productName = itemRest;
@@ -119,35 +175,43 @@ function extractQuotedKitFromMessages(messages: any[]) {
         quantity = parseInt(qtyMatch[1], 10);
         productName = qtyMatch[2].trim();
       }
+      productName = productName
+        .replace(/^[*_~`>•\-\s]+/, "")
+        .replace(/[*_~`\s]+$/, "")
+        .trim();
 
       if (itemType.includes("inversor") || itemType.includes("micro")) {
         categoryName = itemType.includes("micro") ? "microinverter" : "inverter";
-        if (productName.toUpperCase().includes("SAJ")) brandName = "SAJ";
-        else if (productName.toUpperCase().includes("DEYE")) brandName = "DEYE";
-        else if (productName.toUpperCase().includes("GROWATT")) brandName = "GROWATT";
-        else if (productName.toUpperCase().includes("SOLIS")) brandName = "SOLIS";
-        else if (productName.toUpperCase().includes("SUNGROW")) brandName = "SUNGROW";
-        else if (productName.toUpperCase().includes("HUAWEI")) brandName = "HUAWEI";
-        else if (productName.toUpperCase().includes("GOODWE")) brandName = "GOODWE";
+        if (productName.toUpperCase().includes("SOLPLANET")) brandName = "Solplanet";
+        else if (productName.toUpperCase().includes("GROWATT")) brandName = "Growatt";
+        else if (productName.toUpperCase().includes("DEYE")) brandName = "Deye";
+        else if (productName.toUpperCase().includes("SAJ")) brandName = "SAJ";
+        else if (productName.toUpperCase().includes("SOLIS")) brandName = "Solis";
+        else if (productName.toUpperCase().includes("SUNGROW")) brandName = "Sungrow";
+        else if (productName.toUpperCase().includes("HUAWEI")) brandName = "Huawei";
+        else if (productName.toUpperCase().includes("GOODWE")) brandName = "GoodWe";
         else if (productName.toUpperCase().includes("WEG")) brandName = "WEG";
-        else if (productName.toUpperCase().includes("HOYMILES")) brandName = "HOYMILES";
-        else if (productName.toUpperCase().includes("APSYSTEMS")) brandName = "APSYSTEMS";
+        else if (productName.toUpperCase().includes("HOYMILES")) brandName = "Hoymiles";
+        else if (productName.toUpperCase().includes("APSYSTEMS")) brandName = "APsystems";
+        else if (productName.toUpperCase().includes("SOFAR")) brandName = "Sofar";
+        else if (productName.toUpperCase().includes("FOXESS")) brandName = "FoxESS";
       } else if (
         itemType.includes("módulo") ||
         itemType.includes("modulo") ||
         itemType.includes("painel")
       ) {
         categoryName = "module";
-        if (productName.toUpperCase().includes("SINE ENERGY")) brandName = "SINE ENERGY";
-        else if (productName.toUpperCase().includes("JINKO")) brandName = "JINKO";
+        if (productName.toUpperCase().includes("ASTRONERGY")) brandName = "ASTRONERGY";
         else if (productName.toUpperCase().includes("CANADIAN")) brandName = "CANADIAN SOLAR";
         else if (productName.toUpperCase().includes("LONGI")) brandName = "LONGI";
-        else if (productName.toUpperCase().includes("TRINA")) brandName = "TRINA";
+        else if (productName.toUpperCase().includes("JINKO")) brandName = "JINKO";
         else if (productName.toUpperCase().includes("JA SOLAR")) brandName = "JA SOLAR";
+        else if (productName.toUpperCase().includes("TRINA")) brandName = "TRINA";
         else if (productName.toUpperCase().includes("OSDA")) brandName = "OSDA";
         else if (productName.toUpperCase().includes("DAH")) brandName = "DAH SOLAR";
         else if (productName.toUpperCase().includes("RISEN")) brandName = "RISEN";
-        else if (productName.toUpperCase().includes("ASTRONERGY")) brandName = "ASTRONERGY";
+        else if (productName.toUpperCase().includes("CHINT")) brandName = "CHINT";
+        else if (productName.toUpperCase().includes("SINE ENERGY")) brandName = "SINE ENERGY";
       } else if (itemType.includes("estrutura")) {
         categoryName = "structure_kit";
       } else if (itemType.includes("perfil") || itemType.includes("trilho")) {

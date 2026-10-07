@@ -570,26 +570,41 @@ export function buildEquipmentItemFromKitLine(
   ) {
     cat = "profile";
   } else {
-    const rawName = (line.productName || "").trim();
-    const lowerName = rawName.toLowerCase();
+    let rawName = (line.productName || "").trim();
+    // Limpeza preliminar de caracteres especiais/markdown para correta detecção de categoria
+    const cleanSearchText = rawName
+      .replace(/^[*_~`>•\-\s]+/, "")
+      .replace(/[*_~`\s]+$/, "")
+      .toLowerCase();
+    const searchContext = `${cleanSearchText} ${(line.brandName || "").toLowerCase()}`;
+
     if (
-      lowerName.includes("modulo") ||
-      lowerName.includes("módulo") ||
-      lowerName.includes("painel") ||
-      lowerName.includes("module")
+      searchContext.includes("modulo") ||
+      searchContext.includes("módulo") ||
+      searchContext.includes("painel") ||
+      searchContext.includes("module") ||
+      /\b(astronergy|canadian|longi|jinko|ja solar|trina|risen|chint|dah|osda|talesun|sunova|seraphim|gcl|tw solar|tongwei|sine energy|era solar)\b/i.test(
+        searchContext
+      )
     ) {
       cat = "module";
-    } else if (lowerName.includes("microinversor") || lowerName.includes("microinverter")) {
+    } else if (searchContext.includes("microinversor") || searchContext.includes("microinverter")) {
       cat = "microinverter";
-    } else if (lowerName.includes("inversor") || lowerName.includes("inverter")) {
+    } else if (
+      searchContext.includes("inversor") ||
+      searchContext.includes("inverter") ||
+      /\b(solplanet|growatt|deye|saj|solis|sungrow|huawei|goodwe|weg|hoymiles|apsystems|sofar|foxess|sma|fronius)\b/i.test(
+        searchContext
+      )
+    ) {
       cat = "inverter";
-    } else if (lowerName.includes("estrutura")) {
+    } else if (searchContext.includes("estrutura")) {
       cat = "structure_kit";
-    } else if (lowerName.includes("perfil") || lowerName.includes("trilho")) {
+    } else if (searchContext.includes("perfil") || searchContext.includes("trilho")) {
       cat = "profile";
-    } else if (lowerName.includes("cabo")) {
+    } else if (searchContext.includes("cabo")) {
       cat = "dc_cable";
-    } else if (lowerName.includes("conector") || lowerName.includes("mc4")) {
+    } else if (searchContext.includes("conector") || searchContext.includes("mc4")) {
       cat = "connector";
     }
   }
@@ -604,20 +619,78 @@ export function buildEquipmentItemFromKitLine(
           : (CATEGORY_LABELS[cat] ?? "Equipamento");
 
   let rawName = (line.productName || "").trim();
-  let quantity = Math.max(1, Math.floor(line.quantity || 1));
+  // Remove formatação markdown inicial/final (ex: ** 6x Astronergy 580W, • Inversor:, > • etc)
+  rawName = rawName
+    .replace(/^[*_~`>•\-\s]+/, "")
+    .replace(/[*_~`\s]+$/, "")
+    .trim();
 
-  // Remove prefixes like "- Inversor: ", "- Módulos: 10x " if present in raw string data
-  const prefixMatch = rawName.match(/^-\s*[^:]+:\s*(?:(\d+)x\s*)?(.*)$/i);
-  if (prefixMatch) {
-    if (prefixMatch[1] && (!line.quantity || line.quantity <= 1)) {
-      quantity = parseInt(prefixMatch[1], 10);
+  // Remove prefixos como "Inversor: ", "Módulos: ", "- Módulo: "
+  const prefixMatch = rawName.match(
+    /^(?:inversor|microinversor|m[oó]dulos?|pain[eé]is?|estrutura|cabos?|conectores?)\s*:\s*(.*)$/i
+  );
+  if (prefixMatch && prefixMatch[1]) {
+    rawName = prefixMatch[1].trim();
+  }
+  rawName = rawName
+    .replace(/^[*_~`>•\-\s]+/, "")
+    .replace(/[*_~`\s]+$/, "")
+    .trim();
+
+  let quantity = Math.max(1, Math.floor(line.quantity || 1));
+  const multMatch = rawName.match(/^(\d+)x\s*(.*)$/i);
+  if (multMatch && multMatch[1]) {
+    if (!line.quantity || line.quantity <= 1) {
+      quantity = parseInt(multMatch[1], 10);
     }
-    if (prefixMatch[2]) {
-      rawName = prefixMatch[2].trim();
+    if (multMatch[2]) {
+      rawName = multMatch[2].trim();
+    }
+  }
+  rawName = rawName
+    .replace(/^[*_~`>•\-\s]+/, "")
+    .replace(/[*_~`\s]+$/, "")
+    .trim();
+
+  let brand = (line.brandName ?? "").trim();
+  if (!brand) {
+    const knownBrandsMap: Record<string, string> = {
+      astronergy: "ASTRONERGY",
+      "canadian solar": "CANADIAN SOLAR",
+      canadian: "CANADIAN SOLAR",
+      longi: "LONGI",
+      jinko: "JINKO",
+      "ja solar": "JA SOLAR",
+      trina: "TRINA",
+      risen: "RISEN",
+      chint: "CHINT",
+      "dah solar": "DAH SOLAR",
+      dah: "DAH SOLAR",
+      osda: "OSDA",
+      solplanet: "Solplanet",
+      growatt: "Growatt",
+      deye: "Deye",
+      saj: "SAJ",
+      solis: "Solis",
+      sungrow: "Sungrow",
+      huawei: "Huawei",
+      goodwe: "GoodWe",
+      weg: "WEG",
+      hoymiles: "Hoymiles",
+      apsystems: "APsystems",
+      sofar: "Sofar",
+      foxess: "FoxESS",
+      sma: "SMA",
+      fronius: "Fronius",
+    };
+    for (const [pattern, formatted] of Object.entries(knownBrandsMap)) {
+      if (new RegExp(`\\b${pattern}\\b`, "i").test(rawName)) {
+        brand = formatted;
+        break;
+      }
     }
   }
 
-  const brand = (line.brandName ?? "").trim();
   const title = brand ? `${catLabel} — ${brand}` : catLabel;
   const subtitle = rawName;
 
@@ -676,6 +749,69 @@ export function buildProposalEquipmentItemsFromKit(
     return allowedCategories.has(cat);
   });
 
+  if (filtered.length === 0) return [];
+
+  // Deduplicação inteligente e proteção contra misturas de múltiplos tiers
+  // 1. Identificar módulos e inversores
+  const modules = filtered.filter((i) => (i.categoryName ?? "").toLowerCase() === "module");
+  const inverters = filtered.filter((i) => {
+    const cat = (i.categoryName ?? "").toLowerCase();
+    return cat === "inverter" || cat === "microinverter" || cat.includes("inverter");
+  });
+
+  const consolidated: ProposalEquipmentItem[] = [];
+
+  // Processa módulos: consolida itens idênticos e seleciona o kit principal se houver marcas divergentes
+  if (modules.length > 0) {
+    // Agrupa por assinatura de produto
+    const moduleMap = new Map<string, { item: ProposalEquipmentItem; count: number }>();
+    for (const mod of modules) {
+      const key = `${mod.title.toLowerCase()}|${mod.subtitle.toLowerCase()}`;
+      const existing = moduleMap.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        moduleMap.set(key, { item: mod, count: 1 });
+      }
+    }
+
+    // Se houver marcas divergentes (ex: dump com Astronergy E Osda de 3 opções), escolhe o grupo mais frequente ou o primeiro
+    let primaryModule = modules[0];
+    let maxCount = 0;
+    for (const [, entry] of moduleMap.entries()) {
+      if (entry.count > maxCount) {
+        maxCount = entry.count;
+        primaryModule = entry.item;
+      }
+    }
+    consolidated.push(primaryModule);
+  }
+
+  // Processa inversores: consolida duplicatas acidentais e mantém modelo primário ou escala real
+  if (inverters.length > 0) {
+    const invMap = new Map<string, { item: ProposalEquipmentItem; count: number }>();
+    for (const inv of inverters) {
+      const key = `${inv.title.toLowerCase()}|${inv.subtitle.toLowerCase()}`;
+      const existing = invMap.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        invMap.set(key, { item: inv, count: 1 });
+      }
+    }
+
+    // Escolhe o inversor primário do kit
+    let primaryInverter = inverters[0];
+    let maxCount = 0;
+    for (const [, entry] of invMap.entries()) {
+      if (entry.count > maxCount) {
+        maxCount = entry.count;
+        primaryInverter = entry.item;
+      }
+    }
+    consolidated.push(primaryInverter);
+  }
+
   const categoryRank: Record<string, number> = {
     module: 1,
     inverter: 2,
@@ -684,7 +820,7 @@ export function buildProposalEquipmentItemsFromKit(
     off_grid_inverter: 2,
   };
 
-  return filtered.sort((x, y) => {
+  return consolidated.sort((x, y) => {
     const cx = (x.categoryName ?? "").toLowerCase();
     const cy = (y.categoryName ?? "").toLowerCase();
     const rx = categoryRank[cx] ?? 50;
