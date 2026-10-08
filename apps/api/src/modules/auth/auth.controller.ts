@@ -10,15 +10,19 @@ import { OrganizationsService } from "../organizations/organizations.service";
 import { Public } from "../../common/decorators/public.decorator";
 import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator";
 import { PrismaService } from "../../prisma/prisma.service";
+import { Prisma } from "@prisma/client";
 
 import { getTenantPlanDetails } from "../../common/utils/plan-limits";
+
+import { SpecialAccessService } from "../special-access/special-access.service";
 
 @Controller("auth")
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly organizationsService: OrganizationsService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly specialAccessService: SpecialAccessService
   ) {}
 
   @Post("login")
@@ -63,6 +67,19 @@ export class AuthController {
       });
 
       if (tenant) {
+        const settings = (tenant.settings as Record<string, unknown> | null) || {};
+        if (user.email && settings["specialAccessRevoked"] !== true) {
+          const isSpecialAuth = await this.specialAccessService.isEmailAuthorized(user.email);
+          if (isSpecialAuth && settings["specialAccessActive"] !== true) {
+            settings["specialAccessActive"] = true;
+            await this.prisma.tenant.update({
+              where: { id: tenant.id },
+              data: { settings: settings as Prisma.InputJsonValue },
+            });
+            tenant.settings = settings as Prisma.JsonValue;
+          }
+        }
+
         const planDetails = getTenantPlanDetails(tenant);
         isTrial = planDetails.isTrial;
         trialDaysLeft = planDetails.trialDaysLeft;

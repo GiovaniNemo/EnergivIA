@@ -24,6 +24,7 @@ import {
   Crown,
   Compass,
   SlidersHorizontal,
+  UserCheck,
 } from "lucide-react";
 
 export type SidebarSectionKey = "operation" | "management" | "admin" | "platform";
@@ -200,6 +201,14 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/admin/planos",
     section: "admin",
     requiresRole: "platform",
+  },
+  {
+    label: "Acessos Especiais",
+    icon: UserCheck,
+    path: "/admin/acessos-especiais",
+    section: "admin",
+    requiresRole: "platform",
+    tooltip: "Gestão de whitelist com inclusão por e-mail e revogação unificada de Web e WhatsApp",
   },
 
   {

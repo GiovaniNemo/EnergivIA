@@ -673,6 +673,18 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     });
 
     if (boundPhone && boundPhone.organization) {
+      const orgSettings =
+        (boundPhone.organization.settings as Record<string, unknown> | null) || {};
+      if (orgSettings["specialAccessRevoked"] === true) {
+        this.logger.warn(
+          `Tentativa de acesso via WhatsApp de organização com acesso especial revogado: ${boundPhone.organization.id}`
+        );
+        // Expurga o vínculo residual para garantir bloqueio definitivo
+        await this.prisma.tenantWhatsappInboundPhone.deleteMany({
+          where: { organizationId: boundPhone.organization.id },
+        });
+        return null;
+      }
       return boundPhone.organization;
     }
 

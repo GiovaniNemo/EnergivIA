@@ -39,6 +39,7 @@ import { PlansModule } from "./modules/plans/plans.module";
 import { WhatsappCoreModule } from "./modules/whatsapp/whatsapp-core.module";
 import { RadarModule } from "./modules/radar/radar.module";
 import { SystemSettingsModule } from "./modules/system-settings/system-settings.module";
+import { SpecialAccessModule } from "./modules/special-access/special-access.module";
 import { EmailModule } from "./common/email/email.module";
 import { AiUsageModule } from "./modules/ai-usage/ai-usage.module";
 import { WebhooksModule } from "./modules/webhooks/webhooks.module";
@@ -96,6 +97,7 @@ import { SearchModule } from "./modules/search/search.module";
     WhatsappCoreModule,
     RadarModule,
     SystemSettingsModule,
+    SpecialAccessModule,
     AiUsageModule,
     WebhooksModule,
     FeedbacksModule,

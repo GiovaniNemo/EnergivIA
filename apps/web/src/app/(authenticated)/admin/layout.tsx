@@ -32,7 +32,8 @@ function isStandaloneAdminPath(pathname: string | null): boolean {
     normalized.startsWith("/admin/modelos-template/") ||
     normalized.startsWith("/admin/planos") ||
     normalized.startsWith("/admin/metricas") ||
-    normalized.startsWith("/admin/sistema")
+    normalized.startsWith("/admin/sistema") ||
+    normalized.startsWith("/admin/acessos-especiais")
   );
 }
 
