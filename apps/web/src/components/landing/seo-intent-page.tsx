@@ -25,6 +25,7 @@ type SeoIntentPageProps = {
 };
 
 const appLoginUrl = "/login";
+const appSignupUrl = "/cadastro";
 
 export function SeoIntentPage({
   eyebrow,
@@ -209,7 +210,7 @@ export function SeoIntentPage({
           <p className="mt-3 max-w-3xl text-slate-300">{ctaDescription}</p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link
-              href={appLoginUrl}
+              href={appSignupUrl}
               className="inline-flex h-11 items-center justify-center rounded-full bg-emerald-400 px-6 text-sm font-semibold text-slate-950 transition-all hover:-translate-y-0.5 hover:bg-emerald-300"
             >
               Criar conta

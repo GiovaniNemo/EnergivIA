@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import { motion } from "framer-motion";
 
 const appLoginUrl = "/login";
+const appSignupUrl = "/cadastro";
 
 export function BeamqHeroSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -135,7 +136,7 @@ export function BeamqHeroSection() {
               Entrar
             </a>
             <a
-              href={appLoginUrl}
+              href={appSignupUrl}
               className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-semibold text-white rounded-full glass-pill border-emerald-500/40 hover:border-emerald-400/80 hover:bg-emerald-500/15 hover:shadow-[0_0_20px_rgba(16,185,129,0.25)] transition-all"
             >
               Começar Agora &rarr;
@@ -171,7 +172,7 @@ export function BeamqHeroSection() {
                 Entrar
               </a>
               <a
-                href={appLoginUrl}
+                href={appSignupUrl}
                 className="text-center py-3 font-semibold text-[#02040a] bg-gradient-to-r from-[#10b981] to-[#059669] rounded-lg"
               >
                 Começar Agora
@@ -246,7 +247,7 @@ export function BeamqHeroSection() {
             >
               {/* White Primary Button */}
               <a
-                href={appLoginUrl}
+                href={appSignupUrl}
                 className="w-full sm:w-auto bg-white text-black font-semibold rounded-full px-8 py-3.5 hover:scale-105 transition-transform duration-300 shadow-[0_0_25px_rgba(255,255,255,0.4)] text-[15px]"
               >
                 Criar Conta Grátis
