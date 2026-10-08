@@ -17,6 +17,7 @@ import { HowItWorksTabs } from "@/components/landing/how-it-works-tabs";
 import { ConvergingPanelsSection } from "@/components/landing/converging-panels-section";
 import { BeamqHeroSection } from "@/components/landing/beamq-hero-section";
 import { ImpactResultsSection } from "@/components/landing/impact-results-section";
+import { GlassyAuthCard } from "@/components/landing/glassy-auth-card";
 
 const appLoginUrl = "/login";
 
@@ -197,13 +198,13 @@ export default function HomePage(): JSX.Element {
         </section>
 
         {/* ------------------------------------------------------------- */}
-        {/* PRÓXIMO PASSO (CTA)                                          */}
+        {/* PRÓXIMO PASSO (CTA & CADASTRO)                                */}
         {/* ------------------------------------------------------------- */}
         <section
           id="para-quem"
           className="relative overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-16 sm:px-6 sm:py-24"
         >
-          <div className="relative z-10 mx-auto max-w-4xl rounded-3xl glass-panel bg-gradient-to-b from-[#061c16]/80 via-[#04120e]/80 to-[#02040a]/90 p-8 text-center shadow-[0_0_60px_rgba(16,185,129,0.12)] sm:p-12 border-emerald-500/30">
+          <div className="relative mx-auto max-w-4xl text-center mb-6">
             <span className="inline-flex items-center gap-1.5 rounded-full glass-pill border-emerald-500/30 bg-emerald-950/40 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
               <Sun className="h-3.5 w-3.5 text-emerald-400" />
               Próximo passo
@@ -212,26 +213,12 @@ export default function HomePage(): JSX.Element {
               Pronto para acelerar suas vendas solares?
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-slate-300 font-light text-base sm:text-lg">
-              Entre agora e transforme atendimento em proposta enviada em minutos, com mais
-              previsibilidade para o seu time comercial.
+              Crie sua conta agora mesmo ou acesse sua plataforma para transformar atendimento em
+              propostas prontas em minutos.
             </p>
-            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <a
-                href={appLoginUrl}
-                className="w-full sm:w-auto bg-white text-black font-semibold rounded-full px-8 py-3.5 hover:scale-105 transition-transform duration-300 shadow-[0_0_25px_rgba(255,255,255,0.4)] text-[15px]"
-              >
-                Criar conta grátis
-              </a>
-              <a
-                href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20ver%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergivIA."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto glass-pill border-white/20 text-white font-medium rounded-full px-8 py-3.5 hover:border-white/40 text-[15px]"
-              >
-                Ver demonstração
-              </a>
-            </div>
           </div>
+
+          <GlassyAuthCard initialMode="signup" isEmbedded redirectUrl="/auth/login" />
         </section>
 
         {/* ------------------------------------------------------------- */}
