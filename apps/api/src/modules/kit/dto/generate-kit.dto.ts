@@ -50,6 +50,10 @@ export class GenerateKitDto {
   @IsOptional()
   @IsNumber()
   monthly_yield?: number;
+
+  @IsOptional()
+  @IsNumber()
+  monthly_generation_factor?: number;
 }
 
 export class KitAlternativesDto extends GenerateKitDto {

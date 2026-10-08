@@ -783,7 +783,8 @@ export class KitGenerationService {
         ),
         estimated_monthly_generation_kwh: Math.round(
           built.systemPowerKw *
-            (input.monthly_yield && input.monthly_yield > 40 ? input.monthly_yield : 130)
+            (input.monthly_generation_factor ||
+              (input.monthly_yield && input.monthly_yield > 40 ? input.monthly_yield : 130))
         ),
       };
     };

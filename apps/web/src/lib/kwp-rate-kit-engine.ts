@@ -1,3 +1,5 @@
+import { getHsp } from "./geo-irradiance";
+
 export interface KwpRateKitItem {
   productId?: string;
   productName: string;
@@ -99,7 +101,13 @@ export function generateKwpRateTiers({
   // Regra fundamental: mínimo de 4 módulos para qualquer cotação
   const moduleQty = Math.max(4, Math.round((safeKwp * 1000) / modulePowerW));
   const realSystemKwp = Math.round(((moduleQty * modulePowerW) / 1000) * 100) / 100;
-  const estGenPerKwp = 130; // média nacional kWh/mês por kWp
+  let estGenPerKwp = 130; // média nacional kWh/mês por kWp
+  if (cidade || estado) {
+    const hspRes = getHsp(cidade || "São Paulo", estado || "SP");
+    if (hspRes && hspRes.hsp > 0) {
+      estGenPerKwp = Math.max(90, Math.min(180, Math.round(hspRes.hsp * 30 * 0.85)));
+    }
+  }
   const estGeneration = Math.round(realSystemKwp * estGenPerKwp);
 
   const roof = normalizeRoofDescription(roofType);
@@ -114,12 +122,12 @@ export function generateKwpRateTiers({
       description:
         "Equipamentos de entrada com ótimo custo-benefício para quem busca retorno rápido.",
       priceFactor: 1.0,
-      materialCostFactor: 0.88, // materiais ~12% mais econômicos
-      inverterBrand: "Growatt",
+      materialCostFactor: 0.88,
+      inverterBrand: "GoodWe",
       inverterPowerKw: invPower,
-      inverterModel: `Inversor Solar Growatt ${invPower}kW Monofásico/Bifásico`,
-      moduleBrand: "DAH Solar",
-      moduleModel: `Módulo Fotovoltaico DAH Solar ${modulePowerW}W N-Type Bifacial`,
+      inverterModel: `Inversor GoodWe ${invPower}kW`,
+      moduleBrand: "Astronergy",
+      moduleModel: `Módulo Astronergy ${modulePowerW}W`,
     },
     {
       id: "cost_benefit" as const,
@@ -128,12 +136,12 @@ export function generateKwpRateTiers({
       tagline: "Melhor equilíbrio entre preço, tecnologia e durabilidade",
       description: "A linha mais procurada por integradores e clientes finais no Brasil.",
       priceFactor: 1.0,
-      materialCostFactor: 1.0, // padrão de mercado
-      inverterBrand: "Deye",
+      materialCostFactor: 1.0,
+      inverterBrand: "SAJ",
       inverterPowerKw: invPower,
-      inverterModel: `Inversor Solar Deye ${invPower}kW String On-Grid`,
-      moduleBrand: "Canadian Solar",
-      moduleModel: `Módulo Canadian Solar ${modulePowerW}W TOPBiHiKu6 N-Type`,
+      inverterModel: `Inversor SAJ ${invPower}kW`,
+      moduleBrand: "LONGi Solar",
+      moduleModel: `Módulo LONGi Solar ${modulePowerW}W`,
     },
     {
       id: "premium" as const,
@@ -142,12 +150,12 @@ export function generateKwpRateTiers({
       tagline: "Tecnologia de ponta, marcas Tier 1 globais e garantia estendida",
       description: "Para clientes exigentes que buscam máxima performance e durabilidade.",
       priceFactor: 1.0,
-      materialCostFactor: 1.15, // materiais Tier 1 (~15% maior valor agregado)
-      inverterBrand: "Huawei",
+      materialCostFactor: 1.15,
+      inverterBrand: "Solplanet",
       inverterPowerKw: invPower,
-      inverterModel: `Inversor Solar Inteligente Huawei SUN2000-${invPower}KTL`,
+      inverterModel: `Inversor Solplanet ${invPower}kW`,
       moduleBrand: "Jinko Solar",
-      moduleModel: `Módulo Fotovoltaico Jinko Solar ${modulePowerW}W Tiger Neo N-Type`,
+      moduleModel: `Módulo Jinko Solar ${modulePowerW}W`,
     },
   ];
 
@@ -322,11 +330,9 @@ export function generateKwpRateTiers({
     const materialsTotal = structuredItems.reduce((acc, it) => acc + it.lineTotal, 0);
 
     const kitSummaryLines = [
-      `• Inversor: ${cfg.inverterModel}`,
-      `• Módulos: ${moduleQty}x ${cfg.moduleModel}`,
+      `• ${moduleQty}x Módulos ${cfg.moduleBrand} ${modulePowerW}W`,
+      `• 1x Inversor ${cfg.inverterBrand} ${invPower}kW`,
       roof.code !== "none" ? `• Estrutura: ${roof.label}` : null,
-      `• Cabos: ${cableMeters}m Preto + ${cableMeters}m Vermelho 6mm²`,
-      `• Conectores: 4x Pares MC4 IP68`,
     ].filter(Boolean) as string[];
 
     return {

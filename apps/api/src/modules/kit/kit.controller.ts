@@ -104,6 +104,7 @@ export class KitController {
         string_box_id: dto.string_box_id,
         target_inverter_qty: dto.target_inverter_qty,
         monthly_yield: dto.monthly_yield,
+        monthly_generation_factor: dto.monthly_generation_factor,
       },
       organizationId
     );

@@ -1787,8 +1787,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     void _gridVoltage;
 
     let finalTargetKWp = 3.0;
-    const geracaoPorKwp = 130; // média nacional
-    let monthlyFactor = geracaoPorKwp;
+    let monthlyFactor = 130;
     if (cidade || estado) {
       const hspRes = this.geoIrradiance.getHsp(cidade || "São Paulo", estado || "SP");
       if (hspRes && hspRes.hsp > 0) {
@@ -1831,6 +1830,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
             roof_type: mappedRoofType,
             inverter_type: (inverterType as any) || "string",
             monthly_yield: monthlyFactor,
+            monthly_generation_factor: monthlyFactor,
           },
           organizationId
         );
@@ -1872,7 +1872,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
               ratePerKwp,
               materialsTotal: t.equipment_total,
               kwp: realSystemKwp,
-              estimatedGeneration: t.estimated_monthly_generation_kwh,
+              estimatedGeneration: Math.round(realSystemKwp * (monthlyFactor || 130)),
               items: kitItems,
               invName: t.inverter_brand,
               modCount: t.module_qty,
@@ -2031,7 +2031,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         ratePerKwp,
         materialsTotal: baseEquipmentBudget,
         kwp: realSystemKwp,
-        estimatedGeneration: Math.round(realSystemKwp * geracaoPorKwp),
+        estimatedGeneration: Math.round(realSystemKwp * (monthlyFactor || 130)),
         items: kitItems,
         invName: cfg.inverterBrand,
         modCount: moduleQty,
@@ -2455,6 +2455,49 @@ ${catalogContext}`;
     }
   }
 
+  public async processWebChatMessage({
+    messages,
+    incomingText,
+    organizationId,
+    contactName,
+    extractionResult,
+  }: {
+    messages?: Array<{
+      role: string;
+      content?: string | null;
+      metadata?: unknown;
+    }>;
+    incomingText?: string;
+    organizationId?: string;
+    contactName?: string;
+    extractionResult?: BillExtractionResult | null;
+  }): Promise<string> {
+    let orgId = (organizationId || "").trim();
+    if (!orgId) {
+      try {
+        const firstTenant = await this.prisma.tenant.findFirst({ select: { id: true } });
+        orgId = firstTenant?.id || "default-org";
+      } catch {
+        orgId = "default-org";
+      }
+    }
+
+    const conversation = {
+      id: "web-chat-session",
+      organizationId: orgId,
+      title: "Web Chat",
+      metadata: { contactName: contactName || "Integrador" },
+      messages: messages || [],
+    };
+
+    return this.generateBotResponse({
+      conversation,
+      incomingText: incomingText || "",
+      extractionResult: extractionResult || null,
+      contactName,
+    });
+  }
+
   private async generateBotResponse({
     conversation,
     incomingText,
@@ -2637,7 +2680,7 @@ ${catalogContext}`;
               /(?:Localização Identificada|Localização Corrigida|Localização Mantida|Cidade):?[_*\s!]*`?\*?([^*\/`\n]+)\/([A-Za-z]{2})\*?`?/i
             ) ||
             content.match(
-              /(?:em|para)\s+`?\*?([^*\/`\n]{3,40})\/([A-Za-z]{2})\*?`?\s*(?:☀️|📍|\n|$)/i
+              /(?:em|para)\s+`?\*?([^*\/`\n]{3,40})\/([A-Za-z]{2})\*?`?\s*(?:\(|☀️|📍|\n|$|\s)/i
             );
           if (locM && locM[1] && locM[2]) {
             cidade = locM[1].replace(/[*_`]/g, "").trim();

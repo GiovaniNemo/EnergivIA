@@ -11,6 +11,7 @@ export interface GenerateKitInput {
   string_box_id?: string;
   target_inverter_qty?: number;
   monthly_yield?: number;
+  monthly_generation_factor?: number;
 }
 
 export type KitSwapCategory = "module" | "inverter";

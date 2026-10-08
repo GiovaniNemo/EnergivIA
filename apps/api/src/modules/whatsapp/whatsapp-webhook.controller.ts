@@ -13,7 +13,7 @@ import { Public } from "../../common/decorators/public.decorator";
 import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator";
 import { ConfigService } from "@nestjs/config";
 import { Response } from "express";
-import { WhatsappBotService } from "./whatsapp-bot.service";
+import { WhatsappBotService, BillExtractionResult } from "./whatsapp-bot.service";
 
 @Controller(["whatsapp", "api/whatsapp"])
 @SkipTrialLock()
@@ -86,5 +86,26 @@ export class WhatsappWebhookController {
       this.logger.error("Erro no processamento do webhook Evolution WhatsApp:", err);
     });
     return { status: "SUCCESS" };
+  }
+
+  @Public()
+  @Post("web-chat")
+  @HttpCode(HttpStatus.OK)
+  async handleWebChat(
+    @Body()
+    body: {
+      messages?: Array<{
+        role: string;
+        content?: string | null;
+        metadata?: unknown;
+      }>;
+      incomingText?: string;
+      organizationId?: string;
+      contactName?: string;
+      extractionResult?: BillExtractionResult | null;
+    }
+  ) {
+    const replyText = await this.botService.processWebChatMessage(body);
+    return { replyText };
   }
 }
