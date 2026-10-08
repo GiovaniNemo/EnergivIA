@@ -1013,8 +1013,8 @@ export const ProposalEconomicsModal = forwardRef<
     const row = geoCities.find((c) => c.id === selectedCity?.id);
     const fromDb = irradiacaoFromSolarResource(row?.solarResource);
     if (fromDb != null) return fromDb;
-    if (selectedCity) return 145;
-    return 140;
+    if (selectedCity) return 125;
+    return 120;
   }, [geoCities, selectedCity?.id]);
 
   const localSolarYield = useMemo(() => {
@@ -1025,7 +1025,7 @@ export const ProposalEconomicsModal = forwardRef<
       proposalKitDraft.roof ??
       "ceramic") as QuickEconomiaRoofType;
     const roofF = getRoofSolarFactor(roof);
-    return Math.max(40, (heuristicaIrradiacao || 145) * roofF);
+    return Math.max(40, (heuristicaIrradiacao || 125) * roofF);
   }, [
     generatedProposal?.geracaoBase,
     generatedProposal?.roofType,

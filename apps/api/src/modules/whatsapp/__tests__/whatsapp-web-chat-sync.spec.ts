@@ -1,7 +1,77 @@
 import { describe, it, expect } from "vitest";
 import { getHsp } from "../services/geo-irradiance.service";
+import { WhatsappBotService } from "../whatsapp-bot.service";
 
 describe("WhatsApp & Web Chat Engine Synchronization Suite", () => {
+  describe("Individual kit tier presentation in WhatsApp and Bot listings", () => {
+    const mockQuotes = [
+      {
+        distributorName: "Standard",
+        kwp: 3.48,
+        estimatedGeneration: 435,
+        items: [
+          "• 6x Módulos Astronergy 580W",
+          "• 1x Inversor SAJ 3kW",
+          "• Estrutura: Fibrocimento",
+        ],
+      },
+      {
+        distributorName: "Elite",
+        kwp: 3.1,
+        estimatedGeneration: 388,
+        items: [
+          "• 5x Módulos LONGI Solar 620W",
+          "• 1x Inversor Growatt 3kW",
+          "• Estrutura: Fibrocimento",
+        ],
+      },
+      {
+        distributorName: "Premium",
+        kwp: 3.18,
+        estimatedGeneration: 397,
+        items: [
+          "• 5x Módulos Jinko Solar 635W",
+          "• 1x Inversor Solplanet 3kW",
+          "• Estrutura: Fibrocimento",
+        ],
+      },
+    ];
+
+    it("should NOT display a single fixed kWp/generation in the global header", () => {
+      const rendered = WhatsappBotService.prototype.formatQuotesListText.call(
+        {} as unknown as WhatsappBotService,
+        mockQuotes,
+        { consumptionKwh: 416, cidade: "Maringá", estado: "PR" }
+      );
+
+      // The global header should NOT fixate on first quote's kwp
+      const lines = rendered.split("\n");
+      const headerSection = lines.slice(0, 3).join("\n");
+      expect(headerSection).not.toContain("⚡ Potência: `3.48 kWp`");
+      expect(headerSection).toContain("consumo de `416 kWh/mês` em `Maringá/PR`");
+    });
+
+    it("should display individual power (kWp) and estimated monthly generation for EACH option", () => {
+      const rendered = WhatsappBotService.prototype.formatQuotesListText.call(
+        {} as unknown as WhatsappBotService,
+        mockQuotes,
+        { consumptionKwh: 416, cidade: "Maringá", estado: "PR" }
+      );
+
+      // Option 1 has 3.48 kWp / 435 kWh/mês
+      expect(rendered).toContain("*_Opção 1 — Standard (Mais Recomendado)_* 🏆");
+      expect(rendered).toContain("⚡ Potência: `3.48 kWp` | Geração estimada: `435 kWh/mês`");
+
+      // Option 2 has 3.1 kWp / 388 kWh/mês
+      expect(rendered).toContain("*_Opção 2 — Elite_*");
+      expect(rendered).toContain("⚡ Potência: `3.1 kWp` | Geração estimada: `388 kWh/mês`");
+
+      // Option 3 has 3.18 kWp / 397 kWh/mês
+      expect(rendered).toContain("*_Opção 3 — Premium_*");
+      expect(rendered).toContain("⚡ Potência: `3.18 kWp` | Geração estimada: `397 kWh/mês`");
+    });
+  });
+
   describe("Context extraction from Web Assistant bill summary (Screenshot 3)", () => {
     const webAssistantMsg =
       "Legal, dados extraídos com precisão!\n\n" +
@@ -39,6 +109,22 @@ describe("WhatsApp & Web Chat Engine Synchronization Suite", () => {
       const estado = locM![2].replace(/[*_`]/g, "").trim().toUpperCase();
       expect(cidade).toBe("Senador Canedo");
       expect(estado).toBe("GO");
+    });
+
+    it("should extract Maringá/PR location when formatted with backticks and trailing period", () => {
+      const msg = "Consumo médio de `416 kWh/mês` em `Maringá/PR`.\n\nQual a estrutura do telhado?";
+      const locM =
+        msg.match(
+          /(?:Localização Identificada|Localização Corrigida|Localização Mantida|Cidade):?[_*\s!]*`?\*?([^*\/`\n]+)\/([A-Za-z]{2})\*?`?/i
+        ) ||
+        msg.match(
+          /(?:em|para)\s+`?\*?([^*\/`\n]{3,40})\/([A-Za-z]{2})\*?`?\s*(?:\.|\(|☀️|📍|\n|$|\s)/i
+        );
+      expect(locM).not.toBeNull();
+      const cidade = locM![1].replace(/[*_`]/g, "").trim();
+      const estado = locM![2].replace(/[*_`]/g, "").trim().toUpperCase();
+      expect(cidade).toBe("Maringá");
+      expect(estado).toBe("PR");
     });
 
     it("should identify roof question state from the assistant message", () => {

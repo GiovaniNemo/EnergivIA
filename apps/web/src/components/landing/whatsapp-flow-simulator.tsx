@@ -867,22 +867,16 @@ export function WhatsappFlowSimulator(): JSX.Element {
                               </code>
                               :
                             </p>
-                            <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r text-[13px] sm:text-[13.5px]">
-                              Potência:{" "}
-                              <code className="font-mono text-[12.5px] bg-black/[0.04] px-1 py-0.5 rounded font-semibold">
-                                3,15 kWp
-                              </code>{" "}
-                              | Geração estimada:{" "}
-                              <code className="font-mono text-[12.5px] bg-black/[0.04] px-1 py-0.5 rounded font-semibold">
-                                268 kWh/mês
-                              </code>
-                            </div>
-
                             <div className="pt-0.5 space-y-0.5">
                               <p className="font-semibold text-[#111b21]">
                                 Opção 1 — Standard (Mais Recomendado)
                               </p>
                               <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r text-[12.5px] sm:text-[13px] space-y-0.5">
+                                <p className="font-medium text-[#111b21]">
+                                  ⚡ Potência: <span className="font-semibold">3,15 kWp</span> |
+                                  Geração estimada:{" "}
+                                  <span className="font-semibold">394 kWh/mês</span>
+                                </p>
                                 <p>• 5x Módulo Solar 630W N-Type TopCon</p>
                                 <p>• 1x Inversor String 3kW Monofásico 220V</p>
                                 <p>• Estrutura Cerâmica Completa + Cabos e Conectores</p>
@@ -895,6 +889,11 @@ export function WhatsappFlowSimulator(): JSX.Element {
                             <div className="space-y-0.5">
                               <p className="font-semibold text-[#111b21]">Opção 2 — Elite</p>
                               <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r text-[12.5px] sm:text-[13px] space-y-0.5">
+                                <p className="font-medium text-[#111b21]">
+                                  ⚡ Potência: <span className="font-semibold">3,15 kWp</span> |
+                                  Geração estimada:{" "}
+                                  <span className="font-semibold">394 kWh/mês</span>
+                                </p>
                                 <p>• 5x Módulo Solar 630W Bifacial + Microinversor</p>
                                 <p className="font-medium text-[#111b21] pt-0.5">
                                   Valor: R$ 9.450,00
@@ -905,6 +904,11 @@ export function WhatsappFlowSimulator(): JSX.Element {
                             <div className="space-y-0.5">
                               <p className="font-semibold text-[#111b21]">Opção 3 — Premium</p>
                               <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r text-[12.5px] sm:text-[13px] space-y-0.5">
+                                <p className="font-medium text-[#111b21]">
+                                  ⚡ Potência: <span className="font-semibold">3,40 kWp</span> |
+                                  Geração estimada:{" "}
+                                  <span className="font-semibold">425 kWh/mês</span>
+                                </p>
                                 <p>• 5x Módulo Solar 680W N-Type + Inversor Híbrido</p>
                                 <p className="font-medium text-[#111b21] pt-0.5">
                                   Valor: R$ 10.200,00

@@ -3,6 +3,7 @@ import {
   parseExtractedNumber,
   parseBillLocation,
   simulateProposal,
+  irradiacaoFromSolarResource,
   computeProjectCostSection,
   projectCostRuleMatchesKwp,
   getDefaultEssentialRulesForSeeding,
@@ -51,6 +52,24 @@ describe("Proposal Economia - Financial & Cost Suite", () => {
     it("should handle empty or unparseable text gracefully", () => {
       expect(parseBillLocation("")).toEqual({});
       expect(parseBillLocation("Endereço sem cidade nem UF")).toEqual({});
+    });
+  });
+
+  describe("irradiacaoFromSolarResource", () => {
+    it("should apply 0.85 Performance Ratio factor to raw solar resource", () => {
+      const res = irradiacaoFromSolarResource({ annual: 5100 });
+      expect(res).toBe(144.5);
+    });
+
+    it("should calculate realistic generation factor for Maringá solar resource (~125 kWh/kWp/month)", () => {
+      const res = irradiacaoFromSolarResource({ annual: 4410 });
+      expect(res).toBeCloseTo(125, 0);
+    });
+
+    it("should return undefined for invalid or missing solar resources", () => {
+      expect(irradiacaoFromSolarResource(null)).toBeUndefined();
+      expect(irradiacaoFromSolarResource({})).toBeUndefined();
+      expect(irradiacaoFromSolarResource({ annual: -5 })).toBeUndefined();
     });
   });
 

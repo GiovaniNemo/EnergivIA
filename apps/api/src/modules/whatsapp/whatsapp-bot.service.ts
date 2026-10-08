@@ -2187,7 +2187,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Etapa 1: lista os grupos de kits (sem preço) para o integrador escolher */
-  private formatQuotesListText(
+  public formatQuotesListText(
     quotes: any[],
     sessionCtx: {
       targetKWp?: number;
@@ -2212,10 +2212,6 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         : `para o consumo de \`${sessionCtx.consumptionKwh || 300} kWh/mês\`${localidade}`;
 
     let quoteText = `Excelente! Seguem os grupos de kits dimensionados ${infoCabecalho}:\n\n`;
-    const first = quotes[0];
-    if (first) {
-      quoteText += `> ⚡ Potência: \`${first.kwp} kWp\` | Geração estimada: \`${first.estimatedGeneration} kWh/mês\`\n\n`;
-    }
 
     quotes.forEach((q, index) => {
       const tierName =
@@ -2225,6 +2221,9 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       const trophy = isTop ? " 🏆" : "";
 
       quoteText += `*_Opção ${index + 1} — ${tierName}${tag}_*${trophy}\n`;
+      if (q.kwp && q.estimatedGeneration) {
+        quoteText += `> ⚡ Potência: \`${q.kwp} kWp\` | Geração estimada: \`${q.estimatedGeneration} kWh/mês\`\n`;
+      }
 
       const items: string[] =
         q.items && q.items.length > 0
@@ -2721,7 +2720,7 @@ ${catalogContext}`;
               /(?:Localização Identificada|Localização Corrigida|Localização Mantida|Cidade):?[_*\s!]*`?\*?([^*\/`\n]+)\/([A-Za-z]{2})\*?`?/i
             ) ||
             content.match(
-              /(?:em|para)\s+`?\*?([^*\/`\n]{3,40})\/([A-Za-z]{2})\*?`?\s*(?:\(|☀️|📍|\n|$|\s)/i
+              /(?:em|para)\s+`?\*?([^*\/`\n]{3,40})\/([A-Za-z]{2})\*?`?\s*(?:\.|\(|☀️|📍|\n|$|\s)/i
             );
           if (locM && locM[1] && locM[2]) {
             cidade = locM[1].replace(/[*_`]/g, "").trim();
@@ -3030,6 +3029,17 @@ ${catalogContext}`;
     };
 
     const sessionCtx = extractContextFromSession();
+    if (extractionResult && extractionResult.data) {
+      if (extractionResult.data.cidade && !sessionCtx.cidade) {
+        sessionCtx.cidade = extractionResult.data.cidade;
+      }
+      if (extractionResult.data.uf && !sessionCtx.estado) {
+        sessionCtx.estado = extractionResult.data.uf.trim().toUpperCase();
+      }
+      if (extractionResult.exactAverageKwh && !sessionCtx.consumptionKwh) {
+        sessionCtx.consumptionKwh = extractionResult.exactAverageKwh;
+      }
+    }
 
     // Helper: recalcula os grupos de kits para a sessão atual
     const kitsFor = (overrides: { roofType?: string; customRatePerKwp?: number } = {}) =>
