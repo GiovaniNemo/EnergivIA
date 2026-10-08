@@ -177,7 +177,7 @@ export function ImpactResultsSection(): JSX.Element {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/40 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
+            className="inline-flex items-center gap-1.5 rounded-full glass-pill border-emerald-500/30 bg-emerald-950/40 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
           >
             <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
             Resultados Comprovados
@@ -210,7 +210,7 @@ export function ImpactResultsSection(): JSX.Element {
                   y: -6,
                   transition: { duration: 0.2 },
                 }}
-                className="group relative flex flex-col justify-between rounded-2xl border border-white/10 bg-[#070b14]/80 p-6 shadow-xl backdrop-blur-md transition-all duration-300 hover:border-emerald-500/40 hover:shadow-[0_0_30px_rgba(16,185,129,0.15)]"
+                className="group relative flex flex-col justify-between rounded-2xl glass-card glass-card-hover p-6"
               >
                 {/* Subtle top glow highlight */}
                 <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
@@ -255,7 +255,7 @@ export function ImpactResultsSection(): JSX.Element {
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
           transition={{ duration: 0.6, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="relative mt-10 overflow-hidden rounded-2xl border border-white/10 bg-[#070b14]/70 p-8 shadow-xl backdrop-blur-md"
+          className="relative mt-10 overflow-hidden rounded-2xl glass-panel p-8"
         >
           {/* Subtle background gradient accent */}
           <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/10 blur-2xl" />
@@ -318,7 +318,7 @@ export function ImpactResultsSection(): JSX.Element {
               <button
                 type="button"
                 onClick={handlePrevTestimonial}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white transition"
+                className="flex h-8 w-8 items-center justify-center rounded-full glass-pill text-slate-300 hover:text-white transition"
                 aria-label="Depoimento anterior"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -326,7 +326,7 @@ export function ImpactResultsSection(): JSX.Element {
               <button
                 type="button"
                 onClick={handleNextTestimonial}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white transition"
+                className="flex h-8 w-8 items-center justify-center rounded-full glass-pill text-slate-300 hover:text-white transition"
                 aria-label="Próximo depoimento"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -340,7 +340,7 @@ export function ImpactResultsSection(): JSX.Element {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, delay: 0.6 }}
-          className="mt-8 overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] py-5 px-4 backdrop-blur-xs"
+          className="mt-8 overflow-hidden rounded-2xl glass-panel py-5 px-4"
         >
           <div className="flex items-center justify-center gap-2 mb-4">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />

@@ -65,7 +65,7 @@ export function HowItWorksTabs(): JSX.Element {
 
       <div className="relative mx-auto max-w-6xl">
         <div className="text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center px-4 py-1.5 mb-4 rounded-full border border-emerald-500/30 bg-emerald-950/30 backdrop-blur-sm shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+          <div className="inline-flex items-center px-4 py-1.5 mb-4 rounded-full glass-pill border-emerald-500/30 bg-emerald-950/30 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
             <span className="text-[#10b981] text-xs font-bold uppercase tracking-[0.25em]">
               DEMONSTRAÇÃO INTERATIVA
             </span>
@@ -80,7 +80,7 @@ export function HowItWorksTabs(): JSX.Element {
         </div>
 
         {/* Tab Selection */}
-        <div className="mt-10 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-2 sm:grid-cols-2 backdrop-blur-xl">
+        <div className="mt-10 grid gap-3 rounded-2xl glass-panel p-2 sm:grid-cols-2">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -91,8 +91,8 @@ export function HowItWorksTabs(): JSX.Element {
                 className={[
                   "rounded-xl px-5 py-4 text-left transition-all duration-300 relative overflow-hidden group",
                   isActive
-                    ? "border border-emerald-500/40 bg-gradient-to-r from-emerald-950/50 via-[#071914]/80 to-[#070b14]/80 shadow-[0_0_25px_rgba(16,185,129,0.15)] ring-1 ring-emerald-400/30"
-                    : "border border-transparent bg-transparent text-slate-400 hover:bg-white/[0.03] hover:text-slate-200 hover:border-white/5",
+                    ? "glass-card border-emerald-500/50 bg-gradient-to-r from-emerald-950/50 via-[#071914]/80 to-[#070b14]/80 shadow-[0_0_25px_rgba(16,185,129,0.18)] ring-1 ring-emerald-400/30"
+                    : "glass-pill border-white/5 text-slate-400 hover:border-white/15 hover:text-slate-200",
                 ].join(" ")}
                 aria-pressed={isActive}
               >
@@ -122,8 +122,8 @@ export function HowItWorksTabs(): JSX.Element {
         </div>
 
         {/* Main Interactive Container */}
-        <div className="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-[#060a12]/90 backdrop-blur-2xl shadow-[0_20px_70px_rgba(0,0,0,0.9),0_0_40px_rgba(16,185,129,0.05)] ring-1 ring-emerald-500/10">
-          <div className="flex items-center justify-between border-b border-white/10 bg-[#090e1a]/60 px-6 py-3.5 text-slate-200">
+        <div className="mt-6 overflow-hidden rounded-3xl glass-panel shadow-[0_20px_70px_rgba(0,0,0,0.9),0_0_40px_rgba(16,185,129,0.05)] ring-1 ring-emerald-500/15">
+          <div className="flex items-center justify-between border-b border-white/10 bg-[#090e1a]/70 backdrop-blur-md px-6 py-3.5 text-slate-200">
             <div className="flex items-center gap-2.5">
               <span className="text-emerald-400">{tabIcon}</span>
               <p className="text-sm font-semibold tracking-wide">
@@ -157,7 +157,7 @@ function ProposalsDemoContent(): JSX.Element {
         {proposalPreviewItems.map((item) => (
           <article
             key={item.id}
-            className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#070b14]/80 shadow-xl transition-all duration-300 hover:border-emerald-500/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.15)]"
+            className="group flex flex-col justify-between overflow-hidden rounded-2xl glass-card glass-card-hover border-white/10 hover:border-emerald-500/40"
           >
             <div className="h-[290px] sm:h-[310px] w-full p-2.5 sm:p-3 bg-[#03060c]">
               <MockProposalPreview
@@ -166,7 +166,7 @@ function ProposalsDemoContent(): JSX.Element {
                 compact
               />
             </div>
-            <div className="border-t border-white/10 bg-[#090d18]/80 p-4">
+            <div className="border-t border-white/10 bg-[#090d18]/60 backdrop-blur-md p-4">
               <p className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors">
                 {item.title}
               </p>

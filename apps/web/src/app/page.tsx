@@ -80,9 +80,10 @@ export default function HomePage(): JSX.Element {
           id="diferenciais"
           className="relative overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24"
         >
-          <div className="mx-auto max-w-6xl">
+          <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.08),transparent_70%)]" />
+          <div className="relative mx-auto max-w-6xl">
             <div className="relative mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+              <span className="inline-flex items-center gap-1.5 rounded-full glass-pill border-emerald-500/30 bg-emerald-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
                 <Zap className="h-3.5 w-3.5 text-emerald-400" />
                 Diferenciais reais
               </span>
@@ -131,7 +132,7 @@ export default function HomePage(): JSX.Element {
                   <article
                     key={item.title}
                     className={[
-                      "group relative overflow-hidden rounded-3xl border border-white/10 bg-[#070b14]/80 p-7 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/40 hover:shadow-[0_0_30px_rgba(16,185,129,0.12)] backdrop-blur-md",
+                      "group relative overflow-hidden rounded-3xl glass-card glass-card-hover p-7",
                       index === 0 || index === 3 ? "md:col-span-2" : "",
                     ].join(" ")}
                   >
@@ -162,7 +163,7 @@ export default function HomePage(): JSX.Element {
         >
           <div className="relative mx-auto max-w-4xl">
             <div className="mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+              <span className="inline-flex items-center rounded-full glass-pill border-emerald-500/30 bg-emerald-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
                 FAQ
               </span>
               <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
@@ -178,7 +179,7 @@ export default function HomePage(): JSX.Element {
               {faqItems.map((item) => (
                 <details
                   key={item.question}
-                  className="group rounded-2xl border border-white/10 bg-[#070b14]/70 px-6 py-4 shadow-sm transition-all duration-200 hover:border-emerald-500/30 backdrop-blur-md"
+                  className="group rounded-2xl glass-card glass-card-hover px-6 py-4 shadow-sm"
                 >
                   <summary className="cursor-pointer list-none pr-6 text-left text-base font-semibold text-white marker:content-none flex items-center justify-between">
                     <span>{item.question}</span>
@@ -202,8 +203,8 @@ export default function HomePage(): JSX.Element {
           id="para-quem"
           className="relative overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-16 sm:px-6 sm:py-24"
         >
-          <div className="relative z-10 mx-auto max-w-4xl rounded-3xl border border-emerald-500/30 bg-gradient-to-b from-[#061c16] via-[#04120e] to-[#02040a] p-8 text-center shadow-[0_0_60px_rgba(16,185,129,0.12)] sm:p-12 backdrop-blur-xl">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/40 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+          <div className="relative z-10 mx-auto max-w-4xl rounded-3xl glass-panel bg-gradient-to-b from-[#061c16]/80 via-[#04120e]/80 to-[#02040a]/90 p-8 text-center shadow-[0_0_60px_rgba(16,185,129,0.12)] sm:p-12 border-emerald-500/30">
+            <span className="inline-flex items-center gap-1.5 rounded-full glass-pill border-emerald-500/30 bg-emerald-950/40 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
               <Sun className="h-3.5 w-3.5 text-emerald-400" />
               Próximo passo
             </span>
@@ -225,7 +226,7 @@ export default function HomePage(): JSX.Element {
                 href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20ver%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergivIA."
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto bg-white/10 backdrop-blur-md border border-white/20 text-white font-medium rounded-full px-8 py-3.5 hover:bg-white/20 transition-all duration-300 text-[15px]"
+                className="w-full sm:w-auto glass-pill border-white/20 text-white font-medium rounded-full px-8 py-3.5 hover:border-white/40 text-[15px]"
               >
                 Ver demonstração
               </a>
@@ -237,8 +238,8 @@ export default function HomePage(): JSX.Element {
         {/* SEO ARTICLES & LINKS                                          */}
         {/* ------------------------------------------------------------- */}
         <section className="relative overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-16 sm:px-6 sm:py-20">
-          <div className="relative mx-auto max-w-5xl rounded-3xl border border-white/10 bg-[#070b14]/70 p-6 shadow-xl sm:p-8 backdrop-blur-md">
-            <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+          <div className="relative mx-auto max-w-5xl rounded-3xl glass-panel p-6 shadow-xl sm:p-8">
+            <span className="inline-flex items-center rounded-full glass-pill border-emerald-500/30 bg-emerald-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
               Conteúdo para integradores
             </span>
             <h2 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl">
@@ -300,7 +301,7 @@ export default function HomePage(): JSX.Element {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#03060c] p-4 transition-all hover:-translate-y-0.5 hover:border-emerald-500/40 hover:shadow-[0_0_20px_rgba(16,185,129,0.1)]"
+                    className="flex items-start gap-3 rounded-xl glass-card glass-card-hover p-4 border-white/10 hover:border-emerald-500/40"
                   >
                     <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-950/50 border border-emerald-500/20 text-emerald-300">
                       <Icon className="h-4 w-4" />

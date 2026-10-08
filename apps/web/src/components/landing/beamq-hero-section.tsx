@@ -94,7 +94,7 @@ export function BeamqHeroSection() {
       </div>
 
       {/* Navigation Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-black/40 backdrop-blur-md border-b border-white/5">
+      <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-[#02040a]/65 backdrop-blur-xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 lg:px-12 py-2.5 sm:py-3">
           {/* Brand Logo */}
           <Link
@@ -136,7 +136,7 @@ export function BeamqHeroSection() {
             </a>
             <a
               href={appLoginUrl}
-              className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-semibold text-white rounded-full bg-white/5 backdrop-blur-md border border-emerald-500/40 hover:border-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-500/10 transition-all"
+              className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-semibold text-white rounded-full glass-pill border-emerald-500/40 hover:border-emerald-400/80 hover:bg-emerald-500/15 hover:shadow-[0_0_20px_rgba(16,185,129,0.25)] transition-all"
             >
               Começar Agora &rarr;
             </a>
@@ -190,7 +190,7 @@ export function BeamqHeroSection() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="inline-flex items-center px-4 py-1.5 mb-8 rounded-full border border-emerald-500/30 bg-emerald-950/30 backdrop-blur-sm shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+              className="inline-flex items-center px-4 py-1.5 mb-8 rounded-full glass-pill border-emerald-500/30 bg-emerald-950/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
             >
               <span className="text-[#10b981] text-xs sm:text-sm font-bold uppercase tracking-[0.3em]">
                 INTELIGENTE • SEGURO • ESCALÁVEL
@@ -255,7 +255,7 @@ export function BeamqHeroSection() {
               {/* Glass Secondary Button */}
               <a
                 href="#como-funciona"
-                className="w-full sm:w-auto bg-white/10 backdrop-blur-md border border-white/30 text-white font-medium rounded-full px-7 py-3.5 hover:bg-white/20 transition-all duration-300 text-[15px]"
+                className="w-full sm:w-auto glass-pill border-white/20 text-white font-medium rounded-full px-7 py-3.5 hover:border-white/40 transition-all duration-300 text-[15px]"
               >
                 Como Funciona
               </a>
