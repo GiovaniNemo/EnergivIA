@@ -202,9 +202,9 @@ export function GlassyAuthCard({
                       className="mt-8"
                     >
                       <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-[1.15]">
-                        WELCOME <br />
+                        BEM-VINDO <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-300 to-white">
-                          BACK!
+                          DE VOLTA!
                         </span>
                       </h2>
                       <p className="mt-4 text-sm sm:text-base text-slate-300 font-light leading-relaxed">
@@ -243,7 +243,7 @@ export function GlassyAuthCard({
                   onClick={() => setMode(mode === "signup" ? "login" : "signup")}
                   className="group inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white glass-pill border-white/20 hover:border-emerald-400/60 hover:bg-emerald-500/15 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
                 >
-                  <span>{mode === "signup" ? "Sign In" : "Sign Up"}</span>
+                  <span>{mode === "signup" ? "Já tem conta? Entrar" : "Criar nova conta"}</span>
                   <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 text-emerald-400" />
                 </button>
               </div>
@@ -261,7 +261,7 @@ export function GlassyAuthCard({
                     transition={{ duration: 0.25 }}
                   >
                     <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-                      {mode === "signup" ? "Create Account" : "Sign In"}
+                      {mode === "signup" ? "Criar Conta" : "Entrar na Plataforma"}
                     </h3>
                     <p className="mt-1.5 text-xs sm:text-sm text-slate-400 font-light">
                       {mode === "signup"
@@ -278,7 +278,7 @@ export function GlassyAuthCard({
                           <input
                             type="text"
                             required
-                            placeholder="Full Name"
+                            placeholder="Nome completo"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-3 pl-10 pr-4 text-sm text-white placeholder-slate-400 outline-none backdrop-blur-md transition-all focus:border-emerald-500/50 focus:bg-white/[0.08] focus:ring-1 focus:ring-emerald-400/30"
@@ -293,7 +293,7 @@ export function GlassyAuthCard({
                         <input
                           type="email"
                           required
-                          placeholder="Work Email"
+                          placeholder="E-mail corporativo"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-3 pl-10 pr-4 text-sm text-white placeholder-slate-400 outline-none backdrop-blur-md transition-all focus:border-emerald-500/50 focus:bg-white/[0.08] focus:ring-1 focus:ring-emerald-400/30"
@@ -307,7 +307,7 @@ export function GlassyAuthCard({
                         <input
                           type="password"
                           required
-                          placeholder={mode === "signup" ? "Create Password" : "Password"}
+                          placeholder={mode === "signup" ? "Criar uma senha segura" : "Sua senha"}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-3 pl-10 pr-4 text-sm text-white placeholder-slate-400 outline-none backdrop-blur-md transition-all focus:border-emerald-500/50 focus:bg-white/[0.08] focus:ring-1 focus:ring-emerald-400/30"
@@ -327,9 +327,9 @@ export function GlassyAuthCard({
                               Redirecionando...
                             </span>
                           ) : mode === "signup" ? (
-                            "Sign Up"
+                            "Criar Conta Grátis"
                           ) : (
-                            "Sign In"
+                            "Entrar"
                           )}
                         </button>
                       </div>
@@ -337,14 +337,14 @@ export function GlassyAuthCard({
                       {/* Toggle Link below button */}
                       <div className="pt-2 text-center text-xs text-slate-400">
                         <span>
-                          {mode === "signup" ? "Already a Member? " : "Ainda não tem conta? "}
+                          {mode === "signup" ? "Já tem uma conta? " : "Ainda não tem conta? "}
                         </span>
                         <button
                           type="button"
                           onClick={() => setMode(mode === "signup" ? "login" : "signup")}
                           className="font-medium text-emerald-400 hover:text-emerald-300 hover:underline transition-colors ml-1"
                         >
-                          {mode === "signup" ? "Login" : "Cadastre-se"}
+                          {mode === "signup" ? "Entrar" : "Cadastre-se"}
                         </button>
                       </div>
                     </form>
