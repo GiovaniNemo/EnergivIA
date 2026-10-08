@@ -1,14 +1,21 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useOrganization } from "@/components/providers/organization-provider";
 import { AdminThemeProvider } from "@/components/admin/theme-provider";
 import { Box, Tabs, Tab, Paper, Typography } from "@mui/material";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
 import ViewQuiltOutlinedIcon from "@mui/icons-material/ViewQuiltOutlined";
+
+const PLATFORM_ADMIN_EMAILS = [
+  "sgiovanimendes@gmail.com",
+  "contato@energivia.com.br",
+  "admin@energivia.com.br",
+];
 
 const tabs = [
   { label: "Produtos", href: "/admin/produtos", icon: <Inventory2OutlinedIcon fontSize="small" /> },
@@ -37,9 +44,31 @@ function isStandaloneAdminPath(pathname: string | null): boolean {
   );
 }
 
-export default function AdminLayout({ children }: { children: ReactNode }): JSX.Element {
+export default function AdminLayout({ children }: { children: ReactNode }): JSX.Element | null {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, currentOrganization } = useOrganization();
   const standalone = isStandaloneAdminPath(pathname);
+
+  const userEmail = (user?.email || "").toLowerCase().trim();
+  const globalRole = (user?.role || "").toUpperCase();
+  const orgRole = (currentOrganization?.role || "").toUpperCase();
+
+  const isPlatform =
+    globalRole === "PLATFORM" ||
+    globalRole === "SUPERADMIN" ||
+    orgRole === "PLATFORM" ||
+    PLATFORM_ADMIN_EMAILS.includes(userEmail);
+
+  useEffect(() => {
+    if (user && !isPlatform) {
+      router.replace("/painel");
+    }
+  }, [user, isPlatform, router]);
+
+  if (user && !isPlatform) {
+    return null;
+  }
 
   if (standalone) {
     return <AdminThemeProvider>{children}</AdminThemeProvider>;

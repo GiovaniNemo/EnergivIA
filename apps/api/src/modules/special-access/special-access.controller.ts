@@ -1,10 +1,11 @@
 import { Controller, Get, Post, Body, UseGuards, BadRequestException } from "@nestjs/common";
 import { SpecialAccessService } from "./special-access.service";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
+import { PlatformAdminGuard } from "../../common/guards/platform-admin.guard";
 import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator";
 
 @Controller(["admin/special-access", "api/admin/special-access"])
-@UseGuards(UnifiedAuthGuard)
+@UseGuards(UnifiedAuthGuard, PlatformAdminGuard)
 @SkipTrialLock()
 export class SpecialAccessController {
   constructor(private readonly specialAccessService: SpecialAccessService) {}

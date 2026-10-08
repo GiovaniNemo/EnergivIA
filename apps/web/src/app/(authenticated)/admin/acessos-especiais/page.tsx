@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useOrganization } from "@/components/providers/organization-provider";
 import {
   UserCheck,
   ShieldAlert,
@@ -31,12 +33,36 @@ interface SpecialAccessItem {
   revokedAt?: string | null;
 }
 
+const PLATFORM_ADMIN_EMAILS = [
+  "sgiovanimendes@gmail.com",
+  "contato@energivia.com.br",
+  "admin@energivia.com.br",
+];
+
 export default function SpecialAccessAdminPage() {
+  const router = useRouter();
+  const { user, currentOrganization } = useOrganization();
   const [items, setItems] = useState<SpecialAccessItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [actionLoadingEmail, setActionLoadingEmail] = useState<string | null>(null);
+
+  const userEmail = (user?.email || "").toLowerCase().trim();
+  const globalRole = (user?.role || "").toUpperCase();
+  const orgRole = (currentOrganization?.role || "").toUpperCase();
+
+  const isPlatform =
+    globalRole === "PLATFORM" ||
+    globalRole === "SUPERADMIN" ||
+    orgRole === "PLATFORM" ||
+    PLATFORM_ADMIN_EMAILS.includes(userEmail);
+
+  useEffect(() => {
+    if (user && !isPlatform) {
+      router.replace("/painel");
+    }
+  }, [user, isPlatform, router]);
 
   // Formulário de adição
   const [newEmail, setNewEmail] = useState("");
@@ -170,6 +196,10 @@ export default function SpecialAccessAdminPage() {
   const linkedWhatsappCount = items.filter(
     (i) => Boolean(i.whatsappPhone) && i.status === "ACTIVE"
   ).length;
+
+  if (user && !isPlatform) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10 font-sans">
@@ -363,7 +393,7 @@ export default function SpecialAccessAdminPage() {
                 <tr>
                   <th className="py-3.5 px-4 font-semibold">E-mail & Usuário</th>
                   <th className="py-3.5 px-4 font-semibold">Organização Vinculada</th>
-                  <th className="py-3.5 px-4 font-semibold">Origem & Notas</th>
+                  <th className="py-3.5 px-4 font-semibold">Origem do Cadastro & Notas</th>
                   <th className="py-3.5 px-4 font-semibold">WhatsApp Bot</th>
                   <th className="py-3.5 px-4 font-semibold">Status</th>
                   <th className="py-3.5 px-4 font-semibold text-right">Ação Unificada</th>
@@ -421,7 +451,7 @@ export default function SpecialAccessAdminPage() {
                                   : "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
                               }`}
                             >
-                              {item.source === "ENV" ? "Variável Railway" : "Painel Admin"}
+                              {item.source === "ENV" ? "Variável Railway" : "Inclusão Manual"}
                             </span>
                           </div>
                           {item.notes && (
