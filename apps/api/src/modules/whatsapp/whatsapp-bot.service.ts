@@ -794,6 +794,34 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       const code = pairingMatch[1];
       const pairingInfo = this.whatsappPairing.consumePairingCode(code);
       if (pairingInfo) {
+        // Valida se o plano da organização contempla a ferramenta de WhatsApp
+        const targetTenant = await this.prisma.tenant.findUnique({
+          where: { id: pairingInfo.organizationId },
+          include: {
+            subscription: {
+              include: { plan: true },
+            },
+          },
+        });
+
+        if (targetTenant) {
+          const tenantPlan = getTenantPlanDetails(targetTenant);
+          if (!tenantPlan.features.hasWhatsappBot || tenantPlan.features.maxWhatsappNumbers === 0) {
+            const deniedMsg =
+              `Olá! ☀️ O atendimento e dimensionamento solar por WhatsApp com IA não está disponível no plano da organização *${pairingInfo.organizationName}* (${tenantPlan.planName}).\n\n` +
+              `Esta ferramenta é exclusiva dos planos *Pro* e *Plus*.\n\n` +
+              `Para desbloquear o assistente de IA no WhatsApp e começar a cotar por aqui, faça upgrade do seu plano em:\n` +
+              `👉 *https://www.energivia.com.br/gestao/meus-planos*`;
+
+            await this.whatsappCloud.sendTextMessage({
+              phoneNumberId,
+              toWaId: fromWaId,
+              body: deniedMsg,
+            });
+            return;
+          }
+        }
+
         const cleanDigits = fromWaId.replace(/\D/g, "");
         const candidates = expandInboundPhoneCandidates(fromWaId);
 
@@ -853,7 +881,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         `Plano inativo/expirado para organização ${tenant.id} no WhatsApp ${fromWaId} (${planStatus.reason})`
       );
       let blockMsg =
-        `Olá! ☀️ O assistente de WhatsApp com IA da *EnergivIA* não está habilitado no plano da sua organização.\n\n` +
+        `Olá! ☀️ O assistente de WhatsApp com IA para dimensionamento solar da *EnergivIA* não está incluso no seu plano (${planStatus.planName || "Standard"}).\n\n` +
+        `O atendimento e dimensionamento automático por WhatsApp com IA é exclusivo dos planos *Pro* e *Plus*.\n\n` +
         `Para desbloquear o assistente de IA 24/7 e cotações no WhatsApp, escolha o seu plano em:\n` +
         `👉 *https://www.energivia.com.br/gestao/meus-planos*`;
 

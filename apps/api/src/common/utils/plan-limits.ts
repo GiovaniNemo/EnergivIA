@@ -92,6 +92,7 @@ export function getTenantPlanDetails(tenant: {
     tier = "PRO";
   } else if (
     nameLower.includes("essencial") ||
+    nameLower.includes("standard") ||
     nameLower.includes("básic") ||
     nameLower.includes("basic")
   ) {

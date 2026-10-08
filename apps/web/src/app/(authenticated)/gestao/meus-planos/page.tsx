@@ -50,7 +50,12 @@ interface SubscriptionData {
 
 function getOriginalPrice(planName: string, currentPrice: number): number | null {
   const lower = (planName || "").toLowerCase();
-  if (lower.includes("essencial") || Math.abs(currentPrice - 99.99) < 1) return 169.99;
+  if (
+    lower.includes("essencial") ||
+    lower.includes("standard") ||
+    Math.abs(currentPrice - 99.99) < 1
+  )
+    return 169.99;
   if (lower.includes("plus") || Math.abs(currentPrice - 399.99) < 1) return 699.99;
   if (lower.includes("pro") || Math.abs(currentPrice - 199.99) < 1) return 299.99;
   return null;

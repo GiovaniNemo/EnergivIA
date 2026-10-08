@@ -753,9 +753,9 @@ export class OrganizationsService {
     if (tenant) {
       const planDetails = getTenantPlanDetails(tenant);
       const maxPhones = planDetails.features.maxWhatsappNumbers;
-      if (maxPhones === 0) {
+      if (maxPhones === 0 || !planDetails.features.hasWhatsappBot) {
         throw new BadRequestException(
-          `A conexão de números de WhatsApp não está disponível no seu plano (${planDetails.planName}). Faça upgrade para o Plano Essencial ou superior.`
+          `A conexão e dimensionamento via WhatsApp com IA não está disponível no plano ${planDetails.planName}. Faça upgrade para o Plano Pro ou superior.`
         );
       }
       if (maxPhones !== null && maxPhones !== undefined && maxPhones > 0) {

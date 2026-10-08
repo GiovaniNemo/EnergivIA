@@ -132,10 +132,10 @@ export default function AdminPlanosPage() {
     maxProposalsPerMonth: "50",
     maxTeamMembers: "2",
     maxCustomTemplates: "1",
-    maxWhatsappNumbers: "1",
+    maxWhatsappNumbers: "0",
     // Flags booleanas
     hasProposalViewAlerts: false,
-    hasWhatsappBot: true,
+    hasWhatsappBot: false,
     hasRadarSolar: false,
     hasCustomBranding: false,
   });
@@ -295,7 +295,7 @@ export default function AdminPlanosPage() {
       features: [
         { text: "Até 50 propostas comerciais com IA por mês", included: true },
         { text: "2 Usuários na equipe (1 convidado)", included: true },
-        { text: "1 Número de WhatsApp com atendimento IA", included: true },
+        { text: "Atendimento e dimensionamento no WhatsApp com IA", included: false },
         { text: "1 Template de proposta personalizado", included: true },
         { text: "CRM Solar e funil de vendas", included: true },
         { text: "Radar Solar ANEEL (Prospecção ativa na sua região)", included: false },
@@ -307,9 +307,9 @@ export default function AdminPlanosPage() {
       maxProposalsPerMonth: "50",
       maxTeamMembers: "2",
       maxCustomTemplates: "1",
-      maxWhatsappNumbers: "1",
+      maxWhatsappNumbers: "0",
       hasProposalViewAlerts: false,
-      hasWhatsappBot: true,
+      hasWhatsappBot: false,
       hasRadarSolar: false,
       hasCustomBranding: false,
     });
