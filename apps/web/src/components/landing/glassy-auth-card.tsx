@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Mail, Lock, ArrowRight, Sparkles } from "lucide-react";
+import { Mail, Lock, ArrowRight, Sparkles } from "lucide-react";
 
 interface GlassyAuthCardProps {
   initialMode?: "signup" | "login";
@@ -17,7 +17,6 @@ export function GlassyAuthCard({
   isEmbedded = false,
 }: GlassyAuthCardProps): JSX.Element {
   const [mode, setMode] = useState<"signup" | "login">(initialMode);
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -270,21 +269,40 @@ export function GlassyAuthCard({
                     </p>
 
                     <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                      {mode === "signup" && (
-                        <div className="relative">
-                          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                            <User className="h-4 w-4 text-emerald-400/80" />
-                          </div>
-                          <input
-                            type="text"
-                            required
-                            placeholder="Nome completo"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-3 pl-10 pr-4 text-sm text-white placeholder-slate-400 outline-none backdrop-blur-md transition-all focus:border-emerald-500/50 focus:bg-white/[0.08] focus:ring-1 focus:ring-emerald-400/30"
+                      {/* Botão Google em destaque */}
+                      <a
+                        href={`${redirectUrl}?connection=google-oauth2`}
+                        className="w-full rounded-xl border border-white/12 bg-white/[0.04] py-3 px-4 text-sm font-semibold text-white flex items-center justify-center gap-3 backdrop-blur-md transition-all hover:bg-white/[0.08] hover:border-white/25 shadow-sm"
+                      >
+                        <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
+                          <path
+                            fill="#4285F4"
+                            d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"
                           />
-                        </div>
-                      )}
+                          <path
+                            fill="#34A853"
+                            d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.35 24 12 24z"
+                          />
+                          <path
+                            fill="#FBBC05"
+                            d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.6H1.25C.45 8.19 0 10.04 0 12s.45 3.81 1.25 5.4l4.03-3.13z"
+                          />
+                          <path
+                            fill="#EA4335"
+                            d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.27 2.57 1.25 6.6l4.03 3.13c.95-2.83 3.6-4.98 6.72-4.98z"
+                          />
+                        </svg>
+                        Continuar com o Google
+                      </a>
+
+                      {/* Divisor */}
+                      <div className="flex items-center gap-3 my-3">
+                        <div className="h-px flex-1 bg-white/10" />
+                        <span className="text-xs text-slate-500 font-semibold tracking-wider">
+                          OU COM E-MAIL
+                        </span>
+                        <div className="h-px flex-1 bg-white/10" />
+                      </div>
 
                       <div className="relative">
                         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">

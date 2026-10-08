@@ -1,24 +1,29 @@
-# Guia: Como Atualizar a Tela de Login e Cadastro no Auth0 com Efeitos de Glassmorphism
+# Guia: Como Atualizar a Tela de Login e Cadastro no Auth0 (Sem Campo de Nome e com Botão do Google)
 
-Este guia contém o código e o passo a passo completo para transformar a tela oficial de login e cadastro do Auth0 (`https://dev-g3g2vs8yakmcj275.us.auth0.com/u/login`) no visual **Glassy Form V2** da EnergivIA: 100% em português, com efeitos de luzes dinâmicas, vidro fosco translúcido (_glassmorphism_), reflexo chanfrado e brilho neon nos botões.
+Este guia contém o código exato e o passo a passo para transformar a tela oficial de login e cadastro do Auth0 (`https://dev-g3g2vs8yakmcj275.us.auth0.com/login`) no visual **Glassy Form V2** da EnergivIA:
 
----
-
-## Como Aplicar no Dashboard do Auth0
-
-1. Acesse o [Dashboard do Auth0](https://manage.auth0.com).
-2. No menu lateral esquerdo, navegue até **Branding** &rarr; **Universal Login**.
-3. Clique na aba **Advanced Options** (ou no rodapé da página em **Advanced Settings**).
-4. Selecione a aba **Login**.
-5. Ative a chave **Customize Login Page** (Personalizar Página de Login).
-6. Substitua todo o conteúdo pelo código HTML/CSS abaixo.
-7. Clique no botão **Save** no canto superior direito.
+- **100% em português**
+- **Sem campo de nome** (apenas e-mail e senha)
+- **Botão do Google destacado no topo** ("Continuar com o Google")
+- **Efeitos visuais de iluminação ambiente, neon glow e glassmorphism**
 
 ---
 
-## Código Completo (HTML + CSS + Efeitos + Integração Auth0)
+## Passo a Passo para Aplicar no Auth0
 
-Copie e cole o código abaixo na aba **Login** do Auth0:
+1. Acesse o painel: [manage.auth0.com](https://manage.auth0.com)
+2. No menu lateral esquerdo, clique em **Branding** &rarr; **Universal Login**.
+3. Clique em **Advanced Options** (ou no rodapé em **Advanced Settings**).
+4. Clique na aba **Login**.
+5. Ative a chave **Customize Login Page**.
+6. **Substitua todo o código existente** pelo código HTML abaixo.
+7. Clique no botão **Save** no canto superior direito do painel do Auth0.
+
+---
+
+## Código Completo (HTML + CSS + Botão Google + Efeitos Glassmorphism)
+
+Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
 
 ```html
 <!DOCTYPE html>
@@ -34,7 +39,7 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <!-- SDK Oficial do Auth0 para processar Login e Cadastro com segurança -->
+    <!-- SDK Oficial Auth0.js para autenticação -->
     <script src="https://cdn.auth0.com/js/auth0/9.19/auth0.min.js"></script>
 
     <style>
@@ -130,7 +135,7 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
         }
       }
 
-      /* Malha de Fundo 3D Poligonal */
+      /* Malha de Fundo 3D */
       .bg-grid {
         position: fixed;
         inset: 0;
@@ -148,7 +153,7 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
       }
 
       /* ------------------------------------------------------------- */
-      /* CARD MASTER GLASSMORPHISM (VIDRO FUMÊ TRANSLÚCIDO)            */
+      /* CARD PRINCIPAL EM GLASSMORPHISM (VIDRO FUMÊ TRANSLÚCIDO)      */
       /* ------------------------------------------------------------- */
       .glass-container {
         position: relative;
@@ -158,14 +163,14 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
         border-radius: 32px;
         background:
           linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%),
-          rgba(6, 11, 20, 0.78);
+          rgba(6, 11, 20, 0.82);
         border: 1px solid rgba(255, 255, 255, 0.12);
-        border-top: 1px solid rgba(255, 255, 255, 0.35); /* Chanfro de luz especular superior */
+        border-top: 1px solid rgba(255, 255, 255, 0.38); /* Chanfro de luz especular superior */
         backdrop-filter: blur(28px) saturate(190%);
         -webkit-backdrop-filter: blur(28px) saturate(190%);
         box-shadow:
           0 35px 80px -15px rgba(0, 0, 0, 0.95),
-          0 0 50px rgba(16, 185, 129, 0.12),
+          0 0 50px rgba(16, 185, 129, 0.14),
           inset 0 1px 0 rgba(255, 255, 255, 0.25);
         display: grid;
         grid-template-columns: 5fr 7fr;
@@ -180,7 +185,7 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
         }
       }
 
-      /* Coluna Esquerda: Apresentação e Boas-Vindas */
+      /* Coluna Esquerda: Apresentação */
       .left-col {
         padding: 44px 38px;
         display: flex;
@@ -190,7 +195,7 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
         background: linear-gradient(
           145deg,
           rgba(255, 255, 255, 0.04) 0%,
-          rgba(16, 185, 129, 0.02) 100%
+          rgba(16, 185, 129, 0.03) 100%
         );
         position: relative;
       }
@@ -274,7 +279,7 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
         transform: translateY(-1px);
       }
 
-      /* Coluna Direita: Formulário de Ação */
+      /* Coluna Direita: Formulário */
       .right-col {
         padding: 44px 40px;
         display: flex;
@@ -300,8 +305,58 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
         font-size: 13px;
         color: #94a3b8;
         margin-top: 4px;
-        margin-bottom: 24px;
+        margin-bottom: 22px;
         font-weight: 300;
+      }
+
+      /* Botão Social Google no Topo */
+      .google-btn {
+        width: 100%;
+        padding: 13px 16px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        margin-bottom: 16px;
+      }
+
+      .google-btn:hover {
+        background: rgba(255, 255, 255, 0.09);
+        border-color: rgba(52, 211, 153, 0.45);
+        box-shadow:
+          0 6px 24px rgba(0, 0, 0, 0.5),
+          0 0 15px rgba(16, 185, 129, 0.2);
+        transform: translateY(-1px);
+      }
+
+      /* Divisor OU */
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 18px 0 20px 0;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .divider::before,
+      .divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.09);
       }
 
       .input-wrapper {
@@ -367,7 +422,7 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
           0 4px 20px rgba(16, 185, 129, 0.4),
           inset 0 1px 0 rgba(255, 255, 255, 0.3);
         transition: all 0.3s ease;
-        margin-top: 10px;
+        margin-top: 8px;
         position: relative;
         overflow: hidden;
       }
@@ -383,50 +438,6 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
 
       .glow-btn:active {
         transform: translateY(0);
-      }
-
-      /* Divisor OU */
-      .divider {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 18px 0;
-        color: #64748b;
-        font-size: 12px;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-      }
-
-      .divider::before,
-      .divider::after {
-        content: "";
-        flex: 1;
-        height: 1px;
-        background: rgba(255, 255, 255, 0.08);
-      }
-
-      /* Botão Google em Vidro Escuro */
-      .google-btn {
-        width: 100%;
-        padding: 12px;
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        color: #ffffff;
-        font-size: 13px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        cursor: pointer;
-        transition: all 0.25s ease;
-      }
-
-      .google-btn:hover {
-        background: rgba(255, 255, 255, 0.08);
-        border-color: rgba(255, 255, 255, 0.25);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
       }
 
       .toggle-footer {
@@ -473,7 +484,7 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
 
     <!-- Card Principal de Vidro Translúcido -->
     <div class="glass-container">
-      <!-- Coluna Esquerda -->
+      <!-- Coluna Esquerda: Apresentação -->
       <div class="left-col">
         <div>
           <div class="brand-badge">
@@ -484,11 +495,11 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
           </div>
           <h1 id="welcome-title" class="welcome-heading">
             BEM-VINDO <br />
-            <span>DE VOLTA!</span>
+            <span>AO ENERGIVIA!</span>
           </h1>
           <p id="welcome-desc" class="welcome-text">
-            Acesse sua conta para gerenciar propostas, dimensionamento inteligente e atendimento
-            comercial via IA.
+            Crie sua conta em segundos para dimensionar usinas, kits solares e gerar propostas
+            comerciais prontas via IA.
           </p>
         </div>
 
@@ -502,28 +513,37 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
       <!-- Coluna Direita (Formulário) -->
       <div class="right-col">
         <h2 id="form-heading" class="form-title">Criar Conta</h2>
-        <p id="form-subheading" class="form-subtitle">
-          Preencha seus dados corporativos para começar
-        </p>
+        <p id="form-subheading" class="form-subtitle">Cadastre-se ou acesse com sua conta Google</p>
 
         <div id="error-alert" class="error-box"></div>
 
-        <form id="auth-form" onsubmit="handleAuthSubmit(event)">
-          <!-- Campo Nome (visível no cadastro) -->
-          <div id="name-field-group" class="input-wrapper">
-            <input type="text" id="name-input" class="glass-input" placeholder="Nome completo" />
-            <svg
-              class="input-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          </div>
+        <!-- Botão Social Google no Topo -->
+        <button type="button" class="google-btn" onclick="loginWithGoogle()">
+          <svg width="18" height="18" viewBox="0 0 24 24">
+            <path
+              fill="#4285F4"
+              d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"
+            />
+            <path
+              fill="#34A853"
+              d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.35 24 12 24z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.6H1.25C.45 8.19 0 10.04 0 12s.45 3.81 1.25 5.4l4.03-3.13z"
+            />
+            <path
+              fill="#EA4335"
+              d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.27 2.57 1.25 6.6l4.03 3.13c.95-2.83 3.6-4.98 6.72-4.98z"
+            />
+          </svg>
+          Continuar com o Google
+        </button>
 
+        <!-- Divisor OU -->
+        <div class="divider">OU COM SEU E-MAIL</div>
+
+        <form id="auth-form" onsubmit="handleAuthSubmit(event)">
           <!-- Campo E-mail -->
           <div class="input-wrapper">
             <input
@@ -571,32 +591,6 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
           <!-- Botão Primário com Glow -->
           <button type="submit" id="submit-btn" class="glow-btn">Criar Conta Grátis</button>
 
-          <!-- Divisor -->
-          <div class="divider">OU</div>
-
-          <!-- Botão Social Google -->
-          <button type="button" class="google-btn" onclick="loginWithGoogle()">
-            <svg width="18" height="18" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.35 24 12 24z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.6H1.25C.45 8.19 0 10.04 0 12s.45 3.81 1.25 5.4l4.03-3.13z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.27 2.57 1.25 6.6l4.03 3.13c.95-2.83 3.6-4.98 6.72-4.98z"
-              />
-            </svg>
-            Continuar com o Google
-          </button>
-
           <!-- Alternador inferior -->
           <div class="toggle-footer">
             <span id="footer-text">Já tem uma conta?</span>
@@ -612,17 +606,26 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
       var urlParams = new URLSearchParams(window.location.search);
       var currentMode = urlParams.get("screen_hint") === "signup" ? "signup" : "login";
 
-      // Configuração nativa do Auth0 (injetada automaticamente pelo Auth0 Universal Login)
-      var config = typeof @@config@@ !== "undefined" ? @@config@@ : {};
-      var webAuth = null;
+      // Decodificação segura da configuração nativa do Auth0 Universal Login
+      var config = {};
+      try {
+        config = JSON.parse(decodeURIComponent(escape(window.atob('@@config@@'))));
+      } catch (e) {
+        try {
+          config = typeof @@config@@ === 'object' ? @@config@@ : {};
+        } catch (err) {
+          console.warn("Auth0 config preview:", err);
+        }
+      }
 
+      var webAuth = null;
       try {
         if (typeof auth0 !== "undefined" && config.clientID) {
           webAuth = new auth0.WebAuth({
             domain: config.auth0Domain,
             clientID: config.clientID,
             redirectUri: config.callbackURL,
-            responseType: "code",
+            responseType: (config.extraParams && config.extraParams.response_type) || "code",
             params: config.extraParams
           });
         }
@@ -632,8 +635,6 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
 
       function updateUI() {
         var isSignup = currentMode === "signup";
-        var nameGroup = document.getElementById("name-field-group");
-        var nameInput = document.getElementById("name-input");
         var welcomeTitle = document.getElementById("welcome-title");
         var welcomeDesc = document.getElementById("welcome-desc");
         var pillText = document.getElementById("pill-text");
@@ -644,24 +645,20 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
         var footerToggle = document.getElementById("footer-toggle");
 
         if (isSignup) {
-          nameGroup.style.display = "block";
-          nameInput.required = true;
-          welcomeTitle.innerHTML = 'BEM-VINDO <br /><span>DE VOLTA!</span>';
-          welcomeDesc.innerText = 'Acesse sua conta para gerenciar propostas, dimensionamento e clientes.';
+          welcomeTitle.innerHTML = 'BEM-VINDO <br /><span>AO ENERGIVIA!</span>';
+          welcomeDesc.innerText = 'Crie sua conta em segundos para dimensionar usinas, kits solares e gerar propostas comerciais com IA.';
           pillText.innerText = 'Já possui conta? Entrar';
           formHeading.innerText = 'Criar Conta';
-          formSubheading.innerText = 'Preencha seus dados corporativos para começar';
+          formSubheading.innerText = 'Cadastre-se ou acesse com sua conta Google';
           submitBtn.innerText = 'Criar Conta Grátis';
           footerText.innerText = 'Já tem uma conta?';
           footerToggle.innerText = 'Entrar';
         } else {
-          nameGroup.style.display = "none";
-          nameInput.required = false;
-          welcomeTitle.innerHTML = 'COMECE <br /><span>AGORA!</span>';
-          welcomeDesc.innerText = 'Crie sua conta em segundos e gere suas primeiras propostas comerciais com IA.';
+          welcomeTitle.innerHTML = 'BEM-VINDO <br /><span>DE VOLTA!</span>';
+          welcomeDesc.innerText = 'Acesse sua conta para gerenciar propostas, dimensionamento inteligente e atendimento comercial via IA.';
           pillText.innerText = 'Novo por aqui? Cadastre-se';
           formHeading.innerText = 'Entrar na Plataforma';
-          formSubheading.innerText = 'Digite suas credenciais de acesso corporativo';
+          formSubheading.innerText = 'Digite seus dados de acesso corporativo ou use o Google';
           submitBtn.innerText = 'Entrar';
           footerText.innerText = 'Ainda não tem conta?';
           footerToggle.innerText = 'Cadastre-se';
@@ -693,7 +690,7 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
         if (!webAuth) {
           // Ambiente de teste/preview
           setTimeout(function() {
-            alert((currentMode === "signup" ? "Cadastro" : "Login") + " simulado com sucesso para: " + email);
+            alert((currentMode === "signup" ? "Cadastro" : "Login") + " simulado para: " + email);
             submitBtn.disabled = false;
             updateUI();
           }, 800);
@@ -701,12 +698,10 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
         }
 
         if (currentMode === "signup") {
-          var name = document.getElementById("name-input").value;
           webAuth.signup({
             connection: "Username-Password-Authentication",
             email: email,
-            password: password,
-            user_metadata: { name: name }
+            password: password
           }, function(err) {
             if (err) {
               showError(err.description || err.message || "Erro ao realizar cadastro.");
@@ -746,7 +741,10 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
         if (webAuth) {
           webAuth.authorize({ connection: "google-oauth2" });
         } else {
-          alert("Login social com Google acionado.");
+          // Fallback para redirect direto
+          var loc = window.location;
+          var sep = loc.search ? "&" : "?";
+          window.location.href = loc.pathname + loc.search + sep + "connection=google-oauth2";
         }
       }
 
@@ -756,16 +754,3 @@ Copie e cole o código abaixo na aba **Login** do Auth0:
   </body>
 </html>
 ```
-
----
-
-## O que Mudou Neste Template:
-
-1. **100% em Português:** Todos os textos, botões, placeholders, alertas e links foram traduzidos e adaptados ao tom corporativo da EnergivIA.
-2. **Efeitos Visuais Aprimorados ("e efeito"):**
-   - **Orbes Dinâmicos de Luz (Ambient Glow):** Luzes esmeralda e teal pulsando em loop no fundo.
-   - **Vidro Fosco Real (Glassmorphism):** Desfoque de 28px, chanfro superior translúcido com reflexo branco e sombra esmeralda difusa.
-   - **Botões com Glow Neon:** Botão principal esmeralda com brilho neon `box-shadow` e hover iluminado.
-   - **Microinterações nos Inputs:** Ícones SVG que acendem em verde quando o campo recebe foco, anel de luz verde e fundo translúcido.
-   - **Transição Fluida (Login &harr; Cadastro):** Alternância instantânea no mesmo card com JavaScript, alternando os títulos e campos sem recarregar a tela.
-   - **Integração Auth0 Real:** Pronto com `auth0.WebAuth` para autenticar credenciais e Google de verdade no painel.
