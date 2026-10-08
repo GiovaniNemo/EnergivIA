@@ -1,0 +1,16 @@
+[
+  {
+    "original": "b55c9a35589a_datasheet.pdf",
+    "clean": "datasheet-sungrow-sg40cx-p2.pdf",
+    "path": "/datasheets/sungrow/datasheet-sungrow-sg40cx-p2.pdf",
+    "models": ["SG36CX-P2", "SG40CX-P2", "SG50CX-P2"],
+    "manufacturer": "Sungrow"
+  },
+  {
+    "original": "87adacb41eed_datasheet.pdf",
+    "clean": "datasheet-sungrow-sg110cx-p2.pdf",
+    "path": "/datasheets/sungrow/datasheet-sungrow-sg110cx-p2.pdf",
+    "models": ["SG110CX-P2"],
+    "manufacturer": "Sungrow"
+  }
+]
