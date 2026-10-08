@@ -11,13 +11,17 @@ Este guia contém o código exato e o passo a passo para transformar a tela ofic
 
 ## Passo a Passo para Aplicar no Auth0
 
+> **Nota sobre o erro _"The state parameter is invalid."_:**
+> Quando você entra pelo Google, o Next.js exige que o parâmetro de segurança `state` gerado no início da sessão seja devolvido exatamente igual. A versão anterior do script gerava um novo `state` aleatório ao clicar no botão do Google. Esta versão corrigida preserva 100% os parâmetros originais (`config.internalOptions.state`, `nonce`, `code_challenge`), resolvendo o problema definitivamente.
+
 1. Acesse o painel: [manage.auth0.com](https://manage.auth0.com)
 2. No menu lateral esquerdo, clique em **Branding** &rarr; **Universal Login**.
 3. Clique em **Advanced Options** (ou no rodapé em **Advanced Settings**).
 4. Clique na aba **Login**.
-5. Ative a chave **Customize Login Page**.
-6. **Substitua todo o código existente** pelo código HTML abaixo.
+5. Verifique se a chave **Customize Login Page** está ativada (**ON**).
+6. **Substitua todo o código existente** pelo código HTML atualizado abaixo (ou copie o conteúdo direto do arquivo `docs/auth0-login-template.html`).
 7. Clique no botão **Save** no canto superior direito do painel do Auth0.
+8. Teste novamente acessando [www.energivia.com.br](https://www.energivia.com.br) e clicando em **Entrar** ou **Começar Agora** &rarr; **Continuar com o Google**.
 
 ---
 
@@ -602,11 +606,7 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
 
     <!-- Lógica de Alternância Interativa e Integração com Auth0 -->
     <script>
-      // Identifica se a URL solicitou modo de cadastro (screen_hint=signup)
-      var urlParams = new URLSearchParams(window.location.search);
-      var currentMode = urlParams.get("screen_hint") === "signup" ? "signup" : "login";
-
-      // Decodificação segura da configuração nativa do Auth0 Universal Login
+      // 1. Decodificação segura da configuração nativa do Auth0 Universal Login
       var config = {};
       try {
         config = JSON.parse(decodeURIComponent(escape(window.atob('@@config@@'))));
@@ -618,16 +618,28 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
         }
       }
 
+      // 2. Identifica se a URL solicitou modo de cadastro (screen_hint=signup)
+      var urlParams = new URLSearchParams(window.location.search);
+      var screenHint = urlParams.get("screen_hint") || (config.extraParams && config.extraParams.screen_hint);
+      var currentMode = screenHint === "signup" ? "signup" : "login";
+
+      // 3. Inicialização oficial do WebAuth combinando internalOptions para manter state e nonce intactos
       var webAuth = null;
       try {
         if (typeof auth0 !== "undefined" && config.clientID) {
-          webAuth = new auth0.WebAuth({
+          var params = Object.assign({
+            overrides: {
+              __tenant: config.auth0Tenant,
+              __token_issuer: (config.authorizationServer && config.authorizationServer.issuer) || ''
+            },
             domain: config.auth0Domain,
             clientID: config.clientID,
             redirectUri: config.callbackURL,
             responseType: (config.extraParams && config.extraParams.response_type) || "code",
             params: config.extraParams
-          });
+          }, config.internalOptions || {});
+
+          webAuth = new auth0.WebAuth(params);
         }
       } catch (e) {
         console.warn("Auth0 WebAuth fallback local:", e);
@@ -688,7 +700,7 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
         submitBtn.innerText = "Processando...";
 
         if (!webAuth) {
-          // Ambiente de teste/preview
+          // Ambiente de teste/preview local
           setTimeout(function() {
             alert((currentMode === "signup" ? "Cadastro" : "Login") + " simulado para: " + email);
             submitBtn.disabled = false;
@@ -709,7 +721,7 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
               updateUI();
               return;
             }
-            // Realiza login imediato após cadastro
+            // Realiza login imediato após cadastro com a mesma conexão
             webAuth.login({
               realm: "Username-Password-Authentication",
               username: email,
@@ -738,10 +750,21 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
       }
 
       function loginWithGoogle() {
-        if (webAuth) {
-          webAuth.authorize({ connection: "google-oauth2" });
+        // Preserva estritamente todos os parâmetros da transação iniciada pelo Next.js (state, nonce, code_challenge, etc.)
+        var opts = Object.assign({
+          connection: "google-oauth2"
+        }, config.internalOptions || {});
+
+        if (config.internalOptions && config.internalOptions.state) {
+          opts.state = config.internalOptions.state;
+        }
+        if (config.internalOptions && config.internalOptions.nonce) {
+          opts.nonce = config.internalOptions.nonce;
+        }
+
+        if (webAuth && typeof webAuth.authorize === "function") {
+          webAuth.authorize(opts);
         } else {
-          // Fallback para redirect direto
           var loc = window.location;
           var sep = loc.search ? "&" : "?";
           window.location.href = loc.pathname + loc.search + sep + "connection=google-oauth2";
