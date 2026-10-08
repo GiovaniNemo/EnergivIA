@@ -5,8 +5,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowLeft,
   CheckCheck,
-  ExternalLink,
-  FileText,
+  Mic,
   MoreVertical,
   Mouse,
   Pause,
@@ -15,7 +14,6 @@ import {
   RotateCcw,
   Send,
   Video,
-  Zap,
 } from "lucide-react";
 
 interface Milestone {
@@ -502,19 +500,32 @@ export function WhatsappFlowSimulator(): JSX.Element {
 
             {/* WhatsApp iOS Header (matching reference image) */}
             <div className="relative z-20 flex items-center justify-between border-b border-[#e5e5ea] bg-[#f6f6f6]/95 backdrop-blur-sm px-3.5 py-2 shadow-xs">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <ArrowLeft className="h-5 w-5 text-[#007aff] hover:opacity-75 transition cursor-pointer" />
                 <div className="relative">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#070b14] ring-1 ring-slate-200 overflow-hidden shadow-xs">
-                    <span className="text-emerald-400 font-bold text-xs">⚡</span>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#111b21] ring-1 ring-slate-200 overflow-hidden shadow-xs">
+                    <img
+                      src="/landing/bot-avatar.png"
+                      alt="EnergivIA Bot"
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/favicon-dark.png";
+                      }}
+                    />
                   </div>
                   <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#25d366]" />
                 </div>
                 <div className="leading-tight">
-                  <span className="text-[15.5px] font-semibold text-black block tracking-tight">
+                  <span className="text-[15px] font-semibold text-[#111b21] block tracking-tight">
                     EnergivIA
                   </span>
-                  <p className="text-[11px] text-[#8696a0] font-normal">online agora</p>
+                  <p className="text-[11px] text-[#8696a0] font-normal">
+                    {activeBotTyping ? (
+                      <span className="text-[#00a884] font-medium animate-pulse">digitando...</span>
+                    ) : (
+                      "online agora"
+                    )}
+                  </p>
                 </div>
               </div>
 
@@ -553,14 +564,14 @@ export function WhatsappFlowSimulator(): JSX.Element {
                         }}
                         className="flex justify-end"
                       >
-                        {/* OUTGOING GREEN BUBBLE (#dcf8c6 - exact color from reference) */}
-                        <div className="relative max-w-[85%] rounded-[16px] rounded-tr-[4px] bg-[#dcf8c6] px-3.5 py-2 text-black shadow-[0_1px_1px_rgba(0,0,0,0.08)]">
-                          <p className="text-[15px] leading-[21px] font-normal text-black pr-14">
+                        {/* OUTGOING GREEN BUBBLE (#dcf8c6 iOS WhatsApp) */}
+                        <div className="relative max-w-[85%] rounded-[14px] rounded-tr-[3px] bg-[#dcf8c6] px-3.5 py-2 text-[#111b21] shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]">
+                          <p className="text-[14px] sm:text-[14.5px] leading-[20px] font-normal text-[#111b21] pr-14">
                             {msg.text}
                           </p>
-                          <div className="absolute bottom-1.5 right-2.5 flex items-center gap-1 text-[11px] text-[#8696a0] font-normal">
+                          <div className="absolute bottom-1.5 right-2 flex items-center gap-1 text-[11px] text-[#667781] font-normal">
                             <span>{msg.time}</span>
-                            <CheckCheck className="h-3.5 w-3.5 text-[#34b7f1]" />
+                            <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" />
                           </div>
                         </div>
                       </motion.div>
@@ -580,30 +591,31 @@ export function WhatsappFlowSimulator(): JSX.Element {
                         }}
                         className="flex justify-end"
                       >
-                        <div className="relative max-w-[88%] rounded-[16px] rounded-tr-[4px] bg-[#dcf8c6] p-2.5 text-black shadow-[0_1px_1px_rgba(0,0,0,0.08)]">
-                          <div className="flex items-center gap-2.5 rounded-xl bg-white/90 p-2.5 border border-[#dcf8c6] shadow-2xs">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-700 font-bold border border-rose-200">
-                              <FileText className="h-5 w-5" />
+                        {/* OUTGOING DOCUMENT BUBBLE */}
+                        <div className="relative max-w-[88%] rounded-[14px] rounded-tr-[3px] bg-[#dcf8c6] p-2 text-[#111b21] shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]">
+                          <div className="flex items-center gap-2.5 rounded-lg bg-white/90 p-2 border border-black/[0.04]">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-500 text-white font-bold text-xs shadow-2xs">
+                              PDF
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate font-semibold text-black text-[14px]">
+                              <p className="truncate font-semibold text-[#111b21] text-[13.5px]">
                                 {msg.title}
                               </p>
-                              <p className="text-[11.5px] text-[#8696a0] font-normal mt-0.5">
+                              <p className="text-[11px] text-[#667781] font-normal mt-0.5">
                                 {msg.subtitle}
                               </p>
                             </div>
                           </div>
-                          <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-[#8696a0] font-normal pr-1">
+                          <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-[#667781] font-normal pr-1">
                             <span>{msg.time}</span>
-                            <CheckCheck className="h-3.5 w-3.5 text-[#34b7f1]" />
+                            <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" />
                           </div>
                         </div>
                       </motion.div>
                     );
                   }
 
-                  // INCOMING WHITE BUBBLE (#ffffff - exact from reference)
+                  // INCOMING WHITE BUBBLE (#ffffff - exact WhatsApp native style)
                   return (
                     <motion.div
                       key={msg.id}
@@ -616,57 +628,86 @@ export function WhatsappFlowSimulator(): JSX.Element {
                       }}
                       className="flex justify-start"
                     >
-                      <div className="relative max-w-[92%] rounded-[16px] rounded-tl-[4px] bg-white p-3.5 text-black shadow-[0_1px_1px_rgba(0,0,0,0.08)] space-y-2">
+                      <div className="relative max-w-[90%] rounded-[14px] rounded-tl-[3px] bg-white px-3.5 py-2.5 text-[#111b21] shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]">
                         {msg.kind === "welcome" && (
-                          <div className="text-[14.5px] leading-[20px] space-y-2 text-black font-normal">
+                          <div className="space-y-2 text-[#111b21] text-[13.5px] sm:text-[14px] leading-[19px]">
                             <p>
                               Olá Giovani! Tudo bem?
                               <br />
                               Sou seu assistente de vendas e dimensionamento da{" "}
-                              <b>EnergivIA Solar</b>.
+                              <strong className="font-semibold text-[#111b21]">
+                                EnergivIA Solar.
+                              </strong>
                             </p>
-                            <p className="font-semibold text-black">
+                            <p className="font-semibold text-[#111b21]">
                               Como posso ajudar você a gerar orçamentos hoje?
                             </p>
-                            <div className="space-y-1.5 rounded-xl bg-[#f8f9fa] p-2.5 border border-slate-200/80 text-[13px] text-black">
-                              <p className="border-l-2 border-emerald-500 pl-2">
-                                <span className="font-bold text-slate-800">[1]</span>{" "}
-                                <b>Enviar fatura de energia</b> (PDF ou foto)
+                            <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r space-y-1 text-[13px] sm:text-[13.5px]">
+                              <p>
+                                <span className="font-semibold text-[#111b21]">
+                                  [1] Enviar fatura de energia
+                                </span>{" "}
+                                (PDF ou foto)
                               </p>
-                              <p className="border-l-2 border-slate-300 pl-2 text-slate-600">
-                                <span className="font-bold text-slate-700">[2]</span> Simular por
-                                consumo mensal (ex: 450 kWh)
+                              <p>
+                                <span className="font-semibold text-[#111b21]">
+                                  [2] Simular por consumo mensal
+                                </span>{" "}
+                                (ex:{" "}
+                                <code className="font-mono text-[12px] bg-black/[0.04] px-1 py-0.5 rounded">
+                                  450 kWh
+                                </code>
+                                )
                               </p>
-                              <p className="border-l-2 border-slate-300 pl-2 text-slate-600">
-                                <span className="font-bold text-slate-700">[3]</span> Simular por
-                                potência de pico (ex: 5 kWp)
+                              <p>
+                                <span className="font-semibold text-[#111b21]">
+                                  [3] Simular por potência de pico
+                                </span>{" "}
+                                (ex:{" "}
+                                <code className="font-mono text-[12px] bg-black/[0.04] px-1 py-0.5 rounded">
+                                  5 kWp
+                                </code>
+                                )
                               </p>
-                              <p className="border-l-2 border-slate-300 pl-2 text-slate-600">
-                                <span className="font-bold text-slate-700">[4]</span> Simular por
-                                quantidade de placas (ex: 10 módulos)
+                              <p>
+                                <span className="font-semibold text-[#111b21]">
+                                  [4] Simular por quantidade de placas
+                                </span>{" "}
+                                (ex:{" "}
+                                <code className="font-mono text-[12px] bg-black/[0.04] px-1 py-0.5 rounded">
+                                  10 módulos
+                                </code>
+                                )
                               </p>
-                              <p className="border-l-2 border-slate-300 pl-2 text-slate-600">
-                                <span className="font-bold text-slate-700">[5]</span> Dúvidas sobre
-                                equipamentos e preços de catálogo
+                              <p>
+                                <span className="font-semibold text-[#111b21]">
+                                  [5] Dúvidas sobre equipamentos e preços de catálogo
+                                </span>
                               </p>
                             </div>
-                            <p className="text-[11.5px] text-[#8696a0] italic">
+                            <p className="text-[12px] text-[#667781] italic">
                               (Responda com o número da opção ou envie a conta de luz diretamente)
                             </p>
-                            <p className="text-[12px] font-semibold text-slate-700">
-                              Equipe <i>EnergivIA Solar</i>
+                            <p className="text-[12px] font-semibold text-[#667781]">
+                              Equipe <em>EnergivIA Solar</em>
                             </p>
                           </div>
                         )}
 
                         {msg.kind === "ask_bill" && (
-                          <div className="text-[14.5px] leading-[20px] space-y-1.5 text-black font-normal">
-                            <p className="font-bold text-black">Envio de Fatura de Energia</p>
-                            <p>
-                              Envie o arquivo em <b>PDF</b> ou a <b>foto da conta de luz</b> do seu
-                              cliente por aqui mesmo.
+                          <div className="space-y-2 text-[#111b21] text-[13.5px] sm:text-[14px] leading-[19px]">
+                            <p className="font-semibold text-[#111b21]">
+                              Envio de Fatura de Energia
                             </p>
-                            <div className="rounded-lg bg-emerald-50/70 border-l-2 border-emerald-500 p-2 text-[12.5px] text-emerald-900 leading-snug">
+                            <p>
+                              Envie o arquivo em{" "}
+                              <strong className="font-semibold text-[#111b21]">PDF</strong> ou a{" "}
+                              <strong className="font-semibold text-[#111b21]">
+                                foto da conta de luz
+                              </strong>{" "}
+                              do seu cliente por aqui mesmo.
+                            </p>
+                            <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r text-[13px] sm:text-[13.5px]">
                               Nossa inteligência artificial vai extrair automaticamente todos os
                               dados de consumo, histórico e padrão de rede!
                             </div>
@@ -674,309 +715,380 @@ export function WhatsappFlowSimulator(): JSX.Element {
                         )}
 
                         {msg.kind === "ocr_result" && (
-                          <div className="text-[14.5px] leading-[20px] space-y-2 text-black font-normal">
-                            <div className="flex items-center justify-between">
-                              <p className="font-bold text-black">Fatura Analisada com Precisão!</p>
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                IA Concluída
-                              </span>
+                          <div className="space-y-2 text-[#111b21] text-[13.5px] sm:text-[14px] leading-[19px]">
+                            <p className="font-semibold text-[#111b21]">
+                              Fatura Analisada com Precisão!
+                            </p>
+                            <p>
+                              Consumo médio de{" "}
+                              <code className="font-mono text-[13px] bg-black/[0.04] px-1 py-0.5 rounded font-medium">
+                                257 kWh/mês
+                              </code>{" "}
+                              em{" "}
+                              <code className="font-mono text-[13px] bg-black/[0.04] px-1 py-0.5 rounded font-medium">
+                                Maringá/PR
+                              </code>
+                              .
+                            </p>
+                            <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r space-y-0.5 text-[13px] sm:text-[13.5px]">
+                              <p>
+                                Histórico:{" "}
+                                <strong className="font-semibold text-[#111b21]">
+                                  baseado no histórico de 12 meses da fatura
+                                </strong>
+                              </p>
+                              <p>
+                                Padrão de rede identificado:{" "}
+                                <strong className="font-semibold text-[#111b21]">
+                                  Monofásico 220V
+                                </strong>
+                              </p>
                             </div>
-                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2.5 border border-slate-200/80 text-[13px]">
-                              <p className="flex justify-between">
-                                <span className="text-slate-600">Consumo Médio:</span>
-                                <span className="font-semibold text-black">257 kWh/mês</span>
-                              </p>
-                              <p className="flex justify-between">
-                                <span className="text-slate-600">Localização:</span>
-                                <span className="font-semibold text-black">Maringá / PR</span>
-                              </p>
-                              <p className="flex justify-between">
-                                <span className="text-slate-600">Histórico Fatura:</span>
-                                <span className="font-medium text-slate-800">
-                                  12 meses conferidos
-                                </span>
-                              </p>
-                              <p className="flex justify-between">
-                                <span className="text-slate-600">Padrão de Rede:</span>
-                                <span className="font-semibold text-black">Monofásico 220V</span>
-                              </p>
-                            </div>
-                            <p className="text-[13.5px] font-semibold text-black">
+                            <p className="font-semibold text-[#111b21] pt-0.5">
                               Qual a estrutura do telhado?
                             </p>
-                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2 border border-slate-200/80 text-[12.5px]">
-                              <p className="font-semibold text-black bg-emerald-100/90 border border-emerald-400 rounded-md px-2 py-0.5">
-                                [1] Cerâmica (Colonial) (Telhas convencionais)
+                            <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r space-y-1 text-[13px] sm:text-[13.5px]">
+                              <p>
+                                <span className="font-semibold text-[#111b21]">
+                                  [1] Cerâmica (Colonial)
+                                </span>{" "}
+                                (Telhas convencionais)
                               </p>
-                              <p className="px-2 py-0.5 text-slate-600">
-                                [2] Fibrocimento (Em madeira)
+                              <p>
+                                <span className="font-semibold text-[#111b21]">
+                                  [2] Fibrocimento
+                                </span>{" "}
+                                (Em madeira)
                               </p>
-                              <p className="px-2 py-0.5 text-slate-600">
-                                [3] Metálico (Trapezoidal / Zipada)
+                              <p>
+                                <span className="font-semibold text-[#111b21]">[3] Metálico</span>{" "}
+                                (Trapezoidal / Zipada)
                               </p>
-                              <p className="px-2 py-0.5 text-slate-600">[4] Solo (Usina de solo)</p>
-                              <p className="px-2 py-0.5 text-slate-600">
-                                [5] Laje (Plana com triângulos)
+                              <p>
+                                <span className="font-semibold text-[#111b21]">[4] Solo</span>{" "}
+                                (Usina de solo)
                               </p>
-                              <p className="px-2 py-0.5 text-slate-600">
-                                [6] Fibrometal (Vigas metálicas)
+                              <p>
+                                <span className="font-semibold text-[#111b21]">[5] Laje</span>{" "}
+                                (Plana com triângulos)
                               </p>
-                              <p className="px-2 py-0.5 text-slate-600">
-                                [7] Sem estrutura (Apenas equipamentos)
+                              <p>
+                                <span className="font-semibold text-[#111b21]">[6] Fibrometal</span>{" "}
+                                (Vigas metálicas)
+                              </p>
+                              <p>
+                                <span className="font-semibold text-[#111b21]">
+                                  [7] Sem estrutura
+                                </span>{" "}
+                                (Apenas equipamentos)
+                              </p>
+                              <p className="text-[#667781]">
+                                <span className="font-semibold text-[#111b21]">[0] Voltar</span> /
+                                Corrigir padrão elétrico
                               </p>
                             </div>
+                            <p className="text-[12px] text-[#667781] italic">
+                              (Responda com o número da opção)
+                            </p>
                           </div>
                         )}
 
                         {msg.kind === "tax_rate" && (
-                          <div className="text-[14.5px] leading-[20px] space-y-2 text-black font-normal">
-                            <div className="flex items-center justify-between border-b border-slate-200/80 pb-1.5">
-                              <span className="text-[12px] font-semibold text-slate-600">
+                          <div className="space-y-2 text-[#111b21] text-[13.5px] sm:text-[14px] leading-[19px]">
+                            <p>
+                              <span className="font-semibold text-[#111b21]">
                                 Estrutura Registrada:
-                              </span>
-                              <span className="text-[12px] font-bold text-black bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                                Cerâmica (Colonial)
-                              </span>
-                            </div>
-
-                            <p className="font-bold text-black text-[13.5px]">
+                              </span>{" "}
+                              Cerâmica (Colonial)
+                            </p>
+                            <p className="font-semibold text-[#111b21]">
                               Dimensionamento Solar Calculado (257 kWh/mês):
                             </p>
-                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2.5 border border-slate-200/80 text-[13px]">
-                              <p className="flex justify-between">
-                                <span className="text-slate-600">Potência Estimada:</span>
-                                <span className="font-bold text-black">3,15 kWp (5x 630W)</span>
+                            <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r space-y-0.5 text-[13px] sm:text-[13.5px]">
+                              <p>
+                                Potência Estimada:{" "}
+                                <code className="font-mono text-[12.5px] bg-black/[0.04] px-1 py-0.5 rounded font-semibold">
+                                  3,15 kWp (5x 630W)
+                                </code>
                               </p>
-                              <p className="flex justify-between">
-                                <span className="text-slate-600">Geração Estimada:</span>
-                                <span className="font-semibold text-black">268 kWh/mês</span>
+                              <p>
+                                Geração Estimada:{" "}
+                                <code className="font-mono text-[12.5px] bg-black/[0.04] px-1 py-0.5 rounded font-semibold">
+                                  268 kWh/mês
+                                </code>
                               </p>
-                              <p className="flex justify-between border-t border-slate-200 pt-1">
-                                <span className="text-slate-600">Sua taxa padrão:</span>
-                                <span className="font-bold text-emerald-700">R$ 2.850,00/kWp</span>
+                              <p>
+                                Sua taxa padrão:{" "}
+                                <strong className="font-semibold text-[#00a884]">
+                                  R$ 2.850,00/kWp
+                                </strong>
                               </p>
-                              <p className="flex justify-between text-[12px]">
-                                <span className="text-slate-500">Valor aprox. venda:</span>
-                                <span className="font-semibold text-slate-800">R$ 8.977,50</span>
+                              <p className="text-[12px] text-[#667781]">
+                                Valor aprox. venda: R$ 8.977,50
                               </p>
                             </div>
-
-                            <p className="text-[13px] font-semibold text-black">
+                            <p className="font-semibold text-[#111b21] pt-0.5">
                               Como você deseja prosseguir para esta cotação?
                             </p>
-                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2 border border-slate-200/80 text-[12.5px]">
-                              <p className="font-semibold text-black bg-emerald-100/90 border border-emerald-400 rounded-md px-2 py-0.5">
-                                [1] Seguir com a taxa padrão (R$ 2.850,00/kWp)
+                            <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r space-y-1 text-[13px] sm:text-[13.5px]">
+                              <p>
+                                <span className="font-semibold text-[#111b21]">
+                                  [1] Seguir com a taxa padrão
+                                </span>{" "}
+                                (R$ 2.850,00/kWp — Total: R$ 8.977,50)
                               </p>
-                              <p className="px-2 py-0.5 text-slate-600">
-                                [2] Informar outro valor por kWp
+                              <p>
+                                <span className="font-semibold text-[#111b21]">
+                                  [2] Informar outro valor por kWp
+                                </span>{" "}
+                                (ex: 2500 ou R$ 3.000)
                               </p>
-                              <p className="px-2 py-0.5 text-slate-500">
-                                [0] Voltar / Alterar estrutura
+                              <p className="text-[#667781]">
+                                <span className="font-semibold text-[#111b21]">[0] Voltar</span> /
+                                Escolher outro kit
                               </p>
                             </div>
+                            <p className="text-[12px] text-[#667781] italic">
+                              (Responda 1, 2 ou digite o preço por kWp diretamente)
+                            </p>
                           </div>
                         )}
 
                         {msg.kind === "kit_distribuidor" && (
-                          <div className="text-[14.5px] leading-[20px] space-y-2 text-black font-normal">
-                            <p className="text-[13.5px] font-semibold text-black">
-                              Melhores opções dimensionadas (257 kWh/mês):
+                          <div className="space-y-2 text-[#111b21] text-[13.5px] sm:text-[14px] leading-[19px]">
+                            <p>
+                              Excelente! Seguem os grupos de kits dimensionados para o consumo de{" "}
+                              <code className="font-mono text-[12.5px] bg-black/[0.04] px-1 py-0.5 rounded font-medium">
+                                257 kWh/mês
+                              </code>{" "}
+                              em{" "}
+                              <code className="font-mono text-[12.5px] bg-black/[0.04] px-1 py-0.5 rounded font-medium">
+                                Maringá/PR
+                              </code>
+                              :
                             </p>
-                            <p className="text-[11.5px] text-[#8696a0]">
-                              Taxa aplicada: R$ 2.850,00/kWp em Maringá/PR
-                            </p>
-
-                            {/* Opção 1: Standard (Mais Recomendado) */}
-                            <div className="rounded-xl border border-emerald-400/90 bg-emerald-50/50 p-2.5 space-y-1 text-[13px]">
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-black text-xs uppercase tracking-wide">
-                                  Opção 1 — Standard (Mais Recomendado)
-                                </span>
-                                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-2xs">
-                                  R$ 8.977,50
-                                </span>
-                              </div>
-                              <p className="text-[11.5px] text-slate-600 font-medium">
-                                Potência: 3,15 kWp | Geração: 268 kWh/mês
-                              </p>
-                              <p className="text-[11.5px] text-slate-800 leading-snug">
-                                • 5x Módulo Solar 630W N-Type TopCon
-                                <br />• 1x Inversor String 3kW Monofásico 220V
-                                <br />• Estrutura Cerâmica Completa + Cabos e Conectores
-                              </p>
+                            <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r text-[13px] sm:text-[13.5px]">
+                              Potência:{" "}
+                              <code className="font-mono text-[12.5px] bg-black/[0.04] px-1 py-0.5 rounded font-semibold">
+                                3,15 kWp
+                              </code>{" "}
+                              | Geração estimada:{" "}
+                              <code className="font-mono text-[12.5px] bg-black/[0.04] px-1 py-0.5 rounded font-semibold">
+                                268 kWh/mês
+                              </code>
                             </div>
 
-                            {/* Opção 2: Elite */}
-                            <div className="rounded-xl border border-slate-200 bg-[#f8f9fa] p-2 space-y-0.5 text-[12.5px]">
-                              <div className="flex items-center justify-between">
-                                <span className="font-semibold text-slate-800 text-xs">
-                                  Opção 2 — Elite
-                                </span>
-                                <span className="font-bold text-slate-900 text-xs">
-                                  R$ 9.450,00
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-slate-500">
-                                3,15 kWp • 275 kWh/mês • 5x 630W Bifacial + Microinversor Hoymiles
+                            <div className="pt-0.5 space-y-0.5">
+                              <p className="font-semibold text-[#111b21]">
+                                Opção 1 — Standard (Mais Recomendado)
                               </p>
+                              <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r text-[12.5px] sm:text-[13px] space-y-0.5">
+                                <p>• 5x Módulo Solar 630W N-Type TopCon</p>
+                                <p>• 1x Inversor String 3kW Monofásico 220V</p>
+                                <p>• Estrutura Cerâmica Completa + Cabos e Conectores</p>
+                                <p className="font-semibold text-[#00a884] pt-0.5">
+                                  Valor: R$ 8.977,50
+                                </p>
+                              </div>
                             </div>
 
-                            {/* Opção 3: Premium */}
-                            <div className="rounded-xl border border-slate-200 bg-[#f8f9fa] p-2 space-y-0.5 text-[12.5px]">
-                              <div className="flex items-center justify-between">
-                                <span className="font-semibold text-slate-800 text-xs">
-                                  Opção 3 — Premium
-                                </span>
-                                <span className="font-bold text-slate-900 text-xs">
-                                  R$ 10.200,00
-                                </span>
+                            <div className="space-y-0.5">
+                              <p className="font-semibold text-[#111b21]">Opção 2 — Elite</p>
+                              <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r text-[12.5px] sm:text-[13px] space-y-0.5">
+                                <p>• 5x Módulo Solar 630W Bifacial + Microinversor</p>
+                                <p className="font-medium text-[#111b21] pt-0.5">
+                                  Valor: R$ 9.450,00
+                                </p>
                               </div>
-                              <p className="text-[11px] text-slate-500">
-                                3,40 kWp • 290 kWh/mês • 5x 680W N-Type + Inversor Híbrido Bateria
-                              </p>
                             </div>
 
-                            <p className="text-[13px] font-semibold text-black pt-1">
+                            <div className="space-y-0.5">
+                              <p className="font-semibold text-[#111b21]">Opção 3 — Premium</p>
+                              <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r text-[12.5px] sm:text-[13px] space-y-0.5">
+                                <p>• 5x Módulo Solar 680W N-Type + Inversor Híbrido</p>
+                                <p className="font-medium text-[#111b21] pt-0.5">
+                                  Valor: R$ 10.200,00
+                                </p>
+                              </div>
+                            </div>
+
+                            <p className="font-semibold text-[#111b21] pt-0.5">
                               Qual opção você prefere para o seu cliente?
                             </p>
-                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2 border border-slate-200/80 text-[12.5px]">
-                              <p className="font-semibold text-black bg-emerald-100/90 border border-emerald-400 rounded-md px-2 py-0.5">
-                                [1] Standard (Mais Recomendado)
+                            <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r space-y-1 text-[13px] sm:text-[13.5px]">
+                              <p>
+                                <span className="font-semibold text-[#111b21]">[1] Standard</span>{" "}
+                                (Mais Recomendado)
                               </p>
-                              <p className="px-2 py-0.5 text-slate-600">[2] Elite</p>
-                              <p className="px-2 py-0.5 text-slate-600">[3] Premium</p>
+                              <p>
+                                <span className="font-semibold text-[#111b21]">[2] Elite</span>
+                              </p>
+                              <p>
+                                <span className="font-semibold text-[#111b21]">[3] Premium</span>
+                              </p>
+                              <p className="text-[#667781]">
+                                <span className="font-semibold text-[#111b21]">[0] Voltar</span> /
+                                Alterar estrutura
+                              </p>
                             </div>
+                            <p className="text-[12px] text-[#667781] italic">
+                              (Responda com 1, 2 ou 3)
+                            </p>
                           </div>
                         )}
 
                         {msg.kind === "ask_name" && (
-                          <div className="text-[14.5px] leading-[20px] space-y-1.5 text-black font-normal">
-                            <p className="font-semibold text-emerald-800">
+                          <div className="space-y-2 text-[#111b21] text-[13.5px] sm:text-[14px] leading-[19px]">
+                            <p className="font-semibold text-[#111b21]">
                               Ótima escolha! Kit selecionado com sucesso.
                             </p>
-                            <p>
-                              Qual o <b>nome do cliente final</b> para registrarmos no seu CRM?
+                            <p className="font-semibold text-[#111b21]">
+                              Qual o nome do cliente final para registrarmos no seu CRM?
                             </p>
-                            <p className="text-[11.5px] text-[#8696a0] italic">
+                            <p className="text-[12px] text-[#667781] italic">
                               (ou digite 0 para voltar às opções de kits)
                             </p>
                           </div>
                         )}
 
                         {msg.kind === "ask_phone" && (
-                          <div className="text-[14.5px] leading-[20px] space-y-1.5 text-black font-normal">
+                          <div className="space-y-2 text-[#111b21] text-[13.5px] sm:text-[14px] leading-[19px]">
                             <p>
-                              Certo, vou registrar o cliente <b>Marcelo Santana</b>.
+                              Certo, vou registrar o cliente{" "}
+                              <strong className="font-semibold text-[#111b21]">
+                                Marcelo Santana
+                              </strong>
+                              .
                             </p>
-                            <p>
-                              E qual o <b>WhatsApp dele com DDD</b>?
+                            <p className="font-semibold text-[#111b21]">
+                              E qual o WhatsApp dele com DDD?
                             </p>
-                            <p className="text-[11.5px] text-[#8696a0] italic">
+                            <p className="text-[12px] text-[#667781] italic">
                               (ou digite 0 para voltar)
                             </p>
                           </div>
                         )}
 
                         {msg.kind === "ask_template" && (
-                          <div className="text-[14.5px] leading-[20px] space-y-2 text-black font-normal">
-                            <div className="rounded-lg bg-emerald-50 border-l-2 border-emerald-500 p-2 text-[12.5px] text-emerald-950 font-medium">
-                              Cliente <b>Marcelo Santana</b> e WhatsApp <b>(44) 99888-0000</b>{" "}
-                              registrados com sucesso!
-                            </div>
-                            <p className="text-[13.5px] font-semibold text-black">
+                          <div className="space-y-2 text-[#111b21] text-[13.5px] sm:text-[14px] leading-[19px]">
+                            <p>
+                              Cliente{" "}
+                              <strong className="font-semibold text-[#111b21]">
+                                Marcelo Santana
+                              </strong>{" "}
+                              e WhatsApp{" "}
+                              <strong className="font-semibold text-[#111b21]">
+                                (44) 99888-0000
+                              </strong>{" "}
+                              anotados com sucesso!
+                            </p>
+                            <p className="font-semibold text-[#111b21]">
                               Qual modelo de proposta comercial você deseja usar para o seu cliente?
                             </p>
-                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2 border border-slate-200/80 text-[12.5px]">
-                              <p className="font-semibold text-black bg-emerald-100/90 border border-emerald-400 rounded-md px-2 py-0.5">
-                                [1] Modelo Premium Executivo
+                            <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r space-y-1 text-[13px] sm:text-[13.5px]">
+                              <p>
+                                <span className="font-semibold text-[#111b21]">
+                                  [1] Modelo Premium Executivo
+                                </span>
                               </p>
-                              <p className="px-2 py-0.5 text-slate-600">
-                                [2] Modelo Express Comercial
+                              <p>
+                                <span className="font-semibold text-[#111b21]">
+                                  [2] Modelo Express Comercial
+                                </span>
                               </p>
-                              <p className="px-2 py-0.5 text-slate-600">
-                                [3] Modelo Técnico Detalhado
+                              <p>
+                                <span className="font-semibold text-[#111b21]">
+                                  [3] Modelo Técnico Detalhado
+                                </span>
                               </p>
-                              <p className="px-2 py-0.5 text-slate-500">[0] Voltar / Rever dados</p>
+                              <p className="text-[#667781]">
+                                <span className="font-semibold text-[#111b21]">[0] Voltar</span> /
+                                Rever dados
+                              </p>
                             </div>
+                            <p className="text-[12px] text-[#667781] italic">
+                              (Responda com o número da opção desejada)
+                            </p>
                           </div>
                         )}
 
                         {msg.kind === "final_proposal" && (
-                          <div className="text-[14.5px] leading-[20px] space-y-2.5 text-black font-normal">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-black text-[14px]">
-                                Proposta Comercial Gerada com Sucesso!
-                              </span>
-                              <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 border border-emerald-200">
-                                Pronta
-                              </span>
-                            </div>
-
-                            {/* Summary specs from real bot text */}
-                            <div className="space-y-1 rounded-xl bg-[#f8f9fa] p-2.5 border border-slate-200/80 text-[12.5px]">
-                              <p className="flex justify-between">
-                                <span className="text-slate-600">Cliente:</span>
-                                <span className="font-semibold text-black">Marcelo Santana</span>
+                          <div className="space-y-2 text-[#111b21] text-[13.5px] sm:text-[14px] leading-[19px]">
+                            <p className="font-semibold text-[#111b21]">
+                              Proposta Comercial Gerada com Sucesso!
+                            </p>
+                            <p>
+                              Cliente:{" "}
+                              <strong className="font-semibold text-[#111b21]">
+                                Marcelo Santana
+                              </strong>
+                            </p>
+                            <div className="border-l-[3.5px] border-[#25d366] bg-black/[0.02] pl-2.5 py-1 rounded-r space-y-0.5 text-[13px] sm:text-[13.5px]">
+                              <p>
+                                Potência:{" "}
+                                <code className="font-mono text-[12.5px] bg-black/[0.04] px-1 py-0.5 rounded font-semibold">
+                                  3,15 kWp
+                                </code>
                               </p>
-                              <p className="flex justify-between">
-                                <span className="text-slate-600">Potência:</span>
-                                <span className="font-bold text-black">3,15 kWp</span>
-                              </p>
-                              <p className="flex justify-between">
-                                <span className="text-slate-600">Estrutura:</span>
-                                <span className="font-medium text-slate-800">
+                              <p>
+                                Estrutura:{" "}
+                                <strong className="font-semibold text-[#111b21]">
                                   Cerâmica (Colonial)
-                                </span>
+                                </strong>
                               </p>
-                              <p className="flex justify-between">
-                                <span className="text-slate-600">Modelo:</span>
-                                <span className="font-medium text-slate-800">
+                              <p>
+                                Modelo:{" "}
+                                <strong className="font-semibold text-[#111b21]">
                                   Modelo Premium Executivo
-                                </span>
+                                </strong>
                               </p>
-                              <p className="flex justify-between border-t border-slate-200 pt-1 text-[13px]">
-                                <span className="font-bold text-slate-800">Valor Total:</span>
-                                <span className="font-extrabold text-emerald-700">R$ 8.977,50</span>
+                              <p>
+                                Valor Total:{" "}
+                                <strong className="font-semibold text-[#00a884]">
+                                  R$ 8.977,50
+                                </strong>
                               </p>
                             </div>
 
-                            {/* Interactive Proposal Card in WhatsApp */}
-                            <div className="rounded-xl border border-emerald-300 bg-white p-2.5 shadow-2xs space-y-2">
-                              <div className="flex items-center gap-2.5">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                  <FileText className="h-5 w-5" />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate font-semibold text-black text-[13.5px]">
-                                    Proposta_Solar_Marcelo_Santana.pdf
-                                  </p>
-                                  <p className="text-[11.5px] text-[#8696a0] font-normal mt-0.5">
-                                    3,15 kWp • Payback de 2,7 anos • Economia R$ 74.800
-                                  </p>
-                                </div>
-                              </div>
+                            <p className="font-semibold text-[#111b21] pt-0.5">
+                              Acesse a Proposta no link abaixo:
+                            </p>
+                            <p>
+                              <a
+                                href="https://energivia.com.br/proposta/8921a9f"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#027eb5] hover:underline font-mono text-[12.5px] break-all"
+                              >
+                                https://energivia.com.br/proposta/8921a9f
+                              </a>
+                            </p>
 
-                              <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2 text-[12px]">
-                                <span className="font-mono text-emerald-700 text-[11px] truncate max-w-[150px]">
-                                  energivia.com.br/p/8921a9f
+                            {/* Authentic WhatsApp OpenGraph Link Preview Box */}
+                            <div className="mt-1 rounded-lg border border-[#e9edef] bg-[#f0f2f5]/80 overflow-hidden">
+                              <div className="p-2 space-y-0.5">
+                                <span className="text-[10.5px] font-mono text-[#667781] uppercase block">
+                                  energivia.com.br
                                 </span>
-                                <span className="flex items-center gap-1 font-semibold bg-emerald-600 text-white px-2.5 py-1 rounded-md text-[11.5px] shadow-xs cursor-pointer hover:bg-emerald-700 transition">
-                                  Abrir Proposta <ExternalLink className="h-3 w-3" />
-                                </span>
+                                <p className="font-semibold text-[#111b21] text-[12.5px] leading-snug">
+                                  Proposta Comercial — Marcelo Santana
+                                </p>
+                                <p className="text-[11px] text-[#667781] leading-snug line-clamp-2">
+                                  Sistema 3,15 kWp • Payback 2,7 anos • Economia estimada R$ 74.800
+                                </p>
                               </div>
                             </div>
 
-                            <p className="text-[11.5px] text-[#8696a0] leading-snug">
+                            <p className="text-[12px] text-[#667781] italic pt-0.5">
                               Ela também já está disponível no seu painel CRM da EnergivIA.
                             </p>
-                            <p className="text-[12px] font-semibold text-slate-700">
-                              Equipe <i>EnergivIA Solar</i>
+                            <p className="text-[12px] font-semibold text-[#667781]">
+                              Equipe <em>EnergivIA Solar</em>
                             </p>
                           </div>
                         )}
 
-                        <div className="flex items-center justify-end text-[11px] text-[#8696a0] font-normal pt-0.5">
+                        <div className="mt-1 flex items-center justify-end text-[11px] text-[#667781] font-normal leading-none select-none">
                           <span>{msg.time}</span>
                         </div>
                       </div>
@@ -985,25 +1097,22 @@ export function WhatsappFlowSimulator(): JSX.Element {
                 })}
               </AnimatePresence>
 
-              {/* LIVE TYPING INDICATOR */}
+              {/* LIVE TYPING INDICATOR (Authentic WhatsApp 3-Dots Bubble) */}
               <AnimatePresence>
                 {activeBotTyping && (
                   <motion.div
-                    key="typing-pill"
-                    initial={{ opacity: 0, y: 12, scale: 0.92 }}
+                    key="typing-dots-bubble"
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.92 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex items-center gap-2 text-black text-xs py-1"
+                    exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="flex justify-start py-0.5"
                   >
-                    <div className="flex gap-1.5 rounded-full bg-white px-3 py-1.5 shadow-[0_1px_1px_rgba(0,0,0,0.08)] border border-black/[0.04]">
-                      <span className="h-2 w-2 rounded-full bg-[#00a884] animate-bounce" />
-                      <span className="h-2 w-2 rounded-full bg-[#00a884] animate-bounce [animation-delay:150ms]" />
-                      <span className="h-2 w-2 rounded-full bg-[#00a884] animate-bounce [animation-delay:300ms]" />
+                    <div className="flex items-center gap-1.5 rounded-[14px] rounded-tl-[3px] bg-white px-3.5 py-2.5 shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]">
+                      <span className="h-2 w-2 rounded-full bg-[#8696a0] animate-bounce" />
+                      <span className="h-2 w-2 rounded-full bg-[#8696a0] animate-bounce [animation-delay:150ms]" />
+                      <span className="h-2 w-2 rounded-full bg-[#8696a0] animate-bounce [animation-delay:300ms]" />
                     </div>
-                    <span className="text-[12px] text-[#8696a0] font-medium animate-pulse">
-                      {activeBotTyping}
-                    </span>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1017,9 +1126,9 @@ export function WhatsappFlowSimulator(): JSX.Element {
               <button type="button" className="text-[#007aff] hover:opacity-75 transition px-1">
                 <span className="text-2xl font-light leading-none">+</span>
               </button>
-              <div className="flex-1 min-h-[34px] flex items-center rounded-full bg-white px-3.5 py-1 text-[15px] text-black border border-[#e5e5ea] shadow-2xs">
+              <div className="flex-1 min-h-[34px] flex items-center rounded-full bg-white px-3.5 py-1 text-[15px] text-[#111b21] border border-[#e5e5ea] shadow-2xs">
                 {activeInputDraft ? (
-                  <span className="text-black font-normal flex items-center gap-0.5">
+                  <span className="text-[#111b21] font-normal flex items-center gap-0.5">
                     {activeInputDraft}
                     <span className="inline-block w-1.5 h-3.5 bg-[#00a884] animate-pulse" />
                   </span>
@@ -1028,16 +1137,14 @@ export function WhatsappFlowSimulator(): JSX.Element {
                 )}
               </div>
               <motion.div
-                animate={
-                  activeInputDraft ? { scale: [1, 1.15, 1], rotate: [0, 5, 0] } : { scale: 1 }
-                }
-                transition={{ duration: 0.3 }}
+                animate={activeInputDraft ? { scale: [1, 1.12, 1] } : { scale: 1 }}
+                transition={{ duration: 0.2 }}
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#00a884] text-white shadow-xs hover:bg-[#008069] transition"
               >
                 {activeInputDraft ? (
                   <Send className="h-3.5 w-3.5 fill-white" />
                 ) : (
-                  <Zap className="h-3.5 w-3.5 fill-white" />
+                  <Mic className="h-3.5 w-3.5 text-white" />
                 )}
               </motion.div>
             </div>
