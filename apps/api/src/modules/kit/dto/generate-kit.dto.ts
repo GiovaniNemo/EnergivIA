@@ -3,7 +3,9 @@ import { IsNumber, IsString, IsOptional, IsBoolean, IsIn, Min, Max } from "class
 export class GenerateKitDto {
   @IsNumber()
   @Min(0.5, { message: "A potência do sistema (system_kw) deve ser no mínimo 0,5." })
-  @Max(1000, { message: "A potência do sistema (system_kw) deve ser no máximo 1000." })
+  @Max(5_000_000, {
+    message: "A potência do sistema (system_kw) deve ser no máximo 5.000.000 kWp (5 GWp).",
+  })
   system_kw!: number;
 
   @IsString()
@@ -44,7 +46,7 @@ export class GenerateKitDto {
   @IsOptional()
   @IsNumber()
   @Min(1, { message: "A quantidade de inversores deve ser no mínimo 1." })
-  @Max(10, { message: "A quantidade de inversores deve ser no máximo 10." })
+  @Max(50_000, { message: "A quantidade de inversores deve ser no máximo 50.000." })
   target_inverter_qty?: number;
 
   @IsOptional()

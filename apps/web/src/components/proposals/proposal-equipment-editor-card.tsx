@@ -331,7 +331,7 @@ export function ProposalEquipmentEditorCard({
   useEffect(() => {
     if (!hasUserEditedKitSpecs.current) return;
     const kw = parseFloat(kitDraft.systemKw.replace(",", "."));
-    if (!Number.isFinite(kw) || kw < 0.5 || kw > 1000) return;
+    if (!Number.isFinite(kw) || kw < 0.5 || kw > 5_000_000) return;
 
     let cancelled = false;
     const timer = window.setTimeout(async () => {
@@ -543,8 +543,6 @@ export function ProposalEquipmentEditorCard({
       cancelled = true;
     };
   }, [swapTargetIndex, distributorId, swapCategory, swapSearch, organizationId, proposalId]);
-
-
 
   const unavailableCount = lines.filter((l) => l.unavailable).length;
 
@@ -909,12 +907,34 @@ export function ProposalEquipmentEditorCard({
                 <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
                   {/* Potência do sistema (kWp) */}
                   <div className="space-y-1.5">
-                    <Label
-                      htmlFor="proposal-kit-kw"
-                      className="text-xs font-semibold text-[var(--color-foreground)]"
-                    >
-                      Potência do sistema (kWp)
-                    </Label>
+                    <div className="flex items-center justify-between">
+                      <Label
+                        htmlFor="proposal-kit-kw"
+                        className="text-xs font-semibold text-[var(--color-foreground)]"
+                      >
+                        Potência do sistema (kWp)
+                      </Label>
+                      {(() => {
+                        const kwNum = parseFloat(kitDraft.systemKw.replace(",", "."));
+                        if (!Number.isFinite(kwNum) || kwNum < 1000) return null;
+                        if (kwNum >= 1_000_000) {
+                          return (
+                            <span className="inline-flex items-center rounded-md bg-purple-500/10 px-2 py-0.5 text-xs font-semibold text-purple-600 dark:text-purple-400">
+                              {(kwNum / 1_000_000).toLocaleString("pt-BR", {
+                                maximumFractionDigits: 3,
+                              })}{" "}
+                              GWp
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="inline-flex items-center rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            {(kwNum / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 3 })}{" "}
+                            MWp
+                          </span>
+                        );
+                      })()}
+                    </div>
                     <Input
                       id="proposal-kit-kw"
                       type="text"
@@ -1208,7 +1228,6 @@ export function ProposalEquipmentEditorCard({
                     <th className="p-3 text-right text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
                       Qtd
                     </th>
-
                   </tr>
                 </thead>
                 <tbody>
@@ -1457,7 +1476,6 @@ export function ProposalEquipmentEditorCard({
                               </span>
                             )}
                           </td>
-
                         </tr>
                         {swapTargetIndex === idx && role === "bos" ? (
                           <tr className="bg-[var(--color-muted)]/15">
@@ -1480,7 +1498,6 @@ export function ProposalEquipmentEditorCard({
                     </tr>
                   )}
                 </tbody>
-
               </table>
             </div>
 

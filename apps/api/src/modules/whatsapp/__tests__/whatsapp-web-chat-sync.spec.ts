@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getHsp } from "../services/geo-irradiance.service";
-import { WhatsappBotService } from "../whatsapp-bot.service";
+import { WhatsappBotService, formatPowerBadge, parsePowerInput } from "../whatsapp-bot.service";
 
 describe("WhatsApp & Web Chat Engine Synchronization Suite", () => {
   describe("Individual kit tier presentation in WhatsApp and Bot listings", () => {
@@ -196,6 +196,42 @@ describe("WhatsApp & Web Chat Engine Synchronization Suite", () => {
         userResponse === "padrao" ||
         userResponse === "padrão";
       expect(isChoice1).toBe(true);
+    });
+  });
+
+  describe("MWp & GWp Utility-Scale Power Handling", () => {
+    it("should parse power inputs in kWp, MWp, MW, GWp and GW", () => {
+      expect(parsePowerInput("5 kwp")).toBe(5);
+      expect(parsePowerInput("3000 kwp")).toBe(3000);
+      expect(parsePowerInput("3 mwp")).toBe(3000);
+      expect(parsePowerInput("3.5 MW")).toBe(3500);
+      expect(parsePowerInput("1 gwp")).toBe(1_000_000);
+      expect(parsePowerInput("1.2 GW")).toBe(1_200_000);
+    });
+
+    it("should format power badges with MWp and GWp equivalents", () => {
+      expect(formatPowerBadge(5)).toBe("5 kWp");
+      expect(formatPowerBadge(999)).toBe("999 kWp");
+      expect(formatPowerBadge(1000)).toBe("1.000 kWp (1 MWp)");
+      expect(formatPowerBadge(3000)).toBe("3.000 kWp (3 MWp)");
+      expect(formatPowerBadge(1_500_000)).toBe("1.500.000 kWp (1,5 GWp)");
+    });
+
+    it("should display MWp badge in quotes listing for 3000 kWp", () => {
+      const rendered = WhatsappBotService.prototype.formatQuotesListText.call(
+        {} as unknown as WhatsappBotService,
+        [
+          {
+            distributorName: "Elite",
+            kwp: 3000,
+            estimatedGeneration: 375000,
+            items: ["• 5128x Módulos 585W", "• 30x Inversores 100kW"],
+          },
+        ],
+        { targetKWp: 3000, cidade: "Maringá", estado: "PR" }
+      );
+
+      expect(rendered).toContain("3.000 kWp (3 MWp)");
     });
   });
 });

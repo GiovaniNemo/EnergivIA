@@ -24,6 +24,7 @@ export interface KwpRateKitTier {
   ratePerKwpEffective: number;
   systemKwp: number;
   inverterPowerKw: number;
+  inverterQty?: number;
   materialsTotal: number;
   estimatedMonthlyGenerationKwh: number;
   inverterBrand: string;
@@ -92,8 +93,8 @@ export function generateKwpRateTiers({
   ratePerKwp,
   roofType,
   monthlyConsumption: _monthlyConsumption,
-  cidade: _cidade,
-  estado: _estado,
+  cidade,
+  estado,
 }: GenerateKwpRateTiersParams): KwpRateKitTier[] {
   const safeKwp = Math.max(0.5, Number(kwp) || 3.0);
   const safeRate = Math.max(500, Number(ratePerKwp) || 2800);
@@ -111,7 +112,24 @@ export function generateKwpRateTiers({
   const estGeneration = Math.round(realSystemKwp * estGenPerKwp);
 
   const roof = normalizeRoofDescription(roofType);
-  const invPower = getStandardInverterPower(realSystemKwp);
+
+  let invPower = 3;
+  let invQty = 1;
+
+  if (realSystemKwp <= 130) {
+    invPower = getStandardInverterPower(realSystemKwp);
+    invQty = 1;
+  } else {
+    // Para usinas comerciais e de grande porte (> 130 kWp até GWp), dimensiona múltiplos inversores industriais de 75kW ou 100kW
+    invPower = realSystemKwp >= 500 ? 100 : 75;
+    invQty = Math.max(2, Math.ceil(realSystemKwp / (invPower * 1.3)));
+  }
+
+  const formatInvModelName = (brand: string) => {
+    return invQty > 1
+      ? `Inversor ${brand} ${invPower}kW (${invQty}x)`
+      : `Inversor ${brand} ${invPower}kW`;
+  };
 
   const tierConfigs = [
     {
@@ -125,7 +143,7 @@ export function generateKwpRateTiers({
       materialCostFactor: 0.88,
       inverterBrand: "GoodWe",
       inverterPowerKw: invPower,
-      inverterModel: `Inversor GoodWe ${invPower}kW`,
+      inverterModel: formatInvModelName("GoodWe"),
       moduleBrand: "Astronergy",
       moduleModel: `Módulo Astronergy ${modulePowerW}W`,
     },
@@ -139,7 +157,7 @@ export function generateKwpRateTiers({
       materialCostFactor: 1.0,
       inverterBrand: "SAJ",
       inverterPowerKw: invPower,
-      inverterModel: `Inversor SAJ ${invPower}kW`,
+      inverterModel: formatInvModelName("SAJ"),
       moduleBrand: "LONGi Solar",
       moduleModel: `Módulo LONGi Solar ${modulePowerW}W`,
     },
@@ -153,7 +171,7 @@ export function generateKwpRateTiers({
       materialCostFactor: 1.15,
       inverterBrand: "Solplanet",
       inverterPowerKw: invPower,
-      inverterModel: `Inversor Solplanet ${invPower}kW`,
+      inverterModel: formatInvModelName("Solplanet"),
       moduleBrand: "Jinko Solar",
       moduleModel: `Módulo Jinko Solar ${modulePowerW}W`,
     },
@@ -199,10 +217,10 @@ export function generateKwpRateTiers({
         productName: cfg.inverterModel,
         brandName: cfg.inverterBrand,
         categoryName: "inverter",
-        quantity: 1,
-        unitPrice: invTotal,
+        quantity: invQty,
+        unitPrice: Math.round((invTotal / invQty) * 100) / 100,
         lineTotal: invTotal,
-        specs: { powerKw: invPower, type: "On-Grid String" },
+        specs: { powerKw: invPower, type: "On-Grid String", quantity: invQty },
       },
     ];
 
@@ -330,8 +348,8 @@ export function generateKwpRateTiers({
     const materialsTotal = structuredItems.reduce((acc, it) => acc + it.lineTotal, 0);
 
     const kitSummaryLines = [
-      `• ${moduleQty}x Módulos ${cfg.moduleBrand} ${modulePowerW}W`,
-      `• 1x Inversor ${cfg.inverterBrand} ${invPower}kW`,
+      `• ${moduleQty.toLocaleString("pt-BR")}x Módulos ${cfg.moduleBrand} ${modulePowerW}W`,
+      `• ${invQty > 1 ? `${invQty}x Inversores` : "1x Inversor"} ${cfg.inverterBrand} ${invPower}kW`,
       roof.code !== "none" ? `• Estrutura: ${roof.label}` : null,
     ].filter(Boolean) as string[];
 
@@ -353,6 +371,7 @@ export function generateKwpRateTiers({
       ratePerKwpEffective,
       systemKwp: realSystemKwp,
       inverterPowerKw: invPower,
+      inverterQty: invQty,
       materialsTotal,
       estimatedMonthlyGenerationKwh: estGeneration,
       inverterBrand: cfg.inverterBrand,

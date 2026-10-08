@@ -147,17 +147,31 @@ function getRoofSolarFactor(roofType?: string | null): number {
 
 function clampSystemKw(kw: number): number {
   const rounded = Math.round(kw * 100) / 100;
-  return Math.min(1000, Math.max(0.5, rounded));
+  return Math.min(5_000_000, Math.max(0.5, rounded));
 }
 
 function extractPowerBadge(text?: string | null): string | null {
   if (!text) return null;
-  const match = text.match(/\b(\d+(?:[.,]\d+)?)\s*(kwp|kw|wp|w)\b/i);
+  const match = text.match(/\b(\d+(?:[.,]\d+)?)\s*(gwp|gw|mwp|mw|kwp|kw|wp|w)\b/i);
   if (match) {
     const val = match[1];
     const rawUnit = match[2].toLowerCase();
     const unit =
-      rawUnit === "kwp" ? "kWp" : rawUnit === "kw" ? "kW" : rawUnit === "wp" ? "Wp" : "W";
+      rawUnit === "gwp"
+        ? "GWp"
+        : rawUnit === "gw"
+          ? "GW"
+          : rawUnit === "mwp"
+            ? "MWp"
+            : rawUnit === "mw"
+              ? "MW"
+              : rawUnit === "kwp"
+                ? "kWp"
+                : rawUnit === "kw"
+                  ? "kW"
+                  : rawUnit === "wp"
+                    ? "Wp"
+                    : "W";
     return `${val} ${unit}`;
   }
   const matchKtl = text.match(/\b(\d+(?:[.,]\d+)?)\s*ktl\b/i);
@@ -1416,8 +1430,8 @@ export const ProposalEconomicsModal = forwardRef<
     if (!proposalResultOpen || !generatedProposal) return;
     const timer = window.setTimeout(() => {
       const kw = parseFloat(proposalKitDraft.systemKw.replace(",", "."));
-      if (!Number.isFinite(kw) || kw < 0.5 || kw > 1000) {
-        setProposalKitError("Informe uma potência entre 0,5 e 1000 kWp.");
+      if (!Number.isFinite(kw) || kw < 0.5 || kw > 5_000_000) {
+        setProposalKitError("Informe uma potência a partir de 0,5 kWp.");
         return;
       }
       setProposalKitError(null);
@@ -2843,7 +2857,33 @@ export const ProposalEconomicsModal = forwardRef<
                       <div className="grid gap-4 sm:grid-cols-2">
                         {manualSizingBasis === "power" ? (
                           <div className="grid gap-1.5 sm:col-span-1">
-                            <Label>Potência do sistema (kWp)</Label>
+                            <div className="flex items-center justify-between gap-1">
+                              <Label>Potência do sistema (kWp)</Label>
+                              {(() => {
+                                const kw = Number(inputSystemKw.replace(",", "."));
+                                if (kw >= 1_000_000) {
+                                  return (
+                                    <span className="text-[0.68rem] font-bold text-emerald-600 dark:text-emerald-400">
+                                      {(kw / 1_000_000).toLocaleString("pt-BR", {
+                                        maximumFractionDigits: 3,
+                                      })}{" "}
+                                      GWp
+                                    </span>
+                                  );
+                                }
+                                if (kw >= 1_000) {
+                                  return (
+                                    <span className="text-[0.68rem] font-bold text-emerald-600 dark:text-emerald-400">
+                                      {(kw / 1_000).toLocaleString("pt-BR", {
+                                        maximumFractionDigits: 2,
+                                      })}{" "}
+                                      MWp
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
                             <Input
                               value={inputSystemKw}
                               onChange={(e) => {
@@ -2853,7 +2893,7 @@ export const ProposalEconomicsModal = forwardRef<
                                   systemKw: undefined,
                                 }));
                               }}
-                              placeholder="Ex: 5,5"
+                              placeholder="Ex: 5,5 (ou 3000 para 3 MWp)"
                               inputMode="decimal"
                             />
                             {proposalFieldErrors.systemKw ? (
@@ -3100,8 +3140,8 @@ export const ProposalEconomicsModal = forwardRef<
                   } else if (isPowerBasis) {
                     if (!hasKwInput || !hasKw) {
                       fieldErrors.systemKw = "Informe a potência do sistema (kWp).";
-                    } else if (systemKw < 0.5 || systemKw > 1000) {
-                      fieldErrors.systemKw = "Informe uma potência entre 0,5 e 1000 kWp.";
+                    } else if (systemKw < 0.5 || systemKw > 5_000_000) {
+                      fieldErrors.systemKw = "Informe uma potência a partir de 0,5 kWp.";
                     }
                     if (hasBillInput && !hasConta) {
                       fieldErrors.valorConta = "Informe um valor de conta valido.";
@@ -3249,17 +3289,30 @@ export const ProposalEconomicsModal = forwardRef<
                     {isBelowMinModules ? "Potência (Ajustada)" : "Potência"}
                   </p>
                   <p className="text-base sm:text-2xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
-                    {(isBelowMinModules
-                      ? adjustedKw
-                      : (proposalKitResult?.system_power_kw ??
-                        clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0))
-                    )?.toLocaleString("pt-BR", {
-                      minimumFractionDigits: 1,
-                      maximumFractionDigits: 2,
-                    }) ?? "0"}{" "}
-                    <span className="text-[0.65rem] sm:text-sm font-normal text-[var(--color-muted-foreground)] block sm:inline">
-                      kWp
-                    </span>
+                    {(() => {
+                      const finalPowerKw = isBelowMinModules
+                        ? adjustedKw
+                        : (proposalKitResult?.system_power_kw ??
+                          clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0));
+                      const formattedKw = (finalPowerKw ?? 0).toLocaleString("pt-BR", {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 2,
+                      });
+                      const scaleLabel =
+                        finalPowerKw >= 1_000_000
+                          ? ` (${(finalPowerKw / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} GWp)`
+                          : finalPowerKw >= 1_000
+                            ? ` (${(finalPowerKw / 1_000).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} MWp)`
+                            : "";
+                      return (
+                        <>
+                          {formattedKw}{" "}
+                          <span className="text-[0.65rem] sm:text-sm font-normal text-[var(--color-muted-foreground)] block sm:inline">
+                            kWp{scaleLabel}
+                          </span>
+                        </>
+                      );
+                    })()}
                   </p>
                   {isBelowMinModules && (
                     <p className="text-[0.65rem] text-[var(--color-muted-foreground)] leading-tight">
@@ -3415,12 +3468,38 @@ export const ProposalEconomicsModal = forwardRef<
                       </>
                     ) : (
                       <div className="space-y-1.5">
-                        <Label
-                          htmlFor="proposal-kit-kw"
-                          className="text-xs font-semibold text-[var(--color-foreground)]"
-                        >
-                          Potência do sistema (kWp)
-                        </Label>
+                        <div className="flex items-center justify-between gap-1">
+                          <Label
+                            htmlFor="proposal-kit-kw"
+                            className="text-xs font-semibold text-[var(--color-foreground)]"
+                          >
+                            Potência do sistema (kWp)
+                          </Label>
+                          {(() => {
+                            const kwVal = parseFloat(proposalKitDraft.systemKw.replace(",", "."));
+                            if (kwVal >= 1_000_000) {
+                              return (
+                                <span className="text-[0.68rem] font-bold text-emerald-600 dark:text-emerald-400">
+                                  {(kwVal / 1_000_000).toLocaleString("pt-BR", {
+                                    maximumFractionDigits: 3,
+                                  })}{" "}
+                                  GWp
+                                </span>
+                              );
+                            }
+                            if (kwVal >= 1_000) {
+                              return (
+                                <span className="text-[0.68rem] font-bold text-emerald-600 dark:text-emerald-400">
+                                  {(kwVal / 1_000).toLocaleString("pt-BR", {
+                                    maximumFractionDigits: 2,
+                                  })}{" "}
+                                  MWp
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
                         <Input
                           id="proposal-kit-kw"
                           type="text"

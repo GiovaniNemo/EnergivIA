@@ -476,15 +476,17 @@ export class KitGenerationService {
     };
 
     const minInvPowerKw =
-      input.system_kw >= 200
-        ? 40
-        : input.system_kw >= 80
-          ? 20
-          : input.system_kw >= 35
-            ? 10
-            : input.system_kw >= 15
-              ? 5
-              : 1;
+      input.system_kw >= 1000
+        ? 60
+        : input.system_kw >= 200
+          ? 40
+          : input.system_kw >= 80
+            ? 20
+            : input.system_kw >= 35
+              ? 10
+              : input.system_kw >= 15
+                ? 5
+                : 1;
 
     const scaleCompatibleString = allStringInverters.filter(
       (inv) => getInverterPowerKw(inv) >= minInvPowerKw
@@ -499,7 +501,11 @@ export class KitGenerationService {
     };
 
     const sortStringInverters = (inverters: ProductWithSpecs<StringInverterSpec>[]) => {
-      const maxAutoN = input.system_kw >= 200 ? 6 : 4;
+      const maxPowerInvKw = Math.max(...inverters.map((inv) => getInverterPowerKw(inv)), 10);
+      const maxAutoN =
+        input.system_kw < 200
+          ? 6
+          : Math.max(6, Math.ceil(input.system_kw / (maxPowerInvKw * 1.35)) + 4);
       return [...inverters].sort((a, b) => {
         // 1ª prioridade: unidades coerentes para o porte (modelos que precisam de <= maxAutoN unidades têm preferência absoluta)
         const aUnits = calcInverterUnitsNeeded(a);

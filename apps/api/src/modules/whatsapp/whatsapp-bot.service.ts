@@ -264,6 +264,36 @@ function parseKwpRate(
   return null;
 }
 
+/** Formata a potência exibida com badge de MWp ou GWp quando exceder 1.000 kWp */
+export function formatPowerBadge(kwp: number): string {
+  if (!Number.isFinite(kwp) || kwp <= 0) return `${kwp} kWp`;
+  if (kwp >= 1_000_000) {
+    return `${kwp.toLocaleString("pt-BR")} kWp (${(kwp / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} GWp)`;
+  }
+  if (kwp >= 1000) {
+    return `${kwp.toLocaleString("pt-BR")} kWp (${(kwp / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} MWp)`;
+  }
+  return `${kwp} kWp`;
+}
+
+/** Converte entradas textuais de potência (ex: 3000 kwp, 3 mwp, 1.5 gw) para kWp */
+export function parsePowerInput(text: string): number | null {
+  const match = text.match(/(\d+(?:[.,]\d+)?)\s*(gwp|gw|mwp|mw|kwp|kw)\b/i);
+  if (match && match[1]) {
+    const val = parseFloat(match[1].replace(",", "."));
+    if (!Number.isFinite(val) || val <= 0) return null;
+    const unit = (match[2] || "").toLowerCase();
+    if (unit === "gwp" || unit === "gw") {
+      return Math.min(val * 1_000_000, 5_000_000);
+    }
+    if (unit === "mwp" || unit === "mw") {
+      return Math.min(val * 1_000, 5_000_000);
+    }
+    return Math.min(val, 5_000_000);
+  }
+  return null;
+}
+
 @Injectable()
 export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WhatsappBotService.name);
@@ -2186,6 +2216,14 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
+  public formatPowerBadge(kwp: number): string {
+    return formatPowerBadge(kwp);
+  }
+
+  public parsePowerInput(text: string): number | null {
+    return parsePowerInput(text);
+  }
+
   /** Etapa 1: lista os grupos de kits (sem preço) para o integrador escolher */
   public formatQuotesListText(
     quotes: any[],
@@ -2205,8 +2243,11 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
           ? ` em \`${sessionCtx.cidade}\``
           : "";
 
-    const infoCabecalho = sessionCtx.targetKWp
-      ? `para a potência de \`${sessionCtx.targetKWp} kWp\`${localidade}`
+    const formattedHeaderPower = sessionCtx.targetKWp
+      ? formatPowerBadge(sessionCtx.targetKWp)
+      : null;
+    const infoCabecalho = formattedHeaderPower
+      ? `para a potência de \`${formattedHeaderPower}\`${localidade}`
       : sessionCtx.targetModules
         ? `para \`${sessionCtx.targetModules} módulos\`${localidade}`
         : `para o consumo de \`${sessionCtx.consumptionKwh || 300} kWh/mês\`${localidade}`;
@@ -2222,7 +2263,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
       quoteText += `*_Opção ${index + 1} — ${tierName}${tag}_*${trophy}\n`;
       if (q.kwp && q.estimatedGeneration) {
-        quoteText += `> ⚡ Potência: \`${q.kwp} kWp\` | Geração estimada: \`${q.estimatedGeneration} kWh/mês\`\n`;
+        quoteText += `> ⚡ Potência: \`${formatPowerBadge(q.kwp)}\` | Geração estimada: \`${q.estimatedGeneration} kWh/mês\`\n`;
       }
 
       const items: string[] =
@@ -2766,10 +2807,10 @@ ${catalogContext}`;
           }
         }
 
-        // 1. Extração de kWp
-        const kwpM = content.match(/(\d+(?:[.,]\d+)?)\s*kwp/i);
-        if (kwpM && kwpM[1]) {
-          targetKWp = parseFloat(kwpM[1].replace(",", "."));
+        // 1. Extração de Potência (kWp / MWp / GWp)
+        const parsedP = this.parsePowerInput(content);
+        if (parsedP !== null && parsedP >= 0.5) {
+          targetKWp = parsedP;
           targetModules = undefined;
           modPowerWUser = undefined;
           consumptionKwh = undefined;
@@ -2783,7 +2824,7 @@ ${catalogContext}`;
           const numM = content.match(/(\d+(?:[.,]\d+)?)/);
           if (numM && numM[1]) {
             const pVal = parseFloat(numM[1].replace(",", "."));
-            if (pVal >= 0.5 && pVal <= 5000) {
+            if (pVal >= 0.5 && pVal <= 5_000_000) {
               targetKWp = pVal;
               targetModules = undefined;
               modPowerWUser = undefined;
@@ -2827,7 +2868,7 @@ ${catalogContext}`;
         const kwhM = content.match(
           /(?:consumo registrado:\s*|consumo m[ée]dio de\s*|consumo\s+(?:de\s+)?|gasto\s+(?:de\s+)?)?(\d+[\d.,]*)\s*(?:kwh|kw)(?:\/m[eê]s)?/i
         );
-        if (kwhM && kwhM[1] && !kwpM) {
+        if (kwhM && kwhM[1] && parsedP === null) {
           const val = Math.round(Number(kwhM[1].replace(/\./g, "").replace(",", ".")));
           if (val >= 20 && val <= 500000) {
             consumptionKwh = val;
@@ -4073,46 +4114,54 @@ ${catalogContext}`;
         lastBotMsg.includes("potência (kWp)"));
 
     if (isAskingKwp) {
-      const kwpMatch = incomingText.match(/(\d+(?:[.,]\d+)?)\s*(?:kwp|kw)?/i);
-      if (kwpMatch && kwpMatch[1]) {
-        const targetKWp = parseFloat(kwpMatch[1].replace(",", "."));
-        if (targetKWp >= 0.5 && targetKWp <= 5000) {
-          const cityInSameMsg = incomingText.match(
-            /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
-          );
-          if (cityInSameMsg && cityInSameMsg[1]) {
-            const cand = (
-              cityInSameMsg[1] +
-              (cityInSameMsg[2]
-                ? `/${cityInSameMsg[2]}`
-                : cityInSameMsg[3]
-                  ? `/${cityInSameMsg[3]}`
-                  : "")
-            ).trim();
-            const hspRes = getHsp(cand);
-            return (
-              `*_Potência Solicitada:_* \`${targetKWp} kWp\` em \`${hspRes.city}/${hspRes.uf}\` ☀️📍\n\n` +
-              this.GRID_OPTIONS_TEXT
-            );
+      let targetKWp = this.parsePowerInput(incomingText);
+      if (targetKWp === null) {
+        const kwpMatch = incomingText.match(/(\d+(?:[.,]\d+)?)\s*(?:kwp|kw)?/i);
+        if (kwpMatch && kwpMatch[1]) {
+          const val = parseFloat(kwpMatch[1].replace(",", "."));
+          if (val >= 0.5 && val <= 5_000_000) {
+            targetKWp = val;
           }
+        }
+      }
 
-          if (sessionCtx.cidade && sessionCtx.estado) {
-            return (
-              `*_Potência Solicitada:_* \`${targetKWp} kWp\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
-              this.GRID_OPTIONS_TEXT
-            );
-          }
-
+      if (targetKWp !== null && targetKWp >= 0.5 && targetKWp <= 5_000_000) {
+        const formattedPower = this.formatPowerBadge(targetKWp);
+        const cityInSameMsg = incomingText.match(
+          /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
+        );
+        if (cityInSameMsg && cityInSameMsg[1]) {
+          const cand = (
+            cityInSameMsg[1] +
+            (cityInSameMsg[2]
+              ? `/${cityInSameMsg[2]}`
+              : cityInSameMsg[3]
+                ? `/${cityInSameMsg[3]}`
+                : "")
+          ).trim();
+          const hspRes = getHsp(cand);
           return (
-            `*_Potência Solicitada:_* \`${targetKWp} kWp\` ☀️\n\n` +
-            `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+            `*_Potência Solicitada:_* \`${formattedPower}\` em \`${hspRes.city}/${hspRes.uf}\` ☀️📍\n\n` +
+            this.GRID_OPTIONS_TEXT
           );
         }
+
+        if (sessionCtx.cidade && sessionCtx.estado) {
+          return (
+            `*_Potência Solicitada:_* \`${formattedPower}\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
+            this.GRID_OPTIONS_TEXT
+          );
+        }
+
+        return (
+          `*_Potência Solicitada:_* \`${formattedPower}\` ☀️\n\n` +
+          `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+        );
       }
 
       return (
         `Não consegui identificar a potência desejada.\n\n` +
-        `Por favor, informe a potência de pico desejada em kWp (ex: \`5\` ou \`7.5 kWp\`) ou envie 0️⃣ para voltar ao menu inicial:`
+        `Por favor, informe a potência de pico desejada (ex: \`5 kWp\`, \`3000 kWp\`, \`3 MWp\` ou \`1.5 GWp\`) ou envie 0️⃣ para voltar ao menu inicial:`
       );
     }
 
@@ -4283,22 +4332,20 @@ ${catalogContext}`;
       return this.buildGreetingMenu(resolvedContactName);
     }
 
-    // ESTADO I: Entrada por kWp direto (ex: "5 kwp", "kit 7.5kwp", "15 kwp")
-    const kwpDirectMatch = incomingText.match(/(\d+(?:[.,]\d+)?)\s*kwp/i);
-    if (kwpDirectMatch && kwpDirectMatch[1]) {
-      const targetKWp = parseFloat(kwpDirectMatch[1].replace(",", "."));
-      if (targetKWp > 0) {
-        if (sessionCtx.cidade && sessionCtx.estado) {
-          return (
-            `*_Potência Solicitada:_* \`${targetKWp} kWp\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
-            this.GRID_OPTIONS_TEXT
-          );
-        }
+    // ESTADO I: Entrada por Potência direta (ex: "5 kwp", "3000 kwp", "3 mwp", "1.5 gwp")
+    const directPower = this.parsePowerInput(incomingText);
+    if (directPower !== null && directPower >= 0.5) {
+      const formattedPower = this.formatPowerBadge(directPower);
+      if (sessionCtx.cidade && sessionCtx.estado) {
         return (
-          `*_Potência Solicitada:_* \`${targetKWp} kWp\` ☀️\n\n` +
-          `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+          `*_Potência Solicitada:_* \`${formattedPower}\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
+          this.GRID_OPTIONS_TEXT
         );
       }
+      return (
+        `*_Potência Solicitada:_* \`${formattedPower}\` ☀️\n\n` +
+        `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+      );
     }
 
     // ESTADO J: Entrada por Quantidade de Módulos (ex: "12 placas de 590W", "10 módulos")
