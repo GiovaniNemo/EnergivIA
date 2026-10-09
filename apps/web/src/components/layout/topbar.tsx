@@ -132,7 +132,7 @@ function WhatsappIcon(props: React.SVGProps<SVGSVGElement>): JSX.Element {
 export function Topbar() {
   const { resolvedTheme, setTheme } = useTheme();
   const { currentOrganization, user } = useOrganization();
-  const { open, setOpen } = useSidebar();
+  const { open, setOpen, setMobileOpen, onHoverStart, onHoverEnd } = useSidebar();
   const isMobile = useIsMobile();
   const collapsed = !open && !isMobile;
   const searchHandleRef = useRef<GlobalSearchHandle>(null);
@@ -171,12 +171,14 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-[60] flex h-16 shrink-0 items-center border-b border-black/5 bg-white/70 backdrop-blur-xl shadow-xs transition-colors dark:border-white/10 dark:bg-[#1a1a1a]/70">
+    <header className="sticky top-0 z-[60] flex h-16 shrink-0 items-center glass-nav-topbar transition-colors">
       {/* Brand logo container aligning with sidebar */}
       <div
+        onMouseEnter={onHoverStart}
+        onMouseLeave={onHoverEnd}
         className={cn(
-          "hidden shrink-0 items-center border-r border-black/5 dark:border-white/10 h-full transition-[width] duration-200 md:flex overflow-hidden",
-          collapsed ? "w-20 justify-center p-1" : "w-[16rem] justify-center px-2 py-0.5"
+          "hidden shrink-0 items-center border-r border-black/[0.08] dark:border-white/[0.08] h-full transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:flex overflow-hidden",
+          collapsed ? "w-[4.5rem] justify-center p-1" : "w-[16rem] justify-center px-2 py-0.5"
         )}
       >
         <Link href="/painel" className="flex w-full h-full min-w-0 items-center justify-center">
@@ -191,7 +193,7 @@ export function Topbar() {
             variant="ghost"
             size="icon"
             className="h-8 w-8 shrink-0 rounded-lg sm:h-9 sm:w-9"
-            onClick={() => setOpen(true)}
+            onClick={() => (setMobileOpen ? setMobileOpen(true) : setOpen(true))}
             aria-label="Abrir menu"
           >
             <Menu className="h-5 w-5" />
