@@ -151,7 +151,7 @@ export function NotificationsBell(): JSX.Element {
         type="button"
         variant="ghost"
         size="icon"
-        className="relative h-9 w-9 rounded-xl border border-white/10 dark:border-white/15 bg-white/[0.04] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-white/[0.10] hover:border-white/25 backdrop-blur-md transition-all duration-200"
+        className="relative h-9 w-9 rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.10] hover:border-black/15 dark:hover:border-white/25 backdrop-blur-md transition-all duration-200"
         aria-label="Notificações"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
@@ -165,11 +165,11 @@ export function NotificationsBell(): JSX.Element {
       </Button>
       {open ? (
         <div
-          className="fixed left-2 right-2 top-16 z-50 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1 sm:w-[22rem] rounded-2xl border border-white/10 bg-[#161d22]/95 py-2 shadow-2xl backdrop-blur-2xl"
+          className="fixed left-2 right-2 top-16 z-50 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1 sm:w-[22rem] rounded-2xl border border-black/[0.08] dark:border-white/15 bg-white/95 dark:bg-[#161d22]/95 py-2 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150"
           role="dialog"
           aria-label="Notificações"
         >
-          <div className="flex items-center justify-between border-b border-white/10 px-3 pb-2">
+          <div className="flex items-center justify-between border-b border-black/[0.06] dark:border-white/10 px-3 pb-2">
             <span className="text-sm font-medium text-[var(--color-foreground)]">Notificações</span>
             {unread > 0 ? (
               <button

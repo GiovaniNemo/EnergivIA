@@ -84,22 +84,26 @@ function UserMenu(): JSX.Element {
         )}
       </button>
       {open ? (
-        <div className="absolute right-0 top-11 z-[70] w-56 overflow-hidden rounded-2xl border border-white/10 bg-[#161d22]/95 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150">
-          <div className="border-b border-white/10 px-3.5 py-2.5">
-            <p className="truncate text-sm font-semibold text-white">{displayName ?? "Usuário"}</p>
-            {email ? <p className="truncate text-xs text-neutral-400">{email}</p> : null}
+        <div className="absolute right-0 top-11 z-[70] w-56 overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#161d22]/95 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150">
+          <div className="border-b border-black/[0.06] dark:border-white/10 px-3.5 py-2.5">
+            <p className="truncate text-sm font-semibold text-[var(--color-foreground)]">
+              {displayName ?? "Usuário"}
+            </p>
+            {email ? (
+              <p className="truncate text-xs text-[var(--color-muted-foreground)]">{email}</p>
+            ) : null}
           </div>
           <Link
             href="/perfil"
-            className="flex items-center gap-2 px-3.5 py-2.5 text-sm text-neutral-200 transition-colors hover:bg-white/[0.08] hover:text-white"
+            className="flex items-center gap-2 px-3.5 py-2.5 text-sm text-[var(--color-foreground)] transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
             onClick={() => setOpen(false)}
           >
-            <UserRound className="h-4 w-4 text-neutral-400" />
+            <UserRound className="h-4 w-4 text-[var(--color-muted-foreground)]" />
             Editar perfil
           </Link>
           <a
             href="/auth/logout"
-            className="flex items-center gap-2 border-t border-white/10 px-3.5 py-2.5 text-sm text-red-400 transition-colors hover:bg-red-500/15"
+            className="flex items-center gap-2 border-t border-black/[0.06] dark:border-white/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400 transition-colors hover:bg-red-500/10 dark:hover:bg-red-500/15"
           >
             <LogOut className="h-4 w-4" />
             Deslogar
@@ -206,7 +210,7 @@ export function Topbar() {
         {/* Mobile Search Button */}
         <button
           type="button"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 dark:border-white/15 bg-white/[0.04] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:bg-white/[0.09] hover:text-[var(--color-foreground)] backdrop-blur-md transition-all sm:hidden"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] hover:text-[var(--color-foreground)] backdrop-blur-md transition-all sm:hidden"
           onClick={() => setMobileSearchOpen(true)}
           aria-label="Abrir pesquisa"
         >
@@ -269,14 +273,14 @@ export function Topbar() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 rounded-xl border border-white/10 dark:border-white/15 bg-white/[0.04] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-white/[0.09] hover:border-white/20 backdrop-blur-md transition-all duration-200"
+          className="h-9 w-9 rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] hover:border-black/15 dark:hover:border-white/25 backdrop-blur-md transition-all duration-200"
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
           aria-label="Alternar tema"
         >
           {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
         {user && (
-          <span className="hidden max-w-[120px] truncate text-xs font-medium text-neutral-300 sm:block">
+          <span className="hidden max-w-[120px] truncate text-xs font-medium text-neutral-700 dark:text-neutral-300 sm:block">
             {user.name ?? user.email}
           </span>
         )}

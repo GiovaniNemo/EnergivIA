@@ -50,14 +50,14 @@ export function SidebarItem({
         disabled
           ? "border-l-transparent text-[var(--color-muted-foreground)] opacity-50 cursor-not-allowed hover:bg-transparent bg-black/5 dark:bg-black/20"
           : active
-            ? "border-l-emerald-400 bg-emerald-500/15 text-emerald-300 dark:border-l-emerald-400 dark:bg-emerald-500/15 dark:text-emerald-300 shadow-[inset_0_0_12px_rgba(16,185,129,0.08)]"
-            : "border-l-transparent text-[var(--color-muted-foreground)] hover:bg-white/[0.06] hover:text-[var(--color-foreground)]"
+            ? "border-l-emerald-600 bg-emerald-500/10 text-emerald-800 dark:border-l-emerald-400 dark:bg-emerald-500/15 dark:text-emerald-300 shadow-[inset_0_0_12px_rgba(16,185,129,0.08)]"
+            : "border-l-transparent text-[var(--color-muted-foreground)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:text-[var(--color-foreground)]"
       )}
     >
       <Icon
         className={cn(
           "h-[1.15rem] w-[1.15rem] shrink-0 transition-transform duration-200 group-hover:scale-105",
-          active && "text-emerald-400"
+          active ? "text-emerald-600 dark:text-emerald-400" : "opacity-80"
         )}
       />
       {!collapsed ? (

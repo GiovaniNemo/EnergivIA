@@ -37,13 +37,17 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
               {!isOnboardingOrganization && <FeedbackPromptCard />}
               {!isOnboardingOrganization && <EnergiviaFloatingHub />}
 
-              {/* Luz ambiente no topo para realçar a refração do vidro na Topbar e Sidebar */}
+              {/* Luz ambiente no topo e lateral para realçar a refração do vidro na Topbar e Sidebar (ambos os temas) */}
               <div
-                className="pointer-events-none fixed -top-20 left-1/3 -translate-x-1/2 h-60 w-[900px] bg-[radial-gradient(ellipse_75%_60%_at_50%_0%,rgba(16,185,129,0.22),transparent_70%)] blur-2xl z-0"
+                className="pointer-events-none fixed -top-20 left-1/3 -translate-x-1/2 h-64 w-[900px] bg-[radial-gradient(ellipse_75%_60%_at_50%_0%,rgba(16,185,129,0.22),transparent_70%)] dark:bg-[radial-gradient(ellipse_75%_60%_at_50%_0%,rgba(16,185,129,0.28),transparent_70%)] blur-2xl z-0"
                 aria-hidden="true"
               />
               <div
-                className="pointer-events-none fixed -top-20 right-1/4 h-56 w-[700px] bg-[radial-gradient(ellipse_75%_60%_at_50%_0%,rgba(20,184,166,0.18),transparent_70%)] blur-2xl z-0"
+                className="pointer-events-none fixed -top-20 right-1/4 h-56 w-[700px] bg-[radial-gradient(ellipse_75%_60%_at_50%_0%,rgba(56,189,248,0.20),transparent_70%)] dark:bg-[radial-gradient(ellipse_75%_60%_at_50%_0%,rgba(20,184,166,0.22),transparent_70%)] blur-2xl z-0"
+                aria-hidden="true"
+              />
+              <div
+                className="pointer-events-none fixed top-16 left-0 h-[600px] w-72 bg-[radial-gradient(ellipse_60%_70%_at_0%_30%,rgba(16,185,129,0.15),transparent_70%)] blur-3xl z-0"
                 aria-hidden="true"
               />
 
