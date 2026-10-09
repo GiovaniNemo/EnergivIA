@@ -27,8 +27,8 @@ export function OrganizationSwitcher() {
       <button
         type="button"
         className={cn(
-          "flex h-9 max-w-[140px] xs:max-w-[180px] sm:max-w-none items-center gap-1.5 sm:gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-2 sm:px-3 text-xs sm:text-sm font-medium text-[var(--color-foreground)] shadow-sm transition-colors",
-          "hover:bg-[var(--color-accent)] hover:text-[var(--color-accent-foreground)]"
+          "flex h-9 max-w-[140px] xs:max-w-[180px] sm:max-w-none items-center gap-1.5 sm:gap-2 rounded-xl border border-white/10 dark:border-white/15 bg-white/[0.04] dark:bg-white/[0.06] px-2.5 sm:px-3 text-xs sm:text-sm font-medium text-[var(--color-foreground)] shadow-xs backdrop-blur-md transition-all duration-200",
+          "hover:bg-white/[0.09] hover:border-white/25 hover:shadow-sm"
         )}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
@@ -42,7 +42,7 @@ export function OrganizationSwitcher() {
       </button>
       {open && (
         <div
-          className="absolute left-0 top-full z-50 mt-1 min-w-[220px] rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] py-1 shadow-lg"
+          className="absolute left-0 top-full z-50 mt-1 min-w-[220px] overflow-hidden rounded-xl border border-white/10 bg-[#161d22]/95 py-1 shadow-2xl backdrop-blur-xl"
           role="listbox"
         >
           {organizations.map((org) => (

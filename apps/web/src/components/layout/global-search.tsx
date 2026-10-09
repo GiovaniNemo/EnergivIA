@@ -590,7 +590,7 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle, GlobalSearchProps>(
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder="Buscar clientes, negociações, propostas ou páginas..."
-          className="h-9 w-full rounded-xl border-[var(--color-border)] bg-[var(--color-muted)]/70 pl-9 pr-16 text-sm text-[var(--color-foreground)] backdrop-blur-sm transition-all placeholder:text-[var(--color-muted-foreground)] focus:bg-[var(--color-card)] focus:ring-2 focus:ring-[var(--color-ring)] focus:shadow-md"
+          className="h-9 w-full rounded-xl border border-white/10 dark:border-white/15 bg-white/[0.04] dark:bg-white/[0.06] pl-9 pr-16 text-sm text-[var(--color-foreground)] backdrop-blur-md transition-all duration-200 placeholder:text-[var(--color-muted-foreground)] hover:bg-white/[0.08] hover:border-white/20 focus:bg-white/[0.10] focus:border-emerald-400/50 focus:ring-2 focus:ring-emerald-400/20 focus:shadow-md"
         />
 
         {query ? (
@@ -600,21 +600,21 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle, GlobalSearchProps>(
               setQuery("");
               inputRef.current?.focus();
             }}
-            className="absolute right-2.5 top-1/2 z-10 -translate-y-1/2 rounded-md p-1 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+            className="absolute right-2.5 top-1/2 z-10 -translate-y-1/2 rounded-md p-1 text-[var(--color-muted-foreground)] transition-colors hover:bg-white/10 hover:text-[var(--color-foreground)]"
             aria-label="Limpar busca"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         ) : shortcutMod ? (
-          <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 rounded border border-[var(--color-border)] bg-[var(--color-card)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--color-muted-foreground)] shadow-xs">
+          <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 rounded-md border border-white/10 bg-white/[0.06] px-1.5 py-0.5 text-[11px] font-medium text-[var(--color-muted-foreground)] shadow-xs backdrop-blur-xs">
             {shortcutMod}K
           </kbd>
         ) : null}
 
         {open ? (
-          <div className="absolute left-0 sm:-left-4 right-0 sm:right-auto sm:w-[580px] top-[calc(100%+8px)] z-[80] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute left-0 sm:-left-4 right-0 sm:right-auto sm:w-[580px] top-[calc(100%+8px)] z-[80] overflow-hidden rounded-2xl border border-white/10 bg-[#161d22]/95 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150">
             {/* Header info / status */}
-            <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-2 text-[11px] font-medium text-[var(--color-muted-foreground)]">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-2 text-[11px] font-medium text-[var(--color-muted-foreground)]">
               <span className="flex items-center gap-1.5">
                 {loading ? (
                   <>

@@ -136,7 +136,7 @@ export function NotificationsBell(): JSX.Element {
       <Button
         variant="ghost"
         size="icon"
-        className="h-10 w-10 rounded-lg"
+        className="h-9 w-9 rounded-xl border border-white/10 bg-white/[0.04] text-[var(--color-muted-foreground)] opacity-50"
         disabled
         aria-label="Notificações"
       >
@@ -151,25 +151,25 @@ export function NotificationsBell(): JSX.Element {
         type="button"
         variant="ghost"
         size="icon"
-        className="relative h-10 w-10 rounded-lg"
+        className="relative h-9 w-9 rounded-xl border border-white/10 dark:border-white/15 bg-white/[0.04] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-white/[0.10] hover:border-white/25 backdrop-blur-md transition-all duration-200"
         aria-label="Notificações"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
         <Bell className="h-4 w-4" />
         {unread > 0 ? (
-          <span className="absolute right-1 top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[var(--color-destructive)] px-1 text-[10px] font-medium text-white">
+          <span className="absolute -top-1 -right-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[var(--color-destructive)] px-1 text-[10px] font-bold text-white shadow-xs">
             {unread > 99 ? "99+" : unread}
           </span>
         ) : null}
       </Button>
       {open ? (
         <div
-          className="fixed left-2 right-2 top-16 z-50 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1 sm:w-[22rem] rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] py-2 shadow-lg"
+          className="fixed left-2 right-2 top-16 z-50 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1 sm:w-[22rem] rounded-2xl border border-white/10 bg-[#161d22]/95 py-2 shadow-2xl backdrop-blur-2xl"
           role="dialog"
           aria-label="Notificações"
         >
-          <div className="flex items-center justify-between border-b border-[var(--color-border)] px-3 pb-2">
+          <div className="flex items-center justify-between border-b border-white/10 px-3 pb-2">
             <span className="text-sm font-medium text-[var(--color-foreground)]">Notificações</span>
             {unread > 0 ? (
               <button
