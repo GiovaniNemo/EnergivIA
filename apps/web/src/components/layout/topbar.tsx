@@ -178,7 +178,9 @@ export function Topbar() {
         onMouseLeave={onHoverEnd}
         className={cn(
           "hidden shrink-0 items-center h-full transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:flex overflow-hidden",
-          collapsed ? "w-[4.5rem] justify-center p-1" : "w-[16rem] justify-center px-2 py-0.5"
+          collapsed
+            ? "w-[5.25rem] justify-center pl-3 pr-0.5"
+            : "w-[17rem] justify-center pl-3 pr-2 py-0.5"
         )}
       >
         <Link href="/painel" className="flex w-full h-full min-w-0 items-center justify-center">

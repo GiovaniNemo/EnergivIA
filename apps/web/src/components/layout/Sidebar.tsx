@@ -141,12 +141,12 @@ export function Sidebar(): JSX.Element {
         />
       ) : null}
 
-      {/* Spacer estrutural no fluxo da página para liberar área útil às telas em auto-collapse (4.5rem) ou fixo (16rem) */}
+      {/* Spacer estrutural no fluxo da página para liberar área útil às telas em auto-collapse (5.25rem) ou fixo (17rem) */}
       {!isMobile && (
         <div
           className={cn(
             "hidden shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:block pointer-events-none",
-            isPinned ? "w-[16rem]" : "w-[4.5rem]"
+            isPinned ? "w-[17rem]" : "w-[5.25rem]"
           )}
           aria-hidden="true"
         />
@@ -158,9 +158,9 @@ export function Sidebar(): JSX.Element {
         className={cn(
           "flex flex-col transition-[width,box-shadow,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
           showDrawer
-            ? "fixed inset-0 z-[90] w-full max-w-[280px] glass-nav-sidebar shadow-2xl flex"
+            ? "fixed inset-y-2 left-2 z-[90] w-[calc(100%-1rem)] max-w-[280px] rounded-3xl glass-nav-sidebar shadow-2xl flex overflow-hidden"
             : cn(
-                "fixed top-16 left-0 bottom-0 z-40 hidden md:flex glass-nav-sidebar",
+                "fixed top-20 left-3 bottom-3 z-40 hidden md:flex rounded-3xl glass-nav-sidebar",
                 isHovered && !isPinned && "glass-nav-sidebar-floating"
               )
         )}
@@ -231,7 +231,7 @@ export function Sidebar(): JSX.Element {
 
           {/* Efeito translúcido na parte inferior da sidebar */}
           <div
-            className="pointer-events-none absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[var(--color-sidebar)] via-[var(--color-sidebar)]/70 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_top,black_50%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_top,black_50%,transparent_100%)] z-10"
+            className="pointer-events-none absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[var(--color-sidebar)] via-[var(--color-sidebar)]/70 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_top,black_50%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_top,black_50%,transparent_100%)] rounded-b-3xl z-10"
             aria-hidden="true"
           />
         </div>
@@ -244,9 +244,9 @@ export function Sidebar(): JSX.Element {
             type="button"
             onClick={togglePinned}
             className={cn(
-              "absolute -right-3 top-5 z-50 flex h-6 w-6 items-center justify-center rounded-full border border-black/[0.08] dark:border-white/10 bg-white/90 dark:bg-[#1e262b] text-neutral-600 dark:text-white/70 shadow-lg backdrop-blur-md transition-all duration-200 hover:scale-110 hover:text-black dark:hover:text-white hover:border-emerald-500/40",
+              "absolute -right-3 top-5 z-50 flex h-6 w-6 items-center justify-center rounded-full border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#1e262b] text-neutral-600 dark:text-white/70 shadow-lg backdrop-blur-md transition-all duration-200 hover:scale-110 hover:text-black dark:hover:text-white hover:border-emerald-500/40",
               isPinned &&
-                "border-emerald-500/40 text-emerald-600 dark:text-emerald-300 bg-emerald-50/90 dark:bg-emerald-950/70"
+                "border-emerald-500/40 text-emerald-600 dark:text-emerald-300 bg-emerald-50/95 dark:bg-emerald-950/80 shadow-emerald-500/20"
             )}
             title={isPinned ? "Desafixar menu (ativar auto-esconder)" : "Fixar menu aberto"}
             aria-label={isPinned ? "Desafixar menu" : "Fixar menu aberto"}

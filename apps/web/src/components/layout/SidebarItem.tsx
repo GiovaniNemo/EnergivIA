@@ -45,13 +45,15 @@ export function SidebarItem({
       onClick={handleClick}
       title={collapsed ? (tooltip ?? label) : tooltip}
       className={cn(
-        "group flex w-full items-center border-l-[3px] transition-all duration-200",
-        collapsed ? "justify-center rounded-r-lg px-0 py-3.5" : "gap-3 rounded-r-lg py-3 pl-4 pr-3",
+        "group flex items-center transition-all duration-200",
+        collapsed
+          ? "mx-auto h-10 w-10 justify-center rounded-xl p-0"
+          : "mx-2.5 h-10 w-[calc(100%-1.25rem)] gap-3 rounded-xl px-3 py-2",
         disabled
-          ? "border-l-transparent text-[var(--color-muted-foreground)] opacity-50 cursor-not-allowed hover:bg-transparent bg-black/5 dark:bg-black/20"
+          ? "text-[var(--color-muted-foreground)] opacity-50 cursor-not-allowed hover:bg-transparent bg-black/5 dark:bg-black/20"
           : active
-            ? "border-l-emerald-600 bg-emerald-500/10 text-emerald-800 dark:border-l-emerald-400 dark:bg-emerald-500/15 dark:text-emerald-300 shadow-[inset_0_0_12px_rgba(16,185,129,0.08)]"
-            : "border-l-transparent text-[var(--color-muted-foreground)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:text-[var(--color-foreground)]"
+            ? "bg-emerald-500/15 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 font-semibold border border-emerald-500/25 shadow-xs"
+            : "text-[var(--color-muted-foreground)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:text-[var(--color-foreground)] border border-transparent"
       )}
     >
       <Icon
