@@ -39,10 +39,12 @@ const PLATFORM_ADMIN_EMAILS = [
 
 export function Sidebar(): JSX.Element {
   const pathname = usePathname();
-  const { open, setOpen } = useSidebar();
+  const { isPinned, togglePinned, isHovered, onHoverStart, onHoverEnd, mobileOpen, setMobileOpen } =
+    useSidebar();
   const isMobile = useIsMobile();
-  const collapsed = !open && !isMobile;
-  const showDrawer = isMobile && open;
+  const isVisuallyExpanded = isPinned || isHovered;
+  const collapsed = !isVisuallyExpanded && !isMobile;
+  const showDrawer = isMobile && mobileOpen;
   const { user, currentOrganization } = useOrganization();
   const userEmail = (user?.email || "").toLowerCase().trim();
   const globalRole = (user?.role || "").toUpperCase();
@@ -126,7 +128,7 @@ export function Sidebar(): JSX.Element {
     (user?.isTrial && (user?.trialExpired || user?.isTrialProposalLimitReached)) ||
     (!user?.isTrial && user?.isProposalLimitReached)
   );
-  const closeOnMobile = isMobile ? () => setOpen(false) : undefined;
+  const closeOnMobile = isMobile ? () => setMobileOpen(false) : undefined;
 
   return (
     <>
@@ -134,28 +136,45 @@ export function Sidebar(): JSX.Element {
         <button
           type="button"
           className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-xs md:hidden"
-          onClick={() => setOpen(false)}
+          onClick={() => setMobileOpen(false)}
           aria-label="Fechar menu"
         />
       ) : null}
 
+      {/* Spacer estrutural no fluxo da página para liberar área útil às telas em auto-collapse (4.5rem) ou fixo (16rem) */}
+      {!isMobile && (
+        <div
+          className={cn(
+            "hidden shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:block pointer-events-none",
+            isPinned ? "w-[16rem]" : "w-[4.5rem]"
+          )}
+          aria-hidden="true"
+        />
+      )}
+
       <aside
+        onMouseEnter={!isMobile ? onHoverStart : undefined}
+        onMouseLeave={!isMobile ? onHoverEnd : undefined}
         className={cn(
-          "flex h-full shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-sidebar)] transition-[width] duration-200",
-          !open && "hidden md:flex",
-          showDrawer ? "fixed inset-0 z-[90] w-full shadow-2xl flex" : "relative z-30"
+          "flex flex-col transition-[width,box-shadow,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          showDrawer
+            ? "fixed inset-0 z-[90] w-full max-w-[280px] glass-nav-sidebar shadow-2xl flex"
+            : cn(
+                "fixed top-16 left-0 bottom-0 z-40 hidden md:flex glass-nav-sidebar",
+                isHovered && !isPinned && "glass-nav-sidebar-floating"
+              )
         )}
-        style={showDrawer ? undefined : { width: collapsed ? "5rem" : "16rem" }}
+        style={showDrawer ? undefined : { width: collapsed ? "4.5rem" : "16rem" }}
       >
         {showDrawer ? (
-          <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
-            <Link href="/painel" onClick={() => setOpen(false)} className="flex items-center">
+          <div className="flex items-center justify-between border-b border-black/[0.08] dark:border-white/[0.08] px-4 py-3">
+            <Link href="/painel" onClick={() => setMobileOpen(false)} className="flex items-center">
               <BrandLogo size="sm" />
             </Link>
             <button
               type="button"
-              onClick={() => setOpen(false)}
-              className="rounded-lg p-1.5 text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
+              onClick={() => setMobileOpen(false)}
+              className="rounded-lg p-1.5 text-[var(--color-muted-foreground)] hover:bg-white/10"
               aria-label="Fechar menu"
             >
               <X className="h-5 w-5" />
@@ -185,7 +204,7 @@ export function Sidebar(): JSX.Element {
                 <div className="pt-1.5">
                   <Link
                     href="/gestao/meus-planos"
-                    onClick={() => setOpen(false)}
+                    onClick={() => setMobileOpen(false)}
                     className="inline-flex items-center justify-center rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 transition hover:bg-amber-400 shadow-sm"
                   >
                     Ver Planos e Assinar
@@ -210,9 +229,9 @@ export function Sidebar(): JSX.Element {
             ))}
           </nav>
 
-          {/* Efeito translúcido na parte inferior da sidebar (estilo landing page) */}
+          {/* Efeito translúcido na parte inferior da sidebar */}
           <div
-            className="pointer-events-none absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[var(--color-sidebar)] via-[var(--color-sidebar)]/80 to-transparent backdrop-blur-[6px] [mask-image:linear-gradient(to_top,black_50%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_top,black_50%,transparent_100%)] z-10"
+            className="pointer-events-none absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[var(--color-sidebar)] via-[var(--color-sidebar)]/70 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_top,black_50%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_top,black_50%,transparent_100%)] z-10"
             aria-hidden="true"
           />
         </div>
@@ -223,11 +242,19 @@ export function Sidebar(): JSX.Element {
         {!isMobile ? (
           <button
             type="button"
-            onClick={() => setOpen(!open)}
-            className="absolute -right-3 top-20 flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-sidebar)] text-[var(--color-muted-foreground)] shadow-md transition-colors hover:bg-[var(--color-accent)] hover:text-[var(--color-accent-foreground)]"
-            aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+            onClick={togglePinned}
+            className={cn(
+              "absolute -right-3 top-5 z-50 flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-[#1e262b] text-white/70 shadow-lg backdrop-blur-md transition-all duration-200 hover:scale-110 hover:text-white hover:border-emerald-500/40",
+              isPinned && "border-emerald-500/40 text-emerald-300 bg-emerald-950/70"
+            )}
+            title={isPinned ? "Desafixar menu (ativar auto-esconder)" : "Fixar menu aberto"}
+            aria-label={isPinned ? "Desafixar menu" : "Fixar menu aberto"}
           >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            {isPinned ? (
+              <ChevronLeft className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
           </button>
         ) : null}
       </aside>
