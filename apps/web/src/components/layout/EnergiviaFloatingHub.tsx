@@ -16,6 +16,16 @@ export function EnergiviaFloatingHub() {
   const [chatOpen, setChatOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const hubRef = useRef<HTMLDivElement | null>(null);
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Limpeza de timeout ao desmontar
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Monitora se o chat ou o feedback estão abertos para ajustar a interface
   useEffect(() => {
@@ -51,11 +61,17 @@ export function EnergiviaFloatingHub() {
     if (!isExpanded) return;
     const handleClickOutside = (e: MouseEvent) => {
       if (hubRef.current && !hubRef.current.contains(e.target as Node)) {
+        if (closeTimeoutRef.current) {
+          clearTimeout(closeTimeoutRef.current);
+        }
         setIsExpanded(false);
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (closeTimeoutRef.current) {
+          clearTimeout(closeTimeoutRef.current);
+        }
         setIsExpanded(false);
       }
     };
@@ -85,19 +101,52 @@ export function EnergiviaFloatingHub() {
     return null;
   }
 
+  const handleMouseEnter = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setIsExpanded(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+    }
+    closeTimeoutRef.current = setTimeout(() => {
+      setIsExpanded(false);
+    }, 250);
+  };
+
   const handleOpenChat = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+    }
     setIsExpanded(false);
     window.dispatchEvent(new CustomEvent("open-ai-chat"));
   };
 
   const handleOpenFeedback = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+    }
     setIsExpanded(false);
     window.dispatchEvent(new CustomEvent("open-feedback-prompt"));
+  };
+
+  const handleToggleClick = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setIsExpanded((prev) => !prev);
   };
 
   return (
     <div
       ref={hubRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className="fixed bottom-6 right-6 z-40 flex flex-col items-end pointer-events-auto select-none"
     >
       {/* Bolinhas Satélite (Menu Orbital Expandido) */}
@@ -158,7 +207,7 @@ export function EnergiviaFloatingHub() {
       {/* Botão Flutuante Principal Fixo */}
       <button
         type="button"
-        onClick={() => setIsExpanded((prev) => !prev)}
+        onClick={handleToggleClick}
         aria-label="Menu Inteligente EnergivIA"
         className={`relative w-[64px] h-[64px] rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
           isExpanded
