@@ -167,7 +167,7 @@ export function Sidebar(): JSX.Element {
         style={showDrawer ? undefined : { width: collapsed ? "4.5rem" : "16rem" }}
       >
         {showDrawer ? (
-          <div className="flex items-center justify-between border-b border-black/[0.08] dark:border-white/[0.08] px-4 py-3">
+          <div className="flex items-center justify-between px-4 py-3">
             <Link href="/painel" onClick={() => setMobileOpen(false)} className="flex items-center">
               <BrandLogo size="sm" />
             </Link>

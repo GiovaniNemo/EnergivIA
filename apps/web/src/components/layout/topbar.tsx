@@ -177,7 +177,7 @@ export function Topbar() {
         onMouseEnter={onHoverStart}
         onMouseLeave={onHoverEnd}
         className={cn(
-          "hidden shrink-0 items-center border-r border-black/[0.08] dark:border-white/[0.12] h-full transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:flex overflow-hidden",
+          "hidden shrink-0 items-center h-full transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:flex overflow-hidden",
           collapsed ? "w-[4.5rem] justify-center p-1" : "w-[16rem] justify-center px-2 py-0.5"
         )}
       >
