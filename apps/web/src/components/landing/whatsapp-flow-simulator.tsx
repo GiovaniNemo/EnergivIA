@@ -247,14 +247,35 @@ const FLOW_STEPS: StepConfig[] = [
 export function WhatsappFlowSimulator(): JSX.Element {
   const [stepIndex, setStepIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
+  const [isInViewport, setIsInViewport] = useState<boolean>(true);
   const [speed, setSpeed] = useState<number>(1);
 
   const [activeInputDraft, setActiveInputDraft] = useState<string>("");
   const [activeBotTyping, setActiveBotTyping] = useState<string | null>(null);
 
+  const simulatorRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
   const isTransitioningRef = useRef<boolean>(false);
+
+  // IntersectionObserver: Pause simulation loops when scrolled away from viewport
+  useEffect(() => {
+    const el = simulatorRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry) {
+          setIsInViewport(entry.isIntersecting);
+        }
+      },
+      { threshold: 0.05 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Visible messages up to current step
   const visibleMessages = useMemo(() => {
@@ -321,7 +342,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
 
   // Execution engine: Drives the flow with natural human reading pauses
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying || !isInViewport) return;
 
     let isCancelled = false;
     const currentStep = FLOW_STEPS[stepIndex];
@@ -408,7 +429,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
       isCancelled = true;
       timeoutIds.forEach(clearTimeout);
     };
-  }, [stepIndex, isPlaying, speed]);
+  }, [stepIndex, isPlaying, isInViewport, speed]);
 
   // Scrubbing via mouse wheel
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -451,6 +472,7 @@ export function WhatsappFlowSimulator(): JSX.Element {
 
   return (
     <div
+      ref={simulatorRef}
       onWheel={handleWheel}
       className="relative flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-16 py-6 select-none"
     >

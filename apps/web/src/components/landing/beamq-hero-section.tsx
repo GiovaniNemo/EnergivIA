@@ -10,12 +10,14 @@ const appLoginUrl = "/login";
 const appSignupUrl = "/cadastro";
 
 export function BeamqHeroSection() {
+  const sectionRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
+    const section = sectionRef.current;
     if (!video) return;
 
     // Direct property assignment to bypass React hydration attribute quirk on iOS WebKit
@@ -42,6 +44,23 @@ export function BeamqHeroSection() {
 
     startPlayback();
 
+    // IntersectionObserver: Pause video when scrolled out of view to free 100% of GPU/CPU for other sections
+    let observer: IntersectionObserver | null = null;
+    if (section && typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        (entries) => {
+          const [entry] = entries;
+          if (entry?.isIntersecting) {
+            startPlayback();
+          } else if (!video.paused) {
+            video.pause();
+          }
+        },
+        { threshold: 0.02 }
+      );
+      observer.observe(section);
+    }
+
     // In iOS Low Power Mode, video autoplay is restricted until the first user interaction
     const handleUserInteraction = () => {
       startPlayback();
@@ -52,6 +71,7 @@ export function BeamqHeroSection() {
     window.addEventListener("click", handleUserInteraction, { once: true, passive: true });
 
     return () => {
+      if (observer) observer.disconnect();
       window.removeEventListener("touchstart", handleUserInteraction);
       window.removeEventListener("scroll", handleUserInteraction);
       window.removeEventListener("click", handleUserInteraction);
@@ -59,15 +79,24 @@ export function BeamqHeroSection() {
   }, []);
 
   return (
-    <section className="relative min-h-[100vh] w-full bg-[#02040a] text-white overflow-hidden font-plus-jakarta selection:bg-[#10b981]/30 selection:text-white">
+    <section
+      ref={sectionRef}
+      className="relative min-h-[100vh] w-full bg-[#02040a] text-white overflow-hidden font-plus-jakarta selection:bg-[#10b981]/30 selection:text-white"
+    >
       {/* Background Media System - Hardware-accelerated fluid video with smooth blending */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+      <div
+        className="absolute inset-0 z-0 pointer-events-none overflow-hidden"
+        style={{ transform: "translateZ(0)", contain: "paint" }}
+      >
         <video
           ref={videoRef}
           className={`absolute inset-0 w-full h-full object-cover object-center will-change-transform transition-opacity duration-1000 ${
             isPlaying ? "opacity-85 visible" : "opacity-0 invisible"
           }`}
-          style={{ filter: "hue-rotate(-95deg) saturate(1.15) contrast(1.2) brightness(0.98)" }}
+          style={{
+            filter: "hue-rotate(-95deg) saturate(1.15) contrast(1.2) brightness(0.98)",
+            transform: "translateZ(0)",
+          }}
           src="https://strvid.nyc3.cdn.digitaloceanspaces.com/motionsite/blue-light-glow.mp4"
           autoPlay
           loop

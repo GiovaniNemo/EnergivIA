@@ -115,15 +115,25 @@ export function ImpactResultsSection(): JSX.Element {
   const [activeTestimonial, setActiveTestimonial] = useState<number>(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState<boolean>(true);
 
-  // Mouse spotlight state
-  const [mousePosition, setMousePosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  // Mouse spotlight direct DOM ref (0 React re-renders on mousemove)
+  const spotlightRef = useRef<HTMLDivElement>(null);
+  const rafIdRef = useRef<number | null>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    setMousePosition({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+    const currentTarget = e.currentTarget;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+    }
+
+    rafIdRef.current = requestAnimationFrame(() => {
+      if (!spotlightRef.current) return;
+      const rect = currentTarget.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      spotlightRef.current.style.background = `radial-gradient(600px circle at ${x}px ${y}px, rgba(16, 185, 129, 0.12), transparent 70%)`;
     });
   };
 
@@ -135,6 +145,14 @@ export function ImpactResultsSection(): JSX.Element {
     }, 6500);
     return () => clearInterval(interval);
   }, [isAutoPlaying]);
+
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+    };
+  }, []);
 
   const handlePrevTestimonial = () => {
     setIsAutoPlaying(false);
@@ -155,9 +173,10 @@ export function ImpactResultsSection(): JSX.Element {
     >
       {/* Interactive Mouse Spotlight Glow */}
       <div
-        className="pointer-events-none absolute -inset-px opacity-25 transition-opacity duration-300"
+        ref={spotlightRef}
+        className="pointer-events-none absolute -inset-px opacity-25 transition-opacity duration-300 will-change-contents"
         style={{
-          background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(16, 185, 129, 0.12), transparent 70%)`,
+          background: `radial-gradient(600px circle at 50% 50%, rgba(16, 185, 129, 0.12), transparent 70%)`,
         }}
       />
 
