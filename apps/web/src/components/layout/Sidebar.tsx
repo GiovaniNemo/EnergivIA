@@ -160,7 +160,7 @@ export function Sidebar(): JSX.Element {
           showDrawer
             ? "fixed inset-y-2 left-2 z-[90] w-[calc(100%-1rem)] max-w-[280px] rounded-3xl glass-nav-sidebar shadow-2xl flex overflow-hidden"
             : cn(
-                "fixed top-20 left-3 bottom-3 z-40 hidden md:flex rounded-3xl glass-nav-sidebar",
+                "fixed top-[5.5rem] left-3 bottom-3 z-40 hidden md:flex rounded-3xl glass-nav-sidebar",
                 isHovered && !isPinned && "glass-nav-sidebar-floating"
               )
         )}

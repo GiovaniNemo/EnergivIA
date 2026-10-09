@@ -171,16 +171,14 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 flex h-16 shrink-0 items-center glass-nav-topbar transition-colors">
+    <header className="fixed top-3 left-3 right-3 z-50 flex h-16 shrink-0 items-center rounded-2xl md:rounded-3xl overflow-hidden glass-nav-topbar transition-all duration-300">
       {/* Brand logo container aligning with sidebar */}
       <div
         onMouseEnter={onHoverStart}
         onMouseLeave={onHoverEnd}
         className={cn(
           "hidden shrink-0 items-center h-full transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:flex overflow-hidden",
-          collapsed
-            ? "w-[5.25rem] justify-center pl-3 pr-0.5"
-            : "w-[17rem] justify-center pl-3 pr-2 py-0.5"
+          collapsed ? "w-[4.5rem] justify-center p-1" : "w-[16rem] justify-center px-2 py-0.5"
         )}
       >
         <Link href="/painel" className="flex w-full h-full min-w-0 items-center justify-center">
