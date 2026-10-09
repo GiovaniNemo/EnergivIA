@@ -84,7 +84,7 @@ function UserMenu(): JSX.Element {
         )}
       </button>
       {open ? (
-        <div className="absolute right-0 top-11 z-[70] w-56 overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#161d22]/95 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 top-full mt-3.5 z-[70] w-56 overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#161d22]/95 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150">
           <div className="border-b border-black/[0.06] dark:border-white/10 px-3.5 py-2.5">
             <p className="truncate text-sm font-semibold text-[var(--color-foreground)]">
               {displayName ?? "Usuário"}
@@ -171,7 +171,7 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="fixed top-3 left-3 right-3 z-50 flex h-16 shrink-0 items-center rounded-2xl md:rounded-3xl overflow-hidden glass-nav-topbar transition-all duration-300">
+    <header className="fixed top-3 left-3 right-3 z-50 flex h-16 shrink-0 items-center rounded-2xl md:rounded-3xl glass-nav-topbar transition-all duration-300">
       {/* Brand logo container aligning with sidebar */}
       <div
         onMouseEnter={onHoverStart}

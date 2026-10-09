@@ -42,7 +42,7 @@ export function OrganizationSwitcher() {
       </button>
       {open && (
         <div
-          className="absolute left-0 top-full z-50 mt-1 min-w-[220px] overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/15 bg-white/95 dark:bg-[#161d22]/95 py-1 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150"
+          className="absolute left-0 top-full z-50 mt-3.5 min-w-[220px] overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/15 bg-white/95 dark:bg-[#161d22]/95 py-1 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150"
           role="listbox"
         >
           {organizations.map((org) => (

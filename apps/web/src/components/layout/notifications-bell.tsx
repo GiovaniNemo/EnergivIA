@@ -165,7 +165,7 @@ export function NotificationsBell(): JSX.Element {
       </Button>
       {open ? (
         <div
-          className="fixed left-2 right-2 top-16 z-50 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1 sm:w-[22rem] rounded-2xl border border-black/[0.08] dark:border-white/15 bg-white/95 dark:bg-[#161d22]/95 py-2 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150"
+          className="fixed left-2 right-2 top-20 z-50 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-3.5 sm:w-[22rem] rounded-2xl border border-black/[0.08] dark:border-white/15 bg-white/95 dark:bg-[#161d22]/95 py-2 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150"
           role="dialog"
           aria-label="Notificações"
         >

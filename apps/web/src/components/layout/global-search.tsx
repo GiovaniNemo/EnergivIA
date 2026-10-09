@@ -612,7 +612,7 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle, GlobalSearchProps>(
         ) : null}
 
         {open ? (
-          <div className="absolute left-0 sm:-left-4 right-0 sm:right-auto sm:w-[580px] top-[calc(100%+8px)] z-[80] overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/15 bg-white/95 dark:bg-[#161d22]/95 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute left-0 sm:-left-4 right-0 sm:right-auto sm:w-[580px] top-[calc(100%+14px)] z-[80] overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/15 bg-white/95 dark:bg-[#161d22]/95 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150">
             {/* Header info / status */}
             <div className="flex items-center justify-between border-b border-black/[0.06] dark:border-white/10 px-4 py-2 text-[11px] font-medium text-[var(--color-muted-foreground)]">
               <span className="flex items-center gap-1.5">
