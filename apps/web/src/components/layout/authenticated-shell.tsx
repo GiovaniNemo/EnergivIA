@@ -55,7 +55,9 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
                           {isFullscreenChat ? (
                             children
                           ) : (
-                            <div className="mx-auto w-full max-w-[1400px] min-w-0">{children}</div>
+                            <div className="mx-auto w-full max-w-[1680px] min-w-0 transition-all duration-300">
+                              {children}
+                            </div>
                           )}
                         </main>
                       </SidebarInset>
