@@ -16,6 +16,16 @@ export function EnergiviaFloatingHub() {
   const [chatOpen, setChatOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const hubRef = useRef<HTMLDivElement | null>(null);
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Limpeza de timeout ao desmontar
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Monitora se o chat ou o feedback estão abertos para ajustar a interface
   useEffect(() => {
@@ -51,11 +61,17 @@ export function EnergiviaFloatingHub() {
     if (!isExpanded) return;
     const handleClickOutside = (e: MouseEvent) => {
       if (hubRef.current && !hubRef.current.contains(e.target as Node)) {
+        if (closeTimeoutRef.current) {
+          clearTimeout(closeTimeoutRef.current);
+        }
         setIsExpanded(false);
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (closeTimeoutRef.current) {
+          clearTimeout(closeTimeoutRef.current);
+        }
         setIsExpanded(false);
       }
     };
@@ -85,19 +101,52 @@ export function EnergiviaFloatingHub() {
     return null;
   }
 
+  const handleMouseEnter = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setIsExpanded(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+    }
+    closeTimeoutRef.current = setTimeout(() => {
+      setIsExpanded(false);
+    }, 250);
+  };
+
   const handleOpenChat = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+    }
     setIsExpanded(false);
     window.dispatchEvent(new CustomEvent("open-ai-chat"));
   };
 
   const handleOpenFeedback = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+    }
     setIsExpanded(false);
     window.dispatchEvent(new CustomEvent("open-feedback-prompt"));
+  };
+
+  const handleToggleClick = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setIsExpanded((prev) => !prev);
   };
 
   return (
     <div
       ref={hubRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className="fixed bottom-6 right-6 z-40 flex flex-col items-end pointer-events-auto select-none"
     >
       {/* Bolinhas Satélite (Menu Orbital Expandido) */}
@@ -158,16 +207,16 @@ export function EnergiviaFloatingHub() {
       {/* Botão Flutuante Principal Fixo */}
       <button
         type="button"
-        onClick={() => setIsExpanded((prev) => !prev)}
+        onClick={handleToggleClick}
         aria-label="Menu Inteligente EnergivIA"
-        className={`relative w-[64px] h-[64px] rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
+        className={`group relative w-[60px] h-[60px] rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
           isExpanded
-            ? "bg-neutral-900 border-2 border-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.5)] scale-105"
-            : "bg-gradient-to-br from-[#060c18] via-[#09182b] to-[#040810] border border-emerald-500/40 hover:border-amber-400/80 shadow-[0_4px_25px_rgba(16,185,129,0.35)] hover:shadow-[0_4px_35px_rgba(245,158,11,0.5)] hover:scale-108 active:scale-95"
+            ? "bg-neutral-900 border border-emerald-500/50 shadow-[0_8px_30px_rgba(0,0,0,0.6)] scale-105"
+            : "bg-neutral-900/90 hover:bg-neutral-850/95 border border-white/10 hover:border-emerald-500/40 shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_35px_rgba(16,185,129,0.25)] hover:scale-105 active:scale-95 backdrop-blur-xl"
         }`}
       >
-        {/* Halo estático suave */}
-        <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.25)_0%,transparent_70%)] pointer-events-none" />
+        {/* Halo estático suave sem exagero de neon */}
+        <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.15)_0%,transparent_70%)] pointer-events-none" />
 
         {isExpanded ? (
           /* Quando expandido, exibe o ícone de fechar */
@@ -176,19 +225,19 @@ export function EnergiviaFloatingHub() {
             animate={{ rotate: 0, opacity: 1 }}
             exit={{ rotate: 90, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="relative z-10 flex items-center justify-center text-emerald-400"
+            className="relative z-10 flex items-center justify-center text-neutral-300 group-hover:text-white"
           >
-            <X className="w-7 h-7" />
+            <X className="w-6 h-6" />
           </motion.div>
         ) : (
-          /* Imagem fixa do cérebro com circuitos e nós neurais */
-          <div className="relative w-full h-full flex items-center justify-center p-0.5">
+          /* Isotipo oficial da marca EnergivIA */
+          <div className="relative w-full h-full flex items-center justify-center p-2">
             <Image
-              src="/brain-circuit-icon.png"
+              src="/favicon-dark.png"
               alt="EnergivIA"
-              width={64}
-              height={64}
-              className="w-full h-full object-contain shrink-0 select-none scale-[1.35] drop-shadow-[0_0_12px_rgba(16,185,129,0.9)]"
+              width={42}
+              height={42}
+              className="w-9 h-9 object-contain shrink-0 select-none drop-shadow-sm transition-transform duration-300 group-hover:scale-110"
               priority
               unoptimized
             />

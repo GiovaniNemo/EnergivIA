@@ -1,5 +1,6 @@
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
+import { getTenantPlanDetails } from "../../common/utils/plan-limits";
 
 export interface PairingCodeInfo {
   code: string;
@@ -19,11 +20,22 @@ export class WhatsappPairingService {
   async generatePairingCode(organizationId: string, userId: string) {
     const org = await this.prisma.tenant.findUnique({
       where: { id: organizationId },
-      include: { subscription: true },
+      include: {
+        subscription: {
+          include: { plan: true },
+        },
+      },
     });
 
     if (!org) {
       throw new NotFoundException("Organização não encontrada.");
+    }
+
+    const planDetails = getTenantPlanDetails(org);
+    if (!planDetails.features.hasWhatsappBot || planDetails.features.maxWhatsappNumbers === 0) {
+      throw new BadRequestException(
+        `O atendimento e dimensionamento por WhatsApp com IA não está disponível no plano ${planDetails.planName}. Faça upgrade para o Plano Pro ou Plus para vincular seu WhatsApp.`
+      );
     }
 
     // Limpa códigos expirados

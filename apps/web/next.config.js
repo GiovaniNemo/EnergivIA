@@ -25,7 +25,12 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@energivia/ui", "@energivia/utils", "@energivia/tokens"],
+  transpilePackages: [
+    "@energivia/ui",
+    "@energivia/utils",
+    "@energivia/tokens",
+    "@energivia/proposal-economia",
+  ],
   experimental: {
     serverComponentsExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   },

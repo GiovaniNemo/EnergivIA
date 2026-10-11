@@ -1,4 +1,5 @@
 import type { ProposalTemplateConfig } from "@energivia/shared-types";
+import { compressImageForUpload } from "./image-compress";
 
 async function apiProxy(
   method: string,
@@ -168,7 +169,8 @@ export async function uploadProposalTemplateImage(
   file: File,
   organizationId?: string
 ): Promise<string> {
-  const contentType = file.type.toLowerCase();
+  const processedFile = await compressImageForUpload(file, 1600, 0.82).catch(() => file);
+  const contentType = processedFile.type.toLowerCase();
   const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
   if (!allowedTypes.has(contentType)) {
     throw new Error("Envie uma imagem JPG, PNG ou WEBP.");
@@ -178,8 +180,8 @@ export async function uploadProposalTemplateImage(
     "POST",
     "/uploads/presigned-url",
     {
-      fileName: file.name,
-      contentType: file.type,
+      fileName: processedFile.name,
+      contentType: processedFile.type,
       folder: "proposal_templates",
     },
     organizationId
@@ -192,8 +194,8 @@ export async function uploadProposalTemplateImage(
   const presigned = (await presignedRes.json()) as { uploadUrl: string; fileUrl: string };
   const uploadRes = await fetch(presigned.uploadUrl, {
     method: "PUT",
-    headers: { "Content-Type": file.type },
-    body: file,
+    headers: { "Content-Type": processedFile.type },
+    body: processedFile,
   });
   if (!uploadRes.ok) {
     const details = await uploadRes.text().catch(() => "");

@@ -270,18 +270,38 @@ export function sizeSolarSystem(input: SolarSizingInput): SizingResult | null {
 
     // 2. Fallback Automático: Apenas se exceder os limites do maior inversor cadastrado,
     // calcula o menor N de inversores idênticos da mesma marca para cobrir a usina.
-    // Trava de escala técnica: o dimensionamento automático NUNCA fragmenta usinas em dezenas de pequenos inversores.
-    // Limite máximo de inversores em paralelo: 4 unidades (ou 6 para usinas >= 200 kWp).
-    const maxAutoN = input.system_kw >= 200 ? 6 : 4;
-    const viableAutoInverters = input.stringInverters.filter(
-      (inv) => (inv.specs.max_dc_power || 0) * maxAutoN >= systemPowerW * 0.7
+    // Para usinas comerciais e de grande porte (>= 200 kWp / MWp / GWp), escala a quantidade de inversores de alta potência.
+    const allStringInvs = input.stringInverters;
+    const highestDcPower = Math.max(...allStringInvs.map((i) => i.specs.max_dc_power || 0), 1);
+
+    // Se a usina for grande, prioriza inversores de grande porte (>= 30kW ou >= 50% da maior potência disponível)
+    const minPowerFilter =
+      input.system_kw >= 1000
+        ? Math.min(highestDcPower, 60_000)
+        : input.system_kw >= 200
+          ? Math.min(highestDcPower, 30_000)
+          : 0;
+
+    const filteredStringInvs =
+      minPowerFilter > 0
+        ? allStringInvs.filter((inv) => (inv.specs.max_dc_power || 0) >= minPowerFilter)
+        : allStringInvs;
+
+    const usableInverters = filteredStringInvs.length > 0 ? filteredStringInvs : allStringInvs;
+    const maxInvDc = Math.max(...usableInverters.map((i) => i.specs.max_dc_power || 0), 1);
+
+    const minN = Math.max(2, Math.ceil(systemPowerW / (maxInvDc * 1.35)));
+    const maxAutoN =
+      input.system_kw < 200 ? 6 : Math.max(6, Math.ceil(systemPowerW / (maxInvDc * 0.75)) + 2);
+
+    const endN = Math.min(maxAutoN, minN + 8);
+
+    const viableAutoInverters = usableInverters.filter(
+      (inv) => (inv.specs.max_dc_power || 0) * endN >= systemPowerW * 0.7
     );
 
-    const maxInvDc = Math.max(...viableAutoInverters.map((i) => i.specs.max_dc_power || 0), 0);
-    const minN = maxInvDc > 0 ? Math.max(2, Math.ceil(systemPowerW / maxInvDc)) : 2;
-
-    if (minN <= maxAutoN && viableAutoInverters.length > 0) {
-      for (let n = minN; n <= maxAutoN; n++) {
+    if (viableAutoInverters.length > 0) {
+      for (let n = minN; n <= endN; n++) {
         const multiResult = trySizeStringInverters(
           modules,
           viableAutoInverters,

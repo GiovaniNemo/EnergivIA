@@ -48,6 +48,8 @@ export interface QuickEconomiaSimulationResult {
   payback: number;
   tamanhoSistema: number;
   monthlyConsumptionKwh?: number;
+  geracaoBase?: number;
+  geracaoEstimadaKwh?: number;
 }
 
 export function parseExtractedNumber(value: unknown): number {
@@ -234,8 +236,9 @@ export function irradiacaoFromSolarResource(solarResource: unknown): number | un
   if (!solarResource || typeof solarResource !== "object") return undefined;
   const annual = (solarResource as { annual?: unknown }).annual;
   if (typeof annual !== "number" || !Number.isFinite(annual) || annual <= 0) return undefined;
-  const scaled = annual / 30;
-  return Math.min(260, Math.max(95, Math.round(scaled * 10) / 10));
+  // Aplica o fator de desempenho da engenharia solar (Performance Ratio = 0.85, descontando 15% de perdas do sistema)
+  const scaled = (annual / 30) * 0.85;
+  return Math.min(220, Math.max(75, Math.round(scaled * 10) / 10));
 }
 
 export function simulateProposal(
@@ -252,7 +255,9 @@ export function simulateProposal(
   const tarifaFinal =
     tarifa || (valorConta && safeConsumption ? valorConta / safeConsumption : 0.8) || 0.8;
   const roofF = ROOF_SOLAR_FACTOR[roofType] ?? 1;
-  const geracaoBase = Math.max(40, (irradiacao || 140) * roofF);
+  // Fallback padrão regional com perdas (média Brasil ≈ 125 kWh/kWp/mês)
+  const baseYield = irradiacao || 125;
+  const geracaoBase = Math.max(40, baseYield * roofF);
 
   // Se dimensionado diretamente por kWp, usa a potência informada sem inflar
   const tamanhoSistema = isDirectPower ? input.systemKw! : safeConsumption / geracaoBase;
@@ -274,6 +279,8 @@ export function simulateProposal(
     payback,
     tamanhoSistema,
     monthlyConsumptionKwh: isDirectPower ? consumo : safeConsumption,
+    geracaoBase,
+    geracaoEstimadaKwh: Math.round(tamanhoSistema * geracaoBase),
   };
 }
 
@@ -405,7 +412,7 @@ export function quickResultToPersistedSimulationDraft(
   const monthlyKwh =
     quick.monthlyConsumptionKwh && quick.monthlyConsumptionKwh > 0
       ? Math.max(1, Math.round(quick.monthlyConsumptionKwh))
-      : Math.round(quick.tamanhoSistema * 130);
+      : quick.geracaoEstimadaKwh || Math.round(quick.tamanhoSistema * (quick.geracaoBase || 140));
   const energyPrice =
     monthlyKwh > 0 && quick.economiaMensal > 0
       ? Math.min(2.5, Math.max(0.25, quick.economiaMensal / monthlyKwh))

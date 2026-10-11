@@ -20,7 +20,19 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { digitsOnly, maskWhatsappBr } from "@energivia/utils";
-import { MessageSquare, ShieldCheck, RefreshCw, Send, Trash2, PhoneCall } from "lucide-react";
+import Link from "next/link";
+import {
+  MessageSquare,
+  ShieldCheck,
+  RefreshCw,
+  Send,
+  Trash2,
+  PhoneCall,
+  Lock,
+  ArrowUpRight,
+  Plus,
+  Sparkles,
+} from "lucide-react";
 
 interface WhatsappConnectionModalProps {
   open: boolean;
@@ -38,14 +50,18 @@ export function WhatsappConnectionModal({ open, onOpenChange }: WhatsappConnecti
   const [pairingInfo, setPairingInfo] = useState<WhatsappPairingCodeResponse | null>(null);
   const [pairingLoading, setPairingLoading] = useState(false);
 
+  const hasWhatsappFeature = Boolean(user?.planFeatures?.hasWhatsappBot);
+  const currentPlanName = user?.planName || "Standard";
+
   const effectiveRole = String(currentOrganization?.role || user?.role || "").toUpperCase();
   const canEdit =
-    effectiveRole === "OWNER" ||
-    effectiveRole === "ADMIN" ||
-    effectiveRole === "PLATFORM" ||
-    effectiveRole === "SALES" ||
-    effectiveRole === "ENGINEER" ||
-    effectiveRole === "MEMBER";
+    hasWhatsappFeature &&
+    (effectiveRole === "OWNER" ||
+      effectiveRole === "ADMIN" ||
+      effectiveRole === "PLATFORM" ||
+      effectiveRole === "SALES" ||
+      effectiveRole === "ENGINEER" ||
+      effectiveRole === "MEMBER");
 
   // Load phones when open
   useEffect(() => {
@@ -173,73 +189,114 @@ export function WhatsappConnectionModal({ open, onOpenChange }: WhatsappConnecti
         )}
 
         <div className="space-y-6 pt-2">
-          {/* Pairing Code Section */}
-          <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4.5 dark:bg-emerald-950/15">
-            <div className="flex flex-col gap-3">
-              <div>
-                <h4 className="text-sm font-semibold flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
-                  <ShieldCheck className="h-4.5 w-4.5" />
-                  Conexão Rápida por Código
-                </h4>
-                <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
-                  Gere um código de 6 dígitos e envie para o robô no WhatsApp para vincular seu
-                  número na hora.
-                </p>
-              </div>
-
-              {!pairingInfo ? (
-                <Button
-                  type="button"
-                  onClick={handleGenerateCode}
-                  disabled={pairingLoading || !canEdit}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700 shadow-md shadow-emerald-500/15"
-                >
-                  {pairingLoading ? (
-                    <span className="flex items-center gap-2">
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      Gerando código...
+          {!hasWhatsappFeature ? (
+            /* Locked State for Standard / Non-eligible plans */
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 p-5 flex flex-col gap-4 shadow-sm">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-sm font-bold text-[var(--color-foreground)]">
+                      Ferramenta Exclusiva dos Planos Pro & Plus
+                    </h4>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 uppercase tracking-wide">
+                      {currentPlanName}
                     </span>
-                  ) : (
-                    "📲 Conectar meu WhatsApp"
-                  )}
-                </Button>
-              ) : (
-                <div className="mt-2 rounded-lg border border-emerald-500/20 bg-white/70 p-4 text-center dark:bg-black/30">
-                  <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                    Envie a mensagem abaixo para o número{" "}
-                    <strong className="font-mono">{pairingInfo.botNumber}</strong>:
-                  </p>
-                  <div className="my-3 select-all rounded-lg bg-emerald-50 py-2.5 font-mono text-3xl font-black tracking-widest text-emerald-700 shadow-inner dark:bg-emerald-950/40 dark:text-emerald-300">
-                    {pairingInfo.formattedMessage}
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <a
-                      href={pairingInfo.whatsappUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-700 transition-colors"
-                    >
-                      <Send className="h-3.5 w-3.5" />
-                      Abrir WhatsApp e Enviar Código
-                    </a>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs font-medium"
-                      onClick={() => setPairingInfo(null)}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                  <p className="mt-2.5 text-[10px] text-[var(--color-muted-foreground)]">
-                    ⏳ O código expira em 15 minutos. Esta tela fechará o código quando o robô
-                    confirmar.
+                  <p className="text-xs text-[var(--color-muted-foreground)] mt-1.5 leading-relaxed">
+                    O atendimento e dimensionamento solar automatizado por WhatsApp com IA não está
+                    incluso no plano <strong>{currentPlanName}</strong>. Faça upgrade para conectar
+                    números da sua equipe e gerar propostas diretamente pelo chat 24/7.
                   </p>
                 </div>
-              )}
+              </div>
+
+              <div className="pt-3 border-t border-[var(--color-border)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="text-[11px] text-[var(--color-muted-foreground)] flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span>Disponível nos planos Pro e Plus</span>
+                </div>
+                <Link
+                  href="/gestao/meus-planos"
+                  onClick={() => onOpenChange(false)}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors shadow-sm shrink-0"
+                >
+                  Fazer Upgrade do Plano
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Pairing Code Section (Pro & Plus only) */
+            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4.5 dark:bg-emerald-950/15">
+              <div className="flex flex-col gap-3">
+                <div>
+                  <h4 className="text-sm font-semibold flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
+                    <ShieldCheck className="h-4.5 w-4.5" />
+                    Conexão Rápida por Código
+                  </h4>
+                  <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
+                    Gere um código de 6 dígitos e envie para o robô no WhatsApp para vincular seu
+                    número na hora.
+                  </p>
+                </div>
+
+                {!pairingInfo ? (
+                  <Button
+                    type="button"
+                    onClick={handleGenerateCode}
+                    disabled={pairingLoading || !canEdit}
+                    className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700 shadow-md shadow-emerald-500/15"
+                  >
+                    {pairingLoading ? (
+                      <span className="flex items-center gap-2">
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Gerando código...
+                      </span>
+                    ) : (
+                      "Conectar meu WhatsApp"
+                    )}
+                  </Button>
+                ) : (
+                  <div className="mt-2 rounded-lg border border-emerald-500/20 bg-white/70 p-4 text-center dark:bg-black/30">
+                    <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                      Envie a mensagem abaixo para o número{" "}
+                      <strong className="font-mono">{pairingInfo.botNumber}</strong>:
+                    </p>
+                    <div className="my-3 select-all rounded-lg bg-emerald-50 py-2.5 font-mono text-3xl font-black tracking-widest text-emerald-700 shadow-inner dark:bg-emerald-950/40 dark:text-emerald-300">
+                      {pairingInfo.formattedMessage}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <a
+                        href={pairingInfo.whatsappUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-700 transition-colors"
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                        Abrir WhatsApp e Enviar Código
+                      </a>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs font-medium"
+                        onClick={() => setPairingInfo(null)}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                    <p className="mt-2.5 text-[10px] text-[var(--color-muted-foreground)]">
+                      O código expira em 15 minutos. Esta tela fechará o código quando o robô
+                      confirmar.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Connected Numbers List */}
           <div className="space-y-3">
@@ -292,11 +349,14 @@ export function WhatsappConnectionModal({ open, onOpenChange }: WhatsappConnecti
             )}
           </div>
 
-          {/* Manual addition (collapsible) */}
+          {/* Manual addition (collapsible) - Only if user has access */}
           {canEdit && (
             <details className="group border-t border-[var(--color-border)] pt-4">
               <summary className="flex items-center justify-between cursor-pointer font-medium text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition-colors select-none">
-                <span>➕ Adicionar número manualmente</span>
+                <span className="flex items-center gap-1.5">
+                  <Plus className="h-3.5 w-3.5" />
+                  Adicionar número manualmente
+                </span>
               </summary>
               <form onSubmit={handleAddManual} className="mt-3.5 space-y-3.5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

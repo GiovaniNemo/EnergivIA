@@ -210,4 +210,42 @@ describe("Solar Sizing - Multi-Inverter & Single Priority", () => {
       expect(["inv-50k-goodwe", "inv-60k-goodwe"]).toContain(result.inverter.id);
     }
   });
+
+  it("sizes utility-scale plants (> 1000 kWp / 3 MWp) using high-capacity string inverters in parallel", () => {
+    const inverter100k: ProductWithSpecs<StringInverterSpec> = {
+      id: "inv-100k-goodwe",
+      name: "Inversor GoodWe 100kW Comercial/Usina",
+      brandName: "GoodWe",
+      price: 28000,
+      specs: {
+        type: "string",
+        nominal_power_w: 100000,
+        max_dc_power: 150000,
+        max_dc_voltage: 1100,
+        mppt_count: 10,
+        max_strings_per_mppt: 2,
+        mppt_voltage_min: 200,
+        mppt_voltage_max: 1000,
+        max_input_current: 30,
+        recommended_dc_ac_ratio_min: 1.0,
+        recommended_dc_ac_ratio_max: 1.5,
+      },
+    };
+
+    const result = sizeSolarSystem({
+      system_kw: 3000, // 3000 kWp = 3 MWp
+      modules: [sampleModule],
+      stringInverters: [inverter100k, ...stringInverters],
+      microInverters: [],
+    });
+
+    expect(result).not.toBeNull();
+    if (result && "inverter_quantity" in result) {
+      expect(result.inverter.id).toBe("inv-100k-goodwe");
+      // 3000 kW com inversores de 100 kW (max 150 kW DC) precisa de ~20-30 inversores
+      expect(result.inverter_quantity).toBeGreaterThanOrEqual(20);
+      expect(result.inverter_quantity).toBeLessThanOrEqual(32);
+      expect(result.module_quantity).toBeGreaterThan(5000);
+    }
+  });
 });

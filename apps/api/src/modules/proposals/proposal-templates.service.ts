@@ -44,10 +44,43 @@ export class ProposalTemplatesService implements OnModuleInit {
       orderBy: { sortOrder: "asc" },
     });
 
-    const templateConfig = blueprint?.document ?? DEFAULT_PROPOSAL_TEMPLATE_CONFIG;
-    const templateName = blueprint?.name ?? "Template de Proposta Padrão EnergivIA";
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { name: true, settings: true },
+    });
+
+    const rawSettings = (tenant?.settings as Record<string, unknown> | null) || null;
+    const rawProposalName =
+      (rawSettings?.["proposalCompanyName"] as string) || tenant?.name || "Minha Empresa Solar";
+
+    // Higieniza prefixo numérico de CNPJ caso exista
+    const companyName =
+      rawProposalName
+        .replace(/^(\d{2}\.?\d{3}\.?\d{3}(\/?\d{4}-?\d{2})?|\d{14}|\d{8})\s*[-–—]?\s*/i, "")
+        .trim() || rawProposalName.trim();
+
+    const rawConfig = blueprint?.document ?? DEFAULT_PROPOSAL_TEMPLATE_CONFIG;
+    const customConfig = JSON.parse(JSON.stringify(rawConfig)) as Record<string, unknown>;
+    if (customConfig && typeof customConfig === "object") {
+      const prevVars = (customConfig["variables"] as Record<string, unknown>) || {};
+      customConfig["variables"] = {
+        ...prevVars,
+        nome_empresa: companyName,
+      };
+      const prevStyles = (customConfig["styles"] as Record<string, unknown>) || {};
+      const prevFooter = (prevStyles["footer"] as Record<string, unknown>) || {};
+      customConfig["styles"] = {
+        ...prevStyles,
+        footer: {
+          ...prevFooter,
+          companyName,
+        },
+      };
+    }
+
+    const templateName = blueprint?.name ?? `Template de Proposta - ${companyName}`;
     const templateDescription =
-      blueprint?.description ?? "Modelo oficial padrão da EnergivIA pronto para propostas solares.";
+      blueprint?.description ?? `Modelo oficial pronto para propostas solares de ${companyName}.`;
 
     return this.prisma.$transaction(async (tx) => {
       const created = await tx.proposalTemplate.create({
@@ -57,7 +90,7 @@ export class ProposalTemplatesService implements OnModuleInit {
           description: templateDescription,
           isDefault: true,
           status: "PUBLISHED",
-          config: templateConfig as Prisma.InputJsonValue,
+          config: customConfig as Prisma.InputJsonValue,
         },
       });
 
@@ -67,7 +100,7 @@ export class ProposalTemplatesService implements OnModuleInit {
           tenantId,
           version: created.version,
           status: "PUBLISHED",
-          config: templateConfig as Prisma.InputJsonValue,
+          config: customConfig as Prisma.InputJsonValue,
           publishedAt: new Date(),
         },
       });

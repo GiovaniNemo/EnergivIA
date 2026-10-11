@@ -63,12 +63,13 @@ function resolveSignaturePalette(
   const primary = (branding?.primaryColor || "#059669").trim();
   const secondary = (branding?.secondaryColor || "#34d399").trim();
   const bg = (
-    (typeof sectionFields?.backgroundColor === "string" && sectionFields.backgroundColor.trim()) ||
+    (typeof sectionFields?.["backgroundColor"] === "string" &&
+      sectionFields["backgroundColor"].trim()) ||
     branding?.backgroundColor ||
     "#fafcf9"
   ).trim();
   const text = (
-    (typeof sectionFields?.textColor === "string" && sectionFields.textColor.trim()) ||
+    (typeof sectionFields?.["textColor"] === "string" && sectionFields["textColor"].trim()) ||
     branding?.textColor ||
     "#022e22"
   ).trim();
@@ -192,7 +193,7 @@ export function SignatureSectionPreview({
     String(f["companySignerDocument"] || "CREA/CFT · Homologação Técnica Concessionária"),
     vars
   );
-  const companyName = tpl(String(vars.nome_empresa || "EnergivIA Solar"), vars);
+  const companyName = tpl(String(vars.nome_empresa || "Empresa Solar"), vars);
 
   // Date
   const signatureDate = tpl(
@@ -478,7 +479,10 @@ export function SignatureSectionPreview({
                 <div className="flex justify-between" style={{ color: palette.textRole }}>
                   <span>Chave de Emissão:</span>
                   <span className="font-medium" style={{ color: palette.textTitle }}>
-                    Certificado Corporativo EnergivIA
+                    {tpl(
+                      String(f["certificateText"] || `Certificado Corporativo ${companyName}`),
+                      vars
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between" style={{ color: palette.textRole }}>
@@ -506,7 +510,7 @@ export function SignatureSectionPreview({
             >
               <span className="flex items-center gap-1">
                 <Award className="h-3 w-3" style={{ color: palette.primary }} />
-                Homologação EnergivIA
+                {tpl(String(f["homologationText"] || `Homologação ${companyName}`), vars)}
               </span>
               <span>Emissão Autorizada</span>
             </div>

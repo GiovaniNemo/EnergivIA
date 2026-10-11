@@ -1,3 +1,5 @@
+import { compressImageForUpload } from "./image-compress";
+
 async function apiProxy(
   method: string,
   path: string,
@@ -198,6 +200,8 @@ export interface TermsAcceptanceData {
 
 export async function createOrganization(data: {
   name: string;
+  proposalCompanyName?: string;
+  razaoSocial?: string;
   logoUrl?: string;
   cnpj?: string;
   cep?: string;
@@ -240,15 +244,16 @@ export async function getTermsAcceptance(organizationId: string): Promise<TermsA
 }
 
 export async function uploadOrganizationLogo(file: File): Promise<string> {
-  const contentType = file.type.toLowerCase();
+  const processedFile = await compressImageForUpload(file, 800, 0.85).catch(() => file);
+  const contentType = processedFile.type.toLowerCase();
   const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
   if (!allowedTypes.has(contentType)) {
     throw new Error("Envie uma imagem JPG, PNG ou WEBP.");
   }
 
   const presignedRes = await apiProxy("POST", "/uploads/presigned-url", {
-    fileName: file.name,
-    contentType: file.type,
+    fileName: processedFile.name,
+    contentType: processedFile.type,
     folder: "organizations",
   });
   if (!presignedRes.ok) {
@@ -259,8 +264,8 @@ export async function uploadOrganizationLogo(file: File): Promise<string> {
   const presigned = (await presignedRes.json()) as { uploadUrl: string; fileUrl: string };
   const uploadRes = await fetch(presigned.uploadUrl, {
     method: "PUT",
-    headers: { "Content-Type": file.type },
-    body: file,
+    headers: { "Content-Type": processedFile.type },
+    body: processedFile,
   });
   if (!uploadRes.ok) {
     throw new Error(`Falha ao enviar logo (${uploadRes.status}).`);

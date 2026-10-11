@@ -76,7 +76,7 @@ function PanelCard({ panel, index }: { panel: PanelData; index: number }) {
         y: -6,
         transition: { duration: 0.2 },
       }}
-      className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/10 bg-[#070b14]/85 shadow-2xl backdrop-blur-md transition-all duration-300 hover:border-emerald-500/40 hover:shadow-[0_0_35px_rgba(16,185,129,0.14)]"
+      className="group relative flex flex-col justify-between overflow-hidden rounded-3xl glass-card glass-card-hover shadow-2xl"
     >
       {/* Top subtle highlight on hover */}
       <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
@@ -105,7 +105,7 @@ function PanelCard({ panel, index }: { panel: PanelData; index: number }) {
           </h3>
         </div>
 
-        <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-white/5 border border-white/10 px-2.5 py-1 text-[11px] font-mono text-slate-300">
+        <span className="hidden sm:inline-flex items-center gap-1 rounded-full glass-pill px-2.5 py-1 text-[11px] font-mono text-slate-300">
           <Zap className="h-3 w-3 text-emerald-400" />
           {panel.tag}
         </span>
@@ -130,7 +130,7 @@ export function ConvergingPanelsSection() {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="mx-auto max-w-3xl text-center mb-14 sm:mb-16"
         >
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/40 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+          <span className="inline-flex items-center gap-1.5 rounded-full glass-pill border-emerald-500/30 bg-emerald-950/40 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
             <Layers className="h-3.5 w-3.5 text-emerald-400" />
             Modelos de Negócio Adaptáveis
           </span>

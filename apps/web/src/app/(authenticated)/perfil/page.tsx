@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { UserRound } from "lucide-react";
+import { UserRound, Check, Loader2 } from "lucide-react";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { updateMyProfile, uploadUserAvatar } from "@/lib/organizations-api";
 import { Button } from "@/components/ui/button";
@@ -154,9 +154,24 @@ export default function ProfilePage(): JSX.Element {
           <Button
             type="button"
             onClick={() => void handleSave()}
-            disabled={saving || uploading || !dirty}
+            disabled={saving || uploading || (!dirty && !saved)}
+            className={
+              saved && !dirty ? "!bg-emerald-600 hover:!bg-emerald-700 !text-white shadow-sm" : ""
+            }
           >
-            {saving ? "Salvando…" : "Salvar alterações"}
+            {saving ? (
+              <span className="flex items-center gap-1.5">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Salvando...
+              </span>
+            ) : saved && !dirty ? (
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4" />
+                Salvo com sucesso!
+              </span>
+            ) : (
+              "Salvar alterações"
+            )}
           </Button>
         </div>
       </div>

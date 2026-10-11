@@ -1,3 +1,5 @@
+import { getHsp } from "./geo-irradiance";
+
 export interface KwpRateKitItem {
   productId?: string;
   productName: string;
@@ -22,6 +24,7 @@ export interface KwpRateKitTier {
   ratePerKwpEffective: number;
   systemKwp: number;
   inverterPowerKw: number;
+  inverterQty?: number;
   materialsTotal: number;
   estimatedMonthlyGenerationKwh: number;
   inverterBrand: string;
@@ -90,8 +93,8 @@ export function generateKwpRateTiers({
   ratePerKwp,
   roofType,
   monthlyConsumption: _monthlyConsumption,
-  cidade: _cidade,
-  estado: _estado,
+  cidade,
+  estado,
 }: GenerateKwpRateTiersParams): KwpRateKitTier[] {
   const safeKwp = Math.max(0.5, Number(kwp) || 3.0);
   const safeRate = Math.max(500, Number(ratePerKwp) || 2800);
@@ -99,11 +102,34 @@ export function generateKwpRateTiers({
   // Regra fundamental: mínimo de 4 módulos para qualquer cotação
   const moduleQty = Math.max(4, Math.round((safeKwp * 1000) / modulePowerW));
   const realSystemKwp = Math.round(((moduleQty * modulePowerW) / 1000) * 100) / 100;
-  const estGenPerKwp = 130; // média nacional kWh/mês por kWp
+  let estGenPerKwp = 130; // média nacional kWh/mês por kWp
+  if (cidade || estado) {
+    const hspRes = getHsp(cidade || "São Paulo", estado || "SP");
+    if (hspRes && hspRes.hsp > 0) {
+      estGenPerKwp = Math.max(90, Math.min(180, Math.round(hspRes.hsp * 30 * 0.85)));
+    }
+  }
   const estGeneration = Math.round(realSystemKwp * estGenPerKwp);
 
   const roof = normalizeRoofDescription(roofType);
-  const invPower = getStandardInverterPower(realSystemKwp);
+
+  let invPower = 3;
+  let invQty = 1;
+
+  if (realSystemKwp <= 130) {
+    invPower = getStandardInverterPower(realSystemKwp);
+    invQty = 1;
+  } else {
+    // Para usinas comerciais e de grande porte (> 130 kWp até GWp), dimensiona múltiplos inversores industriais de 75kW ou 100kW
+    invPower = realSystemKwp >= 500 ? 100 : 75;
+    invQty = Math.max(2, Math.ceil(realSystemKwp / (invPower * 1.3)));
+  }
+
+  const formatInvModelName = (brand: string) => {
+    return invQty > 1
+      ? `Inversor ${brand} ${invPower}kW (${invQty}x)`
+      : `Inversor ${brand} ${invPower}kW`;
+  };
 
   const tierConfigs = [
     {
@@ -114,12 +140,12 @@ export function generateKwpRateTiers({
       description:
         "Equipamentos de entrada com ótimo custo-benefício para quem busca retorno rápido.",
       priceFactor: 1.0,
-      materialCostFactor: 0.88, // materiais ~12% mais econômicos
-      inverterBrand: "Growatt",
+      materialCostFactor: 0.88,
+      inverterBrand: "GoodWe",
       inverterPowerKw: invPower,
-      inverterModel: `Inversor Solar Growatt ${invPower}kW Monofásico/Bifásico`,
-      moduleBrand: "DAH Solar",
-      moduleModel: `Módulo Fotovoltaico DAH Solar ${modulePowerW}W N-Type Bifacial`,
+      inverterModel: formatInvModelName("GoodWe"),
+      moduleBrand: "Astronergy",
+      moduleModel: `Módulo Astronergy ${modulePowerW}W`,
     },
     {
       id: "cost_benefit" as const,
@@ -128,12 +154,12 @@ export function generateKwpRateTiers({
       tagline: "Melhor equilíbrio entre preço, tecnologia e durabilidade",
       description: "A linha mais procurada por integradores e clientes finais no Brasil.",
       priceFactor: 1.0,
-      materialCostFactor: 1.0, // padrão de mercado
-      inverterBrand: "Deye",
+      materialCostFactor: 1.0,
+      inverterBrand: "SAJ",
       inverterPowerKw: invPower,
-      inverterModel: `Inversor Solar Deye ${invPower}kW String On-Grid`,
-      moduleBrand: "Canadian Solar",
-      moduleModel: `Módulo Canadian Solar ${modulePowerW}W TOPBiHiKu6 N-Type`,
+      inverterModel: formatInvModelName("SAJ"),
+      moduleBrand: "LONGi Solar",
+      moduleModel: `Módulo LONGi Solar ${modulePowerW}W`,
     },
     {
       id: "premium" as const,
@@ -142,12 +168,12 @@ export function generateKwpRateTiers({
       tagline: "Tecnologia de ponta, marcas Tier 1 globais e garantia estendida",
       description: "Para clientes exigentes que buscam máxima performance e durabilidade.",
       priceFactor: 1.0,
-      materialCostFactor: 1.15, // materiais Tier 1 (~15% maior valor agregado)
-      inverterBrand: "Huawei",
+      materialCostFactor: 1.15,
+      inverterBrand: "Solplanet",
       inverterPowerKw: invPower,
-      inverterModel: `Inversor Solar Inteligente Huawei SUN2000-${invPower}KTL`,
+      inverterModel: formatInvModelName("Solplanet"),
       moduleBrand: "Jinko Solar",
-      moduleModel: `Módulo Fotovoltaico Jinko Solar ${modulePowerW}W Tiger Neo N-Type`,
+      moduleModel: `Módulo Jinko Solar ${modulePowerW}W`,
     },
   ];
 
@@ -191,22 +217,96 @@ export function generateKwpRateTiers({
         productName: cfg.inverterModel,
         brandName: cfg.inverterBrand,
         categoryName: "inverter",
-        quantity: 1,
-        unitPrice: invTotal,
+        quantity: invQty,
+        unitPrice: Math.round((invTotal / invQty) * 100) / 100,
         lineTotal: invTotal,
-        specs: { powerKw: invPower, type: "On-Grid String" },
+        specs: { powerKw: invPower, type: "On-Grid String", quantity: invQty },
       },
     ];
 
     if (roof.code !== "none") {
+      const numKits = Math.ceil(moduleQty / 4);
+      const estTotalPart1 = Math.round(estTotal * 0.6);
+      const estTotalPart2 = estTotal - estTotalPart1;
+
+      const unitPricePart1 = Math.round((estTotalPart1 / numKits) * 100) / 100;
+      const unitPricePart2 = Math.round((estTotalPart2 / numKits) * 100) / 100;
+
+      let part1Name = "";
+      let part2Name = "";
+      let part1Brand = "Aldo Solar";
+      let part2Brand = "Aldo Solar";
+
+      switch (roof.code) {
+        case "ceramic":
+          part1Name =
+            "086610-1 ESTRUTURA SOLAR GROUP ASMTC240X000MD04 4 PAINEIS FIXADOR GANCHO TELHA COLONIAL SMART TIGER";
+          part2Name =
+            "145232-5 ESTRUTURA SOLAR GROUP KSMTC240X815MD04 2 PARES PERFIL SMART-X 2,40M";
+          part1Brand = "Solar Group";
+          part2Brand = "Solar Group";
+          break;
+        case "laje":
+          part1Name = '361560-6 KSMTL240X000MD04 - KIT PERFIS SMART PARA TRIANGULO "L" 4 MODULOS';
+          part2Name = '361561-0 ASMTL240X000MD04 - KIT ACESSORIOS SMART PARA TRIANGULO "L" 4 MOD';
+          part1Brand = "Solar Group";
+          part2Brand = "Solar Group";
+          break;
+        case "metal":
+          part1Name =
+            "429252-2 KSPPC818X050MD04 KIT PERFIL MINITRILHO PLANO 3,5CM SMART MINI 50CM - 4";
+          part2Name = "459171-2 KSPPC818X050MD04 KIT PERFIL MINITRILHO BAIXO 1,5CM SMART 55CM";
+          part1Brand = "Solar Group";
+          part2Brand = "Solar Group";
+          break;
+        case "fibromadeira":
+          part1Name = "444791-5 ESTRUTURA PRATYC 2 PARES PERFIL HÍBRIDO ALUMINIO 2,40 M 4 PAINEIS";
+          part2Name = "444793-3 ESTRUTURA PRATYC KIT FIXACAO 4 PAINEIS FIBROMADEIRA 250MM INOX";
+          part1Brand = "Pratyc";
+          part2Brand = "Pratyc";
+          break;
+        case "fibrometal":
+          part1Name = "444791-5 ESTRUTURA PRATYC 2 PARES PERFIL HÍBRIDO ALUMINIO 2,40 M 4 PAINEIS";
+          part2Name =
+            "444794-7 ESTRUTURA PRATYC KIT FIXACAO 4 PAINEIS FIBROMETALICA PONTA BROCA 250MM INOX";
+          part1Brand = "Pratyc";
+          part2Brand = "Pratyc";
+          break;
+        case "ground":
+          part1Name = "446014-1 ESTRUTURA CCM KIT AÇO SOLO EASYLINE - 4 Módulos 1134x2384";
+          part2Name = "446015-5 ESTRUTURA CCM KIT ACESSÓRIOS SOLO EASYLINE AÇO - 4 Módulos";
+          part1Brand = "CCM";
+          part2Brand = "CCM";
+          break;
+        default:
+          part1Name =
+            "145232-5 ESTRUTURA SOLAR GROUP KSMTC240X815MD04 2 PARES PERFIL SMART-X 2,40M";
+          part2Name =
+            "086610-1 ESTRUTURA SOLAR GROUP ASMTC240X000MD04 4 PAINEIS FIXADOR GANCHO TELHA COLONIAL SMART TIGER";
+          part1Brand = "Solar Group";
+          part2Brand = "Solar Group";
+          break;
+      }
+
       structuredItems.push({
-        productId: `kwp-est-${cfg.id}`,
-        productName: `${roof.label} (Kit completo de perfis, grampos e fixadores para ${moduleQty} placas)`,
-        brandName: "Alumínio Solar",
+        productId: `kwp-est1-${cfg.id}`,
+        productName: part1Name,
+        brandName: part1Brand,
         categoryName: "structure_kit",
-        quantity: 1,
-        unitPrice: estTotal,
-        lineTotal: estTotal,
+        quantity: numKits,
+        unitPrice: unitPricePart1,
+        lineTotal: estTotalPart1,
+        specs: { roofType: roof.code, moduleQty },
+      });
+
+      structuredItems.push({
+        productId: `kwp-est2-${cfg.id}`,
+        productName: part2Name,
+        brandName: part2Brand,
+        categoryName: "structure_kit",
+        quantity: numKits,
+        unitPrice: unitPricePart2,
+        lineTotal: estTotalPart2,
         specs: { roofType: roof.code, moduleQty },
       });
     }
@@ -248,11 +348,9 @@ export function generateKwpRateTiers({
     const materialsTotal = structuredItems.reduce((acc, it) => acc + it.lineTotal, 0);
 
     const kitSummaryLines = [
-      `• Inversor: ${cfg.inverterModel}`,
-      `• Módulos: ${moduleQty}x ${cfg.moduleModel}`,
+      `• ${moduleQty.toLocaleString("pt-BR")}x Módulos ${cfg.moduleBrand} ${modulePowerW}W`,
+      `• ${invQty > 1 ? `${invQty}x Inversores` : "1x Inversor"} ${cfg.inverterBrand} ${invPower}kW`,
       roof.code !== "none" ? `• Estrutura: ${roof.label}` : null,
-      `• Cabos: ${cableMeters}m Preto + ${cableMeters}m Vermelho 6mm²`,
-      `• Conectores: 4x Pares MC4 IP68`,
     ].filter(Boolean) as string[];
 
     return {
@@ -273,6 +371,7 @@ export function generateKwpRateTiers({
       ratePerKwpEffective,
       systemKwp: realSystemKwp,
       inverterPowerKw: invPower,
+      inverterQty: invQty,
       materialsTotal,
       estimatedMonthlyGenerationKwh: estGeneration,
       inverterBrand: cfg.inverterBrand,

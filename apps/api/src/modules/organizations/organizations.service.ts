@@ -15,6 +15,7 @@ import { CreateWhatsappInboundPhoneDto } from "./dto/create-whatsapp-inbound-pho
 import { EmailService } from "../../common/email/email.service";
 import { getTenantPlanDetails } from "../../common/utils/plan-limits";
 import { DEFAULT_PROPOSAL_TEMPLATE_CONFIG } from "@energivia/shared-types";
+import { stripCnpjNumbersFromCompanyName } from "@energivia/utils";
 
 import { softDeleteWhere as soft } from "../../prisma/soft-delete";
 
@@ -330,14 +331,18 @@ export class OrganizationsService {
     const termsStatement =
       "Declaro que li e concordo com os Termos de Uso da ENERGIVIA LTDA (CNPJ 66.304.358/0001-16) e com a Política de Privacidade. Entendo que o sistema utiliza Inteligência Artificial que está sujeita a imprecisões e erros de leitura. Assumo total responsabilidade pela conferência técnica minuciosa dos dados e pela emissão de ART/TRT sobre toda e qualquer proposta gerada pela plataforma ou pelo WhatsApp.";
 
-    const slug = await this.generateUniqueOrganizationSlug(dto.name);
+    const commercialName = dto.proposalCompanyName?.trim() || dto.name.trim();
+    const legalName = dto.razaoSocial?.trim() || dto.name.trim();
+    const slug = await this.generateUniqueOrganizationSlug(commercialName);
     const templateSettings = buildTemplateSettings(dto);
     const org = await this.prisma.tenant.create({
       data: {
-        name: dto.name,
+        name: commercialName,
         slug,
         logoUrl: dto.logoUrl ?? undefined,
         settings: {
+          proposalCompanyName: commercialName,
+          razaoSocial: legalName,
           ...(dto.cnpj ? { cnpj: cleanCnpj(dto.cnpj) } : {}),
           ...(dto.cep ? { cep: dto.cep.trim() } : {}),
           ...(dto.street ? { street: dto.street.trim() } : {}),
@@ -422,11 +427,28 @@ export class OrganizationsService {
         orderBy: { sortOrder: "asc" },
       });
 
-      const templateConfig = blueprint?.document ?? DEFAULT_PROPOSAL_TEMPLATE_CONFIG;
-      const templateName = blueprint?.name ?? "Template de Proposta Padrão EnergivIA";
+      const rawTemplateConfig = blueprint?.document ?? DEFAULT_PROPOSAL_TEMPLATE_CONFIG;
+      const customConfig = JSON.parse(JSON.stringify(rawTemplateConfig)) as Record<string, unknown>;
+      if (customConfig && typeof customConfig === "object") {
+        const prevVars = (customConfig["variables"] as Record<string, unknown>) || {};
+        customConfig["variables"] = {
+          ...prevVars,
+          nome_empresa: commercialName,
+        };
+        const prevStyles = (customConfig["styles"] as Record<string, unknown>) || {};
+        const prevFooter = (prevStyles["footer"] as Record<string, unknown>) || {};
+        customConfig["styles"] = {
+          ...prevStyles,
+          footer: {
+            ...prevFooter,
+            companyName: commercialName,
+          },
+        };
+      }
+      const templateName = blueprint?.name ?? `Template de Proposta - ${commercialName}`;
       const templateDescription =
         blueprint?.description ??
-        "Modelo oficial padrão da EnergivIA pronto para propostas solares.";
+        `Modelo oficial pronto para propostas solares de ${commercialName}.`;
 
       const initialTemplate = await this.prisma.proposalTemplate.create({
         data: {
@@ -435,7 +457,7 @@ export class OrganizationsService {
           description: templateDescription,
           isDefault: true,
           status: "PUBLISHED",
-          config: templateConfig as Prisma.InputJsonValue,
+          config: customConfig as Prisma.InputJsonValue,
         },
       });
 
@@ -445,7 +467,7 @@ export class OrganizationsService {
           tenantId: org.id,
           version: initialTemplate.version,
           status: "PUBLISHED",
-          config: templateConfig as Prisma.InputJsonValue,
+          config: customConfig as Prisma.InputJsonValue,
           publishedAt: new Date(),
         },
       });
@@ -731,9 +753,9 @@ export class OrganizationsService {
     if (tenant) {
       const planDetails = getTenantPlanDetails(tenant);
       const maxPhones = planDetails.features.maxWhatsappNumbers;
-      if (maxPhones === 0) {
+      if (maxPhones === 0 || !planDetails.features.hasWhatsappBot) {
         throw new BadRequestException(
-          `A conexão de números de WhatsApp não está disponível no seu plano (${planDetails.planName}). Faça upgrade para o Plano Essencial ou superior.`
+          `A conexão e dimensionamento via WhatsApp com IA não está disponível no plano ${planDetails.planName}. Faça upgrade para o Plano Pro ou superior.`
         );
       }
       if (maxPhones !== null && maxPhones !== undefined && maxPhones > 0) {
@@ -797,8 +819,12 @@ export class OrganizationsService {
       current?.settings && typeof current.settings === "object"
         ? (current.settings as Record<string, unknown>)
         : {};
+    const cleanProposalName =
+      dto.name && dto.name.trim() ? stripCnpjNumbersFromCompanyName(dto.name.trim()) : undefined;
+
     const nextSettings: Prisma.InputJsonObject = {
       ...(currentSettings as Prisma.InputJsonObject),
+      ...(cleanProposalName && { proposalCompanyName: cleanProposalName }),
       ...(dto.cnpj !== undefined && { cnpj: cleanCnpj(dto.cnpj) ?? null }),
       ...(dto.cep !== undefined && { cep: dto.cep.trim() || null }),
       ...(dto.street !== undefined && { street: dto.street.trim() || null }),
@@ -846,7 +872,8 @@ export class OrganizationsService {
       data: {
         ...(dto.name != null && { name: dto.name }),
         ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl }),
-        ...((dto.cnpj !== undefined ||
+        ...((dto.name !== undefined ||
+          dto.cnpj !== undefined ||
           dto.cep !== undefined ||
           dto.street !== undefined ||
           dto.number !== undefined ||
@@ -865,6 +892,46 @@ export class OrganizationsService {
           dto.inverterBrandTiers !== undefined) && { settings: nextSettings }),
       },
     });
+
+    if (cleanProposalName) {
+      try {
+        const templates = await this.prisma.proposalTemplate.findMany({
+          where: { tenantId: id },
+          select: { id: true, config: true },
+        });
+        for (const tpl of templates) {
+          const cfg = (tpl.config as Record<string, unknown>) || {};
+          const editor = (cfg["editor"] as Record<string, unknown>) || {};
+          const variables = (editor["variables"] as Record<string, unknown>) || {};
+          const styles = (editor["styles"] as Record<string, unknown>) || {};
+          const footer = (styles["footer"] as Record<string, unknown>) || {};
+
+          const nextCfg = {
+            ...cfg,
+            editor: {
+              ...editor,
+              variables: {
+                ...variables,
+                nome_empresa: cleanProposalName,
+              },
+              styles: {
+                ...styles,
+                footer: {
+                  ...footer,
+                  companyName: cleanProposalName,
+                },
+              },
+            },
+          };
+          await this.prisma.proposalTemplate.update({
+            where: { id: tpl.id },
+            data: { config: nextCfg as Prisma.InputJsonValue },
+          });
+        }
+      } catch (err) {
+        console.error("[organizations.service] Error auto-updating proposal templates:", err);
+      }
+    }
     return {
       ...org,
       cnpj: extractCnpj(org.settings),

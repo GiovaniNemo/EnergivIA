@@ -5,7 +5,7 @@ export function createScratchProposalDocument() {
     "Capa",
     "Introdução",
     "Sobre a Empresa",
-    "Solução proposta",
+    "Solução",
     "Investimento",
     "Depoimentos",
     "Assinatura",

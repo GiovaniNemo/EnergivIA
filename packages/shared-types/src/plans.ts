@@ -100,7 +100,7 @@ export const DEFAULT_TRIAL_PLAN_FEATURES: PlanFeaturesConfig = {
   bulletPoints: [
     { text: "Até 20 propostas comerciais no período de teste", included: true },
     { text: "1 Usuário na equipe", included: true },
-    { text: "1 Número de WhatsApp com atendimento IA", included: false },
+    { text: "Atendimento e dimensionamento no WhatsApp com IA", included: false },
     { text: "1 Template de proposta personalizado", included: false },
     { text: "CRM Solar e funil de vendas", included: true },
     { text: "Radar Solar ANEEL (Prospecção ativa)", included: false },
@@ -112,15 +112,15 @@ export const DEFAULT_ESSENCIAL_PLAN_FEATURES: PlanFeaturesConfig = {
   maxProposalsPerMonth: 50,
   maxTeamMembers: 2,
   maxCustomTemplates: 1,
-  maxWhatsappNumbers: 1,
+  maxWhatsappNumbers: 0,
   hasProposalViewAlerts: false,
-  hasWhatsappBot: true,
+  hasWhatsappBot: false,
   hasRadarSolar: false,
   hasCustomBranding: false,
   bulletPoints: [
     { text: "Até 50 propostas comerciais com IA por mês", included: true },
     { text: "2 Usuários na equipe (1 convidado)", included: true },
-    { text: "1 Número de WhatsApp com atendimento IA", included: true },
+    { text: "Atendimento e dimensionamento no WhatsApp com IA", included: false },
     { text: "1 Template de proposta personalizado", included: true },
     { text: "CRM Solar e funil de vendas", included: true },
     { text: "Radar Solar ANEEL (Prospecção ativa na sua região)", included: false },
@@ -190,6 +190,7 @@ export function normalizePlanFeatures(
     baseDefaults = DEFAULT_TRIAL_PLAN_FEATURES;
   } else if (
     nameLower.includes("essencial") ||
+    nameLower.includes("standard") ||
     nameLower.includes("básic") ||
     nameLower.includes("basic")
   ) {

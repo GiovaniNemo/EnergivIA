@@ -68,7 +68,7 @@ function UserMenu(): JSX.Element {
         type="button"
         aria-label="Menu do usuário"
         aria-expanded={open}
-        className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[var(--color-primary)] text-xs font-bold text-white transition-opacity hover:opacity-80"
+        className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[var(--color-primary)] text-xs font-bold text-white ring-2 ring-white/15 hover:ring-white/35 shadow-xs transition-all duration-200 hover:scale-105"
         onClick={() => setOpen((v) => !v)}
       >
         {picture && !pictureError ? (
@@ -84,8 +84,8 @@ function UserMenu(): JSX.Element {
         )}
       </button>
       {open ? (
-        <div className="absolute right-0 top-10 z-[70] w-56 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-lg">
-          <div className="border-b border-[var(--color-border)] px-3.5 py-2.5">
+        <div className="absolute right-0 top-full mt-3.5 z-[70] w-56 overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#161d22]/95 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150">
+          <div className="border-b border-black/[0.06] dark:border-white/10 px-3.5 py-2.5">
             <p className="truncate text-sm font-semibold text-[var(--color-foreground)]">
               {displayName ?? "Usuário"}
             </p>
@@ -95,7 +95,7 @@ function UserMenu(): JSX.Element {
           </div>
           <Link
             href="/perfil"
-            className="flex items-center gap-2 px-3.5 py-2.5 text-sm text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-muted)]/40"
+            className="flex items-center gap-2 px-3.5 py-2.5 text-sm text-[var(--color-foreground)] transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
             onClick={() => setOpen(false)}
           >
             <UserRound className="h-4 w-4 text-[var(--color-muted-foreground)]" />
@@ -103,7 +103,7 @@ function UserMenu(): JSX.Element {
           </Link>
           <a
             href="/auth/logout"
-            className="flex items-center gap-2 border-t border-[var(--color-border)] px-3.5 py-2.5 text-sm text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"
+            className="flex items-center gap-2 border-t border-black/[0.06] dark:border-white/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400 transition-colors hover:bg-red-500/10 dark:hover:bg-red-500/15"
           >
             <LogOut className="h-4 w-4" />
             Deslogar
@@ -132,7 +132,7 @@ function WhatsappIcon(props: React.SVGProps<SVGSVGElement>): JSX.Element {
 export function Topbar() {
   const { resolvedTheme, setTheme } = useTheme();
   const { currentOrganization, user } = useOrganization();
-  const { open, setOpen } = useSidebar();
+  const { open, setOpen, setMobileOpen, onHoverStart, onHoverEnd } = useSidebar();
   const isMobile = useIsMobile();
   const collapsed = !open && !isMobile;
   const searchHandleRef = useRef<GlobalSearchHandle>(null);
@@ -171,12 +171,14 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-[60] flex h-16 shrink-0 items-center border-b border-black/5 bg-white/70 backdrop-blur-xl shadow-xs transition-colors dark:border-white/10 dark:bg-[#1a1a1a]/70">
+    <header className="fixed top-3 left-3 right-3 z-50 flex h-16 shrink-0 items-center rounded-2xl md:rounded-3xl glass-nav-topbar transition-all duration-300">
       {/* Brand logo container aligning with sidebar */}
       <div
+        onMouseEnter={onHoverStart}
+        onMouseLeave={onHoverEnd}
         className={cn(
-          "hidden shrink-0 items-center border-r border-black/5 dark:border-white/10 h-full transition-[width] duration-200 md:flex overflow-hidden",
-          collapsed ? "w-20 justify-center p-1" : "w-[16rem] justify-center px-2 py-0.5"
+          "hidden shrink-0 items-center h-full transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:flex overflow-hidden",
+          collapsed ? "w-[4.5rem] justify-center p-1" : "w-[16rem] justify-center px-2 py-0.5"
         )}
       >
         <Link href="/painel" className="flex w-full h-full min-w-0 items-center justify-center">
@@ -191,7 +193,7 @@ export function Topbar() {
             variant="ghost"
             size="icon"
             className="h-8 w-8 shrink-0 rounded-lg sm:h-9 sm:w-9"
-            onClick={() => setOpen(true)}
+            onClick={() => (setMobileOpen ? setMobileOpen(true) : setOpen(true))}
             aria-label="Abrir menu"
           >
             <Menu className="h-5 w-5" />
@@ -208,7 +210,7 @@ export function Topbar() {
         {/* Mobile Search Button */}
         <button
           type="button"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)] transition-colors sm:hidden"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] hover:text-[var(--color-foreground)] backdrop-blur-md transition-all sm:hidden"
           onClick={() => setMobileSearchOpen(true)}
           aria-label="Abrir pesquisa"
         >
@@ -219,19 +221,19 @@ export function Topbar() {
           (trialDaysLeft === 0 ? (
             <Link
               href="/gestao/meus-planos"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 text-rose-700 text-xs font-bold rounded-lg border border-rose-200 shadow-sm transition-all hover:bg-rose-100 hover:scale-[1.02] dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800/60 dark:hover:bg-rose-900/60"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-500/15 text-rose-300 text-xs font-bold rounded-xl border border-rose-500/30 shadow-xs backdrop-blur-md transition-all hover:bg-rose-500/25 hover:scale-[1.02]"
               title="Seu tempo de testes acabou. Clique para escolher seu plano e continuar."
             >
-              <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0 animate-pulse" />
+              <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0 animate-pulse" />
               <span>Tempo de testes acabou</span>
             </Link>
           ) : (
             <Link
               href="/gestao/meus-planos"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-100 text-orange-800 text-xs font-semibold rounded-lg border border-orange-200 transition-colors hover:bg-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-900/50 dark:hover:bg-orange-900/60"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-500/15 text-orange-300 text-xs font-semibold rounded-xl border border-orange-500/30 shadow-xs backdrop-blur-md transition-colors hover:bg-orange-500/25"
               title="Teste grátis"
             >
-              <Timer className="h-4 w-4 text-orange-500" />
+              <Timer className="h-4 w-4 text-orange-400" />
               <span>
                 {trialDaysLeft} {trialDaysLeft === 1 ? "dia restante" : "dias restantes"}
               </span>
@@ -239,7 +241,7 @@ export function Topbar() {
           ))}
 
         {/* WhatsApp AI Button (Responsive) with glowing border light beam */}
-        <div className="relative inline-flex p-[1.5px] overflow-hidden rounded-lg group shrink-0">
+        <div className="relative inline-flex p-[1.5px] overflow-hidden rounded-xl group shrink-0">
           <span
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[220%] aspect-square animate-spin-border opacity-90 group-hover:opacity-100 pointer-events-none"
             style={{
@@ -250,7 +252,7 @@ export function Topbar() {
           <button
             type="button"
             onClick={() => setWhatsappModalOpen(true)}
-            className="relative z-10 inline-flex h-8 items-center gap-1 rounded-[7px] bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-600 px-2 sm:h-9 sm:gap-1.5 sm:px-2.5 text-xs font-bold text-white shadow-sm transition-all hover:brightness-105 active:scale-95 shrink-0"
+            className="relative z-10 inline-flex h-8 items-center gap-1 rounded-[10px] bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-600 px-2 sm:h-9 sm:gap-1.5 sm:px-2.5 text-xs font-bold text-white shadow-sm transition-all hover:brightness-105 active:scale-95 shrink-0"
             title="Conhecer IA no WhatsApp"
           >
             {customWaLogoUrl ? (
@@ -271,14 +273,14 @@ export function Topbar() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 rounded-lg sm:h-9 sm:w-9"
+          className="h-9 w-9 rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] hover:border-black/15 dark:hover:border-white/25 backdrop-blur-md transition-all duration-200"
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
           aria-label="Alternar tema"
         >
           {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
         {user && (
-          <span className="hidden max-w-[100px] truncate text-sm text-[var(--color-muted-foreground)] sm:block">
+          <span className="hidden max-w-[120px] truncate text-xs font-medium text-neutral-700 dark:text-neutral-300 sm:block">
             {user.name ?? user.email}
           </span>
         )}

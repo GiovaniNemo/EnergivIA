@@ -129,7 +129,7 @@ export function SectionShell({
         vars as unknown as Record<string, string>
       ).trim()
     : "";
-  const contentTitleRaw = toOptionalString(fields["title"]);
+  const contentTitleRaw = toOptionalString(fields["title"]) ?? toOptionalString(section.title);
   const contentTitle = contentTitleRaw
     ? replaceVariablesServerSafe(contentTitleRaw, vars as unknown as Record<string, string>).trim()
     : "";

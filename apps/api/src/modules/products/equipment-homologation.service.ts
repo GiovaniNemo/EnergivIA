@@ -996,6 +996,77 @@ export class EquipmentHomologationService {
     },
 
     // ==========================================
+    // SUNGROW - Linha CX Trifásica Comercial / Industrial (380V)
+    // ==========================================
+    {
+      brand: "Sungrow",
+      model: "SG40CX-P2",
+      category: "inverter",
+      aliases: [
+        "SG40CX-P2",
+        "SG40CX",
+        "SG40",
+        "SUNGROW 40KW",
+        "INVERSOR TRIFÁSICO DE 40kW 380V COM AFCI - SUNGROW",
+        "INVERSOR TRIFASICO DE 40KW 380V COM AFCI - SUNGROW",
+        "INVERSOR 380V SUNGROW 40KW",
+      ],
+      specs: {
+        nominal_power_w: 40000,
+        nominal_power_kw: 40,
+        max_dc_power: 60000,
+        max_dc_voltage: 1100,
+        mppt_count: 4,
+        max_strings_per_mppt: 2,
+        mppt_voltage_min: 160,
+        mppt_voltage_max: 1000,
+        max_input_current: 30,
+        max_short_circuit_current_a: 40,
+        recommended_dc_ac_ratio_min: 1.05,
+        recommended_dc_ac_ratio_max: 1.5,
+        warranty_years: 5,
+        grid_topology: "tri_380",
+        grid_standard: "TRI_380",
+        output_voltage_v: "380V",
+        efficiency: 98.5,
+        afci: true,
+      },
+    },
+    {
+      brand: "Sungrow",
+      model: "SG110CX-P2",
+      category: "inverter",
+      aliases: [
+        "SG110CX-P2",
+        "SG110CX",
+        "SG110",
+        "SUNGROW 110KW",
+        "INVERSOR TRIFÁSICO DE 110kW 380V - SUNGROW",
+        "INVERSOR TRIFASICO DE 110KW 380V - SUNGROW",
+        "INVERSOR 380V SUNGROW 110KW",
+      ],
+      specs: {
+        nominal_power_w: 110000,
+        nominal_power_kw: 110,
+        max_dc_power: 154000,
+        max_dc_voltage: 1100,
+        mppt_count: 12,
+        max_strings_per_mppt: 2,
+        mppt_voltage_min: 180,
+        mppt_voltage_max: 1000,
+        max_input_current: 30,
+        max_short_circuit_current_a: 40,
+        recommended_dc_ac_ratio_min: 1.05,
+        recommended_dc_ac_ratio_max: 1.4,
+        warranty_years: 5,
+        grid_topology: "tri_380",
+        grid_standard: "TRI_380",
+        output_voltage_v: "380V",
+        efficiency: 98.6,
+      },
+    },
+
+    // ==========================================
     // MÓDULOS FOTOVOLTAICOS POPULARES
     // ==========================================
     {

@@ -7,14 +7,17 @@ import { Menu, X } from "lucide-react";
 import { motion } from "framer-motion";
 
 const appLoginUrl = "/login";
+const appSignupUrl = "/cadastro";
 
 export function BeamqHeroSection() {
+  const sectionRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
+    const section = sectionRef.current;
     if (!video) return;
 
     // Direct property assignment to bypass React hydration attribute quirk on iOS WebKit
@@ -41,6 +44,23 @@ export function BeamqHeroSection() {
 
     startPlayback();
 
+    // IntersectionObserver: Pause video when scrolled out of view to free 100% of GPU/CPU for other sections
+    let observer: IntersectionObserver | null = null;
+    if (section && typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        (entries) => {
+          const [entry] = entries;
+          if (entry?.isIntersecting) {
+            startPlayback();
+          } else if (!video.paused) {
+            video.pause();
+          }
+        },
+        { threshold: 0.02 }
+      );
+      observer.observe(section);
+    }
+
     // In iOS Low Power Mode, video autoplay is restricted until the first user interaction
     const handleUserInteraction = () => {
       startPlayback();
@@ -51,6 +71,7 @@ export function BeamqHeroSection() {
     window.addEventListener("click", handleUserInteraction, { once: true, passive: true });
 
     return () => {
+      if (observer) observer.disconnect();
       window.removeEventListener("touchstart", handleUserInteraction);
       window.removeEventListener("scroll", handleUserInteraction);
       window.removeEventListener("click", handleUserInteraction);
@@ -58,15 +79,24 @@ export function BeamqHeroSection() {
   }, []);
 
   return (
-    <section className="relative min-h-[100vh] w-full bg-[#02040a] text-white overflow-hidden font-plus-jakarta selection:bg-[#10b981]/30 selection:text-white">
+    <section
+      ref={sectionRef}
+      className="relative min-h-[100vh] w-full bg-[#02040a] text-white overflow-hidden font-plus-jakarta selection:bg-[#10b981]/30 selection:text-white"
+    >
       {/* Background Media System - Hardware-accelerated fluid video with smooth blending */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+      <div
+        className="absolute inset-0 z-0 pointer-events-none overflow-hidden"
+        style={{ transform: "translateZ(0)", contain: "paint" }}
+      >
         <video
           ref={videoRef}
           className={`absolute inset-0 w-full h-full object-cover object-center will-change-transform transition-opacity duration-1000 ${
             isPlaying ? "opacity-85 visible" : "opacity-0 invisible"
           }`}
-          style={{ filter: "hue-rotate(-95deg) saturate(1.15) contrast(1.2) brightness(0.98)" }}
+          style={{
+            filter: "hue-rotate(-95deg) saturate(1.15) contrast(1.2) brightness(0.98)",
+            transform: "translateZ(0)",
+          }}
           src="https://strvid.nyc3.cdn.digitaloceanspaces.com/motionsite/blue-light-glow.mp4"
           autoPlay
           loop
@@ -94,7 +124,7 @@ export function BeamqHeroSection() {
       </div>
 
       {/* Navigation Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-black/40 backdrop-blur-md border-b border-white/5">
+      <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-[#02040a]/65 backdrop-blur-xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 lg:px-12 py-2.5 sm:py-3">
           {/* Brand Logo */}
           <Link
@@ -135,8 +165,8 @@ export function BeamqHeroSection() {
               Entrar
             </a>
             <a
-              href={appLoginUrl}
-              className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-semibold text-white rounded-full bg-white/5 backdrop-blur-md border border-emerald-500/40 hover:border-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-500/10 transition-all"
+              href={appSignupUrl}
+              className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-semibold text-white rounded-full glass-pill border-emerald-500/40 hover:border-emerald-400/80 hover:bg-emerald-500/15 hover:shadow-[0_0_20px_rgba(16,185,129,0.25)] transition-all"
             >
               Começar Agora &rarr;
             </a>
@@ -171,7 +201,7 @@ export function BeamqHeroSection() {
                 Entrar
               </a>
               <a
-                href={appLoginUrl}
+                href={appSignupUrl}
                 className="text-center py-3 font-semibold text-[#02040a] bg-gradient-to-r from-[#10b981] to-[#059669] rounded-lg"
               >
                 Começar Agora
@@ -190,7 +220,7 @@ export function BeamqHeroSection() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="inline-flex items-center px-4 py-1.5 mb-8 rounded-full border border-emerald-500/30 bg-emerald-950/30 backdrop-blur-sm shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+              className="inline-flex items-center px-4 py-1.5 mb-8 rounded-full glass-pill border-emerald-500/30 bg-emerald-950/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
             >
               <span className="text-[#10b981] text-xs sm:text-sm font-bold uppercase tracking-[0.3em]">
                 INTELIGENTE • SEGURO • ESCALÁVEL
@@ -246,7 +276,7 @@ export function BeamqHeroSection() {
             >
               {/* White Primary Button */}
               <a
-                href={appLoginUrl}
+                href={appSignupUrl}
                 className="w-full sm:w-auto bg-white text-black font-semibold rounded-full px-8 py-3.5 hover:scale-105 transition-transform duration-300 shadow-[0_0_25px_rgba(255,255,255,0.4)] text-[15px]"
               >
                 Criar Conta Grátis
@@ -255,7 +285,7 @@ export function BeamqHeroSection() {
               {/* Glass Secondary Button */}
               <a
                 href="#como-funciona"
-                className="w-full sm:w-auto bg-white/10 backdrop-blur-md border border-white/30 text-white font-medium rounded-full px-7 py-3.5 hover:bg-white/20 transition-all duration-300 text-[15px]"
+                className="w-full sm:w-auto glass-pill border-white/20 text-white font-medium rounded-full px-7 py-3.5 hover:border-white/40 transition-all duration-300 text-[15px]"
               >
                 Como Funciona
               </a>

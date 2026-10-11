@@ -264,6 +264,36 @@ function parseKwpRate(
   return null;
 }
 
+/** Formata a potência exibida com badge de MWp ou GWp quando exceder 1.000 kWp */
+export function formatPowerBadge(kwp: number): string {
+  if (!Number.isFinite(kwp) || kwp <= 0) return `${kwp} kWp`;
+  if (kwp >= 1_000_000) {
+    return `${kwp.toLocaleString("pt-BR")} kWp (${(kwp / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} GWp)`;
+  }
+  if (kwp >= 1000) {
+    return `${kwp.toLocaleString("pt-BR")} kWp (${(kwp / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} MWp)`;
+  }
+  return `${kwp} kWp`;
+}
+
+/** Converte entradas textuais de potência (ex: 3000 kwp, 3 mwp, 1.5 gw) para kWp */
+export function parsePowerInput(text: string): number | null {
+  const match = text.match(/(\d+(?:[.,]\d+)?)\s*(gwp|gw|mwp|mw|kwp|kw)\b/i);
+  if (match && match[1]) {
+    const val = parseFloat(match[1].replace(",", "."));
+    if (!Number.isFinite(val) || val <= 0) return null;
+    const unit = (match[2] || "").toLowerCase();
+    if (unit === "gwp" || unit === "gw") {
+      return Math.min(val * 1_000_000, 5_000_000);
+    }
+    if (unit === "mwp" || unit === "mw") {
+      return Math.min(val * 1_000, 5_000_000);
+    }
+    return Math.min(val, 5_000_000);
+  }
+  return null;
+}
+
 @Injectable()
 export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WhatsappBotService.name);
@@ -673,6 +703,18 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     });
 
     if (boundPhone && boundPhone.organization) {
+      const orgSettings =
+        (boundPhone.organization.settings as Record<string, unknown> | null) || {};
+      if (orgSettings["specialAccessRevoked"] === true) {
+        this.logger.warn(
+          `Tentativa de acesso via WhatsApp de organização com acesso especial revogado: ${boundPhone.organization.id}`
+        );
+        // Expurga o vínculo residual para garantir bloqueio definitivo
+        await this.prisma.tenantWhatsappInboundPhone.deleteMany({
+          where: { organizationId: boundPhone.organization.id },
+        });
+        return null;
+      }
       return boundPhone.organization;
     }
 
@@ -782,6 +824,34 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       const code = pairingMatch[1];
       const pairingInfo = this.whatsappPairing.consumePairingCode(code);
       if (pairingInfo) {
+        // Valida se o plano da organização contempla a ferramenta de WhatsApp
+        const targetTenant = await this.prisma.tenant.findUnique({
+          where: { id: pairingInfo.organizationId },
+          include: {
+            subscription: {
+              include: { plan: true },
+            },
+          },
+        });
+
+        if (targetTenant) {
+          const tenantPlan = getTenantPlanDetails(targetTenant);
+          if (!tenantPlan.features.hasWhatsappBot || tenantPlan.features.maxWhatsappNumbers === 0) {
+            const deniedMsg =
+              `Olá! ☀️ O atendimento e dimensionamento solar por WhatsApp com IA não está disponível no plano da organização *${pairingInfo.organizationName}* (${tenantPlan.planName}).\n\n` +
+              `Esta ferramenta é exclusiva dos planos *Pro* e *Plus*.\n\n` +
+              `Para desbloquear o assistente de IA no WhatsApp e começar a cotar por aqui, faça upgrade do seu plano em:\n` +
+              `👉 *https://www.energivia.com.br/gestao/meus-planos*`;
+
+            await this.whatsappCloud.sendTextMessage({
+              phoneNumberId,
+              toWaId: fromWaId,
+              body: deniedMsg,
+            });
+            return;
+          }
+        }
+
         const cleanDigits = fromWaId.replace(/\D/g, "");
         const candidates = expandInboundPhoneCandidates(fromWaId);
 
@@ -841,7 +911,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         `Plano inativo/expirado para organização ${tenant.id} no WhatsApp ${fromWaId} (${planStatus.reason})`
       );
       let blockMsg =
-        `Olá! ☀️ O assistente de WhatsApp com IA da *EnergivIA* não está habilitado no plano da sua organização.\n\n` +
+        `Olá! ☀️ O assistente de WhatsApp com IA para dimensionamento solar da *EnergivIA* não está incluso no seu plano (${planStatus.planName || "Standard"}).\n\n` +
+        `O atendimento e dimensionamento automático por WhatsApp com IA é exclusivo dos planos *Pro* e *Plus*.\n\n` +
         `Para desbloquear o assistente de IA 24/7 e cotações no WhatsApp, escolha o seu plano em:\n` +
         `👉 *https://www.energivia.com.br/gestao/meus-planos*`;
 
@@ -1787,7 +1858,14 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     void _gridVoltage;
 
     let finalTargetKWp = 3.0;
-    const geracaoPorKwp = 130; // média nacional
+    let monthlyFactor = 130;
+    if (cidade || estado) {
+      const hspRes = this.geoIrradiance.getHsp(cidade || "São Paulo", estado || "SP");
+      if (hspRes && hspRes.hsp > 0) {
+        monthlyFactor = Math.max(90, Math.min(180, Math.round(hspRes.hsp * 30 * 0.85)));
+      }
+    }
+
     if (typeof targetKWp === "number" && targetKWp > 0) {
       finalTargetKWp = targetKWp;
     } else if (
@@ -1800,13 +1878,6 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     } else if (typeof targetModules === "number" && targetModules > 0) {
       finalTargetKWp = (targetModules * (modPowerWUser || 585)) / 1000;
     } else if (typeof consumptionKwh === "number" && consumptionKwh > 0) {
-      let monthlyFactor = geracaoPorKwp;
-      if (cidade || estado) {
-        const hspRes = this.geoIrradiance.getHsp(cidade || "São Paulo", estado || "SP");
-        if (hspRes && hspRes.hsp > 0) {
-          monthlyFactor = Math.max(90, Math.min(180, Math.round(hspRes.hsp * 30 * 0.85)));
-        }
-      }
       finalTargetKWp = consumptionKwh / monthlyFactor;
     }
     const safeKwp = Math.max(0.5, finalTargetKWp);
@@ -1829,14 +1900,22 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
             system_kw: safeKwp,
             roof_type: mappedRoofType,
             inverter_type: (inverterType as any) || "string",
+            monthly_yield: monthlyFactor,
+            monthly_generation_factor: monthlyFactor,
           },
           organizationId
         );
 
         if (tiersRes && tiersRes.tiers && tiersRes.tiers.length > 0) {
+          const costBenefitTier =
+            tiersRes.tiers.find((t) => t.tier_id === "cost_benefit") || tiersRes.tiers[0]!;
+          const refKwp =
+            safeKwp > 0 ? safeKwp : costBenefitTier.kit_result?.system_power_kw || safeKwp;
+          const uniformTotalPrice = Math.round(refKwp * ratePerKwp * 100) / 100;
+
           return tiersRes.tiers.map((t) => {
             const realSystemKwp = t.kit_result.system_power_kw;
-            const totalPrice = Math.round(realSystemKwp * ratePerKwp * 100) / 100;
+            const totalPrice = uniformTotalPrice;
             const invQty = t.inverter_qty || t.kit_result.inverter?.quantity || 1;
             const invLabel = invQty > 1 ? `${invQty}x Inversores` : `1x Inversor`;
             const kitItems = [
@@ -1864,7 +1943,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
               ratePerKwp,
               materialsTotal: t.equipment_total,
               kwp: realSystemKwp,
-              estimatedGeneration: t.estimated_monthly_generation_kwh,
+              estimatedGeneration: Math.round(realSystemKwp * (monthlyFactor || 130)),
               items: kitItems,
               invName: t.inverter_brand,
               modCount: t.module_qty,
@@ -1967,7 +2046,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     const results = tiers.map((cfg) => {
       const baseEquipmentRate = ratePerKwp * 0.55;
       const tierEquipmentRate = baseEquipmentRate * cfg.materialCostFactor;
-      const totalPrice = Math.round(realSystemKwp * ratePerKwp * 100) / 100;
+      const totalPrice = Math.round(safeKwp * ratePerKwp * 100) / 100;
 
       const baseEquipmentBudget = Math.round(realSystemKwp * tierEquipmentRate);
       const modTotal = baseEquipmentBudget * 0.5;
@@ -2023,7 +2102,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         ratePerKwp,
         materialsTotal: baseEquipmentBudget,
         kwp: realSystemKwp,
-        estimatedGeneration: Math.round(realSystemKwp * geracaoPorKwp),
+        estimatedGeneration: Math.round(realSystemKwp * (monthlyFactor || 130)),
         items: kitItems,
         invName: cfg.inverterBrand,
         modCount: moduleQty,
@@ -2137,8 +2216,16 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
+  public formatPowerBadge(kwp: number): string {
+    return formatPowerBadge(kwp);
+  }
+
+  public parsePowerInput(text: string): number | null {
+    return parsePowerInput(text);
+  }
+
   /** Etapa 1: lista os grupos de kits (sem preço) para o integrador escolher */
-  private formatQuotesListText(
+  public formatQuotesListText(
     quotes: any[],
     sessionCtx: {
       targetKWp?: number;
@@ -2156,17 +2243,16 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
           ? ` em \`${sessionCtx.cidade}\``
           : "";
 
-    const infoCabecalho = sessionCtx.targetKWp
-      ? `para a potência de \`${sessionCtx.targetKWp} kWp\`${localidade}`
+    const formattedHeaderPower = sessionCtx.targetKWp
+      ? formatPowerBadge(sessionCtx.targetKWp)
+      : null;
+    const infoCabecalho = formattedHeaderPower
+      ? `para a potência de \`${formattedHeaderPower}\`${localidade}`
       : sessionCtx.targetModules
         ? `para \`${sessionCtx.targetModules} módulos\`${localidade}`
         : `para o consumo de \`${sessionCtx.consumptionKwh || 300} kWh/mês\`${localidade}`;
 
     let quoteText = `Excelente! Seguem os grupos de kits dimensionados ${infoCabecalho}:\n\n`;
-    const first = quotes[0];
-    if (first) {
-      quoteText += `> ⚡ Potência: \`${first.kwp} kWp\` | Geração estimada: \`${first.estimatedGeneration} kWh/mês\`\n\n`;
-    }
 
     quotes.forEach((q, index) => {
       const tierName =
@@ -2176,6 +2262,9 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       const trophy = isTop ? " 🏆" : "";
 
       quoteText += `*_Opção ${index + 1} — ${tierName}${tag}_*${trophy}\n`;
+      if (q.kwp && q.estimatedGeneration) {
+        quoteText += `> ⚡ Potência: \`${formatPowerBadge(q.kwp)}\` | Geração estimada: \`${q.estimatedGeneration} kWh/mês\`\n`;
+      }
 
       const items: string[] =
         q.items && q.items.length > 0
@@ -2447,6 +2536,49 @@ ${catalogContext}`;
     }
   }
 
+  public async processWebChatMessage({
+    messages,
+    incomingText,
+    organizationId,
+    contactName,
+    extractionResult,
+  }: {
+    messages?: Array<{
+      role: string;
+      content?: string | null;
+      metadata?: unknown;
+    }>;
+    incomingText?: string;
+    organizationId?: string;
+    contactName?: string;
+    extractionResult?: BillExtractionResult | null;
+  }): Promise<string> {
+    let orgId = (organizationId || "").trim();
+    if (!orgId) {
+      try {
+        const firstTenant = await this.prisma.tenant.findFirst({ select: { id: true } });
+        orgId = firstTenant?.id || "default-org";
+      } catch {
+        orgId = "default-org";
+      }
+    }
+
+    const conversation = {
+      id: "web-chat-session",
+      organizationId: orgId,
+      title: "Web Chat",
+      metadata: { contactName: contactName || "Integrador" },
+      messages: messages || [],
+    };
+
+    return this.generateBotResponse({
+      conversation,
+      incomingText: incomingText || "",
+      extractionResult: extractionResult || null,
+      contactName,
+    });
+  }
+
   private async generateBotResponse({
     conversation,
     incomingText,
@@ -2629,7 +2761,7 @@ ${catalogContext}`;
               /(?:Localização Identificada|Localização Corrigida|Localização Mantida|Cidade):?[_*\s!]*`?\*?([^*\/`\n]+)\/([A-Za-z]{2})\*?`?/i
             ) ||
             content.match(
-              /(?:em|para)\s+`?\*?([^*\/`\n]{3,40})\/([A-Za-z]{2})\*?`?\s*(?:☀️|📍|\n|$)/i
+              /(?:em|para)\s+`?\*?([^*\/`\n]{3,40})\/([A-Za-z]{2})\*?`?\s*(?:\.|\(|☀️|📍|\n|$|\s)/i
             );
           if (locM && locM[1] && locM[2]) {
             cidade = locM[1].replace(/[*_`]/g, "").trim();
@@ -2675,10 +2807,10 @@ ${catalogContext}`;
           }
         }
 
-        // 1. Extração de kWp
-        const kwpM = content.match(/(\d+(?:[.,]\d+)?)\s*kwp/i);
-        if (kwpM && kwpM[1]) {
-          targetKWp = parseFloat(kwpM[1].replace(",", "."));
+        // 1. Extração de Potência (kWp / MWp / GWp)
+        const parsedP = this.parsePowerInput(content);
+        if (parsedP !== null && parsedP >= 0.5) {
+          targetKWp = parsedP;
           targetModules = undefined;
           modPowerWUser = undefined;
           consumptionKwh = undefined;
@@ -2692,7 +2824,7 @@ ${catalogContext}`;
           const numM = content.match(/(\d+(?:[.,]\d+)?)/);
           if (numM && numM[1]) {
             const pVal = parseFloat(numM[1].replace(",", "."));
-            if (pVal >= 0.5 && pVal <= 5000) {
+            if (pVal >= 0.5 && pVal <= 5_000_000) {
               targetKWp = pVal;
               targetModules = undefined;
               modPowerWUser = undefined;
@@ -2736,7 +2868,7 @@ ${catalogContext}`;
         const kwhM = content.match(
           /(?:consumo registrado:\s*|consumo m[ée]dio de\s*|consumo\s+(?:de\s+)?|gasto\s+(?:de\s+)?)?(\d+[\d.,]*)\s*(?:kwh|kw)(?:\/m[eê]s)?/i
         );
-        if (kwhM && kwhM[1] && !kwpM) {
+        if (kwhM && kwhM[1] && parsedP === null) {
           const val = Math.round(Number(kwhM[1].replace(/\./g, "").replace(",", ".")));
           if (val >= 20 && val <= 500000) {
             consumptionKwh = val;
@@ -2938,6 +3070,17 @@ ${catalogContext}`;
     };
 
     const sessionCtx = extractContextFromSession();
+    if (extractionResult && extractionResult.data) {
+      if (extractionResult.data.cidade && !sessionCtx.cidade) {
+        sessionCtx.cidade = extractionResult.data.cidade;
+      }
+      if (extractionResult.data.uf && !sessionCtx.estado) {
+        sessionCtx.estado = extractionResult.data.uf.trim().toUpperCase();
+      }
+      if (extractionResult.exactAverageKwh && !sessionCtx.consumptionKwh) {
+        sessionCtx.consumptionKwh = extractionResult.exactAverageKwh;
+      }
+    }
 
     // Helper: recalcula os grupos de kits para a sessão atual
     const kitsFor = (overrides: { roofType?: string; customRatePerKwp?: number } = {}) =>
@@ -3341,9 +3484,14 @@ ${catalogContext}`;
           distributorName: "Edeltec Solar",
           distributorId: undefined,
           totalPrice: Math.round(effectiveConsumption * 28),
+          ratePerKwp: 0,
+          materialsTotal: Math.round(effectiveConsumption * 28),
           kwp: calculatedFallbackKwp,
           estimatedGeneration: effectiveConsumption,
-          items: [],
+          items: [] as string[],
+          invName: "",
+          modCount: 0,
+          modName: "",
           structuredItems: [],
         };
 
@@ -3383,8 +3531,8 @@ ${catalogContext}`;
           selectedQuote.kwp,
           organizationRules
         );
-        // Valor de venda = potência (kWp) x preço aplicado pelo integrador
-        quotedSaleBrl = selectedQuote.totalPrice;
+        // Valor de venda real baseado nas margens do integrador
+        quotedSaleBrl = costCalc.computedSaleFromCostRulesBrl;
 
         // 3. Cria Deal
         const deal = await this.prisma.deal.create({
@@ -3494,15 +3642,46 @@ ${catalogContext}`;
 
         const rawKitItems = (selectedQuote as any).structuredItems?.length
           ? (selectedQuote as any).structuredItems
-          : selectedQuote.items.map((i) => ({
-              productId: "",
-              productName: i.replace(/^-\s*[^:]+:\s*(?:\d+x\s*)?/, "").trim() || i,
-              brandName: "",
-              categoryName: "equipment",
-              quantity: 1,
-              unitPrice: 0,
-              lineTotal: 0,
-            }));
+          : (selectedQuote.items || []).map((rawStr: string) => {
+              let clean = rawStr
+                .replace(/^[*_~`>•\-\s]+/, "")
+                .replace(/[*_~`\s]+$/, "")
+                .trim();
+              const prefixMatch = clean.match(
+                /^(?:inversor|microinversor|m[oó]dulos?|pain[eé]is?|estrutura|cabos?|conectores?)\s*:\s*(.*)$/i
+              );
+              if (prefixMatch && prefixMatch[1]) {
+                clean = prefixMatch[1].trim();
+              }
+              let quantity = 1;
+              const qMatch = clean.match(/^(\d+)x\s*(.*)$/i);
+              if (qMatch && qMatch[1] && qMatch[2]) {
+                quantity = parseInt(qMatch[1], 10);
+                clean = qMatch[2].trim();
+              }
+              const isMod =
+                /m[oó]dulo|painel|placa|astronergy|canadian|longi|jinko|ja solar|trina|osda|dah/i.test(
+                  clean
+                );
+              const isInv =
+                /inversor|micro|solplanet|growatt|deye|saj|solis|sungrow|huawei|goodwe/i.test(
+                  clean
+                );
+              return {
+                productId: "",
+                productName: clean,
+                brandName:
+                  (selectedQuote as any).modName && isMod
+                    ? (selectedQuote as any).modName
+                    : (selectedQuote as any).invName && isInv
+                      ? (selectedQuote as any).invName
+                      : "",
+                categoryName: isMod ? "module" : isInv ? "inverter" : "equipment",
+                quantity,
+                unitPrice: 0,
+                lineTotal: 0,
+              };
+            });
 
         // 7. Proposta Comercial
         const proposalNumber = await getNextProposalNumber(
@@ -3935,46 +4114,54 @@ ${catalogContext}`;
         lastBotMsg.includes("potência (kWp)"));
 
     if (isAskingKwp) {
-      const kwpMatch = incomingText.match(/(\d+(?:[.,]\d+)?)\s*(?:kwp|kw)?/i);
-      if (kwpMatch && kwpMatch[1]) {
-        const targetKWp = parseFloat(kwpMatch[1].replace(",", "."));
-        if (targetKWp >= 0.5 && targetKWp <= 5000) {
-          const cityInSameMsg = incomingText.match(
-            /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
-          );
-          if (cityInSameMsg && cityInSameMsg[1]) {
-            const cand = (
-              cityInSameMsg[1] +
-              (cityInSameMsg[2]
-                ? `/${cityInSameMsg[2]}`
-                : cityInSameMsg[3]
-                  ? `/${cityInSameMsg[3]}`
-                  : "")
-            ).trim();
-            const hspRes = getHsp(cand);
-            return (
-              `*_Potência Solicitada:_* \`${targetKWp} kWp\` em \`${hspRes.city}/${hspRes.uf}\` ☀️📍\n\n` +
-              this.GRID_OPTIONS_TEXT
-            );
+      let targetKWp = this.parsePowerInput(incomingText);
+      if (targetKWp === null) {
+        const kwpMatch = incomingText.match(/(\d+(?:[.,]\d+)?)\s*(?:kwp|kw)?/i);
+        if (kwpMatch && kwpMatch[1]) {
+          const val = parseFloat(kwpMatch[1].replace(",", "."));
+          if (val >= 0.5 && val <= 5_000_000) {
+            targetKWp = val;
           }
+        }
+      }
 
-          if (sessionCtx.cidade && sessionCtx.estado) {
-            return (
-              `*_Potência Solicitada:_* \`${targetKWp} kWp\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
-              this.GRID_OPTIONS_TEXT
-            );
-          }
-
+      if (targetKWp !== null && targetKWp >= 0.5 && targetKWp <= 5_000_000) {
+        const formattedPower = this.formatPowerBadge(targetKWp);
+        const cityInSameMsg = incomingText.match(
+          /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
+        );
+        if (cityInSameMsg && cityInSameMsg[1]) {
+          const cand = (
+            cityInSameMsg[1] +
+            (cityInSameMsg[2]
+              ? `/${cityInSameMsg[2]}`
+              : cityInSameMsg[3]
+                ? `/${cityInSameMsg[3]}`
+                : "")
+          ).trim();
+          const hspRes = getHsp(cand);
           return (
-            `*_Potência Solicitada:_* \`${targetKWp} kWp\` ☀️\n\n` +
-            `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+            `*_Potência Solicitada:_* \`${formattedPower}\` em \`${hspRes.city}/${hspRes.uf}\` ☀️📍\n\n` +
+            this.GRID_OPTIONS_TEXT
           );
         }
+
+        if (sessionCtx.cidade && sessionCtx.estado) {
+          return (
+            `*_Potência Solicitada:_* \`${formattedPower}\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
+            this.GRID_OPTIONS_TEXT
+          );
+        }
+
+        return (
+          `*_Potência Solicitada:_* \`${formattedPower}\` ☀️\n\n` +
+          `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+        );
       }
 
       return (
         `Não consegui identificar a potência desejada.\n\n` +
-        `Por favor, informe a potência de pico desejada em kWp (ex: \`5\` ou \`7.5 kWp\`) ou envie 0️⃣ para voltar ao menu inicial:`
+        `Por favor, informe a potência de pico desejada (ex: \`5 kWp\`, \`3000 kWp\`, \`3 MWp\` ou \`1.5 GWp\`) ou envie 0️⃣ para voltar ao menu inicial:`
       );
     }
 
@@ -4145,22 +4332,20 @@ ${catalogContext}`;
       return this.buildGreetingMenu(resolvedContactName);
     }
 
-    // ESTADO I: Entrada por kWp direto (ex: "5 kwp", "kit 7.5kwp", "15 kwp")
-    const kwpDirectMatch = incomingText.match(/(\d+(?:[.,]\d+)?)\s*kwp/i);
-    if (kwpDirectMatch && kwpDirectMatch[1]) {
-      const targetKWp = parseFloat(kwpDirectMatch[1].replace(",", "."));
-      if (targetKWp > 0) {
-        if (sessionCtx.cidade && sessionCtx.estado) {
-          return (
-            `*_Potência Solicitada:_* \`${targetKWp} kWp\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
-            this.GRID_OPTIONS_TEXT
-          );
-        }
+    // ESTADO I: Entrada por Potência direta (ex: "5 kwp", "3000 kwp", "3 mwp", "1.5 gwp")
+    const directPower = this.parsePowerInput(incomingText);
+    if (directPower !== null && directPower >= 0.5) {
+      const formattedPower = this.formatPowerBadge(directPower);
+      if (sessionCtx.cidade && sessionCtx.estado) {
         return (
-          `*_Potência Solicitada:_* \`${targetKWp} kWp\` ☀️\n\n` +
-          `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+          `*_Potência Solicitada:_* \`${formattedPower}\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
+          this.GRID_OPTIONS_TEXT
         );
       }
+      return (
+        `*_Potência Solicitada:_* \`${formattedPower}\` ☀️\n\n` +
+        `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+      );
     }
 
     // ESTADO J: Entrada por Quantidade de Módulos (ex: "12 placas de 590W", "10 módulos")

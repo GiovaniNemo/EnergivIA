@@ -643,6 +643,169 @@ html.hide-scrollbar,
   animation: spin-border 3.5s linear infinite;
 }
 
+/* Glassmorphism Design System Utilities */
+.glass-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%), rgba(7, 13, 24, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 8px 32px 0 rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateZ(0);
+}
+
+.glass-card-hover {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card-hover:hover {
+  border-color: rgba(16, 185, 129, 0.45);
+  border-top-color: rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 16px 40px -4px rgba(0, 0, 0, 0.65),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.28),
+    0 0 25px -4px rgba(16, 185, 129, 0.2);
+  transform: translateY(-3px) translateZ(0);
+}
+
+.glass-panel {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.015) 100%), rgba(4, 9, 18, 0.75);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow:
+    0 24px 70px -15px rgba(0, 0, 0, 0.85),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.18);
+  transform: translateZ(0);
+}
+
+.glass-pill {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateZ(0);
+  transition: all 0.25s ease;
+}
+
+.glass-pill:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 100%);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.25), 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .glass-card {
+    background: rgba(7, 13, 24, 0.95);
+  }
+  .glass-panel {
+    background: rgba(4, 9, 18, 0.96);
+  }
+  .glass-pill {
+    background: rgba(20, 26, 38, 0.9);
+  }
+  .glass-nav-topbar {
+    background: rgba(18, 24, 27, 0.96);
+  }
+  .glass-nav-sidebar {
+    background: rgba(18, 24, 27, 0.96);
+  }
+}
+
+/* Glassmorphism Navigation Bar Utilities (Topbar & Sidebar) */
+.glass-nav-topbar {
+  background-color: rgba(255, 255, 255, 0.40);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.20) 100%);
+  backdrop-filter: blur(26px) saturate(200%) contrast(105%);
+  -webkit-backdrop-filter: blur(26px) saturate(200%) contrast(105%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 20px 48px -12px rgba(0, 0, 0, 0.12),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.40);
+}
+
+.dark .glass-nav-topbar {
+  background-color: rgba(10, 15, 19, 0.36) !important;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
+  backdrop-filter: blur(32px) saturate(220%) contrast(105%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(220%) contrast(105%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow:
+    0 28px 64px -12px rgba(0, 0, 0, 0.90),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+.glass-nav-sidebar {
+  background-color: rgba(255, 255, 255, 0.45);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.25) 100%);
+  backdrop-filter: blur(26px) saturate(190%) contrast(105%);
+  -webkit-backdrop-filter: blur(26px) saturate(190%) contrast(105%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 20px 48px -12px rgba(0, 0, 0, 0.12),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.40);
+}
+
+.dark .glass-nav-sidebar {
+  background-color: rgba(10, 15, 19, 0.42) !important;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
+  backdrop-filter: blur(32px) saturate(220%) contrast(105%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(220%) contrast(105%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow:
+    0 28px 64px -12px rgba(0, 0, 0, 0.90),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+.glass-nav-sidebar-floating {
+  box-shadow:
+    0 28px 60px -10px rgba(0, 0, 0, 0.20),
+    0 0 0 1px rgba(0, 0, 0, 0.08),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.98);
+}
+
+.dark .glass-nav-sidebar-floating {
+  box-shadow:
+    0 36px 80px -12px rgba(0, 0, 0, 0.95),
+    0 0 0 1px rgba(255, 255, 255, 0.20),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.38) !important;
+}
+
+.glass-nav-item {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-nav-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.dark .glass-nav-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.glass-nav-item-active {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-left-color: rgba(16, 185, 129, 0.9) !important;
+  color: #047857 !important;
+  box-shadow: inset 0 0 12px rgba(16, 185, 129, 0.08);
+}
+
+.dark .glass-nav-item-active {
+  background: rgba(16, 185, 129, 0.16) !important;
+  border-left-color: rgba(45, 212, 191, 0.9) !important;
+  color: #6ee7b7 !important;
+  box-shadow: inset 0 0 12px rgba(16, 185, 129, 0.12);
+}
+
 @media print {
   *,
   *::before,
@@ -652,8 +815,8 @@ html.hide-scrollbar,
   }
 
   @page {
-    size: A4;
-    margin: 10mm;
+    size: A4 portrait;
+    margin: 0;
   }
 
   .print\:hidden,
@@ -673,7 +836,16 @@ html.hide-scrollbar,
   }
 
   html,
-  body,
+  body {
+    background: var(--proposal-bg, #060b16) !important;
+    color: var(--proposal-text, #f8fafc) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   main,
   article,
   .proposal-preview-cq,
@@ -683,15 +855,54 @@ html.hide-scrollbar,
     min-height: 0 !important;
     max-height: none !important;
     background: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
+  /* Capa A4 100% sangrada */
   .proposal-cover-page {
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
     page-break-after: always !important;
     break-after: page !important;
-    min-height: calc(100vh - 20mm) !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Cada página de seção dedicada no PDF */
+  .proposal-pdf-page {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 297mm !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    padding: 14mm 16mm !important;
+    background: var(--proposal-bg, #060b16) !important;
+  }
+
+  .proposal-pdf-page:last-child,
+  .proposal-pdf-page:last-of-type {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 
   .proposal-content-document {
@@ -710,7 +921,6 @@ html.hide-scrollbar,
     box-shadow: none !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    margin-bottom: 1.5rem !important;
   }
 
   /* Evita quebras no meio de parágrafos, frases e cards */

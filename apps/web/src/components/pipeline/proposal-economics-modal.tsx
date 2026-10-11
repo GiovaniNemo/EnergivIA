@@ -108,7 +108,9 @@ import {
   prepareQuickEconomiaFromExtracted,
   quickResultToPersistedSimulationDraft,
   resolveBillLocationString,
+  ROOF_SOLAR_FACTOR,
   simulateProposal,
+  type QuickEconomiaRoofType,
   type QuickEconomiaRoofType as RoofType,
   type QuickEconomiaSimulationInput as SimulationInput,
   type QuickEconomiaSimulationResult as SimulationResult,
@@ -124,19 +126,52 @@ const ROOF_TYPE_SELECT_OPTIONS: { value: RoofType; label: string }[] = [
   { value: "none", label: "Sem estrutura" },
 ];
 
+const FALLBACK_ROOF_SOLAR_FACTOR: Record<string, number> = {
+  ceramic: 1,
+  metal: 0.94,
+  fibromadeira: 0.96,
+  fibrometal: 0.96,
+  ground: 1,
+  laje: 1,
+  none: 1,
+};
+
+function getRoofSolarFactor(roofType?: string | null): number {
+  if (!roofType) return 1;
+  const factorMap =
+    typeof ROOF_SOLAR_FACTOR !== "undefined" && ROOF_SOLAR_FACTOR
+      ? ROOF_SOLAR_FACTOR
+      : FALLBACK_ROOF_SOLAR_FACTOR;
+  return (factorMap as Record<string, number>)[roofType] ?? 1;
+}
+
 function clampSystemKw(kw: number): number {
   const rounded = Math.round(kw * 100) / 100;
-  return Math.min(1000, Math.max(0.5, rounded));
+  return Math.min(5_000_000, Math.max(0.5, rounded));
 }
 
 function extractPowerBadge(text?: string | null): string | null {
   if (!text) return null;
-  const match = text.match(/\b(\d+(?:[.,]\d+)?)\s*(kwp|kw|wp|w)\b/i);
+  const match = text.match(/\b(\d+(?:[.,]\d+)?)\s*(gwp|gw|mwp|mw|kwp|kw|wp|w)\b/i);
   if (match) {
     const val = match[1];
     const rawUnit = match[2].toLowerCase();
     const unit =
-      rawUnit === "kwp" ? "kWp" : rawUnit === "kw" ? "kW" : rawUnit === "wp" ? "Wp" : "W";
+      rawUnit === "gwp"
+        ? "GWp"
+        : rawUnit === "gw"
+          ? "GW"
+          : rawUnit === "mwp"
+            ? "MWp"
+            : rawUnit === "mw"
+              ? "MW"
+              : rawUnit === "kwp"
+                ? "kWp"
+                : rawUnit === "kw"
+                  ? "kW"
+                  : rawUnit === "wp"
+                    ? "Wp"
+                    : "W";
     return `${val} ${unit}`;
   }
   const matchKtl = text.match(/\b(\d+(?:[.,]\d+)?)\s*ktl\b/i);
@@ -187,6 +222,7 @@ type GeneratedProposal = {
   tamanhoSistemaKw: number;
   roofType: RoofType;
   monthlyConsumptionKwh?: number;
+  geracaoBase?: number;
 };
 
 type ProposalFieldErrors = {
@@ -504,6 +540,17 @@ export function buildGeneratedProposalFromSimulation(
   const roofType: RoofType = validRoofTypes.includes(roofTypeRaw as RoofType)
     ? (roofTypeRaw as RoofType)
     : "ceramic";
+  const roofF = getRoofSolarFactor(roofType);
+  const geracaoBase =
+    typeof resultSizing?.["geracaoBase"] === "number" && (resultSizing["geracaoBase"] as number) > 0
+      ? (resultSizing["geracaoBase"] as number)
+      : typeof result?.["geracaoBase"] === "number" && (result["geracaoBase"] as number) > 0
+        ? (result["geracaoBase"] as number)
+        : Math.max(
+            40,
+            (typeof input?.["irradiacao"] === "number" ? (input["irradiacao"] as number) : 145) *
+              roofF
+          );
 
   return {
     id: simulation.id,
@@ -516,6 +563,7 @@ export function buildGeneratedProposalFromSimulation(
     tamanhoSistemaKw,
     roofType,
     monthlyConsumptionKwh,
+    geracaoBase,
   };
 }
 
@@ -975,48 +1023,95 @@ export const ProposalEconomicsModal = forwardRef<
     };
   }, [currentOrganizationId, proposalResultOpen]);
 
+  const heuristicaIrradiacao = useMemo(() => {
+    const row = geoCities.find((c) => c.id === selectedCity?.id);
+    const fromDb = irradiacaoFromSolarResource(row?.solarResource);
+    if (fromDb != null) return fromDb;
+    if (selectedCity) return 125;
+    return 120;
+  }, [geoCities, selectedCity?.id]);
+
+  const localSolarYield = useMemo(() => {
+    if (generatedProposal?.geracaoBase && generatedProposal.geracaoBase > 40) {
+      return generatedProposal.geracaoBase;
+    }
+    const roof = (generatedProposal?.roofType ??
+      proposalKitDraft.roof ??
+      "ceramic") as QuickEconomiaRoofType;
+    const roofF = getRoofSolarFactor(roof);
+    return Math.max(40, (heuristicaIrradiacao || 125) * roofF);
+  }, [
+    generatedProposal?.geracaoBase,
+    generatedProposal?.roofType,
+    proposalKitDraft.roof,
+    heuristicaIrradiacao,
+  ]);
+
+  // Cálculos de Potência Calculada vs. Potência Ajustada (mínimo técnico de 4 módulos)
+  const calculatedKw =
+    generatedProposal?.tamanhoSistemaKw ?? (parseFloat(proposalKitDraft.systemKw) || 0);
+
+  const catalogModuleW =
+    proposalKitResult && proposalKitResult.modules.quantity > 0
+      ? Math.round((proposalKitResult.system_power_kw / proposalKitResult.modules.quantity) * 1000)
+      : 585;
+
+  const activeModuleWatts = catalogModuleW;
+
+  const theoreticalModuleQty =
+    activeModuleWatts > 0 ? Math.round((calculatedKw * 1000) / activeModuleWatts) : 0;
+
+  // A função de potência ajustada só entra quando o kwp calculado não bate a quantidade mínima de 4 módulos:
+  const isBelowMinModules = theoreticalModuleQty < 4 && calculatedKw > 0;
+
+  const adjustedKw = isBelowMinModules
+    ? (proposalKitResult?.system_power_kw ?? Number(((4 * activeModuleWatts) / 1000).toFixed(2)))
+    : calculatedKw;
+
   const computedDistributorCards = useMemo(() => {
     if (!distributorTiers || distributorTiers.length === 0) return [];
     const baseRate = Math.max(500, Number(kwpRateValue) || 2800);
 
     const eliteTier =
       distributorTiers.find((t) => t.tier_id === "cost_benefit") || distributorTiers[0]!;
-    const eliteSysKw = eliteTier.kit_result.system_power_kw;
-    const eliteBasePrice = Math.round(eliteSysKw * baseRate);
+
+    // Potência de referência definida para o dimensionamento do sistema:
+    // Garante que o valor final (preço em R$) seja igual e uniforme para todos os tiers,
+    // calculado com base na potência definida/dimensionada vezes o valor do kWp.
+    const referenceKw =
+      (isBelowMinModules
+        ? eliteTier?.kit_result.system_power_kw || adjustedKw
+        : proposalKitRequest?.systemKw ||
+          generatedProposal?.tamanhoSistemaKw ||
+          eliteTier?.kit_result.system_power_kw) ||
+      eliteTier?.kit_result.system_power_kw ||
+      3.0;
+
+    const uniformCommercialPrice = Math.round(referenceKw * baseRate);
 
     return distributorTiers.map((tier) => {
       const isSelected = selectedDistributorTierId === tier.tier_id;
-      const sysKw = tier.kit_result.system_power_kw;
-
-      let commercialPrice: number;
-      let ratePerKwpEffective: number;
-
-      if (tier.tier_id === "economic") {
-        // Standard (Econômico): preço mais competitivo de entrada (-4% na taxa de referência)
-        ratePerKwpEffective = Math.round(baseRate * 0.96);
-        commercialPrice = Math.round(sysKw * ratePerKwpEffective);
-      } else if (tier.tier_id === "premium") {
-        // Premium: reflete equipamentos de alta tecnologia e garantia estendida (+7%)
-        // Garante que o valor final nunca fique abaixo do Elite
-        ratePerKwpEffective = Math.round(baseRate * 1.07);
-        const calculatedPrice = Math.round(sysKw * ratePerKwpEffective);
-        commercialPrice = Math.max(calculatedPrice, Math.round(eliteBasePrice * 1.03));
-        ratePerKwpEffective = sysKw > 0 ? Math.round(commercialPrice / sysKw) : ratePerKwpEffective;
-      } else {
-        // Elite (Custo-Benefício): referência comercial
-        ratePerKwpEffective = baseRate;
-        commercialPrice = Math.round(sysKw * ratePerKwpEffective);
-      }
+      const estimatedMonthlyGen = Math.round(tier.kit_result.system_power_kw * localSolarYield);
 
       return {
         ...tier,
         isSelected,
-        commercialPrice,
-        commercialPriceFormatted: formatCurrency(commercialPrice),
-        ratePerKwpEffective,
+        commercialPrice: uniformCommercialPrice,
+        commercialPriceFormatted: formatCurrency(uniformCommercialPrice),
+        ratePerKwpEffective: baseRate,
+        estimated_monthly_generation_kwh: estimatedMonthlyGen,
       };
     });
-  }, [distributorTiers, selectedDistributorTierId, kwpRateValue]);
+  }, [
+    distributorTiers,
+    selectedDistributorTierId,
+    kwpRateValue,
+    isBelowMinModules,
+    adjustedKw,
+    proposalKitRequest?.systemKw,
+    generatedProposal?.tamanhoSistemaKw,
+    localSolarYield,
+  ]);
 
   const activeDistributorCard = useMemo(() => {
     return (
@@ -1029,6 +1124,9 @@ export const ProposalEconomicsModal = forwardRef<
   const activeRatePerKwp =
     activeDistributorCard?.ratePerKwpEffective ?? Math.round(kwpRateValue || 2800);
   const activeCommercialPrice = useMemo(() => {
+    if (activeDistributorCard?.commercialPrice && optimisticModuleQty == null) {
+      return activeDistributorCard.commercialPrice;
+    }
     let sysKw =
       proposalKitResult?.system_power_kw ??
       activeDistributorCard?.kit_result.system_power_kw ??
@@ -1043,6 +1141,7 @@ export const ProposalEconomicsModal = forwardRef<
     }
     return Math.round(sysKw * activeRatePerKwp);
   }, [
+    activeDistributorCard?.commercialPrice,
     proposalKitResult,
     optimisticModuleQty,
     activeDistributorCard,
@@ -1274,6 +1373,7 @@ export const ProposalEconomicsModal = forwardRef<
             ? { grid_topology: req.gridTopology }
             : {}),
           ...(req.stringBoxId ? { string_box_id: req.stringBoxId } : {}),
+          monthly_yield: localSolarYield,
         };
         let tiersRes: DistributorTiersResult | null = null;
         let previewFallbackRes: WhatsAppPreviewResult | null = null;
@@ -1330,8 +1430,8 @@ export const ProposalEconomicsModal = forwardRef<
     if (!proposalResultOpen || !generatedProposal) return;
     const timer = window.setTimeout(() => {
       const kw = parseFloat(proposalKitDraft.systemKw.replace(",", "."));
-      if (!Number.isFinite(kw) || kw < 0.5 || kw > 1000) {
-        setProposalKitError("Informe uma potência entre 0,5 e 1000 kWp.");
+      if (!Number.isFinite(kw) || kw < 0.5 || kw > 5_000_000) {
+        setProposalKitError("Informe uma potência a partir de 0,5 kWp.");
         return;
       }
       setProposalKitError(null);
@@ -1466,13 +1566,6 @@ export const ProposalEconomicsModal = forwardRef<
     proposalKitResult?.modules?.product_id,
     proposalKitResult?.inverter?.product_id,
   ]);
-  const heuristicaIrradiacao = useMemo(() => {
-    const row = geoCities.find((c) => c.id === selectedCity?.id);
-    const fromDb = irradiacaoFromSolarResource(row?.solarResource);
-    if (fromDb != null) return fromDb;
-    if (selectedCity) return 145;
-    return 140;
-  }, [geoCities, selectedCity?.id]);
 
   useEffect(() => {
     const state = {
@@ -2109,6 +2202,7 @@ export const ProposalEconomicsModal = forwardRef<
         tamanhoSistemaKw: result.tamanhoSistema,
         roofType: roof,
         monthlyConsumptionKwh: result.monthlyConsumptionKwh,
+        geracaoBase: result.geracaoBase,
       });
       setProposalResultOpen(true);
       setProposalFormOpen(false);
@@ -2223,27 +2317,6 @@ export const ProposalEconomicsModal = forwardRef<
     kitDraftSource.kind === "supplier"
       ? (supplierOptions.find((s) => s.supplier_id === kitDraftSource.id)?.supplier_name ?? null)
       : null;
-
-  // Cálculos de Potência Calculada vs. Potência Ajustada (mínimo técnico de 4 módulos)
-  const calculatedKw =
-    generatedProposal?.tamanhoSistemaKw ?? (parseFloat(proposalKitDraft.systemKw) || 0);
-
-  const catalogModuleW =
-    proposalKitResult && proposalKitResult.modules.quantity > 0
-      ? Math.round((proposalKitResult.system_power_kw / proposalKitResult.modules.quantity) * 1000)
-      : 585;
-
-  const activeModuleWatts = catalogModuleW;
-
-  const theoreticalModuleQty =
-    activeModuleWatts > 0 ? Math.round((calculatedKw * 1000) / activeModuleWatts) : 0;
-
-  // A função de potência ajustada só entra quando o kwp calculado não bate a quantidade mínima de 4 módulos:
-  const isBelowMinModules = theoreticalModuleQty < 4 && calculatedKw > 0;
-
-  const adjustedKw = isBelowMinModules
-    ? (proposalKitResult?.system_power_kw ?? Number(((4 * activeModuleWatts) / 1000).toFixed(2)))
-    : calculatedKw;
 
   if (!currentOrganizationId) {
     return null;
@@ -2784,7 +2857,33 @@ export const ProposalEconomicsModal = forwardRef<
                       <div className="grid gap-4 sm:grid-cols-2">
                         {manualSizingBasis === "power" ? (
                           <div className="grid gap-1.5 sm:col-span-1">
-                            <Label>Potência do sistema (kWp)</Label>
+                            <div className="flex items-center justify-between gap-1">
+                              <Label>Potência do sistema (kWp)</Label>
+                              {(() => {
+                                const kw = Number(inputSystemKw.replace(",", "."));
+                                if (kw >= 1_000_000) {
+                                  return (
+                                    <span className="text-[0.68rem] font-bold text-emerald-600 dark:text-emerald-400">
+                                      {(kw / 1_000_000).toLocaleString("pt-BR", {
+                                        maximumFractionDigits: 3,
+                                      })}{" "}
+                                      GWp
+                                    </span>
+                                  );
+                                }
+                                if (kw >= 1_000) {
+                                  return (
+                                    <span className="text-[0.68rem] font-bold text-emerald-600 dark:text-emerald-400">
+                                      {(kw / 1_000).toLocaleString("pt-BR", {
+                                        maximumFractionDigits: 2,
+                                      })}{" "}
+                                      MWp
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
                             <Input
                               value={inputSystemKw}
                               onChange={(e) => {
@@ -2794,7 +2893,7 @@ export const ProposalEconomicsModal = forwardRef<
                                   systemKw: undefined,
                                 }));
                               }}
-                              placeholder="Ex: 5,5"
+                              placeholder="Ex: 5,5 (ou 3000 para 3 MWp)"
                               inputMode="decimal"
                             />
                             {proposalFieldErrors.systemKw ? (
@@ -3041,8 +3140,8 @@ export const ProposalEconomicsModal = forwardRef<
                   } else if (isPowerBasis) {
                     if (!hasKwInput || !hasKw) {
                       fieldErrors.systemKw = "Informe a potência do sistema (kWp).";
-                    } else if (systemKw < 0.5 || systemKw > 1000) {
-                      fieldErrors.systemKw = "Informe uma potência entre 0,5 e 1000 kWp.";
+                    } else if (systemKw < 0.5 || systemKw > 5_000_000) {
+                      fieldErrors.systemKw = "Informe uma potência a partir de 0,5 kWp.";
                     }
                     if (hasBillInput && !hasConta) {
                       fieldErrors.valorConta = "Informe um valor de conta valido.";
@@ -3190,17 +3289,30 @@ export const ProposalEconomicsModal = forwardRef<
                     {isBelowMinModules ? "Potência (Ajustada)" : "Potência"}
                   </p>
                   <p className="text-base sm:text-2xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
-                    {(isBelowMinModules
-                      ? adjustedKw
-                      : (proposalKitResult?.system_power_kw ??
-                        clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0))
-                    )?.toLocaleString("pt-BR", {
-                      minimumFractionDigits: 1,
-                      maximumFractionDigits: 2,
-                    }) ?? "0"}{" "}
-                    <span className="text-[0.65rem] sm:text-sm font-normal text-[var(--color-muted-foreground)] block sm:inline">
-                      kWp
-                    </span>
+                    {(() => {
+                      const finalPowerKw = isBelowMinModules
+                        ? adjustedKw
+                        : (proposalKitResult?.system_power_kw ??
+                          clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0));
+                      const formattedKw = (finalPowerKw ?? 0).toLocaleString("pt-BR", {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 2,
+                      });
+                      const scaleLabel =
+                        finalPowerKw >= 1_000_000
+                          ? ` (${(finalPowerKw / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} GWp)`
+                          : finalPowerKw >= 1_000
+                            ? ` (${(finalPowerKw / 1_000).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} MWp)`
+                            : "";
+                      return (
+                        <>
+                          {formattedKw}{" "}
+                          <span className="text-[0.65rem] sm:text-sm font-normal text-[var(--color-muted-foreground)] block sm:inline">
+                            kWp{scaleLabel}
+                          </span>
+                        </>
+                      );
+                    })()}
                   </p>
                   {isBelowMinModules && (
                     <p className="text-[0.65rem] text-[var(--color-muted-foreground)] leading-tight">
@@ -3221,10 +3333,11 @@ export const ProposalEconomicsModal = forwardRef<
                     ~
                     {Math.round(
                       activeDistributorCard?.estimated_monthly_generation_kwh ??
-                        (isBelowMinModules
-                          ? adjustedKw * 130
-                          : (proposalKitResult?.system_power_kw ??
-                              clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0)) * 130)
+                        (proposalKitResult?.system_power_kw ??
+                          (isBelowMinModules
+                            ? adjustedKw
+                            : clampSystemKw(generatedProposal.tamanhoSistemaKw ?? 0))) *
+                          localSolarYield
                     ).toLocaleString("pt-BR")}{" "}
                     <span className="text-[0.65rem] sm:text-sm font-normal text-[var(--color-muted-foreground)] block sm:inline">
                       kWh/mês
@@ -3355,12 +3468,38 @@ export const ProposalEconomicsModal = forwardRef<
                       </>
                     ) : (
                       <div className="space-y-1.5">
-                        <Label
-                          htmlFor="proposal-kit-kw"
-                          className="text-xs font-semibold text-[var(--color-foreground)]"
-                        >
-                          Potência do sistema (kWp)
-                        </Label>
+                        <div className="flex items-center justify-between gap-1">
+                          <Label
+                            htmlFor="proposal-kit-kw"
+                            className="text-xs font-semibold text-[var(--color-foreground)]"
+                          >
+                            Potência do sistema (kWp)
+                          </Label>
+                          {(() => {
+                            const kwVal = parseFloat(proposalKitDraft.systemKw.replace(",", "."));
+                            if (kwVal >= 1_000_000) {
+                              return (
+                                <span className="text-[0.68rem] font-bold text-emerald-600 dark:text-emerald-400">
+                                  {(kwVal / 1_000_000).toLocaleString("pt-BR", {
+                                    maximumFractionDigits: 3,
+                                  })}{" "}
+                                  GWp
+                                </span>
+                              );
+                            }
+                            if (kwVal >= 1_000) {
+                              return (
+                                <span className="text-[0.68rem] font-bold text-emerald-600 dark:text-emerald-400">
+                                  {(kwVal / 1_000).toLocaleString("pt-BR", {
+                                    maximumFractionDigits: 2,
+                                  })}{" "}
+                                  MWp
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
                         <Input
                           id="proposal-kit-kw"
                           type="text"
@@ -4304,29 +4443,6 @@ export const ProposalEconomicsModal = forwardRef<
                                             : alt.reason}
                                         </span>
                                       </span>
-                                      <div className="shrink-0 text-right ml-2 self-center">
-                                        <div className="text-xs sm:text-sm font-semibold text-[var(--color-foreground)]">
-                                          {formatCurrency(
-                                            kitSwapCategory === "inverter" && alt.quantity > 1
-                                              ? alt.unit_price * alt.quantity
-                                              : alt.unit_price
-                                          )}
-                                        </div>
-                                        {alt.compatible ? (
-                                          <div className="text-[0.62rem] text-[var(--color-muted-foreground)]">
-                                            {kitSwapCategory === "inverter" && alt.quantity > 1 ? (
-                                              <span>
-                                                {alt.quantity}x de {formatCurrency(alt.unit_price)}
-                                                {alt.kit_total != null
-                                                  ? ` · Kit: ${formatCurrency(alt.kit_total)}`
-                                                  : ""}
-                                              </span>
-                                            ) : alt.kit_total != null ? (
-                                              <span>Kit: {formatCurrency(alt.kit_total)}</span>
-                                            ) : null}
-                                          </div>
-                                        ) : null}
-                                      </div>
                                     </button>
                                   );
                                 })}
@@ -4363,12 +4479,6 @@ export const ProposalEconomicsModal = forwardRef<
                             </th>
                             <th className="py-2 px-1 sm:p-3 text-center sm:text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-14 sm:w-20">
                               Qtd
-                            </th>
-                            <th className="hidden sm:table-cell p-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                              Un.
-                            </th>
-                            <th className="py-2 px-2 sm:p-3 text-right text-[0.68rem] sm:text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] w-28 sm:w-32">
-                              Total
                             </th>
                           </tr>
                         </thead>
@@ -4586,12 +4696,6 @@ export const ProposalEconomicsModal = forwardRef<
                                     </span>
                                   )}
                                 </td>
-                                <td className="hidden sm:table-cell p-3 text-right tabular-nums text-[var(--color-muted-foreground)]">
-                                  {formatCurrency(item.distributedUnitPrice)}
-                                </td>
-                                <td className="py-2 px-2 sm:p-3 text-right font-semibold tabular-nums text-[var(--color-foreground)] text-[0.72rem] sm:text-sm whitespace-nowrap">
-                                  {formatCurrency(item.distributedLineTotal)}
-                                </td>
                               </tr>
                             );
                           })}
@@ -4605,8 +4709,7 @@ export const ProposalEconomicsModal = forwardRef<
                               Total do Projeto ({activeDistributorCard?.name ?? "Padrão"} ·{" "}
                               {formatCurrency(activeRatePerKwp)}/kWp)
                             </td>
-                            <td className="hidden sm:table-cell" />
-                            <td className="hidden sm:table-cell" />
+
                             <td className="py-2.5 px-2 sm:p-3 text-right text-xs sm:text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                               {formatCurrency(activeCommercialPrice)}
                             </td>

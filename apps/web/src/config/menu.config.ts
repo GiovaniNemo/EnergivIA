@@ -24,6 +24,7 @@ import {
   Crown,
   Compass,
   SlidersHorizontal,
+  UserCheck,
 } from "lucide-react";
 
 export type SidebarSectionKey = "operation" | "management" | "admin" | "platform";
@@ -71,7 +72,7 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: Users,
     path: "/clientes",
     section: "operation",
-    tooltip: "Clientes: onde você gerencia seus contatos",
+    tooltip: "Clientes: contatos e histórico da carteira",
     highlight: true,
   },
   {
@@ -79,10 +80,17 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: Handshake,
     path: "/pipeline",
     section: "operation",
-    tooltip: "Negociações: onde você acompanha suas negociações",
+    tooltip: "Negociações: funil comercial e gestão 360° de oportunidades",
     highlight: true,
   },
-  { label: "Propostas", icon: FileText, path: "/propostas", section: "operation", highlight: true },
+  {
+    label: "Propostas",
+    icon: FileText,
+    path: "/propostas",
+    section: "operation",
+    tooltip: "Propostas: orçamentos e estudos solares",
+    highlight: true,
+  },
   {
     label: "Financiamentos",
     icon: HandCoins,
@@ -193,6 +201,14 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/admin/planos",
     section: "admin",
     requiresRole: "platform",
+  },
+  {
+    label: "Acessos Especiais",
+    icon: UserCheck,
+    path: "/admin/acessos-especiais",
+    section: "admin",
+    requiresRole: "platform",
+    tooltip: "Gestão de whitelist com inclusão por e-mail e revogação unificada de Web e WhatsApp",
   },
 
   {

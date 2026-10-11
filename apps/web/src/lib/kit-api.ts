@@ -14,6 +14,7 @@ export interface GenerateKitRequest {
   grid_topology?: string;
   string_box_id?: string;
   target_inverter_qty?: number;
+  monthly_yield?: number;
 }
 
 export type KitSwapCategory = "module" | "inverter";

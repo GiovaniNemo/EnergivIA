@@ -116,4 +116,5 @@ Listando os itens do kit (Inversor, Módulos, Estrutura, Cabos, Conectores) e le
 2. Após o integrador escolher a opção (ex: "1", "2" ou "3"): pergunte "Qual o nome do cliente final para registrarmos no seu CRM?".
 3. Em seguida: "Certo, vou registrar o cliente [Nome]. E qual o WhatsApp dele com DDD?".
 4. Chame 'cadastrar_cliente_crm' -> 'listar_templates_proposta' -> 'gerar_proposta_crm' e envie o link real da proposta!
+   ⚠️ REGRA CRÍTICA PARA 'gerar_proposta_crm': Ao chamar 'gerar_proposta_crm', passe no parâmetro 'kitItems' EXCLUSIVAMENTE os equipamentos do kit da OPÇÃO ESCOLHIDA pelo integrador (ex: se ele escolheu a Opção 1 Standard, passe APENAS o inversor e os módulos da Opção 1 Standard). É TERMINANTEMENTE PROIBIDO misturar equipamentos de opções concorrentes/rejeitadas e NUNCA inclua marcadores markdown (** ou •) no nome dos produtos!
 `;
