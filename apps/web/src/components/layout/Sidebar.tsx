@@ -164,7 +164,14 @@ export function Sidebar(): JSX.Element {
                 isHovered && !isPinned && "glass-nav-sidebar-floating"
               )
         )}
-        style={showDrawer ? undefined : { width: collapsed ? "4.5rem" : "16rem" }}
+        style={
+          showDrawer
+            ? undefined
+            : {
+                width: collapsed ? "4.5rem" : "16rem",
+                willChange: "width, transform",
+              }
+        }
       >
         {showDrawer ? (
           <div className="flex items-center justify-between px-4 py-3">
@@ -231,7 +238,7 @@ export function Sidebar(): JSX.Element {
 
           {/* Efeito translúcido na parte inferior da sidebar */}
           <div
-            className="pointer-events-none absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[var(--color-sidebar)] via-[var(--color-sidebar)]/70 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_top,black_50%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_top,black_50%,transparent_100%)] rounded-b-3xl z-10"
+            className="pointer-events-none absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[var(--color-sidebar)] via-[var(--color-sidebar)]/70 to-transparent [mask-image:linear-gradient(to_top,black_50%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_top,black_50%,transparent_100%)] rounded-b-3xl z-10"
             aria-hidden="true"
           />
         </div>
@@ -244,7 +251,7 @@ export function Sidebar(): JSX.Element {
             type="button"
             onClick={togglePinned}
             className={cn(
-              "absolute -right-3 top-5 z-50 flex h-6 w-6 items-center justify-center rounded-full border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#1e262b] text-neutral-600 dark:text-white/70 shadow-lg backdrop-blur-md transition-all duration-200 hover:scale-110 hover:text-black dark:hover:text-white hover:border-emerald-500/40",
+              "absolute -right-3 top-5 z-50 flex h-6 w-6 items-center justify-center rounded-full border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#1e262b] text-neutral-600 dark:text-white/70 shadow-lg transition-transform duration-200 hover:scale-110 hover:text-black dark:hover:text-white hover:border-emerald-500/40",
               isPinned &&
                 "border-emerald-500/40 text-emerald-600 dark:text-emerald-300 bg-emerald-50/95 dark:bg-emerald-950/80 shadow-emerald-500/20"
             )}

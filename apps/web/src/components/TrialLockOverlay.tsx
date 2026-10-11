@@ -53,7 +53,7 @@ export function TrialLockOverlay() {
     !user?.isTrialLocked
   ) {
     bannerElement = (
-      <div className="w-full shrink-0 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-500/30 px-3 py-2 sm:px-4 sm:py-2.5 text-xs text-amber-950 dark:text-amber-200 font-medium flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 z-30 backdrop-blur-md">
+      <div className="w-full shrink-0 bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 dark:from-amber-950/60 dark:via-orange-950/50 dark:to-amber-950/60 border-b border-amber-500/30 px-3 py-2 sm:px-4 sm:py-2.5 text-xs text-amber-950 dark:text-amber-200 font-medium flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 z-30">
         <div className="flex items-start sm:items-center gap-2">
           <span className="mt-1 sm:mt-0 flex h-2 w-2 shrink-0 rounded-full bg-amber-400 animate-pulse" />
           <span className="leading-snug">
@@ -82,7 +82,7 @@ export function TrialLockOverlay() {
     );
   } else if (!user?.isTrial && user?.isProposalLimitReached && !user?.isTrialLocked) {
     bannerElement = (
-      <div className="w-full shrink-0 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-500/30 px-3 py-2 sm:px-4 sm:py-2.5 text-xs text-amber-950 dark:text-amber-200 font-medium flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 z-30 backdrop-blur-md">
+      <div className="w-full shrink-0 bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 dark:from-amber-950/60 dark:via-orange-950/50 dark:to-amber-950/60 border-b border-amber-500/30 px-3 py-2 sm:px-4 sm:py-2.5 text-xs text-amber-950 dark:text-amber-200 font-medium flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 z-30">
         <div className="flex items-start sm:items-center gap-2">
           <span className="mt-1 sm:mt-0 flex h-2 w-2 shrink-0 rounded-full bg-amber-400 animate-pulse" />
           <span className="leading-snug">
@@ -119,7 +119,7 @@ export function TrialLockOverlay() {
     <>
       {bannerElement}
       {showModal && (
-        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-500 overflow-y-auto px-4 py-12">
+        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto px-4 py-12">
           {/* Background glow effects */}
           <div className="pointer-events-none fixed left-1/4 top-1/4 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/20 blur-[128px]" />
           <div className="pointer-events-none fixed right-1/4 top-1/2 h-96 w-96 translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-500/10 blur-[128px]" />
@@ -128,7 +128,7 @@ export function TrialLockOverlay() {
           {!user?.isTrialLocked && (
             <button
               onClick={() => setModalOpen(false)}
-              className="absolute top-6 left-6 lg:top-8 lg:left-8 z-50 flex items-center gap-2 text-gray-400 hover:text-white bg-gray-900/80 hover:bg-gray-800 backdrop-blur-sm border border-gray-800 rounded-full px-4 py-2 text-sm font-medium transition-all cursor-pointer"
+              className="absolute top-6 left-6 lg:top-8 lg:left-8 z-50 flex items-center gap-2 text-gray-400 hover:text-white bg-gray-900/90 hover:bg-gray-800 border border-gray-800 rounded-full px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
             >
               ✕ Fechar
             </button>
@@ -136,7 +136,7 @@ export function TrialLockOverlay() {
 
           <a
             href="/auth/logout"
-            className="absolute top-6 right-6 lg:top-8 lg:right-8 z-50 flex items-center gap-2 text-gray-400 hover:text-white bg-gray-900/50 hover:bg-gray-800 backdrop-blur-sm border border-gray-800 rounded-full px-4 py-2 text-sm font-medium transition-all"
+            className="absolute top-6 right-6 lg:top-8 lg:right-8 z-50 flex items-center gap-2 text-gray-400 hover:text-white bg-gray-900/90 hover:bg-gray-800 border border-gray-800 rounded-full px-4 py-2 text-sm font-medium transition-colors"
           >
             <LogOut className="w-4 h-4" />
             Sair da conta

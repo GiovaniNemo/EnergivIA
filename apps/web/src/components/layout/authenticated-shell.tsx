@@ -37,17 +37,20 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
               {!isOnboardingOrganization && <FeedbackPromptCard />}
               {!isOnboardingOrganization && <EnergiviaFloatingHub />}
 
-              {/* Luz ambiente no topo e lateral para realçar a refração do vidro na Topbar e Sidebar (ambos os temas) */}
+              {/* Luz ambiente no topo e lateral com gradientes suaves de alto desempenho (sem filtros pesados de desfoque) */}
               <div
-                className="pointer-events-none fixed -top-20 left-1/3 -translate-x-1/2 h-64 w-[900px] bg-[radial-gradient(ellipse_75%_60%_at_50%_0%,rgba(16,185,129,0.22),transparent_70%)] dark:bg-[radial-gradient(ellipse_75%_60%_at_50%_0%,rgba(16,185,129,0.28),transparent_70%)] blur-2xl z-0"
+                className="pointer-events-none fixed -top-20 left-1/3 -translate-x-1/2 h-64 w-[900px] bg-[radial-gradient(ellipse_80%_65%_at_50%_0%,rgba(16,185,129,0.16)_0%,rgba(16,185,129,0.05)_45%,transparent_75%)] dark:bg-[radial-gradient(ellipse_80%_65%_at_50%_0%,rgba(16,185,129,0.22)_0%,rgba(16,185,129,0.07)_45%,transparent_75%)] z-0"
+                style={{ contain: "strict" }}
                 aria-hidden="true"
               />
               <div
-                className="pointer-events-none fixed -top-20 right-1/4 h-56 w-[700px] bg-[radial-gradient(ellipse_75%_60%_at_50%_0%,rgba(56,189,248,0.20),transparent_70%)] dark:bg-[radial-gradient(ellipse_75%_60%_at_50%_0%,rgba(20,184,166,0.22),transparent_70%)] blur-2xl z-0"
+                className="pointer-events-none fixed -top-20 right-1/4 h-56 w-[700px] bg-[radial-gradient(ellipse_80%_65%_at_50%_0%,rgba(56,189,248,0.14)_0%,rgba(56,189,248,0.04)_45%,transparent_75%)] dark:bg-[radial-gradient(ellipse_80%_65%_at_50%_0%,rgba(20,184,166,0.18)_0%,rgba(20,184,166,0.05)_45%,transparent_75%)] z-0"
+                style={{ contain: "strict" }}
                 aria-hidden="true"
               />
               <div
-                className="pointer-events-none fixed top-16 left-0 h-[600px] w-72 bg-[radial-gradient(ellipse_60%_70%_at_0%_30%,rgba(16,185,129,0.15),transparent_70%)] blur-3xl z-0"
+                className="pointer-events-none fixed top-16 left-0 h-[600px] w-72 bg-[radial-gradient(ellipse_70%_80%_at_0%_30%,rgba(16,185,129,0.12)_0%,rgba(16,185,129,0.04)_45%,transparent_75%)] z-0"
+                style={{ contain: "strict" }}
                 aria-hidden="true"
               />
 
@@ -69,9 +72,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
                         {isFullscreenChat ? (
                           children
                         ) : (
-                          <div className="mx-auto w-full max-w-[1680px] min-w-0 transition-all duration-300">
-                            {children}
-                          </div>
+                          <div className="mx-auto w-full max-w-[1680px] min-w-0">{children}</div>
                         )}
                       </main>
                     </SidebarInset>

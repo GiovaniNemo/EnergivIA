@@ -148,6 +148,7 @@ export function EnergiviaFloatingHub() {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className="fixed bottom-6 right-6 z-40 flex flex-col items-end pointer-events-auto select-none"
+      style={{ transform: "translateZ(0)" }}
     >
       {/* Bolinhas Satélite (Menu Orbital Expandido) */}
       <AnimatePresence>
@@ -167,7 +168,7 @@ export function EnergiviaFloatingHub() {
               transition={{ delay: 0.05, duration: 0.2 }}
               className="flex items-center gap-2.5 group"
             >
-              <span className="px-3 py-1.5 rounded-full bg-neutral-900/95 text-amber-300 text-xs font-bold shadow-lg border border-amber-500/30 backdrop-blur-md opacity-90 group-hover:opacity-100 transition whitespace-nowrap">
+              <span className="px-3 py-1.5 rounded-full bg-neutral-900/95 text-amber-300 text-xs font-bold shadow-lg border border-amber-500/30 opacity-90 group-hover:opacity-100 transition whitespace-nowrap">
                 Avaliar EnergivIA
               </span>
               <button
@@ -188,7 +189,7 @@ export function EnergiviaFloatingHub() {
               transition={{ delay: 0.0, duration: 0.2 }}
               className="flex items-center gap-2.5 group"
             >
-              <span className="px-3 py-1.5 rounded-full bg-neutral-900/95 text-emerald-300 text-xs font-bold shadow-lg border border-emerald-500/30 backdrop-blur-md opacity-90 group-hover:opacity-100 transition whitespace-nowrap">
+              <span className="px-3 py-1.5 rounded-full bg-neutral-900/95 text-emerald-300 text-xs font-bold shadow-lg border border-emerald-500/30 opacity-90 group-hover:opacity-100 transition whitespace-nowrap">
                 Assistente EnergivIA
               </span>
               <button
@@ -212,7 +213,7 @@ export function EnergiviaFloatingHub() {
         className={`group relative w-[60px] h-[60px] rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
           isExpanded
             ? "bg-neutral-900 border border-emerald-500/50 shadow-[0_8px_30px_rgba(0,0,0,0.6)] scale-105"
-            : "bg-neutral-900/90 hover:bg-neutral-850/95 border border-white/10 hover:border-emerald-500/40 shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_35px_rgba(16,185,129,0.25)] hover:scale-105 active:scale-95 backdrop-blur-xl"
+            : "bg-neutral-900/90 hover:bg-neutral-850/95 border border-white/10 hover:border-emerald-500/40 shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_35px_rgba(16,185,129,0.25)] hover:scale-105 active:scale-95 backdrop-blur-md"
         }`}
       >
         {/* Halo estático suave sem exagero de neon */}

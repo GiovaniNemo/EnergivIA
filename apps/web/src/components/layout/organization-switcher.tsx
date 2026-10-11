@@ -27,7 +27,7 @@ export function OrganizationSwitcher() {
       <button
         type="button"
         className={cn(
-          "flex h-9 max-w-[140px] xs:max-w-[180px] sm:max-w-none items-center gap-1.5 sm:gap-2 rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] px-2.5 sm:px-3 text-xs sm:text-sm font-medium text-[var(--color-foreground)] shadow-xs backdrop-blur-md transition-all duration-200",
+          "flex h-9 max-w-[140px] xs:max-w-[180px] sm:max-w-none items-center gap-1.5 sm:gap-2 rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] px-2.5 sm:px-3 text-xs sm:text-sm font-medium text-[var(--color-foreground)] shadow-xs transition-colors duration-150",
           "hover:bg-black/[0.06] dark:hover:bg-white/[0.10] hover:border-black/15 dark:hover:border-white/30 hover:shadow-sm"
         )}
         onClick={() => setOpen((v) => !v)}
@@ -42,7 +42,7 @@ export function OrganizationSwitcher() {
       </button>
       {open && (
         <div
-          className="absolute left-0 top-full z-50 mt-3.5 min-w-[220px] overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/15 bg-white/95 dark:bg-[#161d22]/95 py-1 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150"
+          className="absolute left-0 top-full z-50 mt-3.5 min-w-[220px] overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/15 bg-white/95 dark:bg-[#161d22]/95 py-1 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150"
           role="listbox"
         >
           {organizations.map((org) => (

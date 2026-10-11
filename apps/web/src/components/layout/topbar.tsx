@@ -84,7 +84,7 @@ function UserMenu(): JSX.Element {
         )}
       </button>
       {open ? (
-        <div className="absolute right-0 top-full mt-3.5 z-[70] w-56 overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#161d22]/95 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 top-full mt-3.5 z-[70] w-56 overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#161d22]/95 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
           <div className="border-b border-black/[0.06] dark:border-white/10 px-3.5 py-2.5">
             <p className="truncate text-sm font-semibold text-[var(--color-foreground)]">
               {displayName ?? "Usuário"}
@@ -171,7 +171,7 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="fixed top-3 left-3 right-3 z-50 flex h-16 shrink-0 items-center rounded-2xl md:rounded-3xl glass-nav-topbar transition-all duration-300">
+    <header className="fixed top-3 left-3 right-3 z-50 flex h-16 shrink-0 items-center rounded-2xl md:rounded-3xl glass-nav-topbar">
       {/* Brand logo container aligning with sidebar */}
       <div
         onMouseEnter={onHoverStart}
@@ -210,7 +210,7 @@ export function Topbar() {
         {/* Mobile Search Button */}
         <button
           type="button"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] hover:text-[var(--color-foreground)] backdrop-blur-md transition-all sm:hidden"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] hover:text-[var(--color-foreground)] transition-colors sm:hidden"
           onClick={() => setMobileSearchOpen(true)}
           aria-label="Abrir pesquisa"
         >
@@ -221,7 +221,7 @@ export function Topbar() {
           (trialDaysLeft === 0 ? (
             <Link
               href="/gestao/meus-planos"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-500/15 text-rose-300 text-xs font-bold rounded-xl border border-rose-500/30 shadow-xs backdrop-blur-md transition-all hover:bg-rose-500/25 hover:scale-[1.02]"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-500/15 text-rose-300 text-xs font-bold rounded-xl border border-rose-500/30 shadow-xs transition-colors hover:bg-rose-500/25 hover:scale-[1.02]"
               title="Seu tempo de testes acabou. Clique para escolher seu plano e continuar."
             >
               <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0 animate-pulse" />
@@ -230,7 +230,7 @@ export function Topbar() {
           ) : (
             <Link
               href="/gestao/meus-planos"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-500/15 text-orange-300 text-xs font-semibold rounded-xl border border-orange-500/30 shadow-xs backdrop-blur-md transition-colors hover:bg-orange-500/25"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-500/15 text-orange-300 text-xs font-semibold rounded-xl border border-orange-500/30 shadow-xs transition-colors hover:bg-orange-500/25"
               title="Teste grátis"
             >
               <Timer className="h-4 w-4 text-orange-400" />
@@ -241,7 +241,10 @@ export function Topbar() {
           ))}
 
         {/* WhatsApp AI Button (Responsive) with glowing border light beam */}
-        <div className="relative inline-flex p-[1.5px] overflow-hidden rounded-xl group shrink-0">
+        <div
+          className="relative inline-flex p-[1.5px] overflow-hidden rounded-xl group shrink-0"
+          style={{ contain: "paint" }}
+        >
           <span
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[220%] aspect-square animate-spin-border opacity-90 group-hover:opacity-100 pointer-events-none"
             style={{
@@ -273,7 +276,7 @@ export function Topbar() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] hover:border-black/15 dark:hover:border-white/25 backdrop-blur-md transition-all duration-200"
+          className="h-9 w-9 rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] hover:border-black/15 dark:hover:border-white/25 transition-colors duration-150"
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
           aria-label="Alternar tema"
         >
