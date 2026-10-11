@@ -17,6 +17,7 @@ import { OrgOwnerOrAdminGuard } from "../../common/guards/org-owner-or-admin.gua
 import { TenantId } from "../../common/decorators/tenant-id.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { ProposalsService } from "./proposals.service";
+import { UpdateProposalPaymentOptionsDto } from "./dto/update-proposal-payment-options.dto";
 
 @Controller("proposals")
 @UseGuards(UnifiedAuthGuard)
@@ -62,6 +63,16 @@ export class ProposalOperationsController {
     @CurrentUser() user?: JwtPayload
   ) {
     return this.proposalsService.updateDiscount(tenantId, id, body.discountBrl ?? null, user);
+  }
+
+  @Patch(":id/payment-options")
+  updatePaymentOptions(
+    @TenantId() tenantId: string,
+    @Param("id") id: string,
+    @Body() body: UpdateProposalPaymentOptionsDto,
+    @CurrentUser() user?: JwtPayload
+  ) {
+    return this.proposalsService.updatePaymentOptions(tenantId, id, body, user);
   }
 
   @Patch(":id/margin-override")

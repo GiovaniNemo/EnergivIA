@@ -11,7 +11,7 @@ import {
 import { WebhooksDispatcherService } from "../webhooks/webhooks-dispatcher.service";
 import type { Prisma, ProposalStatus, ProposalTemplate } from "@prisma/client";
 import type { JwtPayload } from "@energivia/types";
-import { isProposalIntegratorSnapshot } from "@energivia/shared-types";
+import { isProposalIntegratorSnapshot, type ProposalPaymentOptions } from "@energivia/shared-types";
 import { RespondPublicProposalDto } from "./dto/respond-public-proposal.dto";
 import {
   PROJECT_COST_ESSENTIAL_MARGIN_NAME,
@@ -662,6 +662,63 @@ export class ProposalsService {
     return {
       id: updated.id,
       discountBrl: updated.discountBrl ?? null,
+      publicToken: nextPublicToken,
+    };
+  }
+
+  async updatePaymentOptions(
+    tenantId: string,
+    id: string,
+    paymentOptions: ProposalPaymentOptions,
+    user?: JwtPayload
+  ) {
+    const proposal = await this.findOne(tenantId, id);
+    if (!paymentOptions || typeof paymentOptions !== "object") {
+      throw new BadRequestException("Opções de pagamento inválidas.");
+    }
+
+    if (
+      !paymentOptions.cash?.enabled &&
+      !paymentOptions.creditCard?.enabled &&
+      !paymentOptions.financing?.enabled
+    ) {
+      throw new BadRequestException("Pelo menos uma forma de pagamento deve permanecer ativada.");
+    }
+
+    const currentRendered = (proposal.renderedData as Record<string, unknown> | null) ?? {};
+    const updatedRendered = {
+      ...currentRendered,
+      paymentOptions,
+    };
+
+    const nextPublicToken = randomUUID();
+    const updated = await this.prisma.proposal.update({
+      where: { id },
+      data: {
+        renderedData: updatedRendered as unknown as Prisma.InputJsonValue,
+        publicToken: nextPublicToken,
+      },
+    });
+
+    if (proposal.deal?.leadId) {
+      await this.leadActivityLog.append({
+        tenantId,
+        leadId: proposal.deal.leadId,
+        kind: "NOTE_ADDED",
+        label: "Condições e formas de pagamento da proposta atualizadas",
+        meta: {
+          proposalId: id,
+          paymentOptions,
+          updatedByUserId: user?.sub,
+          updatedByUserEmail: user?.email,
+          updatedByUserRole: user?.role,
+        },
+      });
+    }
+
+    return {
+      id: updated.id,
+      paymentOptions,
       publicToken: nextPublicToken,
     };
   }

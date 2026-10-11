@@ -2504,6 +2504,8 @@ export function renderSectionContent(
           vars={vars}
           compact={pricingLayout === "compact"}
           branding={pricingBranding}
+          paymentOptions={options?.paymentOptions}
+          mode={options?.mode}
         />
       );
     }

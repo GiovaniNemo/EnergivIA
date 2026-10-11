@@ -1,3 +1,5 @@
+import type { ProposalPaymentOptions } from "@energivia/shared-types";
+
 export interface PreviewRenderVariables {
   nome_cliente: string;
   nome_empresa: string;
@@ -35,6 +37,8 @@ export interface PreviewRenderVariables {
   proposalId?: string;
   id?: string;
   kit_itens_lista?: string;
+  payment_options_json?: string;
+  paymentOptions?: ProposalPaymentOptions | null;
 }
 
 export type SectionRenderMode = "web" | "pdf";
@@ -52,4 +56,5 @@ export interface SectionRenderOptions {
     consumoMensal: number[];
     producaoMensal: number[];
   } | null;
+  paymentOptions?: ProposalPaymentOptions | null;
 }

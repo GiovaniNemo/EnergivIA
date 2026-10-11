@@ -239,5 +239,26 @@ export function mergePublicProposalVariables(
     }
   }
 
+  const paymentOptions = payload.renderedData?.paymentOptions;
+  if (paymentOptions) {
+    merged["payment_options_json"] = JSON.stringify(paymentOptions);
+    if (paymentOptions.cash?.enabled) {
+      merged["forma_pagamento_a_vista"] = formatBRL(paymentOptions.cash.finalAmount);
+    }
+    if (paymentOptions.creditCard?.enabled) {
+      merged["forma_pagamento_cartao"] =
+        `${paymentOptions.creditCard.maxInstallments}x de ${formatBRL(paymentOptions.creditCard.installmentAmount)}`;
+    }
+    if (paymentOptions.financing?.enabled) {
+      merged["forma_pagamento_financiamento"] =
+        `${paymentOptions.financing.installments}x de ${formatBRL(paymentOptions.financing.installmentAmount)}`;
+      merged["financiamento_parcela"] = formatBRL(paymentOptions.financing.installmentAmount);
+      merged["financiamento_meses"] = `${paymentOptions.financing.installments} meses`;
+      if (paymentOptions.financing.downPaymentBrl && paymentOptions.financing.downPaymentBrl > 0) {
+        merged["financiamento_entrada"] = formatBRL(paymentOptions.financing.downPaymentBrl);
+      }
+    }
+  }
+
   return merged;
 }

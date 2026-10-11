@@ -1,3 +1,5 @@
+import type { ProposalPaymentOptions, ProposalRenderedDataShape } from "@energivia/shared-types";
+
 async function apiProxy(
   method: string,
   path: string,
@@ -344,7 +346,7 @@ export interface ProposalDetail {
   sentAt: string | null;
   createdAt: string;
   updatedAt: string;
-  renderedData: unknown;
+  renderedData?: (ProposalRenderedDataShape & Record<string, unknown>) | null;
   discountBrl?: number | null;
   publicToken?: string | null;
   deal: {
@@ -449,6 +451,28 @@ export async function updateProposalDiscount(
     throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
   }
   return res.json() as Promise<{ discountBrl: number | null; publicToken: string }>;
+}
+
+export async function updateProposalPaymentOptions(
+  organizationId: string,
+  proposalId: string,
+  paymentOptions: ProposalPaymentOptions
+): Promise<{ id: string; paymentOptions: ProposalPaymentOptions; publicToken: string }> {
+  const res = await apiProxy(
+    "PATCH",
+    `/proposals/${proposalId}/payment-options`,
+    paymentOptions,
+    organizationId
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<{
+    id: string;
+    paymentOptions: ProposalPaymentOptions;
+    publicToken: string;
+  }>;
 }
 
 export async function updateProposalMarginOverride(

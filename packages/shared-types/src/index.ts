@@ -3,6 +3,7 @@ export * from "./kits";
 export * from "./plans";
 export * from "./product-catalog";
 export * from "./proposal-integrator";
+export * from "./proposal-payment-options";
 export * from "./proposal-templates";
 export * from "./section-ai";
 export * from "./template-assistant-field-schema";

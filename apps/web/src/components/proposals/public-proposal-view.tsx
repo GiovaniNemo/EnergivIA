@@ -141,9 +141,10 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
           mode={isPdf ? "pdf" : "web"}
           viewport="desktop"
           publicLayout
-          sectionRenderOptions={
-            generationConsumptionChart ? { generationConsumptionChart } : undefined
-          }
+          sectionRenderOptions={{
+            ...(generationConsumptionChart ? { generationConsumptionChart } : {}),
+            paymentOptions: data.renderedData?.paymentOptions,
+          }}
         />
       </div>
 
@@ -155,9 +156,10 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
             mode="pdf"
             viewport="pdf"
             publicLayout
-            sectionRenderOptions={
-              generationConsumptionChart ? { generationConsumptionChart } : undefined
-            }
+            sectionRenderOptions={{
+              ...(generationConsumptionChart ? { generationConsumptionChart } : {}),
+              paymentOptions: data.renderedData?.paymentOptions,
+            }}
           />
         </div>
       )}

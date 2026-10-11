@@ -48,8 +48,11 @@ export interface ProposalIntegratorSnapshot {
   freightState?: string;
 }
 
+import type { ProposalPaymentOptions } from "./proposal-payment-options";
+
 export interface ProposalRenderedDataShape {
   integrator?: ProposalIntegratorSnapshot;
+  paymentOptions?: ProposalPaymentOptions;
 }
 
 function isOptionalProjectCostLineArray(v: unknown): boolean {

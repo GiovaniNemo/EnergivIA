@@ -48,6 +48,7 @@ import {
   ProposalSalesHeroCard,
 } from "@/components/proposals/proposal-internal-ui";
 import { ProposalEquipmentEditorCard } from "@/components/proposals/proposal-equipment-editor-card";
+import { ProposalPaymentOptionsCard } from "@/components/proposals/proposal-payment-options-card";
 
 const _PDF_BRANDING = {
   primaryColor: "#059669",
@@ -863,6 +864,31 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
           <p className="mt-2 text-xs text-red-600 dark:text-red-400">{discountError}</p>
         ) : null}
       </section>
+
+      {currentOrganizationId && (
+        <ProposalPaymentOptionsCard
+          organizationId={currentOrganizationId}
+          proposalId={proposal.id}
+          initialOptions={proposal.renderedData?.paymentOptions ?? null}
+          totalInvestment={effectiveSaleToClient}
+          monthlySavings={simRes.monthlySavings}
+          onSaved={({ paymentOptions, publicToken }) => {
+            setProposal((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    renderedData: {
+                      ...(prev.renderedData as Record<string, unknown>),
+                      paymentOptions,
+                    },
+                    publicToken: publicToken ?? prev.publicToken,
+                  }
+                : null
+            );
+            showToast("success", "Condições e formas de pagamento salvas!");
+          }}
+        />
+      )}
 
       {isOwnerOrAdmin &&
       !isKwpRate &&
