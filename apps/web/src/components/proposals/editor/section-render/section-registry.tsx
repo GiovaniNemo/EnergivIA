@@ -36,6 +36,8 @@ import {
 import { DecisionCTASection } from "@/components/proposals/sections/cta/decision-cta-section";
 import { EconomyPurchasesSection } from "@/components/proposals/sections/economy-purchases/EconomyPurchasesSection";
 import { PricingSectionPreview } from "@/components/proposals/sections/pricing/pricing-section-preview";
+import { ProposalPaymentCards } from "@/components/proposals/sections/pricing/proposal-payment-cards";
+import { normalizePaymentOptions } from "@/lib/proposal-payment-utils";
 import { SignatureSectionPreview } from "@/components/proposals/sections/signature/signature-section-preview";
 
 import { buildDecisionCTATheme } from "@/components/proposals/sections/cta/cta-theme";
@@ -2509,26 +2511,40 @@ export function renderSectionContent(
         />
       );
     }
-    case "financing":
-      return (
-        <div className="space-y-2">
-          <div data-editor-field-path="text" className="preview-editable-target">
-            {renderRichText(f.text, vars)}
-          </div>
-          <p data-editor-field-path="title">{tpl(f.title ?? "Opções de financiamento", vars)}</p>
-          <p data-editor-field-path="helperText" className="text-zinc-400">
-            {tpl(f.helperText, vars)}
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded border border-zinc-700/70 p-2">
-              Parcela: {vars.financiamento_parcela}
-            </div>
-            <div className="rounded border border-zinc-700/70 p-2">
-              Prazo: {vars.financiamento_meses}
-            </div>
-          </div>
-        </div>
+    case "financing": {
+      const investment = parseMoneyLikeServerSafe(
+        vars.investimento_total ?? vars.investimento_com_desconto ?? 0,
+        0
       );
+      const monthlySavings = parseMoneyLikeServerSafe(vars.economia_mensal ?? 0, 0);
+
+      let effectivePaymentOptions = options?.paymentOptions ?? vars.paymentOptions ?? null;
+      if (!effectivePaymentOptions && vars.payment_options_json) {
+        try {
+          const parsed = JSON.parse(String(vars.payment_options_json));
+          effectivePaymentOptions = normalizePaymentOptions(parsed, investment);
+        } catch {
+          // ignore
+        }
+      }
+      if (!effectivePaymentOptions) {
+        effectivePaymentOptions = normalizePaymentOptions(
+          null,
+          investment > 0 ? investment : 25000
+        );
+      }
+
+      return (
+        <ProposalPaymentCards
+          paymentOptions={effectivePaymentOptions}
+          monthlySavings={monthlySavings}
+          mode={options?.mode}
+          sectionTitle={f.title ? tpl(f.title, vars) : undefined}
+          sectionDescription={f.text ? renderRichText(f.text, vars) : undefined}
+          branding={options?.branding}
+        />
+      );
+    }
     case "testimonials":
       return (
         <TestimonialsSectionPreview

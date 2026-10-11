@@ -1,5 +1,4 @@
-"use client";
-
+import type { ReactNode } from "react";
 import { Wallet, CreditCard, Landmark, Check, TrendingUp } from "lucide-react";
 import type { ProposalPaymentOptions } from "@energivia/shared-types";
 
@@ -12,6 +11,8 @@ export interface ProposalPaymentCardsProps {
   paymentOptions: ProposalPaymentOptions;
   monthlySavings?: number | null;
   mode?: "web" | "pdf";
+  sectionTitle?: ReactNode;
+  sectionDescription?: ReactNode;
   branding?: {
     primaryColor?: string;
     textColor?: string;
@@ -24,6 +25,8 @@ export function ProposalPaymentCards({
   paymentOptions,
   monthlySavings,
   mode = "web",
+  sectionTitle,
+  sectionDescription,
   branding,
 }: ProposalPaymentCardsProps): JSX.Element | null {
   const { cash, creditCard, financing } = paymentOptions;
@@ -44,15 +47,23 @@ export function ProposalPaymentCards({
   const primaryColor = branding?.primaryColor || "#059669";
 
   return (
-    <div className="mt-8 w-full space-y-4 break-inside-avoid">
+    <div className="w-full space-y-4 break-inside-avoid">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-foreground)]">
-            Condições & Formas de Pagamento
+          <h3
+            data-editor-field-path="title"
+            className="preview-editable-target text-sm font-semibold uppercase tracking-wider text-[var(--color-foreground)]"
+          >
+            {sectionTitle || "Condições & Formas de Pagamento"}
           </h3>
-          <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-            Escolha a modalidade que melhor se adapta ao seu planejamento financeiro.
-          </p>
+          <div
+            data-editor-field-path="text"
+            className="preview-editable-target mt-0.5 text-xs text-[var(--color-muted-foreground)]"
+          >
+            {sectionDescription || (
+              <span>Escolha a modalidade que melhor se adapta ao seu planejamento financeiro.</span>
+            )}
+          </div>
         </div>
       </div>
 

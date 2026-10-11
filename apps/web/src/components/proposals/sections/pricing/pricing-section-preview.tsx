@@ -1,12 +1,9 @@
 "use client";
 
-import { useMemo, type CSSProperties, type ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { parseMoneyLike, replaceVariables } from "@/components/proposals/editor/utils";
 import type { PreviewRenderVariables } from "@/components/proposals/editor/section-render/types";
 import { cn, safeHtml } from "@energivia/utils";
-import { ProposalPaymentCards } from "./proposal-payment-cards";
-import type { ProposalPaymentOptions } from "@energivia/shared-types";
-import { normalizePaymentOptions } from "@/lib/proposal-payment-utils";
 
 function formatBRL(n: number | null | undefined): string {
   if (n == null || typeof n !== "number" || Number.isNaN(n)) return "R$ 0,00";
@@ -112,7 +109,7 @@ export type PricingSectionPreviewProps = {
   vars: PreviewRenderVariables;
   compact?: boolean;
   branding?: PricingBranding | null;
-  paymentOptions?: ProposalPaymentOptions | null;
+  paymentOptions?: unknown;
   mode?: "web" | "pdf";
 };
 
@@ -123,8 +120,6 @@ export function PricingSectionPreview({
   vars,
   compact = false,
   branding,
-  paymentOptions,
-  mode = "web",
 }: PricingSectionPreviewProps): JSX.Element {
   const base = parseAmount(vars, "investimento_total");
   const discountRaw = parseAmount(vars, "investimento_desconto");
@@ -147,20 +142,6 @@ export function PricingSectionPreview({
   const paymentHtml = paymentConditions?.trim()
     ? replaceVariables(paymentConditions, vars as unknown as Record<string, string | number>).trim()
     : "";
-
-  const resolvedPaymentOptions = useMemo(() => {
-    if (paymentOptions) return paymentOptions;
-    if (vars.paymentOptions) return vars.paymentOptions;
-    if (vars.payment_options_json) {
-      try {
-        const parsed = JSON.parse(vars.payment_options_json);
-        return normalizePaymentOptions(parsed, finalAmount ?? base ?? 0);
-      } catch {
-        // ignore
-      }
-    }
-    return null;
-  }, [paymentOptions, vars.paymentOptions, vars.payment_options_json, finalAmount, base]);
 
   const palette = resolveProposalPalette(branding);
 
@@ -371,19 +352,6 @@ export function PricingSectionPreview({
           ) : null}
         </div>
       </div>
-
-      {resolvedPaymentOptions ? (
-        <ProposalPaymentCards
-          paymentOptions={resolvedPaymentOptions}
-          monthlySavings={
-            typeof vars.economia_mensal === "string" || typeof vars.economia_mensal === "number"
-              ? parseMoneyLike(vars.economia_mensal, 0)
-              : 0
-          }
-          mode={mode}
-          branding={branding}
-        />
-      ) : null}
 
       {paymentHtml ? (
         <div

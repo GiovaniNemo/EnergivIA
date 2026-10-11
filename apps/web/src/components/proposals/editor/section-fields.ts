@@ -111,7 +111,8 @@ const SECTION_AI_CONTEXT_BY_TYPE: Partial<Record<SectionType, string>> = {
   economy_purchases:
     "Traduz economia projetada em poder de compra para facilitar percepção de benefício financeiro.",
   pricing: "Detalha investimento e condições comerciais com transparência e objetividade.",
-  financing: "Explica alternativas de financiamento e viabilidade de pagamento da solução.",
+  financing:
+    "Apresenta as condições e formas de pagamento da proposta: à vista com desconto, cartão de crédito parcelado e financiamento solar bancário.",
   testimonials:
     "Seção de prova social por depoimentos. O título e a descrição servem só para introduzir a seção; os depoimentos em si (textos, nomes, fotos) são configurados no componente de itens abaixo. Na descrição, não inventar citações, histórias de clientes nem lista de depoimentos.",
   social_proof: "Reforça credibilidade com indicadores, números e evidências de mercado.",
@@ -208,7 +209,7 @@ export const SECTION_TYPE_LABELS: Record<SectionType, string> = {
   gallery: "Galeria",
   economy_purchases: "Poder de compra",
   pricing: "Investimento",
-  financing: "Financiamento",
+  financing: "Condições & Formas de Pagamento",
   testimonials: "Depoimentos",
   social_proof: "Prova Social",
   guarantees: "Garantias",
@@ -866,21 +867,7 @@ export const SECTION_FIELD_CONFIG: Record<SectionType, DynamicField[]> = {
     },
     { name: "showDiscountRow", label: "Exibir linha de desconto", type: "toggle" },
   ],
-  financing: [
-    ...COMMON_SECTION_BASE_FIELDS,
-    {
-      name: "title",
-      label: "Título do financiamento",
-      type: "text",
-      aiFieldPurpose: "Título específico do bloco de financiamento.",
-    },
-    {
-      name: "helperText",
-      label: "Texto de apoio",
-      type: "text",
-      aiFieldPurpose: "Texto de apoio ao financiamento (benefícios, observações, próximos passos).",
-    },
-  ],
+  financing: [...COMMON_SECTION_BASE_FIELDS],
   testimonials: [
     {
       name: "title",
@@ -1325,7 +1312,8 @@ export const SECTION_DEFAULT_FIELDS: Record<SectionType, Record<string, unknown>
     showDiscountRow: true,
   }),
   financing: withSectionBaseDefaults({
-    helperText: "Parcela e prazo são vinculados à simulação de financiamento.",
+    title: "Condições & Formas de Pagamento",
+    text: "<p>Escolha a modalidade que melhor se adapta ao seu planejamento financeiro.</p>",
   }),
   testimonials: withSectionBaseDefaults({
     sectionEyebrow: "Depoimentos",

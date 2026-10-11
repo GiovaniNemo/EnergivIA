@@ -45,7 +45,10 @@ const SECTION_META: Record<SectionType, { desc: string; vars: number }> = {
     desc: "Detalhamento de valores com desconto, formas de pagamento e parcelamento.",
     vars: 7,
   },
-  financing: { desc: "Opções de financiamento solar com simulação de parcelas e taxas.", vars: 6 },
+  financing: {
+    desc: "Opções de pagamento à vista com desconto, cartão de crédito e financiamento bancário.",
+    vars: 6,
+  },
   testimonials: { desc: "Depoimentos de clientes satisfeitos com projetos realizados.", vars: 2 },
   social_proof: {
     desc: "Números de projetos realizados, kWp instalados e clientes atendidos.",
