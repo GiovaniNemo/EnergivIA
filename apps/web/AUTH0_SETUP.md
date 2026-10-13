@@ -18,12 +18,12 @@
 
 In the same application, open the **Settings** tab and set:
 
-| Field | Value |
-|-------|--------|
-| **Application Type** | Regular Web Application |
-| **Allowed Callback URLs** | `http://localhost:3000/auth/callback` |
-| **Allowed Logout URLs** | `http://localhost:3000` |
-| **Allowed Web Origins** | `http://localhost:3000` (optional, for CORS) |
+| Field                     | Value                                        |
+| ------------------------- | -------------------------------------------- |
+| **Application Type**      | Regular Web Application                      |
+| **Allowed Callback URLs** | `http://localhost:3000/auth/callback`        |
+| **Allowed Logout URLs**   | `http://localhost:3000`                      |
+| **Allowed Web Origins**   | `http://localhost:3000` (optional, for CORS) |
 
 Click **Save Changes**.
 
@@ -72,20 +72,23 @@ Then open [http://localhost:3000](http://localhost:3000), go to **Login** and cl
 
 ---
 
-## Production (later)
+## Production
 
-When you deploy (e.g. `https://app.energivia.com`):
+Quando estiver em produção (ex: `https://www.energivia.com.br` e `https://energivia.com.br`):
 
-1. In Auth0, add to the same application (comma-separated or one per line, depending on UI):
-   - **Allowed Callback URLs:** `https://app.energivia.com/auth/callback`
-   - **Allowed Logout URLs:** `https://app.energivia.com`
-   - **Allowed Web Origins:** `https://app.energivia.com`
-2. In your hosting env (e.g. Vercel), set:
+1. No Auth0 Dashboard, em **Applications** → sua aplicação → **Settings**:
+   - **Allowed Callback URLs:**
+     `https://www.energivia.com.br/auth/callback, https://energivia.com.br/auth/callback, https://app.energivia.com/auth/callback, http://localhost:3000/auth/callback`
+   - **Allowed Logout URLs:**
+     `https://www.energivia.com.br, https://energivia.com.br, https://app.energivia.com, http://localhost:3000`
+   - **Allowed Web Origins:**
+     `https://www.energivia.com.br, https://energivia.com.br, https://app.energivia.com, http://localhost:3000`
+2. No seu ambiente de hospedagem (ex: Vercel):
    - `AUTH0_DOMAIN`
    - `AUTH0_CLIENT_ID`
    - `AUTH0_CLIENT_SECRET`
-   - `AUTH0_SECRET` (same or new 32-byte hex secret)
-   - `APP_BASE_URL=https://app.energivia.com`
+   - `AUTH0_SECRET`
+   - `APP_BASE_URL=https://www.energivia.com.br,https://energivia.com.br`
 
 ---
 
@@ -104,7 +107,7 @@ When you deploy (e.g. `https://app.energivia.com`):
 3. **Try in an incognito/private window**  
    Rules out old cookies or session conflicts.
 
-4. **Check the error**  
+4. **Check the error**
    - After clicking “Entrar com Auth0”, do you get to the Auth0 login screen? If not, the app may not be redirecting (check browser console).
    - After logging in at Auth0, do you see “Callback URL mismatch” or “invalid callback”? Then the URL in Auth0 must match exactly `http://localhost:3000/auth/callback`.
 

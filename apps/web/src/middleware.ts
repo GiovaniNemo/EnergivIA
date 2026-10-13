@@ -30,7 +30,8 @@ export async function middleware(request: NextRequest) {
   log("entry", { host: currentHost, pathname });
 
   // Normaliza o domínio sem www para redirecionar de forma limpa para o LANDING_HOST principal (www)
-  if (!isLocalHost(currentHost) && currentHost === ROOT_DOMAIN) {
+  // Preserva rotas de autenticação (/auth/) para que o callback processe os cookies no host de origem sem perda de estado
+  if (!isLocalHost(currentHost) && currentHost === ROOT_DOMAIN && !pathname.startsWith("/auth/")) {
     const url = request.nextUrl.clone();
     url.protocol = "https:";
     url.host = LANDING_HOST;

@@ -843,7 +843,7 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
             </div>
             <h1 class="welcome-heading">
               BEM-VINDO <br />
-              <span>AO ENERGIVIA!</span>
+              <span>À ENERGIVIA!</span>
             </h1>
             <p class="welcome-text">
               Crie sua conta em segundos para dimensionar usinas, kits solares e gerar propostas comerciais com IA.
@@ -882,13 +882,12 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
           var params = Object.assign({
             overrides: {
               __tenant: config.auth0Tenant,
-              __token_issuer: (config.authorizationServer && config.authorizationServer.issuer) || ''
+              __token_issuer: (config.authorizationServer && config.authorizationServer.issuer) || config.auth0Domain
             },
             domain: config.auth0Domain,
             clientID: config.clientID,
             redirectUri: config.callbackURL,
-            responseType: (config.extraParams && config.extraParams.response_type) || "code",
-            params: config.extraParams
+            responseType: (config.extraParams && config.extraParams.response_type) || "code"
           }, config.internalOptions || {});
 
           webAuth = new auth0.WebAuth(params);
@@ -958,9 +957,16 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
           submitBtn.innerText = "Entrando...";
         }
 
-        var dbConn = config.databaseConnection ||
-          (config.connections && config.connections[0]) ||
-          "Username-Password-Authentication";
+        function getDbConnection() {
+          if (config.databaseConnection) return config.databaseConnection;
+          if (config.connections && config.connections.length > 0) {
+            var first = config.connections[0];
+            return typeof first === "object" && first !== null ? first.name : first;
+          }
+          return "Username-Password-Authentication";
+        }
+
+        var dbConn = getDbConnection();
 
         if (!webAuth) {
           setTimeout(function() {
@@ -999,9 +1005,16 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
           submitBtn.innerText = "Criando conta...";
         }
 
-        var dbConn = config.databaseConnection ||
-          (config.connections && config.connections[0]) ||
-          "Username-Password-Authentication";
+        function getDbConnection() {
+          if (config.databaseConnection) return config.databaseConnection;
+          if (config.connections && config.connections.length > 0) {
+            var first = config.connections[0];
+            return typeof first === "object" && first !== null ? first.name : first;
+          }
+          return "Username-Password-Authentication";
+        }
+
+        var dbConn = getDbConnection();
 
         if (!webAuth) {
           setTimeout(function() {
@@ -1045,19 +1058,10 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
       }
 
       function loginWithGoogle() {
-        var opts = Object.assign({
-          connection: "google-oauth2"
-        }, config.internalOptions || {});
-
-        if (config.internalOptions && config.internalOptions.state) {
-          opts.state = config.internalOptions.state;
-        }
-        if (config.internalOptions && config.internalOptions.nonce) {
-          opts.nonce = config.internalOptions.nonce;
-        }
-
         if (webAuth && typeof webAuth.authorize === "function") {
-          webAuth.authorize(opts);
+          webAuth.authorize({
+            connection: "google-oauth2"
+          });
         } else {
           var loc = window.location;
           var sep = loc.search ? "&" : "?";

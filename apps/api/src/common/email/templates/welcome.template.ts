@@ -20,17 +20,17 @@ export function buildWelcomeTemplate(input: WelcomeTemplateInput): {
   const displayName = input.userName ? escapeHtml(input.userName) : "Integrador";
   const safeLoginUrl = escapeHtml(input.loginUrl);
 
-  const subject = `☀️ Bem-vindo(a) ao EnergivIA! Sua plataforma inteligente de energia solar`;
+  const subject = `☀️ Bem-vindo(a) à EnergivIA! Sua plataforma inteligente de energia solar`;
   const text = [
     `Olá, ${input.userName || "Integrador"}!`,
     ``,
-    `Seja muito bem-vindo(a) ao EnergivIA!`,
+    `Seja muito bem-vindo(a) à EnergivIA!`,
     `A sua plataforma para acelerar vendas, criar propostas solares de alta conversão, simular financiamentos e automatizar seu atendimento com inteligência artificial.`,
     ``,
     `Para acessar a plataforma agora mesmo:`,
     input.loginUrl,
     ``,
-    `O que você pode fazer no EnergivIA:`,
+    `O que você pode fazer na EnergivIA:`,
     `• Gerar propostas solares em PDF em segundos`,
     `• Analisar faturas de energia com IA`,
     `• Gerenciar seu funil de vendas (CRM)`,
@@ -47,7 +47,7 @@ export function buildWelcomeTemplate(input: WelcomeTemplateInput): {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bem-vindo ao EnergivIA</title>
+    <title>Bem-vindo à EnergivIA</title>
   </head>
   <body style="margin:0; padding:0; background-color:#0f172a; font-family:'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0b0f19; padding:40px 10px;">
