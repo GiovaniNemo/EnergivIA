@@ -211,15 +211,23 @@ const DrawerContent = React.forwardRef<HTMLDivElement, DrawerContentProps>(
         open={open}
         onClose={handleClose}
         slotProps={{
+          backdrop: {
+            sx: {
+              backgroundColor: "rgba(2, 6, 23, 0.75)",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+            },
+          },
           paper: {
             ref,
             style: paperStyle,
             className: cn(
-              "box-border flex w-full max-w-md flex-col border-l border-[var(--color-border)] bg-[var(--color-card)] shadow-[0_0_48px_rgba(0,0,0,0.35)] outline-none",
+              "box-border flex w-full max-w-md flex-col border-l border-[var(--color-border)] bg-[var(--color-popover)] shadow-[0_0_48px_rgba(0,0,0,0.35)] outline-none",
               className
             ),
             sx: {
-              bgcolor: "var(--color-card)",
+              bgcolor: "var(--color-popover)",
+              backgroundImage: "none !important",
               color: "var(--color-foreground)",
             },
           },
@@ -238,7 +246,7 @@ const DrawerContent = React.forwardRef<HTMLDivElement, DrawerContentProps>(
               top: 12,
               zIndex: 200,
               border: "1px solid var(--color-border)",
-              bgcolor: "var(--color-card)",
+              bgcolor: "var(--color-popover)",
               color: "var(--color-foreground)",
               borderRadius: 2,
               "&:hover": {

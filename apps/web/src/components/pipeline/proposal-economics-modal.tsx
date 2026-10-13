@@ -2337,10 +2337,10 @@ export const ProposalEconomicsModal = forwardRef<
         <DialogContent
           muiMaxWidth="md"
           stickyChrome
-          className="flex max-h-[min(92vh,calc(100dvh-2rem))] flex-col overflow-hidden rounded-2xl sm:rounded-3xl p-0"
+          className="flex max-h-[min(92vh,calc(100dvh-2rem))] flex-col overflow-hidden rounded-2xl sm:rounded-3xl p-0 bg-white dark:bg-[#0c121e] border border-slate-200 dark:border-slate-800 shadow-2xl"
         >
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <DialogHeader className="shrink-0 space-y-1.5 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 pb-3.5 pt-4 pr-12 sm:space-y-2 sm:px-8 sm:pb-5 sm:pt-7">
+            <DialogHeader className="shrink-0 space-y-1.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c121e] px-4 pb-3.5 pt-4 pr-12 sm:space-y-2 sm:px-8 sm:pb-5 sm:pt-7">
               <DialogTitle className="flex items-start gap-2 text-base font-semibold leading-tight tracking-tight sm:items-center sm:text-2xl">
                 <Zap className="mt-0.5 h-4 w-4 shrink-0 text-amber-500 sm:mt-0 sm:h-5 sm:w-5" />
                 <span className="min-w-0">Economia do cliente em segundos</span>
@@ -2350,7 +2350,7 @@ export const ProposalEconomicsModal = forwardRef<
                 abordagem comercial com dados claros.
               </p>
             </DialogHeader>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-8 sm:py-6 no-scrollbar">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white dark:bg-[#090d14] px-4 py-4 sm:px-8 sm:py-6 no-scrollbar">
               <div className="space-y-5">
                 {proposalError ? (
                   <p className="text-sm text-red-600 dark:text-red-400">{proposalError}</p>
@@ -3099,7 +3099,7 @@ export const ProposalEconomicsModal = forwardRef<
                 </div>
               </div>
             </div>
-            <DialogFooter className="shrink-0 flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 sm:gap-3 sm:px-8 sm:py-5">
+            <DialogFooter className="shrink-0 flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0c121e] px-4 py-3 sm:gap-3 sm:px-8 sm:py-5">
               <Button
                 variant="ghost"
                 className="h-10 sm:h-11 w-full sm:w-auto text-[var(--color-muted-foreground)]"
@@ -3246,7 +3246,7 @@ export const ProposalEconomicsModal = forwardRef<
         <DialogContent
           muiMaxWidth="lg"
           allowOverflow
-          className="max-h-[min(92vh,calc(100dvh-2rem))] overflow-y-auto max-w-5xl"
+          className="max-h-[min(92vh,calc(100dvh-2rem))] overflow-y-auto max-w-5xl bg-white dark:bg-[#0c121e] border border-slate-200 dark:border-slate-800 shadow-2xl"
         >
           <DialogHeader className="pb-1">
             <DialogTitle className="flex items-center gap-2.5 text-xl font-bold">
@@ -4728,7 +4728,7 @@ export const ProposalEconomicsModal = forwardRef<
               </div>
             </div>
           ) : null}
-          <DialogFooter className="flex-col-reverse gap-3 border-t border-[var(--color-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <DialogFooter className="flex-col-reverse gap-3 border-t border-slate-200 dark:border-slate-800 pt-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-[#0c121e]">
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
               <Button
                 variant="outline"

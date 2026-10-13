@@ -256,9 +256,9 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
         slotProps={{
           backdrop: {
             sx: {
-              backgroundColor: "rgba(2, 6, 23, 0.72)",
-              backdropFilter: "blur(8px)",
-              WebkitBackdropFilter: "blur(8px)",
+              backgroundColor: "rgba(2, 6, 23, 0.82)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
             },
           },
           paper: {
@@ -274,6 +274,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
             ),
             sx: {
               bgcolor: "var(--color-popover)",
+              backgroundImage: "none !important",
               color: "var(--color-foreground)",
               m: { xs: "8px !important", sm: "24px !important", md: "32px !important" },
               width: { xs: "calc(100% - 16px) !important", sm: "100%" },

@@ -205,7 +205,7 @@ export function CreateDealModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl bg-white dark:bg-[#0c121e] border border-slate-200 dark:border-slate-800 shadow-2xl">
         <DialogHeader>
           <DialogTitle>Nova negociação</DialogTitle>
           <DialogDescription>

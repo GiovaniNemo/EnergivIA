@@ -177,20 +177,23 @@ export function BillQuickStartDialog({
         if (!value && !submitting) onClose();
       }}
     >
-      <DialogContent muiMaxWidth="sm" className="overflow-hidden rounded-2xl p-0">
-        <DialogHeader className="space-y-1 border-b border-[var(--color-border)] px-6 py-5">
-          <DialogTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+      <DialogContent
+        muiMaxWidth="sm"
+        className="overflow-hidden rounded-2xl p-0 bg-white dark:bg-[#0c121e] border border-slate-200 dark:border-slate-800 shadow-2xl"
+      >
+        <DialogHeader className="space-y-1 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c121e] px-6 py-5">
+          <DialogTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
             <Upload className="h-5 w-5 text-[var(--color-primary)]" />
             Iniciar simulação
           </DialogTitle>
-          <p className="text-sm text-[var(--color-muted-foreground)]">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             A IA vai ler a fatura e gerar a proposta. Antes disso, identifique o cliente.
           </p>
         </DialogHeader>
 
-        <div className="space-y-4 px-6 py-5">
+        <div className="space-y-4 bg-white dark:bg-[#0c121e] px-6 py-5">
           {file ? (
-            <div className="flex items-start gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/30 px-4 py-3">
+            <div className="flex items-start gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#111827] px-4 py-3 shadow-xs">
               <div
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
                 style={{ background: "#e8f5e9", color: "#388e3c" }}
@@ -198,17 +201,17 @@ export function BillQuickStartDialog({
                 <Upload className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-[var(--color-foreground)]">
+                <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
                   {file.name}
                 </p>
-                <p className="mt-0.5 font-mono text-[11px] text-[var(--color-muted-foreground)]">
+                <p className="mt-0.5 font-mono text-[11px] text-slate-500 dark:text-slate-400">
                   {humanizeFileSize(file.size)} · {file.type || "arquivo"}
                 </p>
               </div>
               {!submitting ? (
                 <button
                   type="button"
-                  className="rounded-md p-1 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                  className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                   aria-label="Remover arquivo"
                   onClick={onClose}
                 >
@@ -221,7 +224,7 @@ export function BillQuickStartDialog({
           {}
           <div
             role="tablist"
-            className="grid grid-cols-2 gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/40 p-1.5"
+            className="grid grid-cols-2 gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-[#111827] p-1.5"
           >
             <button
               type="button"
@@ -235,7 +238,7 @@ export function BillQuickStartDialog({
               className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-all ${
                 mode === "existing"
                   ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-md ring-1 ring-[var(--color-primary)]/40"
-                  : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-card)] hover:text-[var(--color-foreground)]"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
               }`}
             >
               <Search className="h-4 w-4" />
@@ -253,7 +256,7 @@ export function BillQuickStartDialog({
               className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-all ${
                 mode === "new"
                   ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-md ring-1 ring-[var(--color-primary)]/40"
-                  : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-card)] hover:text-[var(--color-foreground)]"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
               }`}
             >
               <UserPlus className="h-4 w-4" />
@@ -347,7 +350,7 @@ export function BillQuickStartDialog({
           {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
         </div>
 
-        <DialogFooter className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/20 px-6 py-4">
+        <DialogFooter className="border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0a0f19] px-6 py-4">
           <Button variant="ghost" onClick={onClose} disabled={submitting}>
             Cancelar
           </Button>

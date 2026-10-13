@@ -160,23 +160,26 @@ export function NewProposalDialog({ open, onClose }: NewProposalDialogProps): JS
         if (!value && !submitting) onClose();
       }}
     >
-      <DialogContent muiMaxWidth="sm" className="overflow-hidden rounded-2xl p-0">
-        <DialogHeader className="space-y-1 border-b border-[var(--color-border)] px-6 py-5">
-          <DialogTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+      <DialogContent
+        muiMaxWidth="sm"
+        className="overflow-hidden rounded-2xl p-0 bg-white dark:bg-[#0c121e] border border-slate-200 dark:border-slate-800 shadow-2xl"
+      >
+        <DialogHeader className="space-y-1 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c121e] px-6 py-5">
+          <DialogTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
             <FileText className="h-5 w-5 text-[var(--color-primary)]" />
             Nova proposta
           </DialogTitle>
-          <p className="text-sm text-[var(--color-muted-foreground)]">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Escolha o cliente para iniciar a simulação. Em seguida você envia a fatura ou informa o
             consumo manualmente.
           </p>
         </DialogHeader>
 
-        <div className="space-y-4 px-6 py-5">
+        <div className="space-y-4 bg-white dark:bg-[#0c121e] px-6 py-5">
           {}
           <div
             role="tablist"
-            className="grid grid-cols-2 gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/40 p-1.5"
+            className="grid grid-cols-2 gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-[#111827] p-1.5"
           >
             <button
               type="button"
@@ -190,7 +193,7 @@ export function NewProposalDialog({ open, onClose }: NewProposalDialogProps): JS
               className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-all ${
                 mode === "existing"
                   ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-md ring-1 ring-[var(--color-primary)]/40"
-                  : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-card)] hover:text-[var(--color-foreground)]"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
               }`}
             >
               <Search className="h-4 w-4" />
@@ -208,7 +211,7 @@ export function NewProposalDialog({ open, onClose }: NewProposalDialogProps): JS
               className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-all ${
                 mode === "new"
                   ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-md ring-1 ring-[var(--color-primary)]/40"
-                  : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-card)] hover:text-[var(--color-foreground)]"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
               }`}
             >
               <UserPlus className="h-4 w-4" />
@@ -302,7 +305,7 @@ export function NewProposalDialog({ open, onClose }: NewProposalDialogProps): JS
           {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
         </div>
 
-        <DialogFooter className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/20 px-6 py-4">
+        <DialogFooter className="border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0a0f19] px-6 py-4">
           <Button variant="ghost" onClick={onClose} disabled={submitting}>
             Cancelar
           </Button>
