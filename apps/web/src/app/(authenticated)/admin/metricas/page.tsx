@@ -397,7 +397,7 @@ export default function AdminMetricasPage() {
       : "78.4";
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)] animate-in fade-in duration-300 space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto text-[var(--color-foreground)] animate-in fade-in duration-300 space-y-8">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[var(--color-border)] pb-6">
         <div>

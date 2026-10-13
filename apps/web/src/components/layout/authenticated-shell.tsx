@@ -37,29 +37,29 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
               {!isOnboardingOrganization && <FeedbackPromptCard />}
               {!isOnboardingOrganization && <EnergiviaFloatingHub />}
 
-              {/* Fundo Atmosférico de Alta Performance para Glassmorphism */}
+              {/* Fundo Atmosférico Contínuo para Glassmorphism (Preenchimento Integral sem quebras) */}
               <div
                 className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
                 aria-hidden="true"
               >
-                {/* Camada 1: Aura esmeralda refinada no topo/centro (energia solar) */}
+                {/* Camada 1: Aura esmeralda expansiva no topo e centro */}
                 <div
-                  className="absolute -top-32 left-1/2 -translate-x-1/2 h-[520px] w-[1100px] rounded-full bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(16,185,129,0.12)_0%,rgba(16,185,129,0.03)_55%,transparent_80%)] dark:bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(16,185,129,0.14)_0%,rgba(16,185,129,0.03)_55%,transparent_80%)]"
+                  className="absolute -top-32 left-1/2 -translate-x-1/2 h-[700px] w-full max-w-[1500px] rounded-full bg-[radial-gradient(ellipse_75%_65%_at_50%_20%,rgba(16,185,129,0.12)_0%,rgba(16,185,129,0.03)_50%,transparent_80%)] dark:bg-[radial-gradient(ellipse_75%_65%_at_50%_20%,rgba(16,185,129,0.14)_0%,rgba(16,185,129,0.03)_50%,transparent_80%)]"
                   style={{ contain: "strict" }}
                 />
-                {/* Camada 2: Luz suave teal/safira na lateral direita inferior */}
+                {/* Camada 2: Luz suave teal/safira na lateral direita e base */}
                 <div
-                  className="absolute -bottom-40 right-0 h-[600px] w-[750px] rounded-full bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(20,184,166,0.08)_0%,rgba(56,189,248,0.02)_55%,transparent_80%)] dark:bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(14,116,144,0.10)_0%,rgba(15,23,42,0.03)_55%,transparent_80%)]"
+                  className="absolute -bottom-20 right-0 h-[750px] w-[850px] rounded-full bg-[radial-gradient(ellipse_65%_60%_at_60%_60%,rgba(20,184,166,0.08)_0%,rgba(56,189,248,0.02)_55%,transparent_80%)] dark:bg-[radial-gradient(ellipse_65%_60%_at_60%_60%,rgba(14,116,144,0.10)_0%,rgba(16,185,129,0.03)_50%,transparent_80%)]"
                   style={{ contain: "strict" }}
                 />
                 {/* Camada 3: Luz de apoio na lateral esquerda atrás da sidebar */}
                 <div
-                  className="absolute top-24 -left-20 h-[700px] w-[450px] rounded-full bg-[radial-gradient(ellipse_60%_60%_at_30%_40%,rgba(16,185,129,0.07)_0%,transparent_75%)] dark:bg-[radial-gradient(ellipse_60%_60%_at_30%_40%,rgba(16,185,129,0.09)_0%,transparent_75%)]"
+                  className="absolute top-16 -left-20 h-[900px] w-[500px] rounded-full bg-[radial-gradient(ellipse_60%_60%_at_30%_40%,rgba(16,185,129,0.07)_0%,transparent_75%)] dark:bg-[radial-gradient(ellipse_60%_60%_at_30%_40%,rgba(16,185,129,0.09)_0%,transparent_75%)]"
                   style={{ contain: "strict" }}
                 />
-                {/* Camada 4: Micro-textura arquitetônica (Grid pontilhado fino para refração tátil de vidro) */}
+                {/* Camada 4: Micro-textura arquitetônica 100% contínua (sem corte de máscara elíptica) */}
                 <div
-                  className="absolute inset-0 opacity-[0.035] dark:opacity-[0.07] bg-[radial-gradient(rgba(0,0,0,0.8)_1px,transparent_1px)] dark:bg-[radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_85%_75%_at_50%_45%,black_40%,transparent_95%)]"
+                  className="absolute inset-0 opacity-[0.03] dark:opacity-[0.055] bg-[radial-gradient(rgba(0,0,0,0.8)_1px,transparent_1px)] dark:bg-[radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:24px_24px]"
                   style={{ contain: "strict" }}
                 />
               </div>

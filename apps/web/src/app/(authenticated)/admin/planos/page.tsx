@@ -866,7 +866,7 @@ export default function AdminPlanosPage() {
   const totalSubscribers = plans.reduce((acc, curr) => acc + (curr._count?.subscriptions || 0), 0);
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto min-h-screen bg-[var(--color-background)] animate-in fade-in duration-500">
+    <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto animate-in fade-in duration-500">
       {/* Toast Notification */}
       {toast && (
         <div

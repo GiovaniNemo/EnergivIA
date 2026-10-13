@@ -276,7 +276,7 @@ function MeusPlanosContent() {
     user?.trialDaysLeft ?? (orgCreatedAt ? getTrialDaysLeft(orgCreatedAt, 5) : 5);
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto min-h-screen bg-[var(--color-background)] animate-in fade-in duration-500">
+    <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto animate-in fade-in duration-500">
       {/* Toast Notification */}
       {toastMessage && (
         <div
@@ -322,7 +322,7 @@ function MeusPlanosContent() {
 
       {/* CURRENT SUBSCRIPTION BANNER */}
       {subscription && currentPlan ? (
-        <div className="mb-10 bg-gradient-to-br from-emerald-950/40 via-[var(--color-card)] to-emerald-950/20 border border-emerald-500/40 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+        <div className="mb-10 backdrop-blur-xl bg-gradient-to-br from-emerald-950/30 via-slate-900/40 to-emerald-950/20 border border-emerald-500/30 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
           {/* Subtle Glow */}
           <div className="pointer-events-none absolute -right-20 -bottom-20 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl" />
 
@@ -421,7 +421,7 @@ function MeusPlanosContent() {
           </div>
         </div>
       ) : trialDaysLeft === 0 ? (
-        <div className="mb-10 bg-gradient-to-r from-rose-950/40 via-[var(--color-card)] to-rose-950/20 border border-rose-500/40 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg shadow-rose-950/20">
+        <div className="mb-10 backdrop-blur-xl bg-gradient-to-r from-rose-950/30 via-slate-900/40 to-rose-950/20 border border-rose-500/30 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg shadow-rose-950/20">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
               <AlertTriangle className="w-6 h-6 animate-pulse" />
@@ -443,7 +443,7 @@ function MeusPlanosContent() {
           </div>
         </div>
       ) : (
-        <div className="mb-10 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="mb-10 backdrop-blur-xl bg-slate-900/30 dark:bg-slate-900/30 border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0">
               <Calendar className="w-6 h-6" />
@@ -474,7 +474,7 @@ function MeusPlanosContent() {
         </h2>
 
         {plans.length === 0 ? (
-          <div className="text-center py-16 bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] p-8 max-w-md mx-auto">
+          <div className="text-center py-16 backdrop-blur-xl bg-slate-900/30 rounded-2xl border border-white/10 p-8 max-w-md mx-auto">
             <Boxes className="w-12 h-12 text-[var(--color-primary)] mx-auto mb-4 opacity-80" />
             <h3 className="text-xl font-bold text-[var(--color-foreground)] mb-2">
               Nenhum plano disponível
@@ -512,14 +512,14 @@ function MeusPlanosContent() {
               return (
                 <div
                   key={plan.id}
-                  className={`relative bg-[var(--color-card)] rounded-3xl shadow-xl overflow-hidden border ${
+                  className={`relative backdrop-blur-xl rounded-3xl shadow-xl overflow-hidden border ${
                     isCurrentPlan
-                      ? "border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.15)] ring-2 ring-emerald-500/30"
+                      ? "bg-emerald-950/25 border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.15)] ring-2 ring-emerald-500/30"
                       : isPlus
-                        ? "border-purple-500/40 shadow-[0_0_30px_rgba(168,85,247,0.12)] ring-1 ring-purple-500/30"
+                        ? "bg-purple-950/20 border-purple-500/40 shadow-[0_0_30px_rgba(168,85,247,0.12)] ring-1 ring-purple-500/30"
                         : isHighlighted
-                          ? "border-yellow-500/50 shadow-[0_0_30px_rgba(234,179,8,0.1)] ring-1 ring-yellow-500/30"
-                          : "border-[var(--color-border)]"
+                          ? "bg-amber-950/20 border-yellow-500/50 shadow-[0_0_30px_rgba(234,179,8,0.1)] ring-1 ring-yellow-500/30"
+                          : "bg-slate-900/40 border-white/10"
                   } hover:shadow-2xl transition-all duration-300 flex flex-col hover:-translate-y-1`}
                 >
                   {/* Status Badges */}
@@ -692,7 +692,7 @@ function MeusPlanosContent() {
       {/* CANCEL CONFIRMATION MODAL */}
       {showCancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[var(--color-card)] border border-red-500/30 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6">
+          <div className="backdrop-blur-2xl bg-slate-900/95 border border-red-500/30 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6">
             <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center mx-auto">
               <AlertTriangle className="w-7 h-7" />
             </div>
@@ -714,7 +714,7 @@ function MeusPlanosContent() {
                 type="button"
                 onClick={() => setShowCancelModal(false)}
                 disabled={cancelLoading}
-                className="flex-1 py-3 rounded-xl bg-[var(--color-card)] hover:bg-[var(--color-muted)] text-[var(--color-foreground)] border border-[var(--color-border)] font-semibold text-sm transition"
+                className="flex-1 py-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-[var(--color-foreground)] border border-white/10 font-semibold text-sm transition"
               >
                 Voltar
               </button>

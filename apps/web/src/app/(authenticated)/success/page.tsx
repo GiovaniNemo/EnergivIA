@@ -62,8 +62,8 @@ function SuccessContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[var(--color-background)]">
-        <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl p-10 max-w-md w-full text-center shadow-xl">
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6">
+        <div className="backdrop-blur-xl bg-slate-900/60 border border-white/10 rounded-2xl p-10 max-w-md w-full text-center shadow-xl">
           <Loader2 className="w-12 h-12 text-[var(--color-primary)] animate-spin mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-[var(--color-foreground)] mb-2">
             Confirmando seu pagamento...
@@ -78,8 +78,8 @@ function SuccessContent() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[var(--color-background)]">
-        <div className="bg-[var(--color-card)] border border-red-500/30 rounded-2xl p-10 max-w-md w-full text-center shadow-xl">
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6">
+        <div className="backdrop-blur-xl bg-slate-900/60 border border-red-500/30 rounded-2xl p-10 max-w-md w-full text-center shadow-xl">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-[var(--color-foreground)] mb-2">
             Atenção na verificação
@@ -98,8 +98,8 @@ function SuccessContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[var(--color-background)] animate-in fade-in duration-500">
-      <div className="relative bg-[var(--color-card)] border border-emerald-500/30 rounded-3xl p-10 max-w-lg w-full text-center shadow-2xl overflow-hidden">
+    <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
+      <div className="relative backdrop-blur-xl bg-slate-900/60 border border-emerald-500/30 rounded-3xl p-10 max-w-lg w-full text-center shadow-2xl overflow-hidden">
         {/* Glow effect */}
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -125,7 +125,7 @@ function SuccessContent() {
         <div className="flex flex-col sm:flex-row gap-3">
           <Link
             href="/gestao/meus-planos"
-            className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-[var(--color-card)] hover:bg-[var(--color-muted)] text-[var(--color-foreground)] font-medium border border-[var(--color-border)] transition"
+            className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-[var(--color-foreground)] font-medium border border-white/10 transition"
           >
             Ver Meus Planos
           </Link>
@@ -146,7 +146,7 @@ export default function SuccessPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)]">
+        <div className="min-h-[70vh] flex items-center justify-center">
           <Loader2 className="w-8 h-8 text-[var(--color-primary)] animate-spin" />
         </div>
       }

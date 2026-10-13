@@ -415,7 +415,7 @@ export default function AdminSistemaPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)] p-4 sm:p-6 lg:p-8 animate-in fade-in duration-300">
+    <div className="text-[var(--color-foreground)] p-4 sm:p-6 lg:p-8 animate-in fade-in duration-300">
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border)] pb-6">
