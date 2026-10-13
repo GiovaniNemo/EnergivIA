@@ -463,6 +463,339 @@
     }
   }
 
+  /* ==========================================================================
+     Proposal Responsive Components (Container Queries & Mobile Viewport)
+     ========================================================================== */
+
+  /* About Company - Split Proof (foto + tópicos com badges) */
+  .about-company-split-proof {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: auto;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    border: 1px solid rgba(128, 128, 128, 0.2);
+  }
+
+  .about-company-split-proof-media {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    min-height: 220px;
+    background-size: cover;
+    background-position: center;
+  }
+
+  .about-company-split-proof-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1.25rem;
+  }
+
+  @container proposal-preview (min-width: 680px) {
+    .about-company-split-proof {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 480px;
+    }
+
+    .about-company-split-proof-media {
+      height: auto;
+      min-height: 100%;
+    }
+
+    .about-company-split-proof-content {
+      padding: 2.5rem;
+    }
+  }
+
+  /* About Company - Editorial Split */
+  .about-company-editorial-split {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .about-company-editorial-media {
+    aspect-ratio: 16 / 10;
+    width: 100%;
+    min-height: 200px;
+  }
+
+  @container proposal-preview (min-width: 680px) {
+    .about-company-editorial-split {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      align-items: center;
+      gap: 2.5rem;
+    }
+
+    .about-company-editorial-media {
+      aspect-ratio: 4 / 5;
+      min-height: auto;
+    }
+  }
+
+  /* About Company - Hero Stats */
+  .about-company-hero-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  @container proposal-preview (min-width: 600px) {
+    .about-company-hero-stats {
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 1.5rem;
+    }
+  }
+
+  /* About Company - Process Steps Grid */
+  .about-company-process-steps-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  @container proposal-preview (min-width: 680px) {
+    .about-company-process-steps-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 2.5rem;
+    }
+  }
+
+  /* About Company - Manifesto */
+  .about-company-manifesto-container {
+    padding: 1.75rem 1.25rem;
+  }
+
+  .about-company-manifesto-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  @container proposal-preview (min-width: 680px) {
+    .about-company-manifesto-container {
+      padding: 3.5rem 3rem;
+    }
+
+    .about-company-manifesto-footer {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: end;
+      gap: 2.5rem;
+    }
+  }
+
+  /* Introduction - Split Name */
+  .introduction-split-name-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  @container proposal-preview (min-width: 680px) {
+    .introduction-split-name-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 3rem;
+    }
+  }
+
+  /* Introduction - Bar Accent */
+  .introduction-bar-grid {
+    display: grid;
+    grid-template-columns: 4px 1fr;
+    gap: 1.25rem;
+  }
+
+  @container proposal-preview (min-width: 600px) {
+    .introduction-bar-grid {
+      gap: 2.5rem;
+    }
+  }
+
+  /* Cover - Split */
+  .cover-split-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cover-split-media {
+    width: 100%;
+    height: 220px;
+    min-height: 220px;
+  }
+
+  @container proposal-preview (min-width: 680px) {
+    .cover-split-container {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cover-split-media {
+      height: 100%;
+      min-height: 100%;
+    }
+  }
+
+  /* Cover - Split Editorial */
+  .cover-split-editorial-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cover-split-editorial-media {
+    width: 100%;
+    height: 220px;
+    min-height: 220px;
+  }
+
+  @container proposal-preview (min-width: 680px) {
+    .cover-split-editorial-container {
+      display: grid;
+      grid-template-columns: 55% 45%;
+    }
+
+    .cover-split-editorial-media {
+      height: 100%;
+      min-height: 100%;
+    }
+  }
+
+  /* Gallery - Uniform Grid */
+  .gallery-grid-uniform {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  @container proposal-preview (min-width: 480px) {
+    .gallery-grid-uniform {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @container proposal-preview (min-width: 760px) {
+    .gallery-grid-uniform {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.25rem;
+    }
+  }
+
+  /* Gallery - Editorial */
+  .gallery-editorial-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  @container proposal-preview (min-width: 680px) {
+    .gallery-editorial-row {
+      display: grid;
+      align-items: center;
+      gap: 2.5rem;
+    }
+
+    .gallery-editorial-row.is-normal {
+      grid-template-columns: 1.4fr 1fr;
+    }
+
+    .gallery-editorial-row.is-reversed {
+      grid-template-columns: 1fr 1.4fr;
+    }
+  }
+
+  /* Video - Split */
+  .video-split-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  @container proposal-preview (min-width: 680px) {
+    .video-split-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr;
+      align-items: center;
+      gap: 2.5rem;
+    }
+  }
+
+  /* Signature - Signers Grid */
+  .signature-signers-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  @container proposal-preview (min-width: 680px) {
+    .signature-signers-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
+    }
+  }
+
+  /* Comparison - Cards Grid */
+  .comparison-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  @container proposal-preview (min-width: 480px) {
+    .comparison-cards-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* Proposal Payment Cards */
+  .proposal-payment-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.875rem;
+  }
+
+  @container proposal-preview (min-width: 680px) {
+    .proposal-payment-cards-grid.has-2-cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .proposal-payment-cards-grid.has-3-cards {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* Reforço de responsividade quando dentro do viewport mobile do editor */
+  [data-preview-viewport="mobile"] .about-company-split-proof,
+  [data-preview-viewport="mobile"] .about-company-editorial-split,
+  [data-preview-viewport="mobile"] .about-company-process-steps-grid,
+  [data-preview-viewport="mobile"] .introduction-split-name-grid,
+  [data-preview-viewport="mobile"] .cover-split-container,
+  [data-preview-viewport="mobile"] .cover-split-editorial-container,
+  [data-preview-viewport="mobile"] .video-split-grid,
+  [data-preview-viewport="mobile"] .signature-signers-grid,
+  [data-preview-viewport="mobile"] .gallery-editorial-row,
+  [data-preview-viewport="mobile"] .proposal-payment-cards-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  [data-preview-viewport="mobile"] .about-company-split-proof-media,
+  [data-preview-viewport="mobile"] .cover-split-media,
+  [data-preview-viewport="mobile"] .cover-split-editorial-media {
+    width: 100% !important;
+    height: 220px !important;
+    min-height: 220px !important;
+  }
+
+  [data-preview-viewport="mobile"] .about-company-split-proof-content {
+    padding: 1.25rem !important;
+  }
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

@@ -58,7 +58,7 @@ export function Split({
 
   return (
     <section
-      className="grid min-h-[250px] gap-0 overflow-hidden md:grid-cols-2 h-full min-h-full flex-1"
+      className="cover-split-container min-h-[250px] gap-0 overflow-hidden h-full min-h-full flex-1"
       style={{
         minHeight: `${minHeightPx}px`,
         backgroundColor: style.backgroundColor,
@@ -114,7 +114,7 @@ export function Split({
         {footerBranding ? <div className="mt-auto w-full">{footerBranding}</div> : null}
       </div>
       <div
-        className="relative min-h-[200px]"
+        className="cover-split-media relative"
         style={
           hasImage
             ? {

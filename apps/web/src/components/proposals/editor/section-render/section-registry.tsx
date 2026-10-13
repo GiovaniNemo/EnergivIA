@@ -640,33 +640,36 @@ export function renderSectionContent(
 
       if (variant === "carta") {
         return (
-          <div className="rounded-xl px-16 py-14" style={{ position: "relative" }}>
+          <div
+            className="rounded-xl px-5 py-8 sm:px-10 sm:py-10 md:px-16 md:py-14"
+            style={{ position: "relative" }}
+          >
             <div
-              className="mb-6 h-px w-12"
+              className="mb-5 sm:mb-6 h-px w-12"
               style={{ background: "var(--preview-primary-color, #10b981)" }}
             />
-            <div className="mb-2 text-[15px] italic" style={{ opacity: 0.55 }}>
+            <div className="mb-2 text-[14px] sm:text-[15px] italic" style={{ opacity: 0.55 }}>
               {greeting}
             </div>
-            <div className="mb-10 text-[42px] font-bold leading-none tracking-[-0.035em]">
+            <div className="mb-6 sm:mb-10 text-3xl sm:text-4xl md:text-[42px] font-bold leading-none tracking-[-0.035em]">
               {clientName},
             </div>
             <div
               data-editor-field-path="title"
-              className="preview-editable-target mb-5 text-[22px] font-normal leading-[1.35] tracking-[-0.015em]"
+              className="preview-editable-target mb-4 sm:mb-5 text-lg sm:text-xl md:text-[22px] font-normal leading-[1.35] tracking-[-0.015em]"
               style={{ maxWidth: 580 }}
             >
               {renderRichText(f.title, vars)}
             </div>
             <div
               data-editor-field-path="text"
-              className="preview-editable-target text-[15px] leading-[1.75]"
+              className="preview-editable-target text-sm sm:text-[15px] leading-[1.75]"
               style={{ maxWidth: 540, opacity: 0.75 }}
             >
               {renderRichText(f.text, vars)}
             </div>
             <div
-              className="mt-10 pt-6 text-[11px] font-semibold uppercase tracking-[.18em]"
+              className="mt-8 sm:mt-10 pt-5 sm:pt-6 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[.18em]"
               style={{ borderTop: "1px solid rgba(128,128,128,0.15)", opacity: 0.45 }}
             >
               Proposta personalizada
@@ -677,7 +680,7 @@ export function renderSectionContent(
 
       if (variant === "hero") {
         return (
-          <div className="relative overflow-hidden rounded-xl px-14 py-14">
+          <div className="relative overflow-hidden rounded-xl px-5 py-8 sm:px-10 sm:py-10 md:px-14 md:py-14">
             <div
               className="pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full"
               style={{
@@ -688,7 +691,7 @@ export function renderSectionContent(
               }}
             />
             <div
-              className="relative z-10 mb-6 inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[.2em]"
+              className="relative z-10 mb-4 sm:mb-6 inline-flex items-center gap-2.5 sm:gap-3 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[.2em]"
               style={{ color: "var(--preview-primary-color, #10b981)" }}
             >
               <span
@@ -697,7 +700,10 @@ export function renderSectionContent(
               />
               Sua proposta
             </div>
-            <div className="relative z-10 mb-4 text-[18px] font-light" style={{ opacity: 0.75 }}>
+            <div
+              className="relative z-10 mb-3 sm:mb-4 text-base sm:text-[18px] font-light"
+              style={{ opacity: 0.75 }}
+            >
               {greeting}{" "}
               <strong className="font-semibold" style={{ opacity: 1 }}>
                 {clientName}
@@ -706,7 +712,7 @@ export function renderSectionContent(
             </div>
             <div
               data-editor-field-path="title"
-              className="preview-editable-target relative z-10 mb-6 text-[44px] font-medium leading-[1.08] tracking-[-0.03em]"
+              className="preview-editable-target relative z-10 mb-4 sm:mb-6 text-2xl sm:text-3xl md:text-[44px] font-medium leading-[1.08] tracking-[-0.03em]"
               style={{ maxWidth: 800 }}
             >
               <style>{`[data-editor-field-path="title"] em { color: var(--preview-primary-color, #10b981); font-style: italic; }`}</style>
@@ -714,7 +720,7 @@ export function renderSectionContent(
             </div>
             <div
               data-editor-field-path="text"
-              className="preview-editable-target relative z-10 text-[15px] leading-[1.7]"
+              className="preview-editable-target relative z-10 text-sm sm:text-[15px] leading-[1.7]"
               style={{ maxWidth: 600, opacity: 0.75 }}
             >
               {renderRichText(f.text, vars)}
@@ -725,7 +731,10 @@ export function renderSectionContent(
 
       if (variant === "split-name") {
         return (
-          <div className="grid gap-12 py-6 md:grid-cols-2" style={{ position: "relative" }}>
+          <div
+            className="introduction-split-name-grid py-4 sm:py-6"
+            style={{ position: "relative" }}
+          >
             <div
               className="pointer-events-none absolute hidden md:block"
               style={{
@@ -740,16 +749,19 @@ export function renderSectionContent(
             />
             <div className="pt-2">
               <div
-                className="mb-5 text-[11px] font-semibold uppercase tracking-[.22em]"
+                className="mb-3 sm:mb-5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[.22em]"
                 style={{ color: "var(--preview-primary-color, #10b981)" }}
               >
                 Para
               </div>
-              <div className="mb-2 text-[18px] font-light italic" style={{ opacity: 0.6 }}>
+              <div
+                className="mb-1.5 sm:mb-2 text-base sm:text-[18px] font-light italic"
+                style={{ opacity: 0.6 }}
+              >
                 {greeting},
               </div>
               <div
-                className="inline-block pb-3 text-[46px] font-bold leading-none tracking-[-0.035em]"
+                className="inline-block pb-3 text-3xl sm:text-4xl md:text-[46px] font-bold leading-none tracking-[-0.035em]"
                 style={{
                   borderBottom: "2px solid var(--preview-primary-color, #10b981)",
                   maxWidth: "100%",
@@ -762,14 +774,14 @@ export function renderSectionContent(
             <div className="pt-2">
               <div
                 data-editor-field-path="title"
-                className="preview-editable-target mb-5 pb-5 text-[20px] font-medium leading-[1.3] tracking-[-0.015em]"
+                className="preview-editable-target mb-4 sm:mb-5 pb-4 sm:pb-5 text-lg sm:text-[20px] font-medium leading-[1.3] tracking-[-0.015em]"
                 style={{ borderBottom: "1px solid rgba(128,128,128,0.15)" }}
               >
                 {renderRichText(f.title, vars)}
               </div>
               <div
                 data-editor-field-path="text"
-                className="preview-editable-target text-[14px] leading-[1.75]"
+                className="preview-editable-target text-sm sm:text-[14px] leading-[1.75]"
                 style={{ opacity: 0.65 }}
               >
                 {renderRichText(f.text, vars)}
@@ -781,13 +793,13 @@ export function renderSectionContent(
 
       if (variant === "centered") {
         return (
-          <div className="rounded-xl px-12 py-16 text-center">
+          <div className="rounded-xl px-5 py-8 sm:px-8 sm:py-12 md:px-12 md:py-16 text-center">
             <div
-              className="mx-auto mb-6 h-px w-14"
+              className="mx-auto mb-5 sm:mb-6 h-px w-14"
               style={{ background: "var(--preview-primary-color, #10b981)" }}
             />
             <div
-              className="mb-7 text-[11px] font-semibold uppercase tracking-[.22em]"
+              className="mb-5 sm:mb-7 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[.22em]"
               style={{ opacity: 0.75 }}
             >
               {greeting}{" "}
@@ -797,7 +809,7 @@ export function renderSectionContent(
             </div>
             <div
               data-editor-field-path="title"
-              className="preview-editable-target mx-auto mb-8 text-[40px] font-medium leading-[1.12] tracking-[-0.03em]"
+              className="preview-editable-target mx-auto mb-6 sm:mb-8 text-2xl sm:text-3xl md:text-[40px] font-medium leading-[1.12] tracking-[-0.03em]"
               style={{ maxWidth: 740 }}
             >
               <style>{`[data-editor-field-path="title"] em { color: var(--preview-primary-color, #10b981); font-style: italic; }`}</style>
@@ -805,7 +817,7 @@ export function renderSectionContent(
             </div>
             <div
               data-editor-field-path="text"
-              className="preview-editable-target mx-auto mb-8 text-[15px] leading-[1.75]"
+              className="preview-editable-target mx-auto mb-6 sm:mb-8 text-sm sm:text-[15px] leading-[1.75]"
               style={{ maxWidth: 580, opacity: 0.65 }}
             >
               {renderRichText(f.text, vars)}
@@ -816,38 +828,38 @@ export function renderSectionContent(
       }
 
       return (
-        <div className="grid py-4" style={{ gridTemplateColumns: "4px 1fr", gap: 40 }}>
+        <div className="introduction-bar-grid py-3 sm:py-4">
           <div
             className="rounded-sm"
             style={{
               background: `linear-gradient(180deg, var(--preview-primary-color, #10b981), color-mix(in srgb, var(--preview-primary-color, #10b981) 60%, #000000))`,
               alignSelf: "stretch",
-              minHeight: 280,
+              minHeight: 220,
             }}
           />
           <div className="py-2" style={{ maxWidth: 700 }}>
-            <div className="mb-5 flex items-center gap-3">
+            <div className="mb-4 sm:mb-5 flex flex-wrap items-center gap-2 sm:gap-3">
               <span
-                className="text-[11px] font-semibold uppercase tracking-[.22em]"
+                className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[.22em]"
                 style={{ color: "var(--preview-primary-color, #10b981)" }}
               >
                 Introdução
               </span>
-              <span className="text-[15px] font-semibold tracking-[-0.005em]">
+              <span className="text-sm sm:text-[15px] font-semibold tracking-[-0.005em]">
                 <span style={{ opacity: 0.4, fontWeight: 300 }}>— </span>
                 {greeting} {clientName}
               </span>
             </div>
             <div
               data-editor-field-path="title"
-              className="preview-editable-target mb-7 text-[34px] font-medium leading-[1.15] tracking-[-0.03em]"
+              className="preview-editable-target mb-4 sm:mb-7 text-2xl sm:text-3xl md:text-[34px] font-medium leading-[1.15] tracking-[-0.03em]"
               style={{ maxWidth: 660 }}
             >
               {renderRichText(f.title, vars)}
             </div>
             <div
               data-editor-field-path="text"
-              className="preview-editable-target text-[15px] leading-[1.75]"
+              className="preview-editable-target text-sm sm:text-[15px] leading-[1.75]"
               style={{ maxWidth: 600, opacity: 0.75 }}
             >
               {renderRichText(f.text, vars)}
@@ -881,9 +893,9 @@ export function renderSectionContent(
         return (
           <div
             data-editor-field-path="image"
-            className="relative"
+            className="relative flex items-center px-4 py-8 sm:py-10 md:py-12"
             style={{
-              minHeight: 400,
+              minHeight: 360,
               ...(bgImage
                 ? {
                     backgroundImage: `url(${bgImage})`,
@@ -891,9 +903,6 @@ export function renderSectionContent(
                     backgroundSize: "cover",
                   }
                 : {}),
-              display: "flex",
-              alignItems: "center",
-              padding: "40px 16px",
             }}
           >
             {bgImage && (
@@ -908,7 +917,7 @@ export function renderSectionContent(
             <div style={{ maxWidth: 520, position: "relative", zIndex: 2 }}>
               <div
                 data-editor-field-path="eyebrow"
-                className="preview-editable-target mb-5 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.14em]"
+                className="preview-editable-target mb-4 sm:mb-5 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.14em]"
                 style={{ color: "var(--preview-primary-color, #10b981)" }}
               >
                 <span
@@ -919,14 +928,14 @@ export function renderSectionContent(
               </div>
               <div
                 data-editor-field-path="title"
-                className="preview-editable-target mb-5 text-[40px] font-light leading-[1.08] tracking-[-0.025em]"
+                className="preview-editable-target mb-4 sm:mb-5 text-2xl sm:text-3xl md:text-[40px] font-light leading-[1.08] tracking-[-0.025em]"
               >
                 <style>{`[data-editor-field-path="title"] em { color: var(--preview-primary-color, #10b981); font-style: italic; }`}</style>
                 {renderRichText(f.title || tpl("Sobre a {{nome_empresa}}", vars), vars)}
               </div>
               <div
                 data-editor-field-path="text"
-                className="preview-editable-target mb-8 text-[15px] leading-[1.6]"
+                className="preview-editable-target mb-6 sm:mb-8 text-sm sm:text-[15px] leading-[1.6]"
                 style={{ opacity: 0.75 }}
               >
                 {renderRichText(f.text, vars)}
@@ -934,17 +943,12 @@ export function renderSectionContent(
               {statsRaw.length > 0 && (
                 <div
                   data-editor-field-path="stats"
-                  className="grid gap-6 pt-6"
-                  style={{
-                    gridTemplateColumns: `repeat(${Math.min(statsRaw.length, 4)}, 1fr)`,
-                    borderTop: "1px solid currentColor",
-                    opacity: 1,
-                  }}
+                  className="about-company-hero-stats border-t border-current pt-6"
                 >
                   {statsRaw.map((stat, i) => (
                     <div key={i}>
                       <div
-                        className="text-[32px] font-light leading-none tracking-[-0.02em]"
+                        className="text-2xl sm:text-[32px] font-light leading-none tracking-[-0.02em]"
                         style={{ fontFamily: "inherit" }}
                       >
                         <span data-editor-field-path={`stats[${i}].value`}>
@@ -980,8 +984,8 @@ export function renderSectionContent(
         const badgeValue = tpl(f.badge_value || "", vars);
         const badgeLabel = tpl(f.badge_label || "", vars);
         return (
-          <div className="grid gap-10 md:grid-cols-[1.1fr_1fr]" style={{ alignItems: "center" }}>
-            <div className="py-4">
+          <div className="about-company-editorial-split" style={{ alignItems: "center" }}>
+            <div className="py-2 sm:py-4">
               <div
                 data-editor-field-path="eyebrow"
                 className="preview-editable-target mb-3 text-[13px] italic"
@@ -991,13 +995,13 @@ export function renderSectionContent(
               </div>
               <div
                 data-editor-field-path="title"
-                className="preview-editable-target mb-5 text-[36px] font-light leading-[1.08] tracking-[-0.025em]"
+                className="preview-editable-target mb-4 sm:mb-5 text-2xl sm:text-3xl md:text-[36px] font-light leading-[1.08] tracking-[-0.025em]"
               >
                 {renderRichText(f.title, vars)}
               </div>
               <div
                 data-editor-field-path="text"
-                className="preview-editable-target text-[15px] leading-[1.7]"
+                className="preview-editable-target text-sm sm:text-[15px] leading-[1.7]"
                 style={{ opacity: 0.65 }}
               >
                 {renderRichText(f.text, vars)}
@@ -1017,9 +1021,8 @@ export function renderSectionContent(
             </div>
             <div
               data-editor-field-path="image"
-              className="relative overflow-hidden rounded-sm"
+              className="about-company-editorial-media relative overflow-hidden rounded-sm"
               style={{
-                aspectRatio: "4/5",
                 background: bgImage
                   ? `url(${bgImage}) center/cover`
                   : "color-mix(in srgb, var(--preview-secondary-color, #0f172a) 20%, transparent)",
@@ -1027,7 +1030,7 @@ export function renderSectionContent(
             >
               {(badgeValue || badgeLabel) && (
                 <div
-                  className="absolute bottom-5 left-5 rounded-sm px-4 py-3 shadow-xl backdrop-blur-sm"
+                  className="absolute bottom-4 left-4 sm:bottom-5 sm:left-5 rounded-sm px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-xl backdrop-blur-sm"
                   style={{
                     maxWidth: 200,
                     background: "rgb(var(--preview-background-rgb, 11 27 43) / 0.95)",
@@ -1036,7 +1039,7 @@ export function renderSectionContent(
                 >
                   <div
                     data-editor-field-path="badge_value"
-                    className="text-[28px] font-light leading-none tracking-[-0.02em]"
+                    className="text-2xl sm:text-[28px] font-light leading-none tracking-[-0.02em]"
                     style={{ fontFamily: "inherit" }}
                   >
                     {badgeValue}
@@ -1058,7 +1061,7 @@ export function renderSectionContent(
         const eyebrow = tpl(f.eyebrow || "Sobre a empresa", vars);
         return (
           <div
-            className="rounded-xl p-10"
+            className="rounded-xl p-5 sm:p-8 md:p-10"
             style={{
               background: "rgba(250,247,242,0.06)",
               border: "1px solid rgba(var(--preview-background-rgb, 15 23 42), 0.08)",
@@ -1075,7 +1078,7 @@ export function renderSectionContent(
               }}
             />
             <div
-              className="relative mb-10 grid gap-10 md:grid-cols-2"
+              className="about-company-process-steps-grid relative mb-6 sm:mb-10"
               style={{ alignItems: "end" }}
             >
               <div>
@@ -1088,14 +1091,14 @@ export function renderSectionContent(
                 </div>
                 <div
                   data-editor-field-path="title"
-                  className="preview-editable-target text-[30px] font-light leading-[1.1] tracking-[-0.02em]"
+                  className="preview-editable-target text-xl sm:text-2xl md:text-[30px] font-light leading-[1.1] tracking-[-0.02em]"
                 >
                   {renderRichText(f.title, vars)}
                 </div>
               </div>
               <div
                 data-editor-field-path="text"
-                className="preview-editable-target text-[15px] leading-[1.7]"
+                className="preview-editable-target text-sm sm:text-[15px] leading-[1.7]"
                 style={{ opacity: 0.65 }}
               >
                 {renderRichText(f.text, vars)}
@@ -1113,18 +1116,10 @@ export function renderSectionContent(
         const badgeLabel = tpl(f.badge_label || "", vars);
         const featuresRaw = asObjectArray<{ title?: unknown; description?: unknown }>(f.features);
         return (
-          <div
-            className="overflow-hidden rounded-xl"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              minHeight: 480,
-              border: "1px solid rgba(128,128,128,0.2)",
-            }}
-          >
+          <div className="about-company-split-proof">
             <div
               data-editor-field-path="image"
-              className="relative"
+              className="about-company-split-proof-media"
               style={{
                 background: bgImage
                   ? `url(${bgImage}) center/cover`
@@ -1134,14 +1129,14 @@ export function renderSectionContent(
               <div
                 className="absolute inset-0"
                 style={{
-                  background: "linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.35) 100%)",
+                  background: "linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.45) 100%)",
                 }}
               />
-              <div className="absolute inset-0 z-10 flex flex-col justify-between p-6">
+              <div className="absolute inset-0 z-10 flex flex-col justify-between p-4 sm:p-6">
                 {tagTop && (
                   <div
                     data-editor-field-path="tag_top"
-                    className="inline-flex items-center gap-2 self-start rounded-full px-3 py-1.5 text-[12px] font-medium backdrop-blur-sm"
+                    className="inline-flex items-center gap-2 self-start rounded-full px-3 py-1.5 text-[11px] sm:text-[12px] font-medium backdrop-blur-sm"
                     style={{
                       background: "rgb(var(--preview-background-rgb, 15 23 42) / 0.92)",
                       color: "inherit",
@@ -1156,23 +1151,23 @@ export function renderSectionContent(
                 )}
                 {(badgeValue || badgeLabel) && (
                   <div
-                    className="self-end rounded-xl p-4 shadow-xl backdrop-blur-sm"
+                    className="self-end rounded-xl p-3 sm:p-4 shadow-xl backdrop-blur-sm"
                     style={{
-                      maxWidth: 200,
+                      maxWidth: 180,
                       background: "rgb(var(--preview-background-rgb, 15 23 42) / 0.95)",
                       color: "inherit",
                     }}
                   >
                     <div
                       data-editor-field-path="badge_value"
-                      className="text-[34px] font-light leading-none tracking-[-0.02em]"
+                      className="text-2xl sm:text-[34px] font-light leading-none tracking-[-0.02em]"
                       style={{ fontFamily: "inherit" }}
                     >
                       {badgeValue}
                     </div>
                     <div
                       data-editor-field-path="badge_label"
-                      className="mt-1.5 text-[12px] leading-[1.4] opacity-60"
+                      className="mt-1 text-[10px] sm:text-[12px] leading-[1.3] opacity-60 uppercase tracking-wide"
                     >
                       {badgeLabel}
                     </div>
@@ -1180,31 +1175,34 @@ export function renderSectionContent(
                 )}
               </div>
             </div>
-            <div className="flex flex-col justify-center p-10">
+            <div className="about-company-split-proof-content">
               <div
                 data-editor-field-path="eyebrow"
-                className="preview-editable-target mb-3 text-[11px] font-semibold uppercase tracking-[.18em]"
+                className="preview-editable-target mb-2 sm:mb-3 text-[11px] font-semibold uppercase tracking-[.18em]"
                 style={{ color: "var(--preview-primary-color, #10b981)" }}
               >
                 {eyebrow}
               </div>
               <div
                 data-editor-field-path="title"
-                className="preview-editable-target mb-4 text-[28px] font-medium leading-[1.15] tracking-[-0.02em]"
+                className="preview-editable-target mb-3 sm:mb-4 text-xl sm:text-2xl md:text-[28px] font-medium leading-[1.15] tracking-[-0.02em]"
               >
                 {renderRichText(f.title, vars)}
               </div>
               <div
                 data-editor-field-path="text"
-                className="preview-editable-target mb-6 text-[14px] leading-[1.7]"
+                className="preview-editable-target mb-5 sm:mb-6 text-sm sm:text-[14px] leading-[1.7]"
                 style={{ opacity: 0.65 }}
               >
                 {renderRichText(f.text, vars)}
               </div>
               {featuresRaw.length > 0 && (
-                <div data-editor-field-path="features" className="grid gap-3">
+                <div data-editor-field-path="features" className="grid gap-2.5 sm:gap-3">
                   {featuresRaw.map((feat, i) => (
-                    <div key={i} className="flex items-start gap-3 text-[13px]">
+                    <div
+                      key={i}
+                      className="flex items-start gap-2.5 sm:gap-3 text-xs sm:text-[13px]"
+                    >
                       <div
                         className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
                         style={{
@@ -1253,7 +1251,7 @@ export function renderSectionContent(
         const metaValue = tpl(f.meta_value || "", vars);
         const metaLabel = tpl(f.meta_label || "", vars);
         return (
-          <div className="relative overflow-hidden rounded-xl" style={{ padding: "56px 48px" }}>
+          <div className="about-company-manifesto-container relative overflow-hidden rounded-xl">
             <div
               className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full"
               style={{
@@ -1263,43 +1261,35 @@ export function renderSectionContent(
               }}
             />
             <div
-              className="relative z-10 mb-4 block text-[80px] leading-[0.75]"
+              className="relative z-10 mb-3 block text-5xl sm:text-6xl md:text-[80px] leading-[0.75]"
               style={{ color: "var(--preview-primary-color, #10b981)", fontFamily: "inherit" }}
             >
               "
             </div>
             <div
               data-editor-field-path="quote"
-              className="preview-editable-target relative z-10 mb-10 text-[38px] font-light leading-[1.1] tracking-[-0.025em]"
+              className="preview-editable-target relative z-10 mb-6 sm:mb-10 text-2xl sm:text-3xl md:text-[38px] font-light leading-[1.1] tracking-[-0.025em]"
               style={{ maxWidth: 680 }}
             >
               <style>{`[data-editor-field-path="quote"] em { color: var(--preview-primary-color, #10b981); font-style: italic; }`}</style>
               {renderRichText(f.quote, vars)}
             </div>
-            <div
-              className="relative z-10 grid gap-10 pt-8"
-              style={{
-                gridTemplateColumns: "1fr auto",
-                alignItems: "end",
-                borderTop: "1px solid currentColor",
-                opacity: 1,
-              }}
-            >
+            <div className="about-company-manifesto-footer relative z-10 border-t border-current pt-6 sm:pt-8">
               <div
                 data-editor-field-path="text"
-                className="preview-editable-target text-[15px] leading-[1.7]"
+                className="preview-editable-target text-sm sm:text-[15px] leading-[1.7]"
                 style={{ opacity: 0.7 }}
               >
                 {renderRichText(f.text, vars)}
               </div>
               {(metaValue || metaLabel) && (
                 <div
-                  className="whitespace-nowrap text-right text-[12px] leading-[1.6]"
+                  className="text-left sm:text-right text-[12px] leading-[1.6]"
                   style={{ opacity: 0.7 }}
                 >
                   <strong
                     data-editor-field-path="meta_value"
-                    className="mb-0.5 block text-[22px] font-light"
+                    className="mb-0.5 block text-lg sm:text-[22px] font-light"
                     style={{
                       color: "var(--preview-primary-color, #10b981)",
                       fontFamily: "inherit",
@@ -1926,11 +1916,7 @@ export function renderSectionContent(
           );
         }
         const gridClass =
-          items.length === 1
-            ? "grid grid-cols-1 gap-5"
-            : items.length === 2
-              ? "grid grid-cols-1 gap-5 sm:grid-cols-2"
-              : "grid grid-cols-2 gap-5 md:grid-cols-3";
+          items.length === 1 ? "gallery-grid-uniform max-w-md" : "gallery-grid-uniform";
         const wrapStyle = items.length === 1 ? { maxWidth: 420 } : undefined;
         return (
           <div>
@@ -2345,12 +2331,10 @@ export function renderSectionContent(
                 return (
                   <div
                     key={index}
-                    className={`grid items-center gap-6 md:gap-12 ${
-                      reverse ? "md:grid-cols-[1fr_1.4fr]" : "md:grid-cols-[1.4fr_1fr]"
-                    }`}
+                    className={`gallery-editorial-row ${reverse ? "is-reversed" : "is-normal"}`}
                   >
-                    <div className={reverse ? "md:order-2" : ""}>{imageNode}</div>
-                    <div className={reverse ? "md:order-1" : ""}>{textNode}</div>
+                    <div className={reverse ? "order-1 md:order-2" : "order-1"}>{imageNode}</div>
+                    <div className={reverse ? "order-2 md:order-1" : "order-2"}>{textNode}</div>
                   </div>
                 );
               })}
@@ -2897,22 +2881,28 @@ export function renderSectionContent(
       );
     case "comparison":
       return (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div data-editor-field-path="text" className="preview-editable-target">
             {renderRichText(f.text, vars)}
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded border border-zinc-700/70 p-2">
-              <p data-editor-field-path="beforeLabel" className="text-zinc-400">
+          <div className="comparison-cards-grid">
+            <div className="rounded-xl border border-zinc-700/70 p-3 sm:p-4">
+              <p
+                data-editor-field-path="beforeLabel"
+                className="text-xs uppercase font-medium text-zinc-400"
+              >
                 {String(f.beforeLabel ?? "Antes")}
               </p>
-              <p>{vars.comparacao_antes}</p>
+              <p className="mt-1 text-base sm:text-lg font-semibold">{vars.comparacao_antes}</p>
             </div>
-            <div className="rounded border border-emerald-500/40 bg-emerald-500/10 p-2">
-              <p data-editor-field-path="afterLabel" className="text-emerald-300">
+            <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 sm:p-4">
+              <p
+                data-editor-field-path="afterLabel"
+                className="text-xs uppercase font-medium text-emerald-300"
+              >
                 {String(f.afterLabel ?? "Depois")}
               </p>
-              <p>{vars.comparacao_depois}</p>
+              <p className="mt-1 text-base sm:text-lg font-semibold">{vars.comparacao_depois}</p>
             </div>
           </div>
         </div>
@@ -3091,7 +3081,7 @@ export function renderSectionContent(
 
       if (variant === "split") {
         return (
-          <div className="grid items-center gap-8 md:grid-cols-[1fr_1.3fr] md:gap-12">
+          <div className="video-split-grid items-center">
             <div style={{ padding: "8px 0" }}>
               {eyebrow ? (
                 <div

@@ -39,8 +39,9 @@ export function ProposalPaymentCards({
   const isPdf = mode === "pdf";
 
   // Grid responsiveness
-  let gridColsClass = "grid-cols-1 md:grid-cols-3";
-  if (enabledCount === 2) gridColsClass = isPdf ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2";
+  let gridColsClass = "proposal-payment-cards-grid has-3-cards";
+  if (enabledCount === 2)
+    gridColsClass = isPdf ? "grid-cols-2" : "proposal-payment-cards-grid has-2-cards";
   if (enabledCount === 1) gridColsClass = "grid-cols-1 max-w-md mx-auto";
   if (isPdf && enabledCount === 3) gridColsClass = "grid-cols-3";
 

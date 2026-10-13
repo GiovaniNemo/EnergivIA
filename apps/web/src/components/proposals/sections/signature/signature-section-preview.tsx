@@ -295,7 +295,7 @@ export function SignatureSectionPreview({
         )}
 
         {/* Digital Signers Dossier */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="signature-signers-grid">
           {/* Contratante Dossier Card */}
           <div
             className="group relative flex flex-col justify-between rounded-2xl p-5 shadow-sm transition-all"
@@ -590,7 +590,7 @@ export function SignatureSectionPreview({
       )}
 
       {/* Signature Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="signature-signers-grid">
         {/* Card 1: CONTRATANTE */}
         <div
           className="group relative flex flex-col justify-between rounded-2xl p-6 shadow-sm transition-all"

@@ -37,15 +37,14 @@ export function SplitEditorial({
 
   return (
     <section
-      className="flex flex-col md:grid h-full min-h-full flex-1"
+      className="cover-split-editorial-container h-full min-h-full flex-1"
       style={{
         minHeight: minHeightPx,
-        gridTemplateColumns: "55% 45%",
       }}
     >
       {}
       <div
-        className="relative flex flex-col p-8 md:p-10"
+        className="relative flex flex-col p-5 sm:p-8 md:p-10"
         style={{ backgroundColor: style.backgroundColor, color: style.textColor }}
       >
         {}
@@ -130,7 +129,7 @@ export function SplitEditorial({
 
       {}
       <div
-        className="relative hidden md:block"
+        className="cover-split-editorial-media relative"
         style={{
           minHeight: 200,
           ...(hasBg
