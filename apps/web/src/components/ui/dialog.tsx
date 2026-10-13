@@ -254,11 +254,18 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
         scroll="paper"
         disableEnforceFocus={allowOverflow}
         slotProps={{
+          backdrop: {
+            sx: {
+              backgroundColor: "rgba(2, 6, 23, 0.72)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+            },
+          },
           paper: {
             ref,
             style: paperStyle,
             className: cn(
-              "relative my-auto box-border flex w-full max-h-[min(90vh,calc(100dvh-2rem))] flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3.5 pb-4 sm:rounded-2xl sm:px-6 sm:pb-6 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.55)] outline-none ring-1 ring-white/[0.06] no-scrollbar",
+              "relative my-auto box-border flex w-full max-h-[min(90vh,calc(100dvh-2rem))] flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-popover)] px-3.5 pb-4 sm:rounded-2xl sm:px-6 sm:pb-6 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.55)] outline-none ring-1 ring-white/[0.06] no-scrollbar",
               showCloseButton && !paperHasFlushPadding && "pt-12",
               !showCloseButton && "pt-6",
               allowOverflow ? "overflow-visible" : "overflow-hidden",
@@ -266,7 +273,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
               reserveCloseButtonTopPadding && "!pt-14"
             ),
             sx: {
-              bgcolor: "var(--color-card)",
+              bgcolor: "var(--color-popover)",
               color: "var(--color-foreground)",
               m: { xs: "8px !important", sm: "24px !important", md: "32px !important" },
               width: { xs: "calc(100% - 16px) !important", sm: "100%" },
@@ -294,7 +301,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
               top: 12,
               zIndex: 200,
               border: "1px solid var(--color-border)",
-              bgcolor: "var(--color-card)",
+              bgcolor: "var(--color-popover)",
               color: "var(--color-foreground)",
               borderRadius: 2,
               "&:hover": {
