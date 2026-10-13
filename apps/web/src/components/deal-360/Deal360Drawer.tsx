@@ -87,6 +87,18 @@ const TEMPERATURE_OPTIONS = [
   { value: "HOT", label: "Quente", color: "text-red-500" },
 ] as const;
 
+function safeFormatBRL(value: number | null | undefined): string {
+  if (typeof formatBRL === "function") {
+    try {
+      return formatBRL(value);
+    } catch {
+      // fallback
+    }
+  }
+  if (value == null || !Number.isFinite(value)) return "—";
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+}
+
 function uiToApiStage(stageOption: DealDetailStageOption): ApiDealStage {
   if (stageOption.startsWith("fechado:")) {
     const sub = stageOption.replace("fechado:", "") as ClosedDealStatus;
@@ -807,7 +819,7 @@ export function Deal360Drawer({
                                   Valor da Proposta
                                 </span>
                                 <p className="font-bold text-emerald-600 dark:text-emerald-400">
-                                  {totalBrl != null ? formatBRL(totalBrl) : "—"}
+                                  {totalBrl != null ? safeFormatBRL(totalBrl) : "—"}
                                 </p>
                               </div>
                             </div>

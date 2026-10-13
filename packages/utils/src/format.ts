@@ -5,6 +5,14 @@ export function formatCurrency(value: number, currency = "BRL"): string {
   }).format(value);
 }
 
+export function formatBRL(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "R$ 0,00";
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
+
 export function formatNumber(value: number, options?: Intl.NumberFormatOptions): string {
   return new Intl.NumberFormat("pt-BR", options).format(value);
 }
