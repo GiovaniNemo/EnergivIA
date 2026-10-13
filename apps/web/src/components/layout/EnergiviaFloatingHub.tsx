@@ -88,7 +88,7 @@ export function EnergiviaFloatingHub() {
   const isFullscreen =
     /^\/propostas\/templates\/[^/]+$/.test(normalizedPath) ||
     /^\/proposals\/templates\/[^/]+$/.test(normalizedPath) ||
-    /^\/admin\/template-models\/[^/]+$/.test(normalizedPath) ||
+    /^\/admin\/(template-models|modelos-template)\/[^/]+$/.test(normalizedPath) ||
     normalizedPath === "/create-organization" ||
     normalizedPath === "/chat";
 

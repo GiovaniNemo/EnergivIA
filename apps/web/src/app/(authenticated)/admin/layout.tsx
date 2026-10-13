@@ -37,6 +37,7 @@ function isStandaloneAdminPath(pathname: string | null): boolean {
   const normalized = pathname.replace(/\/$/, "") || "/";
   return (
     normalized.startsWith("/admin/modelos-template/") ||
+    normalized.startsWith("/admin/template-models/") ||
     normalized.startsWith("/admin/planos") ||
     normalized.startsWith("/admin/metricas") ||
     normalized.startsWith("/admin/sistema") ||

@@ -20,11 +20,13 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
   const isFullscreenTemplateEditor =
     /^\/propostas\/templates\/[^/]+$/.test(normalizedPath) ||
     /^\/proposals\/templates\/[^/]+$/.test(normalizedPath);
-  const isFullscreenBlueprintEditor =
-    /^\/admin\/template-models\/[^/]+$/.test(normalizedPath) &&
-    normalizedPath !== "/admin/modelos-template";
+  const isFullscreenBlueprintEditor = /^\/admin\/(template-models|modelos-template)\/[^/]+$/.test(
+    normalizedPath
+  );
   const isOnboardingOrganization = normalizedPath === "/create-organization";
   const isFullscreenChat = normalizedPath === "/chat";
+  const isFullscreenView =
+    isFullscreenTemplateEditor || isFullscreenBlueprintEditor || isOnboardingOrganization;
 
   return (
     <OrganizationProvider>
@@ -34,8 +36,8 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
           <ProposalStudyProvider>
             <div className="relative flex h-screen w-full flex-col overflow-hidden bg-[var(--color-background)]">
               <TrialLockOverlay />
-              {!isOnboardingOrganization && <FeedbackPromptCard />}
-              {!isOnboardingOrganization && <EnergiviaFloatingHub />}
+              {!isFullscreenView && <FeedbackPromptCard />}
+              {!isFullscreenView && <EnergiviaFloatingHub />}
 
               {/* Fundo Atmosférico Contínuo para Glassmorphism (Preenchimento Integral sem quebras) */}
               <div
@@ -64,9 +66,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
                 />
               </div>
 
-              {isFullscreenTemplateEditor ||
-              isFullscreenBlueprintEditor ||
-              isOnboardingOrganization ? (
+              {isFullscreenView ? (
                 <main className="relative z-10 flex-1 h-full min-h-0 flex flex-col overflow-hidden bg-[var(--color-background)] p-0">
                   {children}
                 </main>
