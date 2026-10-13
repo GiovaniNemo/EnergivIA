@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Sparkles, X, ChevronRight, Check } from "lucide-react";
+import { useState } from "react";
+import { Sparkles, ChevronRight, Check } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   getSectionPresets,
   getSectionPresetCategories,
@@ -22,7 +29,6 @@ export function SectionPresetsMenu({
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("Todos");
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   const presets = getSectionPresets(sectionType);
   const categories = ["Todos", ...getSectionPresetCategories(sectionType)];
@@ -30,43 +36,21 @@ export function SectionPresetsMenu({
   const filteredPresets =
     selectedCategory === "Todos" ? presets : presets.filter((p) => p.category === selectedCategory);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleKeyDown);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen]);
-
   const handleSelect = (preset: SectionPresetItem) => {
     onSelectPreset(preset.data);
     setJustAddedId(preset.id);
     setTimeout(() => {
       setJustAddedId(null);
       setIsOpen(false);
-    }, 350);
+    }, 400);
   };
 
   return (
-    <div className="relative inline-block text-left" ref={menuRef}>
+    <>
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => setIsOpen(true)}
         className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 shadow-xs transition hover:border-emerald-500/50 hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-40"
         title="Inserir modelo pronto com 1 clique"
       >
@@ -74,37 +58,38 @@ export function SectionPresetsMenu({
         <span>Modelos prontos</span>
       </button>
 
-      {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1.5 w-80 sm:w-96 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95">
-          <div className="flex items-center justify-between border-b border-[var(--color-border)]/60 pb-2">
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
-              <span className="text-xs font-semibold text-[var(--color-foreground)]">
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent
+          muiMaxWidth="md"
+          className="max-w-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-2xl sm:p-6"
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-[var(--color-foreground)]">
+              <Sparkles className="h-4 w-4 text-emerald-400" />
+              <span>
                 {sectionType === "testimonials"
-                  ? "Depoimentos Fotovoltaicos"
-                  : "Perguntas Frequentes (FAQ)"}
+                  ? "Modelos de Depoimentos Fotovoltaicos"
+                  : "Modelos de Perguntas Frequentes (FAQ)"}
               </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="rounded p-0.5 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[var(--color-muted-foreground)]">
+              {sectionType === "testimonials"
+                ? "Escolha um depoimento pronto de cliente real para enriquecer a confiança da sua proposta. Clique para inserir instantaneamente."
+                : "Escolha uma dúvida frequente com resposta pronta para esclarecer o cliente final. Clique para inserir instantaneamente."}
+            </DialogDescription>
+          </DialogHeader>
 
           {/* Categorias / Filtros */}
-          <div className="mt-2 flex flex-wrap gap-1 border-b border-[var(--color-border)]/40 pb-2">
+          <div className="mt-4 flex flex-wrap gap-1.5 border-b border-[var(--color-border)]/60 pb-3">
             {categories.map((category) => (
               <button
                 key={category}
                 type="button"
                 onClick={() => setSelectedCategory(category)}
-                className={`rounded-md px-2 py-0.5 text-[10px] font-medium transition ${
+                className={`rounded-lg px-3 py-1 text-xs font-medium transition ${
                   selectedCategory === category
-                    ? "bg-emerald-500/20 text-emerald-300 font-semibold"
-                    : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]"
+                    ? "border border-emerald-500/40 bg-emerald-500/20 font-semibold text-emerald-300"
+                    : "border border-[var(--color-border)]/50 bg-[var(--color-muted)]/40 text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]"
                 }`}
               >
                 {category}
@@ -113,52 +98,66 @@ export function SectionPresetsMenu({
           </div>
 
           {/* Lista de Modelos */}
-          <div className="mt-2 max-h-64 space-y-1.5 overflow-y-auto pr-0.5">
+          <div className="mt-3 max-h-[55vh] space-y-2.5 overflow-y-auto pr-1 no-scrollbar">
             {filteredPresets.map((preset) => {
               const isAdded = justAddedId === preset.id;
               return (
-                <button
+                <div
                   key={preset.id}
-                  type="button"
-                  onClick={() => handleSelect(preset)}
-                  className={`group flex w-full flex-col items-start rounded-lg border p-2 text-left transition ${
+                  className={`group flex flex-col justify-between gap-3 rounded-xl border p-3.5 transition sm:flex-row sm:items-center ${
                     isAdded
-                      ? "border-emerald-500/60 bg-emerald-500/20"
-                      : "border-[var(--color-border)]/50 bg-[var(--color-card)] hover:border-emerald-500/40 hover:bg-[var(--color-accent)]/50"
+                      ? "border-emerald-500/60 bg-emerald-500/15"
+                      : "border-[var(--color-border)] bg-[var(--color-card)] hover:border-emerald-500/40 hover:bg-[var(--color-accent)]/40"
                   }`}
                 >
-                  <div className="flex w-full items-center justify-between gap-1">
-                    <span className="truncate text-[11px] font-semibold text-[var(--color-foreground)] group-hover:text-emerald-300">
-                      {preset.title}
-                    </span>
-                    <span className="shrink-0 rounded bg-[var(--color-muted)] px-1 py-0.2 text-[9px] font-medium text-[var(--color-muted-foreground)]">
-                      {preset.category}
-                    </span>
-                  </div>
-                  <p className="mt-1 line-clamp-2 text-[10px] text-[var(--color-muted-foreground)] leading-relaxed">
-                    {preset.preview}
-                  </p>
-                  <div className="mt-1.5 flex w-full items-center justify-end text-[9px] font-medium text-emerald-400 opacity-80 group-hover:opacity-100">
-                    {isAdded ? (
-                      <span className="flex items-center gap-0.5 text-emerald-300 font-bold">
-                        <Check className="h-3 w-3" /> Adicionado!
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-[var(--color-foreground)] group-hover:text-emerald-300">
+                        {preset.title}
                       </span>
-                    ) : (
-                      <span className="flex items-center gap-0.5">
-                        Inserir <ChevronRight className="h-2.5 w-2.5" />
+                      <span className="rounded-md border border-[var(--color-border)] bg-[var(--color-muted)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-muted-foreground)]">
+                        {preset.category}
                       </span>
-                    )}
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed text-[var(--color-muted-foreground)]">
+                      {preset.preview}
+                    </p>
                   </div>
-                </button>
+
+                  <div className="flex shrink-0 items-center justify-end pt-1 sm:pt-0">
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(preset)}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                        isAdded
+                          ? "bg-emerald-500/30 font-semibold text-emerald-200"
+                          : "border border-emerald-500/30 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25"
+                      }`}
+                    >
+                      {isAdded ? (
+                        <>
+                          <Check className="h-3.5 w-3.5 text-emerald-400" />
+                          <span>Adicionado!</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Inserir modelo</span>
+                          <ChevronRight className="h-3.5 w-3.5 text-emerald-400" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               );
             })}
           </div>
 
-          <p className="mt-2 text-[10px] text-[var(--color-muted-foreground)]/80 text-center">
-            Clique para inserir na proposta. Você poderá editar todo o texto livremente.
-          </p>
-        </div>
-      )}
-    </div>
+          <div className="mt-4 border-t border-[var(--color-border)]/60 pt-3 text-center text-xs text-[var(--color-muted-foreground)]">
+            💡 O item será adicionado à proposta e você poderá personalizar qualquer nome, texto ou
+            foto depois.
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
