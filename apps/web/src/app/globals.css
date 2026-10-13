@@ -1035,18 +1035,159 @@
   }
 
   /* ==========================================================================
-     Solution & Video Meta Responsive
+     Solution Section - Editorial CleanTech Layout
      ========================================================================== */
+  .solution-editorial-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1.125rem;
+  }
+
+  .solution-header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: color-mix(in srgb, var(--preview-primary-color, #22c55e) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--preview-primary-color, #22c55e) 28%, transparent);
+    color: var(--preview-primary-color, #22c55e);
+    width: fit-content;
+  }
+
+  .solution-title-heading {
+    font-size: clamp(1.15rem, 2.2cqi, 1.5rem);
+    font-weight: 700;
+    line-height: 1.28;
+    letter-spacing: -0.015em;
+    color: currentColor;
+  }
+
+  .solution-rich-text {
+    font-size: 0.875rem;
+    line-height: 1.62;
+    opacity: 0.88;
+    color: currentColor;
+  }
+
   .solution-benefits-grid {
     display: grid;
     grid-template-columns: 1fr;
+    gap: 0.625rem;
+  }
+
+  @container proposal-preview (min-width: 580px) {
+    .solution-benefits-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+  }
+
+  @container proposal-preview (min-width: 860px) {
+    .solution-benefits-grid.has-3-cols {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .solution-benefit-card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--preview-primary-color, #22c55e) 22%, transparent);
+    background: color-mix(in srgb, var(--preview-primary-color, #22c55e) 5%, transparent);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .solution-benefit-icon-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    background: color-mix(in srgb, var(--preview-primary-color, #22c55e) 15%, transparent);
+    color: var(--preview-primary-color, #22c55e);
+  }
+
+  .solution-benefit-text {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.45;
+    color: currentColor;
+    margin-top: 0.125rem;
+  }
+
+  .solution-topics-list {
+    display: flex;
+    flex-direction: column;
     gap: 0.5rem;
   }
 
-  @container proposal-preview (min-width: 640px) {
-    .solution-benefits-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+  .solution-topic-item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.625rem;
+    background: color-mix(in srgb, currentColor 4%, transparent);
+    border: 1px solid color-mix(in srgb, currentColor 8%, transparent);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .solution-topic-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--preview-primary-color, #22c55e) 15%, transparent);
+    color: var(--preview-primary-color, #22c55e);
+  }
+
+  .solution-how-it-works-card {
+    position: relative;
+    border-radius: 0.875rem;
+    padding: 0.875rem 1rem;
+    background: color-mix(in srgb, currentColor 3.5%, transparent);
+    border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+    border-left: 3px solid var(--preview-primary-color, #22c55e);
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .solution-how-it-works-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.375rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--preview-primary-color, #22c55e);
+  }
+
+  .solution-how-it-works-body {
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    opacity: 0.88;
+    color: currentColor;
   }
 
   .video-editorial-meta-grid {
@@ -1683,7 +1824,10 @@ html.hide-scrollbar,
   table,
   tr,
   figure,
-  .preview-editable-target {
+  .preview-editable-target,
+  .solution-benefit-card,
+  .solution-topic-item,
+  .solution-how-it-works-card {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     orphans: 3 !important;

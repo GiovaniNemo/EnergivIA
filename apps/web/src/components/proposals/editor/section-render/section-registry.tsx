@@ -3,11 +3,13 @@ import {
   AlertCircle,
   Battery,
   BadgeAlert,
+  Compass,
   DollarSign,
   LineChart,
   Plug,
   Shield,
   ShieldAlert,
+  Sparkles,
   TrendingUp,
   Wallet,
   Zap,
@@ -1596,100 +1598,123 @@ export function renderSectionContent(
       const solutionLayout = resolveSectionVariantServerSafe("solution", section.variant);
       const isCardLayout = solutionLayout === "cards";
       const hAlign = resolveSectionHorizontalAlignment(section);
-      const benefitListLayoutClass = isCardLayout
-        ? `solution-benefits-grid ${benefitGridJustifyItemsClass(hAlign)}`
-        : `flex flex-col gap-1.5 ${benefitRowsCrossAxisClass(hAlign)}`;
-      const benefitRowMainAxisClass = isCardLayout
-        ? hAlign === "center"
-          ? "w-full justify-center"
-          : hAlign === "right"
-            ? "w-full justify-end"
-            : "w-full justify-start"
-        : "";
+      const has3Cols = benefits.length >= 3 && benefits.length % 3 === 0;
+      const benefitGridClass = `solution-benefits-grid ${has3Cols ? "has-3-cols" : ""} ${benefitGridJustifyItemsClass(hAlign)}`;
+
       return (
-        <div className="space-y-4">
-          {solutionName ? (
-            <p
-              data-editor-field-path="solutionName"
-              className="text-lg font-semibold leading-snug"
-              style={{ color: "currentColor" }}
-            >
-              {tpl(solutionName, vars)}
-            </p>
-          ) : null}
-          <div data-editor-field-path="text" className="preview-editable-target">
-            {renderRichText(f.text, vars)}
+        <div className="solution-editorial-wrapper">
+          {/* Cabeçalho com Badge & Título */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="solution-header-badge">
+                <Sparkles className="h-3 w-3 shrink-0" />
+                <span>Solução Sob Medida</span>
+              </span>
+            </div>
+
+            {solutionName ? (
+              <h4 data-editor-field-path="solutionName" className="solution-title-heading">
+                {tpl(solutionName, vars)}
+              </h4>
+            ) : null}
+
+            {f.text ? (
+              <div
+                data-editor-field-path="text"
+                className="solution-rich-text preview-editable-target"
+              >
+                {renderRichText(f.text, vars)}
+              </div>
+            ) : null}
           </div>
+
+          {/* Benefícios */}
           {benefits.length ? (
-            <div className="space-y-2">
-              <p className="text-[11px] uppercase tracking-[0.08em]" style={{ opacity: 0.72 }}>
-                Benefícios
-              </p>
-              <div className={benefitListLayoutClass}>
-                {benefits.map((item, index) => {
-                  const ItemIcon = resolveLucideIcon(item.icon);
-                  const label = replaceVariablesServerSafe(
-                    item.text,
-                    vars as unknown as Record<string, string | number>
-                  );
-                  const cardSurfaceStyle: CSSProperties = !isCardLayout
-                    ? { color: "currentColor" }
-                    : {
-                        color: "currentColor",
-                        borderRadius: "0.5rem",
-                        padding: "0.625rem",
-                        borderWidth: 1,
-                        borderStyle: "solid",
-                        borderColor: "var(--preview-primary-color, #34d399)",
-                        backgroundColor: "rgb(var(--preview-background-rgb, 248 250 252) / 0.72)",
-                        boxShadow:
-                          "0 1px 2px rgba(15, 23, 42, 0.1), 0 6px 16px rgba(15, 23, 42, 0.12)",
-                      };
-                  return (
-                    <div
-                      key={`sol-benefit-${index}`}
-                      className={`flex items-start gap-2 ${benefitRowMainAxisClass}`}
-                      style={cardSurfaceStyle}
-                    >
-                      <ItemIcon
-                        data-editor-field-path={`benefits[${index}].icon`}
-                        className="mt-0.5 h-4 w-4 shrink-0"
-                        style={{
-                          color: "var(--preview-primary-color, #34d399)",
-                          opacity: 0.95,
-                        }}
-                      />
-                      {!isCardLayout ? (
-                        <span data-editor-field-path={`benefits[${index}].text`}>{label}</span>
-                      ) : (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <p
+                  className="text-[11px] font-bold uppercase tracking-[0.1em]"
+                  style={{ color: "var(--preview-primary-color, #22c55e)", opacity: 0.9 }}
+                >
+                  Diferenciais & Benefícios
+                </p>
+                <span className="text-[11px] font-medium opacity-60">
+                  {benefits.length} {benefits.length === 1 ? "diferencial" : "diferenciais"}
+                </span>
+              </div>
+
+              {isCardLayout ? (
+                <div className={benefitGridClass}>
+                  {benefits.map((item, index) => {
+                    const ItemIcon = resolveLucideIcon(item.icon);
+                    const label = replaceVariablesServerSafe(
+                      item.text,
+                      vars as unknown as Record<string, string | number>
+                    );
+                    return (
+                      <div key={`sol-benefit-${index}`} className="solution-benefit-card">
+                        <div className="solution-benefit-icon-box">
+                          <ItemIcon
+                            data-editor-field-path={`benefits[${index}].icon`}
+                            className="h-4 w-4 shrink-0"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p
+                            data-editor-field-path={`benefits[${index}].text`}
+                            className="solution-benefit-text"
+                          >
+                            {label}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="solution-topics-list">
+                  {benefits.map((item, index) => {
+                    const ItemIcon = resolveLucideIcon(item.icon);
+                    const label = replaceVariablesServerSafe(
+                      item.text,
+                      vars as unknown as Record<string, string | number>
+                    );
+                    return (
+                      <div key={`sol-topic-${index}`} className="solution-topic-item">
+                        <div className="solution-topic-icon">
+                          <ItemIcon
+                            data-editor-field-path={`benefits[${index}].icon`}
+                            className="h-3 w-3 shrink-0"
+                          />
+                        </div>
                         <span
                           data-editor-field-path={`benefits[${index}].text`}
-                          className="text-sm leading-snug"
+                          className="min-w-0 flex-1"
                         >
                           {label}
                         </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ) : null}
+
+          {/* Box de Destaque 'Como Funciona' */}
           {howItWorks ? (
-            <div data-editor-field-path="howItWorks" className="space-y-1.5">
-              <p className="text-[11px] uppercase tracking-[0.08em]" style={{ opacity: 0.72 }}>
-                Como funciona
-              </p>
+            <div data-editor-field-path="howItWorks" className="solution-how-it-works-card">
+              <div className="solution-how-it-works-header">
+                <Compass className="h-3.5 w-3.5 shrink-0" />
+                <span>Como Funciona na Prática</span>
+              </div>
               {howItWorks.includes("<") ? (
                 <div
-                  className="preview-rich-content max-w-none text-sm"
-                  style={{ color: "currentColor" }}
+                  className="solution-how-it-works-body preview-rich-content max-w-none"
                   dangerouslySetInnerHTML={safeHtml(tpl(howItWorks, vars))}
                 />
               ) : (
-                <p className="text-sm leading-relaxed" style={{ color: "currentColor" }}>
-                  {tpl(howItWorks, vars)}
-                </p>
+                <p className="solution-how-it-works-body">{tpl(howItWorks, vars)}</p>
               )}
             </div>
           ) : null}
