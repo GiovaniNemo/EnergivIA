@@ -84,7 +84,7 @@ function UserMenu(): JSX.Element {
         )}
       </button>
       {open ? (
-        <div className="absolute right-0 top-full mt-3.5 z-[70] w-56 overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#161d22]/95 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 top-full mt-3.5 z-[70] w-56 overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#0c121a]/95 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
           <div className="border-b border-black/[0.06] dark:border-white/10 px-3.5 py-2.5">
             <p className="truncate text-sm font-semibold text-[var(--color-foreground)]">
               {displayName ?? "Usuário"}

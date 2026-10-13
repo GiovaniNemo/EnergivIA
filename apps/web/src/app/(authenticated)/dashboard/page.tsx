@@ -440,7 +440,7 @@ export default function DashboardPage(): JSX.Element {
           <button
             type="button"
             onClick={() => setNewProposalOpen(true)}
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 text-sm font-medium text-[var(--color-primary-foreground)] transition-colors hover:bg-[#43a047]"
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 px-4 text-sm font-semibold text-white shadow-md shadow-emerald-500/15 border border-emerald-400/20 transition-all hover:brightness-105 active:scale-95"
           >
             <Plus className="h-4 w-4" aria-hidden />
             Nova proposta
@@ -578,13 +578,16 @@ export default function DashboardPage(): JSX.Element {
           return (
             <article
               key={stat.label}
-              className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_3px_0_rgba(15,23,42,0.06),0_1px_2px_-1px_rgba(15,23,42,0.06)] dark:shadow-none transition-all hover:shadow-[0_4px_12px_-2px_rgba(15,23,42,0.08)]"
+              className="group rounded-2xl glass-card glass-card-hover p-5 transition-all"
             >
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-[13px] font-medium text-[var(--color-card-foreground)]">
                   {stat.label}
                 </span>
-                <Icon className="h-4 w-4 text-[var(--color-muted-foreground)]" aria-hidden />
+                <Icon
+                  className="h-4 w-4 text-[var(--color-muted-foreground)] group-hover:text-emerald-500 transition-colors"
+                  aria-hidden
+                />
               </div>
               <div className="font-mono text-[26px] font-bold tracking-[-0.01em] text-[var(--color-foreground)]">
                 {isLoading && stat.value === "—" ? (
@@ -597,9 +600,9 @@ export default function DashboardPage(): JSX.Element {
                 <div
                   className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${
                     stat.trend === "up"
-                      ? "text-[#16a34a]"
+                      ? "text-[#16a34a] dark:text-[#34d399]"
                       : stat.trend === "down"
-                        ? "text-[#dc2626]"
+                        ? "text-[#dc2626] dark:text-[#f87171]"
                         : "text-[var(--color-muted-foreground)]"
                   }`}
                 >
@@ -616,7 +619,7 @@ export default function DashboardPage(): JSX.Element {
 
       {/* CHARTS & ACTIVITY */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
-        <article className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-[0_1px_3px_0_rgba(15,23,42,0.06),0_1px_2px_-1px_rgba(15,23,42,0.06)] dark:shadow-none">
+        <article className="rounded-2xl glass-card p-6">
           <h3 className="text-[15px] font-semibold text-[var(--color-foreground)]">
             {isOwnerOrAdmin
               ? "Propostas da equipe — últimos 14 dias"
@@ -626,7 +629,7 @@ export default function DashboardPage(): JSX.Element {
             Volume diário · {chartPoints.total} no período
           </p>
           <div
-            className="mt-4 h-[220px] overflow-hidden rounded-xl border border-[var(--color-border)]/50"
+            className="mt-4 h-[220px] overflow-hidden rounded-xl border border-[var(--color-border)]/50 bg-black/[0.02] dark:bg-black/20 backdrop-blur-xs"
             style={{ background: "linear-gradient(180deg, rgba(34,197,94,0.06), transparent)" }}
           >
             <ResponsiveContainer width="100%" height="100%">
@@ -671,7 +674,7 @@ export default function DashboardPage(): JSX.Element {
             </ResponsiveContainer>
           </div>
         </article>
-        <article className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-[0_1px_3px_0_rgba(15,23,42,0.06),0_1px_2px_-1px_rgba(15,23,42,0.06)] dark:shadow-none">
+        <article className="rounded-2xl glass-card p-6">
           <h3 className="text-[15px] font-semibold text-[var(--color-foreground)]">
             {isOwnerOrAdmin ? "Atividade recente da equipe" : "Suas atividades recentes"}
           </h3>
@@ -698,7 +701,7 @@ export default function DashboardPage(): JSX.Element {
                     }`}
                   >
                     <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full shadow-xs"
                       style={{ background: palette.bg, color: palette.fg }}
                     >
                       <Icon className="h-4 w-4" aria-hidden />
@@ -720,7 +723,7 @@ export default function DashboardPage(): JSX.Element {
       </section>
 
       {/* PIPELINE / FUNIL */}
-      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-[0_1px_3px_0_rgba(15,23,42,0.06),0_1px_2px_-1px_rgba(15,23,42,0.06)] dark:shadow-none">
+      <section className="rounded-2xl glass-card p-6">
         <div className="mb-3 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
           <div>
             <h3 className="text-[15px] font-semibold text-[var(--color-foreground)]">
@@ -728,14 +731,17 @@ export default function DashboardPage(): JSX.Element {
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
               {leads.length} {leads.length === 1 ? "lead" : "leads"} no funil ·{" "}
-              <Link href="/leads" className="underline underline-offset-2 hover:text-[#388e3c]">
+              <Link
+                href="/leads"
+                className="underline underline-offset-2 hover:text-emerald-500 transition-colors"
+              >
                 ver todos
               </Link>
             </p>
           </div>
           <Link
             href="/leads"
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-transparent px-3.5 text-sm font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-[var(--color-border)] bg-black/[0.03] dark:bg-white/[0.04] px-3.5 text-sm font-medium text-[var(--color-foreground)] transition-colors hover:bg-black/[0.06] dark:hover:bg-white/[0.08]"
           >
             <Filter className="h-4 w-4" aria-hidden />
             Filtros
@@ -745,7 +751,7 @@ export default function DashboardPage(): JSX.Element {
           {pipeline.map((stage) => (
             <div
               key={stage.key}
-              className="min-h-[280px] rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3"
+              className="min-h-[280px] rounded-xl border border-[var(--color-border)] bg-black/[0.02] dark:bg-black/30 backdrop-blur-xs p-3"
             >
               <div className="mb-2.5 h-[3px] rounded-full" style={{ background: stage.color }} />
               <h4 className="mb-2.5 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
@@ -763,7 +769,7 @@ export default function DashboardPage(): JSX.Element {
                   <Link
                     key={deal.id}
                     href={`/leads/${deal.id}`}
-                    className={`mb-2 block cursor-pointer rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors hover:border-[#a5d6a7] ${
+                    className={`mb-2 block cursor-pointer rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all hover:border-emerald-500/40 hover:-translate-y-0.5 ${
                       stage.key === "fechado" ? "opacity-85" : ""
                     }`}
                   >
@@ -773,11 +779,13 @@ export default function DashboardPage(): JSX.Element {
                     <div className="mt-1 flex items-center justify-between text-[11px] text-[var(--color-muted-foreground)]">
                       <span className="truncate">{deal.meta}</span>
                       {deal.value ? (
-                        <span className="font-mono font-semibold text-[#388e3c]">{deal.value}</span>
+                        <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                          {deal.value}
+                        </span>
                       ) : null}
                     </div>
                     {deal.badge ? (
-                      <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#dcfce7] px-1.5 py-px text-[10px] text-[#0f5132]">
+                      <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-700 dark:text-emerald-300">
                         {deal.badge}
                       </span>
                     ) : null}
@@ -800,61 +808,71 @@ export default function DashboardPage(): JSX.Element {
       <style jsx>{`
         .upload-hero {
           background-color: var(--color-card);
+          backdrop-filter: blur(16px) saturate(140%);
+          -webkit-backdrop-filter: blur(16px) saturate(140%);
           background-image:
-            radial-gradient(circle at 0% 0%, rgba(52, 211, 153, 0.18), transparent 55%),
-            radial-gradient(circle at 100% 100%, rgba(20, 184, 166, 0.14), transparent 60%),
-            linear-gradient(135deg, rgba(52, 211, 153, 0.06) 0%, rgba(20, 184, 166, 0.05) 100%);
-          border-color: rgba(52, 211, 153, 0.25);
+            radial-gradient(circle at 0% 0%, rgba(52, 211, 153, 0.15), transparent 55%),
+            radial-gradient(circle at 100% 100%, rgba(20, 184, 166, 0.12), transparent 60%),
+            linear-gradient(135deg, rgba(52, 211, 153, 0.05) 0%, rgba(20, 184, 166, 0.03) 100%);
+          border: 1px solid rgba(52, 211, 153, 0.25);
           box-shadow:
-            0 1px 2px rgba(0, 0, 0, 0.04),
-            0 8px 24px -12px rgba(20, 184, 166, 0.18);
+            0 12px 32px -8px rgba(0, 0, 0, 0.06),
+            inset 0 1px 0 rgba(255, 255, 255, 0.6);
         }
         :global(.dark) .upload-hero {
+          background-color: rgba(13, 20, 29, 0.72);
+          backdrop-filter: blur(16px) saturate(140%);
+          -webkit-backdrop-filter: blur(16px) saturate(140%);
           background-image:
-            radial-gradient(circle at 0% 0%, rgba(29, 233, 182, 0.22), transparent 55%),
-            radial-gradient(circle at 100% 100%, rgba(20, 184, 166, 0.18), transparent 60%),
-            linear-gradient(135deg, rgba(29, 233, 182, 0.08) 0%, rgba(20, 184, 166, 0.06) 100%);
-          border-color: rgba(29, 233, 182, 0.28);
+            radial-gradient(circle at 0% 0%, rgba(16, 185, 129, 0.16), transparent 60%),
+            radial-gradient(circle at 100% 100%, rgba(13, 148, 136, 0.1), transparent 65%),
+            linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+          border: 1px solid rgba(16, 185, 129, 0.28);
+          border-top: 1px solid rgba(255, 255, 255, 0.18);
           box-shadow:
-            0 1px 2px rgba(0, 0, 0, 0.4),
-            0 12px 40px -16px rgba(29, 233, 182, 0.32);
+            0 16px 40px -12px rgba(0, 0, 0, 0.7),
+            inset 0 1px 0 rgba(255, 255, 255, 0.12);
         }
         .upload-drop:hover {
           background-color: rgba(52, 211, 153, 0.06);
         }
         :global(.dark) .upload-drop:hover {
-          background-color: rgba(29, 233, 182, 0.08);
+          background-color: rgba(16, 185, 129, 0.06);
         }
         .upload-drop-active {
           background-color: rgba(52, 211, 153, 0.14) !important;
           box-shadow: inset 0 0 0 2px rgba(52, 211, 153, 0.85);
         }
         :global(.dark) .upload-drop-active {
-          background-color: rgba(29, 233, 182, 0.16) !important;
+          background-color: rgba(16, 185, 129, 0.16) !important;
           box-shadow:
-            inset 0 0 0 2px rgba(29, 233, 182, 0.85),
-            0 0 30px rgba(29, 233, 182, 0.18);
+            inset 0 0 0 2px rgba(16, 185, 129, 0.85),
+            0 0 30px rgba(16, 185, 129, 0.18);
         }
         .upload-aside {
-          background-color: rgba(52, 211, 153, 0.04);
+          background-color: rgba(52, 211, 153, 0.03);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
         }
         :global(.dark) .upload-aside {
-          background-color: rgba(29, 233, 182, 0.06);
+          background-color: rgba(16, 185, 129, 0.04);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
         }
         .upload-icon {
           background: linear-gradient(135deg, #e8f5e9, #c8f0d6);
           color: #2e7d32;
         }
         :global(.dark) .upload-icon {
-          background: linear-gradient(135deg, rgba(29, 233, 182, 0.22), rgba(20, 184, 166, 0.16));
-          color: #66f0df;
-          box-shadow: inset 0 0 0 1px rgba(29, 233, 182, 0.32);
+          background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(13, 148, 136, 0.16));
+          color: #6ee7b7;
+          box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.32);
         }
         .upload-icon-ring {
           border-color: rgba(76, 175, 80, 0.45);
         }
         :global(.dark) .upload-icon-ring {
-          border-color: rgba(29, 233, 182, 0.42);
+          border-color: rgba(16, 185, 129, 0.42);
         }
         .upload-drop-ring {
           animation: upload-spin 18s linear infinite;

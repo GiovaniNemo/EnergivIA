@@ -37,22 +37,32 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
               {!isOnboardingOrganization && <FeedbackPromptCard />}
               {!isOnboardingOrganization && <EnergiviaFloatingHub />}
 
-              {/* Luz ambiente no topo e lateral com gradientes suaves de alto desempenho (sem filtros pesados de desfoque) */}
+              {/* Fundo Atmosférico de Alta Performance para Glassmorphism */}
               <div
-                className="pointer-events-none fixed -top-20 left-1/3 -translate-x-1/2 h-64 w-[900px] bg-[radial-gradient(ellipse_80%_65%_at_50%_0%,rgba(16,185,129,0.16)_0%,rgba(16,185,129,0.05)_45%,transparent_75%)] dark:bg-[radial-gradient(ellipse_80%_65%_at_50%_0%,rgba(16,185,129,0.22)_0%,rgba(16,185,129,0.07)_45%,transparent_75%)] z-0"
-                style={{ contain: "strict" }}
+                className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
                 aria-hidden="true"
-              />
-              <div
-                className="pointer-events-none fixed -top-20 right-1/4 h-56 w-[700px] bg-[radial-gradient(ellipse_80%_65%_at_50%_0%,rgba(56,189,248,0.14)_0%,rgba(56,189,248,0.04)_45%,transparent_75%)] dark:bg-[radial-gradient(ellipse_80%_65%_at_50%_0%,rgba(20,184,166,0.18)_0%,rgba(20,184,166,0.05)_45%,transparent_75%)] z-0"
-                style={{ contain: "strict" }}
-                aria-hidden="true"
-              />
-              <div
-                className="pointer-events-none fixed top-16 left-0 h-[600px] w-72 bg-[radial-gradient(ellipse_70%_80%_at_0%_30%,rgba(16,185,129,0.12)_0%,rgba(16,185,129,0.04)_45%,transparent_75%)] z-0"
-                style={{ contain: "strict" }}
-                aria-hidden="true"
-              />
+              >
+                {/* Camada 1: Aura esmeralda refinada no topo/centro (energia solar) */}
+                <div
+                  className="absolute -top-32 left-1/2 -translate-x-1/2 h-[520px] w-[1100px] rounded-full bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(16,185,129,0.12)_0%,rgba(16,185,129,0.03)_55%,transparent_80%)] dark:bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(16,185,129,0.14)_0%,rgba(16,185,129,0.03)_55%,transparent_80%)]"
+                  style={{ contain: "strict" }}
+                />
+                {/* Camada 2: Luz suave teal/safira na lateral direita inferior */}
+                <div
+                  className="absolute -bottom-40 right-0 h-[600px] w-[750px] rounded-full bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(20,184,166,0.08)_0%,rgba(56,189,248,0.02)_55%,transparent_80%)] dark:bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(14,116,144,0.10)_0%,rgba(15,23,42,0.03)_55%,transparent_80%)]"
+                  style={{ contain: "strict" }}
+                />
+                {/* Camada 3: Luz de apoio na lateral esquerda atrás da sidebar */}
+                <div
+                  className="absolute top-24 -left-20 h-[700px] w-[450px] rounded-full bg-[radial-gradient(ellipse_60%_60%_at_30%_40%,rgba(16,185,129,0.07)_0%,transparent_75%)] dark:bg-[radial-gradient(ellipse_60%_60%_at_30%_40%,rgba(16,185,129,0.09)_0%,transparent_75%)]"
+                  style={{ contain: "strict" }}
+                />
+                {/* Camada 4: Micro-textura arquitetônica (Grid pontilhado fino para refração tátil de vidro) */}
+                <div
+                  className="absolute inset-0 opacity-[0.035] dark:opacity-[0.07] bg-[radial-gradient(rgba(0,0,0,0.8)_1px,transparent_1px)] dark:bg-[radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_85%_75%_at_50%_45%,black_40%,transparent_95%)]"
+                  style={{ contain: "strict" }}
+                />
+              </div>
 
               {isFullscreenTemplateEditor ||
               isFullscreenBlueprintEditor ||
