@@ -62,6 +62,18 @@ export class PaymentCreditCardOptionDto {
 
   @IsOptional()
   @IsString()
+  rateMode?: "total_pct" | "monthly_pct" | "manual";
+
+  @IsOptional()
+  @IsNumber()
+  rateValue?: number | null;
+
+  @IsOptional()
+  @IsBoolean()
+  saveAsDefault?: boolean;
+
+  @IsOptional()
+  @IsString()
   notes?: string | null;
 }
 

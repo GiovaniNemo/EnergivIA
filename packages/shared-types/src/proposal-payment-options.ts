@@ -7,6 +7,15 @@ export interface ProposalPaymentCashOption {
   notes?: string | null;
 }
 
+export type CardRateMode = "total_pct" | "monthly_pct" | "manual";
+
+export interface OrganizationCardPaymentDefaults {
+  maxInstallments: number;
+  rateMode: CardRateMode;
+  rateValue: number;
+  taxDescription: string;
+}
+
 export interface ProposalPaymentCardOption {
   enabled: boolean;
   maxInstallments: number; // 1 to 21
@@ -14,6 +23,9 @@ export interface ProposalPaymentCardOption {
   totalAmount?: number | null;
   taxDescription?: string | null;
   notes?: string | null;
+  rateMode?: CardRateMode;
+  rateValue?: number | null;
+  saveAsDefault?: boolean;
 }
 
 export interface ProposalPaymentFinancingOption {

@@ -700,6 +700,37 @@ export class ProposalsService {
       },
     });
 
+    if (paymentOptions.creditCard?.saveAsDefault) {
+      try {
+        const tenant = await this.prisma.tenant.findUnique({
+          where: { id: tenantId },
+          select: { settings: true },
+        });
+        const currentSettings = (tenant?.settings as Record<string, unknown> | null) ?? {};
+        const cardDefaults = {
+          maxInstallments: paymentOptions.creditCard.maxInstallments || 12,
+          rateMode: paymentOptions.creditCard.rateMode || "total_pct",
+          rateValue:
+            typeof paymentOptions.creditCard.rateValue === "number"
+              ? paymentOptions.creditCard.rateValue
+              : 10,
+          taxDescription:
+            paymentOptions.creditCard.taxDescription || "Taxa de parcelamento inclusa",
+        };
+        await this.prisma.tenant.update({
+          where: { id: tenantId },
+          data: {
+            settings: {
+              ...currentSettings,
+              cardPaymentDefaults: cardDefaults,
+            } as Prisma.InputJsonValue,
+          },
+        });
+      } catch (err) {
+        console.error("[proposals.service] Error saving cardPaymentDefaults to tenant:", err);
+      }
+    }
+
     if (proposal.deal?.leadId) {
       await this.leadActivityLog.append({
         tenantId,

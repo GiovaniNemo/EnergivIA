@@ -11,8 +11,13 @@ import {
   TrendingUp,
   AlertCircle,
 } from "lucide-react";
-import type { ProposalPaymentOptions } from "@energivia/shared-types";
-import { normalizePaymentOptions, calculateCashFinalAmount } from "@/lib/proposal-payment-utils";
+import { useOrganization } from "@/components/providers/organization-provider";
+import type { ProposalPaymentOptions, CardRateMode } from "@energivia/shared-types";
+import {
+  normalizePaymentOptions,
+  calculateCashFinalAmount,
+  calculateCardInstallments,
+} from "@/lib/proposal-payment-utils";
 import { updateProposalPaymentOptions } from "@/lib/leads-api";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
@@ -44,8 +49,13 @@ export function ProposalPaymentOptionsCard({
   onSaved,
 }: ProposalPaymentOptionsCardProps): JSX.Element {
   const formId = useId();
+  const { currentOrganization } = useOrganization();
   const [options, setOptions] = useState<ProposalPaymentOptions>(() =>
-    normalizePaymentOptions(initialOptions, totalInvestment)
+    normalizePaymentOptions(
+      initialOptions,
+      totalInvestment,
+      currentOrganization?.cardPaymentDefaults
+    )
   );
 
   const [saving, setSaving] = useState(false);
@@ -113,19 +123,71 @@ export function ProposalPaymentOptionsCard({
     }));
   };
 
+  const handleCardRateModeChange = (mode: CardRateMode) => {
+    setOptions((prev) => {
+      const currentRate =
+        typeof prev.creditCard.rateValue === "number"
+          ? prev.creditCard.rateValue
+          : mode === "monthly_pct"
+            ? 1.5
+            : 10;
+      const calc = calculateCardInstallments({
+        totalInvestment,
+        installments: prev.creditCard.maxInstallments,
+        rateMode: mode,
+        rateValue: currentRate,
+        manualInstallmentAmount: prev.creditCard.installmentAmount,
+      });
+      return {
+        ...prev,
+        creditCard: {
+          ...prev.creditCard,
+          rateMode: mode,
+          rateValue: currentRate,
+          installmentAmount: calc.installmentAmount,
+          totalAmount: calc.totalAmount,
+        },
+      };
+    });
+  };
+
+  const handleCardRateValueChange = (valStr: string) => {
+    const val = parseFloat(valStr.replace(",", ".")) || 0;
+    setOptions((prev) => {
+      const calc = calculateCardInstallments({
+        totalInvestment,
+        installments: prev.creditCard.maxInstallments,
+        rateMode: prev.creditCard.rateMode ?? "total_pct",
+        rateValue: val,
+      });
+      return {
+        ...prev,
+        creditCard: {
+          ...prev.creditCard,
+          rateValue: val,
+          installmentAmount: calc.installmentAmount,
+          totalAmount: calc.totalAmount,
+        },
+      };
+    });
+  };
+
   const handleCardInstallmentsSelect = (installments: number) => {
     setOptions((prev) => {
-      const prevTotal = prev.creditCard.totalAmount || totalInvestment;
-      const calculatedAmt = Math.round((prevTotal / installments) * 100) / 100;
+      const calc = calculateCardInstallments({
+        totalInvestment,
+        installments,
+        rateMode: prev.creditCard.rateMode ?? "total_pct",
+        rateValue: prev.creditCard.rateValue ?? 10,
+        manualInstallmentAmount: prev.creditCard.installmentAmount,
+      });
       return {
         ...prev,
         creditCard: {
           ...prev.creditCard,
           maxInstallments: installments,
-          installmentAmount:
-            prev.creditCard.installmentAmount > 0
-              ? prev.creditCard.installmentAmount
-              : calculatedAmt,
+          installmentAmount: calc.installmentAmount,
+          totalAmount: calc.totalAmount,
         },
       };
     });
@@ -208,6 +270,12 @@ export function ProposalPaymentOptionsCard({
     (monthlySavings ?? 0) > 0 && options.financing.installmentAmount > 0
       ? (monthlySavings ?? 0) - options.financing.installmentAmount
       : null;
+  const cardRateMode: CardRateMode = options.creditCard.rateMode ?? "total_pct";
+  const cardEncargos = Math.max(
+    0,
+    (options.creditCard.totalAmount ||
+      options.creditCard.installmentAmount * options.creditCard.maxInstallments) - totalInvestment
+  );
 
   return (
     <section
@@ -417,6 +485,95 @@ export function ProposalPaymentOptionsCard({
 
             {options.creditCard.enabled ? (
               <div className="space-y-3.5">
+                {/* Seletor de Modo de Cálculo da Taxa */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                      Cálculo de taxa
+                    </label>
+                    <div className="flex rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/40 p-0.5 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => handleCardRateModeChange("total_pct")}
+                        className={`rounded px-1.5 py-0.5 font-medium transition ${
+                          cardRateMode === "total_pct"
+                            ? "bg-[var(--color-background)] text-blue-600 dark:text-blue-400 font-semibold shadow-xs"
+                            : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                        }`}
+                        title="Gross-up da maquininha: você recebe 100% livre de descontos"
+                      >
+                        % Total
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCardRateModeChange("monthly_pct")}
+                        className={`rounded px-1.5 py-0.5 font-medium transition ${
+                          cardRateMode === "monthly_pct"
+                            ? "bg-[var(--color-background)] text-blue-600 dark:text-blue-400 font-semibold shadow-xs"
+                            : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                        }`}
+                        title="Tabela Price: juros compostos mensais"
+                      >
+                        % a.m.
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCardRateModeChange("manual")}
+                        className={`rounded px-1.5 py-0.5 font-medium transition ${
+                          cardRateMode === "manual"
+                            ? "bg-[var(--color-background)] text-blue-600 dark:text-blue-400 font-semibold shadow-xs"
+                            : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                        }`}
+                        title="Digitar parcela em R$ diretamente"
+                      >
+                        R$ Manual
+                      </button>
+                    </div>
+                  </div>
+
+                  {cardRateMode !== "manual" ? (
+                    <div className="mt-1.5 space-y-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={
+                            options.creditCard.rateValue !== undefined &&
+                            options.creditCard.rateValue !== null
+                              ? String(options.creditCard.rateValue)
+                              : ""
+                          }
+                          onChange={(e) => handleCardRateValueChange(e.target.value)}
+                          placeholder={cardRateMode === "monthly_pct" ? "1.49" : "10"}
+                          className="h-8 text-xs font-semibold"
+                        />
+                        <span className="text-xs font-semibold text-[var(--color-muted-foreground)] shrink-0">
+                          {cardRateMode === "monthly_pct" ? "% a.m." : "% total"}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {(cardRateMode === "total_pct"
+                          ? [8, 10, 12, 14, 16]
+                          : [1.0, 1.2, 1.49, 1.99, 2.49]
+                        ).map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => handleCardRateValueChange(String(preset))}
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition border ${
+                              options.creditCard.rateValue === preset
+                                ? "border-blue-500 bg-blue-500/15 text-blue-700 dark:text-blue-300 font-semibold"
+                                : "border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]/40"
+                            }`}
+                          >
+                            {preset}%
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
                 <div>
                   <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
                     Máximo de parcelas
@@ -442,19 +599,30 @@ export function ProposalPaymentOptionsCard({
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                    Valor da parcela real (R$)
-                  </label>
-                  <p className="text-[10px] text-[var(--color-muted-foreground)] mb-1">
-                    Insira o valor exato calculado na sua maquininha
-                  </p>
-                  <CurrencyInput
-                    id={`${formId}-card-installment`}
-                    value={options.creditCard.installmentAmount}
-                    onValueChange={handleCardInstallmentAmountChange}
-                  />
-                </div>
+                {cardRateMode === "manual" ? (
+                  <div>
+                    <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                      Valor da parcela real (R$)
+                    </label>
+                    <p className="text-[10px] text-[var(--color-muted-foreground)] mb-1">
+                      Insira o valor exato calculado na sua maquininha
+                    </p>
+                    <CurrencyInput
+                      id={`${formId}-card-installment`}
+                      value={options.creditCard.installmentAmount}
+                      onValueChange={handleCardInstallmentAmountChange}
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-lg bg-[var(--color-muted)]/20 p-2.5 border border-[var(--color-border)]/60">
+                    <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                      Valor da parcela ({options.creditCard.maxInstallments}x)
+                    </span>
+                    <p className="text-base font-bold text-blue-600 dark:text-blue-400 tabular-nums">
+                      {formatBRL(options.creditCard.installmentAmount)}
+                    </p>
+                  </div>
+                )}
 
                 <div className="rounded-lg bg-[var(--color-muted)]/30 p-2.5">
                   <div className="flex items-center justify-between">
@@ -462,7 +630,7 @@ export function ProposalPaymentOptionsCard({
                       Total a prazo ({options.creditCard.maxInstallments}x)
                     </span>
                     <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
-                      com encargos
+                      {cardEncargos > 0 ? `+${formatBRL(cardEncargos)} encargos` : "sem encargos"}
                     </span>
                   </div>
                   <p className="text-base font-bold text-[var(--color-foreground)] tabular-nums mt-0.5">
@@ -490,6 +658,21 @@ export function ProposalPaymentOptionsCard({
                     className="h-8 mt-1 text-xs"
                   />
                 </div>
+
+                <label className="flex items-start gap-2 cursor-pointer pt-1 text-[11px] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition select-none">
+                  <input
+                    type="checkbox"
+                    checked={!!options.creditCard.saveAsDefault}
+                    onChange={(e) =>
+                      setOptions((prev) => ({
+                        ...prev,
+                        creditCard: { ...prev.creditCard, saveAsDefault: e.target.checked },
+                      }))
+                    }
+                    className="mt-0.5 rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>Salvar como padrão da empresa para novas propostas</span>
+                </label>
               </div>
             ) : (
               <p className="py-6 text-center text-xs text-[var(--color-muted-foreground)]">

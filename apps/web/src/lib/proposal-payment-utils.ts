@@ -3,7 +3,116 @@ import type {
   ProposalPaymentCashOption,
   ProposalPaymentCardOption,
   ProposalPaymentFinancingOption,
+  CardRateMode,
+  OrganizationCardPaymentDefaults,
 } from "@energivia/shared-types";
+
+export interface CalculateCardInstallmentsInput {
+  totalInvestment: number;
+  installments: number;
+  rateMode?: CardRateMode;
+  rateValue?: number | null;
+  manualInstallmentAmount?: number | null;
+}
+
+export interface CalculateCardInstallmentsResult {
+  installmentAmount: number;
+  totalAmount: number;
+  totalInterestAmount: number;
+  effectiveRatePct: number;
+}
+
+export function calculateCardInstallments(
+  input: CalculateCardInstallmentsInput
+): CalculateCardInstallmentsResult {
+  const {
+    totalInvestment,
+    installments,
+    rateMode = "total_pct",
+    rateValue,
+    manualInstallmentAmount,
+  } = input;
+  const safeInvestment =
+    Number.isFinite(totalInvestment) && totalInvestment > 0 ? totalInvestment : 0;
+  const safeInstallments = Math.max(1, Math.min(24, Math.round(installments || 1)));
+
+  if (safeInvestment <= 0) {
+    return {
+      installmentAmount: 0,
+      totalAmount: 0,
+      totalInterestAmount: 0,
+      effectiveRatePct: 0,
+    };
+  }
+
+  if (rateMode === "manual") {
+    const manualAmt =
+      typeof manualInstallmentAmount === "number" && manualInstallmentAmount > 0
+        ? Math.round(manualInstallmentAmount * 100) / 100
+        : Math.round((safeInvestment / safeInstallments) * 100) / 100;
+    const totalAmt = Math.round(manualAmt * safeInstallments * 100) / 100;
+    const interest = Math.max(0, Math.round((totalAmt - safeInvestment) * 100) / 100);
+    return {
+      installmentAmount: manualAmt,
+      totalAmount: totalAmt,
+      totalInterestAmount: interest,
+      effectiveRatePct: 0,
+    };
+  }
+
+  const numericRate = typeof rateValue === "number" && !isNaN(rateValue) ? rateValue : 0;
+
+  if (rateMode === "monthly_pct") {
+    if (numericRate <= 0) {
+      const baseAmt = Math.round((safeInvestment / safeInstallments) * 100) / 100;
+      const totalAmt = Math.round(baseAmt * safeInstallments * 100) / 100;
+      return {
+        installmentAmount: baseAmt,
+        totalAmount: totalAmt,
+        totalInterestAmount: 0,
+        effectiveRatePct: 0,
+      };
+    }
+
+    const i = numericRate / 100;
+    const factor = i / (1 - Math.pow(1 + i, -safeInstallments));
+    const instAmt = Math.round(safeInvestment * factor * 100) / 100;
+    const totalAmt = Math.round(instAmt * safeInstallments * 100) / 100;
+    const interest = Math.max(0, Math.round((totalAmt - safeInvestment) * 100) / 100);
+
+    return {
+      installmentAmount: instAmt,
+      totalAmount: totalAmt,
+      totalInterestAmount: interest,
+      effectiveRatePct: numericRate,
+    };
+  }
+
+  // Padrão: "total_pct" (Gross-up de maquininha)
+  if (numericRate <= 0) {
+    const baseAmt = Math.round((safeInvestment / safeInstallments) * 100) / 100;
+    const totalAmt = Math.round(baseAmt * safeInstallments * 100) / 100;
+    return {
+      installmentAmount: baseAmt,
+      totalAmount: totalAmt,
+      totalInterestAmount: 0,
+      effectiveRatePct: 0,
+    };
+  }
+
+  const cappedRate = Math.min(99.9, numericRate);
+  const grossUpTotal = Math.round((safeInvestment / (1 - cappedRate / 100)) * 100) / 100;
+  const instAmt = Math.round((grossUpTotal / safeInstallments) * 100) / 100;
+  const finalTotal = Math.round(instAmt * safeInstallments * 100) / 100;
+  const interest = Math.max(0, Math.round((finalTotal - safeInvestment) * 100) / 100);
+
+  return {
+    installmentAmount: instAmt,
+    totalAmount: finalTotal,
+    totalInterestAmount: interest,
+    effectiveRatePct: numericRate,
+  };
+}
 
 export function calculateCashFinalAmount(
   totalInvestment: number,
@@ -24,7 +133,10 @@ export function calculateCashFinalAmount(
   return Math.round(totalInvestment * 100) / 100;
 }
 
-export function getDefaultPaymentOptions(totalInvestment: number): ProposalPaymentOptions {
+export function getDefaultPaymentOptions(
+  totalInvestment: number,
+  defaults?: OrganizationCardPaymentDefaults | null
+): ProposalPaymentOptions {
   const safeInvestment =
     Number.isFinite(totalInvestment) && totalInvestment > 0 ? totalInvestment : 0;
 
@@ -38,16 +150,27 @@ export function getDefaultPaymentOptions(totalInvestment: number): ProposalPayme
     notes: null,
   };
 
-  // Cartão 12x default (sem juros mockados rígidos: valor base proporcional)
-  const cardInstallments = 12;
-  const cardInstallmentAmount =
-    cardInstallments > 0 ? Math.round(((safeInvestment * 1.1) / cardInstallments) * 100) / 100 : 0;
+  // Cartão 12x default com cálculo de maquininha
+  const cardInstallments = defaults?.maxInstallments || 12;
+  const cardRateMode: CardRateMode = defaults?.rateMode || "total_pct";
+  const cardRateValue = typeof defaults?.rateValue === "number" ? defaults.rateValue : 10;
+  const cardTaxDesc = defaults?.taxDescription || "Taxa de parcelamento inclusa";
+
+  const cardCalc = calculateCardInstallments({
+    totalInvestment: safeInvestment,
+    installments: cardInstallments,
+    rateMode: cardRateMode,
+    rateValue: cardRateValue,
+  });
+
   const creditCard: ProposalPaymentCardOption = {
     enabled: true,
     maxInstallments: cardInstallments,
-    installmentAmount: cardInstallmentAmount,
-    totalAmount: Math.round(cardInstallmentAmount * cardInstallments * 100) / 100,
-    taxDescription: "Taxa de parcelamento inclusa",
+    installmentAmount: cardCalc.installmentAmount,
+    totalAmount: cardCalc.totalAmount,
+    taxDescription: cardTaxDesc,
+    rateMode: cardRateMode,
+    rateValue: cardRateValue,
     notes: null,
   };
 
@@ -76,9 +199,10 @@ export function getDefaultPaymentOptions(totalInvestment: number): ProposalPayme
 
 export function normalizePaymentOptions(
   raw: unknown,
-  totalInvestment: number
+  totalInvestment: number,
+  defaults?: OrganizationCardPaymentDefaults | null
 ): ProposalPaymentOptions {
-  const fallback = getDefaultPaymentOptions(totalInvestment);
+  const fallback = getDefaultPaymentOptions(totalInvestment, defaults);
 
   if (!raw || typeof raw !== "object") {
     return fallback;
@@ -123,10 +247,29 @@ export function normalizePaymentOptions(
     typeof rawCard["maxInstallments"] === "number" && rawCard["maxInstallments"] > 0
       ? Math.min(24, Math.max(1, rawCard["maxInstallments"]))
       : fallback.creditCard.maxInstallments;
+
+  const cardRateMode: CardRateMode =
+    rawCard["rateMode"] === "monthly_pct" ||
+    rawCard["rateMode"] === "manual" ||
+    rawCard["rateMode"] === "total_pct"
+      ? (rawCard["rateMode"] as CardRateMode)
+      : (fallback.creditCard.rateMode ?? "total_pct");
+
+  const cardRateValue =
+    typeof rawCard["rateValue"] === "number"
+      ? rawCard["rateValue"]
+      : (fallback.creditCard.rateValue ?? 10);
+
   const cardInstAmt =
     typeof rawCard["installmentAmount"] === "number" && rawCard["installmentAmount"] > 0
       ? rawCard["installmentAmount"]
-      : fallback.creditCard.installmentAmount;
+      : calculateCardInstallments({
+          totalInvestment,
+          installments: maxInst,
+          rateMode: cardRateMode,
+          rateValue: cardRateValue,
+        }).installmentAmount;
+
   const cardTotal =
     typeof rawCard["totalAmount"] === "number" && rawCard["totalAmount"] > 0
       ? rawCard["totalAmount"]
@@ -141,6 +284,8 @@ export function normalizePaymentOptions(
       typeof rawCard["taxDescription"] === "string"
         ? rawCard["taxDescription"]
         : fallback.creditCard.taxDescription,
+    rateMode: cardRateMode,
+    rateValue: cardRateValue,
     notes: typeof rawCard["notes"] === "string" ? rawCard["notes"] : null,
   };
 

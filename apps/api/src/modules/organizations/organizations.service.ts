@@ -178,6 +178,31 @@ function compilePreferredFromTiers(
   return list.length > 0 ? list : fallback;
 }
 
+function readCardPaymentDefaults(settings: unknown) {
+  if (!settings || typeof settings !== "object") return undefined;
+  const raw = (settings as Record<string, unknown>)["cardPaymentDefaults"];
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const maxInstallments =
+    typeof r["maxInstallments"] === "number" && r["maxInstallments"] > 0
+      ? Math.min(24, Math.max(1, Math.round(r["maxInstallments"])))
+      : 12;
+  const rateMode =
+    r["rateMode"] === "monthly_pct" || r["rateMode"] === "manual" || r["rateMode"] === "total_pct"
+      ? (r["rateMode"] as "total_pct" | "monthly_pct" | "manual")
+      : "total_pct";
+  const rateValue = typeof r["rateValue"] === "number" ? r["rateValue"] : 10;
+  const taxDescription =
+    typeof r["taxDescription"] === "string" ? r["taxDescription"] : "Taxa de parcelamento inclusa";
+
+  return {
+    maxInstallments,
+    rateMode,
+    rateValue,
+    taxDescription,
+  };
+}
+
 function buildTemplateSettings(dto: {
   templateBusinessSegment?: string;
   templateRegion?: string;
@@ -495,6 +520,7 @@ export class OrganizationsService {
       preferredInverterBrands: readStringArraySetting(org.settings, "preferredInverterBrands"),
       moduleBrandTiers: readTierSetting(org.settings, "moduleBrandTiers"),
       inverterBrandTiers: readTierSetting(org.settings, "inverterBrandTiers"),
+      cardPaymentDefaults: readCardPaymentDefaults(org.settings),
       referralSource: readOptionalSetting(org.settings, "referralSource"),
       referredBy: readOptionalSetting(org.settings, "referredBy"),
     };
@@ -705,6 +731,7 @@ export class OrganizationsService {
       preferredInverterBrands: readStringArraySetting(org.settings, "preferredInverterBrands"),
       moduleBrandTiers: readTierSetting(org.settings, "moduleBrandTiers"),
       inverterBrandTiers: readTierSetting(org.settings, "inverterBrandTiers"),
+      cardPaymentDefaults: readCardPaymentDefaults(org.settings),
       role: membership.role,
     };
   }
@@ -854,6 +881,9 @@ export class OrganizationsService {
       ...(dto.inverterBrandTiers !== undefined && {
         inverterBrandTiers: dto.inverterBrandTiers,
       }),
+      ...(dto.cardPaymentDefaults !== undefined && {
+        cardPaymentDefaults: dto.cardPaymentDefaults,
+      }),
       ...(() => {
         const modPref = compilePreferredFromTiers(dto.moduleBrandTiers, dto.preferredModuleBrands);
         const invPref = compilePreferredFromTiers(
@@ -889,7 +919,8 @@ export class OrganizationsService {
           dto.preferredModuleBrands !== undefined ||
           dto.preferredInverterBrands !== undefined ||
           dto.moduleBrandTiers !== undefined ||
-          dto.inverterBrandTiers !== undefined) && { settings: nextSettings }),
+          dto.inverterBrandTiers !== undefined ||
+          dto.cardPaymentDefaults !== undefined) && { settings: nextSettings }),
       },
     });
 
@@ -951,6 +982,7 @@ export class OrganizationsService {
       preferredInverterBrands: readStringArraySetting(org.settings, "preferredInverterBrands"),
       moduleBrandTiers: readTierSetting(org.settings, "moduleBrandTiers"),
       inverterBrandTiers: readTierSetting(org.settings, "inverterBrandTiers"),
+      cardPaymentDefaults: readCardPaymentDefaults(org.settings),
     };
   }
 

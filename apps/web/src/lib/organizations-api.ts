@@ -37,6 +37,7 @@ export interface Organization {
   preferredInverterBrands?: string[];
   moduleBrandTiers?: BrandTierSelection | null;
   inverterBrandTiers?: BrandTierSelection | null;
+  cardPaymentDefaults?: OrganizationCardPaymentDefaults | null;
   subscription?: {
     status: string;
     planId: string;
@@ -50,7 +51,7 @@ export interface BrandTierSelection {
   priority?: string | null;
 }
 
-import type { PlanFeaturesConfig } from "@energivia/shared-types";
+import type { PlanFeaturesConfig, OrganizationCardPaymentDefaults } from "@energivia/shared-types";
 
 export interface MeResponse {
   id: string;
@@ -321,6 +322,7 @@ export async function updateOrganization(
     preferredInverterBrands?: string[];
     moduleBrandTiers?: BrandTierSelection;
     inverterBrandTiers?: BrandTierSelection;
+    cardPaymentDefaults?: OrganizationCardPaymentDefaults;
   },
   organizationId?: string
 ): Promise<Organization> {

@@ -78,6 +78,14 @@ export class UpdateOrganizationDto {
   };
 
   @IsOptional()
+  cardPaymentDefaults?: {
+    maxInstallments: number;
+    rateMode: "total_pct" | "monthly_pct" | "manual";
+    rateValue: number;
+    taxDescription: string;
+  };
+
+  @IsOptional()
   @IsString()
   @MaxLength(10)
   cep?: string;

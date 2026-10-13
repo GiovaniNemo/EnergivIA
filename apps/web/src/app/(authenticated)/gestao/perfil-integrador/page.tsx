@@ -23,7 +23,10 @@ import {
   Save,
   DollarSign,
   TrendingUp,
+  CreditCard,
 } from "lucide-react";
+import type { CardRateMode } from "@energivia/shared-types";
+import { calculateCardInstallments } from "@/lib/proposal-payment-utils";
 
 export default function PerfilIntegradorPage(): JSX.Element {
   const { currentOrganization, currentOrganizationId, refetch, user } = useOrganization();
@@ -53,6 +56,14 @@ export default function PerfilIntegradorPage(): JSX.Element {
     premium: [],
     priority: null,
   });
+
+  // Card payment defaults states
+  const [cardMaxInstallments, setCardMaxInstallments] = useState<number>(12);
+  const [cardRateMode, setCardRateMode] = useState<CardRateMode>("total_pct");
+  const [cardRateValue, setCardRateValue] = useState<number>(10);
+  const [cardTaxDescription, setCardTaxDescription] = useState<string>(
+    "Taxa de parcelamento inclusa"
+  );
 
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [snack, setSnack] = useState<{
@@ -111,6 +122,18 @@ export default function PerfilIntegradorPage(): JSX.Element {
           priority: inv[0] || null,
         });
       }
+      if (currentOrganization.cardPaymentDefaults) {
+        setCardMaxInstallments(currentOrganization.cardPaymentDefaults.maxInstallments || 12);
+        setCardRateMode(currentOrganization.cardPaymentDefaults.rateMode || "total_pct");
+        setCardRateValue(
+          typeof currentOrganization.cardPaymentDefaults.rateValue === "number"
+            ? currentOrganization.cardPaymentDefaults.rateValue
+            : 10
+        );
+        setCardTaxDescription(
+          currentOrganization.cardPaymentDefaults.taxDescription || "Taxa de parcelamento inclusa"
+        );
+      }
     }
   }, [currentOrganization]);
 
@@ -145,6 +168,12 @@ export default function PerfilIntegradorPage(): JSX.Element {
           inverterBrandTiers: inverterTiers,
           preferredModuleBrands: compileBrands(moduleTiers),
           preferredInverterBrands: compileBrands(inverterTiers),
+          cardPaymentDefaults: {
+            maxInstallments: cardMaxInstallments,
+            rateMode: cardRateMode,
+            rateValue: Number(cardRateValue) || 10,
+            taxDescription: cardTaxDescription,
+          },
         },
         currentOrganizationId
       );
@@ -176,6 +205,16 @@ export default function PerfilIntegradorPage(): JSX.Element {
       { label: "Industrial / Rural", kwp: 40.0, total: Math.round(40.0 * rate) },
     ];
   }, [defaultKwpRate]);
+
+  // Simulação ao vivo das taxas da maquininha para R$ 20.000
+  const cardSimulation = useMemo(() => {
+    return calculateCardInstallments({
+      totalInvestment: 20000,
+      installments: cardMaxInstallments,
+      rateMode: cardRateMode,
+      rateValue: Number(cardRateValue) || 0,
+    });
+  }, [cardMaxInstallments, cardRateMode, cardRateValue]);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-20">
@@ -369,6 +408,229 @@ export default function PerfilIntegradorPage(): JSX.Element {
         onChange={setInverterTiers}
         loading={loadingBrands}
       />
+
+      {/* CARD 4: TAXAS PADRÃO DE MAQUININHA / CARTÃO DE CRÉDITO */}
+      <Card className="border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                <CreditCard className="h-5 w-5" />
+              </span>
+              <div>
+                <CardTitle className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50">
+                  Taxas Padrão de Maquininha / Cartão de Crédito
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal mt-0.5">
+                  Calcule parcelas automaticamente nas novas propostas sem precisar consultar a
+                  maquininha toda vez
+                </CardDescription>
+              </div>
+            </div>
+            <span className="self-start sm:self-auto rounded-full bg-blue-50 dark:bg-blue-950/50 px-3 py-1 text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
+              Padrão: {cardMaxInstallments}x com {cardRateValue}% (
+              {cardRateMode === "monthly_pct"
+                ? "ao mês"
+                : cardRateMode === "manual"
+                  ? "manual"
+                  : "gross-up"}
+              )
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <div className="space-y-4">
+              {/* Modo de taxa */}
+              <div className="space-y-1.5">
+                <label className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  Método de cálculo da maquininha
+                </label>
+                <div className="flex rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900/60 p-1 text-xs">
+                  <button
+                    type="button"
+                    disabled={!canEdit}
+                    onClick={() => setCardRateMode("total_pct")}
+                    className={`flex-1 rounded-lg py-2 font-semibold transition text-center cursor-pointer ${
+                      cardRateMode === "total_pct"
+                        ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                    }`}
+                  >
+                    % Total (Gross-up)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canEdit}
+                    onClick={() => setCardRateMode("monthly_pct")}
+                    className={`flex-1 rounded-lg py-2 font-semibold transition text-center cursor-pointer ${
+                      cardRateMode === "monthly_pct"
+                        ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                    }`}
+                  >
+                    % ao Mês (Price)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canEdit}
+                    onClick={() => setCardRateMode("manual")}
+                    className={`flex-1 rounded-lg py-2 font-semibold transition text-center cursor-pointer ${
+                      cardRateMode === "manual"
+                        ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                    }`}
+                  >
+                    R$ Manual
+                  </button>
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-normal">
+                  {cardRateMode === "total_pct"
+                    ? "Repasse integral: a maquininha desconta a taxa sobre o total e você recebe 100% livre de desconto."
+                    : cardRateMode === "monthly_pct"
+                      ? "Juros compostos mensais padrão Tabela Price para a quantidade de parcelas configurada."
+                      : "Você digita diretamente o valor da parcela em reais na tela da proposta."}
+                </p>
+              </div>
+
+              {/* Taxa % */}
+              {cardRateMode !== "manual" ? (
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                    {cardRateMode === "monthly_pct"
+                      ? "Taxa mensal padrão (% a.m.)"
+                      : "Taxa total da maquininha (%)"}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step={cardRateMode === "monthly_pct" ? 0.01 : 0.5}
+                      min={0}
+                      max={90}
+                      disabled={!canEdit}
+                      value={cardRateValue || ""}
+                      onChange={(e) => setCardRateValue(Number(e.target.value) || 0)}
+                      className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-2.5 px-3.5 text-base font-bold text-zinc-900 dark:text-zinc-100 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25 disabled:bg-zinc-100 dark:disabled:bg-zinc-800/50"
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-500 dark:text-zinc-400">
+                      {cardRateMode === "monthly_pct" ? "% a.m." : "%"}
+                    </span>
+                  </div>
+
+                  {/* Presets rápidos */}
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {(cardRateMode === "total_pct"
+                      ? [8, 10, 12, 14, 16]
+                      : [1.0, 1.2, 1.49, 1.99, 2.49]
+                    ).map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        disabled={!canEdit}
+                        onClick={() => setCardRateValue(preset)}
+                        className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition border cursor-pointer ${
+                          cardRateValue === preset
+                            ? "border-blue-500 bg-blue-500/15 text-blue-700 dark:text-blue-300 font-bold"
+                            : "border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                        }`}
+                      >
+                        {preset}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Parcelas padrão */}
+              <div className="space-y-2">
+                <label className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  Número de parcelas padrão sugerido
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[1, 2, 3, 6, 10, 12, 15, 18, 21].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      disabled={!canEdit}
+                      onClick={() => setCardMaxInstallments(n)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition border cursor-pointer ${
+                        cardMaxInstallments === n
+                          ? "bg-blue-600 text-white border-blue-600 shadow-sm font-bold"
+                          : "border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                      }`}
+                    >
+                      {n}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Descrição padrão */}
+              <div className="space-y-1.5">
+                <label className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  Nota / Condição da maquininha
+                </label>
+                <input
+                  type="text"
+                  disabled={!canEdit}
+                  value={cardTaxDescription}
+                  onChange={(e) => setCardTaxDescription(e.target.value)}
+                  placeholder="Ex: Em até 2 cartões de crédito"
+                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-2 px-3 text-xs text-zinc-900 dark:text-zinc-100 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25"
+                />
+              </div>
+            </div>
+
+            {/* Preview da maquininha */}
+            <div className="rounded-xl border border-zinc-200/90 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 p-4 space-y-3.5">
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200">
+                <CreditCard className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span>Simulação da Maquininha (Base: R$ 20.000,00)</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="rounded-xl border border-zinc-200/90 dark:border-zinc-800/90 bg-white dark:bg-zinc-900 p-3 shadow-xs">
+                  <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                    Parcela ({cardMaxInstallments}x)
+                  </p>
+                  <p className="text-base font-extrabold text-blue-600 dark:text-blue-400 mt-1">
+                    {cardSimulation.installmentAmount.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-zinc-200/90 dark:border-zinc-800/90 bg-white dark:bg-zinc-900 p-3 shadow-xs">
+                  <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                    Total com encargos
+                  </p>
+                  <p className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 mt-1">
+                    {cardSimulation.totalAmount.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })}
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-2.5 text-xs text-blue-800 dark:text-blue-300 space-y-1">
+                <p className="font-semibold">
+                  Taxa embutida para o cliente:{" "}
+                  {cardSimulation.totalInterestAmount.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
+                </p>
+                <p className="text-[11px] opacity-90">
+                  {cardRateMode === "total_pct"
+                    ? "Na maquininha, ao descontar a taxa configurada, sua empresa recebe exatamente os R$ 20.000,00 integrais."
+                    : cardRateMode === "monthly_pct"
+                      ? "Cálculo pela Tabela Price repassado nas parcelas."
+                      : "No modo manual, você informará o valor real na proposta."}
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Botão de ação fixo na base */}
       <div className="flex items-center justify-end gap-3 pt-3">
