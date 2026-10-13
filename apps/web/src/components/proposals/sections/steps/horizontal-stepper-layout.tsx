@@ -22,13 +22,13 @@ export function HorizontalStepperLayout(props: HorizontalStepperLayoutProps): JS
   const connector = withAlpha(theme.primary, 0.38);
 
   return (
-    <div className="flex w-full flex-col gap-5 md:flex-row md:flex-wrap md:items-center">
+    <div className="process-steps-horizontal-wrap">
       {steps.map((step, index) => {
         const pillShadow = "0 6px 24px " + shadow;
         return (
-          <div key={step.title + String(index)} className="contents md:contents">
+          <div key={step.title + String(index)} className="contents">
             <div
-              className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-5 py-4 shadow-md ring-1 md:min-w-[200px] md:flex-none md:max-w-[280px]"
+              className="process-steps-horizontal-item flex min-w-0 items-center gap-3 rounded-2xl px-5 py-4 shadow-md ring-1"
               style={{
                 backgroundColor: withAlpha(theme.background, 0.65),
                 borderColor: border,
@@ -67,7 +67,7 @@ export function HorizontalStepperLayout(props: HorizontalStepperLayoutProps): JS
             </div>
             {index < steps.length - 1 ? (
               <div
-                className="hidden h-px flex-1 basis-4 md:block"
+                className="process-steps-connector"
                 style={{
                   minWidth: "16px",
                   backgroundColor: connector,

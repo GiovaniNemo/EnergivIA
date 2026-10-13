@@ -113,7 +113,7 @@ export function TestimonialsSectionPreview({
             background: `linear-gradient(to bottom, ${withAlpha(theme.primary, 0.08)}, transparent)`,
           }}
         >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="testimonials-grid-quote">
             {items.map((item, index) => {
               const name = tpl(item.name ?? "Cliente", vars);
               const subtitle = tpl(item.subtitle ?? "", vars);
@@ -195,7 +195,7 @@ export function TestimonialsSectionPreview({
   return (
     <div className="space-y-4">
       {intro}
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+      <div className="testimonials-grid-overlap">
         {items.map((item, index) => {
           const name = tpl(item.name ?? "Cliente", vars);
           const subtitle = tpl(item.subtitle ?? "", vars);

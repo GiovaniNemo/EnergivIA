@@ -141,6 +141,7 @@ function ValueDisplay({
   intPart,
   decPart,
   fontSize,
+  className,
   currencyEm,
   centsEm,
   centsAlign,
@@ -149,14 +150,18 @@ function ValueDisplay({
   currency: string;
   intPart: string;
   decPart: string;
-  fontSize: string;
+  fontSize?: string;
+  className?: string;
   currencyEm: string;
   centsEm: string;
   centsAlign: string;
   currencyAlign: string;
 }): JSX.Element {
   return (
-    <div className="font-extrabold leading-none tracking-[-0.05em]" style={{ fontSize }}>
+    <div
+      className={`font-extrabold leading-none tracking-[-0.05em] ${className ?? ""}`.trim()}
+      style={fontSize ? { fontSize } : undefined}
+    >
       <span
         className={`mr-2 ${currencyEm} font-semibold opacity-65`}
         style={{ verticalAlign: currencyAlign }}
@@ -191,10 +196,7 @@ function renderVerticalStack(
           dangerouslySetInnerHTML={safeHtml(textHtml)}
         />
       ) : null}
-      <section
-        className="rounded-2xl px-6 py-10 text-center md:px-12 md:py-14"
-        style={{ background: surfaceSoftBg }}
-      >
+      <section className="economy-purchases-hero-stack" style={{ background: surfaceSoftBg }}>
         {texts.eyebrow ? (
           <div
             data-editor-field-path="eyebrow"
@@ -224,7 +226,7 @@ function renderVerticalStack(
           currency={currency}
           intPart={intPart}
           decPart={decPart}
-          fontSize="clamp(48px, 11vw, 96px)"
+          className="economy-purchases-value-stack"
           currencyEm="text-[0.46em] align-top"
           centsEm="text-[0.27em]"
           currencyAlign="0.18em"
@@ -265,16 +267,13 @@ function renderVerticalStack(
                 </span>
               ) : null}
             </div>
-            <div
-              data-editor-field-path="purchaseItems"
-              className="flex flex-col gap-4 text-left md:flex-row md:flex-wrap"
-            >
+            <div data-editor-field-path="purchaseItems" className="economy-purchases-items-wrap">
               {items.map((item) => {
                 const Icon = resolveLucideIconFromName(item.row.icon);
                 return (
                   <div
                     key={String(item.row.id ?? `${item.row.name}-${item.index}`)}
-                    className="flex-1 rounded-xl border p-5 md:min-w-[240px]"
+                    className="economy-purchases-item-card border"
                     style={{
                       background: "color-mix(in srgb, currentColor 4%, transparent)",
                       borderColor: dividerColor,
@@ -335,13 +334,10 @@ function renderSplit(
         />
       ) : null}
       <section
-        className="grid grid-cols-1 overflow-hidden rounded-2xl border md:grid-cols-[1fr_1.1fr]"
+        className="economy-purchases-split-container border"
         style={{ borderColor: dividerColor }}
       >
-        <div
-          className="flex flex-col justify-center px-7 py-10 md:px-10"
-          style={{ background: surfaceSoftBg }}
-        >
+        <div className="economy-purchases-split-left" style={{ background: surfaceSoftBg }}>
           {texts.eyebrow ? (
             <div
               data-editor-field-path="eyebrow"
@@ -363,7 +359,7 @@ function renderSplit(
             currency={currency}
             intPart={intPart}
             decPart={decPart}
-            fontSize="clamp(40px, 8vw, 76px)"
+            className="economy-purchases-value-split"
             currencyEm="text-[0.42em]"
             centsEm="text-[0.29em]"
             currencyAlign="0.18em"
@@ -378,7 +374,7 @@ function renderSplit(
             />
           ) : null}
         </div>
-        <div className="flex flex-col px-7 py-7 md:px-9">
+        <div className="economy-purchases-split-right">
           {texts.listTitle ? (
             <div
               data-editor-field-path="listTitle"
@@ -469,16 +465,13 @@ function renderInverted(
             </h2>
           ) : null}
         </header>
-        <div
-          data-editor-field-path="purchaseItems"
-          className="mb-7 flex flex-col gap-4 md:flex-row md:flex-wrap"
-        >
+        <div data-editor-field-path="purchaseItems" className="mb-7 economy-purchases-items-wrap">
           {items.map((item) => {
             const Icon = resolveLucideIconFromName(item.row.icon);
             return (
               <div
                 key={String(item.row.id ?? `${item.row.name}-${item.index}`)}
-                className="relative flex-1 overflow-hidden rounded-2xl px-6 pb-6 pt-9 md:min-w-[240px]"
+                className="relative overflow-hidden economy-purchases-item-card border-0 pt-9"
                 style={{ background: surfaceSoftBg }}
               >
                 <span
@@ -532,7 +525,7 @@ function renderInverted(
           })}
         </div>
         <div
-          className="flex flex-col items-center gap-2 rounded-xl px-6 py-5 text-center md:flex-row md:justify-center md:gap-3"
+          className="economy-purchases-inverted-footer rounded-xl text-center"
           style={{
             background: "var(--preview-secondary-color, #0b1b2b)",
             color: "color-mix(in srgb, white 78%, transparent)",
@@ -601,7 +594,7 @@ function renderNarrative(
         ) : null}
         <div
           data-editor-field-path="purchaseItems"
-          className="flex flex-col md:flex-row"
+          className="economy-purchases-narrative-container"
           style={{
             borderTop: `1px solid ${dividerColor}`,
             borderBottom: `1px solid ${dividerColor}`,
@@ -612,7 +605,7 @@ function renderNarrative(
             return (
               <div
                 key={String(item.row.id ?? `${item.row.name}-${item.index}`)}
-                className="min-w-0 flex-1 border-b px-6 py-6 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"
+                className="economy-purchases-narrative-item"
                 style={{ borderColor: dividerColor }}
               >
                 <div className="mb-4 flex items-center gap-3">

@@ -1597,7 +1597,7 @@ export function renderSectionContent(
       const isCardLayout = solutionLayout === "cards";
       const hAlign = resolveSectionHorizontalAlignment(section);
       const benefitListLayoutClass = isCardLayout
-        ? `grid gap-2 sm:grid-cols-2 ${benefitGridJustifyItemsClass(hAlign)}`
+        ? `solution-benefits-grid ${benefitGridJustifyItemsClass(hAlign)}`
         : `flex flex-col gap-1.5 ${benefitRowsCrossAxisClass(hAlign)}`;
       const benefitRowMainAxisClass = isCardLayout
         ? hAlign === "center"
@@ -2706,11 +2706,7 @@ export function renderSectionContent(
         return (
           <div>
             {header}
-            <div
-              data-editor-field-path="items"
-              className="grid grid-cols-1 md:grid-cols-2"
-              style={{ columnGap: 48, rowGap: 32 }}
-            >
+            <div data-editor-field-path="items" className="faq-two-column-grid">
               {items.map((item, index) => (
                 <div
                   key={`faq-${index}`}
@@ -2752,7 +2748,7 @@ export function renderSectionContent(
                 return (
                   <div
                     key={`faq-${index}`}
-                    className="grid gap-4 border-b pb-8 last:border-b-0 last:pb-0 md:grid-cols-[80px_1fr] md:gap-8"
+                    className="faq-interview-row border-b pb-6 last:border-b-0 last:pb-0"
                     style={{ borderColor: dividerColor }}
                   >
                     <div className="md:text-right">
@@ -2799,7 +2795,7 @@ export function renderSectionContent(
               return (
                 <div
                   key={`faq-${index}`}
-                  className="grid items-start gap-6 border-t py-9 first:border-t-0 first:pt-0 last:pb-0 md:grid-cols-[1.2fr_1fr] md:gap-14"
+                  className="faq-headline-row items-start border-t py-6 first:border-t-0 first:pt-0 last:pb-0"
                   style={{ borderColor: dividerColor }}
                 >
                   <div className="flex flex-col gap-2.5">
@@ -3357,7 +3353,7 @@ export function renderSectionContent(
           <div style={{ marginBottom: descriptionHtml ? 28 : 0 }}>{playerStage()}</div>
           {descriptionHtml ? (
             <div
-              className="grid gap-4 md:grid-cols-[200px_1fr] md:gap-12"
+              className="video-editorial-meta-grid"
               style={{
                 paddingTop: 24,
                 borderTop: "1px solid rgba(128,128,128,0.18)",
