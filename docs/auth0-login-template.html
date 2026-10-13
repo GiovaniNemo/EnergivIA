@@ -106,83 +106,223 @@
       }
 
       /* ------------------------------------------------------------- */
-      /* CARD PRINCIPAL EM GLASSMORPHISM (VIDRO FUMÊ TRANSLÚCIDO)      */
+      /* CARD PRINCIPAL EM GLASSMORPHISM (DOUBLE SLIDER 3D)            */
       /* ------------------------------------------------------------- */
       .glass-container {
         position: relative;
         z-index: 10;
         width: 100%;
         max-width: 900px;
-        border-radius: 32px;
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%), rgba(6, 11, 20, 0.82);
+        min-height: 460px;
+        border-radius: 24px;
+        background: 
+          linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%),
+          rgba(6, 11, 20, 0.88);
         border: 1px solid rgba(255, 255, 255, 0.12);
         border-top: 1px solid rgba(255, 255, 255, 0.38); /* Chanfro de luz especular superior */
         backdrop-filter: blur(28px) saturate(190%);
         -webkit-backdrop-filter: blur(28px) saturate(190%);
         box-shadow: 
-          0 35px 80px -15px rgba(0, 0, 0, 0.95),
-          0 0 50px rgba(16, 185, 129, 0.14),
+          0 25px 60px -15px rgba(0, 0, 0, 0.95),
+          0 0 40px rgba(16, 185, 129, 0.12),
           inset 0 1px 0 rgba(255, 255, 255, 0.25);
-        display: grid;
-        grid-template-columns: 5fr 7fr;
         overflow: hidden;
-        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
-      @media (max-width: 768px) {
-        .glass-container {
-          grid-template-columns: 1fr;
-          max-width: 480px;
-        }
-      }
-
-      /* Coluna Esquerda: Apresentação */
-      .left-col {
-        padding: 44px 38px;
+      /* ------------------------------------------------------------- */
+      /* PAINÉIS DE FORMULÁRIO (LOGIN E CADASTRO)                      */
+      /* ------------------------------------------------------------- */
+      .form-panel {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        transition: all 0.65s cubic-bezier(0.77, 0, 0.175, 1);
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
-        border-right: 1px solid rgba(255, 255, 255, 0.08);
-        background: linear-gradient(145deg, rgba(255, 255, 255, 0.04) 0%, rgba(16, 185, 129, 0.03) 100%);
-        position: relative;
+        justify-content: center;
+        padding: 24px 36px;
       }
 
-      @media (max-width: 768px) {
-        .left-col {
-          border-right: none;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          padding: 32px 28px;
+      /* Painel de Login (Lado Esquerdo Inicial) */
+      .login-panel {
+        left: 0;
+        width: 50%;
+        z-index: 2;
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .glass-container.right-panel-active .login-panel {
+        transform: translateX(100%);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* Painel de Cadastro (Lado Esquerdo, revelado à Direita) */
+      .signup-panel {
+        left: 0;
+        width: 50%;
+        opacity: 0;
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      .glass-container.right-panel-active .signup-panel {
+        transform: translateX(100%);
+        opacity: 1;
+        z-index: 5;
+        pointer-events: auto;
+        animation: panelShow 0.65s cubic-bezier(0.77, 0, 0.175, 1);
+      }
+
+      @keyframes panelShow {
+        0%, 49.99% {
+          opacity: 0;
+          z-index: 1;
+        }
+        50%, 100% {
+          opacity: 1;
+          z-index: 5;
         }
       }
 
+      /* ------------------------------------------------------------- */
+      /* SLIDING OVERLAY CONTAINER (COBERTURA DESLIZANTE 3D)           */
+      /* ------------------------------------------------------------- */
+      .overlay-container {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 50%;
+        height: 100%;
+        overflow: hidden;
+        transition: transform 0.65s cubic-bezier(0.77, 0, 0.175, 1);
+        z-index: 10;
+      }
+
+      .glass-container.right-panel-active .overlay-container {
+        transform: translateX(-100%);
+      }
+
+      .overlay {
+        position: relative;
+        left: -100%;
+        height: 100%;
+        width: 200%;
+        background: 
+          linear-gradient(145deg, rgba(16, 185, 129, 0.14) 0%, rgba(6, 78, 59, 0.28) 45%, rgba(2, 6, 23, 0.88) 100%),
+          rgba(8, 15, 27, 0.94);
+        backdrop-filter: blur(28px) saturate(200%);
+        -webkit-backdrop-filter: blur(28px) saturate(200%);
+        transform: translateX(0);
+        transition: transform 0.65s cubic-bezier(0.77, 0, 0.175, 1);
+        border-left: 1px solid rgba(255, 255, 255, 0.14);
+        border-right: 1px solid rgba(255, 255, 255, 0.14);
+      }
+
+      .glass-container.right-panel-active .overlay {
+        transform: translateX(50%);
+      }
+
+      /* Chanfro angular dinâmico de luz na borda divisória */
+      .overlay::before {
+        content: "";
+        position: absolute;
+        top: -10%;
+        left: 50%;
+        width: 2px;
+        height: 120%;
+        background: linear-gradient(
+          to bottom,
+          transparent,
+          rgba(52, 211, 153, 0.6) 20%,
+          rgba(255, 255, 255, 0.8) 50%,
+          rgba(52, 211, 153, 0.6) 80%,
+          transparent
+        );
+        transform: rotate(2.5deg);
+        transition: transform 0.65s cubic-bezier(0.77, 0, 0.175, 1);
+        pointer-events: none;
+        filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.6));
+      }
+
+      .glass-container.right-panel-active .overlay::before {
+        transform: rotate(-2.5deg);
+      }
+
+      .overlay-panel {
+        position: absolute;
+        top: 0;
+        width: 50%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 24px 36px;
+        text-align: left;
+        transition: transform 0.65s cubic-bezier(0.77, 0, 0.175, 1), opacity 0.4s ease;
+      }
+
+      /* Painel do Overlay à Esquerda (ativo quando em modo Cadastro) */
+      .overlay-left {
+        left: 0;
+        transform: translateX(-20%);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .glass-container.right-panel-active .overlay-left {
+        transform: translateX(0);
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      /* Painel do Overlay à Direita (ativo quando em modo Login) */
+      .overlay-right {
+        right: 0;
+        transform: translateX(0);
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .glass-container.right-panel-active .overlay-right {
+        transform: translateX(20%);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* ------------------------------------------------------------- */
+      /* ELEMENTOS TIPOGRÁFICOS E COMPONENTES VISUAIS                  */
+      /* ------------------------------------------------------------- */
       .brand-badge {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 6px 14px;
+        padding: 5px 12px;
         border-radius: 9999px;
-        font-size: 11px;
+        font-size: 10.5px;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.12em;
         color: #34d399;
         background: rgba(6, 78, 59, 0.45);
         border: 1px solid rgba(16, 185, 129, 0.4);
-        box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
+        box-shadow: 0 0 16px rgba(16, 185, 129, 0.22);
         width: fit-content;
       }
 
       .sparkle-icon {
-        width: 13px;
-        height: 13px;
+        width: 12px;
+        height: 12px;
         fill: #34d399;
       }
 
       .welcome-heading {
-        font-size: 36px;
+        font-size: 28px;
         font-weight: 800;
         line-height: 1.15;
-        margin-top: 28px;
+        margin-top: 14px;
         letter-spacing: -0.02em;
         color: #ffffff;
       }
@@ -194,86 +334,82 @@
       }
 
       .welcome-text {
-        font-size: 14px;
+        font-size: 13px;
         color: #94a3b8;
-        margin-top: 14px;
-        line-height: 1.65;
+        margin-top: 10px;
+        line-height: 1.5;
         font-weight: 300;
+        max-width: 340px;
       }
 
       .pill-toggle-btn {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 12px 24px;
+        padding: 10px 20px;
         border-radius: 9999px;
         background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         color: #ffffff;
-        font-size: 13px;
+        font-size: 12.5px;
         font-weight: 600;
         cursor: pointer;
         text-decoration: none;
         transition: all 0.25s ease;
-        margin-top: 28px;
+        margin-top: 18px;
         width: fit-content;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
       }
 
       .pill-toggle-btn:hover {
-        background: rgba(16, 185, 129, 0.18);
-        border-color: rgba(16, 185, 129, 0.6);
-        box-shadow: 0 0 25px rgba(16, 185, 129, 0.3);
+        background: rgba(16, 185, 129, 0.2);
+        border-color: rgba(16, 185, 129, 0.7);
+        box-shadow: 0 0 25px rgba(16, 185, 129, 0.35);
         transform: translateY(-1px);
       }
 
-      /* Coluna Direita: Formulário */
-      .right-col {
-        padding: 44px 40px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        position: relative;
+      .pill-toggle-btn .btn-arrow {
+        display: inline-block;
+        transition: transform 0.2s ease;
       }
 
-      @media (max-width: 768px) {
-        .right-col {
-          padding: 32px 24px;
-        }
+      .pill-toggle-btn:hover .btn-arrow {
+        transform: translateX(4px);
       }
 
       .form-title {
-        font-size: 28px;
+        font-size: 24px;
         font-weight: 700;
         color: #ffffff;
         letter-spacing: -0.02em;
       }
 
       .form-subtitle {
-        font-size: 13px;
+        font-size: 12.5px;
         color: #94a3b8;
-        margin-top: 4px;
-        margin-bottom: 22px;
+        margin-top: 3px;
+        margin-bottom: 14px;
         font-weight: 300;
       }
 
       /* Botão Social Google no Topo */
       .google-btn {
         width: 100%;
-        padding: 13px 16px;
-        border-radius: 14px;
+        padding: 10px 14px;
+        border-radius: 12px;
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.14);
         color: #ffffff;
-        font-size: 14px;
+        font-size: 13.5px;
         font-weight: 600;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 12px;
+        gap: 10px;
         cursor: pointer;
         transition: all 0.25s ease;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        margin-bottom: 16px;
+        margin-bottom: 10px;
       }
 
       .google-btn:hover {
@@ -287,10 +423,10 @@
       .divider {
         display: flex;
         align-items: center;
-        gap: 12px;
-        margin: 18px 0 20px 0;
+        gap: 10px;
+        margin: 10px 0 12px 0;
         color: #64748b;
-        font-size: 11px;
+        font-size: 10.5px;
         font-weight: 700;
         letter-spacing: 0.1em;
         text-transform: uppercase;
@@ -305,17 +441,17 @@
       }
 
       .input-wrapper {
-        margin-bottom: 14px;
+        margin-bottom: 10px;
         position: relative;
       }
 
       .input-icon {
         position: absolute;
-        left: 14px;
+        left: 12px;
         top: 50%;
         transform: translateY(-50%);
-        width: 17px;
-        height: 17px;
+        width: 16px;
+        height: 16px;
         color: #64748b;
         transition: color 0.2s ease;
         pointer-events: none;
@@ -323,12 +459,12 @@
 
       .glass-input {
         width: 100%;
-        padding: 13px 16px 13px 42px;
+        padding: 10px 14px 10px 38px;
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 14px;
+        border-radius: 12px;
         color: #ffffff;
-        font-size: 14px;
+        font-size: 13.5px;
         outline: none;
         transition: all 0.25s ease;
       }
@@ -351,23 +487,23 @@
         color: #34d399;
       }
 
-      /* Botão Primário de Ação com Efeito Shimmer e Neon Glow */
+      /* Botão Primário com Efeito Glow */
       .glow-btn {
         width: 100%;
-        padding: 14px;
-        border-radius: 14px;
+        padding: 11px 16px;
+        border-radius: 12px;
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         border: 1px solid rgba(52, 211, 153, 0.5);
         border-top: 1px solid rgba(255, 255, 255, 0.4);
         color: #ffffff;
-        font-size: 14px;
+        font-size: 13.5px;
         font-weight: 700;
         cursor: pointer;
         box-shadow: 
           0 4px 20px rgba(16, 185, 129, 0.4),
           inset 0 1px 0 rgba(255, 255, 255, 0.3);
         transition: all 0.3s ease;
-        margin-top: 8px;
+        margin-top: 4px;
         position: relative;
         overflow: hidden;
       }
@@ -386,9 +522,9 @@
       }
 
       .toggle-footer {
-        margin-top: 18px;
+        margin-top: 12px;
         text-align: center;
-        font-size: 13px;
+        font-size: 12.5px;
         color: #94a3b8;
       }
 
@@ -402,7 +538,7 @@
         background: transparent;
         border: none;
         padding: 0;
-        font-size: 13px;
+        font-size: 12.5px;
         font-family: inherit;
         display: inline;
       }
@@ -414,13 +550,70 @@
 
       .error-box {
         display: none;
-        padding: 10px 14px;
-        margin-bottom: 14px;
+        padding: 8px 12px;
+        margin-bottom: 10px;
         background: rgba(239, 68, 68, 0.15);
         border: 1px solid rgba(239, 68, 68, 0.4);
         border-radius: 10px;
         color: #fca5a5;
-        font-size: 13px;
+        font-size: 12.5px;
+      }
+
+      /* ------------------------------------------------------------- */
+      /* ADAPTAÇÃO RESPONSIVA PARA MOBILE (TELAS < 768px)             */
+      /* ------------------------------------------------------------- */
+      @media (max-width: 768px) {
+        .glass-container {
+          min-height: auto;
+          max-width: 440px;
+          border-radius: 20px;
+        }
+
+        .overlay-container {
+          display: none;
+        }
+
+        .form-panel {
+          position: relative;
+          width: 100%;
+          left: 0;
+          transform: none !important;
+          padding: 24px 20px;
+        }
+
+        .login-panel {
+          display: flex;
+        }
+
+        .signup-panel {
+          display: none;
+        }
+
+        .glass-container.right-panel-active .login-panel {
+          display: none;
+        }
+
+        .glass-container.right-panel-active .signup-panel {
+          display: flex;
+          opacity: 1;
+          pointer-events: auto;
+        }
+
+        .mobile-header {
+          display: block;
+          margin-bottom: 18px;
+          text-align: left;
+        }
+
+        .mobile-header .brand-badge {
+          margin-bottom: 12px;
+        }
+      }
+
+      @media (min-width: 769px) {
+        .mobile-header {
+          display: none;
+        }
       }
     </style>
   </head>
@@ -433,41 +626,28 @@
     </div>
     <div class="bg-grid"></div>
 
-    <!-- Card Principal de Vidro Translúcido -->
-    <div class="glass-container">
-      <!-- Coluna Esquerda: Apresentação -->
-      <div class="left-col">
-        <div>
+    <!-- Card Principal de Vidro Translúcido com Double Slider 3D -->
+    <div class="glass-container" id="glass-container">
+
+      <!-- ========================================================= -->
+      <!-- PAINEL 1: FORMULÁRIO DE LOGIN (ENTRAR)                    -->
+      <!-- ========================================================= -->
+      <div class="form-panel login-panel">
+        <div class="mobile-header">
           <div class="brand-badge">
             <svg class="sparkle-icon" viewBox="0 0 24 24">
-              <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
+              <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
             </svg>
             EnergivIA
           </div>
-          <h1 id="welcome-title" class="welcome-heading">
-            BEM-VINDO <br />
-            <span>DE VOLTA!</span>
-          </h1>
-          <p id="welcome-desc" class="welcome-text">
-            Acesse sua conta para gerenciar propostas, dimensionamento inteligente e atendimento comercial via IA.
-          </p>
         </div>
 
-        <div>
-          <button type="button" id="pill-toggle" class="pill-toggle-btn" onclick="toggleMode()">
-            <span id="pill-text">Novo por aqui? Cadastre-se</span> &rarr;
-          </button>
-        </div>
-      </div>
+        <h2 class="form-title">Entrar na Plataforma</h2>
+        <p class="form-subtitle">Digite seus dados corporativos ou use o Google</p>
 
-      <!-- Coluna Direita (Formulário) -->
-      <div class="right-col">
-        <h2 id="form-heading" class="form-title">Entrar na Plataforma</h2>
-        <p id="form-subheading" class="form-subtitle">Digite seus dados de acesso corporativo ou use o Google</p>
+        <div id="error-alert-login" class="error-box"></div>
 
-        <div id="error-alert" class="error-box"></div>
-
-        <!-- Botão Social Google no Topo -->
+        <!-- Botão Google -->
         <button type="button" class="google-btn" onclick="loginWithGoogle()">
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"/>
@@ -481,37 +661,171 @@
         <!-- Divisor OU -->
         <div class="divider">OU COM SEU E-MAIL</div>
 
-        <form id="auth-form" onsubmit="handleAuthSubmit(event)">
-          <!-- Campo E-mail -->
+        <form id="login-form" onsubmit="handleLoginSubmit(event)">
           <div class="input-wrapper">
-            <input type="email" id="email-input" class="glass-input" placeholder="E-mail corporativo" required />
+            <input
+              type="email"
+              id="login-email-input"
+              class="glass-input"
+              placeholder="E-mail corporativo"
+              required
+            />
             <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
               <polyline points="22,6 12,13 2,6"></polyline>
             </svg>
           </div>
 
-          <!-- Campo Senha -->
           <div class="input-wrapper">
-            <input type="password" id="password-input" class="glass-input" placeholder="Sua senha de acesso" required />
+            <input
+              type="password"
+              id="login-password-input"
+              class="glass-input"
+              placeholder="Sua senha de acesso"
+              required
+            />
             <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
           </div>
 
-          <!-- Botão Primário com Glow -->
-          <button type="submit" id="submit-btn" class="glow-btn">
+          <button type="submit" id="login-submit-btn" class="glow-btn">
             Entrar
           </button>
 
-          <!-- Alternador inferior -->
           <div class="toggle-footer">
-            <span id="footer-text">Ainda não tem conta?</span>
-            <button type="button" id="footer-toggle" class="toggle-link" onclick="toggleMode()">Cadastre-se</button>
+            <span>Ainda não tem conta?</span>
+            <button type="button" class="toggle-link" onclick="setMode('signup')">Cadastre-se</button>
           </div>
         </form>
       </div>
+
+      <!-- ========================================================= -->
+      <!-- PAINEL 2: FORMULÁRIO DE CADASTRO (CRIAR CONTA)            -->
+      <!-- ========================================================= -->
+      <div class="form-panel signup-panel">
+        <div class="mobile-header">
+          <div class="brand-badge">
+            <svg class="sparkle-icon" viewBox="0 0 24 24">
+              <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
+            </svg>
+            EnergivIA
+          </div>
+        </div>
+
+        <h2 class="form-title">Criar Conta</h2>
+        <p class="form-subtitle">Cadastre-se em segundos ou use o Google</p>
+
+        <div id="error-alert-signup" class="error-box"></div>
+
+        <!-- Botão Google -->
+        <button type="button" class="google-btn" onclick="loginWithGoogle()">
+          <svg width="18" height="18" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"/>
+            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.35 24 12 24z"/>
+            <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.6H1.25C.45 8.19 0 10.04 0 12s.45 3.81 1.25 5.4l4.03-3.13z"/>
+            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.27 2.57 1.25 6.6l4.03 3.13c.95-2.83 3.6-4.98 6.72-4.98z"/>
+          </svg>
+          Continuar com o Google
+        </button>
+
+        <!-- Divisor OU -->
+        <div class="divider">OU COM SEU E-MAIL</div>
+
+        <form id="signup-form" onsubmit="handleSignupSubmit(event)">
+          <div class="input-wrapper">
+            <input
+              type="email"
+              id="signup-email-input"
+              class="glass-input"
+              placeholder="E-mail corporativo"
+              required
+            />
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </div>
+
+          <div class="input-wrapper">
+            <input
+              type="password"
+              id="signup-password-input"
+              class="glass-input"
+              placeholder="Crie uma senha de acesso"
+              required
+            />
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+
+          <button type="submit" id="signup-submit-btn" class="glow-btn">
+            Criar Conta Grátis
+          </button>
+
+          <div class="toggle-footer">
+            <span>Já tem uma conta?</span>
+            <button type="button" class="toggle-link" onclick="setMode('login')">Entrar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- PAINEL 3: SLIDING OVERLAY (COBERTURA DESLIZANTE 3D)       -->
+      <!-- ========================================================= -->
+      <div class="overlay-container">
+        <div class="overlay">
+          <!-- Visível no Overlay quando em modo Cadastro (posicionado à esquerda) -->
+          <div class="overlay-panel overlay-left">
+            <div class="brand-badge">
+              <svg class="sparkle-icon" viewBox="0 0 24 24">
+                <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
+              </svg>
+              EnergivIA
+            </div>
+            <h1 class="welcome-heading">
+              BEM-VINDO <br />
+              <span>DE VOLTA!</span>
+            </h1>
+            <p class="welcome-text">
+              Acesse sua conta para gerenciar propostas, dimensionamento inteligente e atendimento comercial via IA.
+            </p>
+            <div>
+              <button type="button" class="pill-toggle-btn" onclick="setMode('login')">
+                <span>Já possui conta? Entrar</span>
+                <span class="btn-arrow">&rarr;</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Visível no Overlay quando em modo Login (posicionado à direita) -->
+          <div class="overlay-panel overlay-right">
+            <div class="brand-badge">
+              <svg class="sparkle-icon" viewBox="0 0 24 24">
+                <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
+              </svg>
+              EnergivIA
+            </div>
+            <h1 class="welcome-heading">
+              BEM-VINDO <br />
+              <span>AO ENERGIVIA!</span>
+            </h1>
+            <p class="welcome-text">
+              Crie sua conta em segundos para dimensionar usinas, kits solares e gerar propostas comerciais com IA.
+            </p>
+            <div>
+              <button type="button" class="pill-toggle-btn" onclick="setMode('signup')">
+                <span>Novo por aqui? Cadastre-se</span>
+                <span class="btn-arrow">&rarr;</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- Lógica de Alternância Interativa e Integração com Auth0 -->
@@ -529,7 +843,7 @@
       var screenHint = urlParams.get("screen_hint") || (config.extraParams && config.extraParams.screen_hint);
       var currentMode = screenHint === "signup" ? "signup" : "login";
 
-      // 3. Inicialização oficial do WebAuth combinando internalOptions para manter state e nonce intactos
+      // 3. Inicialização oficial do WebAuth preservando parâmetros originais
       var webAuth = null;
       try {
         if (typeof auth0 !== "undefined" && config.clientID) {
@@ -551,12 +865,35 @@
         console.warn("Auth0 WebAuth fallback local:", e);
       }
 
-      function setMode(mode) {
-        var errorAlert = document.getElementById("error-alert");
-        if (errorAlert) {
-          errorAlert.style.display = "none";
-          errorAlert.innerText = "";
+      function updateUI() {
+        var container = document.getElementById("glass-container");
+        var isSignup = currentMode === "signup";
+
+        if (isSignup) {
+          container.classList.add("right-panel-active");
+        } else {
+          container.classList.remove("right-panel-active");
         }
+
+        // Sincroniza e-mail digitado entre formulários para conveniência do usuário
+        var loginEmail = document.getElementById("login-email-input");
+        var signupEmail = document.getElementById("signup-email-input");
+        if (loginEmail && signupEmail) {
+          if (isSignup && loginEmail.value && !signupEmail.value) {
+            signupEmail.value = loginEmail.value;
+          } else if (!isSignup && signupEmail.value && !loginEmail.value) {
+            loginEmail.value = signupEmail.value;
+          }
+        }
+      }
+
+      function setMode(mode) {
+        // Limpa caixas de erro
+        var errLogin = document.getElementById("error-alert-login");
+        var errSignup = document.getElementById("error-alert-signup");
+        if (errLogin) { errLogin.style.display = "none"; errLogin.innerText = ""; }
+        if (errSignup) { errSignup.style.display = "none"; errSignup.innerText = ""; }
+
         if (mode === "login" || mode === "signup") {
           currentMode = mode;
         } else {
@@ -566,71 +903,27 @@
       }
 
       function toggleMode(targetMode) {
-        if (targetMode === "login" || targetMode === "signup") {
-          setMode(targetMode);
-        } else {
-          setMode(currentMode === "signup" ? "login" : "signup");
-        }
+        setMode(targetMode);
       }
 
-      function updateUI() {
-        var isSignup = currentMode === "signup";
-        var welcomeTitle = document.getElementById("welcome-title");
-        var welcomeDesc = document.getElementById("welcome-desc");
-        var pillBtn = document.getElementById("pill-toggle");
-        var pillText = document.getElementById("pill-text");
-        var formHeading = document.getElementById("form-heading");
-        var formSubheading = document.getElementById("form-subheading");
-        var submitBtn = document.getElementById("submit-btn");
-        var footerText = document.getElementById("footer-text");
-        var footerToggle = document.getElementById("footer-toggle");
-
-        if (isSignup) {
-          if (welcomeTitle) welcomeTitle.innerHTML = 'BEM-VINDO <br /><span>AO ENERGIVIA!</span>';
-          if (welcomeDesc) welcomeDesc.innerText = 'Crie sua conta em segundos para dimensionar usinas, kits solares e gerar propostas comerciais com IA.';
-          if (pillText) pillText.innerText = 'Já possui conta? Entrar';
-          if (pillBtn) pillBtn.onclick = function() { setMode('login'); };
-          if (formHeading) formHeading.innerText = 'Criar Conta';
-          if (formSubheading) formSubheading.innerText = 'Cadastre-se ou acesse com sua conta Google';
-          if (submitBtn) submitBtn.innerText = 'Criar Conta Grátis';
-          if (footerText) footerText.innerText = 'Já tem uma conta?';
-          if (footerToggle) {
-            footerToggle.innerText = 'Entrar';
-            footerToggle.onclick = function(e) { if (e && e.preventDefault) e.preventDefault(); setMode('login'); };
-          }
-        } else {
-          if (welcomeTitle) welcomeTitle.innerHTML = 'BEM-VINDO <br /><span>DE VOLTA!</span>';
-          if (welcomeDesc) welcomeDesc.innerText = 'Acesse sua conta para gerenciar propostas, dimensionamento inteligente e atendimento comercial via IA.';
-          if (pillText) pillText.innerText = 'Novo por aqui? Cadastre-se';
-          if (pillBtn) pillBtn.onclick = function() { setMode('signup'); };
-          if (formHeading) formHeading.innerText = 'Entrar na Plataforma';
-          if (formSubheading) formSubheading.innerText = 'Digite seus dados de acesso corporativo ou use o Google';
-          if (submitBtn) submitBtn.innerText = 'Entrar';
-          if (footerText) footerText.innerText = 'Ainda não tem conta?';
-          if (footerToggle) {
-            footerToggle.innerText = 'Cadastre-se';
-            footerToggle.onclick = function(e) { if (e && e.preventDefault) e.preventDefault(); setMode('signup'); };
-          }
-        }
-      }
-
-      function showError(msg) {
-        var el = document.getElementById("error-alert");
+      function showError(msg, formMode) {
+        var targetId = formMode === "signup" ? "error-alert-signup" : "error-alert-login";
+        var el = document.getElementById(targetId);
         if (el) {
           el.innerText = msg;
           el.style.display = "block";
         }
       }
 
-      function handleAuthSubmit(e) {
-        e.preventDefault();
-        var email = document.getElementById("email-input").value;
-        var password = document.getElementById("password-input").value;
-        var submitBtn = document.getElementById("submit-btn");
+      function handleLoginSubmit(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        var email = document.getElementById("login-email-input").value;
+        var password = document.getElementById("login-password-input").value;
+        var submitBtn = document.getElementById("login-submit-btn");
 
         if (submitBtn) {
           submitBtn.disabled = true;
-          submitBtn.innerText = "Processando...";
+          submitBtn.innerText = "Entrando...";
         }
 
         var dbConn = config.databaseConnection ||
@@ -638,59 +931,88 @@
           "Username-Password-Authentication";
 
         if (!webAuth) {
-          // Ambiente de teste/preview local
           setTimeout(function() {
-            alert((currentMode === "signup" ? "Cadastro" : "Login") + " simulado para: " + email);
+            alert("Login simulado para: " + email);
             if (submitBtn) {
               submitBtn.disabled = false;
-              updateUI();
+              submitBtn.innerText = "Entrar";
             }
           }, 800);
           return;
         }
 
-        if (currentMode === "signup") {
-          webAuth.signup({
-            connection: dbConn,
-            email: email,
-            password: password
-          }, function(err) {
-            if (err) {
-              showError(err.description || err.message || "Erro ao realizar cadastro.");
-              if (submitBtn) submitBtn.disabled = false;
-              updateUI();
-              return;
+        webAuth.login({
+          realm: dbConn,
+          username: email,
+          password: password
+        }, function(err) {
+          if (err) {
+            showError(err.description || err.message || "E-mail ou senha incorretos.", "login");
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.innerText = "Entrar";
             }
-            // Realiza login imediato após cadastro com a mesma conexão
-            webAuth.login({
-              realm: dbConn,
-              username: email,
-              password: password
-            }, function(loginErr) {
-              if (loginErr) {
-                showError(loginErr.description || "Cadastro concluído. Efetue login para continuar.");
-                if (submitBtn) submitBtn.disabled = false;
-                updateUI();
-              }
-            });
-          });
-        } else {
+          }
+        });
+      }
+
+      function handleSignupSubmit(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        var email = document.getElementById("signup-email-input").value;
+        var password = document.getElementById("signup-password-input").value;
+        var submitBtn = document.getElementById("signup-submit-btn");
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerText = "Criando conta...";
+        }
+
+        var dbConn = config.databaseConnection ||
+          (config.connections && config.connections[0]) ||
+          "Username-Password-Authentication";
+
+        if (!webAuth) {
+          setTimeout(function() {
+            alert("Cadastro simulado para: " + email);
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.innerText = "Criar Conta Grátis";
+            }
+          }, 800);
+          return;
+        }
+
+        webAuth.signup({
+          connection: dbConn,
+          email: email,
+          password: password
+        }, function(err) {
+          if (err) {
+            showError(err.description || err.message || "Erro ao realizar cadastro.", "signup");
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.innerText = "Criar Conta Grátis";
+            }
+            return;
+          }
+          // Realiza login imediato após cadastro
           webAuth.login({
             realm: dbConn,
             username: email,
             password: password
-          }, function(err) {
-            if (err) {
-              showError(err.description || err.message || "E-mail ou senha incorretos.");
-              if (submitBtn) submitBtn.disabled = false;
-              updateUI();
+          }, function(loginErr) {
+            if (loginErr) {
+              showError(loginErr.description || "Cadastro concluído. Efetue login para continuar.", "signup");
+              if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Criar Conta Grátis";
+              }
             }
           });
-        }
+        });
       }
 
       function loginWithGoogle() {
-        // Preserva estritamente todos os parâmetros da transação iniciada pelo Next.js (state, nonce, code_challenge, etc.)
         var opts = Object.assign({
           connection: "google-oauth2"
         }, config.internalOptions || {});
@@ -711,7 +1033,7 @@
         }
       }
 
-      // Inicializa na renderização
+      // Inicializa no modo solicitado
       updateUI();
     </script>
   </body>

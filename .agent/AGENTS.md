@@ -11,6 +11,7 @@ This profile adapts Superpowers workflows for Antigravity with strict single-flo
 3. Use `browser_subagent` only for browser automation tasks.
 4. Track checklist progress in `<project-root>/docs/plans/task.md` (table-only live tracker).
 5. Keep changes scoped to the requested task and verify before completion claims.
+6. NUNCA iniciar o processo de entrar ou fazer login na plataforma localmente para printar/gravar telas (browser_subagent), pois trava o ambiente e o botão de skip não funciona quando trava.
 
 ## Tool Translation Contract
 

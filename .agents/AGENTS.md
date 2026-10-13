@@ -10,6 +10,7 @@ Não utilizar templates prontos, criar um design único para o site
 Não utilizar imagens de baixa qualidade
 Não utilizar imagens que causem desconforto visual
 Não criar imagens de IA, somente imagens reais
+Não iniciar o processo de entrar na plataforma localmente para tirar print/gravar telas (browser_subagent), pois trava frequentemente e o botão de skip não funciona quando trava
 
 # Role & Objetivo
 
@@ -34,5 +35,5 @@ Você é um Engenheiro de Frontend Sênior e Especialista em UX/Motion Design. S
 # Metodologia de Execução (Browser Agent Workflow)
 
 - **Passo 1 (Plano):** Antes de codificar, gere o plano arquitetônico da interface e confirme comigo.
-- **Passo 2 (Execução Visual):** Codifique seção por seção. Utilize o seu Subagente de Navegador (Browser Agent) interno para abrir a página gerada, simular a rolagem (scroll) e gravar a interação.
+- **Passo 2 (Execução Visual):** Codifique seção por seção. Utilize o seu Subagente de Navegador (Browser Agent) interno para abrir a página gerada, simular a rolagem (scroll) e gravar a interação (REGRA CRÍTICA: NUNCA iniciar o processo de entrar ou fazer login na plataforma localmente para printar/gravar telas, pois trava o ambiente e o botão de skip não funciona quando trava; use testes automatizados e inspeção estática para telas de auth).
 - **Passo 3 (Iteração):** Analise os artefatos visuais capturados. Se os efeitos de scroll estiverem travados ou o timing das animações estiver artificial, ajuste a curva de animação e o peso do componente de forma autônoma antes de finalizar a tarefa.
