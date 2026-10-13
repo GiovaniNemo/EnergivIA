@@ -15,6 +15,7 @@ import {
   parseProposalEquipmentItems,
   parseProposalEquipmentLines,
 } from "../proposal-equipment-model";
+import { SectionPresetsMenu } from "../presets/SectionPresetsMenu";
 
 function isValidHexColor(value: unknown): value is string {
   if (typeof value !== "string") return false;
@@ -592,23 +593,49 @@ export function renderTableField({
           Preencha pelo menos {minRows} linha{minRows === 1 ? "" : "s"} com conteúdo.
         </p>
       ) : null}
-      <button
-        type="button"
-        disabled={rows.length >= maxRows}
-        onClick={() => {
-          if (rows.length >= maxRows) return;
-          const empty: Record<string, string> = {
-            ...(includeId ? { id: crypto.randomUUID() } : {}),
-            ...Object.fromEntries(
-              (field.columns ?? []).map((column) => [column, column === "icon" ? defaultIcon : ""])
-            ),
-          };
-          onSectionFieldChange(field.name, [...rows, empty]);
-        }}
-        className="rounded border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-foreground)] hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-45"
-      >
-        {field.tableAddRowLabel ?? "Adicionar linha"}
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={rows.length >= maxRows}
+          onClick={() => {
+            if (rows.length >= maxRows) return;
+            const empty: Record<string, string> = {
+              ...(includeId ? { id: crypto.randomUUID() } : {}),
+              ...Object.fromEntries(
+                (field.columns ?? []).map((column) => [
+                  column,
+                  column === "icon" ? defaultIcon : "",
+                ])
+              ),
+            };
+            onSectionFieldChange(field.name, [...rows, empty]);
+          }}
+          className="rounded border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-foreground)] hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          {field.tableAddRowLabel ?? "Adicionar linha"}
+        </button>
+
+        {(section.type === "testimonials" || section.type === "faq") && field.name === "items" && (
+          <SectionPresetsMenu
+            sectionType={section.type}
+            disabled={rows.length >= maxRows}
+            onSelectPreset={(presetData) => {
+              if (rows.length >= maxRows) return;
+              const newRow: Record<string, string> = {
+                ...(includeId ? { id: crypto.randomUUID() } : {}),
+                ...Object.fromEntries(
+                  (field.columns ?? []).map((column) => [
+                    column,
+                    column === "icon" ? defaultIcon : "",
+                  ])
+                ),
+                ...presetData,
+              };
+              onSectionFieldChange(field.name, [...rows, newRow]);
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }
