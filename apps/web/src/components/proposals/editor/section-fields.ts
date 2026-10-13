@@ -138,6 +138,7 @@ export const SECTION_TYPES_OWN_TITLE = new Set<SectionType>([
   "video",
   "economy_purchases",
   "faq",
+  "financing",
 ]);
 
 export const SECTION_TYPES_NO_ALIGNMENT = new Set<SectionType>(["introduction", "about_company"]);

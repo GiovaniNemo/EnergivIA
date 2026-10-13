@@ -2518,6 +2518,17 @@ export function renderSectionContent(
         );
       }
 
+      const sectionBranding = {
+        primaryColor: options?.branding?.primaryColor,
+        secondaryColor: options?.branding?.secondaryColor,
+        textColor:
+          (typeof f["textColor"] === "string" && f["textColor"].trim()) ||
+          options?.branding?.textColor,
+        backgroundColor:
+          (typeof f["backgroundColor"] === "string" && f["backgroundColor"].trim()) ||
+          options?.branding?.backgroundColor,
+      };
+
       return (
         <ProposalPaymentCards
           paymentOptions={effectivePaymentOptions}
@@ -2525,7 +2536,7 @@ export function renderSectionContent(
           mode={options?.mode}
           sectionTitle={f.title ? tpl(f.title, vars) : undefined}
           sectionDescription={f.text ? renderRichText(f.text, vars) : undefined}
-          branding={options?.branding}
+          branding={sectionBranding}
         />
       );
     }
