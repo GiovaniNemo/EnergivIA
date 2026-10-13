@@ -234,4 +234,144 @@ describe("WhatsApp & Web Chat Engine Synchronization Suite", () => {
       expect(rendered).toContain("3.000 kWp (3 MWp)");
     });
   });
+
+  describe("Anti-Hallucination Guardrail & Illegible Photo Trava in WhatsApp Bot", () => {
+    const fakeConversation = {
+      id: "conv-test",
+      organizationId: "org-1",
+      title: "Test",
+      messages: [],
+    };
+
+    type BotResponseFn = (args: {
+      conversation: typeof fakeConversation;
+      incomingText: string;
+      extractionResult: unknown;
+      contactName?: string;
+    }) => Promise<string>;
+
+    const callGenerateBotResponse = (
+      context: Record<string, unknown>,
+      args: {
+        conversation: typeof fakeConversation;
+        incomingText: string;
+        extractionResult: unknown;
+        contactName?: string;
+      }
+    ): Promise<string> => {
+      const fn = (WhatsappBotService.prototype as unknown as Record<string, BotResponseFn>)[
+        "generateBotResponse"
+      ];
+      if (!fn) throw new Error("generateBotResponse not found");
+      return fn.call(context, args);
+    };
+
+    it("should trigger guardrail when a photo is submitted but extraction was rejected (illegible/no consumption)", async () => {
+      const mockRejectedExtraction = {
+        data: {
+          legivel: false,
+          motivo_recusa: "Foto com reflexo e borrada",
+          historico_consumo: [],
+        },
+        exactAverageKwh: 0,
+        totalSumKwh: 0,
+        monthCount: 0,
+        isValidForSizing: false,
+        isLegible: false,
+        rejectionReason: "Foto com reflexo e borrada",
+        formattedSummary: "Aviso: Imagem ilegível",
+      };
+
+      const response = await callGenerateBotResponse(
+        {},
+        {
+          conversation: fakeConversation,
+          incomingText: "[Foto enviada: Foto da fatura]",
+          extractionResult: mockRejectedExtraction,
+          contactName: "Integrador",
+        }
+      );
+
+      expect(response).toContain("Não foi possível ler os dados da sua conta com clareza");
+      expect(response).toContain("Trava Anti-Alucinação EnergivIA");
+      expect(response).toContain("proibida de inventar ou chutar números");
+      expect(response).not.toContain("Fatura Analisada com Precisão");
+      expect(response).not.toContain("Qual a estrutura do telhado");
+    });
+
+    it("should trigger guardrail when a photo is submitted but extractionResult is null", async () => {
+      const response = await callGenerateBotResponse(
+        {},
+        {
+          conversation: fakeConversation,
+          incomingText: "[Foto enviada: Foto da fatura]",
+          extractionResult: null,
+          contactName: "Integrador",
+        }
+      );
+
+      expect(response).toContain("Não foi possível ler os dados da sua conta com clareza");
+      expect(response).toContain("Trava Anti-Alucinação EnergivIA");
+      expect(response).not.toContain("Não compreendi sua mensagem");
+    });
+
+    it("should trigger guardrail when a document is submitted but extraction has 0 kWh", async () => {
+      const mockEmptyDoc = {
+        data: { historico_consumo: [] },
+        exactAverageKwh: 0,
+        totalSumKwh: 0,
+        monthCount: 0,
+        isValidForSizing: false,
+        isLegible: false,
+        formattedSummary: "Vazio",
+      };
+
+      const response = await callGenerateBotResponse(
+        {},
+        {
+          conversation: fakeConversation,
+          incomingText: "[Documento enviado: fatura.pdf]",
+          extractionResult: mockEmptyDoc,
+          contactName: "Integrador",
+        }
+      );
+
+      expect(response).toContain("Não foi possível ler os dados da fatura enviada");
+      expect(response).toContain("Trava Anti-Alucinação EnergivIA");
+    });
+
+    it("should proceed normally to roof options when extraction has valid consumption >= 20 kWh", async () => {
+      const mockValidExtraction = {
+        data: {
+          distribuidora: "Copel",
+          cidade: "Maringá",
+          uf: "PR",
+          tipo_conexao: "Trifásico",
+          historico_consumo: [{ mes_ano: "JAN/26", consumo_kwh: 500 }],
+        },
+        exactAverageKwh: 500,
+        totalSumKwh: 500,
+        monthCount: 1,
+        isValidForSizing: true,
+        isLegible: true,
+        formattedSummary: "OK",
+      };
+
+      const mockBotInstance = {
+        ROOF_OPTIONS_TEXT: "Qual a estrutura do telhado?\n1️⃣ Cerâmica...",
+      };
+
+      const response = await callGenerateBotResponse(mockBotInstance, {
+        conversation: fakeConversation,
+        incomingText: "[Foto enviada: Foto da fatura]",
+        extractionResult: mockValidExtraction,
+        contactName: "Integrador",
+      });
+
+      expect(response).toContain("Fatura Analisada com Precisão!");
+      expect(response).toContain("500 kWh/mês");
+      expect(response).toContain("Maringá/PR");
+      expect(response).toContain("Qual a estrutura do telhado");
+    });
+  });
 });

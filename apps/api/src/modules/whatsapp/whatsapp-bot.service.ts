@@ -1077,15 +1077,25 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         role: "user",
         content: incomingText,
         channel: "whatsapp",
-        metadata: extractionResult
-          ? {
-              exactAverageKwh: extractionResult.exactAverageKwh,
-              monthCount: extractionResult.monthCount,
-              totalSumKwh: extractionResult.totalSumKwh,
-              cidade: extractionResult.data.cidade,
-              uf: extractionResult.data.uf,
-            }
-          : undefined,
+        metadata:
+          extractionResult &&
+          extractionResult.isValidForSizing &&
+          extractionResult.exactAverageKwh >= 20
+            ? {
+                exactAverageKwh: extractionResult.exactAverageKwh,
+                monthCount: extractionResult.monthCount,
+                totalSumKwh: extractionResult.totalSumKwh,
+                cidade: extractionResult.data.cidade,
+                uf: extractionResult.data.uf,
+                isValidForSizing: true,
+              }
+            : extractionResult
+              ? {
+                  isValidForSizing: false,
+                  isLegible: false,
+                  rejectionReason: extractionResult.rejectionReason,
+                }
+              : undefined,
       },
     });
 
@@ -3070,7 +3080,12 @@ ${catalogContext}`;
     };
 
     const sessionCtx = extractContextFromSession();
-    if (extractionResult && extractionResult.data) {
+    if (
+      extractionResult &&
+      extractionResult.data &&
+      extractionResult.isValidForSizing &&
+      extractionResult.exactAverageKwh >= 20
+    ) {
       if (extractionResult.data.cidade && !sessionCtx.cidade) {
         sessionCtx.cidade = extractionResult.data.cidade;
       }
@@ -3100,11 +3115,15 @@ ${catalogContext}`;
       `No momento não encontramos kits com todos os componentes e estrutura (${sessionCtx.roofType || "padrão"}) disponíveis em estoque compatível.\n\n` +
       `Você pode selecionar a opção "7️⃣ Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado (ou envie 0️⃣ para voltar).`;
 
-    // 1. Se acabou de extrair a fatura com sucesso
-    if (extractionResult && extractionResult.exactAverageKwh > 0) {
+    // 1. Se acabou de extrair a fatura com sucesso e dados válidos para dimensionamento
+    if (
+      extractionResult &&
+      extractionResult.isValidForSizing &&
+      extractionResult.exactAverageKwh >= 20
+    ) {
       const cidade = extractionResult.data.cidade
         ? `${extractionResult.data.cidade}${extractionResult.data.uf ? `/${extractionResult.data.uf.trim().toUpperCase()}` : ""}`
-        : "São Paulo/SP";
+        : "localidade a confirmar";
       const kwh = extractionResult.exactAverageKwh;
       const meses = extractionResult.monthCount || 1;
       const tipoConexao = extractionResult.data.tipo_conexao || "";
@@ -3120,6 +3139,94 @@ ${catalogContext}`;
         `Consumo médio de \`${kwh.toLocaleString("pt-BR")} kWh/mês\` em \`${cidade}\`.\n\n` +
         `> Histórico: *${baseTexto}*${conexaoInfo}\n\n` +
         this.ROOF_OPTIONS_TEXT
+      );
+    }
+
+    // 2. Trava de Segurança EnergivIA para foto ou documento com baixa nitidez ou dados insuficientes
+    const isImageSubmission =
+      incomingText.startsWith("[Foto enviada") ||
+      lower.includes("[foto enviada") ||
+      Boolean(
+        extractionResult &&
+        !extractionResult.isValidForSizing &&
+        incomingText.toLowerCase().includes("foto")
+      );
+
+    const isDocumentSubmission =
+      incomingText.startsWith("[Documento enviado") ||
+      lower.includes("[documento enviado") ||
+      Boolean(
+        extractionResult &&
+        !extractionResult.isValidForSizing &&
+        incomingText.toLowerCase().includes("documento")
+      );
+
+    if (
+      isImageSubmission &&
+      (!extractionResult ||
+        !extractionResult.isValidForSizing ||
+        extractionResult.exactAverageKwh < 20)
+    ) {
+      const motivo =
+        extractionResult?.rejectionReason ||
+        extractionResult?.data?.motivo_recusa ||
+        "A foto enviada está com pouca nitidez, corte ou reflexos na tabela de histórico de consumo.";
+
+      return (
+        `⚠️ *_Não foi possível ler os dados da sua conta com clareza_* 🔍📸\n\n` +
+        `A foto enviada não permitiu identificar com segurança os *dados fundamentais para o dimensionamento* (como o histórico de consumo em kWh ou localização da unidade).\n\n` +
+        `> 🛡️ *Trava Anti-Alucinação EnergivIA:* Para proteger seu dimensionamento contra erros graves e evitar orçamentos incorretos, nossa IA é proibida de inventar ou chutar números que não estejam 100% nítidos na imagem.\n` +
+        `> 🔎 *Diagnóstico da imagem:* _${motivo}_\n\n` +
+        `💡 *Como prosseguir:*\n` +
+        `• 📸 Envie uma *nova foto mais nítida*, reta e bem iluminada da fatura;\n` +
+        `• 📄 Ou envie o arquivo da conta em formato *PDF original*;\n` +
+        `• ⚡ Ou digite diretamente o consumo médio mensal do seu cliente (ex: \`450 kWh\`) para prosseguirmos agora mesmo!\n\n` +
+        `_(Ou digite 0️⃣ para voltar ao menu inicial)_`
+      );
+    }
+
+    if (
+      isDocumentSubmission &&
+      (!extractionResult ||
+        !extractionResult.isValidForSizing ||
+        extractionResult.exactAverageKwh < 20)
+    ) {
+      const motivo =
+        extractionResult?.rejectionReason ||
+        extractionResult?.data?.motivo_recusa ||
+        "O documento não contém camada de texto legível ou histórico de consumo identificado.";
+
+      return (
+        `⚠️ *_Não foi possível ler os dados da fatura enviada_* 📄🔍\n\n` +
+        `O documento enviado não contém os *dados fundamentais legíveis* para dimensionamento (como histórico de consumo em kWh ou localização).\n\n` +
+        `> 🛡️ *Trava Anti-Alucinação EnergivIA:* Para garantir a precisão do seu orçamento solar, não inventamos dados aproximados quando os números originais não são legíveis.\n` +
+        `> 🔎 *Diagnóstico do documento:* _${motivo}_\n\n` +
+        `💡 *Como prosseguir:*\n` +
+        `• 📄 Envie o arquivo *PDF original* emitido pela distribuidora;\n` +
+        `• 📸 Ou envie uma foto nítida da conta de energia;\n` +
+        `• ⚡ Ou digite diretamente o consumo médio mensal em kWh (ex: \`450 kWh\`) para avançarmos!\n\n` +
+        `_(Ou digite 0️⃣ para voltar ao menu inicial)_`
+      );
+    }
+
+    if (
+      extractionResult &&
+      (!extractionResult.isValidForSizing || extractionResult.exactAverageKwh < 20)
+    ) {
+      const motivo =
+        extractionResult.rejectionReason ||
+        extractionResult.data?.motivo_recusa ||
+        "Não foi possível identificar com nitidez os dados de consumo para dimensionamento.";
+
+      return (
+        `⚠️ *_Não foi possível ler os dados da conta com clareza_* 🔍\n\n` +
+        `O arquivo enviado não permitiu identificar com segurança os *dados fundamentais para dimensionamento* (histórico de consumo em kWh ou localização).\n\n` +
+        `> 🛡️ *Trava Anti-Alucinação EnergivIA:* Para garantir propostas solares 100% confiáveis, nossa inteligência artificial não inventa dados quando a conta está ilegível ou cortada.\n` +
+        `> 🔎 *Diagnóstico da leitura:* _${motivo}_\n\n` +
+        `💡 *Como prosseguir:*\n` +
+        `• 📸 Envie uma nova foto mais nítida ou o arquivo em *PDF original*;\n` +
+        `• ⚡ Ou digite diretamente o consumo médio em kWh (ex: \`450 kWh\`) para simularmos agora mesmo!\n\n` +
+        `_(Ou digite 0️⃣ para voltar ao menu inicial)_`
       );
     }
 

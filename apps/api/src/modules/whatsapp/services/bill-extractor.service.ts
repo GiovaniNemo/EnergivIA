@@ -12,6 +12,10 @@ export interface ExtractedBillHistoryItem {
 }
 
 export interface ExtractedBillData {
+  legivel?: boolean;
+  confianca?: "ALTA" | "MEDIA" | "BAIXA" | string;
+  motivo_recusa?: string | null;
+  dados_fundamentais_identificados?: boolean;
   distribuidora?: string;
   cidade?: string;
   uf?: string;
@@ -34,16 +38,36 @@ export interface BillExtractionResult {
   monthCount: number;
   formattedSummary: string;
   rawText?: string;
+  isValidForSizing: boolean;
+  isLegible: boolean;
+  rejectionReason?: string;
 }
 
 export const BILL_EXTRACTION_SYSTEM_PROMPT = `Você é um motor especialista em visão computacional forense e extração de dados estruturados de faturas de energia elétrica brasileiras (Enel, CPFL, Cemig, Copel, Equatorial, Energisa, Neoenergia, Light, EDP, RGE, Celesc, etc.).
 
-Sua missão é extrair com 100% DE PRECISÃO MATEMÁTICA E VISUAL todos os dados da conta de luz, com foco ABSOLUTO em ler sem erros cada número da tabela de Histórico de Consumo/Faturamento.
+Sua missão é extrair com 100% DE PRECISÃO MATEMÁTICA E VISUAL os dados da conta de luz para DIMENSIONAMENTO SOLAR FOTOVOLTAICO.
 
-REGRAS DE LEITURA E PARSING CRÍTICAS:
+REGRA DE SEGURANÇA MÁXIMA — ANTI-ALUCINAÇÃO E TRAVA DE NITIDEZ:
+1. NUNCA INVENTE, NUNCA CHUTE E NUNCA ADIVINHE NÚMEROS APROXIMADOS.
+   - Para dimensionamento solar, um número inventado ou errado gera prejuízos financeiros gravíssimos ao cliente e ao integrador.
+   - Se a imagem for uma foto tirada de má qualidade (desfocada, borrada, com baixa resolução, cortada, com sombras, reflexo de flash, amassada, distante ou ilegível a ponto de impedir a leitura segura dos números da tabela de consumo faturado em kWh):
+     * Defina "legivel": false
+     * Defina "confianca": "BAIXA"
+     * Defina "dados_fundamentais_identificados": false
+     * Preencha "motivo_recusa" explicando com precisão o que está impedindo a leitura (ex: "Imagem desfocada/borrada impedindo a leitura dos números de kWh", "Foto cortada sem a tabela de histórico de consumo", "Reflexo de luz cobrindo o histórico de faturamento", "Baixa resolução").
+     * Deixe "historico_consumo": [] e "consumo_mes_atual_kwh": null.
+     * NUNCA tente inventar linhas na tabela de histórico se os números não estiverem nítidos!
+
+2. DADOS FUNDAMENTAIS PARA DIMENSIONAMENTO SOLAR:
+   - Para que a extração seja considerada válida para dimensionamento solar ("dados_fundamentais_identificados": true), é OBRIGATÓRIO identificar com 100% de clareza:
+     a) O CONSUMO: ou o histórico faturado em kWh (pelo menos 1 mês real e legível) OU o consumo faturado do mês atual em kWh. Se o consumo não for legível com certeza, marque "dados_fundamentais_identificados": false e "confianca": "BAIXA".
+     b) A LOCALIZAÇÃO ou DISTRIBUIDORA: Cidade/UF ou a concessionária de energia.
+   - Se qualquer um desses dados fundamentais não estiver nítido, NÃO INVENTE.
+
+REGRAS DE LEITURA E PARSING CRÍTICAS (QUANDO A IMAGEM ESTIVER LEGÍVEL):
 1. TABELA DE HISTÓRICO DE CONSUMO ("CONSUMO / kWh", "HISTÓRICO DE CONSUMO", "Evolução do Consumo"):
    - Localize a tabela onde constam os meses de histórico faturados (geralmente entre 11 e 13 meses visíveis).
-   - LEITURA SEQUENCIAL COMPLETA: Percorra CADA UMA das linhas da tabela, da primeira à última linha impressa, sem pular nenhuma linha.
+   - LEITURA SEQUENCIAL COMPLETA: Percorra CADA UMA das linhas da tabela, da primeira à última linha impressa, sem pular nenhuma linha legível.
    - Para CADA linha:
      * Identifique o mês/ano (ex: "AGO/26", "JUL/26", "JUN/26", "MAI/26", "ABR/26", "MAR/26", "FEV/26", "JAN/26", "DEZ/25", "NOV/25", "OUT/25", "SET/25", "AGO/25").
      * Identifique com máxima precisão o valor numérico na coluna de consumo faturado em kWh.
@@ -69,12 +93,16 @@ REGRAS DE LEITURA E PARSING CRÍTICAS:
       * "703,000" significa 703 kWh. Retorne 703.
    
    - Extraia todos os meses que possuem consumo na tabela sem omitir nenhuma linha preenchida!
-   - NUNCA confunda 'consumo_kwh' com quantidade de dias de faturamento ou leituras do medidor.
+   - NUNCA confunda 'consumo_kwh' com quantidade de dias de faturamento, leituras do medidor ou valores em R$.
 
 2. CONSUMO ATIVO E GERAÇÃO DISTRIBUÍDA (GD):
    - Se a fatura tiver créditos solares / GD, utilize sempre o Consumo Ativo Total Faturado/Consumido da rede.
 
 3. DADOS GERAIS:
+   - legivel: true se a imagem permite leitura com nitidez; false se estiver borrada, ilegível ou cortada.
+   - confianca: "ALTA" | "MEDIA" | "BAIXA".
+   - motivo_recusa: Explicação clara se legivel for false ou se os dados essenciais estiverem ausentes/ilegíveis.
+   - dados_fundamentais_identificados: true se consumo e localização/distribuidora foram identificados com certeza.
    - distribuidora: Nome da concessionária identificada no cabeçalho ou logotipo.
    - cidade: Cidade da unidade consumidora indicada no endereço.
    - uf: Sigla do estado com 2 letras (ex: SP, PR, MG, RJ, BA, GO, etc.).
@@ -85,7 +113,25 @@ REGRAS DE LEITURA E PARSING CRÍTICAS:
    - valor_total_fatura_reais: Valor total a pagar em R$.
    - historico_consumo: Lista sequencial dos meses com consumo faturado em kWh.
 
-Retorne EXCLUSIVAMENTE um objeto JSON válido.`;
+Retorne EXCLUSIVAMENTE um objeto JSON válido no formato:
+{
+  "legivel": boolean,
+  "confianca": "ALTA" | "MEDIA" | "BAIXA",
+  "motivo_recusa": string | null,
+  "dados_fundamentais_identificados": boolean,
+  "distribuidora": string | null,
+  "cidade": string | null,
+  "uf": string | null,
+  "tipo_conexao": "Monofásico" | "Bifásico" | "Trifásico" | null,
+  "nome_cliente": string | null,
+  "codigo_instalacao_ou_uc": string | null,
+  "mes_referencia_atual": string | null,
+  "consumo_mes_atual_kwh": number | null,
+  "valor_total_fatura_reais": number | null,
+  "historico_consumo": [
+    { "mes_ano": "string", "consumo_kwh": number, "dias": number }
+  ]
+}`;
 
 export function parseBrazilianKwh(raw: unknown): number {
   if (typeof raw === "number") {
@@ -145,6 +191,33 @@ export function processExtractedBillData(
   data: ExtractedBillData,
   rawText?: string
 ): BillExtractionResult {
+  // Trava 1: Se a IA de visão indicou expressamente que a imagem não é legível ou faltam dados fundamentais
+  const isExplicitlyIllegible =
+    data.legivel === false ||
+    data.dados_fundamentais_identificados === false ||
+    (typeof data.confianca === "string" && data.confianca.toUpperCase() === "BAIXA");
+
+  if (isExplicitlyIllegible) {
+    const reason =
+      data.motivo_recusa ||
+      "A imagem da conta de energia não apresenta nitidez suficiente para leitura segura dos dados fundamentais de consumo.";
+
+    return {
+      data: {
+        ...data,
+        historico_consumo: [],
+      },
+      exactAverageKwh: 0,
+      totalSumKwh: 0,
+      monthCount: 0,
+      isValidForSizing: false,
+      isLegible: false,
+      rejectionReason: reason,
+      formattedSummary: `⚠️ Não foi possível identificar com clareza os dados da conta (${reason}). Nenhuma informação foi inventada.`,
+      rawText,
+    };
+  }
+
   const rawList = Array.isArray(data.historico_consumo) ? data.historico_consumo : [];
 
   const candidates: ExtractedBillHistoryItem[] = [];
@@ -206,16 +279,28 @@ export function processExtractedBillData(
     totalSum = exactAverage;
     monthCount = 1;
   } else {
-    exactAverage = 300;
-    totalSum = 300;
+    // Trava 2: SEM DADOS DE CONSUMO! NUNCA inventar 300 kWh!
+    exactAverage = 0;
+    totalSum = 0;
     monthCount = 0;
   }
+
+  // Trava 3: Consumo mínimo viável para dimensionamento solar
+  const isValidForSizing = exactAverage >= 20;
+  const isLegible = isValidForSizing;
+  const rejectionReason = !isValidForSizing
+    ? data.motivo_recusa ||
+      "A fatura não contém histórico de consumo ou consumo do mês atual identificável com clareza."
+    : undefined;
 
   const baseTexto =
     monthCount > 1
       ? `baseado no histórico de ${monthCount} meses da fatura`
       : `baseado no consumo do mês atual da fatura`;
-  const formattedSummary = `Legal, dados extraídos com precisão! Consumo médio de ${exactAverage} kWh/mês em ${data.cidade || "São Paulo"}/${data.uf || "SP"} (${baseTexto}).`;
+
+  const formattedSummary = isValidForSizing
+    ? `Legal, dados extraídos com precisão! Consumo médio de ${exactAverage} kWh/mês em ${data.cidade || "localidade a confirmar"}/${data.uf || "UF"} (${baseTexto}).`
+    : `⚠️ Não foi possível identificar com clareza os dados fundamentais de consumo para dimensionamento (${rejectionReason}). Nenhuma informação foi inventada.`;
 
   return {
     data: {
@@ -227,6 +312,9 @@ export function processExtractedBillData(
     monthCount,
     formattedSummary,
     rawText,
+    isValidForSizing,
+    isLegible,
+    rejectionReason,
   };
 }
 

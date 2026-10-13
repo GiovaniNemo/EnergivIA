@@ -24,12 +24,29 @@ const BILL_CONTENT_TYPES = [
 
 const BILL_EXTRACTION_SYSTEM_PROMPT = `Você é um motor especialista em visão computacional forense e extração de dados estruturados de faturas de energia elétrica brasileiras (Enel, CPFL, Cemig, Copel, Equatorial, Energisa, Neoenergia, Light, EDP, RGE, Celesc, etc.).
 
-Sua missão é extrair com 100% DE PRECISÃO MATEMÁTICA E VISUAL todos os dados da conta de luz, com foco ABSOLUTO em ler sem erros cada número da tabela de Histórico de Consumo/Faturamento.
+Sua missão é extrair com 100% DE PRECISÃO MATEMÁTICA E VISUAL os dados da conta de luz para DIMENSIONAMENTO SOLAR FOTOVOLTAICO.
 
-REGRAS DE LEITURA E PARSING CRÍTICAS:
+REGRA DE SEGURANÇA MÁXIMA — ANTI-ALUCINAÇÃO E TRAVA DE NITIDEZ:
+1. NUNCA INVENTE, NUNCA CHUTE E NUNCA ADIVINHE NÚMEROS APROXIMADOS.
+   - Para dimensionamento solar, um número inventado ou errado gera prejuízos financeiros gravíssimos ao cliente e ao integrador.
+   - Se a imagem for uma foto tirada de má qualidade (desfocada, borrada, com baixa resolução, cortada, com sombras, reflexo de flash, amassada, distante ou ilegível a ponto de impedir a leitura segura dos números da tabela de consumo faturado em kWh):
+     * Defina "legivel": false
+     * Defina "confianca": "BAIXA"
+     * Defina "dados_fundamentais_identificados": false
+     * Preencha "motivo_recusa" explicando com precisão o que está impedindo a leitura (ex: "Imagem desfocada/borrada impedindo a leitura dos números de kWh", "Foto cortada sem a tabela de histórico de consumo", "Reflexo de luz cobrindo o histórico de faturamento", "Baixa resolução").
+     * Deixe "consumptionHistoryLabeled": [] e "consumptionKwh": null.
+     * NUNCA tente inventar linhas na tabela de histórico se os números não estiverem nítidos!
+
+2. DADOS FUNDAMENTAIS PARA DIMENSIONAMENTO SOLAR:
+   - Para que a extração seja considerada válida para dimensionamento solar ("dados_fundamentais_identificados": true), é OBRIGATÓRIO identificar com 100% de clareza:
+     a) O CONSUMO: ou o histórico faturado em kWh (pelo menos 1 mês real e legível) OU o consumo faturado do mês atual em kWh. Se o consumo não for legível com certeza, marque "dados_fundamentais_identificados": false e "confianca": "BAIXA".
+     b) A LOCALIZAÇÃO ou DISTRIBUIDORA: Cidade/UF ou a concessionária de energia.
+   - Se qualquer um desses dados fundamentais não estiver nítido, NÃO INVENTE.
+
+REGRAS DE LEITURA E PARSING CRÍTICAS (QUANDO A IMAGEM ESTIVER LEGÍVEL):
 1. TABELA DE HISTÓRICO DE CONSUMO ("CONSUMO / kWh", "HISTÓRICO DE CONSUMO", "Evolução do Consumo"):
    - Localize a tabela onde constam os meses de histórico faturados (geralmente entre 11 e 13 meses visíveis).
-   - LEITURA SEQUENCIAL COMPLETA: Percorra CADA UMA das linhas da tabela, da primeira à última linha impressa, sem pular nenhuma linha.
+   - LEITURA SEQUENCIAL COMPLETA: Percorra CADA UMA das linhas da tabela, da primeira à última linha impressa, sem pular nenhuma linha legível.
    - Para CADA linha:
      * Identifique o mês/ano (ex: "AGO/26", "JUL/26", "JUN/26", "MAI/26", "ABR/26", "MAR/26", "FEV/26", "JAN/26", "DEZ/25", "NOV/25", "OUT/25", "SET/25", "AGO/25").
      * Identifique com máxima precisão o valor numérico na coluna de consumo faturado em kWh.
@@ -68,6 +85,10 @@ REGRAS DE LEITURA E PARSING CRÍTICAS:
    - Se a fatura tiver créditos solares / GD, utilize sempre o Consumo Ativo Total Faturado/Consumido da rede (coluna de consumo faturado da tabela de histórico).
 
 3. DADOS GERAIS:
+   - legivel: true se a imagem permite leitura com nitidez; false se estiver borrada, ilegível ou cortada.
+   - confianca: "ALTA" | "MEDIA" | "BAIXA".
+   - motivo_recusa: Explicação clara se legivel for false ou se os dados essenciais estiverem ausentes/ilegíveis.
+   - dados_fundamentais_identificados: true se consumo e localização/distribuidora foram identificados com certeza.
    - provider / distribuidora: Nome da concessionária identificada no cabeçalho ou logotipo (ex: Enel, Copel, CPFL, Cemig, Equatorial, Energisa, etc.).
    - cidade: Cidade da unidade consumidora indicada no endereço (ex: SAO PAULO, SAO BERNARDO DO CAMPO, etc.).
    - uf: Sigla do estado com 2 letras (ex: SP, PR, MG, RJ, BA, GO, etc.).
@@ -79,6 +100,10 @@ REGRAS DE LEITURA E PARSING CRÍTICAS:
 
 Retorne EXCLUSIVAMENTE um objeto JSON válido no seguinte formato:
 {
+  "legivel": boolean,
+  "confianca": "ALTA" | "MEDIA" | "BAIXA",
+  "motivo_recusa": string | null,
+  "dados_fundamentais_identificados": boolean,
   "provider": "string",
   "distribuidora": "string",
   "cidade": "string",
@@ -91,7 +116,7 @@ Retorne EXCLUSIVAMENTE um objeto JSON válido no seguinte formato:
   "consumptionHistoryLabeled": [
     { "month": "string", "consumptionKwh": number }
   ]
-}`;
+};`;
 
 function parseBrazilianKwh(raw: unknown): number {
   if (typeof raw === "number") {
@@ -755,13 +780,34 @@ export class EnergyBillsService {
         }
       }
 
-      // Salva o resultado
-      await this.setExtractionResult(billId, {
-        extractedData: extractedData ?? {},
-        extractionError: undefined,
-      });
+      const isValid = Boolean(
+        extractedData &&
+        extractedData["isValidForSizing"] !== false &&
+        Number(extractedData["averageConsumptionKwh"] || 0) >= 20
+      );
 
-      this.logger.log(`Energy bill extraction completed billId=${billId}`);
+      if (!isValid) {
+        const rejectionReason =
+          (extractedData?.["rejectionReason"] as string) ||
+          "A conta de energia está ilegível ou não possui os dados fundamentais de consumo para dimensionamento.";
+
+        await this.setExtractionResult(billId, {
+          extractedData: extractedData ?? {},
+          extractionError: rejectionReason,
+        });
+
+        this.logger.warn(
+          `Energy bill extraction rejected by sizing guardrail billId=${billId}: ${rejectionReason}`
+        );
+      } else {
+        // Salva o resultado
+        await this.setExtractionResult(billId, {
+          extractedData: extractedData ?? {},
+          extractionError: undefined,
+        });
+
+        this.logger.log(`Energy bill extraction completed billId=${billId}`);
+      }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.logger.error(`Energy bill extraction error billId=${billId}: ${errorMsg}`);
@@ -774,6 +820,36 @@ export class EnergyBillsService {
   }
 
   private processExtractedResultWithMath(parsed: Record<string, unknown>): Record<string, unknown> {
+    const isExplicitlyIllegible =
+      parsed["legivel"] === false ||
+      parsed["dados_fundamentais_identificados"] === false ||
+      (typeof parsed["confianca"] === "string" && parsed["confianca"].toUpperCase() === "BAIXA");
+
+    if (isExplicitlyIllegible) {
+      const rejectionReason =
+        (parsed["motivo_recusa"] as string) ||
+        "A imagem da conta de energia não apresenta nitidez suficiente para leitura segura dos dados fundamentais de consumo.";
+
+      return {
+        ...parsed,
+        isValidForSizing: false,
+        isLegible: false,
+        rejectionReason,
+        consumptionHistoryLabeled: [],
+        consumptionHistoryKwh: [],
+        averageConsumptionKwh: 0,
+        consumptionKwh: 0,
+        monthCount: 0,
+        totalSumKwh: 0,
+        rawData: {
+          ...parsed,
+          isValidForSizing: false,
+          isLegible: false,
+          rejectionReason,
+        },
+      };
+    }
+
     const rawList = Array.isArray(parsed["consumptionHistoryLabeled"])
       ? (parsed["consumptionHistoryLabeled"] as Array<Record<string, unknown>>)
       : Array.isArray(parsed["historico_consumo"])
@@ -837,8 +913,9 @@ export class EnergyBillsService {
       exactAverage = rawCurrentKwh;
       totalSum = exactAverage;
     } else {
-      exactAverage = 300;
-      totalSum = 300;
+      // Trava: NUNCA inventar 300 kWh!
+      exactAverage = 0;
+      totalSum = 0;
     }
 
     const currentMonthKwh =
@@ -847,6 +924,13 @@ export class EnergyBillsService {
         : normalizedHistory.length > 0
           ? (normalizedHistory[0]?.consumptionKwh ?? exactAverage)
           : exactAverage;
+
+    const isValidForSizing = exactAverage >= 20;
+    const isLegible = isValidForSizing;
+    const rejectionReason = !isValidForSizing
+      ? (parsed["motivo_recusa"] as string) ||
+        "Não foi possível identificar o histórico de consumo ou consumo do mês atual com clareza para dimensionamento."
+      : undefined;
 
     const consumptionHistoryKwh = normalizedHistory.map((v) => v.consumptionKwh);
 
@@ -871,6 +955,9 @@ export class EnergyBillsService {
       consumptionHistoryKwh,
       totalSumKwh: totalSum,
       monthCount,
+      isValidForSizing,
+      isLegible,
+      rejectionReason,
       rawData: {
         ...parsed,
         location,
@@ -880,6 +967,9 @@ export class EnergyBillsService {
         consumptionHistoryKwh,
         currentMonthConsumptionKwh: currentMonthKwh,
         simulationMonthlyConsumptionKwh: exactAverage,
+        isValidForSizing,
+        isLegible,
+        rejectionReason,
       },
     };
   }

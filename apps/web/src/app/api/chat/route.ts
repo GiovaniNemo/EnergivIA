@@ -118,40 +118,66 @@ export async function POST(req: Request) {
           const base64Data = lastMsg.imageUrl.split(",")[1];
           const buffer = Buffer.from(base64Data, "base64");
           const result = await extractEnergyBillFromPdfBuffer(buffer);
-          if (result && result.exactAverageKwh > 0) {
-            currentTurnExtraction = {
-              exactAverageKwh: result.exactAverageKwh,
-              monthCount: result.monthCount,
-              totalSumKwh: result.totalSumKwh,
-              data: {
-                cidade: result.data.cidade,
-                uf: result.data.uf,
-                tipo_conexao: result.data.tipo_conexao,
-              },
-              formattedSummary: result.formattedSummary,
-            };
-          }
+          currentTurnExtraction = {
+            exactAverageKwh: result.exactAverageKwh,
+            monthCount: result.monthCount,
+            totalSumKwh: result.totalSumKwh,
+            isValidForSizing: result.isValidForSizing,
+            isLegible: result.isLegible,
+            rejectionReason: result.rejectionReason,
+            data: {
+              cidade: result.data.cidade,
+              uf: result.data.uf,
+              tipo_conexao: result.data.tipo_conexao,
+              legivel: result.data.legivel,
+              motivo_recusa: result.data.motivo_recusa,
+            },
+            formattedSummary: result.formattedSummary,
+          };
         } catch (e) {
           console.error("[PDF EXTRACTION ERROR]", e);
+          currentTurnExtraction = {
+            exactAverageKwh: 0,
+            monthCount: 0,
+            totalSumKwh: 0,
+            isValidForSizing: false,
+            isLegible: false,
+            rejectionReason: "Não foi possível extrair texto legível do arquivo PDF enviado.",
+            data: { legivel: false },
+            formattedSummary: "Documento PDF ilegível para dimensionamento",
+          };
         }
       } else {
         try {
           const result = await extractEnergyBillFromImage(lastMsg.imageUrl);
-          if (result && result.exactAverageKwh > 0) {
-            currentTurnExtraction = {
-              exactAverageKwh: result.exactAverageKwh,
-              monthCount: result.monthCount,
-              totalSumKwh: result.totalSumKwh,
-              data: {
-                cidade: result.data.cidade,
-                uf: result.data.uf,
-                tipo_conexao: result.data.tipo_conexao,
-              },
-              formattedSummary: result.formattedSummary,
-            };
-          }
+          currentTurnExtraction = {
+            exactAverageKwh: result.exactAverageKwh,
+            monthCount: result.monthCount,
+            totalSumKwh: result.totalSumKwh,
+            isValidForSizing: result.isValidForSizing,
+            isLegible: result.isLegible,
+            rejectionReason: result.rejectionReason,
+            data: {
+              cidade: result.data.cidade,
+              uf: result.data.uf,
+              tipo_conexao: result.data.tipo_conexao,
+              legivel: result.data.legivel,
+              motivo_recusa: result.data.motivo_recusa,
+            },
+            formattedSummary: result.formattedSummary,
+          };
         } catch (e) {
           console.error("[IMAGE EXTRACTION ERROR]", e);
+          currentTurnExtraction = {
+            exactAverageKwh: 0,
+            monthCount: 0,
+            totalSumKwh: 0,
+            isValidForSizing: false,
+            isLegible: false,
+            rejectionReason: "A foto enviada está ilegível ou com baixa resolução.",
+            data: { legivel: false },
+            formattedSummary: "Foto ilegível para dimensionamento",
+          };
         }
       }
     }
@@ -166,6 +192,14 @@ export async function POST(req: Request) {
       };
     });
 
+    const effectiveIncomingText =
+      incomingText ||
+      (lastMsg?.imageUrl
+        ? lastMsg.imageUrl.startsWith("data:application/pdf")
+          ? "[Documento enviado: fatura.pdf]"
+          : "[Foto enviada: Foto da fatura]"
+        : "");
+
     // 4. Delegar para o motor unificado do Bot (mesma lógica e mensagens do WhatsApp)
     const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
     const reqHeaders: Record<string, string> = { "Content-Type": "application/json" };
@@ -177,7 +211,7 @@ export async function POST(req: Request) {
       headers: reqHeaders,
       body: JSON.stringify({
         messages: previousMessages,
-        incomingText,
+        incomingText: effectiveIncomingText,
         organizationId: currentOrgId,
         contactName: integratorCompanyName || "Integrador",
         extractionResult: currentTurnExtraction,
