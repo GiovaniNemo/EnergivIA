@@ -458,6 +458,12 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
         text-decoration: none;
         margin-left: 4px;
         transition: color 0.2s;
+        background: transparent;
+        border: none;
+        padding: 0;
+        font-size: 13px;
+        font-family: inherit;
+        display: inline;
       }
 
       .toggle-link:hover {
@@ -499,25 +505,27 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
           </div>
           <h1 id="welcome-title" class="welcome-heading">
             BEM-VINDO <br />
-            <span>AO ENERGIVIA!</span>
+            <span>DE VOLTA!</span>
           </h1>
           <p id="welcome-desc" class="welcome-text">
-            Crie sua conta em segundos para dimensionar usinas, kits solares e gerar propostas
-            comerciais prontas via IA.
+            Acesse sua conta para gerenciar propostas, dimensionamento inteligente e atendimento
+            comercial via IA.
           </p>
         </div>
 
         <div>
-          <button type="button" id="pill-toggle" class="pill-toggle-btn">
-            <span id="pill-text">Já possui conta? Entrar</span> &rarr;
+          <button type="button" id="pill-toggle" class="pill-toggle-btn" onclick="toggleMode()">
+            <span id="pill-text">Novo por aqui? Cadastre-se</span> &rarr;
           </button>
         </div>
       </div>
 
       <!-- Coluna Direita (Formulário) -->
       <div class="right-col">
-        <h2 id="form-heading" class="form-title">Criar Conta</h2>
-        <p id="form-subheading" class="form-subtitle">Cadastre-se ou acesse com sua conta Google</p>
+        <h2 id="form-heading" class="form-title">Entrar na Plataforma</h2>
+        <p id="form-subheading" class="form-subtitle">
+          Digite seus dados de acesso corporativo ou use o Google
+        </p>
 
         <div id="error-alert" class="error-box"></div>
 
@@ -593,12 +601,14 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
           </div>
 
           <!-- Botão Primário com Glow -->
-          <button type="submit" id="submit-btn" class="glow-btn">Criar Conta Grátis</button>
+          <button type="submit" id="submit-btn" class="glow-btn">Entrar</button>
 
           <!-- Alternador inferior -->
           <div class="toggle-footer">
-            <span id="footer-text">Já tem uma conta?</span>
-            <a id="footer-toggle" class="toggle-link" onclick="toggleMode()">Entrar</a>
+            <span id="footer-text">Ainda não tem conta?</span>
+            <button type="button" id="footer-toggle" class="toggle-link" onclick="toggleMode()">
+              Cadastre-se
+            </button>
           </div>
         </form>
       </div>
@@ -609,35 +619,36 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
       // 1. Decodificação segura da configuração nativa do Auth0 Universal Login
       var config = {};
       try {
-        config = JSON.parse(decodeURIComponent(escape(window.atob('@@config@@'))));
+        config = JSON.parse(decodeURIComponent(escape(window.atob("@@config@@"))));
       } catch (e) {
-        try {
-          config = typeof @@config@@ === 'object' ? @@config@@ : {};
-        } catch (err) {
-          console.warn("Auth0 config preview:", err);
-        }
+        console.warn("Auth0 config preview:", e);
       }
 
       // 2. Identifica se a URL solicitou modo de cadastro (screen_hint=signup)
       var urlParams = new URLSearchParams(window.location.search);
-      var screenHint = urlParams.get("screen_hint") || (config.extraParams && config.extraParams.screen_hint);
+      var screenHint =
+        urlParams.get("screen_hint") || (config.extraParams && config.extraParams.screen_hint);
       var currentMode = screenHint === "signup" ? "signup" : "login";
 
       // 3. Inicialização oficial do WebAuth combinando internalOptions para manter state e nonce intactos
       var webAuth = null;
       try {
         if (typeof auth0 !== "undefined" && config.clientID) {
-          var params = Object.assign({
-            overrides: {
-              __tenant: config.auth0Tenant,
-              __token_issuer: (config.authorizationServer && config.authorizationServer.issuer) || ''
+          var params = Object.assign(
+            {
+              overrides: {
+                __tenant: config.auth0Tenant,
+                __token_issuer:
+                  (config.authorizationServer && config.authorizationServer.issuer) || "",
+              },
+              domain: config.auth0Domain,
+              clientID: config.clientID,
+              redirectUri: config.callbackURL,
+              responseType: (config.extraParams && config.extraParams.response_type) || "code",
+              params: config.extraParams,
             },
-            domain: config.auth0Domain,
-            clientID: config.clientID,
-            redirectUri: config.callbackURL,
-            responseType: (config.extraParams && config.extraParams.response_type) || "code",
-            params: config.extraParams
-          }, config.internalOptions || {});
+            config.internalOptions || {}
+          );
 
           webAuth = new auth0.WebAuth(params);
         }
@@ -645,10 +656,33 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
         console.warn("Auth0 WebAuth fallback local:", e);
       }
 
+      function setMode(mode) {
+        var errorAlert = document.getElementById("error-alert");
+        if (errorAlert) {
+          errorAlert.style.display = "none";
+          errorAlert.innerText = "";
+        }
+        if (mode === "login" || mode === "signup") {
+          currentMode = mode;
+        } else {
+          currentMode = currentMode === "signup" ? "login" : "signup";
+        }
+        updateUI();
+      }
+
+      function toggleMode(targetMode) {
+        if (targetMode === "login" || targetMode === "signup") {
+          setMode(targetMode);
+        } else {
+          setMode(currentMode === "signup" ? "login" : "signup");
+        }
+      }
+
       function updateUI() {
         var isSignup = currentMode === "signup";
         var welcomeTitle = document.getElementById("welcome-title");
         var welcomeDesc = document.getElementById("welcome-desc");
+        var pillBtn = document.getElementById("pill-toggle");
         var pillText = document.getElementById("pill-text");
         var formHeading = document.getElementById("form-heading");
         var formSubheading = document.getElementById("form-subheading");
@@ -657,37 +691,58 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
         var footerToggle = document.getElementById("footer-toggle");
 
         if (isSignup) {
-          welcomeTitle.innerHTML = 'BEM-VINDO <br /><span>AO ENERGIVIA!</span>';
-          welcomeDesc.innerText = 'Crie sua conta em segundos para dimensionar usinas, kits solares e gerar propostas comerciais com IA.';
-          pillText.innerText = 'Já possui conta? Entrar';
-          formHeading.innerText = 'Criar Conta';
-          formSubheading.innerText = 'Cadastre-se ou acesse com sua conta Google';
-          submitBtn.innerText = 'Criar Conta Grátis';
-          footerText.innerText = 'Já tem uma conta?';
-          footerToggle.innerText = 'Entrar';
+          if (welcomeTitle) welcomeTitle.innerHTML = "BEM-VINDO <br /><span>AO ENERGIVIA!</span>";
+          if (welcomeDesc)
+            welcomeDesc.innerText =
+              "Crie sua conta em segundos para dimensionar usinas, kits solares e gerar propostas comerciais com IA.";
+          if (pillText) pillText.innerText = "Já possui conta? Entrar";
+          if (pillBtn)
+            pillBtn.onclick = function () {
+              setMode("login");
+            };
+          if (formHeading) formHeading.innerText = "Criar Conta";
+          if (formSubheading)
+            formSubheading.innerText = "Cadastre-se ou acesse com sua conta Google";
+          if (submitBtn) submitBtn.innerText = "Criar Conta Grátis";
+          if (footerText) footerText.innerText = "Já tem uma conta?";
+          if (footerToggle) {
+            footerToggle.innerText = "Entrar";
+            footerToggle.onclick = function (e) {
+              if (e && e.preventDefault) e.preventDefault();
+              setMode("login");
+            };
+          }
         } else {
-          welcomeTitle.innerHTML = 'BEM-VINDO <br /><span>DE VOLTA!</span>';
-          welcomeDesc.innerText = 'Acesse sua conta para gerenciar propostas, dimensionamento inteligente e atendimento comercial via IA.';
-          pillText.innerText = 'Novo por aqui? Cadastre-se';
-          formHeading.innerText = 'Entrar na Plataforma';
-          formSubheading.innerText = 'Digite seus dados de acesso corporativo ou use o Google';
-          submitBtn.innerText = 'Entrar';
-          footerText.innerText = 'Ainda não tem conta?';
-          footerToggle.innerText = 'Cadastre-se';
+          if (welcomeTitle) welcomeTitle.innerHTML = "BEM-VINDO <br /><span>DE VOLTA!</span>";
+          if (welcomeDesc)
+            welcomeDesc.innerText =
+              "Acesse sua conta para gerenciar propostas, dimensionamento inteligente e atendimento comercial via IA.";
+          if (pillText) pillText.innerText = "Novo por aqui? Cadastre-se";
+          if (pillBtn)
+            pillBtn.onclick = function () {
+              setMode("signup");
+            };
+          if (formHeading) formHeading.innerText = "Entrar na Plataforma";
+          if (formSubheading)
+            formSubheading.innerText = "Digite seus dados de acesso corporativo ou use o Google";
+          if (submitBtn) submitBtn.innerText = "Entrar";
+          if (footerText) footerText.innerText = "Ainda não tem conta?";
+          if (footerToggle) {
+            footerToggle.innerText = "Cadastre-se";
+            footerToggle.onclick = function (e) {
+              if (e && e.preventDefault) e.preventDefault();
+              setMode("signup");
+            };
+          }
         }
       }
 
-      function toggleMode() {
-        currentMode = currentMode === "signup" ? "login" : "signup";
-        updateUI();
-      }
-
-      document.getElementById("pill-toggle").addEventListener("click", toggleMode);
-
       function showError(msg) {
         var el = document.getElementById("error-alert");
-        el.innerText = msg;
-        el.style.display = "block";
+        if (el) {
+          el.innerText = msg;
+          el.style.display = "block";
+        }
       }
 
       function handleAuthSubmit(e) {
@@ -696,64 +751,87 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
         var password = document.getElementById("password-input").value;
         var submitBtn = document.getElementById("submit-btn");
 
-        submitBtn.disabled = true;
-        submitBtn.innerText = "Processando...";
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerText = "Processando...";
+        }
+
+        var dbConn =
+          config.databaseConnection ||
+          (config.connections && config.connections[0]) ||
+          "Username-Password-Authentication";
 
         if (!webAuth) {
           // Ambiente de teste/preview local
-          setTimeout(function() {
+          setTimeout(function () {
             alert((currentMode === "signup" ? "Cadastro" : "Login") + " simulado para: " + email);
-            submitBtn.disabled = false;
-            updateUI();
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              updateUI();
+            }
           }, 800);
           return;
         }
 
         if (currentMode === "signup") {
-          webAuth.signup({
-            connection: "Username-Password-Authentication",
-            email: email,
-            password: password
-          }, function(err) {
-            if (err) {
-              showError(err.description || err.message || "Erro ao realizar cadastro.");
-              submitBtn.disabled = false;
-              updateUI();
-              return;
+          webAuth.signup(
+            {
+              connection: dbConn,
+              email: email,
+              password: password,
+            },
+            function (err) {
+              if (err) {
+                showError(err.description || err.message || "Erro ao realizar cadastro.");
+                if (submitBtn) submitBtn.disabled = false;
+                updateUI();
+                return;
+              }
+              // Realiza login imediato após cadastro com a mesma conexão
+              webAuth.login(
+                {
+                  realm: dbConn,
+                  username: email,
+                  password: password,
+                },
+                function (loginErr) {
+                  if (loginErr) {
+                    showError(
+                      loginErr.description || "Cadastro concluído. Efetue login para continuar."
+                    );
+                    if (submitBtn) submitBtn.disabled = false;
+                    updateUI();
+                  }
+                }
+              );
             }
-            // Realiza login imediato após cadastro com a mesma conexão
-            webAuth.login({
-              realm: "Username-Password-Authentication",
+          );
+        } else {
+          webAuth.login(
+            {
+              realm: dbConn,
               username: email,
-              password: password
-            }, function(loginErr) {
-              if (loginErr) {
-                showError(loginErr.description || "Cadastro concluído. Efetue login para continuar.");
-                submitBtn.disabled = false;
+              password: password,
+            },
+            function (err) {
+              if (err) {
+                showError(err.description || err.message || "E-mail ou senha incorretos.");
+                if (submitBtn) submitBtn.disabled = false;
                 updateUI();
               }
-            });
-          });
-        } else {
-          webAuth.login({
-            realm: "Username-Password-Authentication",
-            username: email,
-            password: password
-          }, function(err) {
-            if (err) {
-              showError(err.description || err.message || "E-mail ou senha incorretos.");
-              submitBtn.disabled = false;
-              updateUI();
             }
-          });
+          );
         }
       }
 
       function loginWithGoogle() {
         // Preserva estritamente todos os parâmetros da transação iniciada pelo Next.js (state, nonce, code_challenge, etc.)
-        var opts = Object.assign({
-          connection: "google-oauth2"
-        }, config.internalOptions || {});
+        var opts = Object.assign(
+          {
+            connection: "google-oauth2",
+          },
+          config.internalOptions || {}
+        );
 
         if (config.internalOptions && config.internalOptions.state) {
           opts.state = config.internalOptions.state;

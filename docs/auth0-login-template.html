@@ -399,6 +399,12 @@
         text-decoration: none;
         margin-left: 4px;
         transition: color 0.2s;
+        background: transparent;
+        border: none;
+        padding: 0;
+        font-size: 13px;
+        font-family: inherit;
+        display: inline;
       }
 
       .toggle-link:hover {
@@ -440,24 +446,24 @@
           </div>
           <h1 id="welcome-title" class="welcome-heading">
             BEM-VINDO <br />
-            <span>AO ENERGIVIA!</span>
+            <span>DE VOLTA!</span>
           </h1>
           <p id="welcome-desc" class="welcome-text">
-            Crie sua conta em segundos para dimensionar usinas, kits solares e gerar propostas comerciais com IA.
+            Acesse sua conta para gerenciar propostas, dimensionamento inteligente e atendimento comercial via IA.
           </p>
         </div>
 
         <div>
-          <button type="button" id="pill-toggle" class="pill-toggle-btn">
-            <span id="pill-text">Já possui conta? Entrar</span> &rarr;
+          <button type="button" id="pill-toggle" class="pill-toggle-btn" onclick="toggleMode()">
+            <span id="pill-text">Novo por aqui? Cadastre-se</span> &rarr;
           </button>
         </div>
       </div>
 
       <!-- Coluna Direita (Formulário) -->
       <div class="right-col">
-        <h2 id="form-heading" class="form-title">Criar Conta</h2>
-        <p id="form-subheading" class="form-subtitle">Cadastre-se ou acesse com sua conta Google</p>
+        <h2 id="form-heading" class="form-title">Entrar na Plataforma</h2>
+        <p id="form-subheading" class="form-subtitle">Digite seus dados de acesso corporativo ou use o Google</p>
 
         <div id="error-alert" class="error-box"></div>
 
@@ -496,13 +502,13 @@
 
           <!-- Botão Primário com Glow -->
           <button type="submit" id="submit-btn" class="glow-btn">
-            Criar Conta Grátis
+            Entrar
           </button>
 
           <!-- Alternador inferior -->
           <div class="toggle-footer">
-            <span id="footer-text">Já tem uma conta?</span>
-            <a id="footer-toggle" class="toggle-link" onclick="toggleMode()">Entrar</a>
+            <span id="footer-text">Ainda não tem conta?</span>
+            <button type="button" id="footer-toggle" class="toggle-link" onclick="toggleMode()">Cadastre-se</button>
           </div>
         </form>
       </div>
@@ -515,11 +521,7 @@
       try {
         config = JSON.parse(decodeURIComponent(escape(window.atob('@@config@@'))));
       } catch (e) {
-        try {
-          config = typeof @@config@@ === 'object' ? @@config@@ : {};
-        } catch (err) {
-          console.warn("Auth0 config preview:", err);
-        }
+        console.warn("Auth0 config preview:", e);
       }
 
       // 2. Identifica se a URL solicitou modo de cadastro (screen_hint=signup)
@@ -549,10 +551,33 @@
         console.warn("Auth0 WebAuth fallback local:", e);
       }
 
+      function setMode(mode) {
+        var errorAlert = document.getElementById("error-alert");
+        if (errorAlert) {
+          errorAlert.style.display = "none";
+          errorAlert.innerText = "";
+        }
+        if (mode === "login" || mode === "signup") {
+          currentMode = mode;
+        } else {
+          currentMode = currentMode === "signup" ? "login" : "signup";
+        }
+        updateUI();
+      }
+
+      function toggleMode(targetMode) {
+        if (targetMode === "login" || targetMode === "signup") {
+          setMode(targetMode);
+        } else {
+          setMode(currentMode === "signup" ? "login" : "signup");
+        }
+      }
+
       function updateUI() {
         var isSignup = currentMode === "signup";
         var welcomeTitle = document.getElementById("welcome-title");
         var welcomeDesc = document.getElementById("welcome-desc");
+        var pillBtn = document.getElementById("pill-toggle");
         var pillText = document.getElementById("pill-text");
         var formHeading = document.getElementById("form-heading");
         var formSubheading = document.getElementById("form-subheading");
@@ -561,37 +586,40 @@
         var footerToggle = document.getElementById("footer-toggle");
 
         if (isSignup) {
-          welcomeTitle.innerHTML = 'BEM-VINDO <br /><span>AO ENERGIVIA!</span>';
-          welcomeDesc.innerText = 'Crie sua conta em segundos para dimensionar usinas, kits solares e gerar propostas comerciais com IA.';
-          pillText.innerText = 'Já possui conta? Entrar';
-          formHeading.innerText = 'Criar Conta';
-          formSubheading.innerText = 'Cadastre-se ou acesse com sua conta Google';
-          submitBtn.innerText = 'Criar Conta Grátis';
-          footerText.innerText = 'Já tem uma conta?';
-          footerToggle.innerText = 'Entrar';
+          if (welcomeTitle) welcomeTitle.innerHTML = 'BEM-VINDO <br /><span>AO ENERGIVIA!</span>';
+          if (welcomeDesc) welcomeDesc.innerText = 'Crie sua conta em segundos para dimensionar usinas, kits solares e gerar propostas comerciais com IA.';
+          if (pillText) pillText.innerText = 'Já possui conta? Entrar';
+          if (pillBtn) pillBtn.onclick = function() { setMode('login'); };
+          if (formHeading) formHeading.innerText = 'Criar Conta';
+          if (formSubheading) formSubheading.innerText = 'Cadastre-se ou acesse com sua conta Google';
+          if (submitBtn) submitBtn.innerText = 'Criar Conta Grátis';
+          if (footerText) footerText.innerText = 'Já tem uma conta?';
+          if (footerToggle) {
+            footerToggle.innerText = 'Entrar';
+            footerToggle.onclick = function(e) { if (e && e.preventDefault) e.preventDefault(); setMode('login'); };
+          }
         } else {
-          welcomeTitle.innerHTML = 'BEM-VINDO <br /><span>DE VOLTA!</span>';
-          welcomeDesc.innerText = 'Acesse sua conta para gerenciar propostas, dimensionamento inteligente e atendimento comercial via IA.';
-          pillText.innerText = 'Novo por aqui? Cadastre-se';
-          formHeading.innerText = 'Entrar na Plataforma';
-          formSubheading.innerText = 'Digite seus dados de acesso corporativo ou use o Google';
-          submitBtn.innerText = 'Entrar';
-          footerText.innerText = 'Ainda não tem conta?';
-          footerToggle.innerText = 'Cadastre-se';
+          if (welcomeTitle) welcomeTitle.innerHTML = 'BEM-VINDO <br /><span>DE VOLTA!</span>';
+          if (welcomeDesc) welcomeDesc.innerText = 'Acesse sua conta para gerenciar propostas, dimensionamento inteligente e atendimento comercial via IA.';
+          if (pillText) pillText.innerText = 'Novo por aqui? Cadastre-se';
+          if (pillBtn) pillBtn.onclick = function() { setMode('signup'); };
+          if (formHeading) formHeading.innerText = 'Entrar na Plataforma';
+          if (formSubheading) formSubheading.innerText = 'Digite seus dados de acesso corporativo ou use o Google';
+          if (submitBtn) submitBtn.innerText = 'Entrar';
+          if (footerText) footerText.innerText = 'Ainda não tem conta?';
+          if (footerToggle) {
+            footerToggle.innerText = 'Cadastre-se';
+            footerToggle.onclick = function(e) { if (e && e.preventDefault) e.preventDefault(); setMode('signup'); };
+          }
         }
       }
 
-      function toggleMode() {
-        currentMode = currentMode === "signup" ? "login" : "signup";
-        updateUI();
-      }
-
-      document.getElementById("pill-toggle").addEventListener("click", toggleMode);
-
       function showError(msg) {
         var el = document.getElementById("error-alert");
-        el.innerText = msg;
-        el.style.display = "block";
+        if (el) {
+          el.innerText = msg;
+          el.style.display = "block";
+        }
       }
 
       function handleAuthSubmit(e) {
@@ -600,53 +628,61 @@
         var password = document.getElementById("password-input").value;
         var submitBtn = document.getElementById("submit-btn");
 
-        submitBtn.disabled = true;
-        submitBtn.innerText = "Processando...";
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerText = "Processando...";
+        }
+
+        var dbConn = config.databaseConnection ||
+          (config.connections && config.connections[0]) ||
+          "Username-Password-Authentication";
 
         if (!webAuth) {
           // Ambiente de teste/preview local
           setTimeout(function() {
             alert((currentMode === "signup" ? "Cadastro" : "Login") + " simulado para: " + email);
-            submitBtn.disabled = false;
-            updateUI();
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              updateUI();
+            }
           }, 800);
           return;
         }
 
         if (currentMode === "signup") {
           webAuth.signup({
-            connection: "Username-Password-Authentication",
+            connection: dbConn,
             email: email,
             password: password
           }, function(err) {
             if (err) {
               showError(err.description || err.message || "Erro ao realizar cadastro.");
-              submitBtn.disabled = false;
+              if (submitBtn) submitBtn.disabled = false;
               updateUI();
               return;
             }
             // Realiza login imediato após cadastro com a mesma conexão
             webAuth.login({
-              realm: "Username-Password-Authentication",
+              realm: dbConn,
               username: email,
               password: password
             }, function(loginErr) {
               if (loginErr) {
                 showError(loginErr.description || "Cadastro concluído. Efetue login para continuar.");
-                submitBtn.disabled = false;
+                if (submitBtn) submitBtn.disabled = false;
                 updateUI();
               }
             });
           });
         } else {
           webAuth.login({
-            realm: "Username-Password-Authentication",
+            realm: dbConn,
             username: email,
             password: password
           }, function(err) {
             if (err) {
               showError(err.description || err.message || "E-mail ou senha incorretos.");
-              submitBtn.disabled = false;
+              if (submitBtn) submitBtn.disabled = false;
               updateUI();
             }
           });
