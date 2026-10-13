@@ -500,9 +500,9 @@ export function ProposalPaymentOptionsCard({
                             ? "bg-[var(--color-background)] text-blue-600 dark:text-blue-400 font-semibold shadow-xs"
                             : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
                         }`}
-                        title="Gross-up da maquininha: você recebe 100% livre de descontos"
+                        title="Repassar taxa da maquininha: embute a taxa para você receber 100% livre na conta (sem descontos)"
                       >
-                        % Total
+                        Repassar taxa (%)
                       </button>
                       <button
                         type="button"
@@ -512,9 +512,9 @@ export function ProposalPaymentOptionsCard({
                             ? "bg-[var(--color-background)] text-blue-600 dark:text-blue-400 font-semibold shadow-xs"
                             : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
                         }`}
-                        title="Tabela Price: juros compostos mensais"
+                        title="Juros ao mês: aplica taxa fixa de juros por mês dividida nas parcelas"
                       >
-                        % a.m.
+                        Juros ao mês (% a.m.)
                       </button>
                       <button
                         type="button"
@@ -524,12 +524,19 @@ export function ProposalPaymentOptionsCard({
                             ? "bg-[var(--color-background)] text-blue-600 dark:text-blue-400 font-semibold shadow-xs"
                             : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
                         }`}
-                        title="Digitar parcela em R$ diretamente"
+                        title="Digitar parcela em reais diretamente na proposta"
                       >
-                        R$ Manual
+                        Valor manual (R$)
                       </button>
                     </div>
                   </div>
+                  <p className="mt-1 text-[10px] text-[var(--color-muted-foreground)]">
+                    {cardRateMode === "total_pct"
+                      ? "Repasse da maquininha: embute a taxa para você receber o valor da proposta limpo na conta."
+                      : cardRateMode === "monthly_pct"
+                        ? "Juros mensais: aplica taxa fixa ao mês dividida nas parcelas."
+                        : "Valor manual: digite diretamente o valor em R$ calculado na sua maquininha."}
+                  </p>
 
                   {cardRateMode !== "manual" ? (
                     <div className="mt-1.5 space-y-1.5">

@@ -433,7 +433,7 @@ export default function PerfilIntegradorPage(): JSX.Element {
                 ? "ao mês"
                 : cardRateMode === "manual"
                   ? "manual"
-                  : "gross-up"}
+                  : "repassar taxa"}
               )
             </span>
           </div>
@@ -456,8 +456,9 @@ export default function PerfilIntegradorPage(): JSX.Element {
                         ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm"
                         : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
                     }`}
+                    title="Cálculo automático da maquininha: embute a taxa para você receber 100% livre na conta (sem descontos)"
                   >
-                    % Total (Gross-up)
+                    Repassar Taxa (%)
                   </button>
                   <button
                     type="button"
@@ -468,8 +469,9 @@ export default function PerfilIntegradorPage(): JSX.Element {
                         ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm"
                         : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
                     }`}
+                    title="Aplica taxa de juros fixa ao mês dividida nas parcelas da maquininha ou banco"
                   >
-                    % ao Mês (Price)
+                    Juros ao Mês (% a.m.)
                   </button>
                   <button
                     type="button"
@@ -480,16 +482,17 @@ export default function PerfilIntegradorPage(): JSX.Element {
                         ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm"
                         : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
                     }`}
+                    title="Você digita diretamente o valor de cada parcela em reais na tela da proposta"
                   >
-                    R$ Manual
+                    Valor Manual (R$)
                   </button>
                 </div>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-normal">
                   {cardRateMode === "total_pct"
-                    ? "Repasse integral: a maquininha desconta a taxa sobre o total e você recebe 100% livre de desconto."
+                    ? "Repasse da maquininha: calcula o valor exato para o cliente pagar a taxa e você receber o valor da proposta 100% limpo na sua conta."
                     : cardRateMode === "monthly_pct"
-                      ? "Juros compostos mensais padrão Tabela Price para a quantidade de parcelas configurada."
-                      : "Você digita diretamente o valor da parcela em reais na tela da proposta."}
+                      ? "Juros mensais: aplica uma taxa de juros fixa ao mês dividida no número de parcelas escolhido."
+                      : "Valor manual: você digita diretamente o valor da parcela em reais na tela de edição da proposta."}
                 </p>
               </div>
 
@@ -623,7 +626,7 @@ export default function PerfilIntegradorPage(): JSX.Element {
                   {cardRateMode === "total_pct"
                     ? "Na maquininha, ao descontar a taxa configurada, sua empresa recebe exatamente os R$ 20.000,00 integrais."
                     : cardRateMode === "monthly_pct"
-                      ? "Cálculo pela Tabela Price repassado nas parcelas."
+                      ? "Cálculo com taxa de juros fixa ao mês repassada nas parcelas."
                       : "No modo manual, você informará o valor real na proposta."}
                 </p>
               </div>
