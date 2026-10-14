@@ -12,13 +12,29 @@ describe("public-web-app-base-url resolution", () => {
     process.env = originalEnv;
   });
 
-  it("should default to http://localhost:3000 when no environment variables are set", () => {
+  it("should default to http://localhost:3000 when no environment variables are set in development", () => {
     delete process.env["PUBLIC_PROPOSAL_SITE_URL"];
     delete process.env["FRONTEND_URL"];
     delete process.env["WEB_APP_URL"];
     delete process.env["APP_BASE_URL"];
+    delete process.env["PUBLIC_WEB_APP_BASE_URL"];
+    delete process.env["NEXT_PUBLIC_APP_URL"];
+    delete process.env["NODE_ENV"];
 
     expect(resolvePublicWebAppBaseUrl()).toBe("http://localhost:3000");
+  });
+
+  it("should default to https://www.energivia.com.br in production when no environment variables are set", () => {
+    delete process.env["PUBLIC_PROPOSAL_SITE_URL"];
+    delete process.env["FRONTEND_URL"];
+    delete process.env["WEB_APP_URL"];
+    delete process.env["APP_BASE_URL"];
+    delete process.env["PUBLIC_WEB_APP_BASE_URL"];
+    delete process.env["NEXT_PUBLIC_APP_URL"];
+    process.env["NODE_ENV"] = "production";
+
+    expect(resolvePublicWebAppBaseUrl()).toBe("https://www.energivia.com.br");
+    expect(resolveAuthAppBaseUrl()).toBe("https://app.energivia.com.br");
   });
 
   it("should prioritize PUBLIC_PROPOSAL_SITE_URL and strip trailing slashes", () => {

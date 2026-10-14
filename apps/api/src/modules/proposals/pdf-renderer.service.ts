@@ -137,19 +137,23 @@ export class PdfRendererService implements OnModuleDestroy {
 
       try {
         await page.goto(options.url, {
-          waitUntil: "networkidle0",
+          waitUntil: ["domcontentloaded", "networkidle2"],
           timeout: timeoutMs,
         });
       } catch (navErr) {
         this.logger.warn(
-          `[PDF] networkidle0 timeout (${timeoutMs}ms) ao carregar ${options.url}, tentando domcontentloaded: ${String(navErr)}`
+          `[PDF] navigation timeout (${timeoutMs}ms) ao carregar ${options.url}, tentando domcontentloaded: ${String(navErr)}`
         );
         // Fallback: don't fail immediately if analytics or external trackers hold connections
         await page.goto(options.url, {
           waitUntil: "domcontentloaded",
-          timeout: 10_000,
+          timeout: 15_000,
         });
       }
+
+      // Aguarda montagem visual do corpo e gráficos SVG
+      await page.waitForSelector("body", { timeout: 10_000 }).catch(() => {});
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
       const pdfBuffer = await page.pdf(options.pdfOptions ?? DEFAULT_PDF_OPTIONS);
       const elapsed = Date.now() - startTime;
