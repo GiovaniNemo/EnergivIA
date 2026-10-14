@@ -24,8 +24,15 @@ import {
   processExtractedBillData,
   BillExtractorService,
 } from "./services/bill-extractor.service";
-import { getHsp, isLocationInput, GeoIrradianceService } from "./services/geo-irradiance.service";
 import { KitGenerationService } from "../kit/kit-generation.service";
+import { getHsp, isLocationInput, GeoIrradianceService } from "./services/geo-irradiance.service";
+import {
+  WhatsappBotStep,
+  WhatsappSessionData,
+  isResetCommand,
+  isBackCommand,
+} from "./whatsapp-state.types";
+export type { WhatsappBotStep, WhatsappSessionData };
 
 interface WebhookMessage {
   id?: string;
@@ -3337,6 +3344,40 @@ ${catalogContext}`;
     };
 
     const sessionCtx = extractContextFromSession();
+    const convMeta = (conversation?.metadata as Record<string, any>) || {};
+    const storedSessionData: WhatsappSessionData = convMeta["sessionData"] || {};
+    let currentStep: WhatsappBotStep = convMeta["step"] || "IDLE";
+
+    // Hidrata sessionCtx a partir do sessionData estruturado persistido
+    if (storedSessionData.cidade && !sessionCtx.cidade)
+      sessionCtx.cidade = storedSessionData.cidade;
+    if (storedSessionData.uf && !sessionCtx.estado) sessionCtx.estado = storedSessionData.uf;
+    if (storedSessionData.consumptionKwh && !sessionCtx.consumptionKwh)
+      sessionCtx.consumptionKwh = storedSessionData.consumptionKwh;
+    if (storedSessionData.kwp && !sessionCtx.targetKWp)
+      sessionCtx.targetKWp = storedSessionData.kwp;
+    if (storedSessionData.moduleCount && !sessionCtx.targetModules)
+      sessionCtx.targetModules = storedSessionData.moduleCount;
+    if (storedSessionData.gridType && !sessionCtx.gridVoltage)
+      sessionCtx.gridVoltage = storedSessionData.gridType;
+    if (storedSessionData.roofType && !sessionCtx.roofType)
+      sessionCtx.roofType = storedSessionData.roofType;
+    if (storedSessionData.kwpRate && !sessionCtx.customRatePerKwp)
+      sessionCtx.customRatePerKwp = storedSessionData.kwpRate;
+    if (
+      storedSessionData.clientName &&
+      (!sessionCtx.clientName || sessionCtx.clientName === "Cliente")
+    )
+      sessionCtx.clientName = storedSessionData.clientName;
+    if (
+      storedSessionData.clientPhone &&
+      (!sessionCtx.clientWhatsapp || sessionCtx.clientWhatsapp === "WhatsApp")
+    )
+      sessionCtx.clientWhatsapp = storedSessionData.clientPhone;
+    if (typeof storedSessionData.selectedQuoteIndex === "number") {
+      sessionCtx.chosenQuoteIndex = storedSessionData.selectedQuoteIndex;
+    }
+
     if (
       extractionResult &&
       extractionResult.data &&
@@ -3353,6 +3394,49 @@ ${catalogContext}`;
         sessionCtx.consumptionKwh = extractionResult.exactAverageKwh;
       }
     }
+
+    // Helper determinístico para atualizar estado e dados acumulados
+    const setStep = async (nextStep: WhatsappBotStep, patchData?: Partial<WhatsappSessionData>) => {
+      currentStep = nextStep;
+      const updatedSessionData: WhatsappSessionData = {
+        ...storedSessionData,
+        cidade: sessionCtx.cidade,
+        uf: sessionCtx.estado,
+        consumptionKwh: sessionCtx.consumptionKwh,
+        kwp: sessionCtx.targetKWp,
+        moduleCount: sessionCtx.targetModules,
+        gridType: sessionCtx.gridVoltage,
+        roofType: sessionCtx.roofType,
+        kwpRate: sessionCtx.customRatePerKwp,
+        clientName: sessionCtx.clientName,
+        clientPhone: sessionCtx.clientWhatsapp,
+        selectedQuoteIndex: sessionCtx.chosenQuoteIndex,
+        ...(patchData || {}),
+      };
+
+      if (
+        conversation.id &&
+        conversation.id !== "web-chat-session" &&
+        this.prisma?.conversation?.update
+      ) {
+        try {
+          const currentConvMeta = (conversation.metadata as Record<string, any>) || {};
+          await this.prisma.conversation.update({
+            where: { id: conversation.id },
+            data: {
+              metadata: {
+                ...currentConvMeta,
+                step: nextStep,
+                sessionData: updatedSessionData,
+              },
+            },
+          });
+        } catch (err) {
+          this.logger?.warn?.(`Erro ao persistir step ${nextStep} no metadata:`, err);
+        }
+      }
+      return updatedSessionData;
+    };
 
     // Helper: recalcula os grupos de kits para a sessão atual
     const kitsFor = (overrides: { roofType?: string; customRatePerKwp?: number } = {}) =>
@@ -3390,6 +3474,15 @@ ${catalogContext}`;
           : `baseado no consumo do mês atual da fatura`;
 
       const conexaoInfo = tipoConexao ? `\n> Padrão de rede identificado: *${tipoConexao}*` : "";
+
+      await setStep("AWAITING_ROOF_TYPE", {
+        cidade: extractionResult.data.cidade || sessionCtx.cidade,
+        uf: extractionResult.data.uf
+          ? extractionResult.data.uf.trim().toUpperCase()
+          : sessionCtx.estado,
+        consumptionKwh: kwh,
+        gridType: tipoConexao || sessionCtx.gridVoltage,
+      });
 
       return (
         `*_Fatura Analisada com Precisão!_* 📄⚡\n\n` +
@@ -3531,93 +3624,65 @@ ${catalogContext}`;
         ? functionalAssistantMessages[functionalAssistantMessages.length - 1]?.content || ""
         : "";
 
+    // Comando global de reinicialização / novo orçamento
+    if (isResetCommand(incomingText)) {
+      await setStep("IDLE", {
+        cidade: undefined,
+        uf: undefined,
+        hsp: undefined,
+        consumptionKwh: undefined,
+        kwp: undefined,
+        moduleCount: undefined,
+        gridType: undefined,
+        roofType: undefined,
+        quotesList: undefined,
+        selectedQuoteIndex: undefined,
+        selectedTierName: undefined,
+        kwpRate: undefined,
+        quotedSaleBrl: undefined,
+        clientName: undefined,
+        clientPhone: undefined,
+        selectedTemplateId: undefined,
+      });
+      return this.buildGreetingMenu(resolvedContactName);
+    }
+
     // Tratamento Universal de Voltar / Corrigir
-    const isBackCommand =
-      lower === "0" ||
-      lower === "0️⃣" ||
-      lower === "voltar" ||
+    const userWantsBack =
+      isBackCommand(incomingText) ||
       lower === "corrigir" ||
       lower === "opcao 0" ||
       lower === "opção 0";
 
-    if (isBackCommand) {
+    if (userWantsBack) {
       if (
-        lastBotMsg.includes("Simulação por Consumo Mensal") ||
-        lastBotMsg.includes("consumo médio mensal") ||
-        lastBotMsg.includes("Simulação por Potência de Pico") ||
-        lastBotMsg.includes("potência de pico desejada") ||
-        lastBotMsg.includes("Simulação por Quantidade de Módulos") ||
-        lastBotMsg.includes("placas solares você deseja no kit") ||
-        lastBotMsg.includes("Para qual cidade e estado será a instalação") ||
-        lastBotMsg.includes("Vamos alterar a localização") ||
-        lastBotMsg.includes("Vamos corrigir a localização") ||
-        lastBotMsg.includes("Não identifiquei o município") ||
-        lastBotMsg.includes("Não identifiquei a cidade") ||
-        lastBotMsg.includes("informe a cidade e a sigla do estado") ||
-        lastBotMsg.includes("informe a cidade e estado")
+        currentStep === "AWAITING_TEMPLATE_SELECTION" ||
+        lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar")
       ) {
-        return this.buildGreetingMenu(resolvedContactName);
-      }
-
-      if (lastBotMsg.includes("Qual o padrão de entrada da instalação?")) {
-        if (sessionCtx.consumptionKwh) {
-          return (
-            `Certo! Vamos alterar a localização ou o consumo. 📍\n\n` +
-            `Para qual cidade e estado será a instalação? (Ex: \`Cuiabá/MT\`, \`Maringá/PR\`, \`São Paulo/SP\`)`
-          );
-        }
-        return (
-          `Certo! Vamos alterar o dimensionamento. ☀️\n\n` +
-          `Envie a potência desejada (ex: \`5 kWp\`), a quantidade de placas (ex: \`10 placas\`) ou o consumo médio (ex: \`450 kWh\`).`
-        );
+        await setStep("AWAITING_CLIENT_PHONE");
+        return `Certo! Qual o WhatsApp correto do cliente com DDD? (ou digite 0️⃣ para voltar ao nome)`;
       }
 
       if (
-        lastBotMsg.includes("Qual a estrutura do telhado") ||
-        lastBotMsg.includes("estrutura do telhado")
+        currentStep === "AWAITING_CLIENT_PHONE" ||
+        lastBotMsg.includes("E qual o WhatsApp dele") ||
+        lastBotMsg.includes("qual o WhatsApp") ||
+        lastBotMsg.includes("qual o whatsapp") ||
+        lastBotMsg.includes("WhatsApp correto")
       ) {
-        return (
-          `Sem problemas! Vamos corrigir o padrão elétrico da instalação. ⚡\n\n` +
-          this.GRID_OPTIONS_TEXT
-        );
-      }
-
-      if (
-        lastBotMsg.includes("Como você deseja prosseguir para esta cotação") ||
-        lastBotMsg.includes("Como deseja prosseguir para esta cotação") ||
-        lastBotMsg.includes("taxa padrão configurada")
-      ) {
-        const quotes = await kitsFor();
-        if (quotes.length === 0) return NO_KITS_TEXT;
-        return (
-          `Certo! Vamos escolher outro kit. ☀️\n\n` + this.formatQuotesListText(quotes, sessionCtx)
-        );
-      }
-
-      if (
-        lastBotMsg.includes("Qual valor por kWp") ||
-        lastBotMsg.includes("Qual valor você deseja utilizar")
-      ) {
-        const quotes = await kitsFor();
-        if (quotes.length === 0) return NO_KITS_TEXT;
-        const quote = quotes[sessionCtx.chosenQuoteIndex] || quotes[0];
-        if (!quote) return NO_KITS_TEXT;
-        const orgDefaultRate = await this.getOrganizationDefaultKwpRate(
-          conversation.organizationId
-        );
-        return this.buildPriceQuestionText(quote, orgDefaultRate);
-      }
-
-      if (lastBotMsg.includes("Qual opção você prefere para o seu cliente")) {
-        return `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
+        await setStep("AWAITING_CLIENT_NAME");
+        return `Sem problemas! Qual o nome do cliente final para registrarmos no seu CRM? (ou digite 0️⃣ para alterar o preço)`;
       }
 
       const isClientNameQuestion =
+        currentStep === "AWAITING_CLIENT_NAME" ||
+        currentStep === "AWAITING_CUSTOM_PRICE" ||
         lastBotMsg.includes("cliente final") ||
         lastBotMsg.includes("Qual o nome do cliente final") ||
         lastBotMsg.includes("nome correto do cliente final");
 
       if (isClientNameQuestion) {
+        await setStep("AWAITING_PRICE_CONFIRMATION");
         const quotes = await kitsFor();
         if (quotes.length > 0) {
           const quote = quotes[sessionCtx.chosenQuoteIndex] || quotes[0];
@@ -3632,16 +3697,76 @@ ${catalogContext}`;
       }
 
       if (
-        lastBotMsg.includes("E qual o WhatsApp dele") ||
-        lastBotMsg.includes("qual o WhatsApp") ||
-        lastBotMsg.includes("qual o whatsapp") ||
-        lastBotMsg.includes("WhatsApp correto")
+        currentStep === "AWAITING_PRICE_CONFIRMATION" ||
+        lastBotMsg.includes("Como você deseja prosseguir para esta cotação") ||
+        lastBotMsg.includes("Como deseja prosseguir para esta cotação") ||
+        lastBotMsg.includes("taxa padrão configurada") ||
+        lastBotMsg.includes("Qual valor por kWp") ||
+        lastBotMsg.includes("Qual valor você deseja utilizar")
       ) {
-        return `Sem problemas! Qual o nome do cliente final para registrarmos no seu CRM? (ou digite 0️⃣ para alterar o preço)`;
+        await setStep("AWAITING_KIT_SELECTION");
+        const quotes = await kitsFor();
+        if (quotes.length === 0) return NO_KITS_TEXT;
+        return (
+          `Certo! Vamos escolher outro kit. ☀️\n\n` + this.formatQuotesListText(quotes, sessionCtx)
+        );
       }
 
-      if (lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar")) {
-        return `Certo! Qual o WhatsApp correto do cliente com DDD? (ou digite 0️⃣ para voltar ao nome)`;
+      if (
+        currentStep === "AWAITING_KIT_SELECTION" ||
+        lastBotMsg.includes("Qual opção você prefere para o seu cliente")
+      ) {
+        await setStep("AWAITING_ROOF_TYPE");
+        return `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
+      }
+
+      if (
+        currentStep === "AWAITING_ROOF_TYPE" ||
+        lastBotMsg.includes("Qual a estrutura do telhado") ||
+        lastBotMsg.includes("estrutura do telhado")
+      ) {
+        await setStep("AWAITING_GRID_TYPE");
+        return (
+          `Sem problemas! Vamos corrigir o padrão elétrico da instalação. ⚡\n\n` +
+          this.GRID_OPTIONS_TEXT
+        );
+      }
+
+      if (
+        currentStep === "AWAITING_GRID_TYPE" ||
+        lastBotMsg.includes("Qual o padrão de entrada da instalação?")
+      ) {
+        await setStep("AWAITING_CITY");
+        if (sessionCtx.consumptionKwh) {
+          return (
+            `Certo! Vamos alterar a localização ou o consumo. 📍\n\n` +
+            `Para qual cidade e estado será a instalação? (Ex: \`Cuiabá/MT\`, \`Maringá/PR\`, \`São Paulo/SP\`)`
+          );
+        }
+        return (
+          `Certo! Vamos alterar o dimensionamento. ☀️\n\n` +
+          `Envie a potência desejada (ex: \`5 kWp\`), a quantidade de placas (ex: \`10 placas\`) ou o consumo médio (ex: \`450 kWh\`).`
+        );
+      }
+
+      if (
+        currentStep === "AWAITING_CITY" ||
+        lastBotMsg.includes("Simulação por Consumo Mensal") ||
+        lastBotMsg.includes("consumo médio mensal") ||
+        lastBotMsg.includes("Simulação por Potência de Pico") ||
+        lastBotMsg.includes("potência de pico desejada") ||
+        lastBotMsg.includes("Simulação por Quantidade de Módulos") ||
+        lastBotMsg.includes("placas solares você deseja no kit") ||
+        lastBotMsg.includes("Para qual cidade e estado será a instalação") ||
+        lastBotMsg.includes("Vamos alterar a localização") ||
+        lastBotMsg.includes("Vamos corrigir a localização") ||
+        lastBotMsg.includes("Não identifiquei o município") ||
+        lastBotMsg.includes("Não identifiquei a cidade") ||
+        lastBotMsg.includes("informe a cidade e a sigla do estado") ||
+        lastBotMsg.includes("informe a cidade e estado")
+      ) {
+        await setStep("IDLE");
+        return this.buildGreetingMenu(resolvedContactName);
       }
 
       return (
@@ -3656,14 +3781,22 @@ ${catalogContext}`;
     }
 
     // ESTADO A: O Bot apresentou os grupos de kits (Standard, Elite, Premium) -> escolhido o kit, pergunta o preço por kWp
-    if (lastBotMsg.includes("Qual opção você prefere para o seu cliente")) {
+    if (
+      currentStep === "AWAITING_KIT_SELECTION" ||
+      lastBotMsg.includes("Qual opção você prefere para o seu cliente")
+    ) {
       const quotes = await kitsFor();
       if (quotes.length === 0) return NO_KITS_TEXT;
       const idx = this.resolveQuoteIndexFromText(incomingText, quotes.length);
       if (idx !== null && quotes[idx]) {
+        sessionCtx.chosenQuoteIndex = idx;
         const orgDefaultRate = await this.getOrganizationDefaultKwpRate(
           conversation.organizationId
         );
+        await setStep("AWAITING_PRICE_CONFIRMATION", {
+          selectedQuoteIndex: idx,
+          selectedTierName: quotes[idx].distributorName,
+        });
         return this.buildPriceQuestionText(quotes[idx], orgDefaultRate);
       }
       return (
@@ -3675,6 +3808,7 @@ ${catalogContext}`;
 
     // ESTADO B: O Bot pediu o nome do cliente final (ou o nome correto)
     const isAskingClientName =
+      currentStep === "AWAITING_CLIENT_NAME" ||
       (lastBotMsg.includes("cliente final") &&
         (lastBotMsg.includes("nome") ||
           lastBotMsg.includes("Nome") ||
@@ -3702,6 +3836,13 @@ ${catalogContext}`;
 
       // Se o usuário já enviou o Nome E o WhatsApp na mesma mensagem (ex: "cezar 44988117969" ou "cezar, 44099117969")
       if (phone && name) {
+        sessionCtx.clientName = effectiveName;
+        sessionCtx.clientWhatsapp = phone;
+        await setStep("AWAITING_TEMPLATE_SELECTION", {
+          clientName: effectiveName,
+          clientPhone: phone,
+        });
+
         const templates = await this.getAvailableTemplates(conversation.organizationId);
         let templateListText = "";
         templates.forEach((t, i) => {
@@ -3719,20 +3860,26 @@ ${catalogContext}`;
 
       // Se enviou apenas o telefone sem nome
       if (phone && !name) {
+        sessionCtx.clientWhatsapp = phone;
+        await setStep("AWAITING_CLIENT_NAME", { clientPhone: phone });
         return `Anotado o WhatsApp \`${formatPhone(phone)}\`! E qual o *nome* do cliente final para registrarmos no seu CRM?`;
       }
 
       // Se enviou apenas o nome
+      sessionCtx.clientName = effectiveName;
+      await setStep("AWAITING_CLIENT_PHONE", { clientName: effectiveName });
       return `Certo, vou registrar o cliente *${effectiveName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
     }
 
     // ESTADO C: O Bot pediu o WhatsApp do cliente final -> Apresenta os modelos de proposta
-    if (
+    const isAskingPhone =
+      currentStep === "AWAITING_CLIENT_PHONE" ||
       lastBotMsg.includes("E qual o WhatsApp dele") ||
       lastBotMsg.includes("qual o WhatsApp") ||
       lastBotMsg.includes("qual o whatsapp") ||
-      lastBotMsg.includes("WhatsApp correto")
-    ) {
+      lastBotMsg.includes("WhatsApp correto");
+
+    if (isAskingPhone) {
       const clientNameMatch =
         lastBotMsg.match(/registrar o cliente \*?([^*.]+)\*?\./i) ||
         lastBotMsg.match(/Cliente \*([^*]+)\*/i);
@@ -3742,12 +3889,27 @@ ${catalogContext}`;
       const { name: newName, phone } = extractNameAndPhone(incomingText);
       if (newName && !phone) {
         // Usuário corrigiu apenas o nome
+        sessionCtx.clientName = newName;
+        await setStep("AWAITING_CLIENT_PHONE", { clientName: newName });
         return `Certo, corrigi o nome para *${newName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
       }
       if (newName && phone) {
         // Usuário enviou nome e telefone
         clientName = newName;
       }
+
+      const digits = incomingText.replace(/\D/g, "");
+      const resolvedPhone = phone || (digits.length >= 8 ? digits : undefined);
+
+      sessionCtx.clientName = clientName;
+      if (resolvedPhone) {
+        sessionCtx.clientWhatsapp = resolvedPhone;
+      }
+
+      await setStep("AWAITING_TEMPLATE_SELECTION", {
+        clientName,
+        clientPhone: sessionCtx.clientWhatsapp,
+      });
 
       const templates = await this.getAvailableTemplates(conversation.organizationId);
       let templateListText = "";
@@ -3756,7 +3918,7 @@ ${catalogContext}`;
       });
       templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
 
-      const phoneDisplay = phone ? ` e WhatsApp \`${formatPhone(phone)}\`` : "";
+      const phoneDisplay = resolvedPhone ? ` e WhatsApp \`${formatPhone(resolvedPhone)}\`` : "";
 
       return (
         `Cliente *${clientName}*${phoneDisplay} anotado com sucesso! 👤✨\n\n` +
@@ -3767,7 +3929,10 @@ ${catalogContext}`;
     }
 
     // ESTADO D: O Bot pediu para escolher o modelo de proposta -> GERA PROPOSTA COMPLETA!
-    if (lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar")) {
+    if (
+      currentStep === "AWAITING_TEMPLATE_SELECTION" ||
+      lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar")
+    ) {
       const templateChoiceStr = incomingText.replace(/\D/g, "");
       const chosenTemplateIndex = templateChoiceStr ? parseInt(templateChoiceStr, 10) - 1 : 0;
 
@@ -4085,6 +4250,14 @@ ${catalogContext}`;
 
         proposalId = proposal.id;
 
+        await setStep("PROPOSAL_COMPLETED", {
+          lastProposalId: proposal.id,
+          lastProposalNumber: proposalNumber,
+          lastClientName: clientName,
+          quotedSaleBrl,
+          selectedTemplateId: template?.id || defaultTemplate?.id || chosenTemplate?.id,
+        });
+
         try {
           const currentConvMeta = (conversation.metadata as Record<string, any>) || {};
           await this.prisma.conversation.update({
@@ -4092,6 +4265,7 @@ ${catalogContext}`;
             data: {
               metadata: {
                 ...currentConvMeta,
+                step: "PROPOSAL_COMPLETED",
                 lastProposalId: proposal.id,
                 lastClientName: clientName,
                 lastProposalNumber: proposalNumber,
@@ -4190,13 +4364,17 @@ ${catalogContext}`;
     ].find((r) => lower === r.key || lower.includes(r.key));
 
     if (
+      currentStep === "AWAITING_ROOF_TYPE" ||
       lastBotMsg.includes("Qual a estrutura do telhado") ||
       lastBotMsg.includes("estrutura do telhado")
     ) {
       if (roofMatch) {
         const selectedRoof = roofMatch.name;
+        sessionCtx.roofType = selectedRoof;
         const quotes = await kitsFor({ roofType: selectedRoof });
         if (quotes.length === 0) return NO_KITS_TEXT;
+
+        await setStep("AWAITING_KIT_SELECTION", { roofType: selectedRoof });
 
         return (
           `*_Estrutura Selecionada:_* \`${selectedRoof}\` 🏠\n\n` +
@@ -4212,6 +4390,7 @@ ${catalogContext}`;
 
     // ESTADO E.1: O Bot perguntou se deseja seguir com o preço padrão configurado ou informar outro preço por kWp
     if (
+      currentStep === "AWAITING_PRICE_CONFIRMATION" ||
       lastBotMsg.includes("preço padrão") ||
       lastBotMsg.includes("taxa padrão configurada") ||
       lastBotMsg.includes("Como você deseja prosseguir para esta cotação?") ||
@@ -4238,6 +4417,8 @@ ${catalogContext}`;
         lower === "continuar";
 
       if (isChoice1) {
+        sessionCtx.customRatePerKwp = orgDefaultRate;
+        await setStep("AWAITING_CLIENT_NAME", { kwpRate: orgDefaultRate });
         return this.buildPriceAppliedText(quote, orgDefaultRate);
       }
 
@@ -4255,6 +4436,7 @@ ${catalogContext}`;
         lower === "trocar";
 
       if (isChoice2) {
+        await setStep("AWAITING_CUSTOM_PRICE");
         return (
           `*_Personalização de Preço por kWp_* 💰\n\n` +
           `Kit selecionado: *${quote.distributorName}* (\`${quote.kwp} kWp\`)\n\n` +
@@ -4269,6 +4451,8 @@ ${catalogContext}`;
       // Usuário digitou o valor diretamente (ex: "4000", "2500", "R$ 3.200", "4.000/kwp", "total 18500")
       const directParsed = parseKwpRate(incomingText, quote.kwp);
       if (directParsed) {
+        sessionCtx.customRatePerKwp = directParsed.rate;
+        await setStep("AWAITING_CLIENT_NAME", { kwpRate: directParsed.rate });
         return this.buildPriceAppliedText(
           quote,
           directParsed.rate,
@@ -4281,6 +4465,7 @@ ${catalogContext}`;
 
     // ESTADO E.2: O Bot pediu especificamente para digitar o preço por kWp
     if (
+      currentStep === "AWAITING_CUSTOM_PRICE" ||
       lastBotMsg.includes("Qual preço você deseja utilizar") ||
       lastBotMsg.includes("Qual valor por kWp") ||
       lastBotMsg.includes("Qual valor você deseja utilizar")
@@ -4291,6 +4476,8 @@ ${catalogContext}`;
       if (!quote) return NO_KITS_TEXT;
       const parsedRateObj = parseKwpRate(incomingText, quote.kwp);
       if (parsedRateObj) {
+        sessionCtx.customRatePerKwp = parsedRateObj.rate;
+        await setStep("AWAITING_CLIENT_NAME", { kwpRate: parsedRateObj.rate });
         return this.buildPriceAppliedText(
           quote,
           parsedRateObj.rate,
@@ -4307,7 +4494,10 @@ ${catalogContext}`;
     }
 
     // ESTADO F: O Bot perguntou o padrão de entrada da rede elétrica
-    if (lastBotMsg.includes("Qual o padrão de entrada da instalação?")) {
+    if (
+      currentStep === "AWAITING_GRID_TYPE" ||
+      lastBotMsg.includes("Qual o padrão de entrada da instalação?")
+    ) {
       // Verifica se o usuário enviou explicitamente uma localização para corrigir (ex: "Cuiabá/MT", "mudar cidade para Curitiba")
       const wantsToChangeLocation =
         lower.startsWith("mudar cidade") ||
@@ -4318,6 +4508,13 @@ ${catalogContext}`;
       if (wantsToChangeLocation) {
         const hspRes = getHsp(incomingText);
         if (hspRes && (isLocationInput(incomingText) || hspRes.exact)) {
+          sessionCtx.cidade = hspRes.city;
+          sessionCtx.estado = hspRes.uf;
+          await setStep("AWAITING_GRID_TYPE", {
+            cidade: hspRes.city,
+            uf: hspRes.uf,
+            hsp: hspRes.hsp,
+          });
           return (
             `*_Localização Corrigida com Sucesso!_* 📍☀️\n\n` +
             `> Cidade: \`${hspRes.city}/${hspRes.uf}\`\n` +
@@ -4358,6 +4555,8 @@ ${catalogContext}`;
       }
 
       if (chosenGrid) {
+        sessionCtx.gridVoltage = chosenGrid;
+        await setStep("AWAITING_ROOF_TYPE", { gridType: chosenGrid });
         return `*_Padrão Elétrico Registrado:_* \`${chosenGrid}\` ⚡\n\n` + this.ROOF_OPTIONS_TEXT;
       }
 
@@ -4369,6 +4568,7 @@ ${catalogContext}`;
 
     // ESTADO G: O Bot perguntou a cidade da instalação
     const isAskingCity =
+      currentStep === "AWAITING_CITY" ||
       lastBotMsg.includes("Para qual cidade e estado será a instalação") ||
       lastBotMsg.includes("Vamos alterar a localização") ||
       lastBotMsg.includes("Vamos corrigir a localização") ||
@@ -4396,6 +4596,11 @@ ${catalogContext}`;
 
       if (keepExistingCity) {
         const hspRes = getHsp(sessionCtx.cidade, sessionCtx.estado);
+        await setStep("AWAITING_GRID_TYPE", {
+          cidade: sessionCtx.cidade,
+          uf: sessionCtx.estado,
+          hsp: hspRes.hsp,
+        });
         return (
           `*_Localização Mantida:_* \`${sessionCtx.cidade}/${sessionCtx.estado}\` 📍☀️\n\n` +
           `> Irradiação Solar: \`${hspRes.hsp.toFixed(2)} kWh/m²/dia\`\n\n` +
@@ -4429,6 +4634,13 @@ ${catalogContext}`;
         !invalidWords.has(hspRes.city.toLowerCase());
 
       if (isRecognizedLocation) {
+        sessionCtx.cidade = hspRes.city;
+        sessionCtx.estado = hspRes.uf;
+        await setStep("AWAITING_GRID_TYPE", {
+          cidade: hspRes.city,
+          uf: hspRes.uf,
+          hsp: hspRes.hsp,
+        });
         return (
           `*_Localização Identificada!_* 📍☀️\n\n` +
           `> Cidade: \`${hspRes.city}/${hspRes.uf}\`\n` +
@@ -4463,6 +4675,7 @@ ${catalogContext}`;
         const rawKwh = Number(kwhMatch[1].replace(/\./g, "").replace(",", "."));
         if (rawKwh >= 20 && rawKwh <= 500000) {
           const consumo = Math.round(rawKwh);
+          sessionCtx.consumptionKwh = consumo;
 
           const cityInSameMsg = incomingText.match(
             /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
@@ -4477,6 +4690,14 @@ ${catalogContext}`;
                   : "")
             ).trim();
             const hspRes = getHsp(cand);
+            sessionCtx.cidade = hspRes.city;
+            sessionCtx.estado = hspRes.uf;
+            await setStep("AWAITING_GRID_TYPE", {
+              consumptionKwh: consumo,
+              cidade: hspRes.city,
+              uf: hspRes.uf,
+              hsp: hspRes.hsp,
+            });
             return (
               `*_Consumo Registrado:_* \`${consumo} kWh/mês\` em \`${hspRes.city}/${hspRes.uf}\` ☀️📍\n\n` +
               this.GRID_OPTIONS_TEXT
@@ -4484,12 +4705,18 @@ ${catalogContext}`;
           }
 
           if (sessionCtx.cidade && sessionCtx.estado) {
+            await setStep("AWAITING_GRID_TYPE", {
+              consumptionKwh: consumo,
+            });
             return (
               `*_Consumo Registrado:_* \`${consumo} kWh/mês\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
               this.GRID_OPTIONS_TEXT
             );
           }
 
+          await setStep("AWAITING_CITY", {
+            consumptionKwh: consumo,
+          });
           return (
             `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n\n` +
             `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
@@ -4524,6 +4751,7 @@ ${catalogContext}`;
       }
 
       if (targetKWp !== null && targetKWp >= 0.5 && targetKWp <= 5_000_000) {
+        sessionCtx.targetKWp = targetKWp;
         const formattedPower = this.formatPowerBadge(targetKWp);
         const cityInSameMsg = incomingText.match(
           /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
@@ -4538,6 +4766,14 @@ ${catalogContext}`;
                 : "")
           ).trim();
           const hspRes = getHsp(cand);
+          sessionCtx.cidade = hspRes.city;
+          sessionCtx.estado = hspRes.uf;
+          await setStep("AWAITING_GRID_TYPE", {
+            kwp: targetKWp,
+            cidade: hspRes.city,
+            uf: hspRes.uf,
+            hsp: hspRes.hsp,
+          });
           return (
             `*_Potência Solicitada:_* \`${formattedPower}\` em \`${hspRes.city}/${hspRes.uf}\` ☀️📍\n\n` +
             this.GRID_OPTIONS_TEXT
@@ -4545,12 +4781,18 @@ ${catalogContext}`;
         }
 
         if (sessionCtx.cidade && sessionCtx.estado) {
+          await setStep("AWAITING_GRID_TYPE", {
+            kwp: targetKWp,
+          });
           return (
             `*_Potência Solicitada:_* \`${formattedPower}\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
             this.GRID_OPTIONS_TEXT
           );
         }
 
+        await setStep("AWAITING_CITY", {
+          kwp: targetKWp,
+        });
         return (
           `*_Potência Solicitada:_* \`${formattedPower}\` ☀️\n\n` +
           `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
@@ -4581,13 +4823,22 @@ ${catalogContext}`;
           const kwpCalculado = modPower ? ((modCount * modPower) / 1000).toFixed(2) : undefined;
           const extraInfo = modPower ? ` de \`${modPower}W\` (\`${kwpCalculado} kWp\`)` : "";
 
+          sessionCtx.targetModules = modCount;
+          if (modPower) sessionCtx.modPowerWUser = modPower;
+
           if (sessionCtx.cidade && sessionCtx.estado) {
+            await setStep("AWAITING_GRID_TYPE", {
+              moduleCount: modCount,
+            });
             return (
               `*_Quantidade Solicitada:_* \`${modCount} placas\`${extraInfo} em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
               this.GRID_OPTIONS_TEXT
             );
           }
 
+          await setStep("AWAITING_CITY", {
+            moduleCount: modCount,
+          });
           return (
             `*_Quantidade Solicitada:_* \`${modCount} placas\`${extraInfo} ☀️\n\n` +
             `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
@@ -4635,6 +4886,7 @@ ${catalogContext}`;
 
     if (!isChoosingOtherOption) {
       if (lower === "1" || lower === "1." || lower === "opcao 1" || lower === "opção 1") {
+        await setStep("IDLE");
         return (
           `*_Envio de Fatura de Energia_* 📄⚡\n\n` +
           `Envie o arquivo em *PDF* ou a *foto da conta de luz* do seu cliente por aqui mesmo.\n\n` +
@@ -4642,6 +4894,7 @@ ${catalogContext}`;
         );
       }
       if (lower === "2" || lower === "2." || lower === "opcao 2" || lower === "opção 2") {
+        await setStep("IDLE");
         return (
           `*_Simulação por Consumo Mensal_* ⚡\n\n` +
           `Qual é o *consumo médio mensal* do seu cliente em kWh?\n\n` +
@@ -4649,6 +4902,7 @@ ${catalogContext}`;
         );
       }
       if (lower === "3" || lower === "3." || lower === "opcao 3" || lower === "opção 3") {
+        await setStep("IDLE");
         return (
           `*_Simulação por Potência de Pico_* ☀️\n\n` +
           `Qual a *potência de pico* desejada para o sistema solar?\n\n` +
@@ -4656,6 +4910,7 @@ ${catalogContext}`;
         );
       }
       if (lower === "4" || lower === "4." || lower === "opcao 4" || lower === "opção 4") {
+        await setStep("IDLE");
         return (
           `*_Simulação por Quantidade de Módulos_* 🔌\n\n` +
           `Quantas *placas solares* você deseja no kit e qual a potência delas?\n\n` +
@@ -4663,6 +4918,7 @@ ${catalogContext}`;
         );
       }
       if (lower === "5" || lower === "5." || lower === "opcao 5" || lower === "opção 5") {
+        await setStep("IDLE");
         return this.buildGreetingMenu(resolvedContactName);
       }
     }
@@ -4727,19 +4983,27 @@ ${catalogContext}`;
       lower.startsWith("simular");
 
     if (isStartOrGreeting) {
+      await setStep("IDLE");
       return this.buildGreetingMenu(resolvedContactName);
     }
 
     // ESTADO I: Entrada por Potência direta (ex: "5 kwp", "3000 kwp", "3 mwp", "1.5 gwp")
     const directPower = this.parsePowerInput(incomingText);
     if (directPower !== null && directPower >= 0.5) {
+      sessionCtx.targetKWp = directPower;
       const formattedPower = this.formatPowerBadge(directPower);
       if (sessionCtx.cidade && sessionCtx.estado) {
+        await setStep("AWAITING_GRID_TYPE", {
+          kwp: directPower,
+        });
         return (
           `*_Potência Solicitada:_* \`${formattedPower}\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
           this.GRID_OPTIONS_TEXT
         );
       }
+      await setStep("AWAITING_CITY", {
+        kwp: directPower,
+      });
       return (
         `*_Potência Solicitada:_* \`${formattedPower}\` ☀️\n\n` +
         `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
@@ -4758,13 +5022,22 @@ ${catalogContext}`;
       const kwpCalculado = modPower ? ((modCount * modPower) / 1000).toFixed(2) : undefined;
       const extraInfo = modPower ? ` de \`${modPower}W\` (\`${kwpCalculado} kWp\`)` : "";
 
+      sessionCtx.targetModules = modCount;
+      if (modPower) sessionCtx.modPowerWUser = modPower;
+
       if (sessionCtx.cidade && sessionCtx.estado) {
+        await setStep("AWAITING_GRID_TYPE", {
+          moduleCount: modCount,
+        });
         return (
           `*_Quantidade Solicitada:_* \`${modCount} placas\`${extraInfo} em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
           this.GRID_OPTIONS_TEXT
         );
       }
 
+      await setStep("AWAITING_CITY", {
+        moduleCount: modCount,
+      });
       return (
         `*_Quantidade Solicitada:_* \`${modCount} placas\`${extraInfo} ☀️\n\n` +
         `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
@@ -4777,6 +5050,7 @@ ${catalogContext}`;
       const rawKwh = Number(kwhDirectMatch[1].replace(",", "."));
       if (rawKwh >= 30) {
         const consumo = Math.round(rawKwh);
+        sessionCtx.consumptionKwh = consumo;
 
         // Verifica se a cidade já foi informada na mesma mensagem
         const cityInSameMsg = incomingText.match(
@@ -4793,12 +5067,33 @@ ${catalogContext}`;
                 : "")
           ).trim();
           const hspRes = getHsp(cand);
+          sessionCtx.cidade = hspRes.city;
+          sessionCtx.estado = hspRes.uf;
+          await setStep("AWAITING_GRID_TYPE", {
+            consumptionKwh: consumo,
+            cidade: hspRes.city,
+            uf: hspRes.uf,
+            hsp: hspRes.hsp,
+          });
           return (
             `*_Consumo Registrado:_* \`${consumo} kWh/mês\` em \`${hspRes.city}/${hspRes.uf}\` ☀️📍\n\n` +
             this.GRID_OPTIONS_TEXT
           );
         }
 
+        if (sessionCtx.cidade && sessionCtx.estado) {
+          await setStep("AWAITING_GRID_TYPE", {
+            consumptionKwh: consumo,
+          });
+          return (
+            `*_Consumo Registrado:_* \`${consumo} kWh/mês\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
+            this.GRID_OPTIONS_TEXT
+          );
+        }
+
+        await setStep("AWAITING_CITY", {
+          consumptionKwh: consumo,
+        });
         return (
           `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n\n` +
           `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
@@ -4811,12 +5106,19 @@ ${catalogContext}`;
     if (pureNumMatch && pureNumMatch[1]) {
       const pureVal = parseInt(pureNumMatch[1], 10);
       if (pureVal >= 30 && pureVal <= 50000) {
+        sessionCtx.consumptionKwh = pureVal;
         if (sessionCtx.cidade && sessionCtx.estado) {
+          await setStep("AWAITING_GRID_TYPE", {
+            consumptionKwh: pureVal,
+          });
           return (
             `*_Consumo Registrado:_* \`${pureVal} kWh/mês\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
             this.GRID_OPTIONS_TEXT
           );
         }
+        await setStep("AWAITING_CITY", {
+          consumptionKwh: pureVal,
+        });
         return (
           `*_Consumo Registrado:_* \`${pureVal} kWh/mês\` ☀️\n\n` +
           `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
