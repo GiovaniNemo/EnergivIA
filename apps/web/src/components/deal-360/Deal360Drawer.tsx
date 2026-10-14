@@ -135,6 +135,88 @@ function toLocalInputValue(date: Date | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function formatActivityOccurredAt(iso?: string | null): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+function getActivityMeta(kind: string): { label: string; badgeClass: string } {
+  switch (kind) {
+    case "NOTE":
+    case "NOTE_ADDED":
+      return {
+        label: "Anotação",
+        badgeClass: "text-amber-500 bg-amber-500/10 border-amber-500/20",
+      };
+    case "CALL":
+    case "CALL_LOGGED":
+      return {
+        label: "Ligação",
+        badgeClass: "text-blue-500 bg-blue-500/10 border-blue-500/20",
+      };
+    case "SIMULATION_ADDED":
+      return {
+        label: "Simulação",
+        badgeClass: "text-violet-500 bg-violet-500/10 border-violet-500/20",
+      };
+    case "PROPOSAL_CREATED":
+      return {
+        label: "Proposta Criada",
+        badgeClass: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+      };
+    case "PROPOSAL_SENT":
+      return {
+        label: "Proposta Enviada",
+        badgeClass: "text-cyan-500 bg-cyan-500/10 border-cyan-500/20",
+      };
+    case "PROPOSAL_VIEWED":
+      return {
+        label: "Proposta Visualizada",
+        badgeClass: "text-indigo-500 bg-indigo-500/10 border-indigo-500/20",
+      };
+    case "LEAD_CREATED":
+      return {
+        label: "Lead Criado",
+        badgeClass: "text-slate-400 bg-slate-500/10 border-slate-500/20",
+      };
+    case "DEAL_CREATED":
+      return {
+        label: "Negociação Criada",
+        badgeClass: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+      };
+    default:
+      return {
+        label: kind.replace(/_/g, " "),
+        badgeClass:
+          "text-[var(--color-primary)] bg-[var(--color-primary)]/10 border-[var(--color-primary)]/20",
+      };
+  }
+}
+
+function getActivityText(act: LeadActivityRow): string {
+  const raw = act.label || (act as { text?: string }).text || "";
+  if (act.kind === "NOTE_ADDED" || act.kind === "NOTE") {
+    const stripped = raw.replace(/^Nota:\s*/i, "").trim();
+    return stripped || raw;
+  }
+  if (act.kind === "CALL_LOGGED" || act.kind === "CALL") {
+    const stripped = raw.replace(/^Ligação:\s*/i, "").trim();
+    return stripped || raw;
+  }
+  return raw;
+}
+
 export type Deal360Tab = "cliente" | "propostas" | "negociacao";
 
 export type Deal360DrawerProps = {
@@ -1075,22 +1157,36 @@ export function Deal360Drawer({
                       </p>
                     ) : (
                       <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                        {activities.map((act) => (
-                          <div
-                            key={act.id}
-                            className="rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-muted)]/10 p-3 text-xs space-y-1"
-                          >
-                            <div className="flex items-center justify-between text-[11px] text-[var(--color-muted-foreground)]">
-                              <span className="font-semibold uppercase tracking-wider text-[var(--color-primary-700)] dark:text-[var(--color-primary-300)]">
-                                {act.kind === "NOTE" ? "Anotação" : act.kind}
-                              </span>
-                              <span>{formatProposalDatePt(act.createdAt)}</span>
+                        {activities.map((act) => {
+                          const meta = getActivityMeta(act.kind);
+                          const text = getActivityText(act);
+                          const formattedDate = formatActivityOccurredAt(
+                            act.occurredAt || (act as { createdAt?: string }).createdAt
+                          );
+                          return (
+                            <div
+                              key={act.id}
+                              className="rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-muted)]/10 p-3 text-xs space-y-1.5"
+                            >
+                              <div className="flex items-center justify-between text-[11px] text-[var(--color-muted-foreground)]">
+                                <span
+                                  className={cn(
+                                    "px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide border uppercase",
+                                    meta.badgeClass
+                                  )}
+                                >
+                                  {meta.label}
+                                </span>
+                                <span className="font-mono text-[11px]">{formattedDate}</span>
+                              </div>
+                              {text ? (
+                                <p className="text-[var(--color-foreground)] font-medium leading-relaxed break-words">
+                                  {text}
+                                </p>
+                              ) : null}
                             </div>
-                            <p className="text-[var(--color-foreground)] font-medium leading-relaxed">
-                              {act.text}
-                            </p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
