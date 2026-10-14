@@ -1184,10 +1184,11 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      await this.whatsappCloud.sendTextMessage({
+      await this.dispatchWhatsappReply({
         phoneNumberId,
         toWaId: fromWaId,
-        body: replyText,
+        replyText,
+        organizationId: conversation.organizationId,
       });
 
       // Se acabou de gerar a proposta, descarrega alertas pendentes de visualização
@@ -1195,6 +1196,195 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         await this.flushPendingProposalViewAlerts(conversation.id, phoneNumberId, fromWaId);
       }
     }
+  }
+
+  private async dispatchWhatsappReply(params: {
+    phoneNumberId: string;
+    toWaId: string;
+    replyText: string;
+    organizationId: string;
+  }): Promise<void> {
+    const { phoneNumberId, toWaId, replyText, organizationId } = params;
+
+    // 1. Menu Inicial (buildGreetingMenu)
+    if (replyText.includes("Como posso ajudar você a gerar orçamentos hoje")) {
+      await this.whatsappCloud.sendInteractiveList({
+        phoneNumberId,
+        toWaId,
+        body: replyText,
+        buttonText: "Ver Opções",
+        footer: "EnergivIA Solar",
+        sections: [
+          {
+            title: "Como iniciar a cotação",
+            rows: [
+              { id: "1", title: "1. Enviar fatura", description: "PDF ou foto da conta de luz" },
+              { id: "2", title: "2. Consumo mensal", description: "Simulação por média em kWh" },
+              { id: "3", title: "3. Potência de pico", description: "Simulação por kWp ou MWp" },
+              {
+                id: "4",
+                title: "4. Placas solares",
+                description: "Simulação por quantidade de módulos",
+              },
+            ],
+          },
+        ],
+      });
+      return;
+    }
+
+    // 2. Padrão Elétrico (GRID_OPTIONS_TEXT)
+    if (replyText.includes("Qual o padrão de entrada da instalação")) {
+      await this.whatsappCloud.sendInteractiveList({
+        phoneNumberId,
+        toWaId,
+        body: replyText,
+        buttonText: "Escolher Padrão",
+        footer: "Selecione o padrão de rede",
+        sections: [
+          {
+            title: "Padrão de Entrada",
+            rows: [
+              {
+                id: "1",
+                title: "1. Monofásico 220V",
+                description: "Padrão monofásico convencional",
+              },
+              {
+                id: "2",
+                title: "2. Bifásico 127V/220V",
+                description: "Padrão bifásico residencial",
+              },
+              {
+                id: "3",
+                title: "3. Trifásico 220V",
+                description: "Rede trifásica comercial/rural",
+              },
+              {
+                id: "4",
+                title: "4. Trifásico 380V",
+                description: "Rede trifásica comercial/industrial",
+              },
+            ],
+          },
+        ],
+      });
+      return;
+    }
+
+    // 3. Estrutura do Telhado (ROOF_OPTIONS_TEXT)
+    if (
+      replyText.includes("Qual a estrutura do telhado") ||
+      replyText.includes("estrutura do telhado")
+    ) {
+      await this.whatsappCloud.sendInteractiveList({
+        phoneNumberId,
+        toWaId,
+        body: replyText,
+        buttonText: "Selecionar Telhado",
+        footer: "Selecione a estrutura de fixação",
+        sections: [
+          {
+            title: "Estruturas de Fixação",
+            rows: [
+              {
+                id: "1",
+                title: "1. Cerâmica (Colonial)",
+                description: "Telhas cerâmicas convencionais",
+              },
+              { id: "2", title: "2. Fibrocimento", description: "Fixação em madeira" },
+              { id: "3", title: "3. Metálico", description: "Telhas trapezoidais ou zipadas" },
+              { id: "4", title: "4. Solo", description: "Estrutura para usina de solo" },
+              { id: "5", title: "5. Laje", description: "Laje plana de concreto com triângulos" },
+              { id: "6", title: "6. Fibrometal", description: "Fibrocimento em vigas metálicas" },
+              {
+                id: "7",
+                title: "7. Sem estrutura",
+                description: "Apenas equipamentos (sem fixação)",
+              },
+            ],
+          },
+        ],
+      });
+      return;
+    }
+
+    // 4. Escolha do Kit (formatQuotesListText)
+    if (replyText.includes("Qual opção você prefere para o seu cliente")) {
+      const buttons = [
+        { id: "1", title: "1️⃣ Standard" },
+        { id: "2", title: "2️⃣ Elite" },
+        { id: "3", title: "3️⃣ Premium" },
+      ];
+      const countMatches = (replyText.match(/Opção\s+[1-3]/gi) || []).length;
+      const effectiveButtons =
+        countMatches > 0 && countMatches <= 3 ? buttons.slice(0, countMatches) : buttons;
+
+      await this.whatsappCloud.sendInteractiveButtons({
+        phoneNumberId,
+        toWaId,
+        body: replyText,
+        buttons: effectiveButtons,
+        footer: "Toque na opção desejada",
+      });
+      return;
+    }
+
+    // 5. Decisão de Preço (buildPriceQuestionText)
+    if (
+      replyText.includes("Como deseja prosseguir para esta cotação") ||
+      replyText.includes("Como você deseja prosseguir para esta cotação")
+    ) {
+      await this.whatsappCloud.sendInteractiveButtons({
+        phoneNumberId,
+        toWaId,
+        body: replyText,
+        buttons: [
+          { id: "1", title: "1️⃣ Preço Padrão" },
+          { id: "2", title: "2️⃣ Outro Valor" },
+        ],
+        footer: "Definição de preço por kWp",
+      });
+      return;
+    }
+
+    // 6. Modelo de Proposta Comercial
+    if (replyText.includes("Qual modelo de proposta comercial você deseja usar")) {
+      try {
+        const templates = await this.getAvailableTemplates(organizationId);
+        const rows = templates.slice(0, 10).map((t, i) => ({
+          id: String(i + 1),
+          title: `${i + 1}. ${t.name.slice(0, 20)}`,
+          description: t.name.length > 20 ? t.name.slice(20, 72) : undefined,
+        }));
+
+        if (rows.length > 0) {
+          await this.whatsappCloud.sendInteractiveList({
+            phoneNumberId,
+            toWaId,
+            body: replyText,
+            buttonText: "Escolher Modelo",
+            footer: "Selecione o modelo da proposta",
+            sections: [
+              {
+                title: "Modelos Disponíveis",
+                rows,
+              },
+            ],
+          });
+          return;
+        }
+      } catch (err) {
+        this.logger.warn(`Falha ao carregar templates para lista interativa: ${err}`);
+      }
+    }
+
+    // Fallback padrão: envio em texto
+    await this.whatsappCloud.sendTextMessage({
+      phoneNumberId,
+      toWaId,
+      body: replyText,
+    });
   }
 
   private async flushPendingProposalViewAlerts(
