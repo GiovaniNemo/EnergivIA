@@ -6,7 +6,7 @@
 dockerfilePath = "Dockerfile"
 
 [deploy]
-preDeployCommand = "/bin/sh -c \"set -euxo pipefail; cd /app/apps/api; npx prisma migrate deploy --schema=prisma/schema.prisma\""
+preDeployCommand = "/bin/sh -c \"set -euxo pipefail; cd /app/apps/api; node scripts/migrate-deploy.js\""
 startCommand = "node /app/apps/api/dist/main.js"
 healthcheckPath = "/health"
 restartPolicyType = "ON_FAILURE"
