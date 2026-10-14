@@ -12,7 +12,6 @@ import {
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
-  Boxes,
   Building2,
   Compass,
   Crown,
@@ -223,14 +222,6 @@ const STATIC_NAV_ITEMS: NavItem[] = [
       "capa",
     ],
     icon: Palette,
-  },
-  {
-    id: "nav-estoque",
-    title: "Estoque Próprio",
-    subtitle: "Controle de saldo, custos e produtos em estoque",
-    path: "/configuracoes/estoque",
-    keywords: ["estoque", "produtos", "equipamentos", "saldo", "custo", "armazem", "reservas"],
-    icon: Boxes,
   },
   {
     id: "nav-equipe",

@@ -15,7 +15,6 @@ import {
   Palette,
   ChartColumn,
   LayoutTemplate,
-  Boxes,
   HandCoins,
   Banknote,
   Building2 as BuildingIcon,
@@ -116,13 +115,6 @@ export const MENU_ITEMS: MenuItem[] = [
     section: "management",
     tooltip: "Preferências de marcas de módulos, inversores e valor base por kWp",
     requiresRole: "admin",
-  },
-  {
-    label: "Estoque",
-    icon: Boxes,
-    path: "/configuracoes/estoque",
-    section: "management",
-    tooltip: "Seu estoque próprio: produtos, quantidade e custo para montar propostas",
   },
   {
     label: "Equipe",

@@ -1,5 +1,5 @@
-import { StockPage } from "@/components/stock/StockPage";
+import { redirect } from "next/navigation";
 
-export default function EstoqueRoute(): JSX.Element {
-  return <StockPage />;
+export default function EstoqueRoute(): never {
+  redirect("/configuracoes");
 }
