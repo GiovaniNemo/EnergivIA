@@ -262,7 +262,7 @@ export function ProductSpecsDialog({
           Number(values.specs["max_module_power"]) * 0.5
         );
       }
-      if (values.specs["channels"]) {
+      if (!values.specs["mppt_count"] && values.specs["channels"]) {
         values.specs["mppt_count"] = Number(values.specs["channels"]);
       }
       if (values.specs["max_input_voltage"]) {

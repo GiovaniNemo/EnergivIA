@@ -292,7 +292,12 @@ export function getEquipmentHighlights(
 
     // 3. MPPTs
     let mpptLabel: string | null = null;
-    if (s["mppt_count"]) {
+    const explicitMpptMatch = nameUpper.match(/(\d+)\s*MPPT/i);
+    const explicitMppt = explicitMpptMatch ? Number(explicitMpptMatch[1]) : null;
+
+    if (explicitMppt && explicitMppt > 0) {
+      mpptLabel = `${explicitMppt} MPPT${explicitMppt > 1 ? "s" : ""}`;
+    } else if (s["mppt_count"]) {
       mpptLabel = `${s["mppt_count"]} MPPT${Number(s["mppt_count"]) > 1 ? "s" : ""}`;
     } else if (s["channels"]) {
       mpptLabel = `${s["channels"]} Canais`;

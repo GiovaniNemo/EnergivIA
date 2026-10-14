@@ -12,7 +12,11 @@ import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
 import { WhatsappCloudService } from "./whatsapp-cloud.service";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { computeProjectCostSection } from "@energivia/proposal-economia";
+import {
+  computeProjectCostSection,
+  PROJECT_COST_ESSENTIAL_MARGIN_NAME,
+  roundMoney,
+} from "@energivia/proposal-economia";
 import pdfParse from "pdf-parse";
 import { createWorker } from "tesseract.js";
 import { AiUsageService } from "../ai-usage/ai-usage.service";
@@ -4274,8 +4278,41 @@ ${catalogContext}`;
           selectedQuote.kwp,
           organizationRules
         );
-        // Valor de venda real baseado nas margens do integrador
-        quotedSaleBrl = costCalc.computedSaleFromCostRulesBrl;
+        // Valor de venda final: preserva o valor cotado/acordado no WhatsApp se definido
+        if (selectedQuote.totalPrice > 0) {
+          quotedSaleBrl = selectedQuote.totalPrice;
+
+          // Reconcilia a linha de margem em projectCostLines para que os custos internos reflitam exatamente o total acordado
+          const marginIndex = costCalc.projectCostLines.findIndex(
+            (l) =>
+              l.name === PROJECT_COST_ESSENTIAL_MARGIN_NAME ||
+              (l.name || "").toLowerCase().includes("margem") ||
+              (l.name || "").toLowerCase().includes("lucro")
+          );
+          const nonMarginCosts = costCalc.projectCostLines.reduce((acc, curr, idx) => {
+            if (idx === marginIndex) return acc;
+            return acc + (curr.appliedAmountBrl ?? 0);
+          }, 0);
+          const effectiveMarginBrl = Math.max(
+            0,
+            roundMoney(quotedSaleBrl - materialsSubtotal - nonMarginCosts)
+          );
+          if (marginIndex >= 0 && costCalc.projectCostLines[marginIndex]) {
+            costCalc.projectCostLines[marginIndex].appliedAmountBrl = effectiveMarginBrl;
+            costCalc.projectCostLines[marginIndex].value = effectiveMarginBrl;
+            costCalc.projectCostLines[marginIndex].calculationType = "FIXED";
+          } else if (effectiveMarginBrl > 0) {
+            costCalc.projectCostLines.push({
+              name: PROJECT_COST_ESSENTIAL_MARGIN_NAME,
+              calculationType: "FIXED",
+              value: effectiveMarginBrl,
+              appliedAmountBrl: effectiveMarginBrl,
+              source: "organization",
+            });
+          }
+        } else {
+          quotedSaleBrl = costCalc.computedSaleFromCostRulesBrl;
+        }
 
         // 3. Cria Deal
         const deal = await this.prisma.deal.create({

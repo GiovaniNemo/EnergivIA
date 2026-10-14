@@ -6,6 +6,7 @@ export {
   projectCostRuleMatchesKwp,
   PROJECT_COST_ESSENTIAL_LABOR_NAME,
   PROJECT_COST_ESSENTIAL_MARGIN_NAME,
+  roundMoney,
 } from "./project-cost-rules";
 export type {
   ProjectCostCalculationType,

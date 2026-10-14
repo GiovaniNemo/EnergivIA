@@ -35,7 +35,11 @@ export function mergePublicProposalVariables(
   // Integrator snapshot: kit items and project costs
   const integrator = payload.renderedData?.integrator;
   const quotedSale = integrator
-    ? (integrator.computedSaleFromCostRulesBrl ?? integrator.quotedSaleBrl)
+    ? integrator.sourceType === "kwp_rate" &&
+      typeof integrator.quotedSaleBrl === "number" &&
+      integrator.quotedSaleBrl > 0
+      ? integrator.quotedSaleBrl
+      : (integrator.computedSaleFromCostRulesBrl ?? integrator.quotedSaleBrl)
     : null;
   if (integrator) {
     // Override investimento_total with the real quoted sale price (equipment + costs)

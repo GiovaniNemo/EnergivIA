@@ -184,7 +184,8 @@ function formatGridTopology(specs: Record<string, unknown>): string | undefined 
 export function buildEquipmentDisplaySpecs(
   categoryName: string,
   specs: Record<string, unknown>,
-  quantity: number
+  quantity: number,
+  productName?: string
 ): ProposalEquipmentSpec[] {
   const cat = categoryName.trim().toLowerCase();
   const qSpec = quantitySpec(quantity);
@@ -216,7 +217,8 @@ export function buildEquipmentDisplaySpecs(
     else if (voc != null) c = { label: "Voc", value: `${voc} V`, icon: "plug" };
   } else if (cat === "inverter") {
     const maxDc = num(specs, "max_dc_power") ?? num(specs, "nominal_power_w");
-    const mppt = num(specs, "mppt_count");
+    const explicitMpptMatch = (productName || "").match(/(\d+)\s*MPPT/i);
+    const mppt = explicitMpptMatch ? Number(explicitMpptMatch[1]) : num(specs, "mppt_count");
     const warranty =
       num(specs, "warranty_years") ?? str(specs, "warranty") ?? str(specs, "warranty_description");
     if (maxDc != null) {
@@ -243,7 +245,13 @@ export function buildEquipmentDisplaySpecs(
     } else {
       b = { label: "Garantia", value: "10 anos", icon: "shield" };
     }
-    if (mppt != null) c = { label: "MPPTs", value: `${mppt} trackers`, icon: "layers" };
+    if (mppt != null) {
+      c = {
+        label: "MPPTs",
+        value: `${mppt} ${mppt === 1 ? "tracker" : "trackers"}`,
+        icon: "layers",
+      };
+    }
   } else if (cat === "hybrid_inverter") {
     const p = num(specs, "nominal_power_w");
     const eps = num(specs, "eps_nominal_power_w");
@@ -325,6 +333,8 @@ export function buildEquipmentDisplaySpecs(
   } else if (cat === "microinverter") {
     const ch = num(specs, "channels");
     const maxP = num(specs, "max_module_power");
+    const explicitMpptMatch = (productName || "").match(/(\d+)\s*MPPT/i);
+    const mppt = explicitMpptMatch ? Number(explicitMpptMatch[1]) : num(specs, "mppt_count");
     const warranty =
       num(specs, "warranty_years") ?? str(specs, "warranty") ?? str(specs, "warranty_description");
     if (maxP != null) a = { label: "Módulo máx.", value: `${maxP} W`, icon: "zap" };
@@ -340,7 +350,21 @@ export function buildEquipmentDisplaySpecs(
     } else {
       b = { label: "Garantia", value: "12 anos", icon: "shield" };
     }
-    if (ch != null) c = { label: "Canais", value: `${ch} módulos`, icon: "layers" };
+    if (mppt != null && ch != null && mppt !== ch) {
+      c = {
+        label: "MPPTs",
+        value: `${mppt} ${mppt === 1 ? "tracker" : "trackers"}`,
+        icon: "layers",
+      };
+    } else if (ch != null) {
+      c = { label: "Canais", value: `${ch} módulos`, icon: "layers" };
+    } else if (mppt != null) {
+      c = {
+        label: "MPPTs",
+        value: `${mppt} ${mppt === 1 ? "tracker" : "trackers"}`,
+        icon: "layers",
+      };
+    }
   } else if (cat === "structure_kit") {
     const roof = str(specs, "roof_type");
     const maxM = num(specs, "max_modules");
@@ -380,7 +404,12 @@ export function proposalEquipmentItemFromProduct(
     title: `${catLabel} — ${product.brand.name}`,
     subtitle: product.name,
     categoryName: cat,
-    specs: buildEquipmentDisplaySpecs(cat, product.specs as Record<string, unknown>, quantity),
+    specs: buildEquipmentDisplaySpecs(
+      cat,
+      product.specs as Record<string, unknown>,
+      quantity,
+      product.name
+    ),
     isTier1:
       cat === "module" &&
       (Boolean((product.specs as Record<string, unknown>)?.is_tier_1) ||
@@ -488,7 +517,17 @@ export function inferSpecsFromProductDetails(
       value: cat === "microinverter" ? "12 anos" : "10 anos",
       icon: "shield",
     };
-    c = { label: "Monitoramento", value: "Wi-Fi integrado", icon: "activity" };
+    const explicitMpptMatch = productName.match(/(\d+)\s*MPPT/i);
+    if (explicitMpptMatch && explicitMpptMatch[1]) {
+      const m = Number(explicitMpptMatch[1]);
+      c = {
+        label: "MPPTs",
+        value: `${m} ${m === 1 ? "tracker" : "trackers"}`,
+        icon: "layers",
+      };
+    } else {
+      c = { label: "Monitoramento", value: "Wi-Fi integrado", icon: "activity" };
+    }
   }
 
   const out = [a, b, qSpec, c].filter((s) => s.label.trim() !== "");
@@ -696,7 +735,7 @@ export function buildEquipmentItemFromKitLine(
 
   let specs: ProposalEquipmentSpec[] = [];
   if (line.specs && typeof line.specs === "object" && Object.keys(line.specs).length > 0) {
-    specs = buildEquipmentDisplaySpecs(cat, line.specs, quantity);
+    specs = buildEquipmentDisplaySpecs(cat, line.specs, quantity, rawName);
   } else {
     specs = inferSpecsFromProductDetails(cat, rawName, quantity);
   }

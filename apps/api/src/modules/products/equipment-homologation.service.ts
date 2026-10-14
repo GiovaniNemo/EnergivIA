@@ -53,6 +53,37 @@ export class EquipmentHomologationService {
     },
     {
       brand: "GoodWe",
+      model: "GW35KLV-MT",
+      category: "inverter",
+      aliases: [
+        "GW35KLV-MT",
+        "GW 35KLS-MT",
+        "GW35KLS-MT",
+        "35KLS-MT",
+        "GOODWE 35KW 220V",
+        "GOODWE 35KW",
+      ],
+      specs: {
+        nominal_power_w: 35000,
+        max_dc_power: 52500,
+        max_dc_voltage: 850,
+        mppt_count: 3,
+        max_strings_per_mppt: 2,
+        mppt_voltage_min: 140,
+        mppt_voltage_max: 700,
+        max_input_current: 42,
+        max_short_circuit_current_a: 52.5,
+        recommended_dc_ac_ratio_min: 1.05,
+        recommended_dc_ac_ratio_max: 1.8,
+        warranty_years: 5,
+        grid_topology: "tri_220",
+        grid_standard: "TRI_220",
+        output_voltage_v: "220V",
+        efficiency: 98.0,
+      },
+    },
+    {
+      brand: "GoodWe",
       model: "GW25K-SMT-L-G20",
       category: "inverter",
       aliases: ["GW25K-SMT", "GW25K-SMT-L", "25K-SMT", "GOODWE 25KW"],
@@ -775,6 +806,76 @@ export class EquipmentHomologationService {
         efficiency: 98.2,
       },
     },
+    {
+      brand: "SAJ",
+      model: "R5-3K-S1-15",
+      category: "inverter",
+      aliases: [
+        "R5-3K-S1-15",
+        "R5-3KW-S1-15",
+        "R5-3K-S1",
+        "R5-3KW-S1",
+        "R5 3K",
+        "R5 3KW",
+        "SAJ 3KW 1MPPT",
+        "SAJ 3K 1MPPT",
+        "SAJ 3KW",
+        "SAJ 3K",
+      ],
+      specs: {
+        nominal_power_w: 3000,
+        max_dc_power: 4500,
+        max_dc_voltage: 550,
+        mppt_count: 1,
+        max_strings_per_mppt: 1,
+        mppt_voltage_min: 70,
+        mppt_voltage_max: 500,
+        max_input_current: 15,
+        max_short_circuit_current_a: 18,
+        recommended_dc_ac_ratio_min: 1.05,
+        recommended_dc_ac_ratio_max: 1.5,
+        warranty_years: 10,
+        grid_topology: "mono_220",
+        grid_standard: "EU",
+        output_voltage_v: "220V",
+        efficiency: 97.7,
+      },
+    },
+    {
+      brand: "SAJ",
+      model: "R5-4K-S2-15",
+      category: "inverter",
+      aliases: [
+        "R5-4K-S2-15",
+        "R5-4KW-S2-15",
+        "R5-4K-S2",
+        "R5-4KW-S2",
+        "R5 4K",
+        "R5 4KW",
+        "SAJ 4KW 2MPPT",
+        "SAJ 4K 2MPPT",
+        "SAJ 4KW",
+        "SAJ 4K",
+      ],
+      specs: {
+        nominal_power_w: 4000,
+        max_dc_power: 6000,
+        max_dc_voltage: 550,
+        mppt_count: 2,
+        max_strings_per_mppt: 1,
+        mppt_voltage_min: 80,
+        mppt_voltage_max: 500,
+        max_input_current: 15,
+        max_short_circuit_current_a: 18,
+        recommended_dc_ac_ratio_min: 1.05,
+        recommended_dc_ac_ratio_max: 1.5,
+        warranty_years: 10,
+        grid_topology: "mono_220",
+        grid_standard: "EU",
+        output_voltage_v: "220V",
+        efficiency: 97.8,
+      },
+    },
 
     // ==========================================
     // HOYMILES - Microinversores
@@ -816,6 +917,53 @@ export class EquipmentHomologationService {
         warranty_years: 12,
         efficiency: 96.7,
         output_voltage_v: "220V",
+      },
+    },
+    {
+      brand: "Deye",
+      model: "SUN-S225G4-EU-Q0",
+      category: "microinverter",
+      aliases: [
+        "SUN-S225G4-EU-Q0",
+        "SUN-S225G4",
+        "S225G4-EU-Q0",
+        "DEYE 2.25KW",
+        "DEYE 2,25KW",
+        "DEYE 2250",
+      ],
+      specs: {
+        nominal_power_w: 2250,
+        channels: 4,
+        mppt_count: 2,
+        max_input_voltage: 60,
+        mppt_voltage_min: 20,
+        mppt_voltage_max: 55,
+        max_input_current: 13,
+        max_module_power: 650,
+        warranty_years: 12,
+        grid_topology: "mono_220",
+        output_voltage_v: "220V",
+        efficiency: 96.5,
+      },
+    },
+    {
+      brand: "NEP",
+      model: "BDM-2250",
+      category: "microinverter",
+      aliases: ["BDM-2250", "BDM 2250", "BDM2250", "NEP 2.25KW", "NEP 2,25KW", "NEP 2250"],
+      specs: {
+        nominal_power_w: 2250,
+        channels: 4,
+        mppt_count: 2,
+        max_input_voltage: 60,
+        mppt_voltage_min: 22,
+        mppt_voltage_max: 55,
+        max_input_current: 14,
+        max_module_power: 650,
+        warranty_years: 12,
+        grid_topology: "mono_220",
+        output_voltage_v: "220V",
+        efficiency: 96.5,
       },
     },
 
@@ -959,6 +1107,40 @@ export class EquipmentHomologationService {
         grid_standard: "TRI_220",
         output_voltage_v: "220V",
         efficiency: 98.8,
+      },
+    },
+    {
+      brand: "SAJ",
+      model: "R6-30K-T3-32-LV",
+      category: "inverter",
+      aliases: [
+        "R6-30K-T3-32-LV",
+        "R6-30K-T3-32",
+        "R6-30K-T3",
+        "R6-30K-T3-LV",
+        "30K-T3-32-LV",
+        "30K-T3",
+        "SAJ 30KW 3MPPT",
+        "SAJ 30K 3MPPT",
+        "SAJ 3MPPT 30KW",
+      ],
+      specs: {
+        nominal_power_w: 30000,
+        max_dc_power: 60000,
+        max_dc_voltage: 1100,
+        mppt_count: 3,
+        max_strings_per_mppt: 2,
+        mppt_voltage_min: 180,
+        mppt_voltage_max: 1000,
+        max_input_current: 32,
+        max_short_circuit_current_a: 40,
+        recommended_dc_ac_ratio_min: 1.05,
+        recommended_dc_ac_ratio_max: 2.0,
+        warranty_years: 10,
+        grid_topology: "tri_220",
+        grid_standard: "TRI_220",
+        output_voltage_v: "220V",
+        efficiency: 98.6,
       },
     },
     {
@@ -1179,6 +1361,9 @@ export class EquipmentHomologationService {
     const has380 = cleanInput.includes("380V") || cleanInput.includes("380 V");
     const has220 = cleanInput.includes("220V") || cleanInput.includes("220 V");
 
+    const mpptMatch = cleanInput.match(/(\d+)\s*MPPT/i);
+    const requiredMppt = mpptMatch && mpptMatch[1] ? parseInt(mpptMatch[1], 10) : null;
+
     const isVoltageCompatible = (itemSpecs: Record<string, unknown>): boolean => {
       const top = String(itemSpecs["grid_topology"] || "");
       if (has380 && !has220) {
@@ -1186,6 +1371,15 @@ export class EquipmentHomologationService {
       }
       if (has220 && !has380) {
         if (top === "tri_380") return false;
+      }
+      return true;
+    };
+
+    const isMpptCompatible = (itemSpecs: Record<string, unknown>): boolean => {
+      if (requiredMppt === null) return true;
+      const count = itemSpecs["mppt_count"];
+      if (typeof count === "number") {
+        return count === requiredMppt;
       }
       return true;
     };
@@ -1208,6 +1402,7 @@ export class EquipmentHomologationService {
 
     const testItem = (item: HomologatedEquipment) => {
       if (!isVoltageCompatible(item.specs)) return null;
+      if (!isMpptCompatible(item.specs)) return null;
 
       const cleanModel = item.model
         .toUpperCase()
@@ -1281,6 +1476,7 @@ export class EquipmentHomologationService {
     // 3. Busca combinada de Marca + Potência (ex: "GOODWE" + "37.5" ou "GROWATT" + "25")
     for (const item of this.catalog) {
       if (!isVoltageCompatible(item.specs)) continue;
+      if (!isMpptCompatible(item.specs)) continue;
       if (detectedBrands.length > 0 && !isBrandCompatible(item.brand)) continue;
 
       const brandUpper = item.brand.toUpperCase();
@@ -1296,14 +1492,19 @@ export class EquipmentHomologationService {
         if (powerKw) {
           const powerStr = String(powerKw);
           const escaped = powerStr.replace(".", "[.,]");
-          // Exige que o número de potência não seja parte de outro número maior (ex: 15kW não pode bater com 5kW)
-          // Para potências de um único dígito (< 10kW), exige explicitamente unidade "KW" ou "K" para não confundir com números de MPPTs/strings
-          const regexStrict =
-            powerKw < 10
-              ? new RegExp(`(?:^|[^0-9])${escaped}\\s*(?:KW|K)(?:[^0-9]|$)`, "i")
-              : new RegExp(`(?:^|[^0-9])${escaped}\\s*(?:KW|K)?(?:[^0-9]|$)`, "i");
+          // Exige explicitamente unidade "KW" ou "K" para não confundir com sufixos de modelo (ex: -15, 220V, 32A)
+          const regexStrict = new RegExp(`(?:^|[^0-9])${escaped}\\s*(?:KW|K)(?:[^0-9]|$)`, "i");
 
-          if (regexStrict.test(cleanInput)) {
+          const powerWatts =
+            typeof item.specs["nominal_power_w"] === "number"
+              ? (item.specs["nominal_power_w"] as number)
+              : null;
+          const regexWatts =
+            powerWatts && powerWatts >= 1000
+              ? new RegExp(`(?:^|[^0-9])${powerWatts}\\s*W(?:[^0-9]|$)`, "i")
+              : null;
+
+          if (regexStrict.test(cleanInput) || (regexWatts && regexWatts.test(cleanInput))) {
             this.logger.log(
               `Match por Marca + Potência: ${item.brand} (${powerKw}kW) -> ${item.model}`
             );

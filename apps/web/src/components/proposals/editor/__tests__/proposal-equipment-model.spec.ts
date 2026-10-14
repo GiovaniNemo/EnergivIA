@@ -123,4 +123,47 @@ describe("buildProposalEquipmentItemsFromKit", () => {
     const invCard = result.find((it) => it.categoryName === "inverter");
     expect(invCard?.specs.find((s) => s.label === "Quantidade")?.value).toBe("2 unidades");
   });
+
+  it("should prioritize explicit MPPT count from productName over mismatched specs", () => {
+    const items = [
+      {
+        productName: "INVERSOR 220V SAJ 1MPPT MONOFASICO 3KW R5-3KW-S1-15 WIFI NEW AFCI",
+        brandName: "SAJ",
+        quantity: 1,
+        categoryName: "inverter",
+        specs: {
+          mppt_count: 2, // Mismatched spec in database/homologation
+          nominal_power_w: 3000,
+        },
+      },
+    ];
+
+    const result = buildProposalEquipmentItemsFromKit(items);
+    expect(result).toHaveLength(1);
+    const invCard = result[0];
+    const mpptSpec = invCard.specs.find((s) => s.label === "MPPTs");
+    expect(mpptSpec).toBeDefined();
+    expect(mpptSpec?.value).toBe("1 tracker");
+  });
+
+  it("should format plural trackers correctly when MPPT > 1", () => {
+    const items = [
+      {
+        productName: "INVERSOR SAJ 30KW 3MPPT TRIFASICO 220V",
+        brandName: "SAJ",
+        quantity: 1,
+        categoryName: "inverter",
+        specs: {
+          nominal_power_w: 30000,
+        },
+      },
+    ];
+
+    const result = buildProposalEquipmentItemsFromKit(items);
+    expect(result).toHaveLength(1);
+    const invCard = result[0];
+    const mpptSpec = invCard.specs.find((s) => s.label === "MPPTs");
+    expect(mpptSpec).toBeDefined();
+    expect(mpptSpec?.value).toBe("3 trackers");
+  });
 });
