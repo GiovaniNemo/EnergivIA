@@ -112,6 +112,11 @@ export class WhatsappCloudService {
     return !!this.config.get<string>("EVOLUTION_API_URL")?.trim();
   }
 
+  private isEvolutionInteractiveEnabled(): boolean {
+    const val = this.config.get<string>("EVOLUTION_INTERACTIVE_ENABLED")?.trim().toLowerCase();
+    return val === "true" || val === "1";
+  }
+
   private async postTextViaEvolution(
     toWaId: string,
     body: string
@@ -278,6 +283,15 @@ export class WhatsappCloudService {
 
     // 1. Provedor Evolution API
     if (this.isEvolutionProvider()) {
+      if (!this.isEvolutionInteractiveEnabled()) {
+        await this.sendTextMessage({
+          phoneNumberId: params.phoneNumberId,
+          toWaId: params.toWaId,
+          body,
+        });
+        return;
+      }
+
       const baseUrl = this.config.get<string>("EVOLUTION_API_URL")?.trim().replace(/\/+$/, "");
       const apiKey = this.config.get<string>("EVOLUTION_API_KEY")?.trim();
       const instance = this.config.get<string>("EVOLUTION_INSTANCE_NAME")?.trim() || "energiv-bot";
@@ -423,6 +437,15 @@ export class WhatsappCloudService {
 
     // 1. Provedor Evolution API
     if (this.isEvolutionProvider()) {
+      if (!this.isEvolutionInteractiveEnabled()) {
+        await this.sendTextMessage({
+          phoneNumberId: params.phoneNumberId,
+          toWaId: params.toWaId,
+          body,
+        });
+        return;
+      }
+
       const baseUrl = this.config.get<string>("EVOLUTION_API_URL")?.trim().replace(/\/+$/, "");
       const apiKey = this.config.get<string>("EVOLUTION_API_KEY")?.trim();
       const instance = this.config.get<string>("EVOLUTION_INSTANCE_NAME")?.trim() || "energiv-bot";
