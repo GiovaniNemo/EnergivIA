@@ -316,6 +316,17 @@ export function parsePowerInput(text: string): number | null {
 /** Detecta solicitações de arquivo ou documento PDF no WhatsApp */
 export function isWhatsappPdfRequest(text: string): boolean {
   if (!text) return false;
+  // Ignora mensagens que representam uploads de arquivos/documentos recebidos pelo WhatsApp
+  const rawLower = text.toLowerCase().trim();
+  if (
+    rawLower.startsWith("[documento enviado") ||
+    rawLower.startsWith("[foto enviada") ||
+    rawLower.startsWith("[mensagem de áudio") ||
+    rawLower.startsWith("[mensagem de audio") ||
+    rawLower.startsWith("[mensagem do tipo")
+  ) {
+    return false;
+  }
   // Remove caracteres invisíveis e marcas de direção do WhatsApp (LTR \u200E, RTL \u200F, ZWSP \u200B-\u200D, BOM \uFEFF, \u202A-\u202E)
   const stripped = text.replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, "");
   const clean = stripped
@@ -1225,7 +1236,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     });
 
     // 5.1 Solicitação de PDF sob demanda (não automático)
-    if (this.isPdfRequest(incomingText)) {
+    // SOMENTE se for texto digitado pelo usuário (nunca quando for documento/imagem de fatura)
+    if (msgType === "text" && this.isPdfRequest(incomingText)) {
       await this.handlePdfOnDemandRequest({
         conversation: freshConversation || conversation,
         phoneNumberId,
@@ -3513,7 +3525,7 @@ ${catalogContext}`;
       `Você pode selecionar a opção "7️⃣ Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado (ou envie 0️⃣ para voltar).`;
 
     // 0.1 Se o usuário solicitou PDF a qualquer momento (inclusive durante ou após proposta)
-    if (isWhatsappPdfRequest(incomingText)) {
+    if (!extractionResult && isWhatsappPdfRequest(incomingText)) {
       let targetProposalId = storedSessionData["lastProposalId"] || convMeta["lastProposalId"];
 
       if (!targetProposalId && this.prisma?.proposal) {

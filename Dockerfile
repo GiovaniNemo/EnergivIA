@@ -14,6 +14,9 @@ RUN pnpm run build --filter=@energivia/api
 FROM node:20-alpine AS api-runtime
 WORKDIR /app
 ENV NODE_ENV=production
+RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont font-noto-emoji
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 COPY --from=api-builder /app ./
 WORKDIR /app/apps/api
 EXPOSE 4000

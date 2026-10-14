@@ -1,3 +1,4 @@
+import * as fs from "node:fs";
 import { Injectable, Logger, BadRequestException, OnModuleDestroy } from "@nestjs/common";
 import chromium from "@sparticuz/chromium";
 import puppeteerCore, { type Browser, type PDFOptions } from "puppeteer-core";
@@ -101,15 +102,29 @@ export class PdfRendererService implements OnModuleDestroy {
           ],
         })) as unknown as Browser;
       } else {
+        const envPath = process.env["PUPPETEER_EXECUTABLE_PATH"];
+        const systemPath =
+          envPath && fs.existsSync(envPath)
+            ? envPath
+            : fs.existsSync("/usr/bin/chromium-browser")
+              ? "/usr/bin/chromium-browser"
+              : fs.existsSync("/usr/bin/chromium")
+                ? "/usr/bin/chromium"
+                : undefined;
+
+        const executablePath = systemPath || (await chromium.executablePath());
+
         browser = (await puppeteerCore.launch({
           args: [
-            ...chromium.args,
+            ...(systemPath ? [] : chromium.args),
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
             "--disable-gpu",
+            "--single-process",
+            "--no-zygote",
           ],
-          executablePath: await chromium.executablePath(),
+          executablePath,
           headless: true,
         })) as unknown as Browser;
       }

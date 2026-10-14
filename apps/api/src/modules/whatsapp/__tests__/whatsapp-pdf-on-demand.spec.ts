@@ -268,6 +268,69 @@ describe("WhatsApp Bot & Cloud - On-Demand PDF Delivery Suite", () => {
       expect((service as any).isPdfRequest("tem em pdf?")).toBe(true);
     });
 
+    it("should NOT recognize uploaded documents or photos as PDF download requests", () => {
+      expect((service as any).isPdfRequest("[Documento enviado: SegundaViaCopel (1).pdf]")).toBe(
+        false
+      );
+      expect((service as any).isPdfRequest("[Documento enviado: fatura_energia_05_2026.pdf]")).toBe(
+        false
+      );
+      expect((service as any).isPdfRequest("[Foto enviada: conta_de_luz.jpg]")).toBe(false);
+      expect((service as any).isPdfRequest("[Mensagem de áudio recebida]")).toBe(false);
+    });
+
+    it("should NOT trigger handlePdfOnDemandRequest when receiving document message with pdf extension", async () => {
+      vi.spyOn(service as any, "resolveAuthorizedTenant").mockResolvedValue({ id: "org-123" });
+      vi.spyOn(service as any, "isTenantPlanActive").mockResolvedValue({
+        active: true,
+        planName: "Pro",
+      });
+      const handlePdfSpy = vi
+        .spyOn(service as any, "handlePdfOnDemandRequest")
+        .mockResolvedValue(undefined);
+      const extractSpy = vi.spyOn(service as any, "extractFromMediaDocument").mockResolvedValue({
+        consumptionKwh: 350,
+        monthlyConsumptionHistory: [],
+        isValidForSizing: true,
+        isLegible: true,
+      });
+
+      mockPrisma.conversation.findFirst.mockResolvedValue({
+        id: "conv-doc",
+        organizationId: "org-123",
+        channel: "whatsapp",
+        title: "5544999998888",
+        messages: [],
+        metadata: {},
+      });
+      mockPrisma.conversation.findUnique.mockResolvedValue({
+        id: "conv-doc",
+        organizationId: "org-123",
+        channel: "whatsapp",
+        title: "5544999998888",
+        messages: [],
+        metadata: {},
+      });
+
+      await (service as any).processSingleMessage({
+        message: {
+          id: "msg_doc_copel",
+          from: "5544999998888",
+          type: "document",
+          document: {
+            id: "media_copel_123",
+            filename: "SegundaViaCopel (1).pdf",
+            mime_type: "application/pdf",
+          },
+        },
+        phoneNumberId: "phone-123",
+        contactName: "Carlos Silva",
+      });
+
+      expect(handlePdfSpy).not.toHaveBeenCalled();
+      expect(extractSpy).toHaveBeenCalledWith("media_copel_123", "application/pdf");
+    });
+
     it("should handle 'pdf' request directly inside generateBotResponse without fallback menu", async () => {
       const response = await (service as any).generateBotResponse({
         conversation: {
