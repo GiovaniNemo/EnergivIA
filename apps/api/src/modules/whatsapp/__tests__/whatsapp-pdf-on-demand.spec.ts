@@ -257,5 +257,128 @@ describe("WhatsApp Bot & Cloud - On-Demand PDF Delivery Suite", () => {
       expect(response).toContain("https://www.energivia.com.br/proposta/prop-web-789?pdf=true");
       expect(response).toContain("Você pode visualizar e baixar o PDF da sua proposta");
     });
+
+    it("should recognize PDF requests with invisible WhatsApp characters (LTR, RTL, ZWSP)", () => {
+      expect((service as any).isPdfRequest("\u200Epdf")).toBe(true);
+      expect((service as any).isPdfRequest("pdf\u200F")).toBe(true);
+      expect((service as any).isPdfRequest("\u200Bpdf\uFEFF")).toBe(true);
+      expect((service as any).isPdfRequest("quero em pdf")).toBe(true);
+      expect((service as any).isPdfRequest("manda o pdf aí")).toBe(true);
+      expect((service as any).isPdfRequest("pdf por favor")).toBe(true);
+      expect((service as any).isPdfRequest("tem em pdf?")).toBe(true);
+    });
+
+    it("should handle 'pdf' request directly inside generateBotResponse without fallback menu", async () => {
+      const response = await (service as any).generateBotResponse({
+        conversation: {
+          id: "conv-123",
+          organizationId: "org-123",
+          title: "5544999998888",
+          metadata: {
+            customerWaId: "5544999998888",
+            phoneNumberId: "phone_123",
+            lastProposalId: "prop-xyz",
+            step: "PROPOSAL_COMPLETED",
+          },
+          messages: [],
+        },
+        incomingText: "\u200Epdf",
+        extractionResult: null,
+      });
+
+      expect(response).toContain("Gerando o arquivo PDF da sua proposta");
+      expect(response).not.toContain("Não compreendi sua mensagem");
+    });
+
+    it("should provide contextual polite response for gratitude and queries when PROPOSAL_COMPLETED", async () => {
+      const thanksResponse = await (service as any).generateBotResponse({
+        conversation: {
+          id: "conv-123",
+          organizationId: "org-123",
+          title: "5544999998888",
+          metadata: {
+            contactName: "João da Silva",
+            step: "PROPOSAL_COMPLETED",
+            lastProposalId: "prop-xyz",
+          },
+          messages: [],
+        },
+        incomingText: "obrigado!",
+        extractionResult: null,
+      });
+
+      expect(thanksResponse).toContain("De nada, *João da Silva*!");
+      expect(thanksResponse).toContain("Para baixar a proposta completa em PDF, responda *PDF*");
+      expect(thanksResponse).not.toContain("Não compreendi sua mensagem");
+
+      const randomResponse = await (service as any).generateBotResponse({
+        conversation: {
+          id: "conv-123",
+          organizationId: "org-123",
+          title: "5544999998888",
+          metadata: {
+            step: "PROPOSAL_COMPLETED",
+            lastProposalId: "prop-xyz",
+          },
+          messages: [],
+        },
+        incomingText: "quanto tempo demora?",
+        extractionResult: null,
+      });
+
+      expect(randomResponse).toContain("Sua proposta comercial já foi gerada com sucesso!");
+      expect(randomResponse).toContain(
+        "Para receber o documento em PDF aqui no WhatsApp, digite *PDF*"
+      );
+      expect(randomResponse).not.toContain("Não compreendi sua mensagem");
+    });
+
+    it("should retry main message if initial delivery fails before sending forward message", async () => {
+      vi.spyOn(service as any, "resolveAuthorizedTenant").mockResolvedValue({ id: "org-123" });
+      vi.spyOn(service as any, "isTenantPlanActive").mockResolvedValue({
+        active: true,
+        planName: "Pro",
+      });
+
+      mockPrisma.conversation.findFirst.mockResolvedValue({
+        id: "conv-fwd",
+        organizationId: "org-123",
+        channel: "whatsapp",
+        title: "5544999998888",
+        messages: [],
+        metadata: {},
+      });
+
+      mockPrisma.conversation.findUnique.mockResolvedValue({
+        id: "conv-fwd",
+        organizationId: "org-123",
+        channel: "whatsapp",
+        title: "5544999998888",
+        messages: [],
+        metadata: {},
+      });
+
+      vi.spyOn(service as any, "generateBotResponse").mockResolvedValue(
+        `Mensagem 1 Integrador\n---CLIENT_FORWARD_MESSAGE---\nMensagem 2 Cliente`
+      );
+
+      mockWhatsappCloud.sendTextMessage
+        .mockResolvedValueOnce(false) // Primeira falha transitória
+        .mockResolvedValueOnce(true) // Retentativa com sucesso
+        .mockResolvedValueOnce(true); // Mensagem do cliente
+
+      await (service as any).processSingleMessage({
+        message: {
+          id: "msg_fwd_test",
+          from: "5544999998888",
+          type: "text",
+          text: { body: "1" },
+        },
+        phoneNumberId: "phone-123",
+        contactName: "Carlos Silva",
+      });
+
+      expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledTimes(3);
+    });
   });
 });

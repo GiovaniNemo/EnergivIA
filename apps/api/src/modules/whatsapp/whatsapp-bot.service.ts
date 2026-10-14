@@ -305,6 +305,53 @@ export function parsePowerInput(text: string): number | null {
   }
   return null;
 }
+/** Detecta solicitações de arquivo ou documento PDF no WhatsApp */
+export function isWhatsappPdfRequest(text: string): boolean {
+  if (!text) return false;
+  // Remove caracteres invisíveis e marcas de direção do WhatsApp (LTR \u200E, RTL \u200F, ZWSP \u200B-\u200D, BOM \uFEFF, \u202A-\u202E)
+  const stripped = text.replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, "");
+  const clean = stripped
+    .toLowerCase()
+    .trim()
+    .replace(/[.,!?:;*~_]/g, "");
+
+  const exactMatches = [
+    "pdf",
+    "baixar pdf",
+    "enviar pdf",
+    "gerar pdf",
+    "manda o pdf",
+    "mandar pdf",
+    "quero o pdf",
+    "quero pdf",
+    "manda pdf",
+    "me manda o pdf",
+    "manda em pdf",
+    "envia em pdf",
+    "enviar em pdf",
+    "link do pdf",
+    "arquivo pdf",
+    "pdf por favor",
+    "pdf pfv",
+    "tem pdf",
+    "tem em pdf",
+    "versao pdf",
+    "versão pdf",
+    "proposta em pdf",
+    "pdf da proposta",
+  ];
+
+  if (exactMatches.includes(clean)) {
+    return true;
+  }
+
+  // Coincidência se contiver a palavra isolada "pdf"
+  if (/\bpdf\b/i.test(clean)) {
+    return true;
+  }
+
+  return false;
+}
 
 @Injectable()
 export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
@@ -1206,13 +1253,29 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      await this.whatsappCloud.sendTextMessage({
+      const sentMain = await this.whatsappCloud.sendTextMessage({
         phoneNumberId,
         toWaId: fromWaId,
         body: mainReply,
       });
 
       if (forwardMessage) {
+        // Se o envio principal falhou na Evolution API (socket lock ou rate limit), aguarda e retenta uma vez
+        if (sentMain === false) {
+          this.logger.warn(
+            `[WhatsApp Bot] Retentando envio da mensagem principal de conferência para ${fromWaId}...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, 800));
+          await this.whatsappCloud.sendTextMessage({
+            phoneNumberId,
+            toWaId: fromWaId,
+            body: mainReply,
+          });
+        }
+
+        // Delay de segurança (1200ms) para o gateway WhatsApp / Baileys processar a fila em ordem sem engolir mensagens
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+
         await this.prisma.message.create({
           data: {
             conversationId: conversation.id,
@@ -1275,24 +1338,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
   }
 
   private isPdfRequest(text: string): boolean {
-    if (!text) return false;
-    const clean = text
-      .toLowerCase()
-      .trim()
-      .replace(/[.,!?:;*~_]/g, "");
-    return (
-      clean === "pdf" ||
-      clean === "baixar pdf" ||
-      clean === "enviar pdf" ||
-      clean === "gerar pdf" ||
-      clean === "manda o pdf" ||
-      clean === "mandar pdf" ||
-      clean === "quero o pdf" ||
-      clean === "manda pdf" ||
-      clean === "me manda o pdf" ||
-      clean === "link do pdf" ||
-      clean === "arquivo pdf"
-    );
+    return isWhatsappPdfRequest(text);
   }
 
   private async handlePdfOnDemandRequest({
@@ -3455,6 +3501,152 @@ ${catalogContext}`;
     const NO_KITS_TEXT =
       `No momento não encontramos kits com todos os componentes e estrutura (${sessionCtx.roofType || "padrão"}) disponíveis em estoque compatível.\n\n` +
       `Você pode selecionar a opção "7️⃣ Sem estrutura" para cotar apenas os equipamentos elétricos ou escolher outro tipo de telhado (ou envie 0️⃣ para voltar).`;
+
+    // 0.1 Se o usuário solicitou PDF a qualquer momento (inclusive durante ou após proposta)
+    if (isWhatsappPdfRequest(incomingText)) {
+      let targetProposalId = storedSessionData["lastProposalId"] || convMeta["lastProposalId"];
+
+      if (!targetProposalId && this.prisma?.proposal) {
+        try {
+          const latestProposal = await this.prisma.proposal.findFirst({
+            where: { tenantId: conversation.organizationId, deletedAt: null },
+            orderBy: { createdAt: "desc" },
+            select: { id: true, title: true, proposalNumber: true },
+          });
+          if (latestProposal) {
+            targetProposalId = latestProposal.id;
+          }
+        } catch {
+          // Silencioso se não encontrar
+        }
+      }
+
+      if (targetProposalId) {
+        const customerWaId =
+          convMeta["customerWaId"] ||
+          (typeof conversation.title === "string" && conversation.title.match(/^\d+$/)
+            ? conversation.title
+            : null);
+        const phoneNumberId =
+          convMeta["phoneNumberId"] ||
+          this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID") ||
+          "evolution";
+
+        if (
+          customerWaId &&
+          conversation.id !== "web-chat-session" &&
+          typeof this?.handlePdfOnDemandRequest === "function"
+        ) {
+          this.handlePdfOnDemandRequest({
+            conversation: conversation as any,
+            phoneNumberId,
+            fromWaId: customerWaId,
+          }).catch((err) => {
+            this.logger?.error?.(
+              "Erro no disparo do PDF sob demanda via generateBotResponse:",
+              err
+            );
+          });
+
+          return `_Gerando o arquivo PDF da sua proposta, aguarde um instante..._ ⏳`;
+        }
+
+        const appBaseUrl =
+          process.env["APP_BASE_URL"] ||
+          process.env["PUBLIC_WEB_APP_BASE_URL"] ||
+          this.config.get<string>("APP_BASE_URL") ||
+          "https://www.energivia.com.br";
+        return (
+          `📄 Você pode visualizar e baixar o PDF da sua proposta diretamente pelo link:\n` +
+          `👉 ${appBaseUrl}/proposta/${targetProposalId}?pdf=true\n\n` +
+          `_Caso queira iniciar uma nova simulação solar, digite *novo*._`
+        );
+      }
+
+      return (
+        `_Não encontrei nenhuma proposta recente nesta conversa para gerar o PDF._ ☀️\n\n` +
+        `Você pode gerar uma nova cotação enviando a conta de luz (PDF ou foto) ou digitando o consumo médio em kWh.`
+      );
+    }
+
+    // 0.2 Se a conversa estiver no estado PROPOSAL_COMPLETED (proposta já gerada com sucesso)
+    if (currentStep === "PROPOSAL_COMPLETED") {
+      const lowerClean = incomingText
+        .replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/[.,!?:;*~_]/g, "");
+
+      // Agradecimentos e confirmações comuns
+      const gratitudeMatches = [
+        "obrigado",
+        "obrigada",
+        "valeu",
+        "show",
+        "show de bola",
+        "perfeito",
+        "ok",
+        "top",
+        "muito bom",
+        "blz",
+        "beleza",
+        "legal",
+        "ótimo",
+        "otimo",
+        "agradeço",
+        "agradecido",
+        "valeu demais",
+        "combinado",
+        "certo",
+        "belezinha",
+        "gratidão",
+      ];
+      if (
+        gratitudeMatches.some(
+          (g) => lowerClean === g || lowerClean.startsWith(`${g} `) || lowerClean.endsWith(` ${g}`)
+        )
+      ) {
+        return (
+          `De nada, *${resolvedContactName}*! Ficamos sempre à disposição. ☀️\n\n` +
+          `> 📄 Para baixar a proposta completa em PDF, responda *PDF*.\n` +
+          `> ⚡ Para iniciar uma nova simulação solar para outro cliente, digite *novo* ou envie uma fatura de energia.`
+        );
+      }
+
+      // Reinício para nova proposta
+      if (
+        lowerClean === "novo" ||
+        lowerClean === "reiniciar" ||
+        lowerClean === "nova cotação" ||
+        lowerClean === "nova cotacao" ||
+        lowerClean === "nova proposta" ||
+        lowerClean === "outro cliente"
+      ) {
+        await setStep("IDLE");
+        return (
+          `Vamos iniciar uma nova cotação solar! ☀️\n\n` +
+          `Envie a conta de luz do seu cliente (PDF ou foto) ou digite o consumo médio mensal em kWh para começarmos.`
+        );
+      }
+
+      // Mensagem orientadora pós-proposta (nunca exibe o menu frio inicial "Não compreendi sua mensagem")
+      const targetProposalId = storedSessionData["lastProposalId"] || convMeta["lastProposalId"];
+      const appBaseUrl =
+        process.env["APP_BASE_URL"] ||
+        process.env["PUBLIC_WEB_APP_BASE_URL"] ||
+        this.config.get<string>("APP_BASE_URL") ||
+        "https://www.energivia.com.br";
+      const linkMsg = targetProposalId
+        ? `Sua proposta mais recente está disponível em:\n👉 ${appBaseUrl}/proposta/${targetProposalId}\n\n`
+        : "";
+
+      return (
+        `Sua proposta comercial já foi gerada com sucesso! ☀️\n\n` +
+        linkMsg +
+        `> 📄 Para receber o documento em PDF aqui no WhatsApp, digite *PDF*.\n` +
+        `> 🔄 Para realizar uma nova simulação ou cotar para outro cliente, digite *novo*.`
+      );
+    }
 
     // 1. Se acabou de extrair a fatura com sucesso e dados válidos para dimensionamento
     if (

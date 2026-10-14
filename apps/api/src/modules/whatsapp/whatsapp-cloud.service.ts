@@ -184,7 +184,7 @@ export class WhatsappCloudService {
     phoneNumberId: string;
     toWaId: string;
     body: string;
-  }): Promise<void> {
+  }): Promise<boolean> {
     const body = normalizeAssistantTextForWhatsapp(params.body);
     const to = formatToInternationalWhatsapp(params.toWaId);
 
@@ -195,14 +195,14 @@ export class WhatsappCloudService {
         const maxLen = 4000;
         const text = body.length > maxLen ? `${body.slice(0, maxLen)}…[truncado]` : body;
         this.logger.log(`[Evolution API] WhatsApp mensagem enviada: para=${to}\n---\n${text}\n---`);
-        return;
+        return true;
       }
       this.logger.error(
         `[Evolution API] Falha no envio para ${to}: HTTP ${status} err=${errText.slice(0, 300)}`
       );
       // Se a Evolution falhar e não houver token da Meta, encerra aqui
       const token = this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim();
-      if (!token) return;
+      if (!token) return false;
       this.logger.warn(`Tentando fallback via Meta Cloud API para ${to}...`);
     }
 
@@ -212,7 +212,7 @@ export class WhatsappCloudService {
       "EAANhZClS6ZCeYBSdcHOC6Ne9TD5m1o7h8QG6s8ZC65ZBdRmp4ruWdX2kOV2uTbmSRwimo2uyefGD4SnJzeZCn1WEmEIspoB7ZAmYvOUh9JV5QB9o3a27ufF5yRsvCX5gRZAmruk6GaozfqixmvUfFmDBdaCZC7hZCsZBfJ6MCCXX1ezY5ESNPviJTOZCtVEOOZATlQZDZD";
     if (!token) {
       this.logger.warn("Nenhum provedor de WhatsApp configurado (nem Evolution nem Meta).");
-      return;
+      return false;
     }
 
     const primaryId = params.phoneNumberId.trim();
@@ -235,7 +235,7 @@ export class WhatsappCloudService {
       this.logger.log(
         `[Meta Cloud] WhatsApp mensagem enviada: phone_number_id=${usedPhoneNumberId} para=${to}\n---\n${text}\n---`
       );
-      return;
+      return true;
     }
 
     if (!ok) {
@@ -259,6 +259,7 @@ export class WhatsappCloudService {
         }
       }
     }
+    return false;
   }
 
   async sendInteractiveButtons(params: {
