@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { LeadActivityLogModule } from "../lead-activity-log/lead-activity-log.module";
 import { PrismaModule } from "../../prisma/prisma.module";
@@ -9,7 +9,13 @@ import { NotificationsController } from "./notifications.controller";
 import { NotificationsService } from "./notifications.service";
 
 @Module({
-  imports: [PrismaModule, ConfigModule, LeadActivityLogModule, EmailModule, WhatsappCoreModule],
+  imports: [
+    PrismaModule,
+    ConfigModule,
+    LeadActivityLogModule,
+    EmailModule,
+    forwardRef(() => WhatsappCoreModule),
+  ],
   controllers: [NotificationsController],
   providers: [NotificationsService, NotificationJobsService],
   exports: [NotificationsService],

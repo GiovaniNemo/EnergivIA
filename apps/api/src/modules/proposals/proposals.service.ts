@@ -2,11 +2,13 @@ import { randomUUID } from "node:crypto";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
   Logger,
   ForbiddenException,
   Optional,
+  forwardRef,
 } from "@nestjs/common";
 import { WebhooksDispatcherService } from "../webhooks/webhooks-dispatcher.service";
 import type { Prisma, ProposalStatus, ProposalTemplate } from "@prisma/client";
@@ -93,6 +95,7 @@ export class ProposalsService {
 
   constructor(
     private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => NotificationsService))
     private readonly notificationsService: NotificationsService,
     private readonly leadActivityLog: LeadActivityLogService,
     private readonly stockReservation: StockReservationService,

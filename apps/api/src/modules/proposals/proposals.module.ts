@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 import { LeadActivityLogModule } from "../lead-activity-log/lead-activity-log.module";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { StockModule } from "../stock/stock.module";
@@ -13,7 +13,7 @@ import { ProposalTemplatesService } from "./proposal-templates.service";
 import { PublicProposalsController } from "./public-proposals.controller";
 
 @Module({
-  imports: [NotificationsModule, LeadActivityLogModule, StockModule],
+  imports: [forwardRef(() => NotificationsModule), LeadActivityLogModule, StockModule],
   controllers: [
     DealProposalsController,
     ProposalOperationsController,

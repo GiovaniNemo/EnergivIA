@@ -1,4 +1,11 @@
-import { Injectable, Logger, NotFoundException, type MessageEvent } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  forwardRef,
+  type MessageEvent,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { DealStage, NotificationType, OrgRole } from "@prisma/client";
 import { defer, from, interval, merge, of, type Observable } from "rxjs";
@@ -40,6 +47,7 @@ export class NotificationsService {
     private readonly config: ConfigService,
     private readonly leadActivityLog: LeadActivityLogService,
     private readonly emailService: EmailService,
+    @Inject(forwardRef(() => WhatsappCloudService))
     private readonly whatsappCloud: WhatsappCloudService
   ) {}
 

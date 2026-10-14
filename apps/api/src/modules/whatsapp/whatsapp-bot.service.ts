@@ -1,5 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy, Optional } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+  Optional,
+  forwardRef,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
 import { WhatsappCloudService } from "./whatsapp-cloud.service";
@@ -368,7 +376,9 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     private readonly geoIrradiance: GeoIrradianceService,
     private readonly billExtractor: BillExtractorService,
     private readonly kitGeneration: KitGenerationService,
-    @Optional() private readonly proposalsService?: ProposalsService
+    @Optional()
+    @Inject(forwardRef(() => ProposalsService))
+    private readonly proposalsService?: ProposalsService
   ) {
     const geminiKey =
       this.config.get<string>("GOOGLE_GEMINI_API_KEY") ||
