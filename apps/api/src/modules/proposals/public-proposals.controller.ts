@@ -27,6 +27,7 @@ export class PublicProposalsController {
   trackView(
     @Param("id") id: string,
     @Query("pdf") isPdfQuery?: string,
+    @Query("preview") isPreviewQuery?: string,
     @Headers("x-is-pdf") isPdfHeader?: string,
     @Headers("user-agent") userAgent?: string
   ) {
@@ -35,7 +36,8 @@ export class PublicProposalsController {
       isPdfQuery === "1" ||
       isPdfHeader === "true" ||
       Boolean(userAgent && /HeadlessChrome|Puppeteer|wkhtmltopdf/i.test(userAgent));
-    return this.proposalsService.trackPublicProposalView(id, { isPdf, userAgent });
+    const isPreview = isPreviewQuery === "true" || isPreviewQuery === "1";
+    return this.proposalsService.trackPublicProposalView(id, { isPdf, isPreview, userAgent });
   }
 
   @Post(":id/respond")

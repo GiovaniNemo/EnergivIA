@@ -1175,11 +1175,15 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (replyText) {
+      const parts = replyText.split("\n---CLIENT_FORWARD_MESSAGE---\n");
+      const mainReply = parts[0] || replyText;
+      const forwardMessage = parts[1] || "";
+
       await this.prisma.message.create({
         data: {
           conversationId: conversation.id,
           role: "assistant",
-          content: replyText,
+          content: mainReply,
           channel: "whatsapp",
         },
       });
@@ -1187,11 +1191,31 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       await this.whatsappCloud.sendTextMessage({
         phoneNumberId,
         toWaId: fromWaId,
-        body: replyText,
+        body: mainReply,
       });
 
+      if (forwardMessage) {
+        await this.prisma.message.create({
+          data: {
+            conversationId: conversation.id,
+            role: "assistant",
+            content: forwardMessage,
+            channel: "whatsapp",
+          },
+        });
+
+        await this.whatsappCloud.sendTextMessage({
+          phoneNumberId,
+          toWaId: fromWaId,
+          body: forwardMessage,
+        });
+      }
+
       // Se acabou de gerar a proposta, descarrega alertas pendentes de visualização
-      if (replyText.includes("Proposta comercial gerada com sucesso")) {
+      if (
+        mainReply.includes("Proposta Comercial Gerada com Sucesso") ||
+        mainReply.includes("Proposta comercial gerada com sucesso")
+      ) {
         await this.flushPendingProposalViewAlerts(conversation.id, phoneNumberId, fromWaId);
       }
     }
@@ -2635,12 +2659,17 @@ ${catalogContext}`;
       messages: messages || [],
     };
 
-    return this.generateBotResponse({
+    const reply = await this.generateBotResponse({
       conversation,
       incomingText: incomingText || "",
       extractionResult: extractionResult || null,
       contactName,
     });
+    if (reply.includes("\n---CLIENT_FORWARD_MESSAGE---\n")) {
+      const [main, fwd] = reply.split("\n---CLIENT_FORWARD_MESSAGE---\n");
+      return `${main}\n\n━━━━━━━━━━━━━━━━━━━━\n\n*Mensagem para encaminhar ao cliente:*\n\n${fwd}`;
+    }
+    return reply;
   }
 
   private async generateBotResponse({
@@ -3902,22 +3931,38 @@ ${catalogContext}`;
         this.config.get<string>("NEXT_PUBLIC_APP_URL") ||
         "https://www.energivia.com.br";
 
-      const proposalLink = proposalId
+      const integratorPreviewLink = proposalId
+        ? `${appBaseUrl}/proposta/${proposalId}?preview=true`
+        : `${appBaseUrl}/propostas`;
+
+      const clientProposalLink = proposalId
         ? `${appBaseUrl}/proposta/${proposalId}`
         : `${appBaseUrl}/propostas`;
 
-      return (
+      const estimatedGenerationKwh =
+        selectedQuote.estimatedGeneration || Math.round(selectedQuote.kwp * 130);
+
+      const integratorSummaryMsg =
         `*_Proposta Comercial Gerada com Sucesso!_* 📋✨\n\n` +
         `Cliente: *${clientName}*\n\n` +
         `> ☀️ *Potência:* \`${selectedQuote.kwp} kWp\`\n` +
         `> 🏠 *Estrutura:* \`${sessionCtx.roofType || "Cerâmica (Colonial)"}\`\n` +
         `> 🎨 *Modelo:* \`${chosenTemplate?.name || "Comercial Moderno"}\`\n` +
         `> 💰 *Valor Total:* \`R$ ${quotedSaleBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\`\n\n` +
-        `*_Acesse a Proposta no link abaixo:_* 🔗\n` +
-        `${proposalLink}\n\n` +
-        `_Ela também já está disponível no seu painel CRM da EnergivIA._\n\n` +
-        `Equipe *_EnergivIA Solar._*`
-      );
+        `*_Link de conferência (exclusivo para você):_* 🔗\n` +
+        `${integratorPreviewLink}\n\n` +
+        `_💡 Abra este link acima para revisar a proposta com segurança. Ele **não dispara avisos de visualização**._\n\n` +
+        `_👉 A mensagem a seguir foi preparada para você **encaminhar direto para o seu cliente**. Quando ele abrir o link da proposta, você receberá um **alerta imediato aqui no WhatsApp** avisando que ele está visualizando!_\n\n` +
+        `Equipe *_EnergivIA Solar._*`;
+
+      const clientForwardMsg =
+        `Olá, *${clientName}*! Tudo bem?\n\n` +
+        `Elaborei sua proposta de energia solar sob medida. O sistema projetado terá *${selectedQuote.kwp} kWp* de potência, com geração média estimada de *${estimatedGenerationKwh} kWh/mês* e redução de até *95%* na sua conta de luz.\n\n` +
+        `Acesse sua proposta comercial completa com os equipamentos e simulação no link abaixo:\n` +
+        `${clientProposalLink}\n\n` +
+        `Qualquer dúvida ou ajuste que precisar, estou à disposição!`;
+
+      return `${integratorSummaryMsg}\n---CLIENT_FORWARD_MESSAGE---\n${clientForwardMsg}`;
     }
 
     // ESTADO E: O Bot perguntou a estrutura do telhado OU o usuário respondeu a estrutura

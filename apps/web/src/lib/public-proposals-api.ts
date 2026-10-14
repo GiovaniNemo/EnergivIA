@@ -129,10 +129,10 @@ export async function submitPublicProposalResponse(
 
 export async function recordPublicProposalView(
   proposalId: string,
-  options?: { isPdf?: boolean }
+  options?: { isPdf?: boolean; isPreview?: boolean }
 ): Promise<{ tracked: boolean; reason?: string }> {
-  if (options?.isPdf || typeof window === "undefined") {
-    return { tracked: false, reason: "skipped_pdf_or_ssr" };
+  if (options?.isPdf || options?.isPreview || typeof window === "undefined") {
+    return { tracked: false, reason: "skipped_preview_or_pdf" };
   }
   const cleanId = encodeURIComponent(proposalId.trim());
   const baseUrl = `/api/proxy/public/proposals/${cleanId}/view`;

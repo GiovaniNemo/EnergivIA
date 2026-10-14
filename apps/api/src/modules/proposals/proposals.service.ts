@@ -464,10 +464,13 @@ export class ProposalsService {
 
   async trackPublicProposalView(
     idOrToken: string,
-    options?: { isPdf?: boolean; userAgent?: string }
+    options?: { isPdf?: boolean; isPreview?: boolean; userAgent?: string }
   ): Promise<{ tracked: boolean; reason?: string }> {
     if (options?.isPdf) {
       return { tracked: false, reason: "pdf_suppressed" };
+    }
+    if (options?.isPreview) {
+      return { tracked: false, reason: "preview_suppressed" };
     }
 
     const ua = options?.userAgent || "";

@@ -323,6 +323,14 @@ describe("Proposals RBAC & Commercial Protection", () => {
       expect(mockNotifications.handlePublicProposalView).not.toHaveBeenCalled();
     });
 
+    it("trackPublicProposalView suppresses tracking when isPreview is true", async () => {
+      mockNotifications.handlePublicProposalView.mockClear();
+      const res = await service.trackPublicProposalView("prop-123", { isPreview: true });
+      expect(res.tracked).toBe(false);
+      expect(res.reason).toBe("preview_suppressed");
+      expect(mockNotifications.handlePublicProposalView).not.toHaveBeenCalled();
+    });
+
     it("trackPublicProposalView calls handlePublicProposalView for real user browser", async () => {
       mockNotifications.handlePublicProposalView.mockClear();
       const res = await service.trackPublicProposalView("prop-123", {

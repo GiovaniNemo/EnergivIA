@@ -20,6 +20,7 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const isPdf = searchParams?.get("pdf") === "true";
+  const isPreview = searchParams?.get("preview") === "true" || searchParams?.get("preview") === "1";
   const trackedRef = useRef(false);
 
   useEffect(() => {
@@ -27,15 +28,15 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
     getPublicProposal(proposalId, { isPdf })
       .then((payload) => {
         setData(payload);
-        if (!isPdf && !trackedRef.current) {
+        if (!isPdf && !isPreview && !trackedRef.current) {
           trackedRef.current = true;
-          recordPublicProposalView(proposalId);
+          recordPublicProposalView(proposalId, { isPdf, isPreview });
         }
       })
       .catch((e) =>
         setError(e instanceof Error ? e.message : "Não foi possível carregar proposta.")
       );
-  }, [proposalId, isPdf]);
+  }, [proposalId, isPdf, isPreview]);
 
   const documentState = useMemo(() => {
     if (!data?.proposalTemplate?.config) return null;
