@@ -36,6 +36,11 @@ interface WebhookMessage {
   image?: { id?: string; caption?: string; mime_type?: string };
   audio?: { id?: string };
   voice?: { id?: string };
+  interactive?: {
+    type?: "button_reply" | "list_reply";
+    button_reply?: { id?: string; title?: string };
+    list_reply?: { id?: string; title?: string; description?: string };
+  };
 }
 
 interface WebhookPayload {
@@ -669,6 +674,32 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         );
       }
     }
+    // 5. Botões e Listas Interativas (Evolution API)
+    else if (messageContent.buttonsResponseMessage) {
+      msgType = "text";
+      mappedMessage.type = "text";
+      const btnId =
+        messageContent.buttonsResponseMessage.selectedButtonId ||
+        messageContent.buttonsResponseMessage.selectedDisplayText ||
+        "";
+      mappedMessage.text = { body: btnId };
+    } else if (messageContent.listResponseMessage) {
+      msgType = "text";
+      mappedMessage.type = "text";
+      const rowId =
+        messageContent.listResponseMessage.singleSelectReply?.selectedRowId ||
+        messageContent.listResponseMessage.title ||
+        "";
+      mappedMessage.text = { body: rowId };
+    } else if (messageContent.templateButtonReplyMessage) {
+      msgType = "text";
+      mappedMessage.type = "text";
+      const tId =
+        messageContent.templateButtonReplyMessage.selectedId ||
+        messageContent.templateButtonReplyMessage.selectedDisplayText ||
+        "";
+      mappedMessage.text = { body: tId };
+    }
 
     if (msgType === "unknown") {
       this.logger.debug(
@@ -816,6 +847,17 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     let incomingText = "";
     if (msgType === "text") {
       incomingText = (message.text?.body || "").trim();
+    } else if (msgType === "interactive") {
+      const interactive = message.interactive;
+      if (interactive?.type === "button_reply") {
+        incomingText = (
+          interactive.button_reply?.id ||
+          interactive.button_reply?.title ||
+          ""
+        ).trim();
+      } else if (interactive?.type === "list_reply") {
+        incomingText = (interactive.list_reply?.id || interactive.list_reply?.title || "").trim();
+      }
     }
 
     // 3. Verificação de Código de Pareamento (Token de Ativação)
@@ -1030,8 +1072,20 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
     this.logger.log(`Mensagem recebida do WhatsApp: tipo=${msgType}, de=${fromWaId}`);
 
-    if (msgType === "text") {
-      incomingText = message.text?.body || "";
+    if (msgType === "text" || msgType === "interactive") {
+      if (!incomingText) {
+        if (msgType === "text") {
+          incomingText = message.text?.body || "";
+        } else if (msgType === "interactive") {
+          const interactive = message.interactive;
+          incomingText =
+            interactive?.button_reply?.id ||
+            interactive?.button_reply?.title ||
+            interactive?.list_reply?.id ||
+            interactive?.list_reply?.title ||
+            "";
+        }
+      }
       const lowerText = incomingText.toLowerCase().trim();
       if (
         lowerText === "novo" ||
