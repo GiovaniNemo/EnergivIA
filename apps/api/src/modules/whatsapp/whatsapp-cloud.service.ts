@@ -34,6 +34,20 @@ function formatToInternationalWhatsapp(raw: string): string {
   return digits;
 }
 
+export interface InteractiveButton {
+  id: string;
+  title: string;
+}
+
+export interface InteractiveListSection {
+  title: string;
+  rows: Array<{
+    id: string;
+    title: string;
+    description?: string;
+  }>;
+}
+
 @Injectable()
 export class WhatsappCloudService {
   private readonly logger = new Logger(WhatsappCloudService.name);
@@ -240,6 +254,268 @@ export class WhatsappCloudService {
         }
       }
     }
+  }
+
+  async sendInteractiveButtons(params: {
+    phoneNumberId: string;
+    toWaId: string;
+    body: string;
+    buttons: InteractiveButton[];
+    footer?: string;
+  }): Promise<void> {
+    const to = formatToInternationalWhatsapp(params.toWaId);
+    const body = normalizeAssistantTextForWhatsapp(params.body);
+    const buttons = (params.buttons || []).slice(0, 3);
+
+    if (buttons.length === 0) {
+      await this.sendTextMessage({
+        phoneNumberId: params.phoneNumberId,
+        toWaId: params.toWaId,
+        body,
+      });
+      return;
+    }
+
+    // 1. Provedor Evolution API
+    if (this.isEvolutionProvider()) {
+      const baseUrl = this.config.get<string>("EVOLUTION_API_URL")?.trim().replace(/\/+$/, "");
+      const apiKey = this.config.get<string>("EVOLUTION_API_KEY")?.trim();
+      const instance = this.config.get<string>("EVOLUTION_INSTANCE_NAME")?.trim() || "energiv-bot";
+
+      if (baseUrl && apiKey) {
+        try {
+          const url = `${baseUrl}/message/sendButtons/${encodeURIComponent(instance)}`;
+          const res = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: apiKey,
+            },
+            body: JSON.stringify({
+              number: to,
+              title: "EnergivIA Solar",
+              description: body,
+              footer: params.footer || "Selecione uma opção",
+              buttons: buttons.map((b) => ({
+                id: b.id,
+                text: b.title,
+              })),
+            }),
+          });
+          if (res.ok) {
+            this.logger.log(`[Evolution API] Botões interativos enviados para ${to}`);
+            return;
+          }
+          this.logger.warn(
+            `[Evolution API] Falha no envio de botões (${res.status}), executando fallback para texto.`
+          );
+        } catch (err) {
+          this.logger.warn(`[Evolution API] Erro ao enviar botões interativos: ${err}`);
+        }
+      }
+      await this.sendTextMessage({
+        phoneNumberId: params.phoneNumberId,
+        toWaId: params.toWaId,
+        body,
+      });
+      return;
+    }
+
+    // 2. Provedor Meta Cloud API
+    const token =
+      this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim() ||
+      "EAANhZClS6ZCeYBSdcHOC6Ne9TD5m1o7h8QG6s8ZC65ZBdRmp4ruWdX2kOV2uTbmSRwimo2uyefGD4SnJzeZCn1WEmEIspoB7ZAmYvOUh9JV5QB9o3a27ufF5yRsvCX5gRZAmruk6GaozfqixmvUfFmDBdaCZC7hZCsZBfJ6MCCXX1ezY5ESNPviJTOZCtVEOOZATlQZDZD";
+
+    if (!token) {
+      await this.sendTextMessage({
+        phoneNumberId: params.phoneNumberId,
+        toWaId: params.toWaId,
+        body,
+      });
+      return;
+    }
+
+    const payload = {
+      messaging_product: "whatsapp",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: {
+          text: body,
+        },
+        ...(params.footer ? { footer: { text: params.footer } } : {}),
+        action: {
+          buttons: buttons.map((b) => ({
+            type: "reply",
+            reply: {
+              id: b.id,
+              title: b.title.slice(0, 20),
+            },
+          })),
+        },
+      },
+    };
+
+    try {
+      const primaryId = params.phoneNumberId.trim();
+      const res = await fetch(this.buildMessagesUrl(primaryId, token), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        this.logger.log(`[Meta Cloud] Botões interativos enviados para ${to}`);
+        return;
+      }
+
+      const errText = await res.text().catch(() => "");
+      this.logger.warn(
+        `[Meta Cloud] Falha no envio de botões interativos HTTP ${res.status}: ${errText.slice(0, 300)}. Executando fallback para texto.`
+      );
+    } catch (err) {
+      this.logger.error(`[Meta Cloud] Erro no envio de botões interativos: ${err}`);
+    }
+
+    await this.sendTextMessage({
+      phoneNumberId: params.phoneNumberId,
+      toWaId: params.toWaId,
+      body,
+    });
+  }
+
+  async sendInteractiveList(params: {
+    phoneNumberId: string;
+    toWaId: string;
+    body: string;
+    buttonText: string;
+    sections: InteractiveListSection[];
+    footer?: string;
+  }): Promise<void> {
+    const to = formatToInternationalWhatsapp(params.toWaId);
+    const body = normalizeAssistantTextForWhatsapp(params.body);
+
+    // 1. Provedor Evolution API
+    if (this.isEvolutionProvider()) {
+      const baseUrl = this.config.get<string>("EVOLUTION_API_URL")?.trim().replace(/\/+$/, "");
+      const apiKey = this.config.get<string>("EVOLUTION_API_KEY")?.trim();
+      const instance = this.config.get<string>("EVOLUTION_INSTANCE_NAME")?.trim() || "energiv-bot";
+
+      if (baseUrl && apiKey) {
+        try {
+          const url = `${baseUrl}/message/sendList/${encodeURIComponent(instance)}`;
+          const res = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: apiKey,
+            },
+            body: JSON.stringify({
+              number: to,
+              title: "EnergivIA Solar",
+              description: body,
+              buttonText: params.buttonText.slice(0, 20),
+              footerText: params.footer || "Selecione uma opção",
+              sections: params.sections.map((s) => ({
+                title: s.title.slice(0, 24),
+                rows: s.rows.slice(0, 10).map((r) => ({
+                  rowId: r.id,
+                  title: r.title.slice(0, 24),
+                  ...(r.description ? { description: r.description.slice(0, 72) } : {}),
+                })),
+              })),
+            }),
+          });
+          if (res.ok) {
+            this.logger.log(`[Evolution API] Lista interativa enviada para ${to}`);
+            return;
+          }
+          this.logger.warn(
+            `[Evolution API] Falha no envio de lista (${res.status}), executando fallback para texto.`
+          );
+        } catch (err) {
+          this.logger.warn(`[Evolution API] Erro ao enviar lista interativa: ${err}`);
+        }
+      }
+      await this.sendTextMessage({
+        phoneNumberId: params.phoneNumberId,
+        toWaId: params.toWaId,
+        body,
+      });
+      return;
+    }
+
+    // 2. Provedor Meta Cloud API
+    const token =
+      this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim() ||
+      "EAANhZClS6ZCeYBSdcHOC6Ne9TD5m1o7h8QG6s8ZC65ZBdRmp4ruWdX2kOV2uTbmSRwimo2uyefGD4SnJzeZCn1WEmEIspoB7ZAmYvOUh9JV5QB9o3a27ufF5yRsvCX5gRZAmruk6GaozfqixmvUfFmDBdaCZC7hZCsZBfJ6MCCXX1ezY5ESNPviJTOZCtVEOOZATlQZDZD";
+
+    if (!token) {
+      await this.sendTextMessage({
+        phoneNumberId: params.phoneNumberId,
+        toWaId: params.toWaId,
+        body,
+      });
+      return;
+    }
+
+    const payload = {
+      messaging_product: "whatsapp",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "list",
+        body: {
+          text: body,
+        },
+        ...(params.footer ? { footer: { text: params.footer } } : {}),
+        action: {
+          button: params.buttonText.slice(0, 20),
+          sections: params.sections.map((s) => ({
+            title: s.title.slice(0, 24),
+            rows: s.rows.slice(0, 10).map((r) => ({
+              id: r.id,
+              title: r.title.slice(0, 24),
+              ...(r.description ? { description: r.description.slice(0, 72) } : {}),
+            })),
+          })),
+        },
+      },
+    };
+
+    try {
+      const primaryId = params.phoneNumberId.trim();
+      const res = await fetch(this.buildMessagesUrl(primaryId, token), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        this.logger.log(`[Meta Cloud] Lista interativa enviada para ${to}`);
+        return;
+      }
+
+      const errText = await res.text().catch(() => "");
+      this.logger.warn(
+        `[Meta Cloud] Falha no envio de lista interativa HTTP ${res.status}: ${errText.slice(0, 300)}. Executando fallback para texto.`
+      );
+    } catch (err) {
+      this.logger.error(`[Meta Cloud] Erro no envio de lista interativa: ${err}`);
+    }
+
+    await this.sendTextMessage({
+      phoneNumberId: params.phoneNumberId,
+      toWaId: params.toWaId,
+      body,
+    });
   }
 
   private graphVersion(): string {
