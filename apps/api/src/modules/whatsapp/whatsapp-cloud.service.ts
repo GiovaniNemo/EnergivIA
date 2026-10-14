@@ -725,4 +725,156 @@ export class WhatsappCloudService {
       return null;
     }
   }
+
+  private async postDocumentViaEvolution(
+    toWaId: string,
+    params: {
+      fileName: string;
+      media: string;
+      caption?: string;
+      mimetype?: string;
+    }
+  ): Promise<{ ok: boolean; status: number; errText: string }> {
+    const baseUrl = this.config.get<string>("EVOLUTION_API_URL")?.trim().replace(/\/+$/, "");
+    const apiKey = this.config.get<string>("EVOLUTION_API_KEY")?.trim();
+    const instance = this.config.get<string>("EVOLUTION_INSTANCE_NAME")?.trim() || "energiv-bot";
+
+    if (!baseUrl || !apiKey) {
+      return {
+        ok: false,
+        status: 500,
+        errText:
+          "Evolution API not fully configured (missing EVOLUTION_API_URL or EVOLUTION_API_KEY)",
+      };
+    }
+
+    const cleanNumber = formatToInternationalWhatsapp(toWaId);
+    const url = `${baseUrl}/message/sendMedia/${encodeURIComponent(instance)}`;
+
+    const sendToNumber = async (num: string) => {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: apiKey,
+          },
+          body: JSON.stringify({
+            number: num,
+            mediatype: "document",
+            mimetype: params.mimetype || "application/pdf",
+            caption: params.caption || "",
+            media: params.media,
+            fileName: params.fileName,
+          }),
+        });
+
+        const errText = res.ok ? "" : await res.text().catch(() => "");
+        return { ok: res.ok, status: res.status, errText };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { ok: false, status: 500, errText: msg };
+      }
+    };
+
+    let result = await sendToNumber(cleanNumber);
+    if (!result.ok && cleanNumber.startsWith("55")) {
+      let altNumber: string | null = null;
+      if (cleanNumber.length === 12) {
+        altNumber = `${cleanNumber.slice(0, 4)}9${cleanNumber.slice(4)}`;
+      } else if (cleanNumber.length === 13 && cleanNumber.charAt(4) === "9") {
+        altNumber = `${cleanNumber.slice(0, 4)}${cleanNumber.slice(5)}`;
+      }
+      if (altNumber) {
+        this.logger.warn(
+          `[Evolution API] Falha no envio de documento para ${cleanNumber} (${result.status}). Tentando variante ${altNumber}...`
+        );
+        const altResult = await sendToNumber(altNumber);
+        if (altResult.ok) {
+          return altResult;
+        }
+      }
+    }
+    return result;
+  }
+
+  async sendDocumentMessage(params: {
+    phoneNumberId: string;
+    toWaId: string;
+    fileName: string;
+    documentBase64?: string;
+    documentUrl?: string;
+    caption?: string;
+    mimetype?: string;
+  }): Promise<boolean> {
+    const to = formatToInternationalWhatsapp(params.toWaId);
+    const media = params.documentBase64 || params.documentUrl;
+    if (!media) {
+      this.logger.error("sendDocumentMessage chamado sem documentBase64 ou documentUrl");
+      return false;
+    }
+
+    // 1. Envio via Evolution API
+    if (this.isEvolutionProvider()) {
+      const { ok, status, errText } = await this.postDocumentViaEvolution(to, {
+        fileName: params.fileName,
+        media,
+        caption: params.caption,
+        mimetype: params.mimetype,
+      });
+
+      if (ok) {
+        this.logger.log(
+          `[Evolution API] WhatsApp documento enviado com sucesso: para=${to} file=${params.fileName}`
+        );
+        return true;
+      }
+      this.logger.error(
+        `[Evolution API] Falha no envio de documento para ${to}: HTTP ${status} err=${errText.slice(0, 300)}`
+      );
+      const token = this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim();
+      if (!token) return false;
+      this.logger.warn(`Tentando fallback de documento via Meta Cloud API para ${to}...`);
+    }
+
+    // 2. Envio via Meta Cloud API (se houver token e URL pública)
+    const token = this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim();
+    if (token && params.documentUrl) {
+      const primaryId =
+        params.phoneNumberId.trim() ||
+        this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID")?.trim() ||
+        "";
+      const url = `https://graph.facebook.com/v21.0/${primaryId}/messages`;
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            recipient_type: "individual",
+            to,
+            type: "document",
+            document: {
+              link: params.documentUrl,
+              caption: params.caption,
+              filename: params.fileName,
+            },
+          }),
+        });
+        if (res.ok) {
+          this.logger.log(
+            `[Meta Cloud] WhatsApp documento enviado: para=${to} file=${params.fileName}`
+          );
+          return true;
+        }
+      } catch (err) {
+        this.logger.error("Falha no envio de documento via Meta Cloud:", err);
+      }
+    }
+
+    return false;
+  }
 }

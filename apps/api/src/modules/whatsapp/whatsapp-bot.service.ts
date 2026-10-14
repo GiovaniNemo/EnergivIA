@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
 import { WhatsappCloudService } from "./whatsapp-cloud.service";
@@ -10,7 +10,7 @@ import { createWorker } from "tesseract.js";
 import { AiUsageService } from "../ai-usage/ai-usage.service";
 import { AiFeature } from "@prisma/client";
 import { getTenantPlanDetails } from "../../common/utils/plan-limits";
-import { getNextProposalNumber } from "../proposals/proposals.service";
+import { ProposalsService, getNextProposalNumber } from "../proposals/proposals.service";
 
 import type {
   ExtractedBillHistoryItem,
@@ -313,7 +313,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     private readonly aiUsage: AiUsageService,
     private readonly geoIrradiance: GeoIrradianceService,
     private readonly billExtractor: BillExtractorService,
-    private readonly kitGeneration: KitGenerationService
+    private readonly kitGeneration: KitGenerationService,
+    @Optional() private readonly proposalsService?: ProposalsService
   ) {
     const geminiKey =
       this.config.get<string>("GOOGLE_GEMINI_API_KEY") ||
@@ -1159,6 +1160,16 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       include: { messages: { orderBy: { createdAt: "asc" } } },
     });
 
+    // 5.1 Solicitação de PDF sob demanda (não automático)
+    if (this.isPdfRequest(incomingText)) {
+      await this.handlePdfOnDemandRequest({
+        conversation: freshConversation || conversation,
+        phoneNumberId,
+        fromWaId,
+      });
+      return;
+    }
+
     // 6. Gera a resposta pelo motor de estado do bot e gera a proposta real
     let replyText = "";
     try {
@@ -1254,6 +1265,152 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     } catch (err) {
       this.logger.warn(`Falha ao descarregar alertas pendentes de visualização: ${err}`);
     }
+  }
+
+  private isPdfRequest(text: string): boolean {
+    if (!text) return false;
+    const clean = text
+      .toLowerCase()
+      .trim()
+      .replace(/[.,!?:;*~_]/g, "");
+    return (
+      clean === "pdf" ||
+      clean === "baixar pdf" ||
+      clean === "enviar pdf" ||
+      clean === "gerar pdf" ||
+      clean === "manda o pdf" ||
+      clean === "mandar pdf" ||
+      clean === "quero o pdf" ||
+      clean === "manda pdf" ||
+      clean === "me manda o pdf" ||
+      clean === "link do pdf" ||
+      clean === "arquivo pdf"
+    );
+  }
+
+  private async handlePdfOnDemandRequest({
+    conversation,
+    phoneNumberId,
+    fromWaId,
+  }: {
+    conversation: { id: string; organizationId: string; metadata?: any };
+    phoneNumberId: string;
+    fromWaId: string;
+  }): Promise<void> {
+    const meta = (conversation.metadata as Record<string, any>) || {};
+    let targetProposalId = meta["lastProposalId"] as string | undefined;
+    let clientName = meta["lastClientName"] as string | undefined;
+
+    if (!targetProposalId) {
+      const latestProposal = await this.prisma.proposal.findFirst({
+        where: {
+          tenantId: conversation.organizationId,
+          deletedAt: null,
+        },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, title: true, proposalNumber: true },
+      });
+
+      if (latestProposal) {
+        targetProposalId = latestProposal.id;
+        clientName = latestProposal.title?.replace(/^Proposta Comercial\s*-\s*/i, "");
+      }
+    }
+
+    if (!targetProposalId) {
+      const notFoundMsg =
+        `_Não encontrei nenhuma proposta recente nesta conversa para gerar o PDF._ ☀️\n\n` +
+        `Você pode gerar uma nova cotação enviando a conta de luz (PDF ou foto) ou digitando o consumo médio em kWh.`;
+
+      await this.prisma.message.create({
+        data: {
+          conversationId: conversation.id,
+          role: "assistant",
+          content: notFoundMsg,
+          channel: "whatsapp",
+        },
+      });
+
+      await this.whatsappCloud.sendTextMessage({
+        phoneNumberId,
+        toWaId: fromWaId,
+        body: notFoundMsg,
+      });
+      return;
+    }
+
+    // 1. Mensagem de aguardo imediata
+    const waitMsg = `_Gerando o arquivo PDF da sua proposta, aguarde um instante..._ ⏳`;
+    await this.whatsappCloud.sendTextMessage({
+      phoneNumberId,
+      toWaId: fromWaId,
+      body: waitMsg,
+    });
+
+    try {
+      if (this.proposalsService) {
+        const pdfBuffer = await this.proposalsService.generatePdf(targetProposalId);
+        if (pdfBuffer && pdfBuffer.length > 0) {
+          const base64Data = Buffer.from(pdfBuffer).toString("base64");
+          const safeClient = (clientName || "Cliente")
+            .replace(/[^\w\s-]/g, "")
+            .trim()
+            .replace(/\s+/g, "_");
+          const fileName = `Proposta_${safeClient}.pdf`;
+
+          const sent = await this.whatsappCloud.sendDocumentMessage({
+            phoneNumberId,
+            toWaId: fromWaId,
+            fileName,
+            documentBase64: `data:application/pdf;base64,${base64Data}`,
+            caption: `📄 Proposta Comercial - ${clientName || "EnergivIA"}`,
+            mimetype: "application/pdf",
+          });
+
+          if (sent) {
+            await this.prisma.message.create({
+              data: {
+                conversationId: conversation.id,
+                role: "assistant",
+                content: `[Documento PDF enviado: ${fileName}]`,
+                channel: "whatsapp",
+              },
+            });
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      this.logger.error(
+        `Erro ao gerar/enviar PDF sob demanda para proposta ${targetProposalId}:`,
+        err
+      );
+    }
+
+    // Fallback: caso o buffer ou envio de mídia falhe
+    const appBaseUrl =
+      process.env["APP_BASE_URL"] ||
+      process.env["PUBLIC_WEB_APP_BASE_URL"] ||
+      this.config.get<string>("APP_BASE_URL") ||
+      "https://www.energivia.com.br";
+    const fallbackMsg =
+      `📄 Não foi possível enviar o anexo diretamente agora, mas você pode abrir e baixar o PDF no navegador pelo link:\n` +
+      `${appBaseUrl}/proposta/${targetProposalId}?pdf=true`;
+
+    await this.prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        role: "assistant",
+        content: fallbackMsg,
+        channel: "whatsapp",
+      },
+    });
+
+    await this.whatsappCloud.sendTextMessage({
+      phoneNumberId,
+      toWaId: fromWaId,
+      body: fallbackMsg,
+    });
   }
 
   private async runOcrOnBuffer(buffer: Buffer): Promise<string> {
@@ -2659,6 +2816,23 @@ ${catalogContext}`;
       messages: messages || [],
     };
 
+    if (this.isPdfRequest(incomingText || "")) {
+      const latestProposal = await this.prisma.proposal.findFirst({
+        where: { tenantId: orgId, deletedAt: null },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, title: true },
+      });
+      if (latestProposal) {
+        const appBaseUrl =
+          process.env["APP_BASE_URL"] ||
+          process.env["PUBLIC_WEB_APP_BASE_URL"] ||
+          this.config.get<string>("APP_BASE_URL") ||
+          "https://www.energivia.com.br";
+        return `📄 Você pode visualizar e baixar o PDF da sua proposta diretamente pelo link:\n👉 ${appBaseUrl}/proposta/${latestProposal.id}?pdf=true`;
+      }
+      return `_Não encontrei nenhuma proposta recente para gerar o PDF._ ☀️\n\nVocê pode gerar uma nova cotação enviando a conta de luz ou digitando o consumo médio em kWh.`;
+    }
+
     const reply = await this.generateBotResponse({
       conversation,
       incomingText: incomingText || "",
@@ -3911,6 +4085,23 @@ ${catalogContext}`;
 
         proposalId = proposal.id;
 
+        try {
+          const currentConvMeta = (conversation.metadata as Record<string, any>) || {};
+          await this.prisma.conversation.update({
+            where: { id: conversation.id },
+            data: {
+              metadata: {
+                ...currentConvMeta,
+                lastProposalId: proposal.id,
+                lastClientName: clientName,
+                lastProposalNumber: proposalNumber,
+              },
+            },
+          });
+        } catch (metaErr) {
+          this.logger.warn("Erro ao atualizar metadata da conversa com lastProposalId:", metaErr);
+        }
+
         await this.prisma.leadActivityLog.create({
           data: {
             tenantId: conversation.organizationId,
@@ -3953,6 +4144,7 @@ ${catalogContext}`;
         `${integratorPreviewLink}\n\n` +
         `_💡 Abra este link acima para revisar a proposta com segurança. Ele **não dispara avisos de visualização**._\n\n` +
         `_👉 A mensagem a seguir foi preparada para você **encaminhar direto para o seu cliente**. Quando ele abrir o link da proposta, você receberá um **alerta imediato aqui no WhatsApp** avisando que ele está visualizando!_\n\n` +
+        `_📄 Caso precise do documento em PDF aqui no WhatsApp, basta responder *PDF*._\n\n` +
         `Equipe *_EnergivIA Solar._*`;
 
       const clientForwardMsg =
