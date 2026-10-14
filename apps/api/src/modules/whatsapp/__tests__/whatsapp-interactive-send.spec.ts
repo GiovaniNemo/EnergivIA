@@ -125,4 +125,86 @@ describe("WhatsappCloudService - Interactive Buttons and Lists", () => {
     expect(fallbackPayload.type).toBe("text");
     expect(fallbackPayload.text.body).toContain("Escolha seu kit");
   });
+
+  it("should send interactive buttons via Evolution API with v2 payload format", async () => {
+    const evoConfig = new ConfigService({
+      WHATSAPP_PROVIDER: "evolution",
+      EVOLUTION_API_URL: "https://evo.example.com",
+      EVOLUTION_API_KEY: "secret-key",
+      EVOLUTION_INSTANCE_NAME: "test-bot",
+    });
+    const evoService = new WhatsappCloudService(evoConfig);
+
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ key: { id: "evo-msg-123" } }),
+    } as any);
+
+    await evoService.sendInteractiveButtons({
+      phoneNumberId: "ignored",
+      toWaId: "5544999998888",
+      body: "Escolha uma opção de kit:",
+      buttons: [
+        { id: "1", title: "1️⃣ Standard" },
+        { id: "2", title: "2️⃣ Elite" },
+      ],
+      footer: "EnergivIA",
+    });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://evo.example.com/message/sendButtons/test-bot");
+    expect(options.headers).toMatchObject({
+      apikey: "secret-key",
+      "Content-Type": "application/json",
+    });
+
+    const body = JSON.parse(options.body as string);
+    expect(body.number).toBe("5544999998888");
+    expect(body.buttons).toEqual([
+      { type: "reply", displayText: "1️⃣ Standard", id: "1" },
+      { type: "reply", displayText: "2️⃣ Elite", id: "2" },
+    ]);
+  });
+
+  it("should send interactive list via Evolution API with correct payload structure", async () => {
+    const evoConfig = new ConfigService({
+      WHATSAPP_PROVIDER: "evolution",
+      EVOLUTION_API_URL: "https://evo.example.com",
+      EVOLUTION_API_KEY: "secret-key",
+      EVOLUTION_INSTANCE_NAME: "test-bot",
+    });
+    const evoService = new WhatsappCloudService(evoConfig);
+
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ key: { id: "evo-list-123" } }),
+    } as any);
+
+    await evoService.sendInteractiveList({
+      phoneNumberId: "ignored",
+      toWaId: "5544999998888",
+      body: "Qual a estrutura do telhado?",
+      buttonText: "Ver Opções",
+      sections: [
+        {
+          title: "Telhados",
+          rows: [{ id: "1", title: "Cerâmica", description: "Telhas coloniais" }],
+        },
+      ],
+      footer: "EnergivIA",
+    });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://evo.example.com/message/sendList/test-bot");
+    const body = JSON.parse(options.body as string);
+    expect(body.sections[0].rows[0]).toEqual({
+      rowId: "1",
+      title: "Cerâmica",
+      description: "Telhas coloniais",
+    });
+  });
 });

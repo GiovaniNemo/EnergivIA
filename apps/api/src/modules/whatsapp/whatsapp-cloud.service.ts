@@ -283,35 +283,57 @@ export class WhatsappCloudService {
       const instance = this.config.get<string>("EVOLUTION_INSTANCE_NAME")?.trim() || "energiv-bot";
 
       if (baseUrl && apiKey) {
-        try {
-          const url = `${baseUrl}/message/sendButtons/${encodeURIComponent(instance)}`;
-          const res = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: apiKey,
-            },
-            body: JSON.stringify({
-              number: to,
-              title: "EnergivIA Solar",
-              description: body,
-              footer: params.footer || "Selecione uma opção",
-              buttons: buttons.map((b) => ({
-                id: b.id,
-                text: b.title,
-              })),
-            }),
-          });
-          if (res.ok) {
-            this.logger.log(`[Evolution API] Botões interativos enviados para ${to}`);
-            return;
+        const url = `${baseUrl}/message/sendButtons/${encodeURIComponent(instance)}`;
+        const sendButtonsToNumber = async (num: string) => {
+          try {
+            const res = await fetch(url, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                apikey: apiKey,
+              },
+              body: JSON.stringify({
+                number: num,
+                title: "EnergivIA Solar",
+                description: body,
+                footer: params.footer || "Selecione uma opção",
+                buttons: buttons.map((b) => ({
+                  type: "reply",
+                  displayText: b.title.slice(0, 20),
+                  id: b.id,
+                })),
+              }),
+            });
+            const text = await res.text().catch(() => "");
+            return { ok: res.ok, status: res.status, errText: text };
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return { ok: false, status: 500, errText: msg };
           }
-          this.logger.warn(
-            `[Evolution API] Falha no envio de botões (${res.status}), executando fallback para texto.`
-          );
-        } catch (err) {
-          this.logger.warn(`[Evolution API] Erro ao enviar botões interativos: ${err}`);
+        };
+
+        let result = await sendButtonsToNumber(to);
+        if (!result.ok && to.startsWith("55")) {
+          let altNumber: string | null = null;
+          if (to.length === 12) {
+            altNumber = `${to.slice(0, 4)}9${to.slice(4)}`;
+          } else if (to.length === 13 && to.charAt(4) === "9") {
+            altNumber = `${to.slice(0, 4)}${to.slice(5)}`;
+          }
+          if (altNumber) {
+            const altResult = await sendButtonsToNumber(altNumber);
+            if (altResult.ok) result = altResult;
+          }
         }
+
+        if (result.ok) {
+          this.logger.log(`[Evolution API] Botões interativos enviados para ${to}`);
+          return;
+        }
+
+        this.logger.warn(
+          `[Evolution API] Falha no envio de botões (${result.status}): ${result.errText.slice(0, 300)}. Executando fallback para texto.`
+        );
       }
       await this.sendTextMessage({
         phoneNumberId: params.phoneNumberId,
@@ -406,40 +428,61 @@ export class WhatsappCloudService {
       const instance = this.config.get<string>("EVOLUTION_INSTANCE_NAME")?.trim() || "energiv-bot";
 
       if (baseUrl && apiKey) {
-        try {
-          const url = `${baseUrl}/message/sendList/${encodeURIComponent(instance)}`;
-          const res = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: apiKey,
-            },
-            body: JSON.stringify({
-              number: to,
-              title: "EnergivIA Solar",
-              description: body,
-              buttonText: params.buttonText.slice(0, 20),
-              footerText: params.footer || "Selecione uma opção",
-              sections: params.sections.map((s) => ({
-                title: s.title.slice(0, 24),
-                rows: s.rows.slice(0, 10).map((r) => ({
-                  rowId: r.id,
-                  title: r.title.slice(0, 24),
-                  ...(r.description ? { description: r.description.slice(0, 72) } : {}),
+        const url = `${baseUrl}/message/sendList/${encodeURIComponent(instance)}`;
+        const sendListToNumber = async (num: string) => {
+          try {
+            const res = await fetch(url, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                apikey: apiKey,
+              },
+              body: JSON.stringify({
+                number: num,
+                title: "EnergivIA Solar",
+                description: body,
+                buttonText: params.buttonText.slice(0, 20),
+                footerText: params.footer || "Selecione uma opção",
+                sections: params.sections.map((s) => ({
+                  title: s.title.slice(0, 24),
+                  rows: s.rows.slice(0, 10).map((r) => ({
+                    rowId: r.id,
+                    title: r.title.slice(0, 24),
+                    ...(r.description ? { description: r.description.slice(0, 72) } : {}),
+                  })),
                 })),
-              })),
-            }),
-          });
-          if (res.ok) {
-            this.logger.log(`[Evolution API] Lista interativa enviada para ${to}`);
-            return;
+              }),
+            });
+            const text = await res.text().catch(() => "");
+            return { ok: res.ok, status: res.status, errText: text };
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return { ok: false, status: 500, errText: msg };
           }
-          this.logger.warn(
-            `[Evolution API] Falha no envio de lista (${res.status}), executando fallback para texto.`
-          );
-        } catch (err) {
-          this.logger.warn(`[Evolution API] Erro ao enviar lista interativa: ${err}`);
+        };
+
+        let result = await sendListToNumber(to);
+        if (!result.ok && to.startsWith("55")) {
+          let altNumber: string | null = null;
+          if (to.length === 12) {
+            altNumber = `${to.slice(0, 4)}9${to.slice(4)}`;
+          } else if (to.length === 13 && to.charAt(4) === "9") {
+            altNumber = `${to.slice(0, 4)}${to.slice(5)}`;
+          }
+          if (altNumber) {
+            const altResult = await sendListToNumber(altNumber);
+            if (altResult.ok) result = altResult;
+          }
         }
+
+        if (result.ok) {
+          this.logger.log(`[Evolution API] Lista interativa enviada para ${to}`);
+          return;
+        }
+
+        this.logger.warn(
+          `[Evolution API] Falha no envio de lista (${result.status}): ${result.errText.slice(0, 300)}. Executando fallback para texto.`
+        );
       }
       await this.sendTextMessage({
         phoneNumberId: params.phoneNumberId,
