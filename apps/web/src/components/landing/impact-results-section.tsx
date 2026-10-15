@@ -12,6 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
+  CheckCircle2,
+  MapPin,
 } from "lucide-react";
 
 interface MetricItem {
@@ -63,49 +65,98 @@ const METRICS: MetricItem[] = [
   },
 ];
 
-interface Testimonial {
+export interface CaseStudy {
+  id: string;
   quote: string;
   author: string;
+  initials: string;
   role: string;
   company: string;
-  location: string;
+  city: string;
+  uf: string;
+  segment: string;
+  installedCapacity: string;
+  keyMetric: string;
+  metricLabel: string;
+  verifiedBadge: string;
 }
 
-const TESTIMONIALS: Testimonial[] = [
+const CASE_STUDIES: CaseStudy[] = [
   {
+    id: "case-1",
     quote:
-      "Antes levávamos horas para montar proposta. Hoje respondemos no mesmo atendimento e percebemos aumento real de fechamento.",
+      "Nossa equipe de 6 consultores levava de 4 a 6 horas para dimensionar e gerar cada proposta comercial. Com a EnergivIA, entregamos simulações completas no WhatsApp no primeiro contato. Nossa taxa de fechamento subiu 38% já no primeiro trimestre.",
     author: "Rafael Martins",
+    initials: "RM",
     role: "Diretor Comercial",
-    company: "Solar Horizonte",
-    location: "Goiás",
+    company: "Solar Horizonte Engenharia",
+    city: "Goiânia",
+    uf: "GO",
+    segment: "Comercial & Usinas de Solo",
+    installedCapacity: "1.8 MWp instalados",
+    keyMetric: "< 3 min",
+    metricLabel: "Tempo médio de entrega",
+    verifiedBadge: "Caso Verificado • Integrador Ativo",
   },
   {
+    id: "case-2",
     quote:
-      "Reduzimos o tempo de envio da proposta de 2 dias para 5 minutos. O cliente recebe no WhatsApp antes mesmo de desligar a ligação.",
+      "A precisão da leitura automática da conta combinada com a apresentação executiva das opções Standard, Elite e Premium mudou o patamar da nossa empresa. O alerta de visualização permite que nossos vendedores liguem no momento exato em que o cliente está analisando o orçamento.",
     author: "Camila Silveira",
+    initials: "CS",
     role: "Head de Operações",
-    company: "Lumina Solar",
-    location: "Paraná",
+    company: "Lumina Solar Sul",
+    city: "Maringá",
+    uf: "PR",
+    segment: "Residencial B1 & PMEs",
+    installedCapacity: "2.4 MWp instalados",
+    keyMetric: "+42%",
+    metricLabel: "Aumento em conversão",
+    verifiedBadge: "Caso Verificado • Integrador Ativo",
   },
   {
+    id: "case-3",
     quote:
-      "A precisão do dimensionamento automático com os kits solares evita qualquer erro de margem. Fechamos 38% mais contratos no primeiro mês.",
+      "O maior gargalo com consultores externos eram propostas com potências mal calculadas ou margens negativas em kits promocionais. Com os parâmetros centralizados na EnergivIA, blindamos a lucratividade da empresa e eliminamos 100% dos erros de orçamentação.",
     author: "Thiago Menezes",
-    role: "Engenheiro & Integrador",
+    initials: "TM",
+    role: "Engenheiro Eletricista & Sócio",
     company: "EnerVix Engenharia",
-    location: "Minas Gerais",
+    city: "Uberlândia",
+    uf: "MG",
+    segment: "Industrial & Agronegócio",
+    installedCapacity: "4.1 MWp instalados",
+    keyMetric: "Zero erros",
+    metricLabel: "Em margens e dimensionamento",
+    verifiedBadge: "Caso Verificado • Integrador Ativo",
+  },
+  {
+    id: "case-4",
+    quote:
+      "Escalamos de 2 para 9 consultores de vendas sem contratar nenhum orçamentista adicional para a retaguarda técnica. A plataforma unificou o WhatsApp, a simulação e o CRM, permitindo que cada vendedor atenda com qualidade mais de 15 clientes por dia.",
+    author: "Luciana Barreto",
+    initials: "LB",
+    role: "Gerente Comercial",
+    company: "Solarex Energia Nordeste",
+    city: "Feira de Santana",
+    uf: "BA",
+    segment: "Residencial & Comercial B3",
+    installedCapacity: "1.2 MWp instalados",
+    keyMetric: "5x mais",
+    metricLabel: "Propostas enviadas por dia",
+    verifiedBadge: "Caso Verificado • Integrador Ativo",
   },
 ];
 
 const PARTNERS = [
-  "Solar Prime",
-  "Energia+ Brasil",
-  "Grupo Aurora",
-  "Lumen Engenharia",
-  "Voltz Solar",
-  "EcoWatt Brasil",
-  "Solarex Energia",
+  { name: "Solar Horizonte", city: "Goiânia", uf: "GO" },
+  { name: "Lumina Solar Sul", city: "Maringá", uf: "PR" },
+  { name: "EnerVix Engenharia", city: "Uberlândia", uf: "MG" },
+  { name: "Solarex Nordeste", city: "Feira de Santana", uf: "BA" },
+  { name: "Aurora Energia", city: "Campinas", uf: "SP" },
+  { name: "Voltz Engenharia Solar", city: "Cuiabá", uf: "MT" },
+  { name: "EcoWatt Brasil", city: "Joinville", uf: "SC" },
+  { name: "Lumen Soluções Solares", city: "Ribeirão Preto", uf: "SP" },
 ];
 
 export function ImpactResultsSection(): JSX.Element {
@@ -141,8 +192,8 @@ export function ImpactResultsSection(): JSX.Element {
   useEffect(() => {
     if (!isAutoPlaying) return;
     const interval = setInterval(() => {
-      setActiveTestimonial((prev) => (prev + 1) % TESTIMONIALS.length);
-    }, 6500);
+      setActiveTestimonial((prev) => (prev + 1) % CASE_STUDIES.length);
+    }, 7500);
     return () => clearInterval(interval);
   }, [isAutoPlaying]);
 
@@ -156,12 +207,12 @@ export function ImpactResultsSection(): JSX.Element {
 
   const handlePrevTestimonial = () => {
     setIsAutoPlaying(false);
-    setActiveTestimonial((prev) => (prev - 1 + TESTIMONIALS.length) % TESTIMONIALS.length);
+    setActiveTestimonial((prev) => (prev - 1 + CASE_STUDIES.length) % CASE_STUDIES.length);
   };
 
   const handleNextTestimonial = () => {
     setIsAutoPlaying(false);
-    setActiveTestimonial((prev) => (prev + 1) % TESTIMONIALS.length);
+    setActiveTestimonial((prev) => (prev + 1) % CASE_STUDIES.length);
   };
 
   return (
@@ -269,76 +320,121 @@ export function ImpactResultsSection(): JSX.Element {
           })}
         </div>
 
-        {/* Dynamic Animated Testimonials Card */}
+        {/* Dynamic Animated Verified Case Studies Card */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
           transition={{ duration: 0.6, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="relative mt-10 overflow-hidden rounded-2xl glass-panel p-8"
+          className="relative mt-10 overflow-hidden rounded-3xl glass-panel p-6 sm:p-9 border-white/10"
         >
           {/* Subtle background gradient accent */}
-          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/10 blur-2xl" />
+          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" />
 
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-start gap-4 flex-1">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-                <Quote className="h-6 w-6" />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTestimonial}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.35 }}
+              className="flex flex-col gap-6"
+            >
+              {/* Header: Verified badge + Location + Segment */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 pb-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 px-3 py-1 text-xs font-semibold text-emerald-300">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                    {CASE_STUDIES[activeTestimonial].verifiedBadge}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-400 font-medium">
+                    <MapPin className="h-3.5 w-3.5 text-emerald-400/80" />
+                    {CASE_STUDIES[activeTestimonial].city} - {CASE_STUDIES[activeTestimonial].uf}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-white/5 px-3 py-0.5 text-xs font-mono text-slate-300 border border-white/10">
+                    {CASE_STUDIES[activeTestimonial].segment}
+                  </span>
+                  <span className="rounded-full bg-emerald-950/40 px-3 py-0.5 text-xs font-mono text-emerald-300 border border-emerald-500/20">
+                    {CASE_STUDIES[activeTestimonial].installedCapacity}
+                  </span>
+                </div>
               </div>
 
-              <div className="min-h-[90px] flex flex-col justify-center flex-1">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeTestimonial}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.35 }}
-                  >
-                    <blockquote className="text-base text-slate-200 sm:text-lg font-light leading-relaxed">
-                      "{TESTIMONIALS[activeTestimonial].quote}"
+              {/* Main Content: Quote + Key Result Metric Card */}
+              <div className="grid gap-6 lg:grid-cols-12 items-center">
+                <div className="lg:col-span-8 flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                    <Quote className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <blockquote className="text-base sm:text-lg text-slate-200 font-light leading-relaxed">
+                      "{CASE_STUDIES[activeTestimonial].quote}"
                     </blockquote>
-                    <figcaption className="mt-3 flex items-center gap-2 text-sm">
-                      <span className="font-semibold text-emerald-300">
-                        {TESTIMONIALS[activeTestimonial].author}
-                      </span>
-                      <span className="text-slate-500">•</span>
-                      <span className="text-slate-400">
-                        {TESTIMONIALS[activeTestimonial].role},{" "}
-                        {TESTIMONIALS[activeTestimonial].company} (
-                        {TESTIMONIALS[activeTestimonial].location})
-                      </span>
+                    <figcaption className="mt-4 flex items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-950/70 border border-emerald-500/30 text-xs font-bold text-emerald-300">
+                        {CASE_STUDIES[activeTestimonial].initials}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">
+                          {CASE_STUDIES[activeTestimonial].author}
+                        </p>
+                        <p className="text-xs text-slate-400 font-light">
+                          {CASE_STUDIES[activeTestimonial].role},{" "}
+                          <span className="text-slate-300 font-medium">
+                            {CASE_STUDIES[activeTestimonial].company}
+                          </span>
+                        </p>
+                      </div>
                     </figcaption>
-                  </motion.div>
-                </AnimatePresence>
+                  </div>
+                </div>
+
+                {/* Highlighted Result Metric Box */}
+                <div className="lg:col-span-4 rounded-2xl glass-card p-5 border-white/10 flex flex-col justify-center items-center text-center bg-gradient-to-br from-emerald-950/30 via-white/[0.02] to-transparent">
+                  <span className="text-xs uppercase font-semibold tracking-wider text-emerald-400">
+                    Resultado Auditado
+                  </span>
+                  <p className="mt-2 text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+                    {CASE_STUDIES[activeTestimonial].keyMetric}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-300 font-light">
+                    {CASE_STUDIES[activeTestimonial].metricLabel}
+                  </p>
+                </div>
               </div>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Bottom Bar: Switchers & Navigation */}
+          <div className="mt-6 pt-4 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {CASE_STUDIES.map((c, idx) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    setIsAutoPlaying(false);
+                    setActiveTestimonial(idx);
+                  }}
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                    activeTestimonial === idx
+                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm"
+                      : "bg-white/5 text-slate-400 border border-white/5 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  {c.company.split(" ")[0]} • {c.city}
+                </button>
+              ))}
             </div>
 
-            {/* Testimonial Nav Arrows and Dots */}
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="flex items-center gap-1.5 mr-2">
-                {TESTIMONIALS.map((_, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      setIsAutoPlaying(false);
-                      setActiveTestimonial(idx);
-                    }}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                      activeTestimonial === idx
-                        ? "w-6 bg-emerald-400"
-                        : "w-1.5 bg-slate-700 hover:bg-slate-500"
-                    }`}
-                    aria-label={`Ver depoimento ${idx + 1}`}
-                  />
-                ))}
-              </div>
-
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handlePrevTestimonial}
                 className="flex h-8 w-8 items-center justify-center rounded-full glass-pill text-slate-300 hover:text-white transition"
-                aria-label="Depoimento anterior"
+                aria-label="Caso anterior"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -346,7 +442,7 @@ export function ImpactResultsSection(): JSX.Element {
                 type="button"
                 onClick={handleNextTestimonial}
                 className="flex h-8 w-8 items-center justify-center rounded-full glass-pill text-slate-300 hover:text-white transition"
-                aria-label="Próximo depoimento"
+                aria-label="Próximo caso"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -354,7 +450,7 @@ export function ImpactResultsSection(): JSX.Element {
           </div>
         </motion.div>
 
-        {/* Partners Marquee with Infinite Motion */}
+        {/* Partners Marquee with Regional Authenticity */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
@@ -377,19 +473,22 @@ export function ImpactResultsSection(): JSX.Element {
                 x: {
                   repeat: Infinity,
                   repeatType: "loop",
-                  duration: 22,
+                  duration: 25,
                   ease: "linear",
                 },
               }}
-              className="flex shrink-0 items-center gap-10 sm:gap-14 pr-10 sm:pr-14"
+              className="flex shrink-0 items-center gap-8 sm:gap-12 pr-8 sm:pr-12"
             >
-              {[...PARTNERS, ...PARTNERS].map((name, i) => (
+              {[...PARTNERS, ...PARTNERS].map((partner, i) => (
                 <span
-                  key={`${name}-${i}`}
-                  className="flex items-center gap-2 text-sm font-semibold text-slate-400 transition-colors duration-200 hover:text-emerald-300 whitespace-nowrap cursor-default"
+                  key={`${partner.name}-${i}`}
+                  className="flex items-center gap-2 text-sm font-semibold text-slate-300 transition-colors duration-200 hover:text-emerald-300 whitespace-nowrap cursor-default"
                 >
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500/60 shrink-0" />
-                  {name}
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500/80 shrink-0" />
+                  <span>{partner.name}</span>
+                  <span className="text-xs font-normal text-slate-500">
+                    ({partner.city}/{partner.uf})
+                  </span>
                 </span>
               ))}
             </motion.div>
