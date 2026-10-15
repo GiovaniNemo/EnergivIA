@@ -9,6 +9,14 @@ import { motion } from "framer-motion";
 const appLoginUrl = "/login";
 const appSignupUrl = "/cadastro";
 
+const LANDING_NAV_ITEMS = [
+  { label: "Como Funciona", href: "/#como-funciona" },
+  { label: "Resultados", href: "/#resultados" },
+  { label: "Cenários", href: "/#cenarios" },
+  { label: "Diferenciais", href: "/#diferenciais" },
+  { label: "FAQ", href: "/#faq" },
+];
+
 export function BeamqHeroSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -144,15 +152,15 @@ export function BeamqHeroSection() {
 
           {/* Desktop Nav Menu */}
           <nav className="hidden lg:flex items-center gap-8 text-[15px] font-medium text-slate-300">
-            {["Como Funciona", "Resultados", "Cenários", "Diferenciais", "FAQ"].map((item) => (
-              <a
-                key={item}
-                href={`#${item.toLowerCase().replace(" ", "-")}`}
+            {LANDING_NAV_ITEMS.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
                 className="relative hover:text-white transition-colors duration-300 group"
               >
-                {item}
+                {item.label}
                 <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-gradient-to-r from-[#10b981] to-[#84cc16] transition-all duration-300 group-hover:w-full"></span>
-              </a>
+              </Link>
             ))}
           </nav>
 
@@ -183,15 +191,15 @@ export function BeamqHeroSection() {
           className={`lg:hidden absolute top-full left-0 w-full bg-[#02040a]/95 backdrop-blur-xl border-b border-emerald-500/20 transition-all duration-300 overflow-hidden ${isMenuOpen ? "max-h-[400px] py-4" : "max-h-0 py-0 border-transparent"}`}
         >
           <div className="flex flex-col px-6 gap-4">
-            {["Como Funciona", "Resultados", "Cenários", "Diferenciais", "FAQ"].map((item) => (
-              <a
-                key={item}
-                href={`#${item.toLowerCase().replace(" ", "-")}`}
+            {LANDING_NAV_ITEMS.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
                 className="text-slate-300 hover:text-white font-medium text-lg py-2 border-b border-white/5"
                 onClick={() => setIsMenuOpen(false)}
               >
-                {item}
-              </a>
+                {item.label}
+              </Link>
             ))}
             <div className="flex flex-col gap-3 pt-2">
               <a

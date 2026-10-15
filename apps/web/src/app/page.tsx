@@ -85,7 +85,7 @@ export default function HomePage(): JSX.Element {
         {/* ------------------------------------------------------------- */}
         <section
           id="diferenciais"
-          className="relative overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24"
+          className="relative scroll-mt-20 overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24"
         >
           <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.08),transparent_70%)]" />
           <div className="relative mx-auto max-w-6xl">
@@ -166,7 +166,7 @@ export default function HomePage(): JSX.Element {
         {/* ------------------------------------------------------------- */}
         <section
           id="faq"
-          className="relative overflow-hidden border-y border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24"
+          className="relative scroll-mt-20 overflow-hidden border-y border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24"
         >
           <div className="relative mx-auto max-w-4xl">
             <div className="mx-auto max-w-3xl text-center">

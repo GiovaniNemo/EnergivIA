@@ -29,7 +29,7 @@ export function LandingFooter({ className = "" }: LandingFooterProps): JSX.Eleme
             <Link href="/#como-funciona" className="hover:text-white transition-colors">
               Como funciona
             </Link>
-            <Link href="/#beneficios" className="hover:text-white transition-colors">
+            <Link href="/#resultados" className="hover:text-white transition-colors">
               Resultados
             </Link>
             <Link href="/#cenarios" className="hover:text-white transition-colors">

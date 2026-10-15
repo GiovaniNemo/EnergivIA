@@ -217,11 +217,13 @@ export function ImpactResultsSection(): JSX.Element {
 
   return (
     <section
-      id="beneficios"
+      id="resultados"
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className="relative overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24"
+      className="relative scroll-mt-20 overflow-hidden border-t border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24"
     >
+      {/* Anchor for backward compatibility with #beneficios */}
+      <div id="beneficios" className="pointer-events-none absolute -top-20" aria-hidden="true" />
       {/* Interactive Mouse Spotlight Glow */}
       <div
         ref={spotlightRef}

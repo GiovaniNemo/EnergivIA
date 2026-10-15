@@ -58,7 +58,7 @@ export function HowItWorksTabs(): JSX.Element {
   return (
     <section
       id="como-funciona"
-      className="relative border-t border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24 overflow-hidden"
+      className="relative scroll-mt-20 border-t border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-24 overflow-hidden"
     >
       {/* Subtle ambient light glow */}
       <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.07),transparent_70%)]" />

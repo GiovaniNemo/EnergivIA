@@ -126,7 +126,7 @@ export default function RootLayout({
   `;
 
   return (
-    <html lang="pt-BR" suppressHydrationWarning className="no-scrollbar">
+    <html lang="pt-BR" suppressHydrationWarning className="no-scrollbar scroll-smooth">
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <JsonLd data={rootStructuredData} />

@@ -118,8 +118,10 @@ export function ConvergingPanelsSection() {
   return (
     <section
       id="cenarios"
-      className="relative overflow-hidden border-y border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-28"
+      className="relative scroll-mt-20 overflow-hidden border-y border-white/5 bg-[#02040a] px-4 py-20 sm:px-6 sm:py-28"
     >
+      {/* Anchor for accented hash #cenários */}
+      <div id="cenários" className="pointer-events-none absolute -top-20" aria-hidden="true" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(16,185,129,0.08),transparent_60%)]" />
 
       <div className="relative mx-auto max-w-6xl">
