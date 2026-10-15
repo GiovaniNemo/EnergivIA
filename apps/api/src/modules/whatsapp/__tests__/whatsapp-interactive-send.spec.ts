@@ -55,6 +55,45 @@ describe("WhatsappCloudService - Interactive Buttons and Lists", () => {
     });
   });
 
+  it("should truncate and sanitize Meta Cloud API interactive buttons when payload exceeds strict limits", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ messages: [{ id: "wamid.124" }] }),
+    } as any);
+
+    const overlyLongBody = "Texto longo sobre proposta solar ".repeat(40); // > 1200 chars
+    const overlyLongFooter = "Rodapé institucional longo da empresa de energia solar ".repeat(2); // > 100 chars
+
+    await service.sendInteractiveButtons({
+      phoneNumberId: "123456789",
+      toWaId: "5544999998888",
+      body: overlyLongBody,
+      buttons: [
+        { id: "1", title: "Kit Standard Econômico com Inversor Monofásico 5kW" }, // > 20 chars
+        { id: "2", title: "Kit Elite Premium Alta Performance 10kWp" }, // > 20 chars
+      ],
+      footer: overlyLongFooter,
+    });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const payload = JSON.parse(options.body as string);
+
+    // Body não pode ultrapassar 1024 caracteres
+    expect(payload.interactive.body.text.length).toBeLessThanOrEqual(1024);
+    expect(payload.interactive.body.text.endsWith("...")).toBe(true);
+
+    // Footer não pode ultrapassar 60 caracteres
+    expect(payload.interactive.footer.text.length).toBeLessThanOrEqual(60);
+
+    // Cada botão não pode ultrapassar 20 caracteres
+    for (const btn of payload.interactive.action.buttons) {
+      expect(btn.reply.title.length).toBeLessThanOrEqual(20);
+    }
+    expect(payload.interactive.action.buttons[0].reply.title.length).toBeLessThanOrEqual(20);
+  });
+
   it("should send interactive list via Meta Cloud API with correct payload structure", async () => {
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce({
       ok: true,

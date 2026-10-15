@@ -34,6 +34,17 @@ function formatToInternationalWhatsapp(raw: string): string {
   return digits;
 }
 
+export function sanitizeMetaInteractiveText(text: string, maxLen = 1024): string {
+  const normalized = normalizeAssistantTextForWhatsapp(text || "").trim();
+  if (normalized.length <= maxLen) return normalized;
+  return `${normalized.slice(0, maxLen - 3)}...`;
+}
+
+export function sanitizeMetaButtonTitle(title: string): string {
+  const clean = (title || "").trim().replace(/[\r\n\t]+/g, " ");
+  return clean.slice(0, 20).trim() || "Opção";
+}
+
 export interface InteractiveButton {
   id: string;
   title: string;
@@ -372,6 +383,13 @@ export class WhatsappCloudService {
       return;
     }
 
+    const sanitizedButtons = buttons
+      .map((b, idx) => ({
+        id: (b.id || `btn_${idx}`).trim().slice(0, 256),
+        title: sanitizeMetaButtonTitle(b.title),
+      }))
+      .filter((b) => b.title.length > 0);
+
     const payload = {
       messaging_product: "whatsapp",
       to,
@@ -379,15 +397,15 @@ export class WhatsappCloudService {
       interactive: {
         type: "button",
         body: {
-          text: body,
+          text: sanitizeMetaInteractiveText(body, 1024),
         },
-        ...(params.footer ? { footer: { text: params.footer } } : {}),
+        ...(params.footer ? { footer: { text: params.footer.trim().slice(0, 60) } } : {}),
         action: {
-          buttons: buttons.map((b) => ({
+          buttons: sanitizedButtons.map((b) => ({
             type: "reply",
             reply: {
               id: b.id,
-              title: b.title.slice(0, 20),
+              title: b.title,
             },
           })),
         },
@@ -537,17 +555,17 @@ export class WhatsappCloudService {
       interactive: {
         type: "list",
         body: {
-          text: body,
+          text: sanitizeMetaInteractiveText(body, 1024),
         },
-        ...(params.footer ? { footer: { text: params.footer } } : {}),
+        ...(params.footer ? { footer: { text: params.footer.trim().slice(0, 60) } } : {}),
         action: {
-          button: params.buttonText.slice(0, 20),
+          button: (params.buttonText || "Opções").trim().slice(0, 20),
           sections: params.sections.map((s) => ({
-            title: s.title.slice(0, 24),
+            title: (s.title || "Opções").trim().slice(0, 24),
             rows: s.rows.slice(0, 10).map((r) => ({
-              id: r.id,
-              title: r.title.slice(0, 24),
-              ...(r.description ? { description: r.description.slice(0, 72) } : {}),
+              id: (r.id || "").trim().slice(0, 200),
+              title: (r.title || "Item").trim().slice(0, 24),
+              ...(r.description ? { description: r.description.trim().slice(0, 72) } : {}),
             })),
           })),
         },
