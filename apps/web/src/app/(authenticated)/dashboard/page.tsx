@@ -413,13 +413,13 @@ export default function DashboardPage(): JSX.Element {
     <div className="space-y-6">
       {}
       <header className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
-        <div>
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
             <h1 className="text-[28px] font-bold tracking-[-0.02em] text-[var(--color-foreground)]">
               Painel
             </h1>
             <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0 ${
                 isOwnerOrAdmin
                   ? "border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400"
                   : "border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
@@ -428,19 +428,25 @@ export default function DashboardPage(): JSX.Element {
               {isOwnerOrAdmin ? "Visão da Empresa" : "Seu Painel Comercial"}
             </span>
           </div>
-          <p className="mt-1.5 text-sm text-[var(--color-muted-foreground)]">
+          <p className="mt-1.5 text-sm text-[var(--color-muted-foreground)] max-w-3xl leading-relaxed break-words">
             {greetingName ? `Olá, ${greetingName}. ` : ""}
             {isOwnerOrAdmin
               ? `Aqui está o resumo consolidado da empresa hoje, ${todayLine}.`
               : `Aqui está o resumo das suas oportunidades e propostas hoje, ${todayLine}.`}
-            {currentOrganization?.name ? ` · ${currentOrganization.name}` : ""}
+            {currentOrganization?.name ? (
+              <span className="font-medium text-[var(--color-foreground)]/80">
+                {` · ${currentOrganization.name}`}
+              </span>
+            ) : (
+              ""
+            )}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <button
             type="button"
             onClick={() => setNewProposalOpen(true)}
-            className="inline-flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 px-4 text-sm font-semibold text-white shadow-md shadow-emerald-500/15 border border-emerald-400/20 transition-all hover:brightness-105 active:scale-95"
+            className="inline-flex h-9 items-center gap-2 whitespace-nowrap shrink-0 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 px-4 text-sm font-semibold text-white shadow-md shadow-emerald-500/15 border border-emerald-400/20 transition-all hover:brightness-105 active:scale-95"
           >
             <Plus className="h-4 w-4" aria-hidden />
             Nova proposta

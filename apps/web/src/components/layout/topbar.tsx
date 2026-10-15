@@ -7,7 +7,17 @@ import { useOrganization } from "@/components/providers/organization-provider";
 import { useSidebar } from "@/components/layout/sidebar-inset";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, LogOut, Menu, UserRound, Timer, AlertTriangle, Search } from "lucide-react";
+import {
+  Moon,
+  Sun,
+  LogOut,
+  Menu,
+  UserRound,
+  Timer,
+  AlertTriangle,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { OrganizationSwitcher } from "@/components/layout/organization-switcher";
 import { NotificationsBell } from "@/components/layout/notifications-bell";
@@ -150,10 +160,18 @@ export function Topbar() {
       .catch(() => {});
   }, []);
 
-  const createdAt = currentOrganization?.createdAt ? new Date(currentOrganization.createdAt) : null;
-  const trialDaysLeft = createdAt ? getTrialDaysLeft(createdAt, 5) : 5;
+  const orgSettings =
+    (currentOrganization?.settings as Record<string, unknown> | null | undefined) ?? {};
+  const isSpecialAccess =
+    orgSettings["specialAccessActive"] === true ||
+    (user?.planTier === "PLUS" && !user?.isTrial) ||
+    Boolean(user?.planName?.includes("Especial"));
 
   const hasActiveSub = currentOrganization?.subscription?.status === "active";
+  const hasActivePlan = hasActiveSub || isSpecialAccess || user?.isTrial === false;
+
+  const createdAt = currentOrganization?.createdAt ? new Date(currentOrganization.createdAt) : null;
+  const trialDaysLeft = user?.trialDaysLeft ?? (createdAt ? getTrialDaysLeft(createdAt, 5) : 5);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -171,7 +189,7 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="fixed top-3 left-3 right-3 z-50 flex h-16 shrink-0 items-center rounded-2xl md:rounded-3xl glass-nav-topbar">
+    <header className="fixed top-3 left-3 right-3 z-50 flex h-16 shrink-0 items-center justify-between rounded-2xl md:rounded-3xl glass-nav-topbar px-2 sm:px-3 gap-2">
       {/* Brand logo container aligning with sidebar */}
       <div
         onMouseEnter={onHoverStart}
@@ -187,7 +205,7 @@ export function Topbar() {
       </div>
 
       {/* Page context / actions */}
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2 sm:gap-2 sm:px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
         {isMobile ? (
           <Button
             variant="ghost"
@@ -199,15 +217,32 @@ export function Topbar() {
             <Menu className="h-5 w-5" />
           </Button>
         ) : null}
+
         <OrganizationSwitcher />
-        {/* Desktop Global Search */}
-        <div className="hidden min-w-0 flex-1 max-w-lg lg:max-w-xl sm:block">
+
+        {/* Compact Search Trigger (sm to xl) */}
+        <button
+          type="button"
+          onClick={() => setMobileSearchOpen(true)}
+          className="hidden sm:inline-flex xl:hidden items-center gap-1.5 h-9 px-2.5 rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] transition-colors shrink-0"
+          title="Pesquisar (⌘K / Ctrl+K)"
+        >
+          <Search className="h-3.5 w-3.5 shrink-0" />
+          <span className="hidden md:inline">Buscar...</span>
+          <kbd className="hidden lg:inline text-[10px] font-mono border border-black/10 dark:border-white/10 px-1 rounded bg-black/5 dark:bg-white/5">
+            ⌘K
+          </kbd>
+        </button>
+
+        {/* Desktop Global Search (xl+) */}
+        <div className="hidden min-w-0 flex-1 max-w-sm 2xl:max-w-md xl:block">
           <GlobalSearch ref={searchHandleRef} />
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-0.5 px-1.5 sm:gap-1.5 sm:px-3 md:gap-2">
-        {/* Mobile Search Button */}
+      {/* Right actions */}
+      <div className="flex shrink-0 items-center gap-1 sm:gap-1.5 md:gap-2">
+        {/* Mobile Search Button (phone only) */}
         <button
           type="button"
           className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] hover:text-[var(--color-foreground)] transition-colors sm:hidden"
@@ -217,26 +252,38 @@ export function Topbar() {
           <Search className="h-4 w-4" />
         </button>
 
-        {!hasActiveSub &&
+        {isSpecialAccess ? (
+          <div
+            className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold rounded-xl border border-emerald-500/20 shadow-xs shrink-0"
+            title="Acesso Especial Liberado - Plano Plus"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+            <span>Plano Plus</span>
+          </div>
+        ) : null}
+
+        {!hasActivePlan &&
           (trialDaysLeft === 0 ? (
             <Link
               href="/gestao/meus-planos"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-500/15 text-rose-300 text-xs font-bold rounded-xl border border-rose-500/30 shadow-xs transition-colors hover:bg-rose-500/25 hover:scale-[1.02]"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-500/15 text-rose-300 text-xs font-bold rounded-xl border border-rose-500/30 shadow-xs transition-colors hover:bg-rose-500/25 shrink-0"
               title="Seu tempo de testes acabou. Clique para escolher seu plano e continuar."
             >
               <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0 animate-pulse" />
-              <span>Tempo de testes acabou</span>
+              <span className="hidden lg:inline">Tempo de testes acabou</span>
+              <span className="lg:hidden">Expirado</span>
             </Link>
           ) : (
             <Link
               href="/gestao/meus-planos"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-500/15 text-orange-300 text-xs font-semibold rounded-xl border border-orange-500/30 shadow-xs transition-colors hover:bg-orange-500/25"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-500/15 text-orange-300 text-xs font-semibold rounded-xl border border-orange-500/30 shadow-xs transition-colors hover:bg-orange-500/25 shrink-0"
               title="Teste grátis"
             >
-              <Timer className="h-4 w-4 text-orange-400" />
-              <span>
+              <Timer className="h-4 w-4 text-orange-400 shrink-0" />
+              <span className="hidden lg:inline">
                 {trialDaysLeft} {trialDaysLeft === 1 ? "dia restante" : "dias restantes"}
               </span>
+              <span className="lg:hidden">{trialDaysLeft}d</span>
             </Link>
           ))}
 
@@ -276,14 +323,14 @@ export function Topbar() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] hover:border-black/15 dark:hover:border-white/25 transition-colors duration-150"
+          className="h-9 w-9 shrink-0 rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] hover:border-black/15 dark:hover:border-white/25 transition-colors duration-150"
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
           aria-label="Alternar tema"
         >
           {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
         {user && (
-          <span className="hidden max-w-[120px] truncate text-xs font-medium text-neutral-700 dark:text-neutral-300 sm:block">
+          <span className="hidden max-w-[110px] truncate text-xs font-medium text-neutral-700 dark:text-neutral-300 xl:inline-block">
             {user.name ?? user.email}
           </span>
         )}

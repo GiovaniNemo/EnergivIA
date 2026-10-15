@@ -19,12 +19,19 @@ interface Plan {
 }
 
 export function TrialLockOverlay() {
-  const { user, loading } = useOrganization();
+  const { user, currentOrganization, loading } = useOrganization();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
 
+  const orgSettings =
+    (currentOrganization?.settings as Record<string, unknown> | null | undefined) ?? {};
+  const isSpecialAccess =
+    orgSettings["specialAccessActive"] === true ||
+    (user?.planTier === "PLUS" && !user?.isTrial) ||
+    Boolean(user?.planName?.includes("Especial"));
+
   useEffect(() => {
-    if (user?.isTrialLocked || modalOpen) {
+    if ((user?.isTrialLocked || modalOpen) && !isSpecialAccess) {
       const fetchPlans = async () => {
         try {
           const response = await fetch("/api/proxy/plans");
@@ -38,9 +45,9 @@ export function TrialLockOverlay() {
       };
       fetchPlans();
     }
-  }, [user?.isTrialLocked, modalOpen]);
+  }, [user?.isTrialLocked, modalOpen, isSpecialAccess]);
 
-  if (loading) {
+  if (loading || isSpecialAccess) {
     return null;
   }
 

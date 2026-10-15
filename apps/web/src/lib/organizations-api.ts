@@ -42,6 +42,7 @@ export interface Organization {
     status: string;
     planId: string;
   } | null;
+  settings?: Record<string, unknown> | null;
 }
 
 export interface BrandTierSelection {

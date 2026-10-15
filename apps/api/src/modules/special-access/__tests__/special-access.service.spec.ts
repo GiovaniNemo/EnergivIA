@@ -16,6 +16,8 @@ describe("SpecialAccessService Suite", () => {
       user: {
         findFirst: vi.fn(),
         findUnique: vi.fn(),
+        findMany: vi.fn(),
+        update: vi.fn(),
       },
       tenant: {
         findUnique: vi.fn(),
@@ -24,6 +26,9 @@ describe("SpecialAccessService Suite", () => {
       tenantWhatsappInboundPhone: {
         findFirst: vi.fn(),
         deleteMany: vi.fn(),
+      },
+      organizationMember: {
+        findMany: vi.fn(),
       },
     };
 
@@ -136,6 +141,112 @@ describe("SpecialAccessService Suite", () => {
       expect(planDetails.isTrial).toBe(true);
       expect(planDetails.trialExpired).toBe(true);
       expect(planDetails.tier).toBe("TRIAL");
+    });
+  });
+
+  describe("Auth0 and OrganizationMember Resolution", () => {
+    it("should correctly resolve organization and activate special access even if user.tenantId is null", async () => {
+      mockPrisma.systemSetting.findUnique.mockResolvedValue(null);
+      mockPrisma.systemSetting.upsert.mockResolvedValue({
+        key: "special_access_list",
+        value: "[]",
+      });
+
+      // Usuário Auth0 cadastrado sem tenantId direto
+      mockPrisma.user.findFirst.mockResolvedValue({
+        id: "user-nato",
+        name: "Nato Fávero",
+        email: "nato.favero@gmail.com",
+        tenantId: null,
+        tenant: null,
+      });
+
+      // Retorna usuário com organizationMemberships
+      mockPrisma.user.findMany.mockResolvedValue([
+        {
+          id: "user-nato",
+          tenantId: null,
+          tenant: null,
+          organizationMemberships: [
+            {
+              organization: {
+                id: "tenant-fortunato",
+                name: "FORTUNATO DE MEDEIROS FAVERO 06351098912",
+              },
+            },
+          ],
+          createdTenants: [],
+        },
+      ]);
+
+      mockPrisma.tenant.findUnique.mockResolvedValue({
+        id: "tenant-fortunato",
+        name: "FORTUNATO DE MEDEIROS FAVERO 06351098912",
+        settings: {},
+      });
+
+      const res = await service.addSpecialAccess("nato.favero@gmail.com", "Criação de campanhas");
+
+      expect(res.organizationId).toBe("tenant-fortunato");
+      expect(res.organizationName).toBe("FORTUNATO DE MEDEIROS FAVERO 06351098912");
+      expect(mockPrisma.tenant.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "tenant-fortunato" },
+          data: expect.objectContaining({
+            settings: expect.objectContaining({
+              specialAccessActive: true,
+              specialAccessRevoked: false,
+            }),
+          }),
+        })
+      );
+    });
+
+    it("should list organizations accurately in listAll for Auth0 users", async () => {
+      mockPrisma.systemSetting.findUnique.mockResolvedValue({
+        key: "special_access_list",
+        value: JSON.stringify([
+          {
+            email: "nato.favero@gmail.com",
+            status: "ACTIVE",
+            source: "MANUAL",
+            notes: "Campanhas",
+            createdAt: new Date().toISOString(),
+          },
+        ]),
+      });
+
+      mockPrisma.user.findFirst.mockResolvedValue({
+        id: "user-nato",
+        name: "Nato Fávero",
+        email: "nato.favero@gmail.com",
+        tenantId: null,
+        tenant: null,
+      });
+
+      mockPrisma.user.findMany.mockResolvedValue([
+        {
+          id: "user-nato",
+          tenantId: null,
+          tenant: null,
+          organizationMemberships: [
+            {
+              organization: {
+                id: "tenant-fortunato",
+                name: "FORTUNATO DE MEDEIROS FAVERO 06351098912",
+              },
+            },
+          ],
+          createdTenants: [],
+        },
+      ]);
+
+      const list = await service.listAll();
+      const natoItem = list.find((i) => i.email === "nato.favero@gmail.com");
+
+      expect(natoItem).toBeDefined();
+      expect(natoItem?.organizationId).toBe("tenant-fortunato");
+      expect(natoItem?.organizationName).toBe("FORTUNATO DE MEDEIROS FAVERO 06351098912");
     });
   });
 });

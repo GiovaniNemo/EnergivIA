@@ -257,6 +257,13 @@ function MeusPlanosContent() {
     );
   }
 
+  const orgSettings =
+    (currentOrganization?.settings as Record<string, unknown> | null | undefined) ?? {};
+  const isSpecialAccess =
+    orgSettings["specialAccessActive"] === true ||
+    (user?.planTier === "PLUS" && !user?.isTrial) ||
+    Boolean(user?.planName?.includes("Especial"));
+
   const currentPlan = subscription?.plan || plans.find((p) => p.id === subscription?.planId);
   const currentPlanPrice = currentPlan
     ? typeof currentPlan.price === "number"
@@ -321,7 +328,7 @@ function MeusPlanosContent() {
       </div>
 
       {/* CURRENT SUBSCRIPTION BANNER */}
-      {subscription && currentPlan ? (
+      {(subscription && currentPlan) || isSpecialAccess ? (
         <div className="mb-10 backdrop-blur-xl bg-gradient-to-br from-emerald-950/30 via-slate-900/40 to-emerald-950/20 border border-emerald-500/30 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
           {/* Subtle Glow */}
           <div className="pointer-events-none absolute -right-20 -bottom-20 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl" />
@@ -331,7 +338,11 @@ function MeusPlanosContent() {
               <div className="flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider border border-emerald-500/30">
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  {isLifetime ? "Acesso Vitalício Ativo" : "Plano Ativo"}
+                  {isSpecialAccess
+                    ? "Acesso Especial Liberado"
+                    : isLifetime
+                      ? "Acesso Vitalício Ativo"
+                      : "Plano Ativo"}
                 </span>
                 <span className="text-xs text-[var(--color-muted-foreground)] font-mono">
                   Org: {currentOrganization?.name || "Sua Empresa"}
@@ -340,10 +351,10 @@ function MeusPlanosContent() {
 
               <div className="flex items-baseline gap-3">
                 <h2 className="text-3xl font-extrabold text-[var(--color-foreground)]">
-                  {currentPlan.name}
+                  {isSpecialAccess ? "Plano Plus (Acesso Especial)" : currentPlan?.name}
                 </h2>
-                {isLifetime ? (
-                  <span className="text-xl font-bold text-emerald-400">Acesso Total Vitalício</span>
+                {isSpecialAccess || isLifetime ? (
+                  <span className="text-xl font-bold text-emerald-400">Acesso Total Ilimitado</span>
                 ) : (
                   <span className="text-2xl font-bold text-emerald-400">
                     R$ {currentPlanPrice.toFixed(2)}
@@ -355,7 +366,14 @@ function MeusPlanosContent() {
               </div>
 
               <div className="flex flex-wrap items-center gap-6 text-sm text-[var(--color-muted-foreground)] pt-1">
-                {isLifetime ? (
+                {isSpecialAccess ? (
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-emerald-400" />
+                    <span>
+                      Plano Plus liberado com IA no WhatsApp e propostas comerciais ilimitadas
+                    </span>
+                  </div>
+                ) : isLifetime ? (
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
                     <span>
@@ -365,7 +383,7 @@ function MeusPlanosContent() {
                       </strong>
                     </span>
                   </div>
-                ) : subscription.currentPeriodEnd ? (
+                ) : subscription?.currentPeriodEnd ? (
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-emerald-400" />
                     <span>
@@ -377,7 +395,7 @@ function MeusPlanosContent() {
                   </div>
                 ) : null}
 
-                {!isLifetime && (
+                {!isLifetime && !isSpecialAccess && (
                   <div className="flex items-center gap-2">
                     <CreditCard className="w-4 h-4 text-emerald-400" />
                     <span>Cobrança automática via Stripe</span>
@@ -388,7 +406,12 @@ function MeusPlanosContent() {
 
             {/* Actions for current subscription */}
             <div className="flex flex-wrap items-center gap-3">
-              {isLifetime ? (
+              {isSpecialAccess ? (
+                <div className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold text-sm shadow-sm">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  Conta Autorizada (Plus)
+                </div>
+              ) : isLifetime ? (
                 <div className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold text-sm shadow-sm">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
                   Acesso Total Liberado

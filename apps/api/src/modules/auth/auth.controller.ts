@@ -56,9 +56,11 @@ export class AuthController {
     let hasProposalViewAlerts = false;
     let isProposalLimitReached = false;
 
-    if (user.tenantId) {
+    const activeTenantId = user.tenantId || organizations[0]?.id || "";
+
+    if (activeTenantId) {
       const tenant = await this.prisma.tenant.findUnique({
-        where: { id: user.tenantId },
+        where: { id: activeTenantId },
         include: {
           subscription: {
             include: { plan: true },
@@ -68,8 +70,9 @@ export class AuthController {
 
       if (tenant) {
         const settings = (tenant.settings as Record<string, unknown> | null) || {};
-        if (user.email && settings["specialAccessRevoked"] !== true) {
-          const isSpecialAuth = await this.specialAccessService.isEmailAuthorized(user.email);
+        const cleanUserEmail = user.email?.trim().toLowerCase();
+        if (cleanUserEmail && settings["specialAccessRevoked"] !== true) {
+          const isSpecialAuth = await this.specialAccessService.isEmailAuthorized(cleanUserEmail);
           if (isSpecialAuth && settings["specialAccessActive"] !== true) {
             settings["specialAccessActive"] = true;
             await this.prisma.tenant.update({
@@ -96,7 +99,7 @@ export class AuthController {
         // Contagem de membros
         membersCount = await this.prisma.organizationMember.count({
           where: {
-            organizationId: user.tenantId,
+            organizationId: activeTenantId,
             status: { in: ["ACCEPTED", "PENDING"] },
           },
         });
@@ -104,7 +107,7 @@ export class AuthController {
         // Contagem de templates customizados
         customTemplatesCount = await this.prisma.proposalTemplate.count({
           where: {
-            tenantId: user.tenantId,
+            tenantId: activeTenantId,
             deletedAt: null,
             status: { not: "ARCHIVED" },
           },
@@ -112,14 +115,14 @@ export class AuthController {
 
         // Contagem de números de WhatsApp
         whatsappPhonesCount = await this.prisma.tenantWhatsappInboundPhone.count({
-          where: { organizationId: user.tenantId },
+          where: { organizationId: activeTenantId },
         });
 
         // Contagem de propostas
         if (isTrial) {
           // No trial conta o total geral
           proposalsCount = await this.prisma.proposal.count({
-            where: { tenantId: user.tenantId, deletedAt: null },
+            where: { tenantId: activeTenantId, deletedAt: null },
           });
           proposalsLimit = 20;
           isProposalLimitReached = proposalsCount >= 20;
@@ -131,7 +134,7 @@ export class AuthController {
 
           proposalsCount = await this.prisma.proposal.count({
             where: {
-              tenantId: user.tenantId,
+              tenantId: activeTenantId,
               deletedAt: null,
               createdAt: { gte: startOfMonth },
             },
@@ -140,7 +143,7 @@ export class AuthController {
         } else {
           // Pro / Plus ilimitado
           proposalsCount = await this.prisma.proposal.count({
-            where: { tenantId: user.tenantId, deletedAt: null },
+            where: { tenantId: activeTenantId, deletedAt: null },
           });
           isProposalLimitReached = false;
         }
@@ -151,7 +154,7 @@ export class AuthController {
       ...profile,
       role: user.role,
       organizations,
-      currentOrganizationId: user.tenantId,
+      currentOrganizationId: activeTenantId,
       isTrial,
       trialDaysLeft,
       trialExpired,

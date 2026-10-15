@@ -63,8 +63,18 @@ export function Sidebar(): JSX.Element {
     globalRole === "OWNER" ||
     globalRole === "ADMIN";
 
+  const orgSettings =
+    (currentOrganization?.settings as Record<string, unknown> | null | undefined) ?? {};
+  const isSpecialAccess =
+    orgSettings["specialAccessActive"] === true ||
+    (user?.planTier === "PLUS" && !user?.isTrial) ||
+    Boolean(user?.planName?.includes("Especial"));
+
+  const hasActiveSub = currentOrganization?.subscription?.status === "active";
+  const hasActivePlan = hasActiveSub || isSpecialAccess || user?.isTrial === false;
+
   const createdAt = currentOrganization?.createdAt ? new Date(currentOrganization.createdAt) : null;
-  const trialDaysLeft = createdAt ? getTrialDaysLeft(createdAt, 5) : 5;
+  const trialDaysLeft = user?.trialDaysLeft ?? (createdAt ? getTrialDaysLeft(createdAt, 5) : 5);
 
   const [surface, setSurface] = useState<Surface>("all");
   useEffect(() => {
@@ -89,10 +99,9 @@ export function Sidebar(): JSX.Element {
           return true;
         }).map((item) => {
           if (item.label === "Meus Planos") {
-            const hasActiveSub = currentOrganization?.subscription?.status === "active";
             return {
               ...item,
-              badge: hasActiveSub
+              badge: hasActivePlan
                 ? undefined
                 : trialDaysLeft === 0
                   ? "EXPIRADO"
@@ -103,7 +112,7 @@ export function Sidebar(): JSX.Element {
         }),
       }))
       .filter((section) => section.items.length > 0);
-  }, [isOwnerOrAdmin, isPlatform, surface, currentOrganization, trialDaysLeft]);
+  }, [isOwnerOrAdmin, isPlatform, surface, hasActivePlan, trialDaysLeft]);
 
   const activeMenuPath = useMemo(() => {
     const currentPath = (pathname ?? "").replace(/\/$/, "");
@@ -125,8 +134,9 @@ export function Sidebar(): JSX.Element {
   };
 
   const isTrialLimitReached = Boolean(
-    (user?.isTrial && (user?.trialExpired || user?.isTrialProposalLimitReached)) ||
-    (!user?.isTrial && user?.isProposalLimitReached)
+    !isSpecialAccess &&
+    ((user?.isTrial && (user?.trialExpired || user?.isTrialProposalLimitReached)) ||
+      (!user?.isTrial && user?.isProposalLimitReached))
   );
   const closeOnMobile = isMobile ? () => setMobileOpen(false) : undefined;
 

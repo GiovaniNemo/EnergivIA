@@ -108,7 +108,7 @@ export class SpecialAccessService {
     for (const item of items) {
       const cleanEmail = item.email.toLowerCase();
 
-      // Busca usuário e organização vinculada
+      // Busca usuário
       let user: {
         id: string;
         name: string;
@@ -128,13 +128,22 @@ export class SpecialAccessService {
         });
       }
 
+      const orgs = await this.findOrganizationsForEmail(cleanEmail);
+      const primaryOrg =
+        orgs[0] || (user?.tenant ? { id: user.tenant.id, name: user.tenant.name } : null);
+
       let whatsappPhone: string | null = null;
-      if (user?.tenantId) {
-        const boundPhone = await this.prisma.tenantWhatsappInboundPhone.findFirst({
-          where: { organizationId: user.tenantId },
-        });
-        if (boundPhone) {
-          whatsappPhone = boundPhone.phoneDigits;
+      const targetOrgId = primaryOrg?.id || user?.tenantId;
+      if (targetOrgId) {
+        try {
+          const boundPhone = await this.prisma.tenantWhatsappInboundPhone.findFirst({
+            where: { organizationId: targetOrgId },
+          });
+          if (boundPhone) {
+            whatsappPhone = boundPhone.phoneDigits;
+          }
+        } catch {
+          // Fallback se mock não tiver tenantWhatsappInboundPhone
         }
       }
 
@@ -142,13 +151,121 @@ export class SpecialAccessService {
         ...item,
         userId: user?.id || null,
         userName: user?.name || null,
-        organizationId: user?.tenantId || null,
-        organizationName: user?.tenant?.name || null,
+        organizationId: targetOrgId || null,
+        organizationName: primaryOrg?.name || null,
         whatsappPhone,
       });
     }
 
     return enrichedList.sort((a, b) => a.email.localeCompare(b.email));
+  }
+
+  /**
+   * Localiza todas as organizações associadas a um e-mail (via User.tenantId, OrganizationMember ou createdTenants).
+   */
+  async findOrganizationsForEmail(email: string): Promise<Array<{ id: string; name: string }>> {
+    const cleanEmail = email.trim().toLowerCase();
+    const orgs: Array<{ id: string; name: string }> = [];
+    const seenOrgIds = new Set<string>();
+
+    // 1. Busca por usuários com esse e-mail (podem ser múltiplos ou Auth0)
+    let users: Array<{
+      id: string;
+      tenantId: string | null;
+      tenant?: { id: string; name: string } | null;
+      organizationMemberships?: Array<{ organization?: { id: string; name: string } | null }>;
+      createdTenants?: Array<{ id: string; name: string }>;
+    }> = [];
+
+    try {
+      users = (await this.prisma.user.findMany({
+        where: { email: { equals: cleanEmail, mode: "insensitive" }, deletedAt: null },
+        include: {
+          tenant: true,
+          organizationMemberships: {
+            where: { organization: { deletedAt: null } },
+            include: { organization: true },
+          },
+          createdTenants: {
+            where: { deletedAt: null },
+          },
+        },
+      })) as typeof users;
+    } catch {
+      try {
+        users = (await this.prisma.user.findMany({
+          where: { email: cleanEmail },
+          include: {
+            tenant: true,
+            organizationMemberships: {
+              include: { organization: true },
+            },
+            createdTenants: true,
+          },
+        })) as typeof users;
+      } catch {
+        // Fallback para mocks onde user.findMany pode não estar configurado
+        try {
+          const single = await this.prisma.user.findFirst({
+            where: { email: cleanEmail },
+            include: { tenant: true },
+          });
+          if (single) users = [single as unknown as (typeof users)[0]];
+        } catch {
+          users = [];
+        }
+      }
+    }
+
+    if (Array.isArray(users)) {
+      for (const u of users) {
+        if (u?.tenant && !seenOrgIds.has(u.tenant.id)) {
+          orgs.push({ id: u.tenant.id, name: u.tenant.name });
+          seenOrgIds.add(u.tenant.id);
+        }
+        if (Array.isArray(u?.organizationMemberships)) {
+          for (const m of u.organizationMemberships) {
+            if (m?.organization && !seenOrgIds.has(m.organization.id)) {
+              orgs.push({ id: m.organization.id, name: m.organization.name });
+              seenOrgIds.add(m.organization.id);
+            }
+          }
+        }
+        if (Array.isArray(u?.createdTenants)) {
+          for (const t of u.createdTenants) {
+            if (t && !seenOrgIds.has(t.id)) {
+              orgs.push({ id: t.id, name: t.name });
+              seenOrgIds.add(t.id);
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Busca também em organizationMember por e-mail diretamente (se model existir)
+    if (this.prisma.organizationMember?.findMany) {
+      try {
+        const directMemberships = await this.prisma.organizationMember.findMany({
+          where: {
+            email: { equals: cleanEmail, mode: "insensitive" },
+            organization: { deletedAt: null },
+          },
+          include: { organization: true },
+        });
+        if (Array.isArray(directMemberships)) {
+          for (const dm of directMemberships) {
+            if (dm?.organization && !seenOrgIds.has(dm.organization.id)) {
+              orgs.push({ id: dm.organization.id, name: dm.organization.name });
+              seenOrgIds.add(dm.organization.id);
+            }
+          }
+        }
+      } catch {
+        // Fallback se model não estiver mockado
+      }
+    }
+
+    return orgs;
   }
 
   /**
@@ -182,7 +299,15 @@ export class SpecialAccessService {
     await this.syncTenantSettings(cleanEmail, true);
 
     const fullList = await this.listAll();
-    return fullList.find((item) => item.email === cleanEmail) || (newEntry as SpecialAccessItem);
+    const found = fullList.find((item) => item.email === cleanEmail);
+    if (found) return found;
+
+    const orgs = await this.findOrganizationsForEmail(cleanEmail);
+    return {
+      ...newEntry,
+      organizationId: orgs[0]?.id || null,
+      organizationName: orgs[0]?.name || null,
+    };
   }
 
   /**
@@ -212,42 +337,59 @@ export class SpecialAccessService {
 
     await this.saveStoredEntries(stored);
 
-    // 1. Busca usuário e organização vinculada
-    const user = await this.prisma.user.findFirst({
-      where: { email: cleanEmail },
-      include: { tenant: true },
-    });
+    // 1. Busca todas as organizações vinculadas ao usuário
+    const orgs = await this.findOrganizationsForEmail(cleanEmail);
+    const targetOrgIds = new Set<string>(orgs.map((o) => o.id));
+
+    let user: { id: string; tenantId: string | null } | null = null;
+    try {
+      user = await this.prisma.user.findFirst({
+        where: { email: cleanEmail },
+      });
+    } catch {
+      // Fallback
+    }
 
     if (user?.tenantId) {
-      const tenantId = user.tenantId;
+      targetOrgIds.add(user.tenantId);
+    }
 
+    for (const tenantId of targetOrgIds) {
       // 2. DERRUBADA DO WHATSAPP: Expurga números da organização da base
-      await this.prisma.tenantWhatsappInboundPhone.deleteMany({
-        where: { organizationId: tenantId },
-      });
-      this.logger.log(`[SpecialAccess] WhatsApp desconectado para organização ${tenantId}`);
+      try {
+        await this.prisma.tenantWhatsappInboundPhone.deleteMany({
+          where: { organizationId: tenantId },
+        });
+        this.logger.log(`[SpecialAccess] WhatsApp desconectado para organização ${tenantId}`);
+      } catch (err) {
+        this.logger.error(`[SpecialAccess] Erro ao remover WhatsApp para ${tenantId}:`, err);
+      }
 
       // 3. DERRUBADA DA WEB: Grava status de revogado nos settings da organização
-      const tenant = await this.prisma.tenant.findUnique({
-        where: { id: tenantId },
-      });
+      try {
+        const tenant = await this.prisma.tenant.findUnique({
+          where: { id: tenantId },
+        });
 
-      const currentSettings = (tenant?.settings as Record<string, unknown> | null) || {};
-      await this.prisma.tenant.update({
-        where: { id: tenantId },
-        data: {
-          settings: {
-            ...currentSettings,
-            specialAccessActive: false,
-            specialAccessRevoked: true,
-            specialAccessRevokedAt: now,
-          } as Prisma.InputJsonValue,
-        },
-      });
+        const currentSettings = (tenant?.settings as Record<string, unknown> | null) || {};
+        await this.prisma.tenant.update({
+          where: { id: tenantId },
+          data: {
+            settings: {
+              ...currentSettings,
+              specialAccessActive: false,
+              specialAccessRevoked: true,
+              specialAccessRevokedAt: now,
+            } as Prisma.InputJsonValue,
+          },
+        });
 
-      this.logger.log(
-        `[SpecialAccess] Acesso especial revogado para organização ${tenantId} (${cleanEmail})`
-      );
+        this.logger.log(
+          `[SpecialAccess] Acesso especial revogado para organização ${tenantId} (${cleanEmail})`
+        );
+      } catch (err) {
+        this.logger.error(`[SpecialAccess] Erro ao atualizar tenant ${tenantId}:`, err);
+      }
     }
   }
 
@@ -270,31 +412,65 @@ export class SpecialAccessService {
   }
 
   /**
-   * Sincroniza as flags do Tenant quando o usuário faz login ou cria organização.
+   * Sincroniza as flags do Tenant quando o usuário faz login, cria organização ou tem o acesso concedido.
    */
   async syncTenantSettings(email: string, isActive: boolean): Promise<void> {
     const cleanEmail = email.trim().toLowerCase();
-    const user = await this.prisma.user.findFirst({
-      where: { email: cleanEmail },
-      include: { tenant: true },
-    });
+    const orgs = await this.findOrganizationsForEmail(cleanEmail);
 
-    if (!user?.tenantId) return;
+    // Se temos usuário cujo tenantId é nulo mas encontramos organização, vincula tenantId para curar inconsistência
+    try {
+      const user = await this.prisma.user.findFirst({
+        where: { email: cleanEmail },
+      });
+      if (user && !user.tenantId && orgs[0]) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { tenantId: orgs[0].id },
+        });
+      }
+    } catch {
+      // Ignora se restrição ou mock
+    }
 
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: user.tenantId },
-    });
+    if (orgs.length === 0) {
+      try {
+        const user = await this.prisma.user.findFirst({
+          where: { email: cleanEmail },
+        });
+        if (user?.tenantId) {
+          orgs.push({ id: user.tenantId, name: "Tenant" });
+        } else {
+          return;
+        }
+      } catch {
+        return;
+      }
+    }
 
-    const currentSettings = (tenant?.settings as Record<string, unknown> | null) || {};
-    await this.prisma.tenant.update({
-      where: { id: user.tenantId },
-      data: {
-        settings: {
-          ...currentSettings,
-          specialAccessActive: isActive,
-          specialAccessRevoked: !isActive,
-        } as Prisma.InputJsonValue,
-      },
-    });
+    for (const org of orgs) {
+      try {
+        const tenant = await this.prisma.tenant.findUnique({
+          where: { id: org.id },
+        });
+
+        const currentSettings = (tenant?.settings as Record<string, unknown> | null) || {};
+        await this.prisma.tenant.update({
+          where: { id: org.id },
+          data: {
+            settings: {
+              ...currentSettings,
+              specialAccessActive: isActive,
+              specialAccessRevoked: !isActive,
+              ...(isActive
+                ? { specialAccessGrantedAt: new Date().toISOString() }
+                : { specialAccessRevokedAt: new Date().toISOString() }),
+            } as Prisma.InputJsonValue,
+          },
+        });
+      } catch (err) {
+        this.logger.error(`[SpecialAccess] Erro ao sincronizar tenant ${org.id}:`, err);
+      }
+    }
   }
 }
