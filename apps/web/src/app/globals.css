@@ -1540,6 +1540,78 @@ html.hide-scrollbar,
   box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.25), 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
+/* ==========================================================================
+   LANDING PAGE THEME PRESERVATION (STRICT OBSIDIAN DARK GLASSMORPHISM)
+   The landing page is designed exclusively as an obsidian / deep-space dark UI.
+   These scoped rules guarantee that all cards, panels, and pills retain their
+   rich dark glassmorphism, emerald glows, and contrast under any system theme.
+   ========================================================================== */
+.landing-page {
+  color-scheme: dark !important;
+}
+
+.landing-page .glass-card,
+.landing-page.dark .glass-card,
+.dark .landing-page .glass-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.012) 100%), rgba(13, 19, 29, 0.72) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow:
+    0 12px 32px -10px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09) !important;
+  transform: translateZ(0);
+  isolation: isolate;
+}
+
+.landing-page .glass-card-hover:hover,
+.landing-page.dark .glass-card-hover:hover,
+.dark .landing-page .glass-card-hover:hover {
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  border-top-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow:
+    0 16px 36px -8px rgba(0, 0, 0, 0.65),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 25px -4px rgba(16, 185, 129, 0.22) !important;
+  transform: translateY(-2px) translateZ(0);
+}
+
+.landing-page .glass-panel,
+.landing-page.dark .glass-panel,
+.dark .landing-page .glass-panel {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.015) 100%), rgba(11, 17, 26, 0.78) !important;
+  backdrop-filter: blur(18px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(140%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow:
+    0 24px 60px -15px rgba(0, 0, 0, 0.75),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.12) !important;
+  transform: translateZ(0);
+  isolation: isolate;
+}
+
+.landing-page .glass-pill,
+.landing-page.dark .glass-pill,
+.dark .landing-page .glass-pill {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
+  backdrop-filter: blur(10px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(130%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15) !important;
+  transform: translateZ(0);
+}
+
+.landing-page .glass-pill:hover,
+.landing-page.dark .glass-pill:hover,
+.dark .landing-page .glass-pill:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 100%) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.25), 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+}
+
 .glass-surface {
   background-color: var(--color-card);
   backdrop-filter: blur(14px) saturate(135%);
@@ -1551,17 +1623,23 @@ html.hide-scrollbar,
   .glass-card {
     background: rgba(255, 255, 255, 0.95);
   }
-  .dark .glass-card {
+  .dark .glass-card,
+  .landing-page .glass-card,
+  .dark .landing-page .glass-card {
     background: rgba(13, 19, 29, 0.95) !important;
   }
   .glass-panel {
     background: rgba(255, 255, 255, 0.96);
   }
-  .dark .glass-panel {
+  .dark .glass-panel,
+  .landing-page .glass-panel,
+  .dark .landing-page .glass-panel {
     background: rgba(11, 17, 26, 0.96) !important;
   }
-  .glass-pill {
-    background: rgba(20, 26, 38, 0.9);
+  .glass-pill,
+  .landing-page .glass-pill,
+  .dark .landing-page .glass-pill {
+    background: rgba(20, 26, 38, 0.9) !important;
   }
   .glass-nav-topbar {
     background: rgba(255, 255, 255, 0.96);

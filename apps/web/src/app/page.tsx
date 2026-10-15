@@ -58,7 +58,10 @@ export const metadata: Metadata = {
 
 export default function HomePage(): JSX.Element {
   return (
-    <div className="landing-page min-h-screen flex flex-col bg-[#02040a] text-white antialiased font-plus-jakarta selection:bg-[#10b981]/30 selection:text-white">
+    <div
+      className="landing-page dark min-h-screen flex flex-col bg-[#02040a] text-white antialiased font-plus-jakarta selection:bg-[#10b981]/30 selection:text-white"
+      style={{ colorScheme: "dark" }}
+    >
       {/* ------------------------------------------------------------- */}
       {/* HERO SECTION                                                  */}
       {/* ------------------------------------------------------------- */}
