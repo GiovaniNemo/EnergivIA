@@ -200,4 +200,53 @@ export class FeedbacksService {
       })),
     };
   }
+
+  async getUserFeedbackStatus(user?: JwtPayload, tenantId?: string) {
+    if (!user && !tenantId) {
+      return { hasSubmitted: false };
+    }
+
+    const conditions: Array<Record<string, any>> = [];
+
+    if (user?.sub) {
+      conditions.push({ userId: user.sub });
+      try {
+        const dbUser = await this.prisma.user.findFirst({
+          where: {
+            OR: [{ auth0Sub: user.sub }, { id: user.sub }, { email: user.email }],
+            deletedAt: null,
+          },
+          select: { id: true, email: true, tenantId: true },
+        });
+
+        if (dbUser) {
+          conditions.push({ userId: dbUser.id });
+          if (dbUser.email) conditions.push({ userEmail: dbUser.email });
+          if (dbUser.tenantId) conditions.push({ tenantId: dbUser.tenantId });
+        }
+      } catch (err) {
+        this.logger.warn(`Erro ao consultar usuário para status de feedback: ${err}`);
+      }
+    }
+
+    if (user?.email) {
+      conditions.push({ userEmail: user.email });
+    }
+
+    if (tenantId) {
+      conditions.push({ tenantId });
+    }
+
+    if (conditions.length === 0) {
+      return { hasSubmitted: false };
+    }
+
+    const count = await this.prisma.platformFeedback.count({
+      where: {
+        OR: conditions,
+      },
+    });
+
+    return { hasSubmitted: count > 0 };
+  }
 }

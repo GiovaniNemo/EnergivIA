@@ -10,11 +10,20 @@ import { useOrganization } from "../providers/organization-provider";
 export function EnergiviaFloatingHub() {
   const pathname = usePathname();
   const normalizedPath = (pathname ?? "").replace(/\/$/, "") || "/";
-  const { currentOrganization } = useOrganization();
+  const { user, currentOrganization } = useOrganization();
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return (
+      localStorage.getItem("energivia_feedback_submitted") === "true" ||
+      Boolean(
+        user?.id && localStorage.getItem(`energivia_feedback_submitted_${user.id}`) === "true"
+      )
+    );
+  });
   const hubRef = useRef<HTMLDivElement | null>(null);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -24,6 +33,20 @@ export function EnergiviaFloatingHub() {
       if (closeTimeoutRef.current) {
         clearTimeout(closeTimeoutRef.current);
       }
+    };
+  }, []);
+
+  // Monitora se o feedback foi respondido para ocultar o botão satélite
+  useEffect(() => {
+    const handleFeedbackSubmitted = (e: Event) => {
+      const customEvent = e as CustomEvent<{ submitted?: boolean }>;
+      if (customEvent.detail?.submitted) {
+        setFeedbackSubmitted(true);
+      }
+    };
+    window.addEventListener("feedback-submitted-changed", handleFeedbackSubmitted);
+    return () => {
+      window.removeEventListener("feedback-submitted-changed", handleFeedbackSubmitted);
     };
   }, []);
 
@@ -160,26 +183,28 @@ export function EnergiviaFloatingHub() {
             transition={{ duration: 0.22, ease: "easeOut" }}
             className="flex flex-col items-end gap-3 mb-3"
           >
-            {/* Bolinha 2: Avaliar EnergivIA */}
-            <motion.div
-              initial={{ opacity: 0, x: 20, scale: 0.6 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 20, scale: 0.6 }}
-              transition={{ delay: 0.05, duration: 0.2 }}
-              className="flex items-center gap-2.5 group"
-            >
-              <span className="px-3 py-1.5 rounded-full bg-[#02040a]/95 text-amber-300 text-xs font-bold shadow-xl border border-amber-500/30 backdrop-blur-md opacity-90 group-hover:opacity-100 transition whitespace-nowrap">
-                Avaliar EnergivIA
-              </span>
-              <button
-                type="button"
-                onClick={handleOpenFeedback}
-                aria-label="Avaliar EnergivIA"
-                className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:to-orange-400 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/35 hover:shadow-amber-500/50 hover:scale-110 active:scale-95 transition-all cursor-pointer border border-amber-200/40"
+            {/* Bolinha 2: Avaliar EnergivIA (ocultada automaticamente caso já tenha sido respondida) */}
+            {!feedbackSubmitted && (
+              <motion.div
+                initial={{ opacity: 0, x: 20, scale: 0.6 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 20, scale: 0.6 }}
+                transition={{ delay: 0.05, duration: 0.2 }}
+                className="flex items-center gap-2.5 group"
               >
-                <Star className="w-6 h-6 fill-slate-950 text-slate-950" />
-              </button>
-            </motion.div>
+                <span className="px-3 py-1.5 rounded-full bg-[#02040a]/95 text-amber-300 text-xs font-bold shadow-xl border border-amber-500/30 backdrop-blur-md opacity-90 group-hover:opacity-100 transition whitespace-nowrap">
+                  Avaliar EnergivIA
+                </span>
+                <button
+                  type="button"
+                  onClick={handleOpenFeedback}
+                  aria-label="Avaliar EnergivIA"
+                  className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:to-orange-400 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/35 hover:shadow-amber-500/50 hover:scale-110 active:scale-95 transition-all cursor-pointer border border-amber-200/40"
+                >
+                  <Star className="w-6 h-6 fill-slate-950 text-slate-950" />
+                </button>
+              </motion.div>
+            )}
 
             {/* Bolinha 1: Assistente Chatbot IA */}
             <motion.div

@@ -33,4 +33,17 @@ export class FeedbacksController {
   getMetricsSummary() {
     return this.feedbacksService.getMetricsSummary();
   }
+
+  @Get("status")
+  @Public()
+  @SkipTrialLock()
+  @UseGuards(UnifiedAuthGuard)
+  getUserFeedbackStatus(
+    @CurrentUser() user?: JwtPayload,
+    @OptionalTenantId() tenantId?: string,
+    @Headers("x-organization-id") headerOrgId?: string
+  ) {
+    const effectiveTenantId = tenantId || headerOrgId;
+    return this.feedbacksService.getUserFeedbackStatus(user, effectiveTenantId);
+  }
 }
