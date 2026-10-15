@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 export default function SimulacaoEnergiaSolarPage(): JSX.Element {
   return (
     <SeoIntentPage
+      pathname="/simulacao-energia-solar"
       eyebrow="Simulação de energia solar"
       title="Simulação de energia solar com velocidade comercial e consistência técnica"
       description="A simulação é o centro da proposta. Com a EnergivIA, integradores conseguem transformar dados da conta em cenários claros para o cliente sem travar a operação."

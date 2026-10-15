@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 export default function SoftwareIntegradorSolarPage(): JSX.Element {
   return (
     <SeoIntentPage
+      pathname="/software-integrador-solar"
       eyebrow="Software para integrador solar"
       title="O que um software para integrador solar precisa entregar para aumentar conversão"
       description="Mais do que gerar PDF, um bom software precisa acelerar atendimento, organizar processo e sustentar escala comercial. A EnergivIA foi desenhada para esse cenário."

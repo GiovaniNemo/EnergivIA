@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Sparkles, CheckCircle2, Zap, ChevronDown } from "lucide-react";
 import { LandingSubpageHeader } from "@/components/landing/landing-subpage-header";
 import { LandingFooter } from "@/components/landing/landing-footer";
+import { buildFaqPageSchema, buildWebPageSchema, JsonLd } from "@/lib/seo/structured-data";
 
 type SeoFaq = {
   question: string;
@@ -9,6 +10,7 @@ type SeoFaq = {
 };
 
 type SeoIntentPageProps = {
+  pathname?: string;
   eyebrow: string;
   title: string;
   description: string;
@@ -29,6 +31,7 @@ type SeoIntentPageProps = {
 const appSignupUrl = "/cadastro";
 
 export function SeoIntentPage({
+  pathname,
   eyebrow,
   title,
   description,
@@ -48,11 +51,37 @@ export function SeoIntentPage({
   const sectionTitleClass =
     "text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-400";
 
+  const baseUrl = (process.env["NEXT_PUBLIC_APP_URL"] || "https://energivia.com.br").replace(
+    /\/$/,
+    ""
+  );
+
+  const schemas: Record<string, unknown>[] = [buildFaqPageSchema(faqItems)];
+  if (pathname) {
+    schemas.push(
+      buildWebPageSchema({
+        url: pathname,
+        title,
+        description,
+        baseUrl,
+      })
+    );
+  }
+
+  const structuredData =
+    schemas.length === 1
+      ? schemas[0]!
+      : {
+          "@context": "https://schema.org",
+          "@graph": schemas,
+        };
+
   return (
     <div
       className="landing-page dark min-h-screen flex flex-col bg-[#02040a] text-white antialiased font-plus-jakarta selection:bg-[#10b981]/30 selection:text-white"
       style={{ colorScheme: "dark" }}
     >
+      <JsonLd data={structuredData} />
       {/* Ambient background lighting */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
         <div className="absolute -top-[200px] left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.12),transparent_70%)] blur-3xl" />

@@ -7,6 +7,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { RouteProgress } from "@/components/layout/route-progress";
 import { CookieConsentBanner } from "@/components/ui/cookie-consent-banner";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
+import { buildRootGraphSchema, JsonLd } from "@/lib/seo/structured-data";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -97,6 +98,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>): JSX.Element {
+  const baseUrl = (process.env["NEXT_PUBLIC_APP_URL"] || "https://energivia.com.br").replace(
+    /\/$/,
+    ""
+  );
+  const rootStructuredData = buildRootGraphSchema(baseUrl);
+
   const themeInitScript = `
     (function () {
       try {
@@ -122,6 +129,7 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning className="no-scrollbar">
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <JsonLd data={rootStructuredData} />
       </head>
       <body
         className={`${inter.variable} ${roboto.variable} ${openSans.variable} ${montserrat.variable} ${plusJakarta.variable} font-sans antialiased min-h-screen flex flex-col bg-[var(--color-background)] text-[var(--color-foreground)] no-scrollbar`}

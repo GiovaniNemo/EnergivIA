@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 export default function CrmEnergiaSolarPage(): JSX.Element {
   return (
     <SeoIntentPage
+      pathname="/crm-energia-solar"
       eyebrow="CRM energia solar"
       title="CRM para energia solar: como organizar funil e responder mais rápido"
       description="Sem gestão de funil, oportunidades se perdem entre conversas, planilhas e tarefas manuais. A EnergivIA ajuda a conectar CRM, proposta e operação no mesmo fluxo."

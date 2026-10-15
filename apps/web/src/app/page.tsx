@@ -17,6 +17,7 @@ import { ConvergingPanelsSection } from "@/components/landing/converging-panels-
 import { BeamqHeroSection } from "@/components/landing/beamq-hero-section";
 import { ImpactResultsSection } from "@/components/landing/impact-results-section";
 import { LandingFooter } from "@/components/landing/landing-footer";
+import { buildFaqPageSchema, JsonLd } from "@/lib/seo/structured-data";
 
 const appSignupUrl = "/cadastro";
 
@@ -56,11 +57,14 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage(): JSX.Element {
+  const faqSchema = buildFaqPageSchema(faqItems);
+
   return (
     <div
       className="landing-page dark min-h-screen flex flex-col bg-[#02040a] text-white antialiased font-plus-jakarta selection:bg-[#10b981]/30 selection:text-white"
       style={{ colorScheme: "dark" }}
     >
+      <JsonLd data={faqSchema} />
       {/* ------------------------------------------------------------- */}
       {/* HERO SECTION                                                  */}
       {/* ------------------------------------------------------------- */}

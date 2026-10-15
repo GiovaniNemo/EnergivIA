@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 export default function PropostaEnergiaSolarPage(): JSX.Element {
   return (
     <SeoIntentPage
+      pathname="/proposta-energia-solar"
       eyebrow="Proposta de energia solar"
       title="Como gerar proposta de energia solar mais rápido sem perder qualidade técnica"
       description="A EnergivIA ajuda integradores a transformar atendimento em proposta enviada no mesmo contato. O fluxo reduz retrabalho, padroniza cálculo e melhora o tempo de resposta comercial."
