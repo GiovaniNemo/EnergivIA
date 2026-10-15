@@ -21,6 +21,7 @@ import {
   Info,
   Boxes,
   TrendingUp,
+  Sparkles,
 } from "lucide-react";
 
 import {
