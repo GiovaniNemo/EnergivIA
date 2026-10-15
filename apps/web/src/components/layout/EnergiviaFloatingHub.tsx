@@ -168,7 +168,7 @@ export function EnergiviaFloatingHub() {
               transition={{ delay: 0.05, duration: 0.2 }}
               className="flex items-center gap-2.5 group"
             >
-              <span className="px-3 py-1.5 rounded-full bg-neutral-900/95 text-amber-300 text-xs font-bold shadow-lg border border-amber-500/30 opacity-90 group-hover:opacity-100 transition whitespace-nowrap">
+              <span className="px-3 py-1.5 rounded-full bg-[#02040a]/95 text-amber-300 text-xs font-bold shadow-xl border border-amber-500/30 backdrop-blur-md opacity-90 group-hover:opacity-100 transition whitespace-nowrap">
                 Avaliar EnergivIA
               </span>
               <button
@@ -189,7 +189,7 @@ export function EnergiviaFloatingHub() {
               transition={{ delay: 0.0, duration: 0.2 }}
               className="flex items-center gap-2.5 group"
             >
-              <span className="px-3 py-1.5 rounded-full bg-neutral-900/95 text-emerald-300 text-xs font-bold shadow-lg border border-emerald-500/30 opacity-90 group-hover:opacity-100 transition whitespace-nowrap">
+              <span className="px-3 py-1.5 rounded-full bg-[#02040a]/95 text-emerald-300 text-xs font-bold shadow-xl border border-emerald-500/30 backdrop-blur-md opacity-90 group-hover:opacity-100 transition whitespace-nowrap">
                 Assistente EnergivIA
               </span>
               <button
@@ -212,12 +212,12 @@ export function EnergiviaFloatingHub() {
         aria-label="Menu Inteligente EnergivIA"
         className={`group relative w-[60px] h-[60px] rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
           isExpanded
-            ? "bg-neutral-900 border border-emerald-500/50 shadow-[0_8px_30px_rgba(0,0,0,0.6)] scale-105"
-            : "bg-neutral-900/90 hover:bg-neutral-850/95 border border-white/10 hover:border-emerald-500/40 shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_35px_rgba(16,185,129,0.25)] hover:scale-105 active:scale-95 backdrop-blur-md"
+            ? "bg-[#02040a] border border-emerald-500/60 shadow-[0_12px_36px_rgba(0,0,0,0.8),0_0_24px_rgba(16,185,129,0.25)] scale-105"
+            : "bg-[#02040a]/90 hover:bg-[#030712] border border-emerald-500/30 hover:border-emerald-400/60 shadow-[0_12px_36px_rgba(0,0,0,0.7),0_0_18px_rgba(16,185,129,0.15)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.85),0_0_28px_rgba(16,185,129,0.30)] hover:scale-105 active:scale-95 backdrop-blur-xl"
         }`}
       >
         {/* Halo estático suave sem exagero de neon */}
-        <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.15)_0%,transparent_70%)] pointer-events-none" />
+        <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.20)_0%,rgba(14,165,233,0.08)_50%,transparent_75%)] pointer-events-none" />
 
         {isExpanded ? (
           /* Quando expandido, exibe o ícone de fechar */
@@ -226,7 +226,7 @@ export function EnergiviaFloatingHub() {
             animate={{ rotate: 0, opacity: 1 }}
             exit={{ rotate: 90, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="relative z-10 flex items-center justify-center text-neutral-300 group-hover:text-white"
+            className="relative z-10 flex items-center justify-center text-emerald-300 group-hover:text-white"
           >
             <X className="w-6 h-6" />
           </motion.div>
@@ -238,7 +238,7 @@ export function EnergiviaFloatingHub() {
               alt="EnergivIA"
               width={42}
               height={42}
-              className="w-9 h-9 object-contain shrink-0 select-none drop-shadow-sm transition-transform duration-300 group-hover:scale-110"
+              className="w-9 h-9 object-contain shrink-0 select-none drop-shadow-[0_2px_8px_rgba(16,185,129,0.35)] transition-transform duration-300 group-hover:scale-110"
               priority
               unoptimized
             />

@@ -630,9 +630,9 @@ export function AIAssistantWidget() {
     <div className="fixed flex flex-col items-end bottom-6 right-6 z-40">
       {/* Chat Window */}
       {isOpen && (
-        <div className="flex flex-col bg-gray-950 border border-gray-800 shadow-[0_0_40px_rgba(16,185,129,0.15)] rounded-2xl w-[390px] sm:w-[420px] h-[640px] max-h-[85vh] max-w-[calc(100vw-32px)] mb-4 overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
+        <div className="flex flex-col bg-[#02040a]/95 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(16,185,129,0.15)] backdrop-blur-xl rounded-2xl w-[390px] sm:w-[420px] h-[640px] max-h-[85vh] max-w-[calc(100vw-32px)] mb-4 overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
           {/* Header */}
-          <div className="bg-gray-900 border-b border-gray-800 p-3.5 flex items-center justify-between shrink-0">
+          <div className="bg-[#030712]/90 border-b border-white/10 p-3.5 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20">
                 <Bot className="w-5 h-5 text-emerald-400" />
@@ -896,7 +896,7 @@ export function AIAssistantWidget() {
                 )}
                 <form
                   onSubmit={handleSubmit}
-                  className="flex items-end gap-2 bg-gray-950 border border-gray-800 rounded-xl p-2 focus-within:border-emerald-500/50 transition-colors shadow-inner"
+                  className="flex items-end gap-2 bg-[#030712] border border-white/10 rounded-xl p-2 focus-within:border-emerald-500/50 transition-colors shadow-inner"
                 >
                   <input
                     type="file"

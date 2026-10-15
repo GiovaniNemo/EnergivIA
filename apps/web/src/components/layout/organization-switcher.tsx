@@ -27,8 +27,8 @@ export function OrganizationSwitcher() {
       <button
         type="button"
         className={cn(
-          "flex h-9 w-auto max-w-[130px] xs:max-w-[160px] sm:max-w-[200px] md:max-w-[240px] lg:max-w-[280px] min-w-0 shrink items-center gap-1.5 sm:gap-2 rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] px-2 sm:px-2.5 text-xs sm:text-sm font-medium text-[var(--color-foreground)] shadow-xs transition-colors duration-150",
-          "hover:bg-black/[0.06] dark:hover:bg-white/[0.10] hover:border-black/15 dark:hover:border-white/30 hover:shadow-sm"
+          "flex h-9 w-auto max-w-[130px] xs:max-w-[160px] sm:max-w-[200px] md:max-w-[240px] lg:max-w-[280px] min-w-0 shrink items-center gap-1.5 sm:gap-2 rounded-xl border border-black/[0.08] dark:border-white/10 bg-black/[0.03] dark:bg-[#02040a]/60 px-2 sm:px-2.5 text-xs sm:text-sm font-medium text-[var(--color-foreground)] shadow-xs transition-all duration-150",
+          "hover:bg-black/[0.06] dark:hover:bg-white/[0.06] hover:border-black/15 dark:hover:border-emerald-500/30 hover:shadow-sm"
         )}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
@@ -41,7 +41,7 @@ export function OrganizationSwitcher() {
       </button>
       {open && (
         <div
-          className="absolute left-0 top-full z-50 mt-3.5 min-w-[220px] overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/15 bg-white/95 dark:bg-[#161d22]/95 py-1 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150"
+          className="absolute left-0 top-full z-50 mt-3.5 min-w-[220px] overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#02040a]/95 py-1 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
           role="listbox"
         >
           {organizations.map((org) => (
@@ -53,7 +53,7 @@ export function OrganizationSwitcher() {
                 "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors",
                 currentOrganization?.id === org.id
                   ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold"
-                  : "text-[var(--color-foreground)] hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
+                  : "text-[var(--color-foreground)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
               )}
               onClick={() => {
                 setCurrentOrganizationId(org.id);
@@ -67,7 +67,7 @@ export function OrganizationSwitcher() {
           <div className="my-1 border-t border-black/[0.06] dark:border-white/10" />
           <Link
             href="/configuracoes/organizacao?action=new"
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-primary)] font-medium hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-primary)] font-medium hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
             onClick={() => setOpen(false)}
           >
             <Plus className="h-4 w-4" />
@@ -75,7 +75,7 @@ export function OrganizationSwitcher() {
           </Link>
           <Link
             href="/configuracoes/organizacao"
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-muted-foreground)] hover:bg-black/[0.04] dark:hover:bg-white/[0.08] hover:text-[var(--color-foreground)]"
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-muted-foreground)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:text-[var(--color-foreground)]"
             onClick={() => setOpen(false)}
           >
             <Building2 className="h-4 w-4" />

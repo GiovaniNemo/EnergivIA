@@ -84,7 +84,7 @@ function UserMenu(): JSX.Element {
         )}
       </button>
       {open ? (
-        <div className="absolute right-0 top-full mt-3.5 z-[70] w-56 overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#0c121a]/95 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 top-full mt-3.5 z-[70] w-56 overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#02040a]/95 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
           <div className="border-b border-black/[0.06] dark:border-white/10 px-3.5 py-2.5">
             <p className="truncate text-sm font-semibold text-[var(--color-foreground)]">
               {displayName ?? "Usuário"}
@@ -95,7 +95,7 @@ function UserMenu(): JSX.Element {
           </div>
           <Link
             href="/perfil"
-            className="flex items-center gap-2 px-3.5 py-2.5 text-sm text-[var(--color-foreground)] transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
+            className="flex items-center gap-2 px-3.5 py-2.5 text-sm text-[var(--color-foreground)] transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:text-emerald-400"
             onClick={() => setOpen(false)}
           >
             <UserRound className="h-4 w-4 text-[var(--color-muted-foreground)]" />
@@ -214,12 +214,12 @@ export function Topbar() {
         <button
           type="button"
           onClick={() => setMobileSearchOpen(true)}
-          className="hidden sm:inline-flex xl:hidden items-center gap-1.5 h-9 px-2.5 rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] transition-colors shrink-0"
+          className="hidden sm:inline-flex xl:hidden items-center gap-1.5 h-9 px-2.5 rounded-xl border border-black/[0.08] dark:border-white/10 bg-black/[0.03] dark:bg-[#02040a]/60 text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.06] dark:hover:border-emerald-500/30 transition-all shrink-0"
           title="Pesquisar (⌘K / Ctrl+K)"
         >
           <Search className="h-3.5 w-3.5 shrink-0" />
           <span className="hidden md:inline">Buscar...</span>
-          <kbd className="hidden lg:inline text-[10px] font-mono border border-black/10 dark:border-white/10 px-1 rounded bg-black/5 dark:bg-white/5">
+          <kbd className="hidden lg:inline text-[10px] font-mono border border-black/10 dark:border-white/10 px-1 rounded bg-black/5 dark:bg-white/[0.04]">
             ⌘K
           </kbd>
         </button>
@@ -235,7 +235,7 @@ export function Topbar() {
         {/* Mobile Search Button (phone only) */}
         <button
           type="button"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] hover:text-[var(--color-foreground)] transition-colors sm:hidden"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/[0.08] dark:border-white/10 bg-black/[0.03] dark:bg-[#02040a]/60 text-[var(--color-muted-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.06] dark:hover:border-emerald-500/30 hover:text-[var(--color-foreground)] transition-all sm:hidden"
           onClick={() => setMobileSearchOpen(true)}
           aria-label="Abrir pesquisa"
         >
@@ -303,7 +303,7 @@ export function Topbar() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 shrink-0 rounded-xl border border-black/[0.08] dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.09] hover:border-black/15 dark:hover:border-white/25 transition-colors duration-150"
+          className="h-9 w-9 shrink-0 rounded-xl border border-black/[0.08] dark:border-white/10 bg-black/[0.03] dark:bg-[#02040a]/60 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.06] hover:border-black/15 dark:hover:border-emerald-500/30 transition-all duration-150"
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
           aria-label="Alternar tema"
         >

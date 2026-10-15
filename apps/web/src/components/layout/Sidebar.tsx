@@ -261,9 +261,9 @@ export function Sidebar(): JSX.Element {
             type="button"
             onClick={togglePinned}
             className={cn(
-              "absolute -right-3 top-5 z-50 flex h-6 w-6 items-center justify-center rounded-full border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#1e262b] text-neutral-600 dark:text-white/70 shadow-lg transition-transform duration-200 hover:scale-110 hover:text-black dark:hover:text-white hover:border-emerald-500/40",
+              "absolute -right-3 top-5 z-50 flex h-6 w-6 items-center justify-center rounded-full border border-black/[0.08] dark:border-white/10 bg-white/95 dark:bg-[#02040a] text-neutral-600 dark:text-neutral-300 shadow-lg transition-transform duration-200 hover:scale-110 hover:text-black dark:hover:text-white hover:border-emerald-500/40",
               isPinned &&
-                "border-emerald-500/40 text-emerald-600 dark:text-emerald-300 bg-emerald-50/95 dark:bg-emerald-950/80 shadow-emerald-500/20"
+                "border-emerald-500/50 text-emerald-600 dark:text-emerald-300 bg-emerald-50/95 dark:bg-[#031d16] shadow-emerald-500/20"
             )}
             title={isPinned ? "Desafixar menu (ativar auto-esconder)" : "Fixar menu aberto"}
             aria-label={isPinned ? "Desafixar menu" : "Fixar menu aberto"}
