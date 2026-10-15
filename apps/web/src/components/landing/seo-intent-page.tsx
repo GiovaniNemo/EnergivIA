@@ -1,5 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
+import { Sparkles, CheckCircle2, Zap, ChevronDown } from "lucide-react";
+import { LandingSubpageHeader } from "@/components/landing/landing-subpage-header";
+import { LandingFooter } from "@/components/landing/landing-footer";
 
 type SeoFaq = {
   question: string;
@@ -24,7 +26,6 @@ type SeoIntentPageProps = {
   ctaDescription: string;
 };
 
-const appLoginUrl = "/login";
 const appSignupUrl = "/cadastro";
 
 export function SeoIntentPage({
@@ -45,141 +46,142 @@ export function SeoIntentPage({
   ctaDescription,
 }: SeoIntentPageProps): JSX.Element {
   const sectionTitleClass =
-    "text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/90";
+    "text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-400";
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#edf5f5_0%,#f8fafc_28%,#f8fafc_100%)] text-slate-900">
-      <div className="relative overflow-hidden border-b border-slate-200/80 bg-[#edf5f5]">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[280px] w-[640px] -translate-x-1/2 rounded-full bg-teal-400/18 blur-[110px]" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_16%,rgba(20,184,166,0.1),transparent_52%)]" />
-        <header className="relative z-10">
-          <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
-            <Link href="/" className="flex items-center gap-2">
-              <Image
-                src="/logo.png"
-                alt="EnergiVIA"
-                width={480}
-                height={136}
-                className="h-12 w-auto object-contain sm:h-14"
-                priority
-              />
-            </Link>
-            <nav className="hidden items-center gap-1 text-sm text-slate-700 sm:flex">
-              <Link
-                href="/"
-                className="inline-flex h-9 items-center justify-center rounded-full px-4 font-medium transition-colors hover:bg-slate-200/70 hover:text-slate-900"
-              >
-                Home
-              </Link>
-              <span className="text-slate-400" aria-hidden>
-                •
-              </span>
-              <Link
-                href={appLoginUrl}
-                className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white/80 px-4 font-semibold text-slate-800 transition-colors hover:bg-white"
-              >
-                Entrar
-              </Link>
-            </nav>
-          </div>
-        </header>
+    <div
+      className="landing-page dark min-h-screen flex flex-col bg-[#02040a] text-white antialiased font-plus-jakarta selection:bg-[#10b981]/30 selection:text-white"
+      style={{ colorScheme: "dark" }}
+    >
+      {/* Ambient background lighting */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute -top-[200px] left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.12),transparent_70%)] blur-3xl" />
+        <div className="absolute top-[800px] -right-[150px] h-[500px] w-[600px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(20,184,166,0.08),transparent_70%)] blur-3xl" />
       </div>
 
-      <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:space-y-10 sm:px-6 sm:py-14">
-        <section className="relative overflow-hidden rounded-[30px] border border-slate-200/90 bg-[linear-gradient(145deg,#ffffff_0%,#f8fafc_60%,#ecfdf5_100%)] p-6 shadow-[0_24px_56px_rgba(15,23,42,0.12)] sm:p-8">
-          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-300/20 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-24 left-12 h-56 w-56 rounded-full bg-sky-300/16 blur-3xl" />
+      <LandingSubpageHeader />
+
+      <main className="relative z-10 flex-1 mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14 space-y-10 sm:space-y-12">
+        {/* Hero Section */}
+        <section className="relative overflow-hidden rounded-[32px] glass-panel p-7 sm:p-10 shadow-2xl">
+          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-500/10 blur-3xl" />
           <div className="relative">
-            <div className="max-w-4xl">
-              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                {eyebrow}
-              </span>
-              <h1 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight text-slate-900 sm:text-[2.15rem] sm:leading-[1.15]">
-                {title}
-              </h1>
-              <p className="mt-4 max-w-3xl text-base leading-relaxed text-slate-600 sm:text-lg">
-                {description}
-              </p>
-            </div>
-            <div className="mt-6 grid gap-2 sm:grid-cols-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full glass-pill border-emerald-500/30 bg-emerald-950/30 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+              <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+              {eyebrow}
+            </span>
+            <h1 className="mt-5 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-[2.6rem] md:leading-[1.15]">
+              {title}
+            </h1>
+            <p className="mt-4 max-w-3xl text-base leading-relaxed text-slate-300 sm:text-lg font-light">
+              {description}
+            </p>
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
               {[
                 "Menos tempo entre lead e proposta",
                 "Operação comercial com padrão",
                 "Execução integrada ao WhatsApp",
               ].map((item) => (
-                <p
+                <div
                   key={item}
-                  className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_8px_22px_rgba(15,23,42,0.05)]"
+                  className="flex items-center gap-2.5 rounded-2xl glass-card px-4 py-3 text-sm font-medium text-slate-200 border-white/10"
                 >
-                  {item}
-                </p>
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <span>{item}</span>
+                </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200/90 bg-white/95 p-6 shadow-[0_12px_34px_rgba(15,23,42,0.06)] backdrop-blur-sm sm:p-8">
+        {/* Diagnóstico do Cenário */}
+        <section className="rounded-3xl glass-card p-7 sm:p-9 border-white/10">
           <p className={sectionTitleClass}>Diagnóstico do cenário</p>
-          <h2 className="text-2xl font-semibold text-slate-900">{problemTitle}</h2>
-          <div className="mt-4 space-y-4 text-sm leading-relaxed text-slate-600 sm:text-base">
+          <h2 className="mt-2 text-2xl sm:text-3xl font-semibold text-white tracking-tight">
+            {problemTitle}
+          </h2>
+          <div className="mt-5 space-y-4 text-sm sm:text-base leading-relaxed text-slate-300 font-light">
             {problemParagraphs.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
             ))}
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200/90 bg-white/95 p-6 shadow-[0_12px_34px_rgba(15,23,42,0.06)] backdrop-blur-sm sm:p-8">
+        {/* Fluxo Recomendado */}
+        <section className="rounded-3xl glass-card p-7 sm:p-9 border-white/10">
           <p className={sectionTitleClass}>Fluxo recomendado</p>
-          <h2 className="text-2xl font-semibold text-slate-900">{flowTitle}</h2>
-          <ol className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <h2 className="mt-2 text-2xl sm:text-3xl font-semibold text-white tracking-tight">
+            {flowTitle}
+          </h2>
+          <ol className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {flowSteps.map((step, index) => (
               <li
                 key={step}
-                className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-white"
+                className="relative overflow-hidden rounded-2xl glass-card glass-card-hover p-5 border-white/10"
               >
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                  Passo {index + 1}
-                </p>
-                {step}
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+                    Passo {index + 1}
+                  </span>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-300 text-xs font-bold border border-emerald-500/20">
+                    {index + 1}
+                  </span>
+                </div>
+                <p className="text-sm leading-relaxed text-slate-300 font-light">{step}</p>
               </li>
             ))}
           </ol>
         </section>
 
-        <section className="rounded-3xl border border-slate-200/90 bg-white/95 p-6 shadow-[0_12px_34px_rgba(15,23,42,0.06)] backdrop-blur-sm sm:p-8">
+        {/* Aplicações Práticas */}
+        <section className="rounded-3xl glass-card p-7 sm:p-9 border-white/10">
           <p className={sectionTitleClass}>Aplicações práticas</p>
-          <h2 className="text-2xl font-semibold text-slate-900">{examplesTitle}</h2>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <h2 className="mt-2 text-2xl sm:text-3xl font-semibold text-white tracking-tight">
+            {examplesTitle}
+          </h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {examples.map((example) => (
               <article
                 key={example.title}
-                className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(15,23,42,0.08)]"
+                className="rounded-2xl glass-card glass-card-hover p-5 border-white/10"
               >
-                <h3 className="text-base font-semibold text-slate-900">{example.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{example.description}</p>
+                <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-emerald-400 shrink-0" />
+                  {example.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-400 font-light">
+                  {example.description}
+                </p>
               </article>
             ))}
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200/90 bg-white/95 p-6 shadow-[0_12px_34px_rgba(15,23,42,0.06)] backdrop-blur-sm sm:p-8">
+        {/* Comparativo Operacional */}
+        <section className="rounded-3xl glass-card p-7 sm:p-9 border-white/10">
           <p className={sectionTitleClass}>Comparativo operacional</p>
-          <h2 className="text-2xl font-semibold text-slate-900">{comparisonTitle}</h2>
-          <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200">
+          <h2 className="mt-2 text-2xl sm:text-3xl font-semibold text-white tracking-tight">
+            {comparisonTitle}
+          </h2>
+          <div className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#02040a]/40">
             <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-100">
+              <thead className="bg-white/[0.04] border-b border-white/10">
                 <tr>
-                  <th className="px-4 py-3 font-semibold text-slate-900">Critério</th>
-                  <th className="px-4 py-3 font-semibold text-slate-600">Processo manual</th>
-                  <th className="px-4 py-3 font-semibold text-emerald-700">Com EnergivIA</th>
+                  <th className="px-5 py-3.5 font-semibold text-white">Critério</th>
+                  <th className="px-5 py-3.5 font-semibold text-slate-400">Processo manual</th>
+                  <th className="px-5 py-3.5 font-semibold text-emerald-300 bg-emerald-950/20">
+                    Com EnergivIA
+                  </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-white/5 font-light">
                 {comparisonRows.map((row) => (
-                  <tr key={row.topic} className="border-t border-slate-200">
-                    <td className="px-4 py-3 text-slate-900">{row.topic}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.manual}</td>
-                    <td className="px-4 py-3 font-medium text-slate-800">{row.energivia}</td>
+                  <tr key={row.topic} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="px-5 py-3.5 font-medium text-slate-200">{row.topic}</td>
+                    <td className="px-5 py-3.5 text-slate-400">{row.manual}</td>
+                    <td className="px-5 py-3.5 font-medium text-emerald-300 bg-emerald-950/20">
+                      {row.energivia}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -187,45 +189,59 @@ export function SeoIntentPage({
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200/90 bg-white/95 p-6 shadow-[0_12px_34px_rgba(15,23,42,0.06)] backdrop-blur-sm sm:p-8">
+        {/* Perguntas Frequentes (FAQ) */}
+        <section className="rounded-3xl glass-card p-7 sm:p-9 border-white/10">
           <p className={sectionTitleClass}>Perguntas frequentes</p>
-          <h2 className="text-2xl font-semibold text-slate-900">{faqTitle}</h2>
-          <div className="mt-5 space-y-3">
+          <h2 className="mt-2 text-2xl sm:text-3xl font-semibold text-white tracking-tight">
+            {faqTitle}
+          </h2>
+          <div className="mt-6 space-y-3">
             {faqItems.map((item) => (
               <details
                 key={item.question}
-                className="group rounded-xl border border-slate-200 bg-slate-50 p-4 transition-all hover:border-emerald-200 hover:bg-white"
+                className="group rounded-2xl glass-card p-5 border-white/10 transition-all hover:border-emerald-500/30"
               >
-                <summary className="cursor-pointer list-none font-semibold text-slate-900">
-                  {item.question}
+                <summary className="cursor-pointer list-none font-semibold text-white flex items-center justify-between gap-4">
+                  <span>{item.question}</span>
+                  <ChevronDown className="h-5 w-5 text-slate-400 transition-transform duration-200 group-open:rotate-180 shrink-0 text-emerald-400" />
                 </summary>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.answer}</p>
+                <p className="mt-3.5 pt-3.5 border-t border-white/5 text-sm leading-relaxed text-slate-300 font-light">
+                  {item.answer}
+                </p>
               </details>
             ))}
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-[0_18px_40px_rgba(2,6,23,0.3)] sm:p-8">
-          <h2 className="text-2xl font-semibold text-white">{ctaTitle}</h2>
-          <p className="mt-3 max-w-3xl text-slate-300">{ctaDescription}</p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href={appSignupUrl}
-              className="inline-flex h-11 items-center justify-center rounded-full bg-emerald-400 px-6 text-sm font-semibold text-slate-950 transition-all hover:-translate-y-0.5 hover:bg-emerald-300"
-            >
-              Criar conta
-            </Link>
-            <a
-              href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Quero%20ver%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergivIA."
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-11 items-center justify-center rounded-full border border-slate-700 bg-slate-900 px-6 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-slate-800"
-            >
-              Ver demonstração
-            </a>
+        {/* CTA Final */}
+        <section className="relative overflow-hidden rounded-[32px] glass-panel p-8 sm:p-12 border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 via-[#02040a]/90 to-[#02040a]">
+          <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" />
+          <div className="relative max-w-2xl">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">{ctaTitle}</h2>
+            <p className="mt-3 text-base text-slate-300 font-light leading-relaxed">
+              {ctaDescription}
+            </p>
+            <div className="mt-8 flex flex-col gap-3.5 sm:flex-row">
+              <Link
+                href={appSignupUrl}
+                className="inline-flex h-12 items-center justify-center rounded-full glass-pill border-emerald-500/50 bg-emerald-500 px-7 text-sm font-semibold text-slate-950 transition-all hover:-translate-y-0.5 hover:bg-emerald-400 hover:shadow-[0_0_25px_rgba(16,185,129,0.35)]"
+              >
+                Criar conta gratuitamente
+              </Link>
+              <a
+                href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Quero%20ver%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergivIA."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-12 items-center justify-center rounded-full glass-pill border-white/15 bg-white/5 px-7 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-white/10"
+              >
+                Ver demonstração no WhatsApp
+              </a>
+            </div>
           </div>
         </section>
-      </div>
-    </main>
+      </main>
+
+      <LandingFooter />
+    </div>
   );
 }

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import {
   FileSearch,
   Gauge,
@@ -17,8 +16,8 @@ import { HowItWorksTabs } from "@/components/landing/how-it-works-tabs";
 import { ConvergingPanelsSection } from "@/components/landing/converging-panels-section";
 import { BeamqHeroSection } from "@/components/landing/beamq-hero-section";
 import { ImpactResultsSection } from "@/components/landing/impact-results-section";
+import { LandingFooter } from "@/components/landing/landing-footer";
 
-const appLoginUrl = "/login";
 const appSignupUrl = "/cadastro";
 
 const faqItems = [
@@ -326,63 +325,7 @@ export default function HomePage(): JSX.Element {
         {/* ------------------------------------------------------------- */}
         {/* FOOTER                                                        */}
         {/* ------------------------------------------------------------- */}
-        <footer className="border-t border-white/5 bg-[#02040a] px-4 py-12 sm:px-6 text-slate-400">
-          <div className="mx-auto max-w-6xl">
-            <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
-              <Link href="/" className="flex items-center">
-                <Image
-                  src="/logo-dark.png"
-                  alt="EnergiVIA"
-                  width={480}
-                  height={136}
-                  className="h-12 w-auto object-contain sm:h-14"
-                  sizes="(max-width: 640px) 180px, 240px"
-                />
-              </Link>
-              <nav className="flex flex-wrap items-center justify-center gap-5 text-sm">
-                <a href="#como-funciona" className="hover:text-white transition-colors">
-                  Como funciona
-                </a>
-                <a href="#beneficios" className="hover:text-white transition-colors">
-                  Resultados
-                </a>
-                <a href="#cenarios" className="hover:text-white transition-colors">
-                  Cenários
-                </a>
-                <a href="#diferenciais" className="hover:text-white transition-colors">
-                  Diferenciais
-                </a>
-                <a href="#faq" className="hover:text-white transition-colors">
-                  FAQ
-                </a>
-                <a
-                  href="https://wa.me/5544988117969?text=Ol%C3%A1!%20Gostaria%20de%20ver%20uma%20demonstra%C3%A7%C3%A3o%20da%20EnergivIA."
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-white transition-colors"
-                >
-                  Ver demonstração
-                </a>
-                <a href={appLoginUrl} className="hover:text-white transition-colors">
-                  Entrar
-                </a>
-                <a href={appSignupUrl} className="hover:text-white transition-colors">
-                  Criar conta
-                </a>
-                <Link href="/termos-de-uso" className="hover:text-white transition-colors">
-                  Termos de Uso
-                </Link>
-                <Link href="/privacidade" className="hover:text-white transition-colors">
-                  Privacidade
-                </Link>
-              </nav>
-            </div>
-            <p className="mt-8 text-center text-sm sm:text-left text-slate-400">
-              © {new Date().getFullYear()} EnergiVIA. O seu parceiro via I.A. CNPJ:
-              66.304.358/0001-16
-            </p>
-          </div>
-        </footer>
+        <LandingFooter />
       </main>
     </div>
   );
