@@ -170,30 +170,30 @@ export function GlassyAuthCard({
       </div>
 
       {/* Main Glassmorphism Floating Card Container */}
-      <div className="relative mx-auto max-w-4xl px-4 sm:px-6">
+      <div className="relative mx-auto w-full max-w-4xl xl:max-w-5xl 2xl:max-w-[1120px] px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="relative overflow-hidden rounded-[24px] sm:rounded-[30px] border border-white/15 border-t-white/30 bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-white/[0.01] p-1 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),inset_0_1px_1px_0_rgba(255,255,255,0.22)] backdrop-blur-2xl"
+          className="relative overflow-hidden rounded-[24px] sm:rounded-[30px] xl:rounded-[36px] border border-white/15 border-t-white/30 bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-white/[0.01] p-1 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),inset_0_1px_1px_0_rgba(255,255,255,0.22)] backdrop-blur-2xl"
         >
           {/* Inner frosted glass surface with layout animation */}
           <motion.div
             layout
-            className={`relative flex flex-col md:flex-row rounded-[22px] sm:rounded-[28px] bg-[#050811]/75 backdrop-blur-3xl overflow-hidden ${mode === "login" ? "md:flex-row-reverse" : "md:flex-row"}`}
+            className={`relative flex min-h-[500px] xl:min-h-[560px] 2xl:min-h-[600px] flex-col md:flex-row rounded-[22px] sm:rounded-[28px] xl:rounded-[34px] bg-[#050811]/75 backdrop-blur-3xl overflow-hidden ${mode === "login" ? "md:flex-row-reverse" : "md:flex-row"}`}
           >
             {/* Banner Column with spring sliding */}
             <motion.div
               layout
               transition={{ type: "spring", stiffness: 220, damping: 26 }}
-              className={`relative md:w-5/12 p-6 sm:p-8 flex flex-col justify-center border-b md:border-b-0 ${mode === "login" ? "md:border-l" : "md:border-r"} border-white/10 bg-gradient-to-br from-white/[0.03] via-transparent to-transparent`}
+              className={`relative md:w-5/12 p-6 sm:p-8 xl:p-11 2xl:p-14 flex flex-col justify-center border-b md:border-b-0 ${mode === "login" ? "md:border-l" : "md:border-r"} border-white/10 bg-gradient-to-br from-white/[0.03] via-transparent to-transparent`}
             >
               {/* Subtle light beam inside banner column */}
               <div className="pointer-events-none absolute -top-24 -left-24 h-56 w-56 rounded-full bg-emerald-500/15 blur-2xl" />
 
               <div>
-                <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-emerald-300 glass-pill border-emerald-500/30 bg-emerald-950/40">
-                  <Sparkles className="h-3 w-3 text-emerald-400" />
+                <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs xl:text-sm font-semibold uppercase tracking-wider text-emerald-300 glass-pill border-emerald-500/30 bg-emerald-950/40">
+                  <Sparkles className="h-3 w-3 xl:h-3.5 xl:w-3.5 text-emerald-400" />
                   EnergivIA
                 </div>
 
@@ -205,15 +205,15 @@ export function GlassyAuthCard({
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 10 }}
                       transition={{ duration: 0.3 }}
-                      className="mt-5"
+                      className="mt-5 xl:mt-7"
                     >
-                      <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-[1.15]">
+                      <h2 className="text-2xl sm:text-3xl xl:text-4xl 2xl:text-[2.6rem] font-extrabold tracking-tight text-white leading-[1.15]">
                         BEM-VINDO <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-300 to-white">
                           DE VOLTA!
                         </span>
                       </h2>
-                      <p className="mt-3 text-xs sm:text-sm text-slate-300 font-light leading-relaxed">
+                      <p className="mt-3 text-xs sm:text-sm xl:text-base text-slate-300 font-light leading-relaxed max-w-md">
                         Já faz parte da nossa plataforma? Acesse agora com suas credenciais para
                         gerenciar propostas e clientes.
                       </p>
@@ -225,15 +225,15 @@ export function GlassyAuthCard({
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 10 }}
                       transition={{ duration: 0.3 }}
-                      className="mt-5"
+                      className="mt-5 xl:mt-7"
                     >
-                      <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-[1.15]">
+                      <h2 className="text-2xl sm:text-3xl xl:text-4xl 2xl:text-[2.6rem] font-extrabold tracking-tight text-white leading-[1.15]">
                         COMECE <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-300 to-white">
                           AGORA!
                         </span>
                       </h2>
-                      <p className="mt-3 text-xs sm:text-sm text-slate-300 font-light leading-relaxed">
+                      <p className="mt-3 text-xs sm:text-sm xl:text-base text-slate-300 font-light leading-relaxed max-w-md">
                         Crie sua conta em segundos e gere sua primeira proposta comercial solar hoje
                         mesmo via WhatsApp e IA.
                       </p>
@@ -243,14 +243,14 @@ export function GlassyAuthCard({
               </div>
 
               {/* Action Button to Toggle Mode */}
-              <div className="mt-6 pt-2">
+              <div className="mt-6 xl:mt-8 pt-2">
                 <button
                   type="button"
                   onClick={() => setMode(mode === "signup" ? "login" : "signup")}
-                  className="group inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs sm:text-sm font-semibold text-white glass-pill border-white/20 hover:border-emerald-400/60 hover:bg-emerald-500/15 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+                  className="group inline-flex items-center gap-2 rounded-full px-5 py-2.5 xl:px-7 xl:py-3.5 text-xs sm:text-sm xl:text-base font-semibold text-white glass-pill border-white/20 hover:border-emerald-400/60 hover:bg-emerald-500/15 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
                 >
                   <span>{mode === "signup" ? "Já tem conta? Entrar" : "Criar nova conta"}</span>
-                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 text-emerald-400" />
+                  <ArrowRight className="h-4 w-4 xl:h-5 xl:w-5 transition-transform duration-200 group-hover:translate-x-1 text-emerald-400" />
                 </button>
               </div>
             </motion.div>
@@ -259,9 +259,9 @@ export function GlassyAuthCard({
             <motion.div
               layout
               transition={{ type: "spring", stiffness: 220, damping: 26 }}
-              className="relative md:w-7/12 p-6 sm:p-8 flex flex-col justify-center"
+              className="relative md:w-7/12 p-6 sm:p-8 xl:p-11 2xl:p-14 flex flex-col justify-center"
             >
-              <div className="max-w-md w-full mx-auto">
+              <div className="max-w-md xl:max-w-lg w-full mx-auto">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={mode}
@@ -270,22 +270,22 @@ export function GlassyAuthCard({
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.25 }}
                   >
-                    <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                    <h3 className="text-xl sm:text-2xl xl:text-3xl font-bold tracking-tight text-white">
                       {mode === "signup" ? "Criar Conta" : "Entrar na Plataforma"}
                     </h3>
-                    <p className="mt-1 text-xs text-slate-400 font-light">
+                    <p className="mt-1 text-xs sm:text-sm text-slate-400 font-light">
                       {mode === "signup"
                         ? "Preencha seus dados para criar sua conta gratuita"
                         : "Digite seus dados de acesso corporativo"}
                     </p>
 
-                    <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+                    <form onSubmit={handleSubmit} className="mt-4 xl:mt-6 space-y-3 xl:space-y-4">
                       {/* Botão Google em destaque */}
                       <a
                         href={`${redirectUrl}?connection=google-oauth2`}
-                        className="w-full rounded-xl border border-white/12 bg-white/[0.04] py-2.5 px-4 text-xs sm:text-sm font-semibold text-white flex items-center justify-center gap-3 backdrop-blur-md transition-all hover:bg-white/[0.08] hover:border-white/25 shadow-sm"
+                        className="w-full rounded-xl xl:rounded-2xl border border-white/12 bg-white/[0.04] py-2.5 xl:py-3.5 px-4 text-xs sm:text-sm xl:text-base font-semibold text-white flex items-center justify-center gap-3 backdrop-blur-md transition-all hover:bg-white/[0.08] hover:border-white/25 shadow-sm"
                       >
-                        <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
+                        <svg className="h-4 w-4 xl:h-5 xl:w-5 shrink-0" viewBox="0 0 24 24">
                           <path
                             fill="#4285F4"
                             d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"
@@ -307,17 +307,17 @@ export function GlassyAuthCard({
                       </a>
 
                       {/* Divisor */}
-                      <div className="flex items-center gap-3 my-2.5">
+                      <div className="flex items-center gap-3 my-2.5 xl:my-4">
                         <div className="h-px flex-1 bg-white/10" />
-                        <span className="text-[11px] text-slate-500 font-semibold tracking-wider">
+                        <span className="text-[11px] xl:text-xs text-slate-500 font-semibold tracking-wider">
                           OU COM E-MAIL
                         </span>
                         <div className="h-px flex-1 bg-white/10" />
                       </div>
 
                       <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                          <Mail className="h-4 w-4 text-emerald-400/80" />
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 xl:pl-4 text-slate-400">
+                          <Mail className="h-4 w-4 xl:h-5 xl:w-5 text-emerald-400/80" />
                         </div>
                         <input
                           type="email"
@@ -325,13 +325,13 @@ export function GlassyAuthCard({
                           placeholder="E-mail corporativo"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-4 text-xs sm:text-sm text-white placeholder-slate-400 outline-none backdrop-blur-md transition-all focus:border-emerald-500/50 focus:bg-white/[0.08] focus:ring-1 focus:ring-emerald-400/30"
+                          className="w-full rounded-xl xl:rounded-2xl border border-white/10 bg-white/[0.04] py-2.5 xl:py-3.5 pl-10 xl:pl-12 pr-4 text-xs sm:text-sm xl:text-base text-white placeholder-slate-400 outline-none backdrop-blur-md transition-all focus:border-emerald-500/50 focus:bg-white/[0.08] focus:ring-1 focus:ring-emerald-400/30"
                         />
                       </div>
 
                       <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                          <Lock className="h-4 w-4 text-emerald-400/80" />
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 xl:pl-4 text-slate-400">
+                          <Lock className="h-4 w-4 xl:h-5 xl:w-5 text-emerald-400/80" />
                         </div>
                         <input
                           type="password"
@@ -339,16 +339,16 @@ export function GlassyAuthCard({
                           placeholder={mode === "signup" ? "Criar uma senha segura" : "Sua senha"}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-4 text-xs sm:text-sm text-white placeholder-slate-400 outline-none backdrop-blur-md transition-all focus:border-emerald-500/50 focus:bg-white/[0.08] focus:ring-1 focus:ring-emerald-400/30"
+                          className="w-full rounded-xl xl:rounded-2xl border border-white/10 bg-white/[0.04] py-2.5 xl:py-3.5 pl-10 xl:pl-12 pr-4 text-xs sm:text-sm xl:text-base text-white placeholder-slate-400 outline-none backdrop-blur-md transition-all focus:border-emerald-500/50 focus:bg-white/[0.08] focus:ring-1 focus:ring-emerald-400/30"
                         />
                       </div>
 
                       {/* Submit Button */}
-                      <div className="pt-1.5">
+                      <div className="pt-1.5 xl:pt-2">
                         <button
                           type="submit"
                           disabled={isSubmitting}
-                          className="w-full rounded-xl border border-white/20 border-t-white/40 bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-emerald-500/25 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-[0_4px_24px_rgba(16,185,129,0.2),inset_0_1px_1px_0_rgba(255,255,255,0.25)] backdrop-blur-xl transition-all duration-300 hover:border-emerald-400/80 hover:bg-emerald-500/35 hover:shadow-[0_4px_30px_rgba(16,185,129,0.35)] active:scale-[0.99] disabled:opacity-50"
+                          className="w-full rounded-xl xl:rounded-2xl border border-white/20 border-t-white/40 bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-emerald-500/25 py-2.5 xl:py-3.5 text-xs sm:text-sm xl:text-base font-semibold text-white shadow-[0_4px_24px_rgba(16,185,129,0.2),inset_0_1px_1px_0_rgba(255,255,255,0.25)] backdrop-blur-xl transition-all duration-300 hover:border-emerald-400/80 hover:bg-emerald-500/35 hover:shadow-[0_4px_30px_rgba(16,185,129,0.35)] active:scale-[0.99] disabled:opacity-50"
                         >
                           {isSubmitting ? (
                             <span className="inline-flex items-center gap-2">
@@ -364,7 +364,7 @@ export function GlassyAuthCard({
                       </div>
 
                       {/* Toggle Link below button */}
-                      <div className="pt-1.5 text-center text-xs text-slate-400">
+                      <div className="pt-1.5 xl:pt-2 text-center text-xs sm:text-sm text-slate-400">
                         <span>
                           {mode === "signup" ? "Já tem uma conta? " : "Ainda não tem conta? "}
                         </span>
