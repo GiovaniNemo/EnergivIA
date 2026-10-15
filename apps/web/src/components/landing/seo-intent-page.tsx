@@ -1,15 +1,35 @@
 import Link from "next/link";
-import { Sparkles, CheckCircle2, Zap, ChevronDown } from "lucide-react";
+import { Sparkles, CheckCircle2, Zap, ChevronDown, ArrowRight, FileCheck } from "lucide-react";
 import { LandingSubpageHeader } from "@/components/landing/landing-subpage-header";
 import { LandingFooter } from "@/components/landing/landing-footer";
 import { buildFaqPageSchema, buildWebPageSchema, JsonLd } from "@/lib/seo/structured-data";
 
-type SeoFaq = {
+export type SeoFaq = {
   question: string;
   answer: string;
 };
 
-type SeoIntentPageProps = {
+export type SeoChecklistItem = {
+  title: string;
+  description: string;
+  detail: string;
+};
+
+export type SeoSegmentItem = {
+  badge: string;
+  title: string;
+  scenario: string;
+  resolution: string;
+  metrics: string;
+};
+
+export type SeoRelatedLink = {
+  href: string;
+  title: string;
+  description: string;
+};
+
+export type SeoIntentPageProps = {
   pathname?: string;
   eyebrow: string;
   title: string;
@@ -22,8 +42,16 @@ type SeoIntentPageProps = {
   examples: { title: string; description: string }[];
   comparisonTitle: string;
   comparisonRows: { topic: string; manual: string; energivia: string }[];
+  checklistTitle?: string;
+  checklistDescription?: string;
+  checklistItems?: SeoChecklistItem[];
+  segmentsTitle?: string;
+  segmentsDescription?: string;
+  segments?: SeoSegmentItem[];
   faqTitle: string;
   faqItems: SeoFaq[];
+  relatedTitle?: string;
+  relatedLinks?: SeoRelatedLink[];
   ctaTitle: string;
   ctaDescription: string;
 };
@@ -43,8 +71,16 @@ export function SeoIntentPage({
   examples,
   comparisonTitle,
   comparisonRows,
+  checklistTitle,
+  checklistDescription,
+  checklistItems,
+  segmentsTitle,
+  segmentsDescription,
+  segments,
   faqTitle,
   faqItems,
+  relatedTitle,
+  relatedLinks,
   ctaTitle,
   ctaDescription,
 }: SeoIntentPageProps): JSX.Element {
@@ -218,6 +254,88 @@ export function SeoIntentPage({
           </div>
         </section>
 
+        {/* Checklist Operacional Técnico */}
+        {checklistItems && checklistItems.length > 0 && (
+          <section className="rounded-3xl glass-card p-7 sm:p-9 border-white/10">
+            <p className={sectionTitleClass}>Checklist operacional</p>
+            <h2 className="mt-2 text-2xl sm:text-3xl font-semibold text-white tracking-tight">
+              {checklistTitle || "Checklist técnico para máxima eficiência"}
+            </h2>
+            {checklistDescription && (
+              <p className="mt-3 text-sm sm:text-base text-slate-300 font-light leading-relaxed">
+                {checklistDescription}
+              </p>
+            )}
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {checklistItems.map((item) => (
+                <article
+                  key={item.title}
+                  className="rounded-2xl glass-card glass-card-hover p-5 border-white/10 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center gap-2 mb-2 text-emerald-400">
+                      <FileCheck className="h-4 w-4 shrink-0" />
+                      <h3 className="text-sm font-semibold text-white">{item.title}</h3>
+                    </div>
+                    <p className="text-xs sm:text-sm leading-relaxed text-slate-300 font-light">
+                      {item.description}
+                    </p>
+                  </div>
+                  <span className="mt-4 inline-flex items-center rounded-xl bg-emerald-950/40 px-3 py-1.5 text-xs font-mono text-emerald-300 border border-emerald-500/20">
+                    {item.detail}
+                  </span>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Segmentos de Atuação */}
+        {segments && segments.length > 0 && (
+          <section className="rounded-3xl glass-card p-7 sm:p-9 border-white/10">
+            <p className={sectionTitleClass}>Segmentos de atuação</p>
+            <h2 className="mt-2 text-2xl sm:text-3xl font-semibold text-white tracking-tight">
+              {segmentsTitle || "Como a plataforma se adapta a cada operação"}
+            </h2>
+            {segmentsDescription && (
+              <p className="mt-3 text-sm sm:text-base text-slate-300 font-light leading-relaxed">
+                {segmentsDescription}
+              </p>
+            )}
+            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+              {segments.map((seg) => (
+                <article
+                  key={seg.title}
+                  className="rounded-2xl glass-card glass-card-hover p-6 border-white/10 flex flex-col justify-between"
+                >
+                  <div>
+                    <span className="inline-flex items-center rounded-full bg-emerald-950/50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-300 border border-emerald-500/20">
+                      {seg.badge}
+                    </span>
+                    <h3 className="mt-3 text-base sm:text-lg font-semibold text-white">
+                      {seg.title}
+                    </h3>
+                    <p className="mt-2 text-xs sm:text-sm text-slate-400 font-light leading-relaxed">
+                      <strong className="text-slate-300 font-medium">Cenário:</strong>{" "}
+                      {seg.scenario}
+                    </p>
+                    <p className="mt-2 text-xs sm:text-sm text-slate-300 font-light leading-relaxed">
+                      <strong className="text-emerald-400 font-medium">Solução:</strong>{" "}
+                      {seg.resolution}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs font-semibold text-emerald-300">
+                    <span>Impacto estimado:</span>
+                    <span className="rounded-lg bg-white/5 px-2.5 py-1 text-slate-200 border border-white/5 font-mono">
+                      {seg.metrics}
+                    </span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Perguntas Frequentes (FAQ) */}
         <section className="rounded-3xl glass-card p-7 sm:p-9 border-white/10">
           <p className={sectionTitleClass}>Perguntas frequentes</p>
@@ -241,6 +359,35 @@ export function SeoIntentPage({
             ))}
           </div>
         </section>
+
+        {/* Conteúdo Relacionado e Navegação Interna */}
+        {relatedLinks && relatedLinks.length > 0 && (
+          <section className="rounded-3xl glass-card p-7 sm:p-9 border-white/10">
+            <p className={sectionTitleClass}>Conteúdo relacionado</p>
+            <h2 className="mt-2 text-xl sm:text-2xl font-semibold text-white tracking-tight">
+              {relatedTitle || "Continue explorando recursos para integradores solares"}
+            </h2>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {relatedLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="group flex flex-col justify-between rounded-2xl glass-card glass-card-hover p-5 border-white/10 hover:border-emerald-500/30 transition-all"
+                >
+                  <div>
+                    <h3 className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors flex items-center justify-between">
+                      <span>{link.title}</span>
+                      <ArrowRight className="h-4 w-4 text-emerald-400 transition-transform group-hover:translate-x-1" />
+                    </h3>
+                    <p className="mt-2 text-xs leading-relaxed text-slate-400 font-light">
+                      {link.description}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* CTA Final */}
         <section className="relative overflow-hidden rounded-[32px] glass-panel p-8 sm:p-12 border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 via-[#02040a]/90 to-[#02040a]">
