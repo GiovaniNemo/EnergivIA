@@ -110,3 +110,21 @@ export function getTenantPlanDetails(tenant: {
     features,
   };
 }
+
+/**
+ * Determina se a organização está bloqueada pelo paywall de expiração de teste.
+ */
+export function computeIsTrialLocked(params: {
+  role?: string;
+  isTrial: boolean;
+  trialExpired: boolean;
+  specialAccessActive?: boolean;
+}): boolean {
+  if (params.role === "ADMIN" || params.role === "PLATFORM") {
+    return false;
+  }
+  if (params.specialAccessActive === true) {
+    return false;
+  }
+  return Boolean(params.isTrial && params.trialExpired);
+}

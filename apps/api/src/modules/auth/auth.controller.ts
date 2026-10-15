@@ -12,7 +12,7 @@ import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator
 import { PrismaService } from "../../prisma/prisma.service";
 import { Prisma } from "@prisma/client";
 
-import { getTenantPlanDetails } from "../../common/utils/plan-limits";
+import { getTenantPlanDetails, computeIsTrialLocked } from "../../common/utils/plan-limits";
 
 import { SpecialAccessService } from "../special-access/special-access.service";
 
@@ -150,6 +150,12 @@ export class AuthController {
       }
     }
 
+    const isTrialLocked = computeIsTrialLocked({
+      role: user.role,
+      isTrial,
+      trialExpired,
+    });
+
     return {
       ...profile,
       role: user.role,
@@ -162,7 +168,7 @@ export class AuthController {
       proposalsLimit,
       isTrialProposalLimitReached: isTrial ? isProposalLimitReached : false,
       isProposalLimitReached,
-      isTrialLocked: false,
+      isTrialLocked,
       planTier,
       planName,
       planFeatures,
