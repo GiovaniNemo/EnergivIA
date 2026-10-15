@@ -143,7 +143,7 @@ export function BrandTierSelector({
   const handleSetPriority = (brand: string) => {
     onChange({
       ...value,
-      priority: brand,
+      priority: value.priority === brand ? null : brand,
     });
   };
 
@@ -481,19 +481,19 @@ export function BrandTierSelector({
         <p className="leading-relaxed">
           {priority ? (
             <>
-              Marca prioritária:{" "}
+              Marca prioritária principal:{" "}
               <strong className="text-zinc-900 dark:text-zinc-100 font-bold underline decoration-amber-500 decoration-2">
                 {priority}
               </strong>
-              . O sistema tentará cotar e dimensionar inicialmente com ela. Caso não haja
-              compatibilidade técnica ou estoque homologado, o motor avançará automaticamente para
-              as próximas marcas definidas nos tiers.
+              . Utilizada com precedência máxima dentro da sua respectiva categoria e em cotações
+              diretas. Cada opção de proposta (Standard, Elite, Premium) manterá estritamente as
+              marcas distribuídas no seu próprio quadrante para garantir variedade ao cliente.
             </>
           ) : (
             <>
-              Clique no ícone de estrela <Star className="inline h-3.5 w-3.5 text-amber-500" /> em
-              uma das marcas para fixá-la como a primeira opção nas cotações e propostas
-              automáticas.
+              Nenhuma marca prioritária definida. O sistema distribuirá os equipamentos
+              rigorosamente de acordo com as marcas configuradas em cada categoria (Standard, Elite
+              e Premium).
             </>
           )}
         </p>

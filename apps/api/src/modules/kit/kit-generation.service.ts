@@ -494,46 +494,6 @@ export class KitGenerationService {
     const effectiveStringInverters =
       scaleCompatibleString.length > 0 ? scaleCompatibleString : allStringInverters;
 
-    const calcInverterUnitsNeeded = (inv: ProductWithSpecs<StringInverterSpec>): number => {
-      const p = getInverterPowerKw(inv);
-      if (p <= 0) return 9999;
-      return Math.ceil(input.system_kw / (p * 1.35));
-    };
-
-    const sortStringInverters = (inverters: ProductWithSpecs<StringInverterSpec>[]) => {
-      const maxPowerInvKw = Math.max(...inverters.map((inv) => getInverterPowerKw(inv)), 10);
-      const maxAutoN =
-        input.system_kw < 200
-          ? 6
-          : Math.max(6, Math.ceil(input.system_kw / (maxPowerInvKw * 1.35)) + 4);
-      return [...inverters].sort((a, b) => {
-        // 1ª prioridade: unidades coerentes para o porte (modelos que precisam de <= maxAutoN unidades têm preferência absoluta)
-        const aUnits = calcInverterUnitsNeeded(a);
-        const bUnits = calcInverterUnitsNeeded(b);
-        const aScaleOk = aUnits <= maxAutoN ? 1 : 0;
-        const bScaleOk = bUnits <= maxAutoN ? 1 : 0;
-        if (aScaleOk !== bScaleOk) return bScaleOk - aScaleOk;
-
-        // 2ª prioridade: marcas preferidas configuradas
-        const aBrand = (a.brandName || "").toLowerCase().trim();
-        const bBrand = (b.brandName || "").toLowerCase().trim();
-        const aIdx = preferredInverterBrands.findIndex(
-          (p) => aBrand.includes(p) || p.includes(aBrand)
-        );
-        const bIdx = preferredInverterBrands.findIndex(
-          (p) => bBrand.includes(p) || p.includes(bBrand)
-        );
-        const aRank = aIdx === -1 ? 9999 : aIdx;
-        const bRank = bIdx === -1 ? 9999 : bIdx;
-        if (aRank !== bRank) return aRank - bRank;
-
-        // 3ª prioridade: menor quantidade de unidades
-        if (aUnits !== bUnits) return aUnits - bUnits;
-
-        return a.price - b.price;
-      });
-    };
-
     const sortOtherInverters = <T extends { brandName: string; price: number }>(
       inverters: T[]
     ): T[] => {
@@ -553,188 +513,202 @@ export class KitGenerationService {
       });
     };
 
-    const sortedString = sortStringInverters(effectiveStringInverters);
     const sortedMicro = sortOtherInverters(allMicroInverters);
     const sortedHybrid = sortOtherInverters(allHybridInverters);
 
-    // Module candidates fallback
-    const economicCandidateModule = modulesWithPower[0]?.module;
-    const premiumCandidateModule =
-      modulesWithPower.length > 1
-        ? modulesWithPower[modulesWithPower.length - 1]?.module
-        : modulesWithPower[0]?.module;
-    const costBenefitCandidateModule =
-      modulesWithPower.length > 2
-        ? modulesWithPower[Math.floor(modulesWithPower.length / 2)]?.module
-        : modulesWithPower.length > 1
-          ? modulesWithPower[1]?.module
-          : modulesWithPower[0]?.module;
+    // Helper para extrair marcas de um tier garantindo que a marca prioritária (se configurada)
+    // apenas tenha precedência DENTRO do tier ao qual ela pertence, sem contaminar os demais tiers.
+    const resolveTierBrands = (tierBrands?: string[], priorityBrand?: string | null): string[] => {
+      if (!tierBrands || tierBrands.length === 0) return [];
+      const cleaned = tierBrands.map((b) => b.trim()).filter(Boolean);
+      if (!priorityBrand || !priorityBrand.trim()) return cleaned;
 
-    const findModuleForBrands = (
-      brands: string[] | undefined,
-      defaultCandidate?: ProductWithSpecs<ModuleSpec>
-    ) => {
-      if (brands && brands.length > 0) {
-        const bLowers = brands.map((b) => b.toLowerCase().trim()).filter(Boolean);
-        const match = modulesWithPower.find((m) => {
-          const mBrand = (m.module.brandName || "").toLowerCase().trim();
-          return bLowers.some((b) => mBrand.includes(b) || b.includes(mBrand));
-        });
-        if (match) return match.module;
-      }
-      return defaultCandidate;
-    };
-
-    const findInverterForBrands = (brands: string[] | undefined, defaultId?: string) => {
-      if (brands && brands.length > 0) {
-        const bLowers = brands.map((b) => b.toLowerCase().trim()).filter(Boolean);
-        const match = sortedString.find((i) => {
-          const iBrand = (i.brandName || "").toLowerCase().trim();
-          return bLowers.some((b) => iBrand.includes(b) || b.includes(iBrand));
-        });
-        if (match) return match.id;
-      }
-      return defaultId;
-    };
-
-    // Helper to safely build or fallback
-    const tryBuild = async (pinned: {
-      moduleId?: string;
-      inverterId?: string;
-      inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
-    }): Promise<BuiltKit> => {
-      const trialInput: GenerateKitInput = {
-        ...input,
-        ...(pinned.moduleId ? { pinned_module_id: pinned.moduleId } : {}),
-        ...(pinned.inverterId ? { pinned_inverter_id: pinned.inverterId } : {}),
-        ...(pinned.inverterType ? { inverter_type: pinned.inverterType } : {}),
-      };
-      let res = await this.buildKit(
-        trialInput,
-        roofType,
-        source,
-        preferredModuleBrands,
-        preferredInverterBrands
+      const pLower = priorityBrand.trim().toLowerCase();
+      const matchPrio = cleaned.find(
+        (b) =>
+          b.toLowerCase() === pLower ||
+          b.toLowerCase().includes(pLower) ||
+          pLower.includes(b.toLowerCase())
       );
-      if (
-        !res &&
-        pinned.inverterId &&
-        sortedString[0]?.id &&
-        pinned.inverterId !== sortedString[0].id
-      ) {
-        const retryInput: GenerateKitInput = {
-          ...trialInput,
-          pinned_inverter_id: sortedString[0].id,
+
+      if (matchPrio) {
+        // Marca prioritária pertence a este tier: coloca ela em 1º lugar neste tier
+        return [matchPrio, ...cleaned.filter((b) => b !== matchPrio)];
+      }
+
+      // Marca prioritária pertence a outro tier: mantém as marcas deste tier intactas
+      return cleaned;
+    };
+
+    const stdModBrands = resolveTierBrands(
+      moduleTiersConfig?.standard,
+      moduleTiersConfig?.priority
+    );
+    const eliteModBrands = resolveTierBrands(moduleTiersConfig?.elite, moduleTiersConfig?.priority);
+    const premModBrands = resolveTierBrands(
+      moduleTiersConfig?.premium,
+      moduleTiersConfig?.priority
+    );
+
+    const stdInvBrands = resolveTierBrands(
+      inverterTiersConfig?.standard,
+      inverterTiersConfig?.priority
+    );
+    const eliteInvBrands = resolveTierBrands(
+      inverterTiersConfig?.elite,
+      inverterTiersConfig?.priority
+    );
+    const premInvBrands = resolveTierBrands(
+      inverterTiersConfig?.premium,
+      inverterTiersConfig?.priority
+    );
+
+    // Candidatos de fallback específicos por tier (caso o tier não tenha marcas ou ocorra incompatibilidade)
+    const sortedByPricePerW = [...modulesWithPower].sort((a, b) => a.pricePerW - b.pricePerW);
+    const economicCandidateModule = sortedByPricePerW[0]?.module;
+
+    const sortedByPremium = [...modulesWithPower].sort((a, b) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const aTier1 = checkIsTier1Module(
+        a.module.brandName,
+        a.module.name,
+        Boolean((a.module.specs as any)?.is_tier_1)
+      )
+        ? 1
+        : 0;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const bTier1 = checkIsTier1Module(
+        b.module.brandName,
+        b.module.name,
+        Boolean((b.module.specs as any)?.is_tier_1)
+      )
+        ? 1
+        : 0;
+      if (aTier1 !== bTier1) return bTier1 - aTier1;
+      return b.powerW - a.powerW;
+    });
+    const premiumCandidateModule =
+      sortedByPremium[0]?.module || modulesWithPower[modulesWithPower.length - 1]?.module;
+
+    const costBenefitCandidateModule =
+      sortedByPricePerW.length > 2
+        ? sortedByPricePerW[Math.floor(sortedByPricePerW.length / 2)]?.module
+        : sortedByPricePerW[1]?.module || sortedByPricePerW[0]?.module;
+
+    const sortedStringByPrice = [...effectiveStringInverters].sort((a, b) => a.price - b.price);
+    const economicCandidateInverter = sortedStringByPrice[0];
+    const costBenefitCandidateInverter =
+      sortedStringByPrice.length > 2
+        ? sortedStringByPrice[Math.floor(sortedStringByPrice.length / 2)]
+        : sortedStringByPrice[1] || sortedStringByPrice[0];
+    const premiumCandidateInverter =
+      sortedStringByPrice.length > 1
+        ? sortedStringByPrice[sortedStringByPrice.length - 1]
+        : sortedStringByPrice[0];
+
+    // Helper unificado para montagem de cada tier respeitando sua distribuição
+    const buildTier = async (
+      tierModBrands: string[],
+      tierInvBrands: string[],
+      fallbackModule?: ProductWithSpecs<ModuleSpec>,
+      fallbackInverterId?: string,
+      targetInverterType?: "string" | "microinverter" | "hybrid" | "off_grid"
+    ): Promise<BuiltKit> => {
+      const invType = targetInverterType || input.inverter_type || "string";
+
+      // 1ª Tentativa: Montagem dinâmica com as marcas específicas do tier
+      // Não fixa IDs aleatórios para permitir que o motor de dimensionamento avalie
+      // livremente todos os inversores e módulos compatíveis com a potência requisitada.
+      if (tierModBrands.length > 0 || tierInvBrands.length > 0) {
+        const trialInput: GenerateKitInput = {
+          ...input,
+          pinned_module_id: input.pinned_module_id,
+          pinned_inverter_id: input.pinned_inverter_id,
+          inverter_type: invType,
         };
-        res = await this.buildKit(
-          retryInput,
+
+        const res = await this.buildKit(trialInput, roofType, source, tierModBrands, tierInvBrands);
+
+        if (res) return res;
+
+        // Se não fechou com a fonte primária, tenta distribuidores ativos com as marcas do tier
+        const activeDistributors = await this.prisma.distributor.findMany({
+          where: { active: true },
+          select: { id: true },
+        });
+        for (const dist of activeDistributors) {
+          const distRes = await this.buildKit(
+            trialInput,
+            roofType,
+            { distributorId: dist.id },
+            tierModBrands,
+            tierInvBrands
+          );
+          if (distRes) return distRes;
+        }
+      }
+
+      // 2ª Tentativa: Fallback com candidatos selecionados para a categoria deste tier
+      if (fallbackModule || fallbackInverterId) {
+        const candidateInput: GenerateKitInput = {
+          ...input,
+          ...(fallbackModule && !input.pinned_module_id
+            ? { pinned_module_id: fallbackModule.id }
+            : {}),
+          ...(fallbackInverterId && !input.pinned_inverter_id
+            ? { pinned_inverter_id: fallbackInverterId }
+            : {}),
+          inverter_type: invType,
+        };
+
+        const res = await this.buildKit(
+          candidateInput,
           roofType,
           source,
-          preferredModuleBrands,
-          preferredInverterBrands
+          tierModBrands,
+          tierInvBrands
         );
+        if (res) return res;
       }
-      return res || baseBuilt!;
+
+      // 3ª Tentativa: Fallback de segurança no kit base
+      return baseBuilt!;
     };
 
-    // 3. Assemble Economic kit (Standard)
-    const pinnedModule = input.pinned_module_id
-      ? allModules.find((m) => m.id === input.pinned_module_id)
-      : undefined;
-    const pinnedInverterId = input.pinned_inverter_id;
+    // 3. Monta kit Econômico (Standard) respeitando estritamente marcas de Standard
+    const economicBuilt = await buildTier(
+      stdModBrands,
+      stdInvBrands,
+      economicCandidateModule,
+      economicCandidateInverter?.id,
+      input.inverter_type || "string"
+    );
 
-    const economicModule =
-      pinnedModule || findModuleForBrands(moduleTiersConfig?.standard, economicCandidateModule);
-    const economicInverterId =
-      pinnedInverterId ||
-      (input.inverter_type === "microinverter"
-        ? sortedMicro[0]?.id
-        : input.inverter_type === "hybrid"
-          ? sortedHybrid[0]?.id
-          : findInverterForBrands(inverterTiersConfig?.standard, sortedString[0]?.id));
+    // 4. Monta kit Custo-Benefício (Elite) respeitando estritamente marcas de Elite
+    const costBenefitBuilt = await buildTier(
+      eliteModBrands,
+      eliteInvBrands,
+      costBenefitCandidateModule,
+      costBenefitCandidateInverter?.id,
+      input.inverter_type
+    );
 
-    let economicBuilt: BuiltKit | null = null;
-    if (economicModule) {
-      economicBuilt = await tryBuild({
-        moduleId: economicModule.id,
-        inverterId: economicInverterId,
-        inverterType: input.inverter_type || "string",
-      });
-    }
-    if (!economicBuilt) economicBuilt = baseBuilt;
-
-    // 4. Assemble Cost-Benefit kit (Elite)
-    const eliteModBrands = moduleTiersConfig?.priority
-      ? [moduleTiersConfig.priority, ...(moduleTiersConfig.elite || [])]
-      : moduleTiersConfig?.elite;
-    const eliteInvBrands = inverterTiersConfig?.priority
-      ? [inverterTiersConfig.priority, ...(inverterTiersConfig.elite || [])]
-      : inverterTiersConfig?.elite;
-
-    const costBenefitModule =
-      pinnedModule ||
-      findModuleForBrands(
-        eliteModBrands,
-        costBenefitCandidateModule && costBenefitCandidateModule.id !== economicCandidateModule?.id
-          ? costBenefitCandidateModule
-          : modulesWithPower[Math.min(1, modulesWithPower.length - 1)]?.module
-      );
-    const costBenefitInverterId =
-      pinnedInverterId ||
-      findInverterForBrands(
-        eliteInvBrands,
-        sortedString.length > 1
-          ? sortedString[Math.floor(sortedString.length / 2)]?.id
-          : sortedString[0]?.id
-      );
-
-    let costBenefitBuilt: BuiltKit | null = null;
-    if (costBenefitModule) {
-      costBenefitBuilt = await tryBuild({
-        moduleId: costBenefitModule.id,
-        inverterId: costBenefitInverterId,
-        inverterType: input.inverter_type,
-      });
-    }
-    if (!costBenefitBuilt) costBenefitBuilt = baseBuilt;
-
-    // 5. Assemble Premium kit
-    const premiumModule =
-      pinnedModule ||
-      findModuleForBrands(
-        moduleTiersConfig?.premium,
-        premiumCandidateModule || modulesWithPower[modulesWithPower.length - 1]?.module
-      );
-    const premiumInverterId =
-      pinnedInverterId || findInverterForBrands(inverterTiersConfig?.premium, sortedString[0]?.id);
-
-    let premiumBuilt: BuiltKit | null = null;
+    // 5. Monta kit Alta Performance (Premium) respeitando estritamente marcas de Premium
     const requestedInverterType = input.inverter_type;
-
-    if (requestedInverterType === "microinverter") {
-      if (sortedMicro.length > 0) {
-        premiumBuilt = await tryBuild({
-          moduleId: premiumModule?.id,
-          inverterId: sortedMicro[0]?.id,
-          inverterType: "microinverter",
-        });
-      }
-    } else if (requestedInverterType === "hybrid") {
-      if (sortedHybrid.length > 0) {
-        premiumBuilt = await tryBuild({
-          moduleId: premiumModule?.id,
-          inverterId: sortedHybrid[0]?.id,
-          inverterType: "hybrid",
-        });
-      }
-    } else {
-      premiumBuilt = await tryBuild({
-        moduleId: premiumModule?.id,
-        inverterId: premiumInverterId,
-        inverterType: "string",
-      });
+    let premiumFallbackInverterId = premiumCandidateInverter?.id;
+    if (requestedInverterType === "microinverter" && sortedMicro.length > 0) {
+      premiumFallbackInverterId = sortedMicro[0]?.id;
+    } else if (requestedInverterType === "hybrid" && sortedHybrid.length > 0) {
+      premiumFallbackInverterId = sortedHybrid[0]?.id;
     }
-    if (!premiumBuilt) premiumBuilt = baseBuilt;
+
+    const premiumBuilt = await buildTier(
+      premModBrands,
+      premInvBrands,
+      premiumCandidateModule,
+      premiumFallbackInverterId,
+      requestedInverterType
+    );
 
     const buildTierKit = async (
       tierId: "economic" | "cost_benefit" | "premium",
@@ -1235,7 +1209,13 @@ export class KitGenerationService {
           const bRank = getPrefRank(b.brandName, preferredModuleBrands);
           if (aRank !== bRank) return aRank - bRank;
         }
-        return (Number(a.price) || 0) - (Number(b.price) || 0);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const aPower = Number((a.specs as any)?.power_w) || 550;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const bPower = Number((b.specs as any)?.power_w) || 550;
+        const aWp = (Number(a.price) || 0) / Math.max(1, aPower);
+        const bWp = (Number(b.price) || 0) / Math.max(1, bPower);
+        return aWp - bWp;
       });
     }
 
