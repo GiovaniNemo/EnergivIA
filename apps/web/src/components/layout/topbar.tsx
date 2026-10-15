@@ -7,17 +7,7 @@ import { useOrganization } from "@/components/providers/organization-provider";
 import { useSidebar } from "@/components/layout/sidebar-inset";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { Button } from "@/components/ui/button";
-import {
-  Moon,
-  Sun,
-  LogOut,
-  Menu,
-  UserRound,
-  Timer,
-  AlertTriangle,
-  Search,
-  Sparkles,
-} from "lucide-react";
+import { Moon, Sun, LogOut, Menu, UserRound, Timer, AlertTriangle, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { OrganizationSwitcher } from "@/components/layout/organization-switcher";
 import { NotificationsBell } from "@/components/layout/notifications-bell";
@@ -251,16 +241,6 @@ export function Topbar() {
         >
           <Search className="h-4 w-4" />
         </button>
-
-        {isSpecialAccess ? (
-          <div
-            className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold rounded-xl border border-emerald-500/20 shadow-xs shrink-0"
-            title="Acesso Especial Liberado - Plano Plus"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-            <span>Plano Plus</span>
-          </div>
-        ) : null}
 
         {!hasActivePlan &&
           (trialDaysLeft === 0 ? (
