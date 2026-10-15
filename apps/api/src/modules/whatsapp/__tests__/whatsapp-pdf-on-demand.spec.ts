@@ -371,7 +371,9 @@ describe("WhatsApp Bot & Cloud - On-Demand PDF Delivery Suite", () => {
       });
 
       expect(thanksResponse).toContain("De nada, *João da Silva*!");
-      expect(thanksResponse).toContain("Para baixar a proposta completa em PDF, responda *PDF*");
+      expect(thanksResponse).toContain("Sempre que precisar de uma nova cotação");
+      expect(thanksResponse).not.toContain("responda *PDF*");
+      expect(thanksResponse).not.toContain("digite *novo*");
       expect(thanksResponse).not.toContain("Não compreendi sua mensagem");
 
       const randomResponse = await (service as any).generateBotResponse({
@@ -390,10 +392,47 @@ describe("WhatsApp Bot & Cloud - On-Demand PDF Delivery Suite", () => {
       });
 
       expect(randomResponse).toContain("Sua proposta comercial já foi gerada com sucesso!");
-      expect(randomResponse).toContain(
-        "Para receber o documento em PDF aqui no WhatsApp, digite *PDF*"
-      );
+      expect(randomResponse).not.toContain("digite *PDF*");
+      expect(randomResponse).not.toContain("digite *novo*");
       expect(randomResponse).not.toContain("Não compreendi sua mensagem");
+    });
+
+    it("should directly process a new bill submission even when conversation is in PROPOSAL_COMPLETED step", async () => {
+      vi.spyOn(service as any, "resolveAuthorizedTenant").mockResolvedValue({ id: "org-123" });
+      vi.spyOn(service as any, "isTenantPlanActive").mockResolvedValue({
+        active: true,
+        planName: "Pro",
+      });
+
+      const response = await (service as any).generateBotResponse({
+        conversation: {
+          id: "conv-123",
+          organizationId: "org-123",
+          title: "5544999998888",
+          metadata: {
+            step: "PROPOSAL_COMPLETED",
+            lastProposalId: "prop-xyz",
+          },
+          messages: [],
+        },
+        incomingText: "[Documento enviado: SegundaViaCopel (1).pdf]",
+        extractionResult: {
+          isValidForSizing: true,
+          exactAverageKwh: 350,
+          monthCount: 12,
+          data: {
+            cidade: "Curitiba",
+            uf: "PR",
+            tipo_conexao: "Bifásico 220V",
+          },
+        },
+      });
+
+      // Não deve retornar a proposta antiga nem mensagens orientadoras de PDF/novo
+      expect(response).not.toContain("Sua proposta comercial já foi gerada com sucesso!");
+      expect(response).toContain("Fatura Analisada com Precisão!");
+      expect(response).toContain("350 kWh/mês");
+      expect(response).toContain("Curitiba/PR");
     });
 
     it("should retry main message if initial delivery fails before sending forward message", async () => {

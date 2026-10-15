@@ -2856,7 +2856,7 @@ ${catalogContext}`;
       );
     } catch (err) {
       this.logger.error("Erro na resposta conversacional de IA no WhatsApp:", err);
-      return "Não consegui processar a consulta agora. Digite *novo* para reiniciar ou envie a fatura em PDF/foto.";
+      return "Não consegui processar a consulta agora. Envie a fatura de energia (PDF ou foto) para gerarmos sua cotação!";
     }
   }
 
@@ -3596,7 +3596,17 @@ ${catalogContext}`;
     }
 
     // 0.2 Se a conversa estiver no estado PROPOSAL_COMPLETED (proposta já gerada com sucesso)
-    if (currentStep === "PROPOSAL_COMPLETED") {
+    // MAS SE O USUÁRIO ENVIOU UMA NOVA FATURA OU UM CONSUMO NUMÉRICO, NÃO BLOQUEIA!
+    const isNewBillSubmission =
+      Boolean(extractionResult) ||
+      incomingText.startsWith("[Documento enviado") ||
+      incomingText.startsWith("[Foto enviada") ||
+      lower.includes("[documento enviado") ||
+      lower.includes("[foto enviada");
+
+    const hasDirectKwhInput = /(?:consumo|simular)?\s*(\d+[\d.,]*)\s*kwh/i.test(incomingText);
+
+    if (currentStep === "PROPOSAL_COMPLETED" && !isNewBillSubmission && !hasDirectKwhInput) {
       const lowerClean = incomingText
         .replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, "")
         .toLowerCase()
@@ -3634,12 +3644,11 @@ ${catalogContext}`;
       ) {
         return (
           `De nada, *${resolvedContactName}*! Ficamos sempre à disposição. ☀️\n\n` +
-          `> 📄 Para baixar a proposta completa em PDF, responda *PDF*.\n` +
-          `> ⚡ Para iniciar uma nova simulação solar para outro cliente, digite *novo* ou envie uma fatura de energia.`
+          `Sempre que precisar de uma nova cotação, basta enviar a conta de luz por aqui!`
         );
       }
 
-      // Reinício para nova proposta
+      // Reinício para nova proposta (compatibilidade retroativa caso o usuário digite "novo")
       if (
         lowerClean === "novo" ||
         lowerClean === "reiniciar" ||
@@ -3669,8 +3678,7 @@ ${catalogContext}`;
       return (
         `Sua proposta comercial já foi gerada com sucesso! ☀️\n\n` +
         linkMsg +
-        `> 📄 Para receber o documento em PDF aqui no WhatsApp, digite *PDF*.\n` +
-        `> 🔄 Para realizar uma nova simulação ou cotar para outro cliente, digite *novo*.`
+        `Para realizar uma nova cotação, basta enviar outra conta de luz (PDF ou foto) ou informar o consumo em kWh.`
       );
     }
 
@@ -4569,7 +4577,6 @@ ${catalogContext}`;
         `${integratorPreviewLink}\n\n` +
         `_💡 Abra este link acima para revisar a proposta com segurança. Ele **não dispara avisos de visualização**._\n\n` +
         `_👉 A mensagem a seguir foi preparada para você **encaminhar direto para o seu cliente**. Quando ele abrir o link da proposta, você receberá um **alerta imediato aqui no WhatsApp** avisando que ele está visualizando!_\n\n` +
-        `_📄 Caso precise do documento em PDF aqui no WhatsApp, basta responder *PDF*._\n\n` +
         `Equipe *_EnergivIA Solar._*`;
 
       const clientForwardMsg =
