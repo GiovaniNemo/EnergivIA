@@ -98,7 +98,7 @@ export function FeedbackPromptCard() {
     window.addEventListener("open-feedback-prompt", handleOpen);
 
     // Se a trava dos 5 dias estiver bloqueando o acesso, não exibir a avaliação simultaneamente
-    if (user?.isTrialLocked) {
+    if (user?.isTrialLocked || (user?.isTrial && user?.trialExpired)) {
       setIsOpen(false);
       return () => {
         window.removeEventListener("open-feedback-prompt", handleOpen);
@@ -136,7 +136,11 @@ export function FeedbackPromptCard() {
 
     if (hasPaidPlan || reachedFiveDays) {
       const timer = setTimeout(() => {
-        if (!user?.isTrialLocked && !isFeedbackSubmittedLocally()) {
+        if (
+          !user?.isTrialLocked &&
+          !(user?.isTrial && user?.trialExpired) &&
+          !isFeedbackSubmittedLocally()
+        ) {
           setIsOpen(true);
           localStorage.setItem("energivia_feedback_auto_shown", "true");
           if (user?.id) {

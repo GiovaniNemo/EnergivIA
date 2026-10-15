@@ -30,8 +30,12 @@ export function TrialLockOverlay() {
     (user?.planTier === "PLUS" && !user?.isTrial) ||
     Boolean(user?.planName?.includes("Especial"));
 
+  const isLocked = Boolean(
+    !isSpecialAccess && (user?.isTrialLocked || (user?.isTrial && user?.trialExpired))
+  );
+
   useEffect(() => {
-    if ((user?.isTrialLocked || modalOpen) && !isSpecialAccess) {
+    if ((isLocked || modalOpen) && !isSpecialAccess) {
       const fetchPlans = async () => {
         try {
           const response = await fetch("/api/proxy/plans");
@@ -45,7 +49,7 @@ export function TrialLockOverlay() {
       };
       fetchPlans();
     }
-  }, [user?.isTrialLocked, modalOpen, isSpecialAccess]);
+  }, [isLocked, modalOpen, isSpecialAccess]);
 
   if (loading || isSpecialAccess) {
     return null;
@@ -54,11 +58,7 @@ export function TrialLockOverlay() {
   // Banner superior para limites atingidos
   let bannerElement: React.ReactNode = null;
 
-  if (
-    user?.isTrial &&
-    (user?.trialExpired || user?.isTrialProposalLimitReached) &&
-    !user?.isTrialLocked
-  ) {
+  if (user?.isTrial && (user?.trialExpired || user?.isTrialProposalLimitReached) && !isLocked) {
     bannerElement = (
       <div className="w-full shrink-0 bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 dark:from-amber-950/60 dark:via-orange-950/50 dark:to-amber-950/60 border-b border-amber-500/30 px-3 py-2 sm:px-4 sm:py-2.5 text-xs text-amber-950 dark:text-amber-200 font-medium flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 z-30">
         <div className="flex items-start sm:items-center gap-2">
@@ -87,7 +87,7 @@ export function TrialLockOverlay() {
         </div>
       </div>
     );
-  } else if (!user?.isTrial && user?.isProposalLimitReached && !user?.isTrialLocked) {
+  } else if (!user?.isTrial && user?.isProposalLimitReached && !isLocked) {
     bannerElement = (
       <div className="w-full shrink-0 bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 dark:from-amber-950/60 dark:via-orange-950/50 dark:to-amber-950/60 border-b border-amber-500/30 px-3 py-2 sm:px-4 sm:py-2.5 text-xs text-amber-950 dark:text-amber-200 font-medium flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 z-30">
         <div className="flex items-start sm:items-center gap-2">
@@ -116,7 +116,7 @@ export function TrialLockOverlay() {
     );
   }
 
-  const showModal = Boolean(user?.isTrialLocked || modalOpen);
+  const showModal = Boolean(isLocked || modalOpen);
 
   if (!bannerElement && !showModal) {
     return null;
@@ -132,7 +132,7 @@ export function TrialLockOverlay() {
           <div className="pointer-events-none fixed right-1/4 top-1/2 h-96 w-96 translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-500/10 blur-[128px]" />
 
           {/* Botão de fechar modal se aberto voluntariamente */}
-          {!user?.isTrialLocked && (
+          {!isLocked && (
             <button
               onClick={() => setModalOpen(false)}
               className="absolute top-6 left-6 lg:top-8 lg:left-8 z-50 flex items-center gap-2 text-gray-400 hover:text-white bg-gray-900/90 hover:bg-gray-800 border border-gray-800 rounded-full px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
