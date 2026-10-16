@@ -1,35 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import puppeteerCore from "puppeteer-core";
-import chromium from "@sparticuz/chromium";
-import { proposalPuppeteerPdfOptions } from "@/lib/proposal-puppeteer-html";
-import type { PublicProposalPayload } from "@/lib/public-proposals-api";
 import { auth0 } from "@/lib/auth0";
 
-const BACKEND_URL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
-
-async function getBrowser() {
-  const isLocal =
-    process.env.NODE_ENV === "development" ||
-    process.platform === "win32" ||
-    process.platform === "darwin";
-
-  if (isLocal) {
-    const puppeteer = await import("puppeteer");
-    return puppeteer.default.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-  }
-
-  const CHROMIUM_URL =
-    "https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar";
-  const executablePath = await chromium.executablePath(CHROMIUM_URL);
-  return puppeteerCore.launch({
-    args: chromium.args,
-    executablePath,
-    headless: true,
-  });
-}
+const BACKEND_URL = (process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api").replace(
+  /\/$/,
+  ""
+);
+const AUTH0_AUDIENCE = process.env["AUTH0_AUDIENCE"];
 
 function toSafeAsciiFilename(raw: string): string {
   const normalized = raw
@@ -43,7 +19,7 @@ function toSafeAsciiFilename(raw: string): string {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
   const session = await auth0.getSession();
@@ -56,65 +32,70 @@ export async function GET(
     return NextResponse.json({ error: "Missing proposal id" }, { status: 400 });
   }
 
+  let accessToken = "";
   try {
-    const apiUrl = `${BACKEND_URL}/public/proposals/${id}?pdf=true`;
-    const apiResponse = await fetch(apiUrl, {
+    const result = await auth0.getAccessToken(
+      AUTH0_AUDIENCE ? { audience: AUTH0_AUDIENCE } : undefined
+    );
+    accessToken = result?.token ?? "";
+  } catch (err) {
+    console.warn("[api/proposals/[id]/pdf] Não foi possível obter Access Token via Auth0:", err);
+  }
+
+  const orgId =
+    request.headers.get("x-organization-id") ??
+    request.cookies.get("energivia-organization-id")?.value ??
+    "";
+
+  try {
+    const headers: Record<string, string> = {
+      Accept: "application/pdf",
+    };
+    if (accessToken) {
+      headers["Authorization"] = `Bearer ${accessToken}`;
+    }
+    if (orgId) {
+      headers["x-organization-id"] = orgId;
+    }
+
+    const apiUrl = `${BACKEND_URL}/proposals/${encodeURIComponent(id)}/generate-pdf`;
+    const apiRes = await fetch(apiUrl, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-is-pdf": "true",
-      },
+      headers,
     });
 
-    if (!apiResponse.ok) {
-      const err = (await apiResponse.json().catch(() => ({}))) as { message?: string };
-      return NextResponse.json(
-        { error: err.message ?? `Proposta não encontrada (HTTP ${apiResponse.status})` },
-        { status: apiResponse.status }
+    if (!apiRes.ok) {
+      let errMsg = `Falha ao gerar PDF na API (HTTP ${apiRes.status})`;
+      try {
+        const json = (await apiRes.json()) as { message?: string; error?: string };
+        if (json?.message) errMsg = json.message;
+        else if (json?.error) errMsg = json.error;
+      } catch {
+        const text = await apiRes.text().catch(() => "");
+        if (text) errMsg = text;
+      }
+      return NextResponse.json({ error: errMsg }, { status: apiRes.status });
+    }
+
+    const outHeaders = new Headers(apiRes.headers);
+    outHeaders.delete("content-encoding");
+    outHeaders.delete("content-length");
+    outHeaders.set("Content-Type", "application/pdf");
+    outHeaders.set("Cache-Control", "no-store");
+
+    if (!outHeaders.has("Content-Disposition")) {
+      outHeaders.set(
+        "Content-Disposition",
+        `attachment; filename="${toSafeAsciiFilename(id)}.pdf"`
       );
     }
 
-    const payload = (await apiResponse.json()) as PublicProposalPayload;
-
-    if (!payload.proposalTemplate?.config) {
-      return NextResponse.json({ error: "Proposta sem template configurado." }, { status: 400 });
-    }
-    const appUrl = (process.env["NEXT_PUBLIC_APP_URL"] || _request.nextUrl.origin).replace(
-      /\/$/,
-      ""
-    );
-    const proposalUrl = `${appUrl}/proposta/${payload.publicToken ?? id}?pdf=true&hide_cookie=1`;
-
-    const browser = await getBrowser();
-    try {
-      const page = await browser.newPage();
-      await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
-      await page.goto(proposalUrl, { waitUntil: "networkidle2", timeout: 45_000 });
-
-      // Aguarda de modo explícito que o componente root renderize
-      await page
-        .waitForSelector('[data-preview-scroll="true"]', { timeout: 15_000 })
-        .catch(() => {});
-      // Um pequeno delay extra para ter certeza que gráficos ou fontes terminaram de renderizar
-      await new Promise((r) => setTimeout(r, 2000));
-
-      const pdf = await page.pdf(proposalPuppeteerPdfOptions);
-
-      const safeFilename = toSafeAsciiFilename(payload.title ?? "proposta-solar");
-
-      return new Response(Buffer.from(pdf), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${safeFilename}.pdf"`,
-          "Cache-Control": "no-store",
-        },
-      });
-    } finally {
-      await browser.close();
-    }
+    return new NextResponse(apiRes.body, {
+      status: 200,
+      headers: outHeaders,
+    });
   } catch (error) {
-    console.error("[api/proposals/[id]/pdf] Erro:", error);
+    console.error("[api/proposals/[id]/pdf] Erro ao delegar PDF para API:", error);
     const message = error instanceof Error ? error.message : "Falha ao gerar PDF";
     return NextResponse.json({ error: message }, { status: 500 });
   }
