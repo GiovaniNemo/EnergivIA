@@ -1,35 +1,31 @@
 import { NextResponse, NextRequest } from "next/server";
-import puppeteerCore from "puppeteer-core";
-import chromium from "@sparticuz/chromium";
 import type { ProposalDocumentJson } from "@/components/proposals/editor/types";
 import { createThumbnailRenderSessionId, signThumbnailPayload } from "@/lib/thumbnail-render-token";
 import { setThumbnailRenderSession } from "@/lib/thumbnail-render-store";
+import { auth0 } from "@/lib/auth0";
 
-async function getBrowser() {
-  const isLocal =
-    process.env.NODE_ENV === "development" ||
-    process.platform === "win32" ||
-    process.platform === "darwin";
-
-  if (isLocal) {
-    const puppeteer = await import("puppeteer");
-    return puppeteer.default.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-  }
-
-  const CHROMIUM_URL =
-    "https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar";
-  const executablePath = await chromium.executablePath(CHROMIUM_URL);
-  return puppeteerCore.launch({
-    args: chromium.args,
-    executablePath,
-    headless: true,
-  });
-}
+const BACKEND_URL = (process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api").replace(
+  /\/$/,
+  ""
+);
+const AUTH0_AUDIENCE = process.env["AUTH0_AUDIENCE"];
 
 export async function POST(request: NextRequest): Promise<Response> {
+  const session = await auth0.getSession();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let accessToken = "";
+  try {
+    const result = await auth0.getAccessToken(
+      AUTH0_AUDIENCE ? { audience: AUTH0_AUDIENCE } : undefined
+    );
+    accessToken = result?.token ?? "";
+  } catch (err) {
+    console.warn("[thumbnail-api] Não foi possível obter Access Token via Auth0:", err);
+  }
+
   try {
     const body = (await request.json()) as {
       title?: string;
@@ -58,59 +54,40 @@ export async function POST(request: NextRequest): Promise<Response> {
     const renderUrl = new URL("/internal/template-thumbnail", baseUrl);
     renderUrl.searchParams.set("id", sessionId);
     renderUrl.searchParams.set("sig", sig);
-    console.info("[thumbnail-api] render URL prepared", {
+    console.info("[thumbnail-api] render URL prepared, dispatching to NestJS API", {
       sessionId,
       baseUrl,
       renderPath: renderUrl.pathname,
-      hasSignature: Boolean(sig),
     });
 
-    const browser = await getBrowser();
-    try {
-      const page = await browser.newPage();
-      await page.setViewport({ width: 1200, height: 1800, deviceScaleFactor: 1 });
-      console.info("[thumbnail-api] puppeteer goto", { sessionId, url: renderUrl.toString() });
-      await page.goto(renderUrl.toString(), { waitUntil: "networkidle2", timeout: 45_000 });
-      console.info("[thumbnail-api] waiting capture selector", { sessionId });
-      await page
-        .waitForSelector("[data-preview-capture-target='true']", { timeout: 15_000 })
-        .catch(() => {});
-      const captureElement = await page.$("[data-preview-capture-target='true']");
-      if (!captureElement) {
-        console.error("[thumbnail-api] capture selector missing after wait", { sessionId });
-        return NextResponse.json({ error: "Missing capture target in HTML" }, { status: 422 });
-      }
-      const box = await captureElement.boundingBox();
-      if (!box) {
-        console.error("[thumbnail-api] missing capture bounding box", { sessionId });
-        return NextResponse.json({ error: "Missing capture bounding box" }, { status: 422 });
-      }
-      const a4Ratio = Math.sqrt(2);
-      const clipHeight = Math.min(box.height, box.width * a4Ratio);
-      const imageBuffer = (await page.screenshot({
-        type: "jpeg",
-        quality: 75,
-        clip: {
-          x: Math.max(0, box.x),
-          y: Math.max(0, box.y),
-          width: Math.max(1, box.width),
-          height: Math.max(1, clipHeight),
-        },
-      })) as Buffer;
-      const dataUrl = `data:image/jpeg;base64,${imageBuffer.toString("base64")}`;
-      console.info("[thumbnail-api] screenshot success", {
-        sessionId,
-        bytes: imageBuffer.length,
-        dataUrlLength: dataUrl.length,
-        clip: {
-          width: Math.round(box.width),
-          height: Math.round(clipHeight),
-        },
-      });
-      return NextResponse.json({ dataUrl }, { status: 200 });
-    } finally {
-      await browser.close();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (accessToken) {
+      headers["Authorization"] = `Bearer ${accessToken}`;
     }
+
+    const apiRes = await fetch(`${BACKEND_URL}/proposals/render-thumbnail`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        url: renderUrl.toString(),
+        selector: "[data-preview-capture-target='true']",
+      }),
+    });
+
+    if (!apiRes.ok) {
+      const err = (await apiRes.json().catch(() => ({}))) as { message?: string };
+      throw new Error(err.message || `Erro da API ao renderizar thumbnail (HTTP ${apiRes.status})`);
+    }
+
+    const result = (await apiRes.json()) as { dataUrl: string };
+    console.info("[thumbnail-api] screenshot success via API", {
+      sessionId,
+      dataUrlLength: result.dataUrl?.length ?? 0,
+    });
+
+    return NextResponse.json({ dataUrl: result.dataUrl }, { status: 200 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to generate thumbnail";
     console.error("[thumbnail-api] failed", {
