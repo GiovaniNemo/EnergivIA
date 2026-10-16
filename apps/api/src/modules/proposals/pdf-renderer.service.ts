@@ -227,9 +227,16 @@ export class PdfRendererService implements OnModuleDestroy {
 
       await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1 });
       await page.setContent(cleanHtml, {
-        waitUntil: ["domcontentloaded", "networkidle0"],
+        waitUntil: ["domcontentloaded", "load"],
         timeout: timeoutMs,
       });
+      await page
+        .evaluate(
+          () =>
+            (globalThis as unknown as { document?: { fonts?: { ready?: Promise<unknown> } } })
+              .document?.fonts?.ready
+        )
+        .catch(() => {});
 
       const pdfBuffer = await page.pdf(options.pdfOptions ?? DEFAULT_PDF_OPTIONS);
       const elapsed = Date.now() - startTime;
