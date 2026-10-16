@@ -9,7 +9,7 @@
     "@remotion/cli": "4.0.523",
     "@remotion/tailwind-v4": "4.0.523",
     "@remotion/zod-types": "4.0.523",
-    "lucide-react": "^0.468.0",
+    "lucide-react": "^1.55.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.523",
