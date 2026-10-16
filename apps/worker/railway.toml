@@ -1,13 +1,12 @@
-# Railway config — Worker service.
-# Apontar este arquivo no Railway: service worker → Settings → "Config File Path"
-# = apps/worker/railway.toml
+# Railway config — Worker service (SUSPENSO / DESATIVADO).
+# AVISO DE CUSTO: Toda geração de PDF foi centralizada diretamente no serviço da API NestJS (PdfRendererService).
+# O serviço 'worker' não precisa mais rodar no Railway e pode ser pausado ou removido no dashboard para corte de custos.
+#
+# Config File Path no Railway: apps/worker/railway.toml
 
 [build]
 dockerfilePath = "apps/worker/Dockerfile"
 
 [deploy]
-# Sem preDeployCommand — worker não roda migrations (é a API que faz)
-# Sem healthcheckPath — worker não expõe HTTP
-# Sem startCommand — o CMD do Dockerfile cuida
 restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 10
+restartPolicyMaxRetries = 3
