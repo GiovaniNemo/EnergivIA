@@ -647,8 +647,8 @@ export function PreviewDocument({
               />
 
               <div
-                className={`proposal-pdf-page-body flex-1 overflow-hidden px-8 py-4 flex flex-col justify-start ${
-                  pageDef.sections.length === 1 ? "gap-0" : "gap-4"
+                className={`proposal-pdf-page-body relative z-10 flex-1 overflow-hidden px-8 py-5 flex flex-col ${
+                  pageDef.sections.length === 1 ? "justify-center gap-0" : "justify-start gap-4"
                 }`}
                 style={{
                   fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),

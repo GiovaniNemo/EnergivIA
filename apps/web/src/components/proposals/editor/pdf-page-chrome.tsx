@@ -3,6 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { ProposalStyles } from "./types";
 import type { PreviewRenderVariables } from "./section-render/types";
+import { PdfOrbitalBackground } from "./pdf-orbital-background";
 
 interface PdfPageHeaderProps {
   pageNumber: number;
@@ -132,6 +133,9 @@ export function PdfPageContainer({
         breakInside: "avoid",
       }}
     >
+      {!isCover ? (
+        <PdfOrbitalBackground primaryColor={branding.primaryColor} variant="content" />
+      ) : null}
       {children}
     </div>
   );
