@@ -1314,12 +1314,14 @@ export function renderSectionContent(
             {renderRichText(f.text, vars)}
           </div>
           {String(f.image ?? "") ? (
-            <img
-              data-editor-field-path="image"
-              src={resolveDisplayAssetUrl(f.image)}
-              alt="Empresa ou equipe"
-              className="h-32 w-full rounded-lg border border-zinc-700/70 object-cover"
-            />
+            <div className="proposal-photo-frame aspect-[16/9] w-full max-h-56 overflow-hidden rounded-lg border border-zinc-700/60 bg-black/10">
+              <img
+                data-editor-field-path="image"
+                src={resolveDisplayAssetUrl(f.image)}
+                alt="Empresa ou equipe"
+                className="h-full w-full object-cover object-center"
+              />
+            </div>
           ) : null}
         </div>
       );

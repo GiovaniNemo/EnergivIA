@@ -44,10 +44,31 @@ export function proposalPuppeteerDocumentCss(): string {
       font-family: var(--proposal-font);
     }
 
-    img,
+    img {
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
+
     svg {
       max-width: 100%;
       height: auto;
+    }
+
+    /* Blindagem anti-distorção para logotipos institucionais */
+    header img,
+    footer img,
+    .proposal-pdf-page header img,
+    .proposal-pdf-page footer img,
+    .proposal-cover-page img {
+      object-fit: contain !important;
+    }
+
+    /* Fotos e molduras fotográficas com proporção travada e sem deformação */
+    .proposal-photo-frame,
+    .proposal-photo-frame img {
+      object-fit: cover !important;
+      object-position: center !important;
     }
 
     table {

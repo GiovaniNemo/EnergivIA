@@ -14,4 +14,11 @@ describe("proposalPuppeteerDocumentCss", () => {
     expect(css).toContain("break-after: page");
     expect(css).toContain("break-inside: avoid");
   });
+
+  it("should enforce anti-distortion rules for images and strict card break prevention", () => {
+    const css = proposalPuppeteerDocumentCss();
+    expect(css).toContain("object-fit: contain");
+    expect(css).toContain(".proposal-content-section");
+    expect(css).toContain("page-break-inside: avoid");
+  });
 });
