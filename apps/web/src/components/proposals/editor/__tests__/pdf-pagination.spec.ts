@@ -72,4 +72,45 @@ describe("pdf-pagination", () => {
     expect(pages[0].sections).toHaveLength(2);
     expect(pages[1].sections).toHaveLength(1);
   });
+
+  it("particiona lista longa de equipamentos (> 6 itens) em páginas consecutivas para não cortar cards", () => {
+    const longEquipmentSection: ProposalSection = {
+      ...mockSection("proposal_equipment", "equip-long"),
+      fields: {
+        equipmentItems: [
+          { name: "Painel 1", category: "module" },
+          { name: "Painel 2", category: "module" },
+          { name: "Inversor 1", category: "inverter" },
+          { name: "Estrutura 1", category: "structure" },
+          { name: "Estrutura 2", category: "structure" },
+          { name: "Cabo Vermelho", category: "cables" },
+          { name: "Cabo Preto", category: "cables" },
+          { name: "Conector MC4", category: "accessories" },
+          { name: "String Box", category: "protection" },
+        ],
+      },
+    };
+
+    const pages = distributeSectionsIntoPdfPages([longEquipmentSection], 2);
+    // Deve quebrar em 2 páginas A4 dedicadas sequenciais (ex: 6 itens na primeira, 3 na segunda)
+    expect(pages.length).toBe(2);
+    expect(pages[0].sections).toHaveLength(1);
+    expect(pages[1].sections).toHaveLength(1);
+    const firstPartItems = (pages[0].sections[0].fields as { equipmentItems: unknown[] })
+      .equipmentItems;
+    const secondPartItems = (pages[1].sections[0].fields as { equipmentItems: unknown[] })
+      .equipmentItems;
+    expect(firstPartItems.length).toBeLessThanOrEqual(6);
+    expect(firstPartItems.length + secondPartItems.length).toBe(9);
+  });
+
+  it("atribui peso maior para seções compactas que possuem alta densidade de texto", () => {
+    const heavyCompactSection: ProposalSection = {
+      ...mockSection("solution", "heavy-sol"),
+      fields: {
+        text: "A".repeat(800), // Texto longo
+      },
+    };
+    expect(getSectionPdfWeight(heavyCompactSection)).toBe(1.0);
+  });
 });
