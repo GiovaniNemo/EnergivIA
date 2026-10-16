@@ -1119,6 +1119,14 @@ export class ProposalsService {
     return this.pdfRenderer.renderUrlToPdf({ url: targetUrl });
   }
 
+  async renderHtmlPdf(html: string): Promise<Buffer> {
+    return this.pdfRenderer.renderHtmlToPdf({ html });
+  }
+
+  async renderThumbnail(url: string, selector?: string): Promise<{ dataUrl: string }> {
+    return this.pdfRenderer.renderScreenshot({ url, selector });
+  }
+
   async generateAiSection(prompt: string, contextText?: string) {
     const apiKey =
       process.env["GOOGLE_GEMINI_API_KEY"] ??

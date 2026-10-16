@@ -29,6 +29,18 @@ export class ProposalOperationsController {
     return this.proposalsService.generateAiSection(body.prompt, body.contextText);
   }
 
+  @Post("render-html-pdf")
+  @Header("Content-Type", "application/pdf")
+  async renderHtmlPdf(@Body() body: { html: string; title?: string }) {
+    const buffer = await this.proposalsService.renderHtmlPdf(body.html);
+    return new StreamableFile(buffer);
+  }
+
+  @Post("render-thumbnail")
+  async renderThumbnail(@Body() body: { url: string; selector?: string }) {
+    return this.proposalsService.renderThumbnail(body.url, body.selector);
+  }
+
   @Get()
   list(
     @TenantId() tenantId: string,
