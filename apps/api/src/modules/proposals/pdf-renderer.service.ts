@@ -9,6 +9,20 @@ export interface RenderPdfOptions {
   timeoutMs?: number;
 }
 
+export interface RenderHtmlOptions {
+  html: string;
+  pdfOptions?: PDFOptions;
+  timeoutMs?: number;
+}
+
+export interface RenderScreenshotOptions {
+  url: string;
+  selector?: string;
+  timeoutMs?: number;
+  width?: number;
+  height?: number;
+}
+
 const DEFAULT_PDF_OPTIONS: PDFOptions = {
   format: "A4",
   printBackground: true,
@@ -73,9 +87,62 @@ export class PdfRendererService implements OnModuleDestroy {
   }
 
   /**
+   * Spawns an isolated Chromium browser instance suited for the runtime platform.
+   */
+  private async createBrowser(): Promise<Browser> {
+    const isLocal = process.platform === "win32" || process.platform === "darwin";
+
+    if (isLocal) {
+      const puppeteerLocal = await import("puppeteer");
+      return (await puppeteerLocal.default.launch({
+        headless: true,
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
+          "--no-zygote",
+          "--single-process",
+        ],
+      })) as unknown as Browser;
+    }
+
+    const envPath = process.env["PUPPETEER_EXECUTABLE_PATH"];
+    const systemPath =
+      envPath && fs.existsSync(envPath)
+        ? envPath
+        : fs.existsSync("/usr/bin/chromium-browser")
+          ? "/usr/bin/chromium-browser"
+          : fs.existsSync("/usr/bin/chromium")
+            ? "/usr/bin/chromium"
+            : undefined;
+
+    const executablePath = systemPath || (await chromium.executablePath());
+
+    return (await puppeteerCore.launch({
+      args: [
+        ...(systemPath ? [] : chromium.args),
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--single-process",
+        "--no-zygote",
+      ],
+      executablePath,
+      headless: true,
+    })) as unknown as Browser;
+  }
+
+  /**
    * Renders a given URL into a PDF Buffer safely.
    */
   async renderUrlToPdf(options: RenderPdfOptions): Promise<Buffer> {
+    const cleanUrl = (options.url ?? "").trim();
+    if (!cleanUrl) {
+      throw new BadRequestException("URL para renderização de PDF não pode ser vazia.");
+    }
+
     await this.acquirePermit();
 
     const startTime = Date.now();
@@ -83,52 +150,10 @@ export class PdfRendererService implements OnModuleDestroy {
 
     try {
       this.logger.log(
-        `[PDF] Iniciando renderização para URL: ${options.url} (Em execução: ${this.currentRunning}/${this.maxConcurrent})`
+        `[PDF] Iniciando renderização para URL: ${cleanUrl} (Em execução: ${this.currentRunning}/${this.maxConcurrent})`
       );
 
-      const isLocal = process.platform === "win32" || process.platform === "darwin";
-
-      if (isLocal) {
-        const puppeteerLocal = await import("puppeteer");
-        browser = (await puppeteerLocal.default.launch({
-          headless: true,
-          args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--no-zygote",
-            "--single-process",
-          ],
-        })) as unknown as Browser;
-      } else {
-        const envPath = process.env["PUPPETEER_EXECUTABLE_PATH"];
-        const systemPath =
-          envPath && fs.existsSync(envPath)
-            ? envPath
-            : fs.existsSync("/usr/bin/chromium-browser")
-              ? "/usr/bin/chromium-browser"
-              : fs.existsSync("/usr/bin/chromium")
-                ? "/usr/bin/chromium"
-                : undefined;
-
-        const executablePath = systemPath || (await chromium.executablePath());
-
-        browser = (await puppeteerCore.launch({
-          args: [
-            ...(systemPath ? [] : chromium.args),
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--single-process",
-            "--no-zygote",
-          ],
-          executablePath,
-          headless: true,
-        })) as unknown as Browser;
-      }
-
+      browser = await this.createBrowser();
       const page = await browser.newPage();
       const timeoutMs = options.timeoutMs ?? 30_000;
 
@@ -136,16 +161,16 @@ export class PdfRendererService implements OnModuleDestroy {
       await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1 });
 
       try {
-        await page.goto(options.url, {
+        await page.goto(cleanUrl, {
           waitUntil: ["domcontentloaded", "networkidle2"],
           timeout: timeoutMs,
         });
       } catch (navErr) {
         this.logger.warn(
-          `[PDF] navigation timeout (${timeoutMs}ms) ao carregar ${options.url}, tentando domcontentloaded: ${String(navErr)}`
+          `[PDF] navigation timeout (${timeoutMs}ms) ao carregar ${cleanUrl}, tentando domcontentloaded: ${String(navErr)}`
         );
         // Fallback: don't fail immediately if analytics or external trackers hold connections
-        await page.goto(options.url, {
+        await page.goto(cleanUrl, {
           waitUntil: "domcontentloaded",
           timeout: 15_000,
         });
@@ -163,7 +188,7 @@ export class PdfRendererService implements OnModuleDestroy {
 
       return Buffer.from(pdfBuffer);
     } catch (err) {
-      this.logger.error(`[PDF] Falha ao renderizar PDF para ${options.url}: ${String(err)}`);
+      this.logger.error(`[PDF] Falha ao renderizar PDF para ${cleanUrl}: ${String(err)}`);
       throw new BadRequestException("Não foi possível gerar o PDF da proposta comercial.");
     } finally {
       if (browser) {
@@ -171,6 +196,139 @@ export class PdfRendererService implements OnModuleDestroy {
           await browser.close();
         } catch (closeErr) {
           this.logger.warn(`[PDF] Erro ao fechar browser instance: ${String(closeErr)}`);
+        }
+      }
+      this.releasePermit();
+    }
+  }
+
+  /**
+   * Renders raw HTML string into a PDF Buffer safely.
+   */
+  async renderHtmlToPdf(options: RenderHtmlOptions): Promise<Buffer> {
+    const cleanHtml = (options.html ?? "").trim();
+    if (!cleanHtml) {
+      throw new BadRequestException("HTML para renderização de PDF não pode ser vazio.");
+    }
+
+    await this.acquirePermit();
+
+    const startTime = Date.now();
+    let browser: Browser | null = null;
+
+    try {
+      this.logger.log(
+        `[PDF] Iniciando renderização a partir de HTML (Tamanho: ${cleanHtml.length} chars, Em execução: ${this.currentRunning}/${this.maxConcurrent})`
+      );
+
+      browser = await this.createBrowser();
+      const page = await browser.newPage();
+      const timeoutMs = options.timeoutMs ?? 30_000;
+
+      await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1 });
+      await page.setContent(cleanHtml, {
+        waitUntil: ["domcontentloaded", "networkidle0"],
+        timeout: timeoutMs,
+      });
+
+      const pdfBuffer = await page.pdf(options.pdfOptions ?? DEFAULT_PDF_OPTIONS);
+      const elapsed = Date.now() - startTime;
+      this.logger.log(
+        `[PDF] Sucesso gerando PDF via HTML (${elapsed}ms, tamanho: ${pdfBuffer.length} bytes)`
+      );
+
+      return Buffer.from(pdfBuffer);
+    } catch (err) {
+      this.logger.error(`[PDF] Falha ao renderizar PDF a partir de HTML: ${String(err)}`);
+      throw new BadRequestException("Não foi possível gerar o PDF da proposta comercial.");
+    } finally {
+      if (browser) {
+        try {
+          await browser.close();
+        } catch (closeErr) {
+          this.logger.warn(`[PDF] Erro ao fechar browser instance: ${String(closeErr)}`);
+        }
+      }
+      this.releasePermit();
+    }
+  }
+
+  /**
+   * Captures a screenshot from a target URL and returns a JPEG Data URL string.
+   */
+  async renderScreenshot(options: RenderScreenshotOptions): Promise<{ dataUrl: string }> {
+    const cleanUrl = (options.url ?? "").trim();
+    if (!cleanUrl) {
+      throw new BadRequestException("URL para captura de thumbnail não pode ser vazia.");
+    }
+
+    await this.acquirePermit();
+
+    const startTime = Date.now();
+    let browser: Browser | null = null;
+
+    try {
+      this.logger.log(
+        `[Thumbnail] Iniciando captura para URL: ${cleanUrl} (Em execução: ${this.currentRunning}/${this.maxConcurrent})`
+      );
+
+      browser = await this.createBrowser();
+      const page = await browser.newPage();
+      const timeoutMs = options.timeoutMs ?? 30_000;
+      const width = options.width ?? 1200;
+      const height = options.height ?? 1800;
+
+      await page.setViewport({ width, height, deviceScaleFactor: 1 });
+      await page.goto(cleanUrl, {
+        waitUntil: ["domcontentloaded", "networkidle2"],
+        timeout: timeoutMs,
+      });
+
+      let imageBuffer: Buffer;
+      if (options.selector) {
+        await page.waitForSelector(options.selector, { timeout: 15_000 }).catch(() => {});
+        const element = await page.$(options.selector);
+        if (element) {
+          const box = await element.boundingBox();
+          if (box) {
+            const a4Ratio = Math.sqrt(2);
+            const clipHeight = Math.min(box.height, box.width * a4Ratio);
+            imageBuffer = (await page.screenshot({
+              type: "jpeg",
+              quality: 75,
+              clip: {
+                x: Math.max(0, box.x),
+                y: Math.max(0, box.y),
+                width: Math.max(1, box.width),
+                height: Math.max(1, clipHeight),
+              },
+            })) as Buffer;
+          } else {
+            imageBuffer = (await page.screenshot({ type: "jpeg", quality: 75 })) as Buffer;
+          }
+        } else {
+          imageBuffer = (await page.screenshot({ type: "jpeg", quality: 75 })) as Buffer;
+        }
+      } else {
+        imageBuffer = (await page.screenshot({ type: "jpeg", quality: 75 })) as Buffer;
+      }
+
+      const elapsed = Date.now() - startTime;
+      const dataUrl = `data:image/jpeg;base64,${Buffer.from(imageBuffer).toString("base64")}`;
+      this.logger.log(
+        `[Thumbnail] Sucesso capturando thumbnail (${elapsed}ms, tamanho: ${imageBuffer.length} bytes)`
+      );
+
+      return { dataUrl };
+    } catch (err) {
+      this.logger.error(`[Thumbnail] Falha ao capturar thumbnail para ${cleanUrl}: ${String(err)}`);
+      throw new BadRequestException("Não foi possível gerar thumbnail da proposta.");
+    } finally {
+      if (browser) {
+        try {
+          await browser.close();
+        } catch (closeErr) {
+          this.logger.warn(`[Thumbnail] Erro ao fechar browser instance: ${String(closeErr)}`);
         }
       }
       this.releasePermit();
