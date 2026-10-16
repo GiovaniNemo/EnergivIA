@@ -11,7 +11,7 @@
   "dependencies": {
     "@energivia/types": "workspace:*",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.6.0"
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@energivia/config": "workspace:*",
