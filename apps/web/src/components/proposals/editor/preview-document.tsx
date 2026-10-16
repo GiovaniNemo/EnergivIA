@@ -501,6 +501,18 @@ export function PreviewDocument({
       previewVariables.equivalente_arvores_ano != null
         ? String(previewVariables.equivalente_arvores_ano)
         : "",
+    proposalNumber:
+      String(
+        (previewVariables as Record<string, unknown>)["proposalNumber"] ??
+          (previewVariables as Record<string, unknown>)["numero_proposta"] ??
+          ""
+      ).replace(/^#/, "") || undefined,
+    companyCityState:
+      String(
+        (previewVariables as Record<string, unknown>)["cidade_uf"] ??
+          (previewVariables as Record<string, unknown>)["cidade"] ??
+          ""
+      ) || undefined,
   };
 
   const coverStyle = {
@@ -597,7 +609,6 @@ export function PreviewDocument({
                   style={{
                     backgroundColor: activeBadgeBackground,
                     color: styles.branding.textColor,
-
                   }}
                 >
                   Ativa

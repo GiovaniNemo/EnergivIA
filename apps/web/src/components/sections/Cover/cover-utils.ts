@@ -49,6 +49,8 @@ export interface CoverContent {
   geracaoMensal?: string;
   coberturaConsumo?: string;
   equivalenteArvores?: string;
+  proposalNumber?: string;
+  companyCityState?: string;
 }
 
 export interface CoverStyle {
