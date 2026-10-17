@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { ProposalStyles } from "./types";
 import type { PreviewRenderVariables } from "./section-render/types";
 import { PdfOrbitalBackground } from "./pdf-orbital-background";
+import { enforceHighContrastBranding } from "./pdf-contrast-utils";
 
 interface PdfPageHeaderProps {
   pageNumber: number;
@@ -30,16 +31,18 @@ interface PdfPageContainerProps {
 }
 
 export function PdfPageHeader({ title, vars, branding }: PdfPageHeaderProps): JSX.Element {
+  const safeBranding = enforceHighContrastBranding(branding);
   const companyName = String(vars.nome_empresa || "EnergivIA").trim();
   const clientName = String(vars.nome_cliente || "").trim();
-  const logoUrl = branding.logoUrl?.trim();
-  const primaryColor = branding.primaryColor || "#10b981";
+  const logoUrl = safeBranding.logoUrl?.trim();
+  const primaryColor = safeBranding.primaryColor;
 
   return (
     <header
       className="relative z-10 flex shrink-0 items-center justify-between border-b px-8 py-4 transition-colors"
       style={{
         borderColor: "color-mix(in srgb, currentColor 12%, transparent)",
+        color: safeBranding.textColor,
       }}
     >
       <div className="flex items-center gap-3">
@@ -75,7 +78,13 @@ export function PdfPageHeader({ title, vars, branding }: PdfPageHeaderProps): JS
   );
 }
 
-export function PdfPageFooter({ pageNumber, totalPages, vars }: PdfPageFooterProps): JSX.Element {
+export function PdfPageFooter({
+  pageNumber,
+  totalPages,
+  vars,
+  branding,
+}: PdfPageFooterProps): JSX.Element {
+  const safeBranding = enforceHighContrastBranding(branding);
   const companyName = String(vars.nome_empresa || "EnergivIA").trim();
 
   return (
@@ -83,6 +92,7 @@ export function PdfPageFooter({ pageNumber, totalPages, vars }: PdfPageFooterPro
       className="relative z-10 flex shrink-0 items-center justify-between border-t px-8 py-3 text-[10px] opacity-70"
       style={{
         borderColor: "color-mix(in srgb, currentColor 12%, transparent)",
+        color: safeBranding.textColor,
       }}
     >
       <div className="flex items-center gap-2">
@@ -107,16 +117,17 @@ export function PdfPageContainer({
   branding,
   children,
 }: PdfPageContainerProps): JSX.Element {
+  const safeBranding = enforceHighContrastBranding(branding);
   const style: CSSProperties = {
-    backgroundColor: branding.backgroundColor || "#0f172a",
-    color: branding.textColor || "#f8fafc",
+    backgroundColor: safeBranding.backgroundColor,
+    color: safeBranding.textColor,
   };
 
   return (
     <div
       data-pdf-page={pageNumber}
       data-pdf-total-pages={totalPages}
-      className={`proposal-pdf-page relative mx-auto flex flex-col overflow-hidden text-left shadow-[0_8px_30px_rgba(0,0,0,0.22)] ring-1 ring-black/10 dark:ring-white/10 ${
+      className={`proposal-pdf-page proposal-preview-cq relative mx-auto flex flex-col overflow-hidden text-left shadow-[0_8px_30px_rgba(0,0,0,0.22)] ring-1 ring-black/10 dark:ring-white/10 ${
         isCover ? "proposal-pdf-page--cover" : "proposal-pdf-page--content"
       }`}
       style={{
@@ -134,7 +145,7 @@ export function PdfPageContainer({
       }}
     >
       {!isCover ? (
-        <PdfOrbitalBackground primaryColor={branding.primaryColor} variant="content" />
+        <PdfOrbitalBackground primaryColor={safeBranding.primaryColor} variant="content" />
       ) : null}
       {children}
     </div>

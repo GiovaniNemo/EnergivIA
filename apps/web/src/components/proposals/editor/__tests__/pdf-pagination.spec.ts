@@ -18,7 +18,7 @@ describe("pdf-pagination", () => {
     expect(getSectionPdfWeight(mockSection("generation_consumption", "1"))).toBe(1.0);
     expect(getSectionPdfWeight(mockSection("gallery", "2"))).toBe(1.0);
 
-    expect(getSectionPdfWeight(mockSection("about_company", "3"))).toBe(0.5);
+    expect(getSectionPdfWeight(mockSection("about_company", "3"))).toBe(0.85);
     expect(getSectionPdfWeight(mockSection("proposal_equipment", "4"))).toBe(0.5);
     expect(getSectionPdfWeight(mockSection("diagnostic_energy", "5"))).toBe(0.5);
     expect(getSectionPdfWeight(mockSection("solution", "6"))).toBe(0.5);

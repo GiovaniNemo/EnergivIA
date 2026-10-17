@@ -18,6 +18,7 @@ import {
   stripCnpjNumbersFromCompanyName,
   isGenericOrEnergiviaCompanyName,
 } from "@/lib/company-name-utils";
+import { enforceHighContrastBranding } from "./pdf-contrast-utils";
 
 interface PreviewDocumentProps {
   title: string;
@@ -561,6 +562,7 @@ export function PreviewDocument({
   });
 
   if (mode === "pdf") {
+    const pdfBranding = enforceHighContrastBranding(styles.branding);
     const pdfPages = distributeSectionsIntoPdfPages(visibleSections, 2);
     const totalPages = 1 + pdfPages.length;
 
@@ -571,12 +573,7 @@ export function PreviewDocument({
       >
         <div className="flex flex-col items-center gap-8 py-6 print:gap-0 print:py-0">
           {/* Folha 1: Capa Executiva A4 */}
-          <PdfPageContainer
-            pageNumber={1}
-            totalPages={totalPages}
-            isCover
-            branding={styles.branding}
-          >
+          <PdfPageContainer pageNumber={1} totalPages={totalPages} isCover branding={pdfBranding}>
             <article
               data-preview-capture-target="true"
               data-preview-section-id={coverSection?.id}
@@ -599,8 +596,8 @@ export function PreviewDocument({
               style={{
                 fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
                 fontSize: `${styles.typography.bodySize}px`,
-                backgroundColor: coverStyle.backgroundColor || styles.branding.backgroundColor,
-                color: styles.branding.textColor,
+                backgroundColor: coverStyle.backgroundColor || pdfBranding.backgroundColor,
+                color: pdfBranding.textColor,
               }}
             >
               {coverSection?.id && selectedSectionId === coverSection.id ? (
@@ -608,7 +605,7 @@ export function PreviewDocument({
                   className="pointer-events-none absolute right-0 top-0 z-20 inline-flex h-5 items-center rounded-l-sm rounded-r-none px-2 text-[10px] font-semibold uppercase tracking-wide"
                   style={{
                     backgroundColor: activeBadgeBackground,
-                    color: styles.branding.textColor,
+                    color: pdfBranding.textColor,
                   }}
                 >
                   Ativa
@@ -617,12 +614,15 @@ export function PreviewDocument({
               <Cover
                 variant={(coverSection?.variant ?? "hero-cinematic") as CoverVariant}
                 content={coverContent}
-                style={coverStyle}
+                style={{
+                  ...coverStyle,
+                  textColor: pdfBranding.textColor,
+                }}
                 typography={styles.typography}
                 organization={{
                   companyName: previewVariables.nome_empresa || styles.footer.companyName,
-                  logo: hideLegacyLogo ? "" : resolveDisplayAssetUrl(styles.branding.logoUrl),
-                  primaryColor: styles.branding.primaryColor,
+                  logo: hideLegacyLogo ? "" : resolveDisplayAssetUrl(pdfBranding.logoUrl),
+                  primaryColor: pdfBranding.primaryColor,
                 }}
                 showSectionDivider={resolveDividerToggle(coverFields["showSectionDivider"])}
               />
@@ -635,22 +635,23 @@ export function PreviewDocument({
               key={`pdf-page-${pageDef.pageNumber}`}
               pageNumber={pageDef.pageNumber}
               totalPages={totalPages}
-              branding={styles.branding}
+              branding={pdfBranding}
             >
               <PdfPageHeader
                 pageNumber={pageDef.pageNumber}
                 totalPages={totalPages}
                 title={title}
                 vars={previewVariables}
-                branding={styles.branding}
+                branding={pdfBranding}
                 typography={styles.typography}
               />
 
               <div
-                className="proposal-pdf-page-body relative z-10 flex-1 overflow-hidden px-10 py-6 flex flex-col justify-start gap-6"
+                className="proposal-pdf-page-body proposal-preview-cq relative z-10 flex-1 overflow-hidden px-10 py-6 flex flex-col justify-start gap-6"
                 style={{
                   fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
                   fontSize: `${styles.typography.bodySize}px`,
+                  color: pdfBranding.textColor,
                 }}
               >
                 {pageDef.sections.map((section) => (
@@ -678,7 +679,7 @@ export function PreviewDocument({
                         className="pointer-events-none absolute right-0 top-0 z-20 inline-flex h-5 items-center rounded-l-sm rounded-r-none px-2 text-[10px] font-semibold uppercase tracking-wide"
                         style={{
                           backgroundColor: activeBadgeBackground,
-                          color: styles.branding.textColor,
+                          color: pdfBranding.textColor,
                         }}
                       >
                         Ativa
@@ -690,15 +691,19 @@ export function PreviewDocument({
                       vars={previewVariables}
                       mode={mode}
                       defaults={{
-                        textColor: styles.branding.textColor,
-                        backgroundColor: styles.branding.backgroundColor,
-                        primaryColor: styles.branding.primaryColor,
-                        secondaryColor: styles.branding.secondaryColor,
+                        textColor: pdfBranding.textColor,
+                        backgroundColor: pdfBranding.backgroundColor,
+                        primaryColor: pdfBranding.primaryColor,
+                        secondaryColor: pdfBranding.secondaryColor,
                       }}
                     >
                       {renderSectionContent(section, previewVariables, {
                         ...sectionContentOptions,
                         mode,
+                        branding: {
+                          ...sectionContentOptions.branding,
+                          ...pdfBranding,
+                        },
                       })}
                     </SectionShell>
                   </div>
@@ -709,7 +714,7 @@ export function PreviewDocument({
                 pageNumber={pageDef.pageNumber}
                 totalPages={totalPages}
                 vars={previewVariables}
-                branding={styles.branding}
+                branding={pdfBranding}
               />
             </PdfPageContainer>
           ))}

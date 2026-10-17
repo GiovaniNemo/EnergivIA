@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { ProposalSection } from "../types";
 import { SECTION_TYPES_OWN_TITLE } from "../section-fields";
 import type { PreviewRenderVariables } from "./types";
+import { getHexRelativeLuminance } from "../pdf-contrast-utils";
 
 interface SectionShellProps {
   section: ProposalSection;
@@ -155,18 +156,43 @@ export function SectionShell({
       : resolvedAlignment.vertical === "bottom"
         ? "justify-end"
         : "justify-center";
-  const textColor = isPdf
+
+  const defaultBg = toOptionalString(defaults?.backgroundColor) || "#060b16";
+  const isDarkBg = getHexRelativeLuminance(defaultBg) < 0.45;
+
+  let textColor = isPdf
     ? (toOptionalString(defaults?.textColor) ?? toOptionalString(fields["textColor"]))
     : (toOptionalString(fields["textColor"]) ?? toOptionalString(defaults?.textColor));
-  const primaryColor = toOptionalString(defaults?.primaryColor);
-  const secondaryColor = toOptionalString(defaults?.secondaryColor);
+
   const backgroundImage =
     section.type === "signature"
       ? undefined
       : resolveDisplayAssetUrl(toOptionalString(fields["backgroundImage"]));
-  // No modo PDF, os blocos fazem parte do fundo da página em vez de criarem um card branco colado por cima
+
+  // Blindagem de alto contraste: se o fundo for escuro ou se houver imagem de fundo, o texto NUNCA pode ser escuro!
+  if (backgroundImage || (isDarkBg && (!textColor || getHexRelativeLuminance(textColor) < 0.55))) {
+    textColor = "#f8fafc";
+  } else if (
+    !isDarkBg &&
+    !backgroundImage &&
+    (!textColor || getHexRelativeLuminance(textColor) >= 0.45)
+  ) {
+    textColor = "#0f172a";
+  }
+
+  let primaryColor = toOptionalString(defaults?.primaryColor) || "#10b981";
+  if (isDarkBg && getHexRelativeLuminance(primaryColor) < 0.35) {
+    // Evita verde escuro floresta (#022e22) que some no fundo escuro
+    primaryColor = "#22c55e";
+  }
+
+  const secondaryColor = toOptionalString(defaults?.secondaryColor);
+
+  // No modo PDF, os blocos sem imagem fazem parte do fundo da página em vez de criarem um card branco colado por cima
   const backgroundColor = isPdf
-    ? "transparent"
+    ? backgroundImage
+      ? undefined
+      : "transparent"
     : (toOptionalString(fields["backgroundColor"]) ?? toOptionalString(defaults?.backgroundColor));
   const overlayColor = toOptionalString(fields["overlayColor"]);
   const overlayOpacity = overlayColor ? toOverlayOpacity(fields["overlayOpacity"]) : 0;
@@ -182,11 +208,20 @@ export function SectionShell({
   if (secondaryColor) contentStyle["--preview-secondary-color"] = secondaryColor;
   if (themeBackgroundRgb) contentStyle["--preview-background-rgb"] = themeBackgroundRgb;
 
+  // Garante que uma seção com imagem de fundo tenha altura suficiente (mínimo 240px) para não cortar a imagem
+  const effectiveMinHeight = backgroundImage
+    ? `${Math.max(240, sectionMinHeightPx ?? 240)}px`
+    : isPdf
+      ? undefined
+      : sectionMinHeightPx
+        ? `${sectionMinHeightPx}px`
+        : undefined;
+
   return (
     <section
-      className={`relative ${isPdf ? "w-full" : "rounded-xl"}`}
+      className={`relative w-full ${backgroundImage ? "overflow-hidden rounded-2xl shadow-sm" : isPdf ? "" : "rounded-xl"}`}
       style={{
-        minHeight: isPdf ? undefined : sectionMinHeightPx ? `${sectionMinHeightPx}px` : undefined,
+        minHeight: effectiveMinHeight,
         backgroundColor,
         ...(backgroundImage
           ? {
@@ -197,7 +232,15 @@ export function SectionShell({
           : {}),
       }}
     >
-      {overlayColor && overlayOpacity > 0 ? (
+      {backgroundImage ? (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 45%, rgba(0,0,0,0.7) 100%)",
+          }}
+        />
+      ) : overlayColor && overlayOpacity > 0 ? (
         <div
           className="pointer-events-none absolute inset-0"
           style={{ backgroundColor: overlayColor, opacity: overlayOpacity }}
@@ -205,7 +248,8 @@ export function SectionShell({
       ) : null}
 
       <div
-        className={`relative z-10 flex min-h-full flex-col ${isPdf ? "p-0" : "px-4 py-3"} ${itemsClass} ${justifyClass}`}
+        className={`relative z-10 flex min-h-full flex-col ${backgroundImage ? "px-6 py-6" : isPdf ? "p-0" : "px-4 py-3"} ${itemsClass} ${justifyClass}`}
+        style={{ minHeight: effectiveMinHeight }}
       >
         <div className={`w-full ${textAlignClass}`} style={contentStyle}>
           {sectionEyebrow ? (
