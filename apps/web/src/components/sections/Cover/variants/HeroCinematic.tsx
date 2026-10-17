@@ -46,15 +46,26 @@ export function HeroCinematic({
 }: HeroCinematicProps): React.JSX.Element {
   const minHeightPx = Math.round(250 * (style.coverHeight / 100));
   const hasBg = Boolean(style.backgroundImage);
-  const bgColor = style.backgroundColor || "#0b1b2b";
+  const rawBg = style.backgroundColor?.trim();
+  const isDarkBlue =
+    rawBg === "#0b1b2b" ||
+    rawBg === "#060b16" ||
+    rawBg === "#0B1220" ||
+    rawBg === "#021b16" ||
+    rawBg === "#020617";
+  const bgColor = !rawBg || isDarkBlue ? "#ffffff" : rawBg;
   const lum = getLuminance(bgColor);
   const maxOpacity = lum > 0.5 ? 0.9 : 0.65;
   const midOpacity = lum > 0.5 ? 0.7 : 0.4;
 
   const isDarkCover = hasBg || lum < 0.45;
-  const effectiveTextColor = isDarkCover ? "#ffffff" : style.textColor || "#ffffff";
-  const effectiveSubtitleColor = isDarkCover ? "rgba(255, 255, 255, 0.92)" : effectiveTextColor;
-  const effectiveStatLabelColor = isDarkCover ? "rgba(255, 255, 255, 0.72)" : effectiveTextColor;
+  const effectiveTextColor = isDarkCover ? "#ffffff" : style.textColor || "#022C22";
+  const effectiveSubtitleColor = isDarkCover
+    ? "rgba(255, 255, 255, 0.92)"
+    : "rgba(2, 44, 34, 0.85)";
+  const effectiveStatLabelColor = isDarkCover
+    ? "rgba(255, 255, 255, 0.72)"
+    : "rgba(2, 44, 34, 0.70)";
 
   const stats = [
     { value: content.potenciaKwp, unit: "kWp", label: "Potência" },
@@ -99,7 +110,7 @@ export function HeroCinematic({
         {topBranding ?? null}
         <div
           className="rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest shadow-sm"
-          style={{ background: primaryColor, color: "#0B1B2B" }}
+          style={{ background: primaryColor, color: "#ffffff" }}
         >
           Proposta
         </div>

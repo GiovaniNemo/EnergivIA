@@ -1806,8 +1806,8 @@ html.hide-scrollbar,
 
   html,
   body {
-    background: var(--proposal-bg, #060b16) !important;
-    color: var(--proposal-text, #f8fafc) !important;
+    background: var(--proposal-bg, #ffffff) !important;
+    color: var(--proposal-text, #022C22) !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;

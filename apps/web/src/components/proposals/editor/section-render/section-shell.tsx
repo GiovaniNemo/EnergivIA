@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { ProposalSection } from "../types";
 import { SECTION_TYPES_OWN_TITLE } from "../section-fields";
 import type { PreviewRenderVariables } from "./types";
-import { getHexRelativeLuminance } from "../pdf-contrast-utils";
+import { getHexRelativeLuminance, isLegacyDarkBlue } from "../pdf-contrast-utils";
 
 interface SectionShellProps {
   section: ProposalSection;
@@ -157,7 +157,8 @@ export function SectionShell({
         ? "justify-end"
         : "justify-center";
 
-  const defaultBg = toOptionalString(defaults?.backgroundColor) || "#060b16";
+  const rawDefaultBg = toOptionalString(defaults?.backgroundColor);
+  const defaultBg = !rawDefaultBg || isLegacyDarkBlue(rawDefaultBg) ? "#ffffff" : rawDefaultBg;
   const isDarkBg = getHexRelativeLuminance(defaultBg) < 0.45;
 
   let textColor = isPdf
@@ -178,7 +179,7 @@ export function SectionShell({
       textColor = "#f8fafc";
     }
   } else {
-    if (!textColor || getHexRelativeLuminance(textColor) >= 0.5) {
+    if (!textColor || getHexRelativeLuminance(textColor) >= 0.45) {
       textColor = "#022C22";
     }
   }
@@ -193,18 +194,21 @@ export function SectionShell({
   const secondaryColor = toOptionalString(defaults?.secondaryColor);
 
   // No modo PDF, os blocos sem imagem fazem parte do fundo da página em vez de criarem um card branco colado por cima
+  const rawFieldBg = toOptionalString(fields["backgroundColor"]);
   const backgroundColor = isPdf
     ? backgroundImage
       ? undefined
       : "transparent"
-    : (toOptionalString(fields["backgroundColor"]) ?? toOptionalString(defaults?.backgroundColor));
+    : rawFieldBg && !isLegacyDarkBlue(rawFieldBg)
+      ? rawFieldBg
+      : defaultBg;
   const overlayColor = toOptionalString(fields["overlayColor"]);
   const overlayOpacity = overlayColor ? toOverlayOpacity(fields["overlayOpacity"]) : 0;
   const sectionMinHeightPx = backgroundImage
     ? toSectionMinHeightPx(fields["coverHeight"])
     : undefined;
   const showSectionDivider = Boolean(fields["showSectionDivider"]);
-  const themeBackgroundRgb = toRgbTriplet(toOptionalString(defaults?.backgroundColor));
+  const themeBackgroundRgb = toRgbTriplet(defaultBg);
   const contentStyle: CSSProperties & Record<string, string> = textColor
     ? { color: textColor }
     : {};

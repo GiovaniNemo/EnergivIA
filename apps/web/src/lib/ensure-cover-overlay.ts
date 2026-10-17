@@ -1,6 +1,6 @@
 import type { ProposalDocumentJson } from "@/components/proposals/editor/types";
 
-const DEFAULT_BG = "#0B1220";
+const DEFAULT_BG = "#ffffff";
 
 export function overlayOpacityPercentFromBackgroundHex(hex: string): number {
   const raw = hex.replace(/^#/, "").trim();

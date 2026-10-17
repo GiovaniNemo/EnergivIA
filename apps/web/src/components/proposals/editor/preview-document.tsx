@@ -19,7 +19,7 @@ import {
   stripCnpjNumbersFromCompanyName,
   isGenericOrEnergiviaCompanyName,
 } from "@/lib/company-name-utils";
-import { enforceHighContrastBranding } from "./pdf-contrast-utils";
+import { enforceHighContrastBranding, isLegacyDarkBlue } from "./pdf-contrast-utils";
 
 interface PreviewDocumentProps {
   title: string;
@@ -547,7 +547,8 @@ export function PreviewDocument({
       | "bottom-center"
       | "bottom-right",
     backgroundColor: (() => {
-      const templateBg = styles.branding.backgroundColor || "#0f172a";
+      const rawBg = styles.branding.backgroundColor?.trim();
+      const templateBg = !rawBg || isLegacyDarkBlue(rawBg) ? "#ffffff" : rawBg;
       const coverBg =
         typeof coverFields["backgroundColor"] === "string"
           ? coverFields["backgroundColor"].trim()
@@ -726,7 +727,7 @@ export function PreviewDocument({
 
   const scrollShellClass = publicLayout
     ? "h-full overflow-y-auto overflow-x-hidden bg-transparent"
-    : "h-full overflow-y-auto overflow-x-hidden rounded-2xl bg-[#060b16]";
+    : "h-full overflow-y-auto overflow-x-hidden rounded-2xl bg-slate-100 dark:bg-slate-900";
 
   const articleFrameClass =
     publicLayout && mode === "web"
@@ -743,6 +744,8 @@ export function PreviewDocument({
       ? `0 ${4 + styles.layout.shadowIntensity * 10}px ${14 + styles.layout.shadowIntensity * 32}px rgba(0,0,0,0.14)`
       : `0 ${styles.layout.shadowIntensity * 8}px ${styles.layout.shadowIntensity * 26}px rgba(0,0,0,0.28)`;
 
+  const docSafeBranding = enforceHighContrastBranding(styles.branding);
+
   return (
     <div data-preview-scroll="true" data-preview-viewport={viewport} className={scrollShellClass}>
       <article
@@ -752,13 +755,13 @@ export function PreviewDocument({
           ...articleWidthStyle,
           fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
           fontSize: `${styles.typography.bodySize}px`,
-          backgroundColor: styles.branding.backgroundColor,
-          color: styles.branding.textColor,
+          backgroundColor: docSafeBranding.backgroundColor,
+          color: docSafeBranding.textColor,
           borderRadius: `${styles.layout.borderRadius}px`,
           boxShadow: articleShadow,
         }}
       >
-        <PdfOrbitalBackground primaryColor={styles.branding.primaryColor} variant="content" />
+        <PdfOrbitalBackground primaryColor={docSafeBranding.primaryColor} variant="content" />
         <div
           data-preview-section-id={coverSection?.id}
           onClick={

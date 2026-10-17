@@ -50,10 +50,25 @@ function isNeutralLightColor(hex: string): boolean {
   return minVal >= 200 && maxVal - minVal <= 35;
 }
 
+export function isLegacyDarkBlue(hex: string | undefined): boolean {
+  if (!hex) return false;
+  const n = hex.trim().toLowerCase();
+  return (
+    n === "#060b16" ||
+    n === "#0b1220" ||
+    n === "#0b1b2b" ||
+    n === "#021b16" ||
+    n === "#020617" ||
+    n === "#0f172a" ||
+    n === "#0b0f1a"
+  );
+}
+
 /**
  * Garante que a paleta de cores usada para renderizar a proposta (Editor e PDF) tenha contraste perfeito.
- * Respeita integralmente as cores escolhidas pelo usuário (temas claros e escuros), garantindo
- * legibilidade conforme as diretrizes WCAG sem sobrescrever fundos claros ou escuros customizados.
+ * Respeita integralmente as cores escolhidas pelo usuário, garantindo legibilidade WCAG.
+ * Por padrão estrito da EnergivIA, adota fundo branco (#ffffff), grafismos em verde (#059669) e tipografia escura (#022C22).
+ * Fundo não informado ou azul escuro legado é normalizado para branco (#ffffff).
  */
 export function enforceHighContrastBranding<
   T extends {
@@ -66,14 +81,13 @@ export function enforceHighContrastBranding<
 >(branding: T, _options?: { isPdf?: boolean }): T & ContrastSafeBranding {
   const rawBg = branding.backgroundColor?.trim();
 
-  // Se o fundo não foi informado, adota o tema executivo escuro (#060b16) por padrão.
-  // Se o usuário configurou um fundo (seja claro como #FAFFFC ou escuro), respeita 100%.
-  const bg = rawBg || "#060b16";
+  // Se o fundo não foi informado ou for um dos azuis escuros legados, adota branco (#ffffff)
+  const bg = !rawBg || isLegacyDarkBlue(rawBg) ? "#ffffff" : rawBg;
   const isDarkBg = getHexRelativeLuminance(bg) < 0.45;
 
   let textColor = branding.textColor?.trim();
   if (isDarkBg) {
-    // Em fundo escuro, garante que o texto corporativo seja claro (#f8fafc) se estiver indefinido, escuro ou cromático
+    // Em fundo escuro customizado, garante que o texto corporativo seja claro (#f8fafc) se estiver indefinido, escuro ou cromático
     if (
       !textColor ||
       !isNeutralLightColor(textColor) ||
@@ -82,8 +96,8 @@ export function enforceHighContrastBranding<
       textColor = "#f8fafc";
     }
   } else {
-    // Em fundo claro (ex: #FAFFFC, #ffffff), garante que o texto corporativo seja escuro (#022C22 ou similar)
-    if (!textColor || getHexRelativeLuminance(textColor) >= 0.5) {
+    // Em fundo claro (ex: #ffffff, #FAFFFC), garante que o texto corporativo seja escuro (#022C22 ou similar)
+    if (!textColor || getHexRelativeLuminance(textColor) >= 0.45) {
       textColor = "#022C22";
     }
   }
@@ -92,12 +106,15 @@ export function enforceHighContrastBranding<
   if (isDarkBg && getHexRelativeLuminance(primaryColor) < 0.2) {
     // Evita cores primárias quase pretas sobre fundo escuro
     primaryColor = "#22c55e";
-  } else if (!isDarkBg && getHexRelativeLuminance(primaryColor) > 0.9) {
-    // Evita cores primárias quase brancas sobre fundo branco
+  } else if (
+    !isDarkBg &&
+    (getHexRelativeLuminance(primaryColor) > 0.85 || getHexRelativeLuminance(primaryColor) < 0.15)
+  ) {
+    // Evita cores primárias quase brancas ou quase pretas sobre fundo branco; adota verde esmeralda institucional
     primaryColor = "#059669";
   }
 
-  const secondaryColor = branding.secondaryColor?.trim() || (isDarkBg ? "#34d399" : "#10b981");
+  const secondaryColor = branding.secondaryColor?.trim() || (isDarkBg ? "#34d399" : "#34D399");
 
   return {
     ...branding,

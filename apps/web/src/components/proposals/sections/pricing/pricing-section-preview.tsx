@@ -2,6 +2,10 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { parseMoneyLike, replaceVariables } from "@/components/proposals/editor/utils";
+import {
+  isLegacyDarkBlue,
+  getHexRelativeLuminance,
+} from "@/components/proposals/editor/pdf-contrast-utils";
 import type { PreviewRenderVariables } from "@/components/proposals/editor/section-render/types";
 import { cn, safeHtml } from "@energivia/utils";
 
@@ -87,17 +91,26 @@ type ProposalPalette = {
 };
 
 function resolveProposalPalette(branding?: PricingBranding | null): ProposalPalette | null {
-  if (!branding?.textColor?.trim() || !branding?.backgroundColor?.trim()) return null;
-  const textColor = branding.textColor.trim();
-  const backgroundColor = branding.backgroundColor.trim();
-  const accent = branding.primaryColor?.trim() || "#059669";
+  const rawBg = branding?.backgroundColor?.trim();
+  const rawText = branding?.textColor?.trim();
+  const bg = !rawBg || isLegacyDarkBlue(rawBg) ? "#ffffff" : rawBg;
+  const isDarkBg = getHexRelativeLuminance(bg) < 0.45;
+  const text =
+    !rawText || (!isDarkBg && getHexRelativeLuminance(rawText) >= 0.45)
+      ? isDarkBg
+        ? "#f8fafc"
+        : "#022C22"
+      : rawText;
+  const accent = branding?.primaryColor?.trim() || "#059669";
   return {
-    fg: textColor,
-    cardBg: `color-mix(in srgb, ${textColor} 5%, ${backgroundColor})`,
-    footerBg: `color-mix(in srgb, ${accent} 12%, ${backgroundColor})`,
-    divider: `color-mix(in srgb, ${textColor} 11%, ${backgroundColor})`,
-    border: `color-mix(in srgb, ${textColor} 16%, ${backgroundColor})`,
-    muted: `color-mix(in srgb, ${textColor} 50%, ${backgroundColor})`,
+    fg: text,
+    cardBg: isDarkBg
+      ? `color-mix(in srgb, ${text} 6%, ${bg})`
+      : `color-mix(in srgb, ${text} 3%, ${bg})`,
+    footerBg: `color-mix(in srgb, ${accent} 10%, ${bg})`,
+    divider: `color-mix(in srgb, ${text} 10%, ${bg})`,
+    border: `color-mix(in srgb, ${text} 14%, ${bg})`,
+    muted: `color-mix(in srgb, ${text} 60%, ${bg})`,
     accent,
   };
 }
@@ -145,22 +158,40 @@ export function PricingSectionPreview({
     ? replaceVariables(paymentConditions, vars as unknown as Record<string, string | number>).trim()
     : "";
 
+  const rawBrandingBg = branding?.backgroundColor?.trim();
+  const safeBg = !rawBrandingBg || isLegacyDarkBlue(rawBrandingBg) ? "#ffffff" : rawBrandingBg;
+  const isDark = getHexRelativeLuminance(safeBg) < 0.45;
+  const rawBrandingText = branding?.textColor?.trim();
+  const safeText =
+    !rawBrandingText || (!isDark && getHexRelativeLuminance(rawBrandingText) >= 0.45)
+      ? isDark
+        ? "#f8fafc"
+        : "#022C22"
+      : rawBrandingText;
+
   const effectiveBranding: PricingBranding = {
-    backgroundColor: branding?.backgroundColor || "#060b16",
-    textColor: branding?.textColor || "#f8fafc",
-    primaryColor: branding?.primaryColor || "#22c55e",
-    secondaryColor: branding?.secondaryColor || "#10b981",
+    backgroundColor: safeBg,
+    textColor: safeText,
+    primaryColor: branding?.primaryColor?.trim() || (isDark ? "#22c55e" : "#059669"),
+    secondaryColor: branding?.secondaryColor?.trim() || (isDark ? "#34d399" : "#34D399"),
   };
 
   const palette = resolveProposalPalette(branding || effectiveBranding);
+  const fgColor = palette?.fg ?? safeText;
+  const mutedColor =
+    palette?.muted ?? (isDark ? "rgba(248, 250, 252, 0.75)" : "rgba(2, 44, 34, 0.70)");
 
-  const cardStyle: CSSProperties | undefined = palette
+  const cardStyle: CSSProperties = palette
     ? {
         backgroundColor: palette.cardBg,
         borderColor: palette.border,
         color: palette.fg,
       }
-    : undefined;
+    : {
+        backgroundColor: safeBg,
+        borderColor: `color-mix(in srgb, ${fgColor} 14%, ${safeBg})`,
+        color: fgColor,
+      };
 
   const rawKitList =
     typeof vars.kit_itens_lista === "string" && vars.kit_itens_lista.trim()
@@ -174,7 +205,7 @@ export function PricingSectionPreview({
   return (
     <div
       className={cn("space-y-5", !palette && !isPdf && "text-[var(--color-foreground)]")}
-      style={isPdf ? { color: "#f8fafc" } : palette ? { color: palette.fg } : undefined}
+      style={{ color: fgColor }}
     >
       {intro}
 
@@ -217,7 +248,7 @@ export function PricingSectionPreview({
                       "text-sm font-semibold uppercase leading-snug tracking-wide",
                       !palette && !isPdf && "text-[var(--color-foreground)]"
                     )}
-                    style={isPdf ? { color: "#f8fafc" } : undefined}
+                    style={{ color: fgColor }}
                   >
                     {item.label}
                   </p>
@@ -227,13 +258,7 @@ export function PricingSectionPreview({
                         "mt-0.5 text-xs leading-relaxed",
                         !palette && !isPdf && "text-[var(--color-muted-foreground)]"
                       )}
-                      style={
-                        isPdf
-                          ? { color: "rgba(248, 250, 252, 0.75)" }
-                          : palette
-                            ? { color: palette.muted }
-                            : undefined
-                      }
+                      style={{ color: mutedColor }}
                     >
                       {item.description}
                     </p>
@@ -245,7 +270,7 @@ export function PricingSectionPreview({
                       "shrink-0 text-sm font-semibold tabular-nums sm:pt-0.5 sm:text-right",
                       !palette && !isPdf && "text-[var(--color-foreground)]"
                     )}
-                    style={isPdf ? { color: "#f8fafc" } : undefined}
+                    style={{ color: fgColor }}
                   >
                     {item.price}
                   </p>
@@ -268,6 +293,7 @@ export function PricingSectionPreview({
                     "text-base font-semibold leading-snug",
                     !palette && "text-[var(--color-foreground)]"
                   )}
+                  style={{ color: fgColor }}
                 >
                   {BASE_LINE_LABEL}
                 </p>
@@ -276,7 +302,7 @@ export function PricingSectionPreview({
                     "mt-1 max-w-xl text-sm leading-relaxed",
                     !palette && "text-[var(--color-muted-foreground)]"
                   )}
-                  style={palette ? { color: palette.muted } : undefined}
+                  style={{ color: mutedColor }}
                 >
                   {BASE_LINE_DESCRIPTION}
                 </p>
@@ -286,6 +312,7 @@ export function PricingSectionPreview({
                   "shrink-0 text-base font-semibold tabular-nums sm:pt-0.5 sm:text-lg sm:text-right",
                   !palette && "text-[var(--color-foreground)]"
                 )}
+                style={{ color: fgColor }}
               >
                 {baseDisplay}
               </p>
@@ -301,7 +328,9 @@ export function PricingSectionPreview({
               )}
               style={palette ? { borderColor: palette.divider } : undefined}
             >
-              <p className="text-base font-medium">Desconto</p>
+              <p className="text-base font-medium" style={{ color: fgColor }}>
+                Desconto
+              </p>
               <p
                 className="shrink-0 text-base font-semibold tabular-nums sm:text-lg"
                 style={{
@@ -319,22 +348,13 @@ export function PricingSectionPreview({
             "mt-0 border-t-2 px-4 py-5 sm:px-5 sm:py-6",
             !palette && !isPdf && "border-[var(--color-border)]"
           )}
-          style={
-            isPdf
-              ? {
-                  backgroundColor:
-                    "color-mix(in srgb, var(--preview-primary-color, #10b981) 12%, transparent)",
-                  borderTopColor: "color-mix(in srgb, currentColor 18%, transparent)",
-                  color: "#f8fafc",
-                }
-              : palette
-                ? {
-                    backgroundColor: palette.footerBg,
-                    borderTopColor: palette.accent,
-                    color: palette.fg,
-                  }
-                : undefined
-          }
+          style={{
+            backgroundColor:
+              palette?.footerBg ??
+              `color-mix(in srgb, ${effectiveBranding.primaryColor} 10%, ${safeBg})`,
+            borderTopColor: palette?.border ?? `color-mix(in srgb, ${fgColor} 16%, ${safeBg})`,
+            color: fgColor,
+          }}
         >
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <p
@@ -342,19 +362,13 @@ export function PricingSectionPreview({
                 "text-sm font-bold uppercase tracking-[0.06em]",
                 !palette && !isPdf && "text-[var(--color-muted-foreground)]"
               )}
-              style={
-                isPdf
-                  ? { color: "rgba(248, 250, 252, 0.75)" }
-                  : palette
-                    ? { color: palette.muted }
-                    : undefined
-              }
+              style={{ color: mutedColor }}
             >
               Total a investir
             </p>
             <p
               className={cn("font-bold leading-tight tracking-tight tabular-nums", totalSize)}
-              style={isPdf ? { color: "#f8fafc" } : undefined}
+              style={{ color: fgColor }}
             >
               {totalDisplay}
             </p>
@@ -365,13 +379,7 @@ export function PricingSectionPreview({
                 "mt-3 text-sm leading-relaxed",
                 !palette && !isPdf && "text-[var(--color-muted-foreground)]"
               )}
-              style={
-                isPdf
-                  ? { color: "rgba(248, 250, 252, 0.75)" }
-                  : palette
-                    ? { color: palette.muted }
-                    : undefined
-              }
+              style={{ color: mutedColor }}
             >
               <span
                 className="font-medium"
@@ -384,9 +392,8 @@ export function PricingSectionPreview({
               <span
                 className="mx-1.5"
                 style={{
-                  color: isPdf
-                    ? "rgba(248, 250, 252, 0.3)"
-                    : (palette?.divider ?? "var(--color-border)"),
+                  color:
+                    palette?.divider ?? (isPdf ? "rgba(2, 44, 34, 0.3)" : "var(--color-border)"),
                 }}
               >
                 ·
@@ -394,9 +401,7 @@ export function PricingSectionPreview({
               <span
                 className="line-through"
                 style={{
-                  textDecorationColor: isPdf
-                    ? "rgba(248, 250, 252, 0.5)"
-                    : (palette?.muted ?? "var(--color-muted-foreground)"),
+                  textDecorationColor: mutedColor,
                 }}
               >
                 {formatBRL(base)}
@@ -414,13 +419,7 @@ export function PricingSectionPreview({
             "preview-rich-content max-w-none text-sm leading-relaxed [&_p]:my-2",
             !palette && !isPdf && "text-[var(--color-muted-foreground)]"
           )}
-          style={
-            isPdf
-              ? { color: "rgba(248, 250, 252, 0.85)" }
-              : palette
-                ? { color: palette.muted }
-                : undefined
-          }
+          style={{ color: mutedColor }}
           dangerouslySetInnerHTML={safeHtml(paymentHtml)}
         />
       ) : null}

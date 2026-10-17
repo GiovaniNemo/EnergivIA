@@ -121,10 +121,10 @@ export function createBaseDocument(
     styles: {
       branding: {
         logoUrl: "",
-        primaryColor: "#22C55E",
-        secondaryColor: "#16A34A",
-        backgroundColor: "#0B1220",
-        textColor: "#E5E7EB",
+        primaryColor: "#059669",
+        secondaryColor: "#34D399",
+        backgroundColor: "#FFFFFF",
+        textColor: "#022C22",
       },
       typography: {
         fontFamily: "Inter",

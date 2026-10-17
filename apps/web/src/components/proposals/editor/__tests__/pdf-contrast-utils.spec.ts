@@ -23,21 +23,44 @@ describe("pdf-contrast-utils", () => {
   });
 
   describe("enforceHighContrastBranding", () => {
-    it("promove texto escuro para #f8fafc quando o fundo for escuro", () => {
+    it("adota fundo branco (#ffffff), texto #022C22 e primária #059669 quando o fundo não for informado", () => {
+      const emptyBranding = {};
+      const result = enforceHighContrastBranding(emptyBranding);
+      expect(result.backgroundColor).toBe("#ffffff");
+      expect(result.textColor).toBe("#022C22");
+      expect(result.primaryColor).toBe("#059669");
+    });
+
+    it("normaliza fundos azuis escuros legados (#060b16, #0b1220, #0b1b2b) para branco (#ffffff)", () => {
+      const legacy1 = enforceHighContrastBranding({ backgroundColor: "#060b16" });
+      expect(legacy1.backgroundColor).toBe("#ffffff");
+      expect(legacy1.textColor).toBe("#022C22");
+      expect(legacy1.primaryColor).toBe("#059669");
+
+      const legacy2 = enforceHighContrastBranding({ backgroundColor: "#0b1220" });
+      expect(legacy2.backgroundColor).toBe("#ffffff");
+      expect(legacy2.textColor).toBe("#022C22");
+
+      const legacy3 = enforceHighContrastBranding({ backgroundColor: "#0b1b2b" });
+      expect(legacy3.backgroundColor).toBe("#ffffff");
+      expect(legacy3.textColor).toBe("#022C22");
+    });
+
+    it("promove texto escuro para #f8fafc quando o fundo for escuro customizado (#18181b)", () => {
       const darkBgBranding = {
-        backgroundColor: "#060b16",
+        backgroundColor: "#18181b",
         textColor: "#0f172a", // escuro
         primaryColor: "#22c55e",
       };
 
       const result = enforceHighContrastBranding(darkBgBranding);
       expect(result.textColor).toBe("#f8fafc");
-      expect(result.backgroundColor).toBe("#060b16");
+      expect(result.backgroundColor).toBe("#18181b");
     });
 
-    it("promove texto verde escuro / baixa luminância para #f8fafc em fundo escuro", () => {
+    it("promove texto verde escuro / baixa luminância para #f8fafc em fundo escuro customizado", () => {
       const darkBgBranding = {
-        backgroundColor: "#0b1220",
+        backgroundColor: "#18181b",
         textColor: "#042f2e", // verde escuro quase preto
         primaryColor: "#10b981",
       };
@@ -46,9 +69,9 @@ describe("pdf-contrast-utils", () => {
       expect(result.textColor).toBe("#f8fafc");
     });
 
-    it("converte tons verdes cromáticos (#6ee7b7, #10b981) para #f8fafc no texto corrido em fundo escuro", () => {
+    it("converte tons verdes cromáticos (#6ee7b7, #10b981) para #f8fafc no texto corrido em fundo escuro customizado", () => {
       const darkBgBranding = {
-        backgroundColor: "#0b1220",
+        backgroundColor: "#18181b",
         textColor: "#6ee7b7", // verde menta colorido
         primaryColor: "#10b981",
       };
@@ -57,9 +80,9 @@ describe("pdf-contrast-utils", () => {
       expect(result.textColor).toBe("#f8fafc");
     });
 
-    it("mantém texto claro se já for de alto contraste em fundo escuro", () => {
+    it("mantém texto claro se já for de alto contraste em fundo escuro customizado", () => {
       const darkBgBranding = {
-        backgroundColor: "#060b16",
+        backgroundColor: "#18181b",
         textColor: "#f1f5f9",
         primaryColor: "#22c55e",
       };
@@ -68,9 +91,9 @@ describe("pdf-contrast-utils", () => {
       expect(result.textColor).toBe("#f1f5f9");
     });
 
-    it("eleva primaryColor escura para #22c55e em fundo escuro", () => {
+    it("eleva primaryColor escura para #22c55e em fundo escuro customizado", () => {
       const darkBgBranding = {
-        backgroundColor: "#060b16",
+        backgroundColor: "#18181b",
         primaryColor: "#022e22", // verde escuro floresta que sumiria no fundo escuro
       };
 

@@ -21,10 +21,10 @@ export function withAlpha(color: string, alpha: number): string {
 
 export function defaultStepsTheme(): StepsTheme {
   return {
-    text: "#e5e7eb",
-    background: "#0b1220",
-    primary: "#22c55e",
-    secondary: "#16a34a",
+    text: "#022c22",
+    background: "#ffffff",
+    primary: "#059669",
+    secondary: "#34d399",
   };
 }
 
@@ -35,10 +35,21 @@ export function brandingToStepsTheme(branding?: {
   secondaryColor: string;
 }): StepsTheme {
   if (!branding) return defaultStepsTheme();
+  const rawBg = branding.backgroundColor?.trim();
+  const isDark =
+    rawBg === "#060b16" ||
+    rawBg === "#0b1220" ||
+    rawBg === "#0b1b2b" ||
+    rawBg === "#021b16" ||
+    rawBg === "#020617";
+  const bg = !rawBg || isDark ? "#ffffff" : rawBg;
+  const text = !branding.textColor?.trim() || isDark ? "#022c22" : branding.textColor.trim();
+  const primary = branding.primaryColor?.trim() || "#059669";
+  const secondary = branding.secondaryColor?.trim() || "#34d399";
   return {
-    text: branding.textColor,
-    background: branding.backgroundColor,
-    primary: branding.primaryColor,
-    secondary: branding.secondaryColor,
+    text,
+    background: bg,
+    primary,
+    secondary,
   };
 }
