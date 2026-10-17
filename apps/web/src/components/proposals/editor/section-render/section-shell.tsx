@@ -170,14 +170,14 @@ export function SectionShell({
       : resolveDisplayAssetUrl(toOptionalString(fields["backgroundImage"]));
 
   // Blindagem de alto contraste: se o fundo for escuro ou se houver imagem de fundo, o texto NUNCA pode ser escuro!
-  if (backgroundImage || (isDarkBg && (!textColor || getHexRelativeLuminance(textColor) < 0.55))) {
-    textColor = "#f8fafc";
-  } else if (
-    !isDarkBg &&
-    !backgroundImage &&
-    (!textColor || getHexRelativeLuminance(textColor) >= 0.45)
-  ) {
-    textColor = "#0f172a";
+  if (backgroundImage || isDarkBg) {
+    if (!textColor || getHexRelativeLuminance(textColor) < 0.55 || isPdf) {
+      textColor = "#f8fafc";
+    }
+  } else if (!isDarkBg && !backgroundImage) {
+    if (!textColor || getHexRelativeLuminance(textColor) >= 0.45 || isPdf) {
+      textColor = "#0f172a";
+    }
   }
 
   let primaryColor = toOptionalString(defaults?.primaryColor) || "#10b981";

@@ -33,9 +33,9 @@ export function getSectionPdfWeight(section: ProposalSection): number {
     return 0.5;
   }
 
-  // Sobre a empresa (possui foto, histórico e tópicos ricos): peso alto para não ser espremida e cortada no rodapé
+  // Sobre a empresa: peso 0.5 para compartilhar harmoniosamente a Página 2 com a Introdução (0.5 + 0.5 = 1.0)
   if (section.type === "about_company") {
-    return 0.85;
+    return 0.5;
   }
 
   // Seções com texto muito longo ganham página dedicada para não espremer

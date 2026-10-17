@@ -31,10 +31,48 @@ export interface ContrastSafeBranding {
   logoUrl?: string;
 }
 
+function isNeutralLightColor(hex: string): boolean {
+  const normalized = hex.trim().replace(/^#/, "");
+  const expanded =
+    normalized.length === 3
+      ? normalized
+          .split("")
+          .map((chunk) => `${chunk}${chunk}`)
+          .join("")
+      : normalized;
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return false;
+  const parsed = Number.parseInt(expanded, 16);
+  const r = (parsed >> 16) & 255;
+  const g = (parsed >> 8) & 255;
+  const b = parsed & 255;
+  const minVal = Math.min(r, g, b);
+  const maxVal = Math.max(r, g, b);
+  return minVal >= 200 && maxVal - minVal <= 35;
+}
+
+function isNeutralDarkColor(hex: string): boolean {
+  const normalized = hex.trim().replace(/^#/, "");
+  const expanded =
+    normalized.length === 3
+      ? normalized
+          .split("")
+          .map((chunk) => `${chunk}${chunk}`)
+          .join("")
+      : normalized;
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return false;
+  const parsed = Number.parseInt(expanded, 16);
+  const r = (parsed >> 16) & 255;
+  const g = (parsed >> 8) & 255;
+  const b = parsed & 255;
+  const minVal = Math.min(r, g, b);
+  const maxVal = Math.max(r, g, b);
+  return maxVal <= 70 && maxVal - minVal <= 30;
+}
+
 /**
  * Garante que a paleta de cores usada para renderizar o PDF tenha contraste perfeito.
- * Se o fundo for escuro, o texto é blindado para tons claros (#f8fafc) e cores primárias
- * escuras são elevadas para tons luminosos (#22c55e).
+ * Se o fundo for escuro, o texto é blindado incondicionalmente para branco gelo (#f8fafc)
+ * ou mantido se for neutro claro, impedindo contaminação por cores verdes ou escuras salvas em templates.
  */
 export function enforceHighContrastBranding<
   T extends {
@@ -50,14 +88,14 @@ export function enforceHighContrastBranding<
 
   let textColor = branding.textColor?.trim();
   if (isDarkBg) {
-    // Em fundo escuro (< 0.45), o texto NUNCA pode ter baixa luminância (< 0.55).
-    // Evita tons pretos, azuis-marinho ou verdes-escuros ilegíveis.
-    if (!textColor || getHexRelativeLuminance(textColor) < 0.55) {
+    // Em fundo escuro (< 0.45), o texto de leitura corporativo deve ser branco neutro (#f8fafc).
+    // Impede tons verdes (#10b981, #042f2e, #6ee7b7) ou escuros no texto corrido.
+    if (!textColor || !isNeutralLightColor(textColor)) {
       textColor = "#f8fafc";
     }
   } else {
-    // Em fundo claro (>= 0.45), o texto deve ser escuro (#0f172a).
-    if (!textColor || getHexRelativeLuminance(textColor) >= 0.45) {
+    // Em fundo claro (>= 0.45), o texto de leitura corporativo deve ser grafite escuro (#0f172a).
+    if (!textColor || !isNeutralDarkColor(textColor)) {
       textColor = "#0f172a";
     }
   }

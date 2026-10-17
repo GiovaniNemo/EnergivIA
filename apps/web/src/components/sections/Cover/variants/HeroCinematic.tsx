@@ -48,8 +48,13 @@ export function HeroCinematic({
   const hasBg = Boolean(style.backgroundImage);
   const bgColor = style.backgroundColor || "#0b1b2b";
   const lum = getLuminance(bgColor);
-  const maxOpacity = lum > 0.5 ? 1.0 : 0.75;
-  const midOpacity = lum > 0.5 ? 0.85 : 0.5;
+  const maxOpacity = lum > 0.5 ? 0.9 : 0.65;
+  const midOpacity = lum > 0.5 ? 0.7 : 0.4;
+
+  const isDarkCover = hasBg || lum < 0.45;
+  const effectiveTextColor = isDarkCover ? "#ffffff" : style.textColor || "#ffffff";
+  const effectiveSubtitleColor = isDarkCover ? "rgba(255, 255, 255, 0.92)" : effectiveTextColor;
+  const effectiveStatLabelColor = isDarkCover ? "rgba(255, 255, 255, 0.72)" : effectiveTextColor;
 
   const stats = [
     { value: content.potenciaKwp, unit: "kWp", label: "Potência" },
@@ -69,7 +74,7 @@ export function HeroCinematic({
               backgroundPosition: "center",
             }
           : {}),
-        color: style.textColor,
+        color: effectiveTextColor,
       }}
     >
       {}
@@ -77,7 +82,7 @@ export function HeroCinematic({
         <div
           className="pointer-events-none absolute inset-0"
           style={{
-            background: `linear-gradient(to top, ${hexToRgba(bgColor, maxOpacity)} 0%, ${hexToRgba(bgColor, midOpacity)} 30%, ${hexToRgba(bgColor, 0.08)} 65%, transparent 100%)`,
+            background: `linear-gradient(to top, ${hexToRgba(bgColor, maxOpacity)} 0%, ${hexToRgba(bgColor, midOpacity)} 35%, ${hexToRgba(bgColor, 0.05)} 70%, transparent 100%)`,
           }}
         />
       )}
@@ -93,7 +98,7 @@ export function HeroCinematic({
       <div className="relative z-10 flex items-start justify-between p-6 md:p-9">
         {topBranding ?? null}
         <div
-          className="rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest"
+          className="rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest shadow-sm"
           style={{ background: primaryColor, color: "#0B1B2B" }}
         >
           Proposta
@@ -117,10 +122,10 @@ export function HeroCinematic({
         {content.title ? (
           <h2
             data-editor-field-path="title"
-            className="mb-6 font-bold leading-tight tracking-tight"
+            className="mb-6 font-bold leading-tight tracking-tight drop-shadow-sm"
             style={{
               fontSize: Math.min(56, Math.max(typography.titleSize, 28)),
-              color: style.textColor,
+              color: effectiveTextColor,
               maxWidth: "90%",
               letterSpacing: "-0.04em",
             }}
@@ -134,7 +139,7 @@ export function HeroCinematic({
           <div
             data-editor-field-path="subtitle"
             className="mb-8 text-base leading-relaxed"
-            style={{ color: style.textColor, opacity: 0.82, maxWidth: "92%" }}
+            style={{ color: effectiveSubtitleColor, opacity: 0.95, maxWidth: "92%" }}
             dangerouslySetInnerHTML={safeHtml(content.subtitle)}
           />
         ) : null}
@@ -143,27 +148,27 @@ export function HeroCinematic({
         {stats.length > 0 ? (
           <div
             className="flex flex-wrap items-center gap-0 border-t pt-5"
-            style={{ borderColor: "rgba(255,255,255,0.18)" }}
+            style={{ borderColor: "rgba(255,255,255,0.22)" }}
           >
             {stats.map((stat, i) => (
               <div key={stat.label} className="flex items-center">
                 {i > 0 ? (
                   <div
                     className="mx-5 h-8 w-px shrink-0"
-                    style={{ background: "rgba(255,255,255,0.18)" }}
+                    style={{ background: "rgba(255,255,255,0.22)" }}
                   />
                 ) : null}
                 <div>
                   <div
                     className="text-[22px] font-bold leading-tight tracking-tight"
-                    style={{ color: style.textColor, letterSpacing: "-0.02em" }}
+                    style={{ color: effectiveTextColor, letterSpacing: "-0.02em" }}
                   >
                     {stat.value}{" "}
-                    <span style={{ color: primaryColor, fontWeight: 500 }}>{stat.unit}</span>
+                    <span style={{ color: primaryColor, fontWeight: 600 }}>{stat.unit}</span>
                   </div>
                   <div
                     className="mt-1 text-[10px] font-medium uppercase tracking-[.1em]"
-                    style={{ color: style.textColor, opacity: 0.6 }}
+                    style={{ color: effectiveStatLabelColor }}
                   >
                     {stat.label}
                   </div>

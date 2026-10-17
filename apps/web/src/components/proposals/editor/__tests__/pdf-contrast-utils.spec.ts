@@ -46,6 +46,17 @@ describe("pdf-contrast-utils", () => {
       expect(result.textColor).toBe("#f8fafc");
     });
 
+    it("converte tons verdes cromáticos (#6ee7b7, #10b981) para #f8fafc no texto corrido em fundo escuro", () => {
+      const darkBgBranding = {
+        backgroundColor: "#0b1220",
+        textColor: "#6ee7b7", // verde menta colorido
+        primaryColor: "#10b981",
+      };
+
+      const result = enforceHighContrastBranding(darkBgBranding);
+      expect(result.textColor).toBe("#f8fafc");
+    });
+
     it("mantém texto claro se já for de alto contraste em fundo escuro", () => {
       const darkBgBranding = {
         backgroundColor: "#060b16",

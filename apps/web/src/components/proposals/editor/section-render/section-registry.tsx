@@ -641,24 +641,25 @@ export function renderSectionContent(
       const clientName = tpl("{{nome_cliente}}", vars);
 
       if (variant === "carta") {
+        const isPdf = renderMode === "pdf";
         return (
           <div
-            className="rounded-xl px-5 py-8 sm:px-10 sm:py-10 md:px-16 md:py-14"
+            className={`rounded-xl ${isPdf ? "px-2 py-3" : "px-5 py-8 sm:px-10 sm:py-10 md:px-16 md:py-14"}`}
             style={{ position: "relative" }}
           >
             <div
-              className="mb-5 sm:mb-6 h-px w-12"
+              className="mb-4 sm:mb-6 h-px w-12"
               style={{ background: "var(--preview-primary-color, #10b981)" }}
             />
-            <div className="mb-2 text-[14px] sm:text-[15px] italic" style={{ opacity: 0.55 }}>
+            <div className="mb-2 text-[14px] sm:text-[15px] italic" style={{ opacity: 0.75 }}>
               {greeting}
             </div>
-            <div className="mb-6 sm:mb-10 text-3xl sm:text-4xl md:text-[42px] font-bold leading-none tracking-[-0.035em]">
+            <div className="mb-4 sm:mb-8 text-3xl sm:text-4xl md:text-[38px] font-bold leading-none tracking-[-0.035em]">
               {clientName},
             </div>
             <div
               data-editor-field-path="title"
-              className="preview-editable-target mb-4 sm:mb-5 text-lg sm:text-xl md:text-[22px] font-normal leading-[1.35] tracking-[-0.015em]"
+              className="preview-editable-target mb-3 sm:mb-4 text-lg sm:text-xl md:text-[22px] font-normal leading-[1.35] tracking-[-0.015em]"
               style={{ maxWidth: 580 }}
             >
               {renderRichText(f.title, vars)}
@@ -666,13 +667,13 @@ export function renderSectionContent(
             <div
               data-editor-field-path="text"
               className="preview-editable-target text-sm sm:text-[15px] leading-[1.75]"
-              style={{ maxWidth: 540, opacity: 0.75 }}
+              style={{ maxWidth: 540, opacity: 0.9 }}
             >
               {renderRichText(f.text, vars)}
             </div>
             <div
-              className="mt-8 sm:mt-10 pt-5 sm:pt-6 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[.18em]"
-              style={{ borderTop: "1px solid rgba(128,128,128,0.15)", opacity: 0.45 }}
+              className="mt-6 sm:mt-8 pt-4 sm:pt-5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[.18em]"
+              style={{ borderTop: "1px solid rgba(128,128,128,0.25)", opacity: 0.65 }}
             >
               Proposta personalizada
             </div>
