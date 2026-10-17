@@ -170,26 +170,24 @@ export function SectionShell({
       : resolveDisplayAssetUrl(toOptionalString(fields["backgroundImage"]));
 
   // Blindagem de alto contraste:
-  // No modo PDF, todo o documento é renderizado sobre o design corporativo escuro orbital,
-  // portanto o texto de leitura DEVE SER INCONDICIONALMENTE CLARO (#f8fafc), nunca escuro (#0f172a).
-  if (isPdf) {
-    if (!textColor || getHexRelativeLuminance(textColor) < 0.55) {
-      textColor = "#f8fafc";
-    }
-  } else if (backgroundImage || isDarkBg) {
-    if (!textColor || getHexRelativeLuminance(textColor) < 0.55) {
+  // Se houver imagem de fundo ou se o fundo for escuro, o texto deve ser claro (#f8fafc).
+  // Em fundos claros (ex: #FAFFFC, #ffffff), o texto deve ser escuro (#022C22 ou similar).
+  const isDark = Boolean(backgroundImage) || isDarkBg;
+  if (isDark) {
+    if (!textColor || getHexRelativeLuminance(textColor) < 0.5) {
       textColor = "#f8fafc";
     }
   } else {
-    if (!textColor || getHexRelativeLuminance(textColor) >= 0.45) {
-      textColor = "#0f172a";
+    if (!textColor || getHexRelativeLuminance(textColor) >= 0.5) {
+      textColor = "#022C22";
     }
   }
 
-  let primaryColor = toOptionalString(defaults?.primaryColor) || "#10b981";
-  if (isDarkBg && getHexRelativeLuminance(primaryColor) < 0.35) {
-    // Evita verde escuro floresta (#022e22) que some no fundo escuro
+  let primaryColor = toOptionalString(defaults?.primaryColor) || (isDark ? "#22c55e" : "#059669");
+  if (isDark && getHexRelativeLuminance(primaryColor) < 0.25) {
     primaryColor = "#22c55e";
+  } else if (!isDark && getHexRelativeLuminance(primaryColor) > 0.85) {
+    primaryColor = "#059669";
   }
 
   const secondaryColor = toOptionalString(defaults?.secondaryColor);

@@ -651,38 +651,29 @@ export function renderSectionContent(
               className="mb-4 sm:mb-6 h-px w-12"
               style={{ background: "var(--preview-primary-color, #10b981)" }}
             />
-            <div
-              className="mb-2 text-[14px] sm:text-[15px] italic"
-              style={{ opacity: isPdf ? 0.9 : 0.75, color: isPdf ? "#cbd5e1" : undefined }}
-            >
-              {greeting}
-            </div>
-            <div
-              className="mb-4 sm:mb-8 text-3xl sm:text-4xl md:text-[38px] font-bold leading-none tracking-[-0.035em]"
-              style={{ color: isPdf ? "#ffffff" : undefined }}
-            >
+            <div className="mb-2 text-[14px] sm:text-[15px] italic opacity-80">{greeting}</div>
+            <div className="mb-4 sm:mb-8 text-3xl sm:text-4xl md:text-[38px] font-bold leading-none tracking-[-0.035em]">
               {clientName},
             </div>
             <div
               data-editor-field-path="title"
               className="preview-editable-target mb-3 sm:mb-4 text-lg sm:text-xl md:text-[22px] font-normal leading-[1.35] tracking-[-0.015em]"
-              style={{ maxWidth: 580, color: isPdf ? "#f8fafc" : undefined }}
+              style={{ maxWidth: 580 }}
             >
               {renderRichText(f.title, vars)}
             </div>
             <div
               data-editor-field-path="text"
-              className="preview-editable-target text-sm sm:text-[15px] leading-[1.75]"
-              style={{ maxWidth: 540, opacity: 0.95, color: isPdf ? "#e2e8f0" : undefined }}
+              className="preview-editable-target text-sm sm:text-[15px] leading-[1.75] opacity-90"
+              style={{ maxWidth: 540 }}
             >
               {renderRichText(f.text, vars)}
             </div>
             <div
               className="mt-6 sm:mt-8 pt-4 sm:pt-5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[.18em]"
               style={{
-                borderTop: "1px solid rgba(128,128,128,0.25)",
-                opacity: isPdf ? 0.8 : 0.65,
-                color: isPdf ? "#94a3b8" : undefined,
+                borderTop: "1px solid color-mix(in srgb, currentColor 18%, transparent)",
+                opacity: 0.7,
               }}
             >
               Proposta personalizada
@@ -1213,14 +1204,12 @@ export function renderSectionContent(
               <div
                 data-editor-field-path="title"
                 className="preview-editable-target mb-3 sm:mb-4 text-xl sm:text-2xl md:text-[28px] font-medium leading-[1.15] tracking-[-0.02em]"
-                style={{ color: isPdf ? "#f8fafc" : undefined }}
               >
                 {renderRichText(f.title, vars)}
               </div>
               <div
                 data-editor-field-path="text"
-                className="preview-editable-target mb-5 sm:mb-6 text-sm sm:text-[14px] leading-[1.7]"
-                style={{ opacity: isPdf ? 0.9 : 0.65, color: isPdf ? "#e2e8f0" : undefined }}
+                className="preview-editable-target mb-5 sm:mb-6 text-sm sm:text-[14px] leading-[1.7] opacity-85"
               >
                 {renderRichText(f.text, vars)}
               </div>
@@ -1256,16 +1245,12 @@ export function renderSectionContent(
                         <strong
                           data-editor-field-path={`features[${i}].title`}
                           className="block font-semibold"
-                          style={{ color: isPdf ? "#f8fafc" : undefined }}
                         >
                           {tpl(feat.title, vars)}
                         </strong>
                         <span
                           data-editor-field-path={`features[${i}].description`}
-                          style={{
-                            opacity: isPdf ? 0.85 : 0.65,
-                            color: isPdf ? "#cbd5e1" : undefined,
-                          }}
+                          className="opacity-75"
                         >
                           {tpl(feat.description, vars)}
                         </span>

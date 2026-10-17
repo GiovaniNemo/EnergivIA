@@ -13,6 +13,7 @@ import type {
 } from "./section-render/types";
 import { distributeSectionsIntoPdfPages } from "./pdf-pagination";
 import { PdfPageContainer, PdfPageHeader, PdfPageFooter } from "./pdf-page-chrome";
+import { PdfOrbitalBackground } from "./pdf-orbital-background";
 import { useOrganization } from "@/components/providers/organization-provider";
 import {
   stripCnpjNumbersFromCompanyName,
@@ -746,7 +747,7 @@ export function PreviewDocument({
     <div data-preview-scroll="true" data-preview-viewport={viewport} className={scrollShellClass}>
       <article
         data-preview-capture-target="true"
-        className={`${articleFrameClass} proposal-content-document`}
+        className={`${articleFrameClass} proposal-content-document relative`}
         style={{
           ...articleWidthStyle,
           fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
@@ -757,6 +758,7 @@ export function PreviewDocument({
           boxShadow: articleShadow,
         }}
       >
+        <PdfOrbitalBackground primaryColor={styles.branding.primaryColor} variant="content" />
         <div
           data-preview-section-id={coverSection?.id}
           onClick={
@@ -801,13 +803,7 @@ export function PreviewDocument({
             </span>
           ) : null}
           <Cover
-            variant={
-              (coverSection?.variant ?? "full-image") as
-                | "full-image"
-                | "split"
-                | "minimal"
-                | "card-overlay"
-            }
+            variant={(coverSection?.variant ?? "hero-cinematic") as CoverVariant}
             content={coverContent}
             style={coverStyle}
             typography={styles.typography}

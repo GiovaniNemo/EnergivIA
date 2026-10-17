@@ -78,27 +78,31 @@ describe("pdf-contrast-utils", () => {
       expect(result.primaryColor).toBe("#22c55e");
     });
 
-    it("normaliza fundos claros para #060b16 e texto para #f8fafc no PDF executivo", () => {
+    it("preserva fundos claros (ex: #FAFFFC, #ffffff) e texto escuro (#022C22) respeitando a paleta do usuário", () => {
       const lightBgBranding = {
-        backgroundColor: "#ffffff",
-        textColor: "#0f172a",
-        primaryColor: "#15803d",
+        backgroundColor: "#FAFFFC",
+        textColor: "#022C22",
+        primaryColor: "#059669",
+        secondaryColor: "#34D399",
       };
 
       const result = enforceHighContrastBranding(lightBgBranding, { isPdf: true });
-      expect(result.textColor).toBe("#f8fafc");
-      expect(result.backgroundColor).toBe("#060b16");
+      expect(result.backgroundColor).toBe("#FAFFFC");
+      expect(result.textColor).toBe("#022C22");
+      expect(result.primaryColor).toBe("#059669");
+      expect(result.secondaryColor).toBe("#34D399");
     });
 
-    it("garante texto escuro (#0f172a) se o fundo for claro em modo web (não PDF)", () => {
+    it("ajusta texto claro para escuro se o usuário colocou texto branco em fundo branco", () => {
       const lightBgBranding = {
         backgroundColor: "#ffffff",
-        textColor: "#f8fafc", // texto claro em fundo branco sumiria no modo web
-        primaryColor: "#15803d",
+        textColor: "#ffffff", // texto branco em fundo branco sumiria
+        primaryColor: "#059669",
       };
 
-      const result = enforceHighContrastBranding(lightBgBranding, { isPdf: false });
-      expect(result.textColor).toBe("#0f172a");
+      const result = enforceHighContrastBranding(lightBgBranding);
+      expect(result.backgroundColor).toBe("#ffffff");
+      expect(result.textColor).toBe("#022C22");
     });
   });
 });

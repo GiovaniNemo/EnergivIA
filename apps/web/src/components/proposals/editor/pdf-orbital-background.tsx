@@ -1,4 +1,4 @@
-import type { CSSProperties, JSX } from "react";
+import React, { useId, type CSSProperties, type JSX } from "react";
 
 export interface PdfOrbitalBackgroundProps {
   primaryColor?: string;
@@ -8,9 +8,9 @@ export interface PdfOrbitalBackgroundProps {
 }
 
 /**
- * Renderizador vetorial de arcos concêntricos e linhas orbitais elegantes para o PDF.
- * Inspirado em design editorial contemporâneo de alto contraste.
- * Reage 100% à cor primária pré-definida da organização.
+ * Renderizador vetorial de arcos concêntricos e linhas orbitais elegantes para o PDF e preview.
+ * Inspirado em design editorial contemporâneo de alto nível executivo.
+ * Reage 100% à cor primária pré-definida da organização com alta nitidez e visibilidade.
  */
 export function PdfOrbitalBackground({
   primaryColor = "#10b981",
@@ -19,9 +19,27 @@ export function PdfOrbitalBackground({
   style,
 }: PdfOrbitalBackgroundProps): JSX.Element {
   const isContent = variant === "content";
-  // Em páginas de conteúdo, a opacidade é atenuada para não interferir na leitura de tabelas e textos
-  const baseOpacity = isContent ? 0.35 : 1.0;
+  // Opacidade equilibrada para garantir que as linhas e arcos sejam claramente visíveis
+  const baseOpacity = isContent ? 0.85 : 1.0;
   const strokeColor = primaryColor || "#10b981";
+
+  // Identificador único para evitar colisões de gradiente no DOM entre múltiplas páginas
+  const rawId = useId();
+  const safeId = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
+  const sweepId = `grad-sweep-${variant}-${safeId}`;
+  const softId = `grad-soft-${variant}-${safeId}`;
+
+  const sweepStopStart = isContent ? "0.40" : "0.55";
+  const sweepStopMid = isContent ? "0.22" : "0.32";
+  const sweepStopEnd = isContent ? "0.08" : "0.14";
+
+  const softStopStart = isContent ? "0.38" : "0.50";
+  const softStopEnd = isContent ? "0.08" : "0.12";
+
+  const circle1Opacity = isContent ? "0.26" : "0.36";
+  const circle2Opacity = isContent ? "0.22" : "0.30";
+  const circle3Opacity = isContent ? "0.18" : "0.24";
+  const circleOuterOpacity = isContent ? "0.14" : "0.18";
 
   return (
     <div
@@ -42,15 +60,15 @@ export function PdfOrbitalBackground({
         className="h-full w-full"
       >
         <defs>
-          <linearGradient id={`grad-sweep-${variant}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.25" />
-            <stop offset="50%" stopColor={strokeColor} stopOpacity="0.10" />
-            <stop offset="100%" stopColor={strokeColor} stopOpacity="0.02" />
+          <linearGradient id={sweepId} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={strokeColor} stopOpacity={sweepStopStart} />
+            <stop offset="50%" stopColor={strokeColor} stopOpacity={sweepStopMid} />
+            <stop offset="100%" stopColor={strokeColor} stopOpacity={sweepStopEnd} />
           </linearGradient>
 
-          <linearGradient id={`grad-soft-${variant}`} x1="100%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.18" />
-            <stop offset="100%" stopColor="currentColor" stopOpacity="0.04" />
+          <linearGradient id={softId} x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={strokeColor} stopOpacity={softStopStart} />
+            <stop offset="100%" stopColor={strokeColor} stopOpacity={softStopEnd} />
           </linearGradient>
         </defs>
 
@@ -60,39 +78,33 @@ export function PdfOrbitalBackground({
           cy="190"
           r="160"
           stroke={strokeColor}
-          strokeWidth="1.2"
-          strokeOpacity="0.15"
+          strokeWidth="1.6"
+          strokeOpacity={circle1Opacity}
         />
         <circle
           cx="560"
           cy="190"
           r="290"
           stroke={strokeColor}
-          strokeWidth="1.2"
-          strokeOpacity="0.12"
+          strokeWidth="1.5"
+          strokeOpacity={circle2Opacity}
         />
         <circle
           cx="560"
           cy="190"
           r="450"
           stroke={strokeColor}
-          strokeWidth="1.4"
-          strokeOpacity="0.10"
+          strokeWidth="1.6"
+          strokeOpacity={circle3Opacity}
         />
-        <circle
-          cx="560"
-          cy="190"
-          r="640"
-          stroke={`url(#grad-sweep-${variant})`}
-          strokeWidth="1.5"
-        />
+        <circle cx="560" cy="190" r="640" stroke={`url(#${sweepId})`} strokeWidth="1.8" />
         <circle
           cx="560"
           cy="190"
           r="860"
           stroke={strokeColor}
-          strokeWidth="1.0"
-          strokeOpacity="0.06"
+          strokeWidth="1.4"
+          strokeOpacity={circleOuterOpacity}
         />
 
         {/* --- Centro Orbital 2: Inferior Esquerdo (arcos concêntricos de base) --- */}
@@ -101,40 +113,40 @@ export function PdfOrbitalBackground({
           cy="920"
           r="140"
           stroke={strokeColor}
-          strokeWidth="1.2"
-          strokeOpacity="0.16"
+          strokeWidth="1.6"
+          strokeOpacity={circle1Opacity}
         />
         <circle
           cx="110"
           cy="920"
           r="270"
           stroke={strokeColor}
-          strokeWidth="1.3"
-          strokeOpacity="0.12"
+          strokeWidth="1.5"
+          strokeOpacity={circle2Opacity}
         />
-        <circle cx="110" cy="920" r="430" stroke={`url(#grad-soft-${variant})`} strokeWidth="1.4" />
+        <circle cx="110" cy="920" r="430" stroke={`url(#${softId})`} strokeWidth="1.8" />
         <circle
           cx="110"
           cy="920"
           r="620"
           stroke={strokeColor}
-          strokeWidth="1.0"
-          strokeOpacity="0.06"
+          strokeWidth="1.4"
+          strokeOpacity={circleOuterOpacity}
         />
 
-        {/* --- Traços dinâmicos de ligação / Curvas Bezier sutis --- */}
+        {/* --- Traços dinâmicos de ligação / Curvas Bezier marcantes --- */}
         <path
           d="M -50 480 C 250 400, 540 680, 844 590"
           stroke={strokeColor}
-          strokeWidth="1.0"
-          strokeOpacity="0.07"
-          strokeDasharray="4 6"
+          strokeWidth="1.5"
+          strokeOpacity={circle3Opacity}
+          strokeDasharray="5 7"
         />
         <path
           d="M -100 220 C 320 180, 480 460, 894 400"
           stroke={strokeColor}
-          strokeWidth="1.2"
-          strokeOpacity="0.09"
+          strokeWidth="1.6"
+          strokeOpacity={circle2Opacity}
         />
       </svg>
     </div>

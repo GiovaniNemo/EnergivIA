@@ -145,29 +145,22 @@ export function PricingSectionPreview({
     ? replaceVariables(paymentConditions, vars as unknown as Record<string, string | number>).trim()
     : "";
 
-  // No modo PDF, se a paleta não estiver definida ou vier com fundo claro, garantimos o tema escuro integrado
   const effectiveBranding: PricingBranding = {
-    backgroundColor: isPdf ? "#060b16" : branding?.backgroundColor || "#060b16",
-    textColor: isPdf ? "#f8fafc" : branding?.textColor || "#f8fafc",
+    backgroundColor: branding?.backgroundColor || "#060b16",
+    textColor: branding?.textColor || "#f8fafc",
     primaryColor: branding?.primaryColor || "#22c55e",
     secondaryColor: branding?.secondaryColor || "#10b981",
   };
 
-  const palette = resolveProposalPalette(isPdf ? effectiveBranding : branding || effectiveBranding);
+  const palette = resolveProposalPalette(branding || effectiveBranding);
 
-  const cardStyle: CSSProperties | undefined = isPdf
+  const cardStyle: CSSProperties | undefined = palette
     ? {
-        backgroundColor: "color-mix(in srgb, currentColor 5%, transparent)",
-        borderColor: "color-mix(in srgb, currentColor 14%, transparent)",
-        color: "#f8fafc",
+        backgroundColor: palette.cardBg,
+        borderColor: palette.border,
+        color: palette.fg,
       }
-    : palette
-      ? {
-          backgroundColor: palette.cardBg,
-          borderColor: palette.border,
-          color: palette.fg,
-        }
-      : undefined;
+    : undefined;
 
   const rawKitList =
     typeof vars.kit_itens_lista === "string" && vars.kit_itens_lista.trim()

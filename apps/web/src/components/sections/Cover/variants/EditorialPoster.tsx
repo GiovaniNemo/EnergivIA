@@ -143,10 +143,14 @@ export function EditorialPoster({
             {stats.map((s) => (
               <div
                 key={s.label}
-                className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs backdrop-blur-sm"
+                className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs backdrop-blur-sm"
+                style={{
+                  backgroundColor: "color-mix(in srgb, currentColor 6%, transparent)",
+                  borderColor: "color-mix(in srgb, currentColor 14%, transparent)",
+                }}
               >
                 <span className="opacity-60 text-[10px] uppercase font-semibold">{s.label}:</span>
-                <span className="font-bold text-white">
+                <span className="font-bold" style={{ color: style.textColor }}>
                   {s.value} <span style={{ color: primaryColor }}>{s.unit}</span>
                 </span>
               </div>
@@ -156,7 +160,12 @@ export function EditorialPoster({
       </div>
 
       {/* 4. Base: Metadados Estruturados em 2 Colunas (Proposto a / Organizado por / Contato) */}
-      <footer className="relative z-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 pt-4 border-t border-white/10">
+      <footer
+        className="relative z-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 pt-4 border-t"
+        style={{
+          borderColor: "color-mix(in srgb, currentColor 14%, transparent)",
+        }}
+      >
         <div className="flex flex-col gap-4">
           <div>
             <div
