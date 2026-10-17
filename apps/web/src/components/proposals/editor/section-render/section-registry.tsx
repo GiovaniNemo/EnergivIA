@@ -1118,7 +1118,13 @@ export function renderSectionContent(
         const badgeLabel = tpl(f.badge_label || "", vars);
         const featuresRaw = asObjectArray<{ title?: unknown; description?: unknown }>(f.features);
         return (
-          <div className="about-company-split-proof">
+          <div
+            className="about-company-split-proof"
+            style={{
+              backgroundColor: "color-mix(in srgb, currentColor 4%, transparent)",
+              borderColor: "color-mix(in srgb, currentColor 12%, transparent)",
+            }}
+          >
             <div
               data-editor-field-path="image"
               className="about-company-split-proof-media"

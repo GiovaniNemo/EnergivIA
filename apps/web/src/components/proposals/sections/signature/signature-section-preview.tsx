@@ -63,14 +63,14 @@ function resolveSignaturePalette(
   const primary = (branding?.primaryColor || "#059669").trim();
   const secondary = (branding?.secondaryColor || "#34d399").trim();
   const bg = (
+    branding?.backgroundColor ||
     (typeof sectionFields?.["backgroundColor"] === "string" &&
       sectionFields["backgroundColor"].trim()) ||
-    branding?.backgroundColor ||
     "#fafcf9"
   ).trim();
   const text = (
-    (typeof sectionFields?.["textColor"] === "string" && sectionFields["textColor"].trim()) ||
     branding?.textColor ||
+    (typeof sectionFields?.["textColor"] === "string" && sectionFields["textColor"].trim()) ||
     "#022e22"
   ).trim();
 
@@ -84,14 +84,12 @@ function resolveSignaturePalette(
     text,
     // Cards background & border adapting to light/dark palette
     cardBg: isDark
-      ? `color-mix(in srgb, ${text} 8%, ${bg})`
-      : `color-mix(in srgb, ${bg} 65%, white 35%)`,
+      ? `color-mix(in srgb, ${text} 6%, transparent)`
+      : `color-mix(in srgb, ${text} 3%, transparent)`,
     cardBorder: isDark
-      ? `color-mix(in srgb, ${text} 16%, transparent)`
+      ? `color-mix(in srgb, ${text} 14%, transparent)`
       : `color-mix(in srgb, ${text} 12%, transparent)`,
-    cardShadow: isDark
-      ? "0 8px 24px -4px rgba(0, 0, 0, 0.45)"
-      : `0 8px 30px -4px color-mix(in srgb, ${text} 7%, transparent)`,
+    cardShadow: isDark ? "none" : `0 2px 8px color-mix(in srgb, ${text} 4%, transparent)`,
 
     // Canvas panel for the signature
     canvasBg: isDark

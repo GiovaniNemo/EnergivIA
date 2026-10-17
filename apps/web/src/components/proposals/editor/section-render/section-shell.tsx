@@ -7,6 +7,7 @@ interface SectionShellProps {
   section: ProposalSection;
   subtitleSize: number;
   vars: PreviewRenderVariables;
+  mode?: "web" | "pdf";
   defaults?: {
     textColor?: string;
     backgroundColor?: string;
@@ -118,9 +119,11 @@ export function SectionShell({
   section,
   subtitleSize,
   vars,
+  mode,
   defaults,
   children,
 }: SectionShellProps): JSX.Element {
+  const isPdf = mode === "pdf";
   const fields = section.fields as Record<string, unknown>;
   const sectionEyebrowRaw = toOptionalString(fields["sectionEyebrow"]);
   const sectionEyebrow = sectionEyebrowRaw
@@ -152,15 +155,19 @@ export function SectionShell({
       : resolvedAlignment.vertical === "bottom"
         ? "justify-end"
         : "justify-center";
-  const textColor = toOptionalString(fields["textColor"]) ?? toOptionalString(defaults?.textColor);
+  const textColor = isPdf
+    ? (toOptionalString(defaults?.textColor) ?? toOptionalString(fields["textColor"]))
+    : (toOptionalString(fields["textColor"]) ?? toOptionalString(defaults?.textColor));
   const primaryColor = toOptionalString(defaults?.primaryColor);
   const secondaryColor = toOptionalString(defaults?.secondaryColor);
   const backgroundImage =
     section.type === "signature"
       ? undefined
       : resolveDisplayAssetUrl(toOptionalString(fields["backgroundImage"]));
-  const backgroundColor =
-    toOptionalString(fields["backgroundColor"]) ?? toOptionalString(defaults?.backgroundColor);
+  // No modo PDF, os blocos fazem parte do fundo da página em vez de criarem um card branco colado por cima
+  const backgroundColor = isPdf
+    ? "transparent"
+    : (toOptionalString(fields["backgroundColor"]) ?? toOptionalString(defaults?.backgroundColor));
   const overlayColor = toOptionalString(fields["overlayColor"]);
   const overlayOpacity = overlayColor ? toOverlayOpacity(fields["overlayOpacity"]) : 0;
   const sectionMinHeightPx = backgroundImage
@@ -177,9 +184,9 @@ export function SectionShell({
 
   return (
     <section
-      className="relative rounded-xl"
+      className={`relative ${isPdf ? "w-full" : "rounded-xl"}`}
       style={{
-        minHeight: sectionMinHeightPx ? `${sectionMinHeightPx}px` : undefined,
+        minHeight: isPdf ? undefined : sectionMinHeightPx ? `${sectionMinHeightPx}px` : undefined,
         backgroundColor,
         ...(backgroundImage
           ? {
@@ -198,7 +205,7 @@ export function SectionShell({
       ) : null}
 
       <div
-        className={`relative z-10 flex min-h-full flex-col px-4 py-3 ${itemsClass} ${justifyClass}`}
+        className={`relative z-10 flex min-h-full flex-col ${isPdf ? "p-0" : "px-4 py-3"} ${itemsClass} ${justifyClass}`}
       >
         <div className={`w-full ${textAlignClass}`} style={contentStyle}>
           {sectionEyebrow ? (

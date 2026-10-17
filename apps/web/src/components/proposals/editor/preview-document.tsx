@@ -647,9 +647,7 @@ export function PreviewDocument({
               />
 
               <div
-                className={`proposal-pdf-page-body relative z-10 flex-1 overflow-hidden px-8 py-5 flex flex-col ${
-                  pageDef.sections.length === 1 ? "justify-center gap-0" : "justify-start gap-4"
-                }`}
+                className="proposal-pdf-page-body relative z-10 flex-1 overflow-hidden px-10 py-6 flex flex-col justify-start gap-6"
                 style={{
                   fontFamily: resolvePreviewFontFamily(styles.typography.fontFamily),
                   fontSize: `${styles.typography.bodySize}px`,
@@ -668,11 +666,7 @@ export function PreviewDocument({
                         : undefined
                     }
                     className={`proposal-content-section relative w-full shrink-0 transition ${
-                      selectedSectionId === section.id
-                        ? "ring-2 ring-emerald-500 rounded-xl"
-                        : interactive
-                          ? "cursor-pointer hover:ring-1 hover:ring-white/20 rounded-xl"
-                          : ""
+                      selectedSectionId === section.id ? "ring-2 ring-emerald-500" : ""
                     }`}
                     style={{
                       pageBreakInside: "avoid",
@@ -694,6 +688,7 @@ export function PreviewDocument({
                       section={section}
                       subtitleSize={styles.typography.subtitleSize}
                       vars={previewVariables}
+                      mode={mode}
                       defaults={{
                         textColor: styles.branding.textColor,
                         backgroundColor: styles.branding.backgroundColor,

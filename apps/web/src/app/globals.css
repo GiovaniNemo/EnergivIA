@@ -1859,13 +1859,14 @@ html.hide-scrollbar,
     width: 100% !important;
     max-width: none !important;
     min-height: 297mm !important;
+    height: 297mm !important;
     margin: 0 !important;
     box-sizing: border-box !important;
     display: flex !important;
     flex-direction: column !important;
-    justify-content: center !important;
-    padding: 14mm 16mm !important;
-    background: var(--proposal-bg, #060b16) !important;
+    justify-content: flex-start !important;
+    padding: 0 !important;
+    background: var(--proposal-bg, inherit) !important;
   }
 
   .proposal-pdf-page:last-child,

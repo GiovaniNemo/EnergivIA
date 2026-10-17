@@ -5,46 +5,49 @@ export interface PdfPageDefinition {
   sections: ProposalSection[];
 }
 
-const FULL_PAGE_SECTION_TYPES: ReadonlySet<SectionType> = new Set([
-  "about_company",
+const DENSE_FULL_PAGE_SECTION_TYPES: ReadonlySet<SectionType> = new Set([
   "generation_consumption",
-  "proposal_equipment",
-  "pricing",
   "gallery",
-  "signature",
 ]);
 
 const MAX_EQUIPMENT_ITEMS_PER_PDF_PAGE = 6;
 
 /**
  * Retorna o peso visual estimado de uma seção para diagramação em folha A4 (0 a 1.0).
- * Uma folha A4 tem orçamento total de peso = 1.0.
- * Inspeciona o conteúdo real para evitar que seções com alta densidade de texto
- * sejam espremidas com outra seção, prevenindo cortes no PDF.
+ * Uma folha A4 tem orçamento total de peso = 1.0 (permite até 2 seções compactas por página).
+ * Evita deixar seções curtas (ex: uma única foto com título) isoladas em folhas vazias.
  */
 export function getSectionPdfWeight(section: ProposalSection): number {
-  if (FULL_PAGE_SECTION_TYPES.has(section.type)) {
+  if (DENSE_FULL_PAGE_SECTION_TYPES.has(section.type)) {
     return 1.0;
   }
 
-  // Seções compactas com volume alto de texto ou tópicos ganham página dedicada
   const fields = section.fields as Record<string, unknown> | undefined;
+
+  // Equipamentos: se tiver mais de 3 itens, precisa de página dedicada; se for compacto (1-3 itens), peso 0.5
+  if (section.type === "proposal_equipment") {
+    const rawItems = fields?.["equipmentItems"];
+    if (Array.isArray(rawItems) && rawItems.length > 3) {
+      return 1.0;
+    }
+    return 0.5;
+  }
+
+  // Seções com texto muito longo ganham página dedicada para não espremer
   if (fields) {
     const textContent = typeof fields["text"] === "string" ? fields["text"] : "";
-    if (textContent.length > 500) {
+    if (textContent.length >= 600) {
       return 1.0;
     }
-
-    if (Array.isArray(fields["items"]) && fields["items"].length > 4) {
+    if (Array.isArray(fields["items"]) && fields["items"].length > 5) {
       return 1.0;
     }
-
-    if (Array.isArray(fields["steps"]) && fields["steps"].length > 4) {
+    if (Array.isArray(fields["steps"]) && fields["steps"].length > 5) {
       return 1.0;
     }
   }
 
-  // Seções compactas regulares (diagnóstico, solução curta, garantias, passos resumidos)
+  // Seções regulares (diagnostic_energy, solution, about_company, guarantees, signature, etc.)
   return 0.5;
 }
 

@@ -157,8 +157,8 @@ export class PdfRendererService implements OnModuleDestroy {
       const page = await browser.newPage();
       const timeoutMs = options.timeoutMs ?? 30_000;
 
-      // Set viewport suitable for A4 printable previews
-      await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1 });
+      // Viewport exato da proporção física A4 (210x297mm a 96DPI) com Retina 2x para nitidez máxima de imagens e fontes
+      await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
 
       try {
         await page.goto(cleanUrl, {
@@ -176,9 +176,20 @@ export class PdfRendererService implements OnModuleDestroy {
         });
       }
 
-      // Aguarda montagem visual do corpo e gráficos SVG
-      await page.waitForSelector("body", { timeout: 10_000 }).catch(() => {});
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      // Aguarda montagem visual do componente do preview e fontes
+      await page
+        .waitForSelector('[data-preview-scroll="true"]', { timeout: 15_000 })
+        .catch(() => {});
+      await page
+        .evaluate(
+          () =>
+            (globalThis as unknown as { document?: { fonts?: { ready?: Promise<unknown> } } })
+              .document?.fonts?.ready
+        )
+        .catch(() => {});
+
+      // Delay de 2000ms para garantir carregamento assíncrono completo de imagens externas (S3), gráficos e renderizadores
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const pdfBuffer = await page.pdf(options.pdfOptions ?? DEFAULT_PDF_OPTIONS);
       const elapsed = Date.now() - startTime;
@@ -225,7 +236,7 @@ export class PdfRendererService implements OnModuleDestroy {
       const page = await browser.newPage();
       const timeoutMs = options.timeoutMs ?? 30_000;
 
-      await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1 });
+      await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
       await page.setContent(cleanHtml, {
         waitUntil: ["domcontentloaded", "load"],
         timeout: timeoutMs,

@@ -568,19 +568,19 @@ export class KitGenerationService {
     const economicCandidateModule = sortedByPricePerW[0]?.module;
 
     const sortedByPremium = [...modulesWithPower].sort((a, b) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const aSpecs = a.module.specs as unknown as Record<string, unknown> | null;
       const aTier1 = checkIsTier1Module(
         a.module.brandName,
         a.module.name,
-        Boolean((a.module.specs as any)?.is_tier_1)
+        Boolean(aSpecs?.["is_tier_1"])
       )
         ? 1
         : 0;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const bSpecs = b.module.specs as unknown as Record<string, unknown> | null;
       const bTier1 = checkIsTier1Module(
         b.module.brandName,
         b.module.name,
-        Boolean((b.module.specs as any)?.is_tier_1)
+        Boolean(bSpecs?.["is_tier_1"])
       )
         ? 1
         : 0;
