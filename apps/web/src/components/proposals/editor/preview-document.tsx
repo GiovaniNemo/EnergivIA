@@ -571,7 +571,7 @@ export function PreviewDocument({
         data-preview-scroll="true"
         className="h-full overflow-y-auto overflow-x-hidden bg-transparent proposal-pdf-mode-root"
       >
-        <div className="flex flex-col items-center gap-8 py-6 print:gap-0 print:py-0">
+        <div className="flex flex-col items-center gap-8 py-6 print:block print:gap-0 print:py-0">
           {/* Folha 1: Capa Executiva A4 */}
           <PdfPageContainer pageNumber={1} totalPages={totalPages} isCover branding={pdfBranding}>
             <article

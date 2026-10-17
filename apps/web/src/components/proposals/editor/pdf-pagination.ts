@@ -8,6 +8,12 @@ export interface PdfPageDefinition {
 const DENSE_FULL_PAGE_SECTION_TYPES: ReadonlySet<SectionType> = new Set([
   "generation_consumption",
   "gallery",
+  "pricing",
+  "financing",
+  "testimonials",
+  "signature",
+  "proposal_equipment",
+  "economy_purchases",
 ]);
 
 const MAX_EQUIPMENT_ITEMS_PER_PDF_PAGE = 6;
@@ -15,7 +21,8 @@ const MAX_EQUIPMENT_ITEMS_PER_PDF_PAGE = 6;
 /**
  * Retorna o peso visual estimado de uma seção para diagramação em folha A4 (0 a 1.0).
  * Uma folha A4 tem orçamento total de peso = 1.0 (permite até 2 seções compactas por página).
- * Evita deixar seções curtas (ex: uma única foto com título) isoladas em folhas vazias.
+ * Seções estruturais executivas (Assinaturas, Depoimentos, Investimento/Preço, Equipamentos, Gráfico)
+ * possuem peso 1.0 para ocuparem páginas dedicadas exclusivas, blindando contra sobreposições e cortes.
  */
 export function getSectionPdfWeight(section: ProposalSection): number {
   if (DENSE_FULL_PAGE_SECTION_TYPES.has(section.type)) {

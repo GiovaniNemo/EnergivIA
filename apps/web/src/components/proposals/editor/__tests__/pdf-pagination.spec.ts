@@ -17,13 +17,15 @@ describe("pdf-pagination", () => {
   it("atribui peso 1.0 para seções complexas e 0.5 para seções compactas", () => {
     expect(getSectionPdfWeight(mockSection("generation_consumption", "1"))).toBe(1.0);
     expect(getSectionPdfWeight(mockSection("gallery", "2"))).toBe(1.0);
+    expect(getSectionPdfWeight(mockSection("pricing", "3"))).toBe(1.0);
+    expect(getSectionPdfWeight(mockSection("testimonials", "4"))).toBe(1.0);
+    expect(getSectionPdfWeight(mockSection("signature", "5"))).toBe(1.0);
+    expect(getSectionPdfWeight(mockSection("proposal_equipment", "6"))).toBe(1.0);
 
-    expect(getSectionPdfWeight(mockSection("about_company", "3"))).toBe(0.5);
-    expect(getSectionPdfWeight(mockSection("proposal_equipment", "4"))).toBe(0.5);
-    expect(getSectionPdfWeight(mockSection("diagnostic_energy", "5"))).toBe(0.5);
-    expect(getSectionPdfWeight(mockSection("solution", "6"))).toBe(0.5);
-    expect(getSectionPdfWeight(mockSection("guarantees", "7"))).toBe(0.5);
-    expect(getSectionPdfWeight(mockSection("signature", "8"))).toBe(0.5);
+    expect(getSectionPdfWeight(mockSection("about_company", "7"))).toBe(0.5);
+    expect(getSectionPdfWeight(mockSection("diagnostic_energy", "8"))).toBe(0.5);
+    expect(getSectionPdfWeight(mockSection("solution", "9"))).toBe(0.5);
+    expect(getSectionPdfWeight(mockSection("guarantees", "10"))).toBe(0.5);
   });
 
   it("agrupa seções compactas de 0.5 em pares em uma mesma página", () => {
@@ -58,6 +60,18 @@ describe("pdf-pagination", () => {
     expect(pages[1].sections.map((s) => s.id)).toEqual(["gen"]);
     expect(pages[2].pageNumber).toBe(4);
     expect(pages[2].sections.map((s) => s.id)).toEqual(["sol"]);
+  });
+
+  it("nunca agrupa seções executivas densas como depoimentos e assinatura na mesma página", () => {
+    const sections: ProposalSection[] = [
+      mockSection("testimonials", "test"),
+      mockSection("signature", "sig"),
+    ];
+
+    const pages = distributeSectionsIntoPdfPages(sections, 2);
+    expect(pages).toHaveLength(2);
+    expect(pages[0].sections.map((s) => s.id)).toEqual(["test"]);
+    expect(pages[1].sections.map((s) => s.id)).toEqual(["sig"]);
   });
 
   it("limita a no máximo 2 seções por página para evitar overflow no A4", () => {

@@ -98,6 +98,7 @@ export function proposalPuppeteerDocumentCss(): string {
       overflow: visible !important;
     }
 
+    body.proposal-puppeteer-body > div,
     [data-preview-scroll="true"] > div,
     .proposal-pdf-mode-root > div {
       display: block !important;
