@@ -78,14 +78,26 @@ describe("pdf-contrast-utils", () => {
       expect(result.primaryColor).toBe("#22c55e");
     });
 
-    it("garante texto escuro (#0f172a) se o fundo for claro", () => {
+    it("normaliza fundos claros para #060b16 e texto para #f8fafc no PDF executivo", () => {
       const lightBgBranding = {
         backgroundColor: "#ffffff",
-        textColor: "#f8fafc", // texto claro em fundo branco sumiria
+        textColor: "#0f172a",
         primaryColor: "#15803d",
       };
 
-      const result = enforceHighContrastBranding(lightBgBranding);
+      const result = enforceHighContrastBranding(lightBgBranding, { isPdf: true });
+      expect(result.textColor).toBe("#f8fafc");
+      expect(result.backgroundColor).toBe("#060b16");
+    });
+
+    it("garante texto escuro (#0f172a) se o fundo for claro em modo web (não PDF)", () => {
+      const lightBgBranding = {
+        backgroundColor: "#ffffff",
+        textColor: "#f8fafc", // texto claro em fundo branco sumiria no modo web
+        primaryColor: "#15803d",
+      };
+
+      const result = enforceHighContrastBranding(lightBgBranding, { isPdf: false });
       expect(result.textColor).toBe("#0f172a");
     });
   });

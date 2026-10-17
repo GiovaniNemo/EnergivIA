@@ -71,8 +71,9 @@ function isNeutralDarkColor(hex: string): boolean {
 
 /**
  * Garante que a paleta de cores usada para renderizar o PDF tenha contraste perfeito.
- * Se o fundo for escuro, o texto é blindado incondicionalmente para branco gelo (#f8fafc)
- * ou mantido se for neutro claro, impedindo contaminação por cores verdes ou escuras salvas em templates.
+ * No PDF corporativo executivo, a apresentação é construída sobre base escura (fundo cósmico/orbital #060b16).
+ * Por isso, no PDF as letras de leitura corporativa são SEMPRE claras (#f8fafc / #ffffff),
+ * impedindo texto escuro (#0f172a) ou esmaecido que desapareça contra o fundo.
  */
 export function enforceHighContrastBranding<
   T extends {
@@ -82,19 +83,32 @@ export function enforceHighContrastBranding<
     textColor?: string;
     logoUrl?: string;
   },
->(branding: T): T & ContrastSafeBranding {
-  const bg = branding.backgroundColor?.trim() || "#060b16";
+>(branding: T, options?: { isPdf?: boolean }): T & ContrastSafeBranding {
+  const isPdf = options?.isPdf ?? true;
+  const rawBg = branding.backgroundColor?.trim();
+
+  // No PDF, se o fundo for indefinido ou se for claro (ex: #ffffff herdado de template padrão web),
+  // normalizamos para o fundo executivo escuro (#060b16) para harmonizar com os anéis orbitais.
+  let bg = rawBg || "#060b16";
+  if (isPdf && (!rawBg || getHexRelativeLuminance(rawBg) >= 0.45)) {
+    bg = "#060b16";
+  }
+
   const isDarkBg = getHexRelativeLuminance(bg) < 0.45;
 
   let textColor = branding.textColor?.trim();
-  if (isDarkBg) {
-    // Em fundo escuro (< 0.45), o texto de leitura corporativo deve ser branco neutro (#f8fafc).
-    // Impede tons verdes (#10b981, #042f2e, #6ee7b7) ou escuros no texto corrido.
-    if (!textColor || !isNeutralLightColor(textColor)) {
+  if (isDarkBg || isPdf) {
+    // Em fundo escuro ou no modo PDF executivo, o texto corporativo é incondicionalmente claro (#f8fafc).
+    // Impede tons escuros (#0f172a, #000) e contaminação por tons verdes escuros no texto corrido.
+    if (
+      !textColor ||
+      !isNeutralLightColor(textColor) ||
+      getHexRelativeLuminance(textColor) < 0.55
+    ) {
       textColor = "#f8fafc";
     }
   } else {
-    // Em fundo claro (>= 0.45), o texto de leitura corporativo deve ser grafite escuro (#0f172a).
+    // Apenas em visualização web em fundo estritamente claro
     if (!textColor || !isNeutralDarkColor(textColor)) {
       textColor = "#0f172a";
     }

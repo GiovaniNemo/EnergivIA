@@ -411,7 +411,7 @@ function renderProposalEquipmentCards(items: ProposalEquipmentItem[]): JSX.Eleme
                   />
                 ) : null}
               </div>
-              {item.subtitle ? <p className="mt-0.5 text-xs opacity-75">{item.subtitle}</p> : null}
+              {item.subtitle ? <p className="mt-0.5 text-xs opacity-85">{item.subtitle}</p> : null}
               {item.datasheetUrl ? (
                 <a
                   href={item.datasheetUrl}
@@ -444,7 +444,7 @@ function renderProposalEquipmentCards(items: ProposalEquipmentItem[]): JSX.Eleme
                             aria-hidden
                           />
                         </span>
-                        <span className="text-[0.65rem] font-medium uppercase tracking-wide opacity-[0.65]">
+                        <span className="text-[0.65rem] font-medium uppercase tracking-wide opacity-80">
                           {spec.label || "—"}
                         </span>
                       </div>
@@ -651,29 +651,39 @@ export function renderSectionContent(
               className="mb-4 sm:mb-6 h-px w-12"
               style={{ background: "var(--preview-primary-color, #10b981)" }}
             />
-            <div className="mb-2 text-[14px] sm:text-[15px] italic" style={{ opacity: 0.75 }}>
+            <div
+              className="mb-2 text-[14px] sm:text-[15px] italic"
+              style={{ opacity: isPdf ? 0.9 : 0.75, color: isPdf ? "#cbd5e1" : undefined }}
+            >
               {greeting}
             </div>
-            <div className="mb-4 sm:mb-8 text-3xl sm:text-4xl md:text-[38px] font-bold leading-none tracking-[-0.035em]">
+            <div
+              className="mb-4 sm:mb-8 text-3xl sm:text-4xl md:text-[38px] font-bold leading-none tracking-[-0.035em]"
+              style={{ color: isPdf ? "#ffffff" : undefined }}
+            >
               {clientName},
             </div>
             <div
               data-editor-field-path="title"
               className="preview-editable-target mb-3 sm:mb-4 text-lg sm:text-xl md:text-[22px] font-normal leading-[1.35] tracking-[-0.015em]"
-              style={{ maxWidth: 580 }}
+              style={{ maxWidth: 580, color: isPdf ? "#f8fafc" : undefined }}
             >
               {renderRichText(f.title, vars)}
             </div>
             <div
               data-editor-field-path="text"
               className="preview-editable-target text-sm sm:text-[15px] leading-[1.75]"
-              style={{ maxWidth: 540, opacity: 0.9 }}
+              style={{ maxWidth: 540, opacity: 0.95, color: isPdf ? "#e2e8f0" : undefined }}
             >
               {renderRichText(f.text, vars)}
             </div>
             <div
               className="mt-6 sm:mt-8 pt-4 sm:pt-5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[.18em]"
-              style={{ borderTop: "1px solid rgba(128,128,128,0.25)", opacity: 0.65 }}
+              style={{
+                borderTop: "1px solid rgba(128,128,128,0.25)",
+                opacity: isPdf ? 0.8 : 0.65,
+                color: isPdf ? "#94a3b8" : undefined,
+              }}
             >
               Proposta personalizada
             </div>
@@ -885,6 +895,7 @@ export function renderSectionContent(
         />
       );
     case "about_company": {
+      const isPdf = renderMode === "pdf";
       const variant = String(section.variant ?? "hero");
 
       if (variant === "hero") {
@@ -1147,8 +1158,11 @@ export function renderSectionContent(
                     data-editor-field-path="tag_top"
                     className="inline-flex items-center gap-2 self-start rounded-full px-3 py-1.5 text-[11px] sm:text-[12px] font-medium backdrop-blur-sm"
                     style={{
-                      background: "rgb(var(--preview-background-rgb, 15 23 42) / 0.92)",
-                      color: "inherit",
+                      background: isPdf
+                        ? "rgba(11, 18, 32, 0.88)"
+                        : "rgb(var(--preview-background-rgb, 15 23 42) / 0.92)",
+                      color: isPdf ? "#f8fafc" : "inherit",
+                      border: isPdf ? "1px solid rgba(255, 255, 255, 0.15)" : undefined,
                     }}
                   >
                     <span
@@ -1163,20 +1177,24 @@ export function renderSectionContent(
                     className="self-end rounded-xl p-3 sm:p-4 shadow-xl backdrop-blur-sm"
                     style={{
                       maxWidth: 180,
-                      background: "rgb(var(--preview-background-rgb, 15 23 42) / 0.95)",
-                      color: "inherit",
+                      background: isPdf
+                        ? "rgba(11, 18, 32, 0.92)"
+                        : "rgb(var(--preview-background-rgb, 15 23 42) / 0.95)",
+                      color: isPdf ? "#f8fafc" : "inherit",
+                      border: isPdf ? "1px solid rgba(255, 255, 255, 0.15)" : undefined,
                     }}
                   >
                     <div
                       data-editor-field-path="badge_value"
                       className="text-2xl sm:text-[34px] font-light leading-none tracking-[-0.02em]"
-                      style={{ fontFamily: "inherit" }}
+                      style={{ fontFamily: "inherit", color: isPdf ? "#f8fafc" : undefined }}
                     >
                       {badgeValue}
                     </div>
                     <div
                       data-editor-field-path="badge_label"
-                      className="mt-1 text-[10px] sm:text-[12px] leading-[1.3] opacity-60 uppercase tracking-wide"
+                      className="mt-1 text-[10px] sm:text-[12px] leading-[1.3] opacity-75 uppercase tracking-wide"
+                      style={{ color: isPdf ? "#cbd5e1" : undefined }}
                     >
                       {badgeLabel}
                     </div>
@@ -1195,13 +1213,14 @@ export function renderSectionContent(
               <div
                 data-editor-field-path="title"
                 className="preview-editable-target mb-3 sm:mb-4 text-xl sm:text-2xl md:text-[28px] font-medium leading-[1.15] tracking-[-0.02em]"
+                style={{ color: isPdf ? "#f8fafc" : undefined }}
               >
                 {renderRichText(f.title, vars)}
               </div>
               <div
                 data-editor-field-path="text"
                 className="preview-editable-target mb-5 sm:mb-6 text-sm sm:text-[14px] leading-[1.7]"
-                style={{ opacity: 0.65 }}
+                style={{ opacity: isPdf ? 0.9 : 0.65, color: isPdf ? "#e2e8f0" : undefined }}
               >
                 {renderRichText(f.text, vars)}
               </div>
@@ -1237,12 +1256,16 @@ export function renderSectionContent(
                         <strong
                           data-editor-field-path={`features[${i}].title`}
                           className="block font-semibold"
+                          style={{ color: isPdf ? "#f8fafc" : undefined }}
                         >
                           {tpl(feat.title, vars)}
                         </strong>
                         <span
                           data-editor-field-path={`features[${i}].description`}
-                          style={{ opacity: 0.65 }}
+                          style={{
+                            opacity: isPdf ? 0.85 : 0.65,
+                            color: isPdf ? "#cbd5e1" : undefined,
+                          }}
                         >
                           {tpl(feat.description, vars)}
                         </span>

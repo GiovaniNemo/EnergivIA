@@ -562,7 +562,7 @@ export function PreviewDocument({
   });
 
   if (mode === "pdf") {
-    const pdfBranding = enforceHighContrastBranding(styles.branding);
+    const pdfBranding = enforceHighContrastBranding(styles.branding, { isPdf: true });
     const pdfPages = distributeSectionsIntoPdfPages(visibleSections, 2);
     const totalPages = 1 + pdfPages.length;
 

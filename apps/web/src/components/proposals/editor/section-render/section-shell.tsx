@@ -169,13 +169,19 @@ export function SectionShell({
       ? undefined
       : resolveDisplayAssetUrl(toOptionalString(fields["backgroundImage"]));
 
-  // Blindagem de alto contraste: se o fundo for escuro ou se houver imagem de fundo, o texto NUNCA pode ser escuro!
-  if (backgroundImage || isDarkBg) {
-    if (!textColor || getHexRelativeLuminance(textColor) < 0.55 || isPdf) {
+  // Blindagem de alto contraste:
+  // No modo PDF, todo o documento é renderizado sobre o design corporativo escuro orbital,
+  // portanto o texto de leitura DEVE SER INCONDICIONALMENTE CLARO (#f8fafc), nunca escuro (#0f172a).
+  if (isPdf) {
+    if (!textColor || getHexRelativeLuminance(textColor) < 0.55) {
       textColor = "#f8fafc";
     }
-  } else if (!isDarkBg && !backgroundImage) {
-    if (!textColor || getHexRelativeLuminance(textColor) >= 0.45 || isPdf) {
+  } else if (backgroundImage || isDarkBg) {
+    if (!textColor || getHexRelativeLuminance(textColor) < 0.55) {
+      textColor = "#f8fafc";
+    }
+  } else {
+    if (!textColor || getHexRelativeLuminance(textColor) >= 0.45) {
       textColor = "#0f172a";
     }
   }

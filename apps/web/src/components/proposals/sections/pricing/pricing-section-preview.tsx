@@ -120,7 +120,9 @@ export function PricingSectionPreview({
   vars,
   compact = false,
   branding,
+  mode,
 }: PricingSectionPreviewProps): JSX.Element {
+  const isPdf = mode === "pdf";
   const base = parseAmount(vars, "investimento_total");
   const discountRaw = parseAmount(vars, "investimento_desconto");
   const discount = discountRaw != null ? Math.abs(discountRaw) : null;
@@ -143,15 +145,29 @@ export function PricingSectionPreview({
     ? replaceVariables(paymentConditions, vars as unknown as Record<string, string | number>).trim()
     : "";
 
-  const palette = resolveProposalPalette(branding);
+  // No modo PDF, se a paleta não estiver definida ou vier com fundo claro, garantimos o tema escuro integrado
+  const effectiveBranding: PricingBranding = {
+    backgroundColor: isPdf ? "#060b16" : branding?.backgroundColor || "#060b16",
+    textColor: isPdf ? "#f8fafc" : branding?.textColor || "#f8fafc",
+    primaryColor: branding?.primaryColor || "#22c55e",
+    secondaryColor: branding?.secondaryColor || "#10b981",
+  };
 
-  const cardStyle: CSSProperties | undefined = palette
+  const palette = resolveProposalPalette(isPdf ? effectiveBranding : branding || effectiveBranding);
+
+  const cardStyle: CSSProperties | undefined = isPdf
     ? {
-        backgroundColor: palette.cardBg,
-        borderColor: palette.border,
-        color: palette.fg,
+        backgroundColor: "color-mix(in srgb, currentColor 5%, transparent)",
+        borderColor: "color-mix(in srgb, currentColor 14%, transparent)",
+        color: "#f8fafc",
       }
-    : undefined;
+    : palette
+      ? {
+          backgroundColor: palette.cardBg,
+          borderColor: palette.border,
+          color: palette.fg,
+        }
+      : undefined;
 
   const rawKitList =
     typeof vars.kit_itens_lista === "string" && vars.kit_itens_lista.trim()
@@ -164,15 +180,15 @@ export function PricingSectionPreview({
 
   return (
     <div
-      className={cn("space-y-5", !palette && "text-[var(--color-foreground)]")}
-      style={palette ? { color: palette.fg } : undefined}
+      className={cn("space-y-5", !palette && !isPdf && "text-[var(--color-foreground)]")}
+      style={isPdf ? { color: "#f8fafc" } : palette ? { color: palette.fg } : undefined}
     >
       {intro}
 
       <div
         className={cn(
           "overflow-hidden rounded-2xl border shadow-sm",
-          !palette && "border-[var(--color-border)] bg-[var(--color-card)]",
+          !palette && !isPdf && "border-[var(--color-border)] bg-[var(--color-card)]",
           cardPad
         )}
         style={cardStyle}
@@ -180,10 +196,16 @@ export function PricingSectionPreview({
         <div
           className={cn(
             "divide-y",
-            palette ? "divide-[var(--palette-divider)]" : "divide-[var(--color-border)]"
+            isPdf
+              ? "divide-[color-mix(in_srgb,currentColor_10%,transparent)]"
+              : palette
+                ? "divide-[var(--palette-divider)]"
+                : "divide-[var(--color-border)]"
           )}
           style={
-            palette ? ({ "--palette-divider": palette.divider } as React.CSSProperties) : undefined
+            palette && !isPdf
+              ? ({ "--palette-divider": palette.divider } as React.CSSProperties)
+              : undefined
           }
         >
           {hasKitItems ? (
@@ -200,8 +222,9 @@ export function PricingSectionPreview({
                   <p
                     className={cn(
                       "text-sm font-semibold uppercase leading-snug tracking-wide",
-                      !palette && "text-[var(--color-foreground)]"
+                      !palette && !isPdf && "text-[var(--color-foreground)]"
                     )}
+                    style={isPdf ? { color: "#f8fafc" } : undefined}
                   >
                     {item.label}
                   </p>
@@ -209,9 +232,15 @@ export function PricingSectionPreview({
                     <p
                       className={cn(
                         "mt-0.5 text-xs leading-relaxed",
-                        !palette && "text-[var(--color-muted-foreground)]"
+                        !palette && !isPdf && "text-[var(--color-muted-foreground)]"
                       )}
-                      style={palette ? { color: palette.muted } : undefined}
+                      style={
+                        isPdf
+                          ? { color: "rgba(248, 250, 252, 0.75)" }
+                          : palette
+                            ? { color: palette.muted }
+                            : undefined
+                      }
                     >
                       {item.description}
                     </p>
@@ -221,8 +250,9 @@ export function PricingSectionPreview({
                   <p
                     className={cn(
                       "shrink-0 text-sm font-semibold tabular-nums sm:pt-0.5 sm:text-right",
-                      !palette && "text-[var(--color-foreground)]"
+                      !palette && !isPdf && "text-[var(--color-foreground)]"
                     )}
+                    style={isPdf ? { color: "#f8fafc" } : undefined}
                   >
                     {item.price}
                   </p>
@@ -294,29 +324,45 @@ export function PricingSectionPreview({
         <div
           className={cn(
             "mt-0 border-t-2 px-4 py-5 sm:px-5 sm:py-6",
-            !palette && "border-[var(--color-border)]"
+            !palette && !isPdf && "border-[var(--color-border)]"
           )}
           style={
-            palette
+            isPdf
               ? {
-                  backgroundColor: palette.footerBg,
-                  borderTopColor: palette.accent,
-                  color: palette.fg,
+                  backgroundColor:
+                    "color-mix(in srgb, var(--preview-primary-color, #10b981) 12%, transparent)",
+                  borderTopColor: "color-mix(in srgb, currentColor 18%, transparent)",
+                  color: "#f8fafc",
                 }
-              : undefined
+              : palette
+                ? {
+                    backgroundColor: palette.footerBg,
+                    borderTopColor: palette.accent,
+                    color: palette.fg,
+                  }
+                : undefined
           }
         >
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <p
               className={cn(
                 "text-sm font-bold uppercase tracking-[0.06em]",
-                !palette && "text-[var(--color-muted-foreground)]"
+                !palette && !isPdf && "text-[var(--color-muted-foreground)]"
               )}
-              style={palette ? { color: palette.muted } : undefined}
+              style={
+                isPdf
+                  ? { color: "rgba(248, 250, 252, 0.75)" }
+                  : palette
+                    ? { color: palette.muted }
+                    : undefined
+              }
             >
               Total a investir
             </p>
-            <p className={cn("font-bold leading-tight tracking-tight tabular-nums", totalSize)}>
+            <p
+              className={cn("font-bold leading-tight tracking-tight tabular-nums", totalSize)}
+              style={isPdf ? { color: "#f8fafc" } : undefined}
+            >
               {totalDisplay}
             </p>
           </div>
@@ -324,9 +370,15 @@ export function PricingSectionPreview({
             <p
               className={cn(
                 "mt-3 text-sm leading-relaxed",
-                !palette && "text-[var(--color-muted-foreground)]"
+                !palette && !isPdf && "text-[var(--color-muted-foreground)]"
               )}
-              style={palette ? { color: palette.muted } : undefined}
+              style={
+                isPdf
+                  ? { color: "rgba(248, 250, 252, 0.75)" }
+                  : palette
+                    ? { color: palette.muted }
+                    : undefined
+              }
             >
               <span
                 className="font-medium"
@@ -336,13 +388,22 @@ export function PricingSectionPreview({
               >
                 Economia de {formatBRL(discount)}
               </span>
-              <span className="mx-1.5" style={{ color: palette?.divider ?? "var(--color-border)" }}>
+              <span
+                className="mx-1.5"
+                style={{
+                  color: isPdf
+                    ? "rgba(248, 250, 252, 0.3)"
+                    : (palette?.divider ?? "var(--color-border)"),
+                }}
+              >
                 ·
               </span>
               <span
                 className="line-through"
                 style={{
-                  textDecorationColor: palette?.muted ?? "var(--color-muted-foreground)",
+                  textDecorationColor: isPdf
+                    ? "rgba(248, 250, 252, 0.5)"
+                    : (palette?.muted ?? "var(--color-muted-foreground)"),
                 }}
               >
                 {formatBRL(base)}
@@ -358,9 +419,15 @@ export function PricingSectionPreview({
           data-editor-field-path="paymentConditions"
           className={cn(
             "preview-rich-content max-w-none text-sm leading-relaxed [&_p]:my-2",
-            !palette && "text-[var(--color-muted-foreground)]"
+            !palette && !isPdf && "text-[var(--color-muted-foreground)]"
           )}
-          style={palette ? { color: palette.muted } : undefined}
+          style={
+            isPdf
+              ? { color: "rgba(248, 250, 252, 0.85)" }
+              : palette
+                ? { color: palette.muted }
+                : undefined
+          }
           dangerouslySetInnerHTML={safeHtml(paymentHtml)}
         />
       ) : null}
