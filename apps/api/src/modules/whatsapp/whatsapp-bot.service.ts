@@ -38,6 +38,7 @@ import {
 } from "./services/bill-extractor.service";
 import { KitGenerationService } from "../kit/kit-generation.service";
 import { getHsp, isLocationInput, GeoIrradianceService } from "./services/geo-irradiance.service";
+import { WhatsappGuestTrialService } from "./services/whatsapp-guest-trial.service";
 import {
   WhatsappBotStep,
   WhatsappSessionData,
@@ -393,8 +394,13 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     private readonly kitGeneration: KitGenerationService,
     @Optional()
     @Inject(forwardRef(() => ProposalsService))
-    private readonly proposalsService?: ProposalsService
+    private readonly proposalsService?: ProposalsService,
+    @Optional()
+    private guestTrial?: WhatsappGuestTrialService
   ) {
+    if (!this.guestTrial && this.prisma) {
+      this.guestTrial = new WhatsappGuestTrialService(this.prisma);
+    }
     const geminiKey =
       this.config.get<string>("GOOGLE_GEMINI_API_KEY") ||
       this.config.get<string>("GEMINI_API_KEY") ||
@@ -1007,23 +1013,42 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     }
 
     // 4. Resolução da Organização / Tenant do Integrador
-    const tenant = await this.resolveAuthorizedTenant(fromWaId);
-    if (!tenant) {
-      this.logger.warn(`Número não autorizado tentando usar o bot: ${fromWaId}`);
-      const salesMsg =
-        `Olá! ☀️ O assistente de inteligência artificial da *EnergivIA* é um recurso exclusivo para integradores parceiros credenciados.\n\n` +
-        `Para vincular este WhatsApp à sua conta:\n` +
-        `1️⃣ Acesse a plataforma: *https://www.energivia.com.br*\n` +
-        `2️⃣ Clique no botão *"IA no WhatsApp"* no topo da tela e envie o código gerado aqui.\n\n` +
-        `Se você ainda não possui um plano ativo, conheça nossos recursos e comece a gerar propostas solares em segundos:\n` +
-        `👉 *https://www.energivia.com.br*`;
+    let tenant = await this.resolveAuthorizedTenant(fromWaId);
+    let isGuestTrial = false;
 
-      await this.whatsappCloud.sendTextMessage({
-        phoneNumberId,
-        toWaId: fromWaId,
-        body: salesMsg,
+    if (!tenant) {
+      if (!this.guestTrial) {
+        this.guestTrial = new WhatsappGuestTrialService(this.prisma);
+      }
+      const demoTenant = await this.guestTrial.getOrCreateDemoTenant();
+
+      // Busca se já existe conversa prévia de degustação para este número
+      const existingConv = await this.prisma.conversation.findFirst({
+        where: {
+          organizationId: demoTenant.id,
+          channel: "whatsapp",
+          title: fromWaId,
+        },
+        select: { id: true, metadata: true },
       });
-      return;
+
+      const trialStatus = this.guestTrial.getGuestTrialStatus(existingConv);
+
+      if (!trialStatus.allowed) {
+        this.logger.warn(
+          `Novo número ${fromWaId} tentou usar o bot mas atingiu o limite de 3 cotações de teste gratuito.`
+        );
+        const trialExceededMsg = this.buildGuestTrialExceededMessage();
+        await this.whatsappCloud.sendTextMessage({
+          phoneNumberId,
+          toWaId: fromWaId,
+          body: trialExceededMsg,
+        });
+        return;
+      }
+
+      tenant = demoTenant;
+      isGuestTrial = true;
     }
 
     // 5. Verificação de Assinatura / Plano Ativo
@@ -1120,12 +1145,16 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
             customerWaId: fromWaId,
             contactName,
             phoneNumberId,
+            isGuestTrial,
+            trialQuotesUsed: 0,
+            trialMaxQuotes: 3,
           },
         },
         include: { messages: { orderBy: { createdAt: "asc" } } },
       });
     } else {
       const currentMeta = (conversation.metadata as Record<string, any>) || {};
+      const shouldFlagTrial = isGuestTrial || currentMeta["isGuestTrial"] === true;
       await this.prisma.conversation.update({
         where: { id: conversation.id },
         data: {
@@ -1135,6 +1164,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
             customerWaId: fromWaId,
             contactName: contactName || currentMeta["contactName"],
             phoneNumberId: phoneNumberId || currentMeta["phoneNumberId"],
+            isGuestTrial: shouldFlagTrial,
           },
         },
       });
@@ -1176,7 +1206,19 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         await this.prisma.message.deleteMany({
           where: { conversationId: conversation.id },
         });
-        const resetMsg = `Sessão reiniciada com sucesso! ☀️\n\nEnvie a conta de luz do seu cliente (PDF ou foto) ou digite o consumo médio em kWh para começarmos uma nova simulação.`;
+
+        const convMeta = (conversation.metadata as Record<string, any>) || {};
+        const isTrialActive = isGuestTrial || convMeta["isGuestTrial"] === true;
+        let resetMsg = `Sessão reiniciada com sucesso! ☀️\n\nEnvie a conta de luz do seu cliente (PDF ou foto) ou digite o consumo médio em kWh para começarmos uma nova simulação.`;
+
+        if (isTrialActive && this.guestTrial) {
+          const trialStatus = this.guestTrial.getGuestTrialStatus(conversation);
+          resetMsg =
+            `Sessão reiniciada com sucesso! ☀️\n\n` +
+            `🎁 *Você possui ${trialStatus.remaining} de ${trialStatus.trialMaxQuotes} cotações de teste disponíveis.*\n\n` +
+            `Envie a conta de luz do seu cliente (PDF ou foto) ou digite o consumo médio em kWh para começarmos uma nova simulação.`;
+        }
+
         await this.whatsappCloud.sendTextMessage({
           phoneNumberId,
           toWaId: fromWaId,
@@ -2609,7 +2651,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     quoteText += `Qual opção você prefere para o seu cliente?\n`;
     quoteText += `_(Responda com o número ou nome da opção: 1 Standard, 2 Elite ou 3 Premium. Na sequência você define o preço por kWp)_\n`;
     quoteText += `> 0️⃣ *Voltar / Alterar estrutura*\n\n`;
-    quoteText += `Equipe *_EnergivIA Solar._*`;
+    quoteText += `Equipe *_EnergivIA._*`;
     return quoteText;
   }
 
@@ -2649,18 +2691,44 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     return `${saudacao}${firstName}! Tudo bem? ☀️`;
   }
 
-  private buildGreetingMenu(contactName?: string): string {
+  public buildGreetingMenu(contactName?: string): string {
     const greeting = this.getGreetingText(contactName);
     return (
       `${greeting}\n\n` +
-      `Sou seu assistente de vendas e dimensionamento da *_EnergivIA Solar._*\n\n` +
+      `Sou seu assistente de vendas e dimensionamento da *_EnergivIA._*\n\n` +
       `*_Como posso ajudar você a gerar orçamentos hoje?_*\n\n` +
       `> 1️⃣ *Enviar fatura de energia* (PDF ou foto)\n` +
       `> 2️⃣ *Simular por consumo mensal* (ex: \`450 kWh\`)\n` +
       `> 3️⃣ *Simular por potência de pico* (ex: \`5 kWp\`)\n` +
       `> 4️⃣ *Simular por quantidade de placas* (ex: \`10 módulos\`)\n\n` +
       `_(Responda com o número da opção ou envie a conta de luz diretamente)_\n\n` +
-      `Equipe *_EnergivIA Solar._*`
+      `Equipe *_EnergivIA._*`
+    );
+  }
+
+  public buildGuestGreetingMenu(contactName?: string, trialQuotesRemaining = 3): string {
+    const greeting = this.getGreetingText(contactName);
+    return (
+      `${greeting}\n\n` +
+      `Sou seu assistente de vendas e dimensionamento da *_EnergivIA._*\n\n` +
+      `🎁 *Você ganhou 3 cotações completas gratuitas de teste!*\n` +
+      `_(Restam ${trialQuotesRemaining} cotações no seu teste gratuito)_\n\n` +
+      `*_Como posso ajudar você a gerar orçamentos hoje?_*\n\n` +
+      `> 1️⃣ *Enviar fatura de energia* (PDF ou foto)\n` +
+      `> 2️⃣ *Simular por consumo mensal* (ex: \`450 kWh\`)\n` +
+      `> 3️⃣ *Simular por potência de pico* (ex: \`5 kWp\`)\n` +
+      `> 4️⃣ *Simular por quantidade de placas* (ex: \`10 módulos\`)\n\n` +
+      `_(Responda com o número da opção ou envie a conta de luz diretamente)_\n\n` +
+      `Equipe *_EnergivIA._*`
+    );
+  }
+
+  public buildGuestTrialExceededMessage(): string {
+    return (
+      `Olá! ☀️ Você já utilizou suas *3 cotações gratuitas de degustação* da EnergivIA.\n\n` +
+      `Esperamos que tenha gostado da velocidade e precisão das propostas comerciais! 🚀\n\n` +
+      `Para continuar gerando propostas comerciais ilimitadas com IA, personalizar o valor por kWp, usar o logotipo da sua empresa e cadastrar seus próprios clientes, escolha o seu plano em:\n` +
+      `👉 *https://www.energivia.com.br/gestao/meus-planos*`
     );
   }
 
@@ -2954,6 +3022,18 @@ ${catalogContext}`;
         "contactName"
       ]?.toString() ||
       "Integrador";
+
+    const convMeta = (conversation?.metadata as Record<string, any>) || {};
+    const isGuestTrial = convMeta["isGuestTrial"] === true;
+    const trialStatus =
+      isGuestTrial && this.guestTrial ? this.guestTrial.getGuestTrialStatus(conversation) : null;
+
+    const getGreetingMenu = () => {
+      if (isGuestTrial && trialStatus) {
+        return this.buildGuestGreetingMenu(resolvedContactName, trialStatus.remaining);
+      }
+      return this.buildGreetingMenu(resolvedContactName);
+    };
 
     // Helper interno para decodificar o estado acumulado da conversa
     const extractContextFromSession = () => {
@@ -3416,7 +3496,6 @@ ${catalogContext}`;
     };
 
     const sessionCtx = extractContextFromSession();
-    const convMeta = (conversation?.metadata as Record<string, any>) || {};
     const storedSessionData: WhatsappSessionData = convMeta["sessionData"] || {};
     let currentStep: WhatsappBotStep = convMeta["step"] || "IDLE";
 
@@ -3658,6 +3737,13 @@ ${catalogContext}`;
         lowerClean === "outro cliente"
       ) {
         await setStep("IDLE");
+        if (isGuestTrial && trialStatus) {
+          return (
+            `Vamos iniciar uma nova cotação solar! ☀️\n\n` +
+            `_(Restam ${trialStatus.remaining} cotações no seu teste gratuito)_\n\n` +
+            `Envie a conta de luz do seu cliente (PDF ou foto) ou digite o consumo médio mensal em kWh para começarmos.`
+          );
+        }
         return (
           `Vamos iniciar uma nova cotação solar! ☀️\n\n` +
           `Envie a conta de luz do seu cliente (PDF ou foto) ou digite o consumo médio mensal em kWh para começarmos.`
@@ -3870,7 +3956,7 @@ ${catalogContext}`;
         clientPhone: undefined,
         selectedTemplateId: undefined,
       });
-      return this.buildGreetingMenu(resolvedContactName);
+      return getGreetingMenu();
     }
 
     // Tratamento Universal de Voltar / Corrigir
@@ -3992,7 +4078,7 @@ ${catalogContext}`;
         lastBotMsg.includes("informe a cidade e estado")
       ) {
         await setStep("IDLE");
-        return this.buildGreetingMenu(resolvedContactName);
+        return getGreetingMenu();
       }
 
       return (
@@ -4032,136 +4118,7 @@ ${catalogContext}`;
       );
     }
 
-    // ESTADO B: O Bot pediu o nome do cliente final (ou o nome correto)
-    const isAskingClientName =
-      currentStep === "AWAITING_CLIENT_NAME" ||
-      (lastBotMsg.includes("cliente final") &&
-        (lastBotMsg.includes("nome") ||
-          lastBotMsg.includes("Nome") ||
-          lastBotMsg.includes("CRM") ||
-          lastBotMsg.includes("registrarmos"))) ||
-      lastBotMsg.includes("Qual o nome do cliente final") ||
-      lastBotMsg.includes("nome correto do cliente final");
-
-    if (isAskingClientName) {
-      const lower = incomingText.toLowerCase().trim();
-      const isGreeting =
-        /^(olá|ola|oi|oii|bom dia|boa tarde|boa noite|menu|iniciar|ajuda|novo|reiniciar)$/i.test(
-          lower
-        );
-      if (isGreeting) {
-        return (
-          `Olá! Identifiquei sua mensagem. ☀️\n\n` +
-          `Para gerarmos a proposta comercial oficial, qual o nome do cliente final? (Ex: João da Silva)\n` +
-          `(Ou envie 0️⃣ para voltar e ver os kits disponíveis, ou *novo* para iniciar outra simulação)`
-        );
-      }
-
-      const { name, phone } = extractNameAndPhone(incomingText);
-      const effectiveName = name || (phone ? "Cliente" : incomingText.trim());
-
-      // Se o usuário já enviou o Nome E o WhatsApp na mesma mensagem (ex: "cezar 44988117969" ou "cezar, 44099117969")
-      if (phone && name) {
-        sessionCtx.clientName = effectiveName;
-        sessionCtx.clientWhatsapp = phone;
-        await setStep("AWAITING_TEMPLATE_SELECTION", {
-          clientName: effectiveName,
-          clientPhone: phone,
-        });
-
-        const templates = await this.getAvailableTemplates(conversation.organizationId);
-        let templateListText = "";
-        templates.forEach((t, i) => {
-          templateListText += `> ${this.numToEmoji(i + 1)} *${t.name}*\n`;
-        });
-        templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
-
-        return (
-          `Cliente *${effectiveName}* e WhatsApp \`${formatPhone(phone)}\` registrados com sucesso! 👤✨\n\n` +
-          `*_Qual modelo de proposta comercial você deseja usar para o seu cliente?_*\n\n` +
-          `${templateListText}\n` +
-          `_(Responda com o número da opção desejada ou digite 0️⃣ para corrigir o nome/telefone)_`
-        );
-      }
-
-      // Se enviou apenas o telefone sem nome
-      if (phone && !name) {
-        sessionCtx.clientWhatsapp = phone;
-        await setStep("AWAITING_CLIENT_NAME", { clientPhone: phone });
-        return `Anotado o WhatsApp \`${formatPhone(phone)}\`! E qual o *nome* do cliente final para registrarmos no seu CRM?`;
-      }
-
-      // Se enviou apenas o nome
-      sessionCtx.clientName = effectiveName;
-      await setStep("AWAITING_CLIENT_PHONE", { clientName: effectiveName });
-      return `Certo, vou registrar o cliente *${effectiveName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
-    }
-
-    // ESTADO C: O Bot pediu o WhatsApp do cliente final -> Apresenta os modelos de proposta
-    const isAskingPhone =
-      currentStep === "AWAITING_CLIENT_PHONE" ||
-      lastBotMsg.includes("E qual o WhatsApp dele") ||
-      lastBotMsg.includes("qual o WhatsApp") ||
-      lastBotMsg.includes("qual o whatsapp") ||
-      lastBotMsg.includes("WhatsApp correto");
-
-    if (isAskingPhone) {
-      const clientNameMatch =
-        lastBotMsg.match(/registrar o cliente \*?([^*.]+)\*?\./i) ||
-        lastBotMsg.match(/Cliente \*([^*]+)\*/i);
-      let clientName =
-        clientNameMatch?.[1]?.replace(/\*/g, "").trim() || sessionCtx.clientName || "Cliente";
-
-      const { name: newName, phone } = extractNameAndPhone(incomingText);
-      if (newName && !phone) {
-        // Usuário corrigiu apenas o nome
-        sessionCtx.clientName = newName;
-        await setStep("AWAITING_CLIENT_PHONE", { clientName: newName });
-        return `Certo, corrigi o nome para *${newName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
-      }
-      if (newName && phone) {
-        // Usuário enviou nome e telefone
-        clientName = newName;
-      }
-
-      const digits = incomingText.replace(/\D/g, "");
-      const resolvedPhone = phone || (digits.length >= 8 ? digits : undefined);
-
-      sessionCtx.clientName = clientName;
-      if (resolvedPhone) {
-        sessionCtx.clientWhatsapp = resolvedPhone;
-      }
-
-      await setStep("AWAITING_TEMPLATE_SELECTION", {
-        clientName,
-        clientPhone: sessionCtx.clientWhatsapp,
-      });
-
-      const templates = await this.getAvailableTemplates(conversation.organizationId);
-      let templateListText = "";
-      templates.forEach((t, i) => {
-        templateListText += `> ${this.numToEmoji(i + 1)} *${t.name}*\n`;
-      });
-      templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
-
-      const phoneDisplay = resolvedPhone ? ` e WhatsApp \`${formatPhone(resolvedPhone)}\`` : "";
-
-      return (
-        `Cliente *${clientName}*${phoneDisplay} anotado com sucesso! 👤✨\n\n` +
-        `*_Qual modelo de proposta comercial você deseja usar para o seu cliente?_*\n\n` +
-        `${templateListText}\n` +
-        `_(Responda com o número da opção desejada)_`
-      );
-    }
-
-    // ESTADO D: O Bot pediu para escolher o modelo de proposta -> GERA PROPOSTA COMPLETA!
-    if (
-      currentStep === "AWAITING_TEMPLATE_SELECTION" ||
-      lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar")
-    ) {
-      const templateChoiceStr = incomingText.replace(/\D/g, "");
-      const chosenTemplateIndex = templateChoiceStr ? parseInt(templateChoiceStr, 10) - 1 : 0;
-
+    const generateProposalAndReply = async (chosenTemplateIndex: number = 0): Promise<string> => {
       const availableTemplates = await this.getAvailableTemplates(conversation.organizationId);
       const chosenTemplate = availableTemplates[chosenTemplateIndex] || availableTemplates[0];
 
@@ -4547,6 +4504,21 @@ ${catalogContext}`;
         this.logger.error("Erro gerando proposta completa no banco:", err);
       }
 
+      let trialQuotesCount = 0;
+      let trialQuotesRemaining = 0;
+      if (isGuestTrial && this.guestTrial && proposalId) {
+        try {
+          const trialResult = await this.guestTrial.recordProposalCompleted(
+            conversation.id,
+            proposalId
+          );
+          trialQuotesCount = trialResult.trialQuotesUsed;
+          trialQuotesRemaining = trialResult.remaining;
+        } catch (trialErr) {
+          this.logger.warn("Erro ao debitar cota de degustação:", trialErr);
+        }
+      }
+
       const appBaseUrl =
         process.env["APP_BASE_URL"] ||
         process.env["PUBLIC_WEB_APP_BASE_URL"] ||
@@ -4566,18 +4538,27 @@ ${catalogContext}`;
       const estimatedGenerationKwh =
         selectedQuote.estimatedGeneration || Math.round(selectedQuote.kwp * 130);
 
+      const trialCounterText = isGuestTrial
+        ? `📊 *Cotação [${trialQuotesCount || 1} de 3] gerada com sucesso!*\n` +
+          (trialQuotesRemaining > 0
+            ? `_(Você ainda possui ${trialQuotesRemaining} cotaç${trialQuotesRemaining === 1 ? "ão gratuita" : "ões gratuitas"} de teste)_\n\n`
+            : `_(Você utilizou suas 3 cotações de teste gratuito)_\n\n`) +
+          `💡 *Dica:* Na plataforma oficial da EnergivIA você pode personalizar sua logo, criar seus próprios modelos de proposta, gerenciar integradores e definir suas margens de lucro: *https://www.energivia.com.br*\n\n`
+        : "";
+
       const integratorSummaryMsg =
         `*_Proposta Comercial Gerada com Sucesso!_* 📋✨\n\n` +
         `Cliente: *${clientName}*\n\n` +
         `> ☀️ *Potência:* \`${selectedQuote.kwp} kWp\`\n` +
         `> 🏠 *Estrutura:* \`${sessionCtx.roofType || "Cerâmica (Colonial)"}\`\n` +
-        `> 🎨 *Modelo:* \`${chosenTemplate?.name || "Comercial Moderno"}\`\n` +
+        `> 🎨 *Modelo:* \`${chosenTemplate?.name || "Modelo Comercial Padrão"}\`\n` +
         `> 💰 *Valor Total:* \`R$ ${quotedSaleBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\`\n\n` +
+        (trialCounterText ? `${trialCounterText}` : "") +
         `*_Link de conferência (exclusivo para você):_* 🔗\n` +
         `${integratorPreviewLink}\n\n` +
         `_💡 Abra este link acima para revisar a proposta com segurança. Ele **não dispara avisos de visualização**._\n\n` +
         `_👉 A mensagem a seguir foi preparada para você **encaminhar direto para o seu cliente**. Quando ele abrir o link da proposta, você receberá um **alerta imediato aqui no WhatsApp** avisando que ele está visualizando!_\n\n` +
-        `Equipe *_EnergivIA Solar._*`;
+        `Equipe *_EnergivIA._*`;
 
       const clientForwardMsg =
         `Olá, *${clientName}*! Tudo bem?\n\n` +
@@ -4587,6 +4568,147 @@ ${catalogContext}`;
         `Qualquer dúvida ou ajuste que precisar, estou à disposição!`;
 
       return `${integratorSummaryMsg}\n---CLIENT_FORWARD_MESSAGE---\n${clientForwardMsg}`;
+    };
+
+    // ESTADO B: O Bot pediu o nome do cliente final (ou o nome correto)
+    const isAskingClientName =
+      currentStep === "AWAITING_CLIENT_NAME" ||
+      (lastBotMsg.includes("cliente final") &&
+        (lastBotMsg.includes("nome") ||
+          lastBotMsg.includes("Nome") ||
+          lastBotMsg.includes("CRM") ||
+          lastBotMsg.includes("registrarmos"))) ||
+      lastBotMsg.includes("Qual o nome do cliente final") ||
+      lastBotMsg.includes("nome correto do cliente final");
+
+    if (isAskingClientName) {
+      const lower = incomingText.toLowerCase().trim();
+      const isGreeting =
+        /^(olá|ola|oi|oii|bom dia|boa tarde|boa noite|menu|iniciar|ajuda|novo|reiniciar)$/i.test(
+          lower
+        );
+      if (isGreeting) {
+        return (
+          `Olá! Identifiquei sua mensagem. ☀️\n\n` +
+          `Para gerarmos a proposta comercial oficial, qual o nome do cliente final? (Ex: João da Silva)\n` +
+          `(Ou envie 0️⃣ para voltar e ver os kits disponíveis, ou *novo* para iniciar outra simulação)`
+        );
+      }
+
+      const { name, phone } = extractNameAndPhone(incomingText);
+      const effectiveName = name || (phone ? "Cliente" : incomingText.trim());
+
+      // Se o usuário já enviou o Nome E o WhatsApp na mesma mensagem (ex: "cezar 44988117969" ou "cezar, 44099117969")
+      if (phone && name) {
+        sessionCtx.clientName = effectiveName;
+        sessionCtx.clientWhatsapp = phone;
+
+        if (isGuestTrial) {
+          return generateProposalAndReply(0);
+        }
+
+        await setStep("AWAITING_TEMPLATE_SELECTION", {
+          clientName: effectiveName,
+          clientPhone: phone,
+        });
+
+        const templates = await this.getAvailableTemplates(conversation.organizationId);
+        let templateListText = "";
+        templates.forEach((t, i) => {
+          templateListText += `> ${this.numToEmoji(i + 1)} *${t.name}*\n`;
+        });
+        templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
+
+        return (
+          `Cliente *${effectiveName}* e WhatsApp \`${formatPhone(phone)}\` registrados com sucesso! 👤✨\n\n` +
+          `*_Qual modelo de proposta comercial você deseja usar para o seu cliente?_*\n\n` +
+          `${templateListText}\n` +
+          `_(Responda com o número da opção desejada ou digite 0️⃣ para corrigir o nome/telefone)_`
+        );
+      }
+
+      // Se enviou apenas o telefone sem nome
+      if (phone && !name) {
+        sessionCtx.clientWhatsapp = phone;
+        await setStep("AWAITING_CLIENT_NAME", { clientPhone: phone });
+        return `Anotado o WhatsApp \`${formatPhone(phone)}\`! E qual o *nome* do cliente final para registrarmos no seu CRM?`;
+      }
+
+      // Se enviou apenas o nome
+      sessionCtx.clientName = effectiveName;
+      await setStep("AWAITING_CLIENT_PHONE", { clientName: effectiveName });
+      return `Certo, vou registrar o cliente *${effectiveName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
+    }
+
+    // ESTADO C: O Bot pediu o WhatsApp do cliente final -> Apresenta os modelos de proposta
+    const isAskingPhone =
+      currentStep === "AWAITING_CLIENT_PHONE" ||
+      lastBotMsg.includes("E qual o WhatsApp dele") ||
+      lastBotMsg.includes("qual o WhatsApp") ||
+      lastBotMsg.includes("qual o whatsapp") ||
+      lastBotMsg.includes("WhatsApp correto");
+
+    if (isAskingPhone) {
+      const clientNameMatch =
+        lastBotMsg.match(/registrar o cliente \*?([^*.]+)\*?\./i) ||
+        lastBotMsg.match(/Cliente \*([^*]+)\*/i);
+      let clientName =
+        clientNameMatch?.[1]?.replace(/\*/g, "").trim() || sessionCtx.clientName || "Cliente";
+
+      const { name: newName, phone } = extractNameAndPhone(incomingText);
+      if (newName && !phone) {
+        // Usuário corrigiu apenas o nome
+        sessionCtx.clientName = newName;
+        await setStep("AWAITING_CLIENT_PHONE", { clientName: newName });
+        return `Certo, corrigi o nome para *${newName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
+      }
+      if (newName && phone) {
+        // Usuário enviou nome e telefone
+        clientName = newName;
+      }
+
+      const digits = incomingText.replace(/\D/g, "");
+      const resolvedPhone = phone || (digits.length >= 8 ? digits : undefined);
+
+      sessionCtx.clientName = clientName;
+      if (resolvedPhone) {
+        sessionCtx.clientWhatsapp = resolvedPhone;
+      }
+
+      if (isGuestTrial) {
+        return generateProposalAndReply(0);
+      }
+
+      await setStep("AWAITING_TEMPLATE_SELECTION", {
+        clientName,
+        clientPhone: sessionCtx.clientWhatsapp,
+      });
+
+      const templates = await this.getAvailableTemplates(conversation.organizationId);
+      let templateListText = "";
+      templates.forEach((t, i) => {
+        templateListText += `> ${this.numToEmoji(i + 1)} *${t.name}*\n`;
+      });
+      templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
+
+      const phoneDisplay = resolvedPhone ? ` e WhatsApp \`${formatPhone(resolvedPhone)}\`` : "";
+
+      return (
+        `Cliente *${clientName}*${phoneDisplay} anotado com sucesso! 👤✨\n\n` +
+        `*_Qual modelo de proposta comercial você deseja usar para o seu cliente?_*\n\n` +
+        `${templateListText}\n` +
+        `_(Responda com o número da opção desejada)_`
+      );
+    }
+
+    // ESTADO D: O Bot pediu para escolher o modelo de proposta -> GERA PROPOSTA COMPLETA!
+    if (
+      currentStep === "AWAITING_TEMPLATE_SELECTION" ||
+      lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar")
+    ) {
+      const templateChoiceStr = incomingText.replace(/\D/g, "");
+      const chosenTemplateIndex = templateChoiceStr ? parseInt(templateChoiceStr, 10) - 1 : 0;
+      return generateProposalAndReply(chosenTemplateIndex);
     }
 
     // ESTADO E: O Bot perguntou a estrutura do telhado OU o usuário respondeu a estrutura
@@ -5177,7 +5299,7 @@ ${catalogContext}`;
       }
       if (lower === "5" || lower === "5." || lower === "opcao 5" || lower === "opção 5") {
         await setStep("IDLE");
-        return this.buildGreetingMenu(resolvedContactName);
+        return getGreetingMenu();
       }
     }
 
@@ -5242,7 +5364,7 @@ ${catalogContext}`;
 
     if (isStartOrGreeting) {
       await setStep("IDLE");
-      return this.buildGreetingMenu(resolvedContactName);
+      return getGreetingMenu();
     }
 
     // ESTADO I: Entrada por Potência direta (ex: "5 kwp", "3000 kwp", "3 mwp", "1.5 gwp")

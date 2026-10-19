@@ -320,7 +320,7 @@ export class WhatsappCloudService {
               },
               body: JSON.stringify({
                 number: num,
-                title: "EnergivIA Solar",
+                title: "EnergivIA",
                 description: body,
                 footer: params.footer || "Selecione uma opção",
                 buttons: buttons.map((b) => ({
@@ -481,7 +481,7 @@ export class WhatsappCloudService {
               },
               body: JSON.stringify({
                 number: num,
-                title: "EnergivIA Solar",
+                title: "EnergivIA",
                 description: body,
                 buttonText: params.buttonText.slice(0, 20),
                 footerText: params.footer || "Selecione uma opção",

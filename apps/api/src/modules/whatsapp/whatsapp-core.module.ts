@@ -8,6 +8,7 @@ import { AiUsageModule } from "../ai-usage/ai-usage.module";
 
 import { GeoIrradianceService } from "./services/geo-irradiance.service";
 import { BillExtractorService } from "./services/bill-extractor.service";
+import { WhatsappGuestTrialService } from "./services/whatsapp-guest-trial.service";
 import { KitModule } from "../kit/kit.module";
 import { ProposalsModule } from "../proposals/proposals.module";
 
@@ -20,6 +21,7 @@ import { ProposalsModule } from "../proposals/proposals.module";
     WhatsappPairingService,
     GeoIrradianceService,
     BillExtractorService,
+    WhatsappGuestTrialService,
   ],
   exports: [
     WhatsappCloudService,
@@ -27,6 +29,7 @@ import { ProposalsModule } from "../proposals/proposals.module";
     WhatsappPairingService,
     GeoIrradianceService,
     BillExtractorService,
+    WhatsappGuestTrialService,
   ],
 })
 export class WhatsappCoreModule {}
