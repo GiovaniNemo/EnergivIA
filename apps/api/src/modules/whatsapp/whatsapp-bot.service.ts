@@ -676,6 +676,7 @@ export function isWhatsappPdfRequest(text: string): boolean {
 @Injectable()
 export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WhatsappBotService.name);
+  private readonly inboundPhoneQueues = new Map<string, Promise<void>>();
   private genAI: GoogleGenerativeAI | null = null;
   private inactivityCheckTimer?: NodeJS.Timeout;
 
@@ -1229,7 +1230,35 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     return { active: true, planName: planDetails.planName };
   }
 
-  private async processSingleMessage({
+  public async processSingleMessage({
+    message,
+    phoneNumberId,
+    contactName,
+  }: {
+    message: WebhookMessage;
+    phoneNumberId: string;
+    contactName: string;
+  }): Promise<void> {
+    const fromWaId = message?.from || "";
+    if (!fromWaId) {
+      return this.processSingleMessageInternal({ message, phoneNumberId, contactName });
+    }
+
+    const currentQueue = this.inboundPhoneQueues.get(fromWaId) || Promise.resolve();
+    const nextTask = currentQueue
+      .catch(() => {})
+      .then(() => this.processSingleMessageInternal({ message, phoneNumberId, contactName }))
+      .finally(() => {
+        if (this.inboundPhoneQueues.get(fromWaId) === nextTask) {
+          this.inboundPhoneQueues.delete(fromWaId);
+        }
+      });
+
+    this.inboundPhoneQueues.set(fromWaId, nextTask);
+    return nextTask;
+  }
+
+  private async processSingleMessageInternal({
     message,
     phoneNumberId,
     contactName,
@@ -6103,7 +6132,23 @@ ${catalogContext}`;
       lower.startsWith("criar proposta") ||
       lower.startsWith("simular");
 
+    const isMainMenuAlreadyShown =
+      lastBotMsg.includes("Como posso ajudar você a gerar orçamentos hoje") ||
+      lastBotMsg.includes("Sou seu assistente de vendas e dimensionamento");
+
+    const isPureGreeting =
+      /^(oi|ola|olá|oii|oie|opa|bom dia|boa tarde|boa noite|boa|eai|e aí|eaí|tudo bem|tudo bom|salve|fala|hello|hi)[!?.,\s]*$/i.test(
+        lower
+      );
+
     if (isStartOrGreeting && !quoteEntities.isQuoteRequest) {
+      if (isMainMenuAlreadyShown && isPureGreeting) {
+        return (
+          `Olá, *${resolvedContactName}*! ☀️\n\n` +
+          `Pode responder com o número da opção desejada acima *(1 a 4)* ou me enviar a conta de luz (PDF ou foto) diretamente aqui pelo chat.`
+        );
+      }
+
       await setStep("IDLE");
       return getGreetingMenu();
     }
