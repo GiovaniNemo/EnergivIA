@@ -59,8 +59,8 @@ interface WebhookMessage {
   text?: { body?: string };
   document?: { id?: string; filename?: string; mime_type?: string };
   image?: { id?: string; caption?: string; mime_type?: string };
-  audio?: { id?: string };
-  voice?: { id?: string };
+  audio?: { id?: string; mime_type?: string };
+  voice?: { id?: string; mime_type?: string };
   interactive?: {
     type?: "button_reply" | "list_reply";
     button_reply?: { id?: string; title?: string };
@@ -1040,19 +1040,21 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         );
       }
     }
-    // 4. Áudio / Mensagem de Voz
-    else if (messageContent.audioMessage) {
+    // 4. Áudio / Mensagem de Voz (Evolution API)
+    else if (messageContent.audioMessage || messageContent.pttMessage) {
+      const audioData = messageContent.audioMessage || messageContent.pttMessage;
       msgType = "audio";
       mappedMessage.type = "audio";
-      mappedMessage.audio = { id: messageId };
+      const audioMime = audioData?.mimetype || "audio/ogg; codecs=opus";
+      mappedMessage.audio = { id: messageId, mime_type: audioMime };
 
-      const b64 = messageContent.audioMessage.base64 || data.base64 || messageContent.base64;
+      const b64 = audioData?.base64 || data.base64 || messageContent.base64;
       if (b64) {
         const cleanB64 = b64.replace(/^data:.*?;base64,/, "");
         this.whatsappCloud.registerMediaBuffer(
           messageId,
           Buffer.from(cleanB64, "base64"),
-          messageContent.audioMessage.mimetype || "audio/ogg; codecs=opus"
+          audioMime
         );
       }
     }
@@ -1537,10 +1539,37 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         extractionResult = await this.extractFromMediaImage(img.id, img.mime_type);
       }
     } else if (msgType === "audio" || msgType === "voice") {
-      incomingText = "[Mensagem de áudio recebida]";
+      const audioObj = message.audio || message.voice;
+      const audioMediaId = audioObj?.id || message.id;
+      const mimeType = audioObj?.mime_type || "audio/ogg";
+
+      let transcribed = "";
+      if (audioMediaId) {
+        this.logger.log(`Iniciando transcrição de áudio via Gemini mediaId=${audioMediaId}`);
+        const media = await this.whatsappCloud.downloadWhatsappMedia(audioMediaId);
+        if (media?.buffer) {
+          transcribed =
+            (await this.transcribeAudioWithGemini(
+              media.buffer,
+              media.mimeType || mimeType,
+              conversation.organizationId
+            )) || "";
+        }
+      }
+
+      if (transcribed && transcribed.trim().length > 0) {
+        this.logger.log(`Áudio transcrito com sucesso via Gemini: "${transcribed}"`);
+        incomingText = transcribed.trim();
+      } else {
+        incomingText = "[Mensagem de áudio recebida]";
+      }
     } else {
       incomingText = `[Mensagem do tipo ${msgType} recebida]`;
     }
+
+    const isAudioMsg = msgType === "audio" || msgType === "voice";
+    const audioObj = message.audio || message.voice;
+    const audioMediaId = audioObj?.id || message.id;
 
     // Salva a mensagem do usuário no banco
     await this.prisma.message.create({
@@ -1567,7 +1596,14 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
                   isLegible: false,
                   rejectionReason: extractionResult.rejectionReason,
                 }
-              : undefined,
+              : isAudioMsg
+                ? {
+                    isAudio: true,
+                    originalAudioId: audioMediaId,
+                    transcription:
+                      incomingText !== "[Mensagem de áudio recebida]" ? incomingText : undefined,
+                  }
+                : undefined,
       },
     });
 
@@ -2172,7 +2208,39 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       const media = await this.whatsappCloud.downloadWhatsappMedia(mediaId);
       if (!media || !media.buffer) return null;
 
-      // 1. Visão Computacional Direta da IA (enxerga com 100% de nitidez toda a tabela de 12 meses)
+      // 1. Visão Computacional Direta com Gemini (prioridade primária: gratuito e ultrarrápido)
+      if (this.genAI) {
+        const candidateModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
+        for (const modelName of candidateModels) {
+          try {
+            const model = this.genAI.getGenerativeModel({ model: modelName });
+            const result = await model.generateContent([
+              BILL_EXTRACTION_SYSTEM_PROMPT,
+              {
+                inlineData: {
+                  data: media.buffer.toString("base64"),
+                  mimeType: media.mimeType || mimeType || "image/jpeg",
+                },
+              },
+            ]);
+
+            const respText = result.response.text();
+            const clean = respText
+              .replace(/```json/g, "")
+              .replace(/```/g, "")
+              .trim();
+            const parsed = JSON.parse(clean) as ExtractedBillData;
+            const processed = processExtractedBillData(parsed);
+            if (processed) return processed;
+          } catch (geminiErr) {
+            this.logger.warn(
+              `Tentativa Gemini visão (${modelName}) falhou, tentando fallback: ${String(geminiErr)}`
+            );
+          }
+        }
+      }
+
+      // 2. Fallback: Visão Computacional OpenAI (se Gemini falhar ou não configurado)
       const openAiKey = this.config.get<string>("OPENAI_API_KEY");
       if (openAiKey) {
         const fromVision = await this.extractImageWithOpenAI(
@@ -2183,32 +2251,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         if (fromVision) return fromVision;
       }
 
-      if (this.genAI) {
-        try {
-          const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-          const result = await model.generateContent([
-            BILL_EXTRACTION_SYSTEM_PROMPT,
-            {
-              inlineData: {
-                data: media.buffer.toString("base64"),
-                mimeType: media.mimeType || mimeType || "image/jpeg",
-              },
-            },
-          ]);
-
-          const respText = result.response.text();
-          const clean = respText
-            .replace(/```json/g, "")
-            .replace(/```/g, "")
-            .trim();
-          const parsed = JSON.parse(clean) as ExtractedBillData;
-          return processExtractedBillData(parsed);
-        } catch (geminiErr) {
-          this.logger.error("Erro extraindo imagem com Gemini no WhatsApp:", geminiErr);
-        }
-      }
-
-      // 2. Fallback OCR Tesseract local se nenhuma API de IA de visão estiver disponível
+      // 3. Fallback OCR Tesseract local se nenhuma API de IA de visão estiver disponível
       const ocrText = await this.runOcrOnBuffer(media.buffer);
       if (ocrText && ocrText.trim().length > 30) {
         const deterministic = this.parseBillTextDeterministic(ocrText);
@@ -2224,88 +2267,61 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     pdfText: string,
     organizationId?: string | null
   ): Promise<BillExtractionResult | null> {
-    if (!pdfText || pdfText.trim().length === 0) return null;
+    return this.billExtractor.parseBillTextWithAI(pdfText, organizationId);
+  }
 
-    const openAiKey = this.config.get<string>("OPENAI_API_KEY");
-    if (openAiKey) {
-      const startTime = Date.now();
-      const model = "gpt-4o";
-      try {
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${openAiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model,
-            temperature: 0,
-            response_format: { type: "json_object" },
-            messages: [
-              { role: "system", content: BILL_EXTRACTION_SYSTEM_PROMPT },
-              {
-                role: "user",
-                content: `Extraia com máxima precisão todos os dados e TODOS os meses do histórico de consumo do seguinte texto de fatura de energia:\n\n${pdfText}`,
-              },
-            ],
-          }),
-        });
-
-        const latencyMs = Date.now() - startTime;
-        if (response.ok) {
-          const json = (await response.json()) as {
-            choices?: Array<{ message?: { content?: string } }>;
-            usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
-          };
-
-          if (json.usage) {
-            void this.aiUsage.logUsage({
-              organizationId,
-              feature: AiFeature.WHATSAPP_BOT,
-              model,
-              promptTokens: json.usage.prompt_tokens || 0,
-              completionTokens: json.usage.completion_tokens || 0,
-              totalTokens: json.usage.total_tokens || 0,
-              latencyMs,
-              status: "SUCCESS",
-            });
-          }
-
-          const content = json.choices?.[0]?.message?.content;
-          if (content) {
-            const parsed = JSON.parse(content) as ExtractedBillData;
-            return processExtractedBillData(parsed, pdfText);
-          }
-        } else {
-          void this.aiUsage.logUsage({
-            organizationId,
-            feature: AiFeature.WHATSAPP_BOT,
-            model,
-            latencyMs,
-            status: "ERROR",
-            errorMessage: `OpenAI HTTP ${response.status}`,
-          });
-        }
-      } catch (err) {
-        this.logger.error("Erro extraindo texto com OpenAI:", err);
-      }
+  /**
+   * Transcreve e compreende áudio com Google Gemini Multimodal.
+   * Suporta modelos Flash (gemini-2.0-flash e gemini-1.5-flash).
+   */
+  async transcribeAudioWithGemini(
+    audioBuffer: Buffer,
+    mimeType: string = "audio/ogg",
+    organizationId?: string | null
+  ): Promise<string | null> {
+    if (!this.genAI) {
+      this.logger.warn("transcribeAudioWithGemini: genAI não configurado (chave ausente)");
+      return null;
     }
 
-    if (this.genAI) {
+    // Normaliza mimeType removendo parâmetros (ex: 'audio/ogg; codecs=opus' -> 'audio/ogg')
+    const firstPart = (mimeType || "audio/ogg").split(";")[0];
+    let cleanMime = firstPart ? firstPart.trim().toLowerCase() : "audio/ogg";
+    if (!cleanMime.startsWith("audio/")) {
+      cleanMime = "audio/ogg";
+    }
+
+    const candidateModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
+    const prompt = `Transcreva com máxima fidelidade e precisão para o português do Brasil todo o conteúdo falado neste áudio.
+Regras estritas:
+1. Retorne APENAS a transcrição literal do que o usuário falou.
+2. Não adicione saudações como "Aqui está a transcrição", não use aspas extras e não faça comentários.
+3. Preserve e formate termos técnicos e grandezas de energia solar quando falados (ex: "10 kWp", "450 kWh", "550W", "220V", "380V", "módulos", "painéis", "inversor", "monofásico", "bifásico", "trifásico", "telhado cerâmico/colonial/metálico/fibrocimento").
+4. Se o áudio for inaudível, contiver apenas ruído, silêncio ou não houver fala compreensível, responda exatamente: [inaudível]`;
+
+    for (const modelName of candidateModels) {
       const startTime = Date.now();
-      const modelName = "gemini-1.5-flash";
       try {
         const model = this.genAI.getGenerativeModel({ model: modelName });
-        const result = await model.generateContent(
-          `${BILL_EXTRACTION_SYSTEM_PROMPT}\n\nTexto da fatura:\n${pdfText}`
-        );
+        const result = await model.generateContent([
+          {
+            inlineData: {
+              data: audioBuffer.toString("base64"),
+              mimeType: cleanMime,
+            },
+          },
+          prompt,
+        ]);
+
         const latencyMs = Date.now() - startTime;
-        const usage = result.response.usageMetadata;
+        const rawText = result.response?.text()?.trim() || "";
+        const usage = result.response?.usageMetadata;
+
         if (usage) {
           void this.aiUsage.logUsage({
             organizationId,
             provider: "google",
-            feature: AiFeature.WHATSAPP_BOT,
+            feature: AiFeature.AUDIO_TRANSCRIPTION,
             model: modelName,
             promptTokens: usage.promptTokenCount || 0,
             completionTokens: usage.candidatesTokenCount || 0,
@@ -2315,15 +2331,21 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
           });
         }
 
-        const respText = result.response.text();
-        const clean = respText
-          .replace(/```json/g, "")
-          .replace(/```/g, "")
-          .trim();
-        const parsed = JSON.parse(clean) as ExtractedBillData;
-        return processExtractedBillData(parsed, pdfText);
-      } catch (err) {
-        this.logger.error("Erro extraindo texto com Gemini:", err);
+        const clean = rawText.replace(/^["'`]|["'`]$/g, "").trim();
+
+        if (
+          clean &&
+          clean.toLowerCase() !== "[inaudível]" &&
+          clean.toLowerCase() !== "inaudível" &&
+          clean.toLowerCase() !== "[inaudivel]" &&
+          clean.toLowerCase() !== "inaudivel"
+        ) {
+          return clean;
+        }
+      } catch (err: any) {
+        this.logger.warn(
+          `Falha ao transcrever áudio com Gemini (${modelName}): ${err?.message || String(err)}`
+        );
       }
     }
 
@@ -3127,7 +3149,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     organizationId?: string | null;
   }): Promise<string> {
     const openAiKey = this.config.get<string>("OPENAI_API_KEY");
-    if (!openAiKey) {
+    if (!openAiKey && !this.genAI) {
       return (
         `Não consegui consultar as especificações no momento. ` +
         `Para cotar um kit completo, você pode me enviar a fatura em PDF/foto ou digitar o consumo médio em kWh (ex: *450 kWh*).`
@@ -3164,67 +3186,96 @@ REGRAS OBRIGATÓRIAS E INEGOCIÁVEIS:
 CONTEXTO DO CATÁLOGO:
 ${catalogContext}`;
 
-    const startTime = Date.now();
-    const model = "gpt-4o-mini";
-
-    try {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${openAiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          temperature: 0,
-          max_tokens: 150,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userQuestion },
-          ],
-        }),
-      });
-
-      const latencyMs = Date.now() - startTime;
-      if (!response.ok) {
-        void this.aiUsage.logUsage({
-          organizationId,
-          feature: AiFeature.WHATSAPP_BOT,
-          model,
-          latencyMs,
-          status: "ERROR",
-          errorMessage: `OpenAI HTTP ${response.status}`,
-        });
-        return "Desculpe, tive uma instabilidade temporária ao consultar o catálogo. Por favor, tente novamente em instantes.";
+    // 1. Provedor Gemini (prioridade primária: gratuito e ultrarrápido)
+    if (this.genAI) {
+      const candidateModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
+      for (const modelName of candidateModels) {
+        const startTime = Date.now();
+        try {
+          const model = this.genAI.getGenerativeModel({ model: modelName });
+          const result = await model.generateContent([
+            systemPrompt,
+            `Pergunta do integrador: ${userQuestion}`,
+          ]);
+          const latencyMs = Date.now() - startTime;
+          const usage = result.response.usageMetadata;
+          if (usage) {
+            void this.aiUsage.logUsage({
+              organizationId,
+              provider: "google",
+              feature: AiFeature.WHATSAPP_BOT,
+              model: modelName,
+              promptTokens: usage.promptTokenCount || 0,
+              completionTokens: usage.candidatesTokenCount || 0,
+              totalTokens: usage.totalTokenCount || 0,
+              latencyMs,
+              status: "SUCCESS",
+            });
+          }
+          const text = result.response.text()?.trim();
+          if (text) return text;
+        } catch (geminiErr) {
+          this.logger.warn(
+            `Erro no Gemini (${modelName}) em answerFreeformQuestion: ${String(geminiErr)}`
+          );
+        }
       }
-
-      const json = (await response.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
-        usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
-      };
-
-      if (json.usage) {
-        void this.aiUsage.logUsage({
-          organizationId,
-          feature: AiFeature.WHATSAPP_BOT,
-          model,
-          promptTokens: json.usage.prompt_tokens || 0,
-          completionTokens: json.usage.completion_tokens || 0,
-          totalTokens: json.usage.total_tokens || 0,
-          latencyMs,
-          status: "SUCCESS",
-        });
-      }
-
-      const answer = json.choices?.[0]?.message?.content?.trim();
-      return (
-        answer ||
-        "Não localizei essa informação no catálogo no momento. Você pode enviar a conta de luz ou digitar o consumo em kWh para gerarmos uma cotação completa!"
-      );
-    } catch (err) {
-      this.logger.error("Erro na resposta conversacional de IA no WhatsApp:", err);
-      return "Não consegui processar a consulta agora. Envie a fatura de energia (PDF ou foto) para gerarmos sua cotação!";
     }
+
+    // 2. Provedor OpenAI (fallback de contingência se Gemini falhar ou não configurado)
+    if (openAiKey) {
+      const startTime = Date.now();
+      const model = "gpt-4o-mini";
+      try {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${openAiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            temperature: 0,
+            max_tokens: 150,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userQuestion },
+            ],
+          }),
+        });
+
+        const latencyMs = Date.now() - startTime;
+        if (response.ok) {
+          const json = (await response.json()) as {
+            choices?: Array<{ message?: { content?: string } }>;
+            usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+          };
+
+          if (json.usage) {
+            void this.aiUsage.logUsage({
+              organizationId,
+              feature: AiFeature.WHATSAPP_BOT,
+              model,
+              promptTokens: json.usage.prompt_tokens || 0,
+              completionTokens: json.usage.completion_tokens || 0,
+              totalTokens: json.usage.total_tokens || 0,
+              latencyMs,
+              status: "SUCCESS",
+            });
+          }
+
+          const answer = json.choices?.[0]?.message?.content?.trim();
+          if (answer) return answer;
+        }
+      } catch (err) {
+        this.logger.error(
+          "Erro na resposta conversacional de IA no WhatsApp com OpenAI fallback:",
+          err
+        );
+      }
+    }
+
+    return "Não localizei essa informação no catálogo no momento. Você pode enviar a conta de luz ou digitar o consumo em kWh para gerarmos uma cotação completa!";
   }
 
   public async processWebChatMessage({
@@ -3333,6 +3384,13 @@ ${catalogContext}`;
       }
       return this.buildGreetingMenu(resolvedContactName);
     };
+
+    if (incomingText === "[Mensagem de áudio recebida]") {
+      return (
+        `Não consegui compreender o áudio com clareza. 🎙️\n\n` +
+        `Pode me enviar outro áudio com a sua solicitação ou, se preferir, digitar os dados da cotação (ex: *15 kWp telhado metálico Curitiba*)?`
+      );
+    }
 
     // Helper interno para decodificar o estado acumulado da conversa
     const extractContextFromSession = () => {

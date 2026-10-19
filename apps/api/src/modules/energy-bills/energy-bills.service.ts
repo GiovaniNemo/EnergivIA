@@ -691,10 +691,10 @@ export class EnergyBillsService {
 
       if (ext === ".txt") {
         rawText = await response.text();
-        if (openAiApiKey) {
-          extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey, tenantId, billId);
-        } else if (this.genAI) {
+        if (this.genAI) {
           extractedData = await this.extractDataWithGemini(rawText, tenantId, billId);
+        } else if (openAiApiKey) {
+          extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey, tenantId, billId);
         }
       } else if (ext === ".pdf") {
         try {
@@ -706,18 +706,18 @@ export class EnergyBillsService {
           this.logger.warn(`Erro leitura PDF com pdfParse: ${String(pdfErr)}`);
         }
 
-        // Se o PDF tem camada de texto digital, envia direto para a IA interpretar
+        // Se o PDF tem camada de texto digital, envia direto para a IA interpretar (Gemini primeiro)
         if (rawText && rawText.trim().length >= 30) {
-          if (openAiApiKey) {
+          if (this.genAI) {
+            extractedData = await this.extractDataWithGemini(rawText, tenantId, billId);
+            if (extractedData) extractionEngine = "AI";
+          } else if (openAiApiKey) {
             extractedData = await this.extractDataWithOpenAI(
               rawText,
               openAiApiKey,
               tenantId,
               billId
             );
-            if (extractedData) extractionEngine = "AI";
-          } else if (this.genAI) {
-            extractedData = await this.extractDataWithGemini(rawText, tenantId, billId);
             if (extractedData) extractionEngine = "AI";
           }
         }
@@ -727,15 +727,15 @@ export class EnergyBillsService {
           const pdfBuffer = Buffer.from(arrayBuffer);
           const ocrText = await this.runOcrOnBuffer(pdfBuffer);
           if (ocrText && ocrText.trim().length >= 30) {
-            if (openAiApiKey) {
+            if (this.genAI) {
+              extractedData = await this.extractDataWithGemini(ocrText, tenantId, billId);
+            } else if (openAiApiKey) {
               extractedData = await this.extractDataWithOpenAI(
                 ocrText,
                 openAiApiKey,
                 tenantId,
                 billId
               );
-            } else if (this.genAI) {
-              extractedData = await this.extractDataWithGemini(ocrText, tenantId, billId);
             }
           }
         }
@@ -746,7 +746,18 @@ export class EnergyBillsService {
           const buf = Buffer.from(arrayBuffer);
           const base64Image = buf.toString("base64");
           const mimeType = ext === ".png" ? "image/png" : "image/jpeg";
-          if (openAiApiKey) {
+          if (this.genAI) {
+            extractedData = await this.extractVisionWithGemini(
+              base64Image,
+              mimeType,
+              tenantId,
+              billId
+            );
+            if (extractedData) {
+              extractionEngine = "VISION_AI";
+            }
+          }
+          if (!extractedData && openAiApiKey) {
             extractedData = await this.extractVisionWithOpenAI(
               base64Image,
               mimeType,
@@ -1055,6 +1066,65 @@ export class EnergyBillsService {
       });
       return null;
     }
+  }
+
+  private async extractVisionWithGemini(
+    base64Image: string,
+    mimeType: string,
+    organizationId?: string | null,
+    resourceId?: string
+  ): Promise<Record<string, unknown> | null> {
+    if (!this.genAI) return null;
+    const startTime = Date.now();
+    const candidateModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
+
+    for (const modelName of candidateModels) {
+      try {
+        const model = this.genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: {
+            responseMimeType: "application/json",
+          },
+        });
+        const result = await model.generateContent([
+          BILL_EXTRACTION_SYSTEM_PROMPT,
+          {
+            inlineData: {
+              data: base64Image,
+              mimeType,
+            },
+          },
+        ]);
+        const latencyMs = Date.now() - startTime;
+        const usage = result.response.usageMetadata;
+
+        if (usage) {
+          void this.aiUsage.logUsage({
+            organizationId,
+            provider: "google",
+            feature: AiFeature.OCR_BILL_VISION,
+            model: modelName,
+            promptTokens: usage.promptTokenCount || 0,
+            completionTokens: usage.candidatesTokenCount || 0,
+            totalTokens: usage.totalTokenCount || 0,
+            latencyMs,
+            status: "SUCCESS",
+            resourceId,
+          });
+        }
+
+        const respText = result.response.text();
+        const clean = respText
+          .replace(/```json/gi, "")
+          .replace(/```/g, "")
+          .trim();
+        const parsed = JSON.parse(clean) as Record<string, unknown>;
+        return this.processExtractedResultWithMath(parsed);
+      } catch (err) {
+        this.logger.warn(`Modelo ${modelName} falhou para visão de fatura: ${String(err)}`);
+      }
+    }
+    return null;
   }
 
   private async extractVisionWithOpenAI(
