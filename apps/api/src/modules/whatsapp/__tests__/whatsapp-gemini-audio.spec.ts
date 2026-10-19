@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { WhatsappBotService } from "../whatsapp-bot.service";
+import { WhatsappBotService, parseIntegratorQuoteEntities } from "../whatsapp-bot.service";
 import { AiFeature } from "@prisma/client";
 
 describe("WhatsappBotService - Gemini Audio & AI Priority Suite", () => {
@@ -41,6 +41,7 @@ describe("WhatsappBotService - Gemini Audio & AI Priority Suite", () => {
     mockWhatsappCloud = {
       downloadWhatsappMedia: vi.fn(),
       registerMediaBuffer: vi.fn(),
+      registerEvolutionRawMessage: vi.fn(),
       sendTextMessage: vi.fn().mockResolvedValue(true),
     };
 
@@ -117,7 +118,7 @@ describe("WhatsappBotService - Gemini Audio & AI Priority Suite", () => {
       });
     });
 
-    it("deve retornar null quando o Gemini indicar que o áudio foi inaudível", async () => {
+    it("deve acionar fallback OpenAI Whisper se o Gemini indicar inaudível ou falhar", async () => {
       const mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
           text: () => "[inaudível]",
@@ -129,10 +130,15 @@ describe("WhatsappBotService - Gemini Audio & AI Priority Suite", () => {
         generateContent: mockGenerateContent,
       });
 
-      const audioBuffer = Buffer.from("silent-audio");
-      const result = await service.transcribeAudioWithGemini(audioBuffer, "audio/mp4");
+      const spyWhisper = vi
+        .spyOn(service, "transcribeAudioWithOpenAI")
+        .mockResolvedValue("cota 26Kwp com estrutura fibromadeira");
 
-      expect(result).toBeNull();
+      const audioBuffer = Buffer.from("audio-com-fala-real");
+      const result = await service.transcribeAudioWithGemini(audioBuffer, "audio/ogg");
+
+      expect(spyWhisper).toHaveBeenCalledTimes(1);
+      expect(result).toBe("cota 26Kwp com estrutura fibromadeira");
     });
 
     it("deve tentar modelo de fallback (gemini-1.5-flash) se o primeiro modelo falhar", async () => {
@@ -154,6 +160,16 @@ describe("WhatsappBotService - Gemini Audio & AI Priority Suite", () => {
       expect(result).toBe("Telhado colonial em Maringá PR");
       expect(mockGenAI.getGenerativeModel).toHaveBeenCalledWith({ model: "gemini-2.0-flash" });
       expect(mockGenAI.getGenerativeModel).toHaveBeenCalledWith({ model: "gemini-1.5-flash" });
+    });
+  });
+
+  describe("Cotação falada pelo integrador: cota 26Kwp com estrutura fibromadeira", () => {
+    it("deve extrair 26 kWp e telhado Fibrocimento da transcrição de áudio do integrador", () => {
+      const parsed = parseIntegratorQuoteEntities("cota 26Kwp com estrutura fibromadeira");
+
+      expect(parsed.isQuoteRequest).toBe(true);
+      expect(parsed.targetKWp).toBe(26);
+      expect(parsed.roofType).toBe("Fibrocimento");
     });
   });
 

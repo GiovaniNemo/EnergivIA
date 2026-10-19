@@ -697,13 +697,24 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     if (!this.guestTrial && this.prisma) {
       this.guestTrial = new WhatsappGuestTrialService(this.prisma);
     }
+    this.getGenAI();
+  }
+
+  public getGenAI(): GoogleGenerativeAI | null {
+    if (this.genAI) return this.genAI;
     const geminiKey =
       this.config.get<string>("GOOGLE_GEMINI_API_KEY") ||
       this.config.get<string>("GEMINI_API_KEY") ||
+      this.config.get<string>("GOOGLE_GENERATIVE_AI_API_KEY") ||
+      process.env["GOOGLE_GEMINI_API_KEY"] ||
+      process.env["GEMINI_API_KEY"] ||
+      process.env["GOOGLE_GENERATIVE_AI_API_KEY"] ||
       "";
     if (geminiKey) {
       this.genAI = new GoogleGenerativeAI(geminiKey);
+      return this.genAI;
     }
+    return null;
   }
 
   onModuleInit() {
@@ -1009,6 +1020,11 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         mime_type: doc.mimetype || "application/pdf",
       };
 
+      this.whatsappCloud.registerEvolutionRawMessage(messageId, {
+        key: data.key,
+        message: data.message || messageContent,
+      });
+
       const b64 = doc.base64 || data.base64 || messageContent.base64;
       if (b64) {
         const cleanB64 = b64.replace(/^data:.*?;base64,/, "");
@@ -1030,6 +1046,11 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         mime_type: img.mimetype || "image/jpeg",
       };
 
+      this.whatsappCloud.registerEvolutionRawMessage(messageId, {
+        key: data.key,
+        message: data.message || messageContent,
+      });
+
       const b64 = img.base64 || data.base64 || messageContent.base64;
       if (b64) {
         const cleanB64 = b64.replace(/^data:.*?;base64,/, "");
@@ -1047,6 +1068,11 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       mappedMessage.type = "audio";
       const audioMime = audioData?.mimetype || "audio/ogg; codecs=opus";
       mappedMessage.audio = { id: messageId, mime_type: audioMime };
+
+      this.whatsappCloud.registerEvolutionRawMessage(messageId, {
+        key: data.key,
+        message: data.message || messageContent,
+      });
 
       const b64 = audioData?.base64 || data.base64 || messageContent.base64;
       if (b64) {
@@ -2279,15 +2305,19 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
   /**
    * Transcreve e compreende áudio com Google Gemini Multimodal.
    * Suporta modelos Flash (gemini-2.0-flash e gemini-1.5-flash).
+   * Caso o Gemini não esteja disponível ou falhe, aciona fallback para OpenAI Whisper.
    */
   async transcribeAudioWithGemini(
     audioBuffer: Buffer,
     mimeType: string = "audio/ogg",
     organizationId?: string | null
   ): Promise<string | null> {
-    if (!this.genAI) {
-      this.logger.warn("transcribeAudioWithGemini: genAI não configurado (chave ausente)");
-      return null;
+    const genAI = this.getGenAI();
+    if (!genAI) {
+      this.logger.warn(
+        "transcribeAudioWithGemini: genAI não configurado (chave ausente), tentando contingência OpenAI Whisper"
+      );
+      return this.transcribeAudioWithOpenAI(audioBuffer, mimeType, organizationId);
     }
 
     // Normaliza mimeType removendo parâmetros (ex: 'audio/ogg; codecs=opus' -> 'audio/ogg')
@@ -2302,13 +2332,13 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 Regras estritas:
 1. Retorne APENAS a transcrição literal do que o usuário falou.
 2. Não adicione saudações como "Aqui está a transcrição", não use aspas extras e não faça comentários.
-3. Preserve e formate termos técnicos e grandezas de energia solar quando falados (ex: "10 kWp", "450 kWh", "550W", "220V", "380V", "módulos", "painéis", "inversor", "monofásico", "bifásico", "trifásico", "telhado cerâmico/colonial/metálico/fibrocimento").
+3. Preserve e formate termos técnicos e grandezas de energia solar quando falados (ex: "10 kWp", "26 kWp", "450 kWh", "550W", "220V", "380V", "módulos", "painéis", "inversor", "monofásico", "bifásico", "trifásico", "telhado cerâmico/colonial/metálico/fibrocimento/fibromadeira").
 4. Se o áudio for inaudível, contiver apenas ruído, silêncio ou não houver fala compreensível, responda exatamente: [inaudível]`;
 
     for (const modelName of candidateModels) {
       const startTime = Date.now();
       try {
-        const model = this.genAI.getGenerativeModel({ model: modelName });
+        const model = genAI.getGenerativeModel({ model: modelName });
         const result = await model.generateContent([
           {
             inlineData: {
@@ -2355,6 +2385,80 @@ Regras estritas:
       }
     }
 
+    // Se o Gemini oscilar ou falhar, executa contingência automática com Whisper da OpenAI
+    this.logger.warn(
+      "transcribeAudioWithGemini: Gemini indisponível para este áudio, executando fallback OpenAI Whisper"
+    );
+    return this.transcribeAudioWithOpenAI(audioBuffer, mimeType, organizationId);
+  }
+
+  /**
+   * Fallback de transcrição de áudio com OpenAI Whisper (whisper-1).
+   * Acionado caso o Google Gemini apresente instabilidade ou ausência de chave.
+   */
+  async transcribeAudioWithOpenAI(
+    audioBuffer: Buffer,
+    mimeType: string = "audio/ogg",
+    organizationId?: string | null
+  ): Promise<string | null> {
+    const openAiKey = this.config.get<string>("OPENAI_API_KEY") || process.env["OPENAI_API_KEY"];
+    if (!openAiKey) return null;
+
+    const startTime = Date.now();
+    try {
+      const ext =
+        mimeType.includes("mp4") || mimeType.includes("m4a")
+          ? "m4a"
+          : mimeType.includes("mp3")
+            ? "mp3"
+            : mimeType.includes("wav")
+              ? "wav"
+              : "ogg";
+
+      const cleanMime = mimeType.split(";")[0]?.trim() || "audio/ogg";
+      const blob = new Blob([audioBuffer], { type: cleanMime });
+      const formData = new FormData();
+      formData.append("file", blob, `audio.${ext}`);
+      formData.append("model", "whisper-1");
+      formData.append("language", "pt");
+      formData.append(
+        "prompt",
+        "Cotação de energia solar fotovoltaica, kWp, kWh, módulos, inversores, telhado metálico, fibromadeira, fibrocimento, cerâmica, colonial, laje, solo, 220V, 380V"
+      );
+
+      const resp = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openAiKey}`,
+        },
+        body: formData,
+      });
+
+      if (resp.ok) {
+        const json = (await resp.json()) as { text?: string };
+        const text = json.text?.trim();
+        if (text) {
+          const latencyMs = Date.now() - startTime;
+          void this.aiUsage.logUsage({
+            organizationId,
+            feature: AiFeature.AUDIO_TRANSCRIPTION,
+            model: "whisper-1",
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+            latencyMs,
+            status: "SUCCESS",
+          });
+          this.logger.log(`Áudio transcrito via contingência OpenAI Whisper: "${text}"`);
+          return text;
+        }
+      } else {
+        const errText = await resp.text().catch(() => "");
+        this.logger.warn(`OpenAI Whisper retornou status ${resp.status}: ${errText.slice(0, 200)}`);
+      }
+    } catch (err: unknown) {
+      this.logger.error("Erro na transcrição de áudio com OpenAI Whisper:", err);
+    }
     return null;
   }
 

@@ -105,6 +105,11 @@ export class WhatsappCloudService {
     { buffer: Buffer; mimeType: string; timestamp: number }
   >();
 
+  private readonly evolutionRawMessages = new Map<
+    string,
+    { rawMessage: Record<string, unknown>; timestamp: number }
+  >();
+
   registerMediaBuffer(mediaId: string, buffer: Buffer, mimeType: string) {
     this.mediaCache.set(mediaId, { buffer, mimeType, timestamp: Date.now() });
     // Limpar itens velhos (> 30 min)
@@ -112,6 +117,17 @@ export class WhatsappCloudService {
     for (const [key, item] of this.mediaCache.entries()) {
       if (item.timestamp < threshold) {
         this.mediaCache.delete(key);
+      }
+    }
+  }
+
+  registerEvolutionRawMessage(mediaId: string, rawMessage: Record<string, unknown>) {
+    if (!mediaId || !rawMessage) return;
+    this.evolutionRawMessages.set(mediaId, { rawMessage, timestamp: Date.now() });
+    const threshold = Date.now() - 30 * 60 * 1000;
+    for (const [key, item] of this.evolutionRawMessages.entries()) {
+      if (item.timestamp < threshold) {
+        this.evolutionRawMessages.delete(key);
       }
     }
   }
@@ -641,32 +657,79 @@ export class WhatsappCloudService {
       const apiKey = this.config.get<string>("EVOLUTION_API_KEY")?.trim();
       const instance = this.config.get<string>("EVOLUTION_INSTANCE_NAME")?.trim() || "energiv-bot";
 
-      if (baseUrl && apiKey) {
-        try {
-          const evoUrl = `${baseUrl}/chat/getBase64FromMediaMessage/${encodeURIComponent(instance)}`;
-          const evoRes = await fetch(evoUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: apiKey,
-            },
-            body: JSON.stringify({
-              message: { key: { id: mediaId } },
-              convertToMp4: false,
-            }),
-          });
+      const rawEntry = this.evolutionRawMessages.get(mediaId);
+      const rawStored = rawEntry?.rawMessage;
 
-          if (evoRes.ok) {
-            const data = (await evoRes.json()) as { base64?: string; mimetype?: string };
-            if (data.base64) {
-              const buffer = Buffer.from(data.base64, "base64");
-              const mimeType = data.mimetype || "application/octet-stream";
-              this.registerMediaBuffer(mediaId, buffer, mimeType);
-              return { buffer, mimeType };
-            }
+      // Se dentro da mensagem bruta tiver URL direta pública (ex: MinIO/S3 da Evolution), baixa diretamente
+      const audioOrDoc =
+        rawStored?.message?.audioMessage ||
+        rawStored?.message?.pttMessage ||
+        rawStored?.message?.documentMessage ||
+        rawStored?.message?.imageMessage ||
+        rawStored?.audioMessage ||
+        rawStored?.pttMessage;
+
+      if (
+        audioOrDoc?.url &&
+        typeof audioOrDoc.url === "string" &&
+        /^https?:\/\//i.test(audioOrDoc.url) &&
+        !audioOrDoc.url.includes("mmg.whatsapp.net")
+      ) {
+        try {
+          const directRes = await fetch(audioOrDoc.url);
+          if (directRes.ok) {
+            const arr = await directRes.arrayBuffer();
+            const buffer = Buffer.from(arr);
+            const mimeType = audioOrDoc.mimetype || "application/octet-stream";
+            this.registerMediaBuffer(mediaId, buffer, mimeType);
+            return { buffer, mimeType };
           }
-        } catch (evoErr) {
-          this.logger.warn(`WA media: falha ao buscar mídia na Evolution API: ${evoErr}`);
+        } catch (directErr) {
+          this.logger.warn(`WA media: falha ao baixar URL direta da Evolution: ${directErr}`);
+        }
+      }
+
+      if (baseUrl && apiKey) {
+        // Tenta com o objeto completo da mensagem primeiro (com mediaKey para Baileys decodificar)
+        // e depois fallback para ID simples
+        const payloadsToTry = [];
+        if (rawStored) {
+          payloadsToTry.push({
+            message: rawStored.message ? rawStored : { message: rawStored },
+            convertToMp4: false,
+          });
+        }
+        payloadsToTry.push({
+          message: { key: { id: mediaId } },
+          convertToMp4: false,
+        });
+
+        for (const payloadBody of payloadsToTry) {
+          try {
+            const evoUrl = `${baseUrl}/chat/getBase64FromMediaMessage/${encodeURIComponent(instance)}`;
+            const evoRes = await fetch(evoUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                apikey: apiKey,
+              },
+              body: JSON.stringify(payloadBody),
+            });
+
+            if (evoRes.ok) {
+              const data = (await evoRes.json()) as { base64?: string; mimetype?: string };
+              if (data.base64) {
+                const cleanB64 = data.base64.replace(/^data:.*?;base64,/, "").trim();
+                const buffer = Buffer.from(cleanB64, "base64");
+                const mimeType =
+                  data.mimetype || audioOrDoc?.mimetype || "application/octet-stream";
+                this.registerMediaBuffer(mediaId, buffer, mimeType);
+                return { buffer, mimeType };
+              }
+            }
+          } catch (evoErr) {
+            this.logger.warn(`WA media: falha na tentativa Evolution getBase64: ${evoErr}`);
+          }
         }
       }
     }
