@@ -295,7 +295,7 @@ describe("WhatsApp Bot - Formatação de Mensagens e Degustação Trial", () => 
       messages: [
         {
           role: "assistant",
-          content: "Qual o nome do cliente final para registrarmos no seu CRM?",
+          content: "Qual o nome do seu cliente para a proposta comercial?",
         },
       ],
     };
@@ -424,5 +424,193 @@ describe("WhatsApp Bot - Formatação de Mensagens e Degustação Trial", () => 
         body: expect.stringContaining("3 cotações gratuitas de degustação"),
       })
     );
+  });
+
+  describe("Fluxo Real de Cotações de Integradores & Destravamento de PROPOSAL_COMPLETED", () => {
+    it("parseIntegratorQuoteEntities deve extrair perfeitamente as entidades dos 5 exemplos reais de integradores", () => {
+      // Exemplo 1 (Print 1): "Preciso de uma cotação de 70kwp com estrutura metálica"
+      const ex1 = (botService as any).parseIntegratorQuoteEntities(
+        "Preciso de uma cotação de 70kwp com estrutura metálica"
+      );
+      expect(ex1.isQuoteRequest).toBe(true);
+      expect(ex1.targetKWp).toBe(70);
+      expect(ex1.roofType).toBe("Metálico");
+
+      // Exemplo 2 (Print 2):
+      // 18 painéis 620w
+      // Inversor 7.5k Saj
+      // Telhado madeira fibrocimento
+      // Cabos e string box CC
+      const ex2 = (botService as any).parseIntegratorQuoteEntities(
+        "18 painéis 620w\nInversor 7.5k Saj\nTelhado madeira fibrocimento\nCabos e string box CC"
+      );
+      expect(ex2.isQuoteRequest).toBe(true);
+      expect(ex2.targetModules).toBe(18);
+      expect(ex2.modPowerWUser).toBe(620);
+      expect(ex2.targetKWp).toBe(11.16);
+      expect(ex2.roofType).toBe("Fibrocimento");
+
+      // Exemplo 3 (Print 3):
+      // 16 módulos 610
+      // 01 híbrido deye 7,5 bifásico
+      // 01 bateria
+      // Telhado metálico
+      const ex3 = (botService as any).parseIntegratorQuoteEntities(
+        "16 módulos 610\n01 híbrido deye 7,5 bifásico\n01 bateria\nTelhado metálico"
+      );
+      expect(ex3.isQuoteRequest).toBe(true);
+      expect(ex3.targetModules).toBe(16);
+      expect(ex3.modPowerWUser).toBe(610);
+      expect(ex3.targetKWp).toBe(9.76);
+      expect(ex3.gridVoltage).toBe("Bifásico 127V/220V");
+      expect(ex3.hasBattery).toBe(true);
+      expect(ex3.roofType).toBe("Metálico");
+
+      // Exemplo 4 (Print 4):
+      // Boa tarde amigo
+      // Consegue orçar pra mim, 13 placas, 1 deye híbrido 5kw
+      // 1 bateria
+      //
+      // Colonial
+      //
+      // Entrega em Anitápolis
+      const ex4 = (botService as any).parseIntegratorQuoteEntities(
+        "Boa tarde amigo\nConsegue orçar pra mim, 13 placas, 1 deye híbrido 5kw\n1 bateria\n\nColonial\n\nEntrega em Anitápolis"
+      );
+      expect(ex4.isQuoteRequest).toBe(true);
+      expect(ex4.targetModules).toBe(13);
+      expect(ex4.hasBattery).toBe(true);
+      expect(ex4.roofType).toBe("Cerâmica (Colonial)");
+      expect(ex4.cidade).toBe("Anitápolis");
+      expect(ex4.estado).toBe("SC");
+
+      // Exemplo 5 (Print 5):
+      // Orçamento 9.22 Kwp
+      // Estrutura fibro madeira
+      const ex5 = (botService as any).parseIntegratorQuoteEntities(
+        "Orçamento 9.22 Kwp\nEstrutura fibro madeira"
+      );
+      expect(ex5.isQuoteRequest).toBe(true);
+      expect(ex5.targetKWp).toBe(9.22);
+      expect(ex5.roofType).toBe("Fibrocimento");
+    });
+
+    it("deve destravar PROPOSAL_COMPLETED quando o usuário enviar 'Preciso de uma cotação de 70kwp com estrutura metálica' sem reenviar link antigo", async () => {
+      const conversation = {
+        id: "conv-completed-1",
+        organizationId: "demo-tenant-id",
+        metadata: {
+          step: "PROPOSAL_COMPLETED",
+          isGuestTrial: true,
+          trialQuotesUsed: 1,
+          trialMaxQuotes: 3,
+          lastProposalId: "cmvfdk0cp001as101r9npemew",
+        },
+        messages: [
+          {
+            role: "assistant",
+            content: "Sua proposta comercial já foi gerada com sucesso! ☀️",
+          },
+        ],
+      };
+
+      const reply = await (botService as any).generateBotResponse({
+        conversation,
+        incomingText: "Preciso de uma cotação de 70kwp com estrutura metálica",
+        contactName: "Carlos",
+      });
+
+      // NÃO pode reenviar o link antigo
+      expect(reply).not.toContain("Sua proposta mais recente está disponível em");
+      // DEVE processar a nova cotação de 70 kWp metálico
+      expect(reply).toContain("70 kWp");
+      expect(reply).toContain("Metálico");
+      expect(reply).toContain("Para qual cidade e estado será a instalação?");
+    });
+
+    it("deve pular pergunta de telhado quando o usuário já informou a estrutura anteriormente (fast-forward)", async () => {
+      // Conversa onde a potência (70 kWp) e a estrutura (Metálico) já foram registradas
+      const conversation = {
+        id: "conv-fast-forward",
+        organizationId: "demo-tenant-id",
+        metadata: {
+          step: "AWAITING_CITY",
+          kwp: 70,
+          roofType: "Metálico",
+          isGuestTrial: true,
+        },
+        messages: [
+          {
+            role: "user",
+            content: "Preciso de uma cotação de 70kwp com estrutura metálica",
+          },
+          {
+            role: "assistant",
+            content:
+              "*_Potência Solicitada:_* `70 kWp` ☀️\n> 🏠 Estrutura: *Metálico*\n\nPara qual cidade e estado será a instalação?",
+          },
+        ],
+      };
+
+      // Integrador responde a cidade: "Maringá/PR"
+      const replyCity = await (botService as any).generateBotResponse({
+        conversation,
+        incomingText: "Maringá/PR",
+        contactName: "Carlos",
+      });
+
+      // Reconhece a cidade, mostra que a estrutura já é Metálico, e pergunta o padrão elétrico
+      expect(replyCity).toContain("Maringá/PR");
+      expect(replyCity).toContain("Metálico");
+      expect(replyCity).toContain("Qual o padrão de entrada da instalação?");
+
+      // Atualiza estado simulado da conversa para AWAITING_GRID_TYPE com telhado Metálico
+      conversation.metadata.step = "AWAITING_GRID_TYPE";
+      (conversation.metadata as any).cidade = "Maringá";
+      (conversation.metadata as any).uf = "PR";
+      conversation.messages.push({
+        role: "assistant",
+        content: replyCity,
+      });
+
+      // Integrador responde o padrão elétrico: "2" (Bifásico 127V/220V)
+      const replyGrid = await (botService as any).generateBotResponse({
+        conversation,
+        incomingText: "2",
+        contactName: "Carlos",
+      });
+
+      // O bot NÃO DEVE perguntar o telhado de novo (Qual a estrutura do telhado?), deve ir DIRETO pros kits!
+      expect(replyGrid).not.toContain("Qual a estrutura do telhado?");
+      expect(replyGrid).toContain("Standard");
+      expect(replyGrid).toContain("Elite");
+      expect(replyGrid).toContain("Metálico");
+    });
+
+    it("deve processar mensagem de integrador com saudação no início sem cair no menu de boas-vindas", async () => {
+      const conversation = {
+        id: "conv-greeting-with-quote",
+        organizationId: "demo-tenant-id",
+        metadata: {
+          step: "IDLE",
+          isGuestTrial: true,
+        },
+        messages: [],
+      };
+
+      const reply = await (botService as any).generateBotResponse({
+        conversation,
+        incomingText:
+          "Boa tarde amigo\nConsegue orçar pra mim, 13 placas, 1 deye híbrido 5kw\n1 bateria\n\nColonial\n\nEntrega em Anitápolis",
+        contactName: "Integrador",
+      });
+
+      // NÃO deve responder com o menu de boas-vindas genérico
+      expect(reply).not.toContain("Como posso ajudar você a gerar orçamentos hoje?");
+      // Deve identificar Anitápolis/SC, telhado Colonial e perguntar o padrão elétrico
+      expect(reply).toContain("Anitápolis/SC");
+      expect(reply).toContain("Cerâmica (Colonial)");
+      expect(reply).toContain("Qual o padrão de entrada da instalação?");
+    });
   });
 });

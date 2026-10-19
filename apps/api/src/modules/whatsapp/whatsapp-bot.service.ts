@@ -37,7 +37,12 @@ import {
   BillExtractorService,
 } from "./services/bill-extractor.service";
 import { KitGenerationService } from "../kit/kit-generation.service";
-import { getHsp, isLocationInput, GeoIrradianceService } from "./services/geo-irradiance.service";
+import {
+  getHsp,
+  isLocationInput,
+  cleanLocationInput,
+  GeoIrradianceService,
+} from "./services/geo-irradiance.service";
 import { WhatsappGuestTrialService } from "./services/whatsapp-guest-trial.service";
 import {
   WhatsappBotStep,
@@ -318,6 +323,262 @@ export function parsePowerInput(text: string): number | null {
   }
   return null;
 }
+
+export interface ExtractedIntegratorQuote {
+  targetKWp?: number;
+  targetModules?: number;
+  modPowerWUser?: number;
+  consumptionKwh?: number;
+  roofType?: string;
+  gridVoltage?: string;
+  cidade?: string;
+  estado?: string;
+  hsp?: number;
+  inverterDescription?: string;
+  inverterPowerKw?: number;
+  hasBattery?: boolean;
+  isQuoteRequest: boolean;
+}
+
+/** Extrai entidades solares ricas de mensagens livres de integradores */
+export function parseIntegratorQuoteEntities(rawText: string): ExtractedIntegratorQuote {
+  if (!rawText) return { isQuoteRequest: false };
+
+  // Remove caracteres invisíveis do WhatsApp
+  const clean = rawText.replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, "").trim();
+  const lower = clean.toLowerCase();
+
+  let targetKWp: number | undefined;
+  let targetModules: number | undefined;
+  let modPowerWUser: number | undefined;
+  let consumptionKwh: number | undefined;
+  let roofType: string | undefined;
+  let gridVoltage: string | undefined;
+  let cidade: string | undefined;
+  let estado: string | undefined;
+  let hsp: number | undefined;
+  let inverterDescription: string | undefined;
+  let inverterPowerKw: number | undefined;
+  let hasBattery = false;
+
+  // 1. Extração de Inversor
+  const invPowerMatch = clean.match(
+    /(?:inversor|h[íi]brido|deye|growatt|solis|sungrow|huawei|saj)\s*(?:h[íi]brido\s*)?(\d+(?:[.,]\d+)?)\s*(?:k|kw)?\b/i
+  );
+  if (invPowerMatch && invPowerMatch[1]) {
+    const p = parseFloat(invPowerMatch[1].replace(",", "."));
+    if (p > 0 && p < 100000) {
+      inverterPowerKw = p;
+    }
+  }
+  const invLineMatch = clean.match(
+    /(?:0?\d+\s+)?(?:inversor|h[íi]brido|microinversor|micro)\s*([^\n,]+)/i
+  );
+  if (invLineMatch && invLineMatch[1]) {
+    inverterDescription = invLineMatch[0].trim();
+  }
+
+  // 2. Extração de Bateria
+  if (/(?:0?\d+\s+)?bateria\b/i.test(clean)) {
+    hasBattery = true;
+  }
+
+  // 3. Extração de Módulos / Painéis / Placas e seus Watts
+  const modMatch = clean.match(/(?:0?(\d+))\s*(?:placas?|m[oó]dulos?|pain[eé]is?|paineis?)\b/i);
+  if (modMatch && modMatch[1]) {
+    const count = parseInt(modMatch[1], 10);
+    if (count >= 1 && count <= 50000) {
+      targetModules = count;
+
+      // Watts dos módulos: ex: 620w, 610, 585w
+      const wattsMatch =
+        clean.match(
+          /(?:placas?|m[oó]dulos?|pain[eé]is?|paineis?)[^\d\n]*(\d{3,4})\s*(?:w|watts?)\b/i
+        ) ||
+        clean.match(/(?:placas?|m[oó]dulos?|pain[eé]is?|paineis?)\s+(\d{3,4})\b/i) ||
+        clean.match(/\b(\d{3,4})\s*w\b/i);
+
+      if (wattsMatch && wattsMatch[1]) {
+        const w = parseInt(wattsMatch[1], 10);
+        if (w >= 200 && w <= 800) {
+          modPowerWUser = w;
+          targetKWp = Number(((count * w) / 1000).toFixed(2));
+        }
+      }
+
+      if (!targetKWp) {
+        // Fallback de potência padrão de módulo comercial (585W)
+        targetKWp = Number(((count * 585) / 1000).toFixed(2));
+      }
+    }
+  }
+
+  // 4. Extração de Potência explícita (kWp / MWp / GWp / kW) se explicitamente informada ou fallback
+  const directKWp = parsePowerInput(clean);
+  if (directKWp !== null && directKWp >= 0.5) {
+    targetKWp = directKWp;
+  } else if (!targetKWp) {
+    const kwpRegexMatch = clean.match(
+      /(?:cota[çc][ãa]o|or[çc]amento|sistema|usina|pot[êe]ncia)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(kwp|kw|mwp|mw)\b/i
+    );
+    if (kwpRegexMatch && kwpRegexMatch[1]) {
+      const val = parseFloat(kwpRegexMatch[1].replace(",", "."));
+      if (val >= 0.5 && val <= 5_000_000) {
+        targetKWp = val;
+      }
+    }
+  }
+
+  // 5. Extração de Consumo (kWh)
+  const kwhMatch = clean.match(/(?:consumo\s*(?:m[ée]dio)?\s*(?:de\s*)?)?(\d+[\d.,]*)\s*kwh\b/i);
+  if (kwhMatch && kwhMatch[1]) {
+    const rawKwh = Number(kwhMatch[1].replace(/\./g, "").replace(",", "."));
+    if (rawKwh >= 20 && rawKwh <= 500000) {
+      consumptionKwh = Math.round(rawKwh);
+    }
+  }
+
+  // 6. Extração de Estrutura de Telhado
+  if (
+    /(?:estrutura|telhado)?\s*(?:met[áa]lic[ao]|zinco|trapezoidal)\b/i.test(clean) ||
+    /\bmet[áa]lic[ao]\b/i.test(clean)
+  ) {
+    roofType = "Metálico";
+  } else if (
+    /(?:madeira\s+fibrocimento|fibro\s*madeira|fibrocimento|fibro|amianto|ondulada)\b/i.test(clean)
+  ) {
+    roofType = "Fibrocimento";
+  } else if (/(?:colonial|cer[âa]mic[ao]|francesa|romana)\b/i.test(clean)) {
+    roofType = "Cerâmica (Colonial)";
+  } else if (/\b(?:de\s+)?solo\b/i.test(clean)) {
+    roofType = "Solo";
+  } else if (/\b(?:de\s+)?laje\b/i.test(clean)) {
+    roofType = "Laje";
+  } else if (/\bfibrometal\b/i.test(clean)) {
+    roofType = "Fibrometal";
+  } else if (/(?:sem\s+estrutura|sem\s+telhado|nenhuma\s+estrutura)\b/i.test(clean)) {
+    roofType = "Sem estrutura";
+  }
+
+  // 7. Extração de Padrão Elétrico / Tensão
+  if (/\b(?:bif[áa]sico|bifasico|\bbi\b|127\/220|220\s*bi)\b/i.test(clean)) {
+    gridVoltage = "Bifásico 127V/220V";
+  } else if (/\b(?:trif[áa]sico\s*380|trifasico\s*380|tri\s*380|380\s*v|380v)\b/i.test(clean)) {
+    gridVoltage = "Trifásico 380V";
+  } else if (
+    /\b(?:trif[áa]sico\s*220|trifasico\s*220|tri\s*220|trif[áa]sico|trifasico)\b/i.test(clean)
+  ) {
+    gridVoltage = "Trifásico 220V";
+  } else if (/\b(?:monof[áa]sico|monofasico|\bmono\b|mono\s*220)\b/i.test(clean)) {
+    gridVoltage = "Monofásico 220V";
+  }
+
+  // 8. Extração de Cidade / Local de Entrega
+  const deliveryCityMatch = clean.match(
+    /(?:entrega\s+em|para|em|cidade(?:\s*de)?|instala[çc][ãa]o\s+em|no\s+munic[íi]pio\s+de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
+  );
+  if (deliveryCityMatch && deliveryCityMatch[1]) {
+    const rawCandidate = (
+      deliveryCityMatch[1] +
+      (deliveryCityMatch[2]
+        ? `/${deliveryCityMatch[2]}`
+        : deliveryCityMatch[3]
+          ? `/${deliveryCityMatch[3]}`
+          : "")
+    ).trim();
+    const candLower = rawCandidate.toLowerCase();
+    if (
+      !candLower.includes("pain") &&
+      !candLower.includes("modul") &&
+      !candLower.includes("invers") &&
+      !candLower.includes("estrut") &&
+      !candLower.includes("telhad") &&
+      !candLower.includes("bater")
+    ) {
+      const hspRes = getHsp(rawCandidate);
+      if (hspRes && (isLocationInput(rawCandidate) || hspRes.exact)) {
+        cidade = hspRes.city;
+        estado = hspRes.uf;
+        hsp = hspRes.hsp;
+      }
+    }
+  }
+
+  if (!cidade) {
+    const lines = clean
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    for (const line of lines) {
+      const lineLower = line.toLowerCase();
+      if (
+        lineLower.includes("painel") ||
+        lineLower.includes("módulo") ||
+        lineLower.includes("modulo") ||
+        lineLower.includes("placa") ||
+        lineLower.includes("inversor") ||
+        lineLower.includes("bateria") ||
+        lineLower.includes("telhado") ||
+        lineLower.includes("estrutura") ||
+        lineLower.includes("cabo") ||
+        lineLower.includes("string") ||
+        lineLower.includes("boa tarde") ||
+        lineLower.includes("bom dia")
+      ) {
+        continue;
+      }
+      const cleanedLine = cleanLocationInput(line);
+      if (isLocationInput(cleanedLine)) {
+        const hspRes = getHsp(cleanedLine);
+        if (hspRes && (isLocationInput(cleanedLine) || hspRes.exact)) {
+          cidade = hspRes.city;
+          estado = hspRes.uf;
+          hsp = hspRes.hsp;
+          break;
+        }
+      }
+    }
+  }
+
+  // 9. Determina se é solicitação de cotação
+  const hasQuoteKeywords =
+    lower.includes("cotação") ||
+    lower.includes("cotacao") ||
+    lower.includes("orçamento") ||
+    lower.includes("orcamento") ||
+    lower.includes("orçar") ||
+    lower.includes("orcar") ||
+    lower.includes("simular") ||
+    lower.includes("simulação") ||
+    lower.includes("simulacao") ||
+    lower.includes("preciso de uma cotação") ||
+    lower.includes("consegue orçar");
+
+  const isQuoteRequest = Boolean(
+    targetKWp ||
+    targetModules ||
+    consumptionKwh ||
+    (inverterPowerKw && (roofType || targetModules || targetKWp)) ||
+    (hasQuoteKeywords && (targetKWp || targetModules || roofType || consumptionKwh))
+  );
+
+  return {
+    targetKWp,
+    targetModules,
+    modPowerWUser,
+    consumptionKwh,
+    roofType,
+    gridVoltage,
+    cidade,
+    estado,
+    hsp,
+    inverterDescription,
+    inverterPowerKw,
+    hasBattery,
+    isQuoteRequest,
+  };
+}
+
 /** Detecta solicitações de arquivo ou documento PDF no WhatsApp */
 export function isWhatsappPdfRequest(text: string): boolean {
   if (!text) return false;
@@ -2577,7 +2838,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       `> ⚡ Potência: \`${quote.kwp} kWp\`\n` +
       `> 💰 Valor total: \`R$ ${this.formatBrl(total)}\` (${quote.kwp} kWp × R$ ${this.formatBrl(rate)})\n` +
       `> _Validade da cotação: 3 dias úteis_\n\n` +
-      `*_Qual o nome do cliente final para registrarmos no seu CRM?_*\n` +
+      `*_Qual o nome do cliente final para a proposta comercial?_*\n` +
       `_(ou digite 0️⃣ para alterar o preço)_`
     );
   }
@@ -2588,6 +2849,10 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
   public parsePowerInput(text: string): number | null {
     return parsePowerInput(text);
+  }
+
+  public parseIntegratorQuoteEntities(text: string): ExtractedIntegratorQuote {
+    return parseIntegratorQuoteEntities(text);
   }
 
   /** Etapa 1: lista os grupos de kits (sem preço) para o integrador escolher */
@@ -3041,13 +3306,13 @@ ${catalogContext}`;
       let targetKWp: number | undefined;
       let targetModules: number | undefined;
       let modPowerWUser: number | undefined;
-      let cidade = "";
-      let estado = "";
-      let gridVoltage = "";
-      let roofType = "";
+      let cidade: string | undefined = undefined;
+      let estado: string | undefined = undefined;
+      let gridVoltage: string | undefined = undefined;
+      let roofType: string | undefined = undefined;
       let customRatePerKwp: number | undefined;
-      let clientName = "Cliente";
-      let clientWhatsapp = "WhatsApp";
+      let clientName: string | undefined = undefined;
+      let clientWhatsapp: string | undefined = undefined;
       let chosenQuoteIndex = 0;
 
       for (let i = 0; i < messages.length; i++) {
@@ -3166,7 +3431,10 @@ ${catalogContext}`;
           const roofM =
             content.match(
               /Estrutura(?: registrada)?:?[_*\s]*`?\*?([^*`🏠\n]+?)\*?`?(?:\s*🏠|\.|\n|$)/i
-            ) || content.match(/Estrutura Selecionada:?[_*\s]*`?\*?([^*`🏠\n]+?)\*?`?/i);
+            ) ||
+            content.match(/Estrutura Selecionada:?[_*\s]*`?\*?([^*`🏠\n]+?)\*?`?/i) ||
+            content.match(/>\s*🏠\s*Estrutura:\s*\*([^*]+)\*/i) ||
+            content.match(/>\s*Estrutura:\s*\*([^*]+)\*/i);
           if (roofM && roofM[1]) {
             roofType = roofM[1].replace(/\*/g, "").trim();
           }
@@ -3195,6 +3463,14 @@ ${catalogContext}`;
           }
 
           continue; // Não analisa mensagens do bot para evitar capturar exemplos de texto
+        }
+
+        const quoteEnt = parseIntegratorQuoteEntities(content);
+        if (quoteEnt.roofType && !roofType) roofType = quoteEnt.roofType;
+        if (quoteEnt.gridVoltage && !gridVoltage) gridVoltage = quoteEnt.gridVoltage;
+        if (quoteEnt.cidade && !cidade) {
+          cidade = quoteEnt.cidade;
+          if (quoteEnt.estado) estado = quoteEnt.estado;
         }
 
         const prevAssistantForLead = i > 0 ? messages[i - 1]?.content || "" : "";
@@ -3675,7 +3951,7 @@ ${catalogContext}`;
     }
 
     // 0.2 Se a conversa estiver no estado PROPOSAL_COMPLETED (proposta já gerada com sucesso)
-    // MAS SE O USUÁRIO ENVIOU UMA NOVA FATURA OU UM CONSUMO NUMÉRICO, NÃO BLOQUEIA!
+    // MAS SE O USUÁRIO ENVIOU UMA NOVA FATURA OU DADOS DE UMA NOVA COTAÇÃO, NÃO BLOQUEIA!
     const isNewBillSubmission =
       Boolean(extractionResult) ||
       incomingText.startsWith("[Documento enviado") ||
@@ -3684,8 +3960,45 @@ ${catalogContext}`;
       lower.includes("[foto enviada");
 
     const hasDirectKwhInput = /(?:consumo|simular)?\s*(\d+[\d.,]*)\s*kwh/i.test(incomingText);
+    const quoteEntities = parseIntegratorQuoteEntities(incomingText);
+    const isNewQuoteRequest =
+      isNewBillSubmission || hasDirectKwhInput || quoteEntities.isQuoteRequest;
 
-    if (currentStep === "PROPOSAL_COMPLETED" && !isNewBillSubmission && !hasDirectKwhInput) {
+    if (currentStep === "PROPOSAL_COMPLETED" && isNewQuoteRequest) {
+      if (isGuestTrial && trialStatus && trialStatus.remaining <= 0) {
+        return this.buildGuestTrialExceededMessage();
+      }
+
+      await setStep("IDLE", {
+        cidade: undefined,
+        uf: undefined,
+        hsp: undefined,
+        consumptionKwh: undefined,
+        kwp: undefined,
+        moduleCount: undefined,
+        gridType: undefined,
+        roofType: undefined,
+        quotesList: undefined,
+        selectedQuoteIndex: undefined,
+        selectedTierName: undefined,
+        kwpRate: undefined,
+        quotedSaleBrl: undefined,
+        clientName: undefined,
+        clientPhone: undefined,
+        selectedTemplateId: undefined,
+      });
+
+      sessionCtx.targetKWp = undefined;
+      sessionCtx.targetModules = undefined;
+      sessionCtx.modPowerWUser = undefined;
+      sessionCtx.consumptionKwh = undefined;
+      sessionCtx.roofType = undefined;
+      sessionCtx.gridVoltage = undefined;
+      sessionCtx.cidade = undefined;
+      sessionCtx.estado = undefined;
+      sessionCtx.clientName = undefined;
+      sessionCtx.clientWhatsapp = undefined;
+    } else if (currentStep === "PROPOSAL_COMPLETED") {
       const lowerClean = incomingText
         .replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, "")
         .toLowerCase()
@@ -3983,13 +4296,17 @@ ${catalogContext}`;
         lastBotMsg.includes("WhatsApp correto")
       ) {
         await setStep("AWAITING_CLIENT_NAME");
-        return `Sem problemas! Qual o nome do cliente final para registrarmos no seu CRM? (ou digite 0️⃣ para alterar o preço)`;
+        return `Sem problemas! Qual o nome do cliente final para a proposta comercial? (ou digite 0️⃣ para alterar o preço)`;
       }
 
       const isClientNameQuestion =
         currentStep === "AWAITING_CLIENT_NAME" ||
         currentStep === "AWAITING_CUSTOM_PRICE" ||
-        lastBotMsg.includes("cliente final") ||
+        (lastBotMsg.includes("nome") &&
+          (lastBotMsg.includes("cliente") ||
+            lastBotMsg.includes("proposta") ||
+            lastBotMsg.includes("CRM"))) ||
+        lastBotMsg.includes("Qual o nome do seu cliente") ||
         lastBotMsg.includes("Qual o nome do cliente final") ||
         lastBotMsg.includes("nome correto do cliente final");
 
@@ -4573,11 +4890,12 @@ ${catalogContext}`;
     // ESTADO B: O Bot pediu o nome do cliente final (ou o nome correto)
     const isAskingClientName =
       currentStep === "AWAITING_CLIENT_NAME" ||
-      (lastBotMsg.includes("cliente final") &&
-        (lastBotMsg.includes("nome") ||
-          lastBotMsg.includes("Nome") ||
+      (lastBotMsg.includes("nome") &&
+        (lastBotMsg.includes("cliente") ||
           lastBotMsg.includes("CRM") ||
+          lastBotMsg.includes("proposta") ||
           lastBotMsg.includes("registrarmos"))) ||
+      lastBotMsg.includes("Qual o nome do seu cliente") ||
       lastBotMsg.includes("Qual o nome do cliente final") ||
       lastBotMsg.includes("nome correto do cliente final");
 
@@ -4590,7 +4908,7 @@ ${catalogContext}`;
       if (isGreeting) {
         return (
           `Olá! Identifiquei sua mensagem. ☀️\n\n` +
-          `Para gerarmos a proposta comercial oficial, qual o nome do cliente final? (Ex: João da Silva)\n` +
+          `Para gerarmos a proposta comercial oficial, qual o nome do seu cliente final? (Ex: João da Silva)\n` +
           `(Ou envie 0️⃣ para voltar e ver os kits disponíveis, ou *novo* para iniciar outra simulação)`
         );
       }
@@ -4631,7 +4949,7 @@ ${catalogContext}`;
       if (phone && !name) {
         sessionCtx.clientWhatsapp = phone;
         await setStep("AWAITING_CLIENT_NAME", { clientPhone: phone });
-        return `Anotado o WhatsApp \`${formatPhone(phone)}\`! E qual o *nome* do cliente final para registrarmos no seu CRM?`;
+        return `Anotado o WhatsApp \`${formatPhone(phone)}\`! E qual o *nome* do seu cliente final para a proposta comercial?`;
       }
 
       // Se enviou apenas o nome
@@ -4936,6 +5254,21 @@ ${catalogContext}`;
 
       if (chosenGrid) {
         sessionCtx.gridVoltage = chosenGrid;
+        if (sessionCtx.roofType) {
+          const quotes = await kitsFor({ roofType: sessionCtx.roofType });
+          if (quotes.length > 0) {
+            await setStep("AWAITING_KIT_SELECTION", {
+              gridType: chosenGrid,
+              roofType: sessionCtx.roofType,
+            });
+            return (
+              `*_Padrão Elétrico Registrado:_* \`${chosenGrid}\` ⚡\n` +
+              `> 🏠 Estrutura: *${sessionCtx.roofType}*\n\n` +
+              this.formatQuotesListText(quotes, sessionCtx)
+            );
+          }
+        }
+
         await setStep("AWAITING_ROOF_TYPE", { gridType: chosenGrid });
         return `*_Padrão Elétrico Registrado:_* \`${chosenGrid}\` ⚡\n\n` + this.ROOF_OPTIONS_TEXT;
       }
@@ -4974,7 +5307,7 @@ ${catalogContext}`;
           lower.includes("deixar como")) &&
         Boolean(sessionCtx.cidade && sessionCtx.estado);
 
-      if (keepExistingCity) {
+      if (keepExistingCity && sessionCtx.cidade && sessionCtx.estado) {
         const hspRes = getHsp(sessionCtx.cidade, sessionCtx.estado);
         await setStep("AWAITING_GRID_TYPE", {
           cidade: sessionCtx.cidade,
@@ -5016,15 +5349,56 @@ ${catalogContext}`;
       if (isRecognizedLocation) {
         sessionCtx.cidade = hspRes.city;
         sessionCtx.estado = hspRes.uf;
+
+        // Se já possui Padrão Elétrico E Telhado definidos: Fast-forward direto pros kits!
+        if (sessionCtx.gridVoltage && sessionCtx.roofType) {
+          const quotes = await kitsFor({ roofType: sessionCtx.roofType });
+          if (quotes.length > 0) {
+            await setStep("AWAITING_KIT_SELECTION", {
+              cidade: hspRes.city,
+              uf: hspRes.uf,
+              hsp: hspRes.hsp,
+              gridType: sessionCtx.gridVoltage,
+              roofType: sessionCtx.roofType,
+            });
+            return (
+              `*_Localização Identificada!_* \`${hspRes.city}/${hspRes.uf}\` 📍☀️\n` +
+              `> ⚡ Padrão Elétrico: *${sessionCtx.gridVoltage}*\n` +
+              `> 🏠 Estrutura: *${sessionCtx.roofType}*\n\n` +
+              this.formatQuotesListText(quotes, sessionCtx)
+            );
+          }
+        }
+
+        // Se já possui Padrão Elétrico, mas falta Telhado: vai para AWAITING_ROOF_TYPE
+        if (sessionCtx.gridVoltage && !sessionCtx.roofType) {
+          await setStep("AWAITING_ROOF_TYPE", {
+            cidade: hspRes.city,
+            uf: hspRes.uf,
+            hsp: hspRes.hsp,
+            gridType: sessionCtx.gridVoltage,
+          });
+          return (
+            `*_Localização Identificada!_* \`${hspRes.city}/${hspRes.uf}\` 📍☀️\n` +
+            `> ⚡ Padrão Elétrico: *${sessionCtx.gridVoltage}*\n\n` +
+            this.ROOF_OPTIONS_TEXT
+          );
+        }
+
+        // Falta Padrão Elétrico: vai para AWAITING_GRID_TYPE
         await setStep("AWAITING_GRID_TYPE", {
           cidade: hspRes.city,
           uf: hspRes.uf,
           hsp: hspRes.hsp,
+          roofType: sessionCtx.roofType,
         });
+        const roofInfo = sessionCtx.roofType ? `> 🏠 Estrutura: *${sessionCtx.roofType}*\n` : "";
         return (
           `*_Localização Identificada!_* 📍☀️\n\n` +
           `> Cidade: \`${hspRes.city}/${hspRes.uf}\`\n` +
-          `> Irradiação Solar: \`${hspRes.hsp.toFixed(2)} kWh/m²/dia\`\n\n` +
+          `> Irradiação Solar: \`${hspRes.hsp.toFixed(2)} kWh/m²/dia\`\n` +
+          roofInfo +
+          `\n` +
           this.GRID_OPTIONS_TEXT
         );
       }
@@ -5362,122 +5736,108 @@ ${catalogContext}`;
       lower.startsWith("criar proposta") ||
       lower.startsWith("simular");
 
-    if (isStartOrGreeting) {
+    if (isStartOrGreeting && !quoteEntities.isQuoteRequest) {
       await setStep("IDLE");
       return getGreetingMenu();
     }
 
-    // ESTADO I: Entrada por Potência direta (ex: "5 kwp", "3000 kwp", "3 mwp", "1.5 gwp")
-    const directPower = this.parsePowerInput(incomingText);
-    if (directPower !== null && directPower >= 0.5) {
-      sessionCtx.targetKWp = directPower;
-      const formattedPower = this.formatPowerBadge(directPower);
-      if (sessionCtx.cidade && sessionCtx.estado) {
-        await setStep("AWAITING_GRID_TYPE", {
-          kwp: directPower,
-        });
-        return (
-          `*_Potência Solicitada:_* \`${formattedPower}\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
-          this.GRID_OPTIONS_TEXT
-        );
-      }
-      await setStep("AWAITING_CITY", {
-        kwp: directPower,
-      });
-      return (
-        `*_Potência Solicitada:_* \`${formattedPower}\` ☀️\n\n` +
-        `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
-      );
-    }
-
-    // ESTADO J: Entrada por Quantidade de Módulos (ex: "12 placas de 590W", "10 módulos")
-    const modDirectMatch = incomingText.match(
-      /(\d+)\s*(?:placas?|m[oó]dulos?|paineis?|pain[eé]is)/i
-    );
-    if (modDirectMatch && modDirectMatch[1]) {
-      const modCount = parseInt(modDirectMatch[1], 10);
-      const modPowerMatch = incomingText.match(/(\d{3,4})\s*w/i);
-      const modPower =
-        modPowerMatch && modPowerMatch[1] ? parseInt(modPowerMatch[1], 10) : undefined;
-      const kwpCalculado = modPower ? ((modCount * modPower) / 1000).toFixed(2) : undefined;
-      const extraInfo = modPower ? ` de \`${modPower}W\` (\`${kwpCalculado} kWp\`)` : "";
-
-      sessionCtx.targetModules = modCount;
-      if (modPower) sessionCtx.modPowerWUser = modPower;
-
-      if (sessionCtx.cidade && sessionCtx.estado) {
-        await setStep("AWAITING_GRID_TYPE", {
-          moduleCount: modCount,
-        });
-        return (
-          `*_Quantidade Solicitada:_* \`${modCount} placas\`${extraInfo} em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
-          this.GRID_OPTIONS_TEXT
-        );
+    // ESTADO I/J/K: Entrada Direta de Cotação de Integrador (Potência, Módulos, Consumo, Telhado, Rede, Cidade)
+    if (quoteEntities.isQuoteRequest) {
+      if (quoteEntities.targetKWp) sessionCtx.targetKWp = quoteEntities.targetKWp;
+      if (quoteEntities.targetModules) sessionCtx.targetModules = quoteEntities.targetModules;
+      if (quoteEntities.modPowerWUser) sessionCtx.modPowerWUser = quoteEntities.modPowerWUser;
+      if (quoteEntities.consumptionKwh) sessionCtx.consumptionKwh = quoteEntities.consumptionKwh;
+      if (quoteEntities.roofType) sessionCtx.roofType = quoteEntities.roofType;
+      if (quoteEntities.gridVoltage) sessionCtx.gridVoltage = quoteEntities.gridVoltage;
+      if (quoteEntities.cidade) {
+        sessionCtx.cidade = quoteEntities.cidade;
+        if (quoteEntities.estado) sessionCtx.estado = quoteEntities.estado;
       }
 
-      await setStep("AWAITING_CITY", {
-        moduleCount: modCount,
-      });
-      return (
-        `*_Quantidade Solicitada:_* \`${modCount} placas\`${extraInfo} ☀️\n\n` +
-        `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
-      );
-    }
-
-    // ESTADO K: Entrada por Consumo em kWh (ex: "300 kwh", "300kw", "500 kwh/mes")
-    const kwhDirectMatch = incomingText.match(/(\d+[\d.,]*)\s*(?:kwh|kw)(?:\/m[eê]s)?/i);
-    if (kwhDirectMatch && kwhDirectMatch[1]) {
-      const rawKwh = Number(kwhDirectMatch[1].replace(",", "."));
-      if (rawKwh >= 30) {
-        const consumo = Math.round(rawKwh);
-        sessionCtx.consumptionKwh = consumo;
-
-        // Verifica se a cidade já foi informada na mesma mensagem
-        const cityInSameMsg = incomingText.match(
-          /(?:em|para|na cidade de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,30}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
-        );
-
-        if (cityInSameMsg && cityInSameMsg[1]) {
-          const cand = (
-            cityInSameMsg[1] +
-            (cityInSameMsg[2]
-              ? `/${cityInSameMsg[2]}`
-              : cityInSameMsg[3]
-                ? `/${cityInSameMsg[3]}`
-                : "")
-          ).trim();
-          const hspRes = getHsp(cand);
-          sessionCtx.cidade = hspRes.city;
-          sessionCtx.estado = hspRes.uf;
-          await setStep("AWAITING_GRID_TYPE", {
-            consumptionKwh: consumo,
-            cidade: hspRes.city,
-            uf: hspRes.uf,
-            hsp: hspRes.hsp,
-          });
-          return (
-            `*_Consumo Registrado:_* \`${consumo} kWh/mês\` em \`${hspRes.city}/${hspRes.uf}\` ☀️📍\n\n` +
-            this.GRID_OPTIONS_TEXT
-          );
+      // Monta cabeçalho informativo com base no que foi identificado
+      let headerText = "";
+      if (sessionCtx.targetKWp) {
+        const formattedPower = this.formatPowerBadge(sessionCtx.targetKWp);
+        if (sessionCtx.targetModules && sessionCtx.modPowerWUser) {
+          headerText = `*_Cotação Solicitada:_* \`${sessionCtx.targetModules} painéis de ${sessionCtx.modPowerWUser}W\` (\`${formattedPower}\`) ☀️`;
+        } else if (sessionCtx.targetModules) {
+          headerText = `*_Cotação Solicitada:_* \`${sessionCtx.targetModules} placas\` (\`${formattedPower}\`) ☀️`;
+        } else {
+          headerText = `*_Potência Solicitada:_* \`${formattedPower}\` ☀️`;
         }
+      } else if (sessionCtx.targetModules) {
+        headerText = `*_Quantidade Solicitada:_* \`${sessionCtx.targetModules} placas\` ☀️`;
+      } else if (sessionCtx.consumptionKwh) {
+        headerText = `*_Consumo Registrado:_* \`${sessionCtx.consumptionKwh} kWh/mês\` ☀️`;
+      }
 
-        if (sessionCtx.cidade && sessionCtx.estado) {
-          await setStep("AWAITING_GRID_TYPE", {
-            consumptionKwh: consumo,
-          });
-          return (
-            `*_Consumo Registrado:_* \`${consumo} kWh/mês\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
-            this.GRID_OPTIONS_TEXT
-          );
-        }
+      const extraDetails: string[] = [];
+      if (sessionCtx.cidade && sessionCtx.estado) {
+        extraDetails.push(`> 📍 Localidade: \`${sessionCtx.cidade}/${sessionCtx.estado}\``);
+      }
+      if (sessionCtx.roofType) {
+        extraDetails.push(`> 🏠 Estrutura: *${sessionCtx.roofType}*`);
+      }
+      if (sessionCtx.gridVoltage) {
+        extraDetails.push(`> ⚡ Padrão Elétrico: *${sessionCtx.gridVoltage}*`);
+      }
 
+      const detailsBlock = extraDetails.length > 0 ? `\n${extraDetails.join("\n")}\n\n` : "\n\n";
+
+      // 1. Falta a Cidade
+      if (!sessionCtx.cidade) {
         await setStep("AWAITING_CITY", {
-          consumptionKwh: consumo,
+          kwp: sessionCtx.targetKWp,
+          moduleCount: sessionCtx.targetModules,
+          consumptionKwh: sessionCtx.consumptionKwh,
+          roofType: sessionCtx.roofType,
+          gridType: sessionCtx.gridVoltage,
         });
         return (
-          `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n\n` +
+          `${headerText}${detailsBlock}` +
           `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
         );
+      }
+
+      // 2. Tem a Cidade, mas Falta o Padrão Elétrico
+      if (!sessionCtx.gridVoltage) {
+        await setStep("AWAITING_GRID_TYPE", {
+          cidade: sessionCtx.cidade,
+          uf: sessionCtx.estado,
+          kwp: sessionCtx.targetKWp,
+          moduleCount: sessionCtx.targetModules,
+          consumptionKwh: sessionCtx.consumptionKwh,
+          roofType: sessionCtx.roofType,
+        });
+        return `${headerText}${detailsBlock}` + this.GRID_OPTIONS_TEXT;
+      }
+
+      // 3. Tem Cidade e Padrão Elétrico, mas Falta o Telhado
+      if (!sessionCtx.roofType) {
+        await setStep("AWAITING_ROOF_TYPE", {
+          cidade: sessionCtx.cidade,
+          uf: sessionCtx.estado,
+          kwp: sessionCtx.targetKWp,
+          moduleCount: sessionCtx.targetModules,
+          consumptionKwh: sessionCtx.consumptionKwh,
+          gridType: sessionCtx.gridVoltage,
+        });
+        return `${headerText}${detailsBlock}` + this.ROOF_OPTIONS_TEXT;
+      }
+
+      // 4. Tem TUDO (Cidade + Padrão + Telhado) -> Fast Forward direto pros kits!
+      const quotes = await kitsFor({ roofType: sessionCtx.roofType });
+      if (quotes.length > 0) {
+        await setStep("AWAITING_KIT_SELECTION", {
+          cidade: sessionCtx.cidade,
+          uf: sessionCtx.estado,
+          kwp: sessionCtx.targetKWp,
+          moduleCount: sessionCtx.targetModules,
+          consumptionKwh: sessionCtx.consumptionKwh,
+          gridType: sessionCtx.gridVoltage,
+          roofType: sessionCtx.roofType,
+        });
+        return `${headerText}${detailsBlock}` + this.formatQuotesListText(quotes, sessionCtx);
       }
     }
 
