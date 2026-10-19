@@ -64,7 +64,7 @@ export function AntigravityParticlesCanvas({
       canvas.style.width = `${validW}px`;
       canvas.style.height = `${validH}px`;
 
-      const ambientCount = particleCount ?? Math.min(120, Math.max(60, Math.floor(validW * 0.1)));
+      const ambientCount = particleCount ?? Math.min(45, Math.max(20, Math.floor(validW * 0.04)));
       if (ambientParticlesRef.current.length === 0) {
         ambientParticlesRef.current = createAmbientParticles(ambientCount, width, height);
       }
@@ -121,7 +121,7 @@ export function AntigravityParticlesCanvas({
       p.speed = speed;
       p.isActive = true;
 
-      // Emite fita densa de partículas que segue o traço do mouse em tempo real
+      // Emite fita leve de partículas que segue o traço do mouse em tempo real
       emitRibbonParticles(trailParticlesRef.current, p);
     };
 
@@ -151,10 +151,10 @@ export function AntigravityParticlesCanvas({
 
         const pointer = pointerStateRef.current;
 
-        // Se o mouse estiver se movendo, emite partículas contínuas
-        if (pointer.isActive && pointer.speed > 0.5) {
+        // Se o mouse estiver se movendo, emite micro-partículas contínuas
+        if (pointer.isActive && pointer.speed > 0.8) {
           emitRibbonParticles(trailParticlesRef.current, pointer);
-          pointer.speed *= 0.85;
+          pointer.speed *= 0.82;
         }
 
         // Atualiza física da fita de partículas e partículas ambientes

@@ -67,8 +67,8 @@ export function createAmbientParticles(
 
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 0.2 + Math.random() * 0.45;
-    const baseAlpha = 0.2 + Math.random() * 0.45;
+    const speed = 0.15 + Math.random() * 0.35;
+    const baseAlpha = 0.12 + Math.random() * 0.28;
     const color =
       EMERALD_RIBBON_PALETTE[1 + Math.floor(Math.random() * (EMERALD_RIBBON_PALETTE.length - 1))];
 
@@ -78,11 +78,11 @@ export function createAmbientParticles(
       y: Math.random() * height,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      radius: 1.0 + Math.random() * 1.6,
+      radius: 0.7 + Math.random() * 0.9,
       color,
       alpha: baseAlpha,
       baseAlpha,
-      pulseSpeed: 0.02 + Math.random() * 0.03,
+      pulseSpeed: 0.015 + Math.random() * 0.025,
       pulseAngle: Math.random() * Math.PI * 2,
     });
   }
@@ -91,13 +91,13 @@ export function createAmbientParticles(
 }
 
 /**
- * Emite uma rajada densa de partículas ao longo do caminho percorrido pelo mouse (Particle Ribbon).
- * Interpola entre a posição anterior e atual do cursor para não deixar falhas em movimentos rápidos.
+ * Emite uma fita leve e refinada de micro-partículas ao longo do caminho percorrido pelo mouse.
+ * Interpola entre a posição anterior e atual do cursor com toque minimalista e translúcido.
  */
 export function emitRibbonParticles(
   trail: TrailParticle[],
   pointer: PointerState,
-  maxTrailLength = 450
+  maxTrailLength = 260
 ): void {
   if (!pointer.isActive) return;
 
@@ -105,9 +105,9 @@ export function emitRibbonParticles(
   const dy = pointer.y - pointer.lastY;
   const dist = Math.hypot(dx, dy);
 
-  // Determina quantas partículas emitir proporcionalmente à distância e velocidade do movimento
-  const steps = Math.min(25, Math.max(3, Math.floor(dist / 3)));
-  const particlesPerStep = Math.min(5, Math.max(2, Math.floor(pointer.speed * 0.4) + 1));
+  // Determina quantas partículas emitir proporcionalmente à distância e velocidade do movimento (minimalista)
+  const steps = Math.min(14, Math.max(2, Math.floor(dist / 4.5)));
+  const particlesPerStep = Math.min(3, Math.max(1, Math.floor(pointer.speed * 0.25) + 1));
 
   for (let s = 0; s < steps; s++) {
     const t = s / steps;
@@ -119,23 +119,23 @@ export function emitRibbonParticles(
         trail.shift(); // Remove as partículas mais antigas para manter 60fps constantes
       }
 
-      // Direção oposta e perpendicular ao movimento do cursor para criar o efeito de fita/onda
+      // Direção oposta e perpendicular ao movimento do cursor para criar o efeito de fita/onda sutil
       const spreadAngle = Math.random() * Math.PI * 2;
-      const spreadDist = Math.random() * (4 + pointer.speed * 0.8);
-      const perpAngle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 1.4;
+      const spreadDist = Math.random() * (2.2 + pointer.speed * 0.4);
+      const perpAngle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 1.1;
 
-      // Velocidade do rastro fluido
+      // Velocidade do rastro fluido suave
       const vx =
-        -Math.cos(perpAngle) * (pointer.speed * 0.15) +
-        Math.cos(spreadAngle) * (0.8 + Math.random() * 1.2);
+        -Math.cos(perpAngle) * (pointer.speed * 0.1) +
+        Math.cos(spreadAngle) * (0.5 + Math.random() * 0.8);
       const vy =
-        -Math.sin(perpAngle) * (pointer.speed * 0.15) +
-        Math.sin(spreadAngle) * (0.8 + Math.random() * 1.2);
+        -Math.sin(perpAngle) * (pointer.speed * 0.1) +
+        Math.sin(spreadAngle) * (0.5 + Math.random() * 0.8);
 
-      const maxLife = 35 + Math.floor(Math.random() * 35); // 35 a 70 frames de vida
+      const maxLife = 18 + Math.floor(Math.random() * 20); // 18 a 38 frames de vida (desvanecimento rápido e limpo)
       const color =
         EMERALD_RIBBON_PALETTE[Math.floor(Math.random() * EMERALD_RIBBON_PALETTE.length)];
-      const radius = 1.0 + Math.random() * 2.4; // 1px a 3.4px
+      const radius = 0.7 + Math.random() * 1.1; // 0.7px a 1.8px (micro-partículas estelares)
 
       trail.push({
         id: nextParticleId++,
@@ -145,10 +145,10 @@ export function emitRibbonParticles(
         vy,
         radius,
         color,
-        alpha: 0.75 + Math.random() * 0.25,
+        alpha: 0.55 + Math.random() * 0.25,
         life: maxLife,
         maxLife,
-        curl: (Math.random() - 0.5) * 0.12,
+        curl: (Math.random() - 0.5) * 0.08,
       });
     }
   }
@@ -168,20 +168,20 @@ export function updateRibbonParticles(trail: TrailParticle[], time = 0): TrailPa
     p.life--;
 
     if (p.life > 0) {
-      // Ondulação de vórtice natural (curl turbulence)
+      // Ondulação suave de vórtice natural (curl turbulence)
       p.vx += Math.sin(time * 0.05 + p.y * 0.04) * p.curl;
       p.vy += Math.cos(time * 0.05 + p.x * 0.04) * p.curl;
 
-      // Desaceleração aerodinâmica
-      p.vx *= 0.95;
-      p.vy *= 0.95;
+      // Desaceleração aerodinâmica suave
+      p.vx *= 0.94;
+      p.vy *= 0.94;
 
       p.x += p.vx;
       p.y += p.vy;
 
-      // Decaimento de opacidade suave
+      // Decaimento de opacidade suave e etéreo
       const progress = p.life / p.maxLife;
-      p.alpha = Math.pow(progress, 1.2) * 0.9;
+      p.alpha = Math.pow(progress, 1.4) * 0.65;
 
       alive.push(p);
     }
@@ -204,20 +204,20 @@ export function updateAmbientParticles(
 
     // Pulsação suave de brilho
     p.pulseAngle += p.pulseSpeed;
-    const pulseFactor = 0.8 + Math.sin(p.pulseAngle) * 0.2;
+    const pulseFactor = 0.85 + Math.sin(p.pulseAngle) * 0.15;
 
     if (pointer.isActive) {
       const dx = pointer.x - p.x;
       const dy = pointer.y - p.y;
       const dist = Math.hypot(dx, dy);
-      const attractRadius = 180;
+      const attractRadius = 130;
 
       if (dist < attractRadius && dist > 1) {
         const proximity = 1 - dist / attractRadius;
-        // Puxa suavemente para dentro do enxame do cursor
-        p.vx += (dx / dist) * Math.pow(proximity, 1.5) * 1.2;
-        p.vy += (dy / dist) * Math.pow(proximity, 1.5) * 1.2;
-        p.alpha = Math.min(0.9, p.baseAlpha + proximity * 0.5);
+        // Puxa suavemente para dentro do enxame do cursor de forma minimalista
+        p.vx += (dx / dist) * Math.pow(proximity, 1.6) * 0.8;
+        p.vy += (dy / dist) * Math.pow(proximity, 1.6) * 0.8;
+        p.alpha = Math.min(0.55, p.baseAlpha + proximity * 0.25);
       } else {
         p.alpha = p.baseAlpha * pulseFactor;
       }
@@ -231,7 +231,7 @@ export function updateAmbientParticles(
 
     // Velocidade mínima constante para nunca ficar estático
     const speed = Math.hypot(p.vx, p.vy);
-    const minSpeed = 0.22;
+    const minSpeed = 0.18;
     if (speed < minSpeed && speed > 0.001) {
       const scale = minSpeed / speed;
       p.vx *= scale;
@@ -284,16 +284,16 @@ export function renderParticlesFrame(
     ctx.fill();
   }
 
-  // 3. Brilho do cursor quando ativo
+  // 3. Brilho suave e minimalista do cursor quando ativo
   if (pointer.isActive) {
-    const glow = ctx.createRadialGradient(pointer.x, pointer.y, 0, pointer.x, pointer.y, 45);
-    glow.addColorStop(0, "rgba(255, 255, 255, 0.35)");
-    glow.addColorStop(0.25, "rgba(52, 211, 153, 0.25)");
-    glow.addColorStop(0.7, "rgba(16, 185, 129, 0.08)");
+    const glow = ctx.createRadialGradient(pointer.x, pointer.y, 0, pointer.x, pointer.y, 22);
+    glow.addColorStop(0, "rgba(255, 255, 255, 0.20)");
+    glow.addColorStop(0.35, "rgba(52, 211, 153, 0.12)");
+    glow.addColorStop(0.8, "rgba(16, 185, 129, 0.03)");
     glow.addColorStop(1, "rgba(16, 185, 129, 0)");
 
     ctx.beginPath();
-    ctx.arc(pointer.x, pointer.y, 45, 0, Math.PI * 2);
+    ctx.arc(pointer.x, pointer.y, 22, 0, Math.PI * 2);
     ctx.fillStyle = glow;
     ctx.globalAlpha = 1;
     ctx.fill();

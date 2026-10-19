@@ -19,12 +19,12 @@ describe("antigravity-particles-engine (rastro fluido de partículas)", () => {
       expect(EMERALD_RIBBON_PALETTE).toContain(p.color);
       const speed = Math.hypot(p.vx, p.vy);
       expect(speed).toBeGreaterThan(0.1);
-      expect(p.radius).toBeGreaterThanOrEqual(1.0);
-      expect(p.radius).toBeLessThanOrEqual(3.0);
+      expect(p.radius).toBeGreaterThanOrEqual(0.7);
+      expect(p.radius).toBeLessThanOrEqual(2.0);
     }
   });
 
-  it("deve emitir fita de partículas densas quando o cursor do mouse se move", () => {
+  it("deve emitir fita de micro-partículas refinadas quando o cursor do mouse se move", () => {
     const trail: TrailParticle[] = [];
     const pointer: PointerState = {
       x: 200,
@@ -39,15 +39,17 @@ describe("antigravity-particles-engine (rastro fluido de partículas)", () => {
 
     emitRibbonParticles(trail, pointer, 300);
 
-    // Deve ter emitido dezenas de partículas ao longo do trajeto (fita densa)
-    expect(trail.length).toBeGreaterThan(20);
+    // Deve ter emitido micro-partículas ao longo do trajeto de forma minimalista
+    expect(trail.length).toBeGreaterThan(10);
 
     for (const p of trail) {
       expect(p.x).toBeGreaterThanOrEqual(75);
       expect(p.x).toBeLessThanOrEqual(225);
       expect(EMERALD_RIBBON_PALETTE).toContain(p.color);
       expect(p.life).toBeGreaterThan(0);
-      expect(p.alpha).toBeGreaterThan(0.5);
+      expect(p.alpha).toBeGreaterThan(0.4);
+      expect(p.radius).toBeGreaterThanOrEqual(0.7);
+      expect(p.radius).toBeLessThanOrEqual(2.0);
     }
   });
 
@@ -112,6 +114,6 @@ describe("antigravity-particles-engine (rastro fluido de partículas)", () => {
     updateAmbientParticles(particles, inactivePointer, 800, 200);
 
     const speed = Math.hypot(particles[0].vx, particles[0].vy);
-    expect(speed).toBeGreaterThanOrEqual(0.2);
+    expect(speed).toBeGreaterThanOrEqual(0.15);
   });
 });
