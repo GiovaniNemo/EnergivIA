@@ -1,79 +1,89 @@
 /**
- * Motor de física cinética vetorial para partículas Verde Esmeralda EnergivIA.
- * Sistema de enxame vivo de alta densidade que segue, orbita e reage dinamicamente ao cursor do mouse.
+ * Motor de física cinética para o efeito de Rastro Fluido de Partículas (Particle Ribbon / Fluid Comet)
+ * em Verde Esmeralda EnergivIA.
+ * Cria uma fita dinâmica e densa de partículas que segue e ondula com o movimento do mouse,
+ * combinada a partículas ambientes em flutuação contínua.
  */
 
-export const ANTIGRAVITY_PALETTE = [
-  "#10B981", // Emerald 500
-  "#34D399", // Emerald 400 (Mint brilhante)
-  "#059669", // Emerald 600 (Profundo)
-  "#6EE7B7", // Emerald 300 (Glow claro)
+export const EMERALD_RIBBON_PALETTE = [
+  "#FFFFFF", // Brilho estelar puro no núcleo do rastro
   "#A7F3D0", // Emerald 200 (Gelo esmeralda)
-  "#047857", // Emerald 700 (Profundidade de campo)
+  "#6EE7B7", // Emerald 300 (Menta luminoso)
+  "#34D399", // Emerald 400 (Esmeralda radiante)
+  "#10B981", // Emerald 500 (Verde principal)
+  "#059669", // Emerald 600 (Profundidade)
 ] as const;
 
-export type ParticleShape = "dash" | "dot";
-
-export interface AntigravityParticle {
+export interface TrailParticle {
   id: number;
   x: number;
   y: number;
   vx: number;
   vy: number;
-  angle: number;
-  angularVelocity: number;
-  shape: ParticleShape;
-  length: number;
-  thickness: number;
+  radius: number;
+  color: string;
+  alpha: number;
+  life: number;
+  maxLife: number;
+  curl: number;
+}
+
+export interface AmbientParticle {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
   radius: number;
   color: string;
   alpha: number;
   baseAlpha: number;
+  pulseSpeed: number;
+  pulseAngle: number;
 }
 
 export interface PointerState {
   x: number;
   y: number;
+  lastX: number;
+  lastY: number;
   isActive: boolean;
-  vx?: number;
-  vy?: number;
+  vx: number;
+  vy: number;
+  speed: number;
 }
 
+let nextParticleId = 0;
+
 /**
- * Cria uma coleção densa de partículas verde esmeralda distribuídas no canvas.
+ * Cria a coleção de partículas de fundo ambiente que flutuam continuamente pelo card.
  */
-export function createParticles(
+export function createAmbientParticles(
   count: number,
   width: number,
   height: number
-): AntigravityParticle[] {
-  const particles: AntigravityParticle[] = [];
+): AmbientParticle[] {
+  const particles: AmbientParticle[] = [];
 
   for (let i = 0; i < count; i++) {
-    // 60% pontos luminosos, 40% traços de energia esmeralda
-    const isDash = i % 5 === 0 || i % 5 === 2;
-    const x = Math.random() * width;
-    const y = Math.random() * height;
-    const color = ANTIGRAVITY_PALETTE[Math.floor(Math.random() * ANTIGRAVITY_PALETTE.length)];
-    const speed = 0.3 + Math.random() * 0.7;
-    const moveAngle = Math.random() * Math.PI * 2;
-    const baseAlpha = 0.25 + Math.random() * 0.55;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.2 + Math.random() * 0.45;
+    const baseAlpha = 0.2 + Math.random() * 0.45;
+    const color =
+      EMERALD_RIBBON_PALETTE[1 + Math.floor(Math.random() * (EMERALD_RIBBON_PALETTE.length - 1))];
 
     particles.push({
-      id: i,
-      x,
-      y,
-      vx: Math.cos(moveAngle) * speed,
-      vy: Math.sin(moveAngle) * speed,
-      angle: moveAngle,
-      angularVelocity: (Math.random() - 0.5) * 0.04,
-      shape: isDash ? "dash" : "dot",
-      length: isDash ? 4 + Math.random() * 5 : 0, // 4px a 9px
-      thickness: isDash ? 1.0 + Math.random() * 0.6 : 0, // 1px a 1.6px
-      radius: isDash ? 0 : 1.1 + Math.random() * 1.4, // 1.1px a 2.5px
+      id: nextParticleId++,
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      radius: 1.0 + Math.random() * 1.6,
       color,
       alpha: baseAlpha,
       baseAlpha,
+      pulseSpeed: 0.02 + Math.random() * 0.03,
+      pulseAngle: Math.random() * Math.PI * 2,
     });
   }
 
@@ -81,120 +91,182 @@ export function createParticles(
 }
 
 /**
- * Atualiza o estado físico das partículas:
- * - Movimento contínuo orgânico fluido (sem posições estáticas presas)
- * - Atração magnética e seguimento dinâmico ao cursor ("vai junto com o mouse")
- * - Vórtice e turbulência suave que fazem o enxame dançar ao redor do ponteiro
- * - Limite de velocidade e wrap suave nas bordas
+ * Emite uma rajada densa de partículas ao longo do caminho percorrido pelo mouse (Particle Ribbon).
+ * Interpola entre a posição anterior e atual do cursor para não deixar falhas em movimentos rápidos.
  */
-export function updateParticle(
-  p: AntigravityParticle,
+export function emitRibbonParticles(
+  trail: TrailParticle[],
   pointer: PointerState,
-  width: number,
-  height: number,
-  _deltaTime = 16
-): AntigravityParticle {
-  const copy: AntigravityParticle = { ...p };
+  maxTrailLength = 450
+): void {
+  if (!pointer.isActive) return;
 
-  // 1. Interação dinâmica com o cursor (Atração, Rastro e Vórtice)
-  if (pointer.isActive) {
-    const dx = pointer.x - copy.x;
-    const dy = pointer.y - copy.y;
-    const dist = Math.hypot(dx, dy);
-    const influenceRadius = 220; // Amplo raio de captura magnética
+  const dx = pointer.x - pointer.lastX;
+  const dy = pointer.y - pointer.lastY;
+  const dist = Math.hypot(dx, dy);
 
-    if (dist < influenceRadius && dist > 1) {
-      const proximity = 1 - dist / influenceRadius;
-      const nx = dx / dist;
-      const ny = dy / dist;
+  // Determina quantas partículas emitir proporcionalmente à distância e velocidade do movimento
+  const steps = Math.min(25, Math.max(3, Math.floor(dist / 3)));
+  const particlesPerStep = Math.min(5, Math.max(2, Math.floor(pointer.speed * 0.4) + 1));
 
-      // Força de atração em direção ao cursor (para "ir junto")
-      const attractForce = Math.pow(proximity, 1.2) * 1.8;
-      copy.vx += nx * attractForce;
-      copy.vy += ny * attractForce;
+  for (let s = 0; s < steps; s++) {
+    const t = s / steps;
+    const posX = pointer.lastX + dx * t;
+    const posY = pointer.lastY + dy * t;
 
-      // Força de rotação/vórtice suave (swirl em espiral)
-      const swirlForce = proximity * 0.9;
-      copy.vx += -ny * swirlForce;
-      copy.vy += nx * swirlForce;
-
-      // Momentum do mouse (acompanha o rastro do movimento da mão)
-      if (pointer.vx !== undefined && pointer.vy !== undefined) {
-        copy.vx += pointer.vx * 0.22 * proximity;
-        copy.vy += pointer.vy * 0.22 * proximity;
+    for (let p = 0; p < particlesPerStep; p++) {
+      if (trail.length >= maxTrailLength) {
+        trail.shift(); // Remove as partículas mais antigas para manter 60fps constantes
       }
 
-      // Intensifica o brilho da partícula quando próxima do mouse
-      copy.alpha = Math.min(0.95, copy.baseAlpha + proximity * 0.45);
-    } else {
-      // Retorna gradualmente ao brilho natural
-      copy.alpha += (copy.baseAlpha - copy.alpha) * 0.05;
+      // Direção oposta e perpendicular ao movimento do cursor para criar o efeito de fita/onda
+      const spreadAngle = Math.random() * Math.PI * 2;
+      const spreadDist = Math.random() * (4 + pointer.speed * 0.8);
+      const perpAngle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 1.4;
+
+      // Velocidade do rastro fluido
+      const vx =
+        -Math.cos(perpAngle) * (pointer.speed * 0.15) +
+        Math.cos(spreadAngle) * (0.8 + Math.random() * 1.2);
+      const vy =
+        -Math.sin(perpAngle) * (pointer.speed * 0.15) +
+        Math.sin(spreadAngle) * (0.8 + Math.random() * 1.2);
+
+      const maxLife = 35 + Math.floor(Math.random() * 35); // 35 a 70 frames de vida
+      const color =
+        EMERALD_RIBBON_PALETTE[Math.floor(Math.random() * EMERALD_RIBBON_PALETTE.length)];
+      const radius = 1.0 + Math.random() * 2.4; // 1px a 3.4px
+
+      trail.push({
+        id: nextParticleId++,
+        x: posX + Math.cos(spreadAngle) * spreadDist,
+        y: posY + Math.sin(spreadAngle) * spreadDist,
+        vx,
+        vy,
+        radius,
+        color,
+        alpha: 0.75 + Math.random() * 0.25,
+        life: maxLife,
+        maxLife,
+        curl: (Math.random() - 0.5) * 0.12,
+      });
     }
-  } else {
-    copy.alpha += (copy.baseAlpha - copy.alpha) * 0.05;
   }
-
-  // 2. Atrito aerodinâmico fluido (damping suave que preserva o fluxo vivo)
-  const friction = pointer.isActive ? 0.94 : 0.97;
-  copy.vx *= friction;
-  copy.vy *= friction;
-
-  // Garante velocidade mínima para nunca ficar congelado/estático
-  const currentSpeed = Math.hypot(copy.vx, copy.vy);
-  const minSpeed = 0.25;
-  const maxSpeed = 7.5;
-
-  if (currentSpeed < minSpeed && currentSpeed > 0.001) {
-    const scale = minSpeed / currentSpeed;
-    copy.vx *= scale;
-    copy.vy *= scale;
-  } else if (currentSpeed > maxSpeed) {
-    const scale = maxSpeed / currentSpeed;
-    copy.vx *= scale;
-    copy.vy *= scale;
-  }
-
-  // 3. Atualiza posição
-  copy.x += copy.vx;
-  copy.y += copy.vy;
-
-  // 4. Rotação do traço alinhada com o vetor de movimento
-  if (currentSpeed > 0.3) {
-    const targetAngle = Math.atan2(copy.vy, copy.vx);
-    copy.angle += (targetAngle - copy.angle) * 0.12;
-  } else {
-    copy.angle += copy.angularVelocity;
-  }
-
-  // 5. Wrap contínuo nas bordas (as partículas circulam infinitamente pelo card)
-  const margin = 15;
-  if (copy.x < -margin) copy.x = width + margin;
-  else if (copy.x > width + margin) copy.x = -margin;
-
-  if (copy.y < -margin) copy.y = height + margin;
-  else if (copy.y > height + margin) copy.y = -margin;
-
-  return copy;
 }
 
 /**
- * Renderiza uma partícula individual no contexto do Canvas 2D.
+ * Atualiza todas as partículas do rastro fluido (Particle Ribbon):
+ * - Física de desaceleração suave
+ * - Ondulação de vórtice/curling
+ * - Decaimento de vida e desvanecimento de opacidade
  */
-export function drawParticle(ctx: CanvasRenderingContext2D, p: AntigravityParticle): void {
-  ctx.save();
+export function updateRibbonParticles(trail: TrailParticle[], time = 0): TrailParticle[] {
+  const alive: TrailParticle[] = [];
 
-  if (p.shape === "dash") {
-    ctx.translate(p.x, p.y);
-    ctx.rotate(p.angle);
-    ctx.beginPath();
-    ctx.lineCap = "round";
-    ctx.lineWidth = p.thickness;
-    ctx.strokeStyle = p.color;
-    ctx.globalAlpha = p.alpha;
-    ctx.moveTo(-p.length / 2, 0);
-    ctx.lineTo(p.length / 2, 0);
-    ctx.stroke();
-  } else {
+  for (let i = 0; i < trail.length; i++) {
+    const p = trail[i];
+    p.life--;
+
+    if (p.life > 0) {
+      // Ondulação de vórtice natural (curl turbulence)
+      p.vx += Math.sin(time * 0.05 + p.y * 0.04) * p.curl;
+      p.vy += Math.cos(time * 0.05 + p.x * 0.04) * p.curl;
+
+      // Desaceleração aerodinâmica
+      p.vx *= 0.95;
+      p.vy *= 0.95;
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Decaimento de opacidade suave
+      const progress = p.life / p.maxLife;
+      p.alpha = Math.pow(progress, 1.2) * 0.9;
+
+      alive.push(p);
+    }
+  }
+
+  return alive;
+}
+
+/**
+ * Atualiza partículas ambientes: atração suave quando o cursor está perto, flutuação contínua sem parar.
+ */
+export function updateAmbientParticles(
+  particles: AmbientParticle[],
+  pointer: PointerState,
+  width: number,
+  height: number
+): void {
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+
+    // Pulsação suave de brilho
+    p.pulseAngle += p.pulseSpeed;
+    const pulseFactor = 0.8 + Math.sin(p.pulseAngle) * 0.2;
+
+    if (pointer.isActive) {
+      const dx = pointer.x - p.x;
+      const dy = pointer.y - p.y;
+      const dist = Math.hypot(dx, dy);
+      const attractRadius = 180;
+
+      if (dist < attractRadius && dist > 1) {
+        const proximity = 1 - dist / attractRadius;
+        // Puxa suavemente para dentro do enxame do cursor
+        p.vx += (dx / dist) * Math.pow(proximity, 1.5) * 1.2;
+        p.vy += (dy / dist) * Math.pow(proximity, 1.5) * 1.2;
+        p.alpha = Math.min(0.9, p.baseAlpha + proximity * 0.5);
+      } else {
+        p.alpha = p.baseAlpha * pulseFactor;
+      }
+    } else {
+      p.alpha = p.baseAlpha * pulseFactor;
+    }
+
+    // Atrito suave
+    p.vx *= 0.96;
+    p.vy *= 0.96;
+
+    // Velocidade mínima constante para nunca ficar estático
+    const speed = Math.hypot(p.vx, p.vy);
+    const minSpeed = 0.22;
+    if (speed < minSpeed && speed > 0.001) {
+      const scale = minSpeed / speed;
+      p.vx *= scale;
+      p.vy *= scale;
+    }
+
+    p.x += p.vx;
+    p.y += p.vy;
+
+    // Wrap contínuo nas bordas
+    const margin = 10;
+    if (p.x < -margin) p.x = width + margin;
+    else if (p.x > width + margin) p.x = -margin;
+
+    if (p.y < -margin) p.y = height + margin;
+    else if (p.y > height + margin) p.y = -margin;
+  }
+}
+
+/**
+ * Renderiza o rastro fluido e as partículas ambientes no canvas.
+ */
+export function renderParticlesFrame(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  ambient: AmbientParticle[],
+  trail: TrailParticle[],
+  pointer: PointerState
+): void {
+  ctx.clearRect(0, 0, width, height);
+
+  // 1. Partículas ambientes em verde esmeralda translúcido
+  for (let i = 0; i < ambient.length; i++) {
+    const p = ambient[i];
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
     ctx.fillStyle = p.color;
@@ -202,59 +274,30 @@ export function drawParticle(ctx: CanvasRenderingContext2D, p: AntigravityPartic
     ctx.fill();
   }
 
-  ctx.restore();
-}
-
-/**
- * Desenha teias de conexão suaves entre partículas vizinhas e entre o cursor e as partículas.
- */
-export function drawConnections(
-  ctx: CanvasRenderingContext2D,
-  particles: AntigravityParticle[],
-  pointer: PointerState,
-  maxDistance = 55
-): void {
-  const len = particles.length;
-
-  for (let i = 0; i < len; i++) {
-    const p1 = particles[i];
-
-    // Conexão delicada com o cursor
-    if (pointer.isActive) {
-      const pdx = pointer.x - p1.x;
-      const pdy = pointer.y - p1.y;
-      const pDist = Math.hypot(pdx, pdy);
-      const cursorMaxDist = 110;
-
-      if (pDist < cursorMaxDist) {
-        const lineAlpha = (1 - pDist / cursorMaxDist) * 0.22;
-        ctx.beginPath();
-        ctx.strokeStyle = "#34D399";
-        ctx.globalAlpha = lineAlpha;
-        ctx.lineWidth = 0.8;
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(pointer.x, pointer.y);
-        ctx.stroke();
-      }
-    }
-
-    // Conexões sutis entre partículas próximas
-    for (let j = i + 1; j < len; j++) {
-      const p2 = particles[j];
-      const dx = p1.x - p2.x;
-      const dy = p1.y - p2.y;
-      const dist = Math.hypot(dx, dy);
-
-      if (dist < maxDistance) {
-        const lineAlpha = (1 - dist / maxDistance) * 0.12;
-        ctx.beginPath();
-        ctx.strokeStyle = "#10B981";
-        ctx.globalAlpha = lineAlpha;
-        ctx.lineWidth = 0.6;
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
-      }
-    }
+  // 2. Rastro Fluido (Particle Ribbon) com brilho no núcleo
+  for (let i = 0; i < trail.length; i++) {
+    const p = trail[i];
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.alpha;
+    ctx.fill();
   }
+
+  // 3. Brilho do cursor quando ativo
+  if (pointer.isActive) {
+    const glow = ctx.createRadialGradient(pointer.x, pointer.y, 0, pointer.x, pointer.y, 45);
+    glow.addColorStop(0, "rgba(255, 255, 255, 0.35)");
+    glow.addColorStop(0.25, "rgba(52, 211, 153, 0.25)");
+    glow.addColorStop(0.7, "rgba(16, 185, 129, 0.08)");
+    glow.addColorStop(1, "rgba(16, 185, 129, 0)");
+
+    ctx.beginPath();
+    ctx.arc(pointer.x, pointer.y, 45, 0, Math.PI * 2);
+    ctx.fillStyle = glow;
+    ctx.globalAlpha = 1;
+    ctx.fill();
+  }
+
+  ctx.globalAlpha = 1;
 }

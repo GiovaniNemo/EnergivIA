@@ -2,12 +2,14 @@
 
 import React, { useEffect, useRef } from "react";
 import {
-  createParticles,
-  drawConnections,
-  drawParticle,
-  updateParticle,
-  type AntigravityParticle,
+  createAmbientParticles,
+  emitRibbonParticles,
+  renderParticlesFrame,
+  updateAmbientParticles,
+  updateRibbonParticles,
+  type AmbientParticle,
   type PointerState,
+  type TrailParticle,
 } from "./antigravity-particles-engine";
 
 interface AntigravityParticlesCanvasProps {
@@ -23,26 +25,18 @@ export function AntigravityParticlesCanvas({
 }: AntigravityParticlesCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const particlesRef = useRef<AntigravityParticle[]>([]);
-  const isVisibleRef = useRef<boolean>(true);
+  const ambientParticlesRef = useRef<AmbientParticle[]>([]);
+  const trailParticlesRef = useRef<TrailParticle[]>([]);
 
   const pointerStateRef = useRef<PointerState>({
     x: -9999,
     y: -9999,
+    lastX: -9999,
+    lastY: -9999,
     isActive: false,
     vx: 0,
     vy: 0,
-  });
-
-  const smoothPointerRef = useRef<{ x: number; y: number }>({
-    x: -9999,
-    y: -9999,
-  });
-
-  const lastPointerPosRef = useRef<{ x: number; y: number; time: number }>({
-    x: 0,
-    y: 0,
-    time: 0,
+    speed: 0,
   });
 
   useEffect(() => {
@@ -52,204 +46,130 @@ export function AntigravityParticlesCanvas({
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
-    // Respeita acessibilidade de movimento reduzido
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    // Container que receberá os eventos do cursor (ou o parentElement por padrão)
-    const container = interactiveContainerRef?.current || canvas.parentElement;
+    const container = interactiveContainerRef?.current || canvas.parentElement || canvas;
 
     let width = 0;
     let height = 0;
     let dpr = 1;
 
     const setupDimensions = (w: number, h: number) => {
-      if (w <= 0 || h <= 0) return;
-      width = w;
-      height = h;
+      const validW = Math.max(200, Math.floor(w));
+      const validH = Math.max(100, Math.floor(h));
+      width = validW;
+      height = validH;
       dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
+      canvas.width = Math.floor(validW * dpr);
+      canvas.height = Math.floor(validH * dpr);
+      canvas.style.width = `${validW}px`;
+      canvas.style.height = `${validH}px`;
 
-      // Densidade generosa de partículas verde esmeralda (180 a 260)
-      const count = particleCount ?? Math.min(260, Math.max(160, Math.floor(w * 0.22)));
-
-      if (particlesRef.current.length === 0) {
-        particlesRef.current = createParticles(count, width, height);
-      } else {
-        const scaleX = w / (canvas.dataset.prevWidth ? Number(canvas.dataset.prevWidth) : w);
-        const scaleY = h / (canvas.dataset.prevHeight ? Number(canvas.dataset.prevHeight) : h);
-        for (const p of particlesRef.current) {
-          p.x *= scaleX;
-          p.y *= scaleY;
-        }
+      const ambientCount = particleCount ?? Math.min(120, Math.max(60, Math.floor(validW * 0.1)));
+      if (ambientParticlesRef.current.length === 0) {
+        ambientParticlesRef.current = createAmbientParticles(ambientCount, width, height);
       }
-
-      canvas.dataset.prevWidth = String(w);
-      canvas.dataset.prevHeight = String(h);
     };
 
-    // 1. ResizeObserver para atualizar dimensões e densidade
+    // Inicializa dimensões imediatamente com bounding box atual ou fallback
+    const initialRect = container.getBoundingClientRect();
+    setupDimensions(initialRect.width || 850, initialRect.height || 180);
+
+    // 1. ResizeObserver para atualizar dimensões em tempo real
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width: entryW, height: entryH } = entry.contentRect;
-        setupDimensions(entryW, entryH);
-        if (prefersReducedMotion && ctx) {
-          renderStaticFrame();
+        if (entryW > 0 && entryH > 0) {
+          setupDimensions(entryW, entryH);
         }
       }
     });
 
-    if (container) {
-      resizeObserver.observe(container);
-    } else {
-      resizeObserver.observe(canvas);
-    }
+    resizeObserver.observe(container);
 
-    // 2. IntersectionObserver para suspender animação fora da tela (0% CPU)
-    const intersectionObserver = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          isVisibleRef.current = entry.isIntersecting;
-          if (entry.isIntersecting && !prefersReducedMotion && !animationFrameRef.current) {
-            lastTime = performance.now();
-            animationFrameRef.current = requestAnimationFrame(renderLoop);
-          } else if (!entry.isIntersecting && animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-            animationFrameRef.current = null;
-          }
-        }
-      },
-      { threshold: 0.05 }
-    );
-
-    if (container) {
-      intersectionObserver.observe(container);
-    }
-
-    // 3. Rastreamento contínuo e responsivo do cursor
+    // 2. Rastreamento universal do ponteiro com captura no container
     const handlePointerMove = (e: PointerEvent) => {
-      const targetElement = container || canvas;
-      const rect = targetElement.getBoundingClientRect();
+      const rect = container.getBoundingClientRect();
       const currentX = e.clientX - rect.left;
       const currentY = e.clientY - rect.top;
-      const now = performance.now();
 
-      const last = lastPointerPosRef.current;
-      const dt = Math.max(1, now - last.time);
-      const computedVx = ((currentX - last.x) / dt) * 14;
-      const computedVy = ((currentY - last.y) / dt) * 14;
+      // Verifica se está dentro ou muito próximo do card
+      const isInside =
+        e.clientX >= rect.left - 20 &&
+        e.clientX <= rect.right + 20 &&
+        e.clientY >= rect.top - 20 &&
+        e.clientY <= rect.bottom + 20;
 
-      pointerStateRef.current = {
-        x: currentX,
-        y: currentY,
-        isActive: true,
-        vx: Math.max(-18, Math.min(18, computedVx)),
-        vy: Math.max(-18, Math.min(18, computedVy)),
-      };
-
-      if (smoothPointerRef.current.x === -9999) {
-        smoothPointerRef.current = { x: currentX, y: currentY };
-      }
-
-      lastPointerPosRef.current = {
-        x: currentX,
-        y: currentY,
-        time: now,
-      };
-    };
-
-    const handlePointerLeave = () => {
-      pointerStateRef.current = {
-        x: -9999,
-        y: -9999,
-        isActive: false,
-        vx: 0,
-        vy: 0,
-      };
-      smoothPointerRef.current = {
-        x: -9999,
-        y: -9999,
-      };
-    };
-
-    if (container) {
-      container.addEventListener("pointermove", handlePointerMove, {
-        passive: true,
-        capture: true,
-      });
-      container.addEventListener("pointerleave", handlePointerLeave, {
-        passive: true,
-        capture: true,
-      });
-    }
-
-    // 4. Renderização estática para acessibilidade
-    const renderStaticFrame = () => {
-      if (!ctx || width <= 0 || height <= 0) return;
-      ctx.save();
-      ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, width, height);
-      for (const p of particlesRef.current) {
-        drawParticle(ctx, p);
-      }
-      ctx.restore();
-    };
-
-    // 5. Loop de animação contínua a 60fps
-    let lastTime = performance.now();
-
-    const renderLoop = (time: number) => {
-      if (!isVisibleRef.current) {
-        animationFrameRef.current = null;
+      if (!isInside) {
+        pointerStateRef.current.isActive = false;
         return;
       }
 
-      const deltaTime = Math.min(32, time - lastTime);
+      const p = pointerStateRef.current;
+      const prevX = p.isActive && p.x > -500 ? p.x : currentX;
+      const prevY = p.isActive && p.y > -500 ? p.y : currentY;
+
+      const vx = currentX - prevX;
+      const vy = currentY - prevY;
+      const speed = Math.hypot(vx, vy);
+
+      p.lastX = prevX;
+      p.lastY = prevY;
+      p.x = currentX;
+      p.y = currentY;
+      p.vx = vx;
+      p.vy = vy;
+      p.speed = speed;
+      p.isActive = true;
+
+      // Emite fita densa de partículas que segue o traço do mouse em tempo real
+      emitRibbonParticles(trailParticlesRef.current, p);
+    };
+
+    const handlePointerLeave = () => {
+      pointerStateRef.current.isActive = false;
+    };
+
+    container.addEventListener("pointermove", handlePointerMove, { passive: true, capture: true });
+    container.addEventListener("pointerleave", handlePointerLeave, {
+      passive: true,
+      capture: true,
+    });
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+
+    // 3. Loop de animação contínua a 60fps sem travas
+    let lastTime = performance.now();
+    let frameCount = 0;
+
+    const renderLoop = (time: number) => {
+      frameCount++;
+      const _deltaTime = Math.min(32, time - lastTime);
       lastTime = time;
 
-      if (ctx && width > 0 && height > 0) {
+      if (ctx && width > 0 && height > 0 && !document.hidden) {
         ctx.save();
         ctx.scale(dpr, dpr);
-        ctx.clearRect(0, 0, width, height);
 
         const pointer = pointerStateRef.current;
-        const particles = particlesRef.current;
 
-        // Efeito de halo/aura esmeralda translúcida que acompanha o mouse
-        if (pointer.isActive) {
-          const smooth = smoothPointerRef.current;
-          smooth.x += (pointer.x - smooth.x) * 0.25;
-          smooth.y += (pointer.y - smooth.y) * 0.25;
-
-          const aura = ctx.createRadialGradient(smooth.x, smooth.y, 0, smooth.x, smooth.y, 160);
-          aura.addColorStop(0, "rgba(52, 211, 153, 0.12)");
-          aura.addColorStop(0.4, "rgba(16, 185, 129, 0.05)");
-          aura.addColorStop(1, "rgba(16, 185, 129, 0)");
-          ctx.fillStyle = aura;
-          ctx.beginPath();
-          ctx.arc(smooth.x, smooth.y, 160, 0, Math.PI * 2);
-          ctx.fill();
+        // Se o mouse estiver se movendo, emite partículas contínuas
+        if (pointer.isActive && pointer.speed > 0.5) {
+          emitRibbonParticles(trailParticlesRef.current, pointer);
+          pointer.speed *= 0.85;
         }
 
-        // Teias de energia esmeralda entre partículas vizinhas e o cursor
-        drawConnections(ctx, particles, pointer, 52);
+        // Atualiza física da fita de partículas e partículas ambientes
+        trailParticlesRef.current = updateRibbonParticles(trailParticlesRef.current, frameCount);
+        updateAmbientParticles(ambientParticlesRef.current, pointer, width, height);
 
-        // Atualização e renderização das partículas verde esmeralda
-        for (let i = 0; i < particles.length; i++) {
-          particles[i] = updateParticle(particles[i], pointer, width, height, deltaTime);
-          drawParticle(ctx, particles[i]);
-        }
-
-        // Amortece velocidade residual do ponteiro
-        if (pointer.vx !== undefined && pointer.vy !== undefined) {
-          pointer.vx *= 0.88;
-          pointer.vy *= 0.88;
-        }
+        // Renderiza tudo no canvas com alto contraste e nitidez
+        renderParticlesFrame(
+          ctx,
+          width,
+          height,
+          ambientParticlesRef.current,
+          trailParticlesRef.current,
+          pointer
+        );
 
         ctx.restore();
       }
@@ -257,30 +177,20 @@ export function AntigravityParticlesCanvas({
       animationFrameRef.current = requestAnimationFrame(renderLoop);
     };
 
-    if (!prefersReducedMotion) {
-      animationFrameRef.current = requestAnimationFrame(renderLoop);
-    } else {
-      renderStaticFrame();
-    }
+    animationFrameRef.current = requestAnimationFrame(renderLoop);
 
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      if (container) {
-        container.removeEventListener("pointermove", handlePointerMove, {
-          capture: true,
-        } as EventListenerOptions);
-        container.removeEventListener("pointerleave", handlePointerLeave, {
-          capture: true,
-        } as EventListenerOptions);
-        resizeObserver.unobserve(container);
-        intersectionObserver.unobserve(container);
-      } else {
-        resizeObserver.unobserve(canvas);
-      }
+      container.removeEventListener("pointermove", handlePointerMove, {
+        capture: true,
+      } as EventListenerOptions);
+      container.removeEventListener("pointerleave", handlePointerLeave, {
+        capture: true,
+      } as EventListenerOptions);
+      window.removeEventListener("pointermove", handlePointerMove);
       resizeObserver.disconnect();
-      intersectionObserver.disconnect();
     };
   }, [particleCount, interactiveContainerRef]);
 
