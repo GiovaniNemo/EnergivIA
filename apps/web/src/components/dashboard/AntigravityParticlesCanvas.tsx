@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import {
   createParticles,
+  drawConnections,
   drawParticle,
   updateParticle,
   type AntigravityParticle,
@@ -24,12 +25,18 @@ export function AntigravityParticlesCanvas({
   const animationFrameRef = useRef<number | null>(null);
   const particlesRef = useRef<AntigravityParticle[]>([]);
   const isVisibleRef = useRef<boolean>(true);
+
   const pointerStateRef = useRef<PointerState>({
     x: -9999,
     y: -9999,
     isActive: false,
     vx: 0,
     vy: 0,
+  });
+
+  const smoothPointerRef = useRef<{ x: number; y: number }>({
+    x: -9999,
+    y: -9999,
   });
 
   const lastPointerPosRef = useRef<{ x: number; y: number; time: number }>({
@@ -68,20 +75,17 @@ export function AntigravityParticlesCanvas({
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
 
-      // Inicializa ou reescala a densidade de partículas
-      const count = particleCount ?? Math.min(90, Math.max(45, Math.floor(w * 0.08)));
+      // Densidade generosa de partículas verde esmeralda (180 a 260)
+      const count = particleCount ?? Math.min(260, Math.max(160, Math.floor(w * 0.22)));
 
       if (particlesRef.current.length === 0) {
         particlesRef.current = createParticles(count, width, height);
       } else {
-        // Re-ancora as partículas existentes aos novos limites
         const scaleX = w / (canvas.dataset.prevWidth ? Number(canvas.dataset.prevWidth) : w);
         const scaleY = h / (canvas.dataset.prevHeight ? Number(canvas.dataset.prevHeight) : h);
         for (const p of particlesRef.current) {
           p.x *= scaleX;
           p.y *= scaleY;
-          p.baseX *= scaleX;
-          p.baseY *= scaleY;
         }
       }
 
@@ -89,7 +93,7 @@ export function AntigravityParticlesCanvas({
       canvas.dataset.prevHeight = String(h);
     };
 
-    // 1. ResizeObserver para atualizar dimensões do canvas
+    // 1. ResizeObserver para atualizar dimensões e densidade
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width: entryW, height: entryH } = entry.contentRect;
@@ -127,7 +131,7 @@ export function AntigravityParticlesCanvas({
       intersectionObserver.observe(container);
     }
 
-    // 3. Rastreamento fluido do cursor do mouse
+    // 3. Rastreamento contínuo e responsivo do cursor
     const handlePointerMove = (e: PointerEvent) => {
       const targetElement = container || canvas;
       const rect = targetElement.getBoundingClientRect();
@@ -137,16 +141,20 @@ export function AntigravityParticlesCanvas({
 
       const last = lastPointerPosRef.current;
       const dt = Math.max(1, now - last.time);
-      const computedVx = ((currentX - last.x) / dt) * 12;
-      const computedVy = ((currentY - last.y) / dt) * 12;
+      const computedVx = ((currentX - last.x) / dt) * 14;
+      const computedVy = ((currentY - last.y) / dt) * 14;
 
       pointerStateRef.current = {
         x: currentX,
         y: currentY,
         isActive: true,
-        vx: Math.max(-15, Math.min(15, computedVx)),
-        vy: Math.max(-15, Math.min(15, computedVy)),
+        vx: Math.max(-18, Math.min(18, computedVx)),
+        vy: Math.max(-18, Math.min(18, computedVy)),
       };
+
+      if (smoothPointerRef.current.x === -9999) {
+        smoothPointerRef.current = { x: currentX, y: currentY };
+      }
 
       lastPointerPosRef.current = {
         x: currentX,
@@ -163,14 +171,24 @@ export function AntigravityParticlesCanvas({
         vx: 0,
         vy: 0,
       };
+      smoothPointerRef.current = {
+        x: -9999,
+        y: -9999,
+      };
     };
 
     if (container) {
-      container.addEventListener("pointermove", handlePointerMove, { passive: true });
-      container.addEventListener("pointerleave", handlePointerLeave, { passive: true });
+      container.addEventListener("pointermove", handlePointerMove, {
+        passive: true,
+        capture: true,
+      });
+      container.addEventListener("pointerleave", handlePointerLeave, {
+        passive: true,
+        capture: true,
+      });
     }
 
-    // 4. Renderização estática (para acessibilidade / prefers-reduced-motion)
+    // 4. Renderização estática para acessibilidade
     const renderStaticFrame = () => {
       if (!ctx || width <= 0 || height <= 0) return;
       ctx.save();
@@ -202,15 +220,35 @@ export function AntigravityParticlesCanvas({
         const pointer = pointerStateRef.current;
         const particles = particlesRef.current;
 
+        // Efeito de halo/aura esmeralda translúcida que acompanha o mouse
+        if (pointer.isActive) {
+          const smooth = smoothPointerRef.current;
+          smooth.x += (pointer.x - smooth.x) * 0.25;
+          smooth.y += (pointer.y - smooth.y) * 0.25;
+
+          const aura = ctx.createRadialGradient(smooth.x, smooth.y, 0, smooth.x, smooth.y, 160);
+          aura.addColorStop(0, "rgba(52, 211, 153, 0.12)");
+          aura.addColorStop(0.4, "rgba(16, 185, 129, 0.05)");
+          aura.addColorStop(1, "rgba(16, 185, 129, 0)");
+          ctx.fillStyle = aura;
+          ctx.beginPath();
+          ctx.arc(smooth.x, smooth.y, 160, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Teias de energia esmeralda entre partículas vizinhas e o cursor
+        drawConnections(ctx, particles, pointer, 52);
+
+        // Atualização e renderização das partículas verde esmeralda
         for (let i = 0; i < particles.length; i++) {
           particles[i] = updateParticle(particles[i], pointer, width, height, deltaTime);
           drawParticle(ctx, particles[i]);
         }
 
-        // Amortece o vetor de velocidade residual do cursor
+        // Amortece velocidade residual do ponteiro
         if (pointer.vx !== undefined && pointer.vy !== undefined) {
-          pointer.vx *= 0.85;
-          pointer.vy *= 0.85;
+          pointer.vx *= 0.88;
+          pointer.vy *= 0.88;
         }
 
         ctx.restore();
@@ -230,8 +268,12 @@ export function AntigravityParticlesCanvas({
         cancelAnimationFrame(animationFrameRef.current);
       }
       if (container) {
-        container.removeEventListener("pointermove", handlePointerMove);
-        container.removeEventListener("pointerleave", handlePointerLeave);
+        container.removeEventListener("pointermove", handlePointerMove, {
+          capture: true,
+        } as EventListenerOptions);
+        container.removeEventListener("pointerleave", handlePointerLeave, {
+          capture: true,
+        } as EventListenerOptions);
         resizeObserver.unobserve(container);
         intersectionObserver.unobserve(container);
       } else {

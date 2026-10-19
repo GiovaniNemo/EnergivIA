@@ -173,6 +173,7 @@ export default function DashboardPage(): JSX.Element {
   const [isDragging, setIsDragging] = useState(false);
   const [newProposalOpen, setNewProposalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const uploadHeroRef = useRef<HTMLElement | null>(null);
 
   const handleFile = useCallback((file: File | null) => {
     if (!file) return;
@@ -456,8 +457,14 @@ export default function DashboardPage(): JSX.Element {
       </header>
 
       {}
-      <section className="upload-hero relative grid grid-cols-1 overflow-hidden rounded-2xl border shadow-[0_1px_2px_rgba(0,0,0,0.05)] md:grid-cols-[1fr_320px]">
-        <AntigravityParticlesCanvas className="pointer-events-none absolute inset-0 z-[1] h-full w-full" />
+      <section
+        ref={uploadHeroRef}
+        className="upload-hero relative grid grid-cols-1 overflow-hidden rounded-2xl border shadow-[0_1px_2px_rgba(0,0,0,0.05)] md:grid-cols-[1fr_320px]"
+      >
+        <AntigravityParticlesCanvas
+          interactiveContainerRef={uploadHeroRef}
+          className="pointer-events-none absolute inset-0 z-[1] h-full w-full"
+        />
         <div
           role="button"
           tabIndex={0}

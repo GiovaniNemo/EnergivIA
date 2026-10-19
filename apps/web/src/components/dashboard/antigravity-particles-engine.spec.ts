@@ -7,163 +7,122 @@ import {
   type PointerState,
 } from "./antigravity-particles-engine";
 
-describe("antigravity-particles-engine", () => {
-  it("deve criar a quantidade especificada de partículas respeitando dimensões e paleta", () => {
+describe("antigravity-particles-engine (verde esmeralda dinâmico)", () => {
+  it("deve criar partículas estritamente na paleta verde esmeralda EnergivIA", () => {
     const width = 800;
     const height = 180;
-    const count = 50;
+    const count = 180;
     const particles = createParticles(count, width, height);
 
     expect(particles).toHaveLength(count);
 
-    let dashes = 0;
-    let dots = 0;
+    // Todas as cores devem ser tons de verde esmeralda
+    const emeraldPrefixes = ["#10B981", "#34D399", "#059669", "#6EE7B7", "#A7F3D0", "#047857"];
 
     for (const p of particles) {
-      expect(p.x).toBeGreaterThanOrEqual(0);
-      expect(p.x).toBeLessThanOrEqual(width);
-      expect(p.y).toBeGreaterThanOrEqual(0);
-      expect(p.y).toBeLessThanOrEqual(height);
+      expect(emeraldPrefixes).toContain(p.color);
       expect(ANTIGRAVITY_PALETTE).toContain(p.color);
-
-      if (p.shape === "dash") {
-        dashes++;
-        expect(p.length).toBeGreaterThanOrEqual(4);
-        expect(p.length).toBeLessThanOrEqual(14);
-      } else {
-        dots++;
-        expect(p.radius).toBeGreaterThanOrEqual(0.8);
-        expect(p.radius).toBeLessThanOrEqual(2.5);
-      }
+      expect(p.alpha).toBeGreaterThan(0.1);
+      // Nunca nasce com velocidade 0 (sempre dinâmico)
+      const initialSpeed = Math.hypot(p.vx, p.vy);
+      expect(initialSpeed).toBeGreaterThan(0.2);
     }
-
-    // Proporção aproximada esperada: maioria traços (~75%) e minoria pontos (~25%)
-    expect(dashes).toBeGreaterThan(dots);
   });
 
-  it("deve repelir a partícula quando o cursor do mouse estiver dentro do raio de influência", () => {
+  it("deve atrair e direcionar a partícula na direção do cursor quando o mouse passa ('vai junto')", () => {
     const p: AntigravityParticle = {
       id: 1,
       x: 100,
       y: 100,
-      baseX: 100,
-      baseY: 100,
       vx: 0,
       vy: 0,
       angle: 0,
       angularVelocity: 0,
-      shape: "dash",
-      length: 8,
-      thickness: 1.6,
-      radius: 1,
+      shape: "dot",
+      length: 0,
+      thickness: 0,
+      radius: 1.5,
       color: "#10B981",
       alpha: 0.5,
-      driftAngle: 0,
-      driftSpeed: 0.3,
+      baseAlpha: 0.5,
     };
 
-    // Cursor a 30px à esquerda da partícula
+    // Cursor se movendo à direita da partícula (em x=150) com velocidade para a direita
     const pointer: PointerState = {
-      x: 70,
+      x: 150,
       y: 100,
       isActive: true,
-      vx: 2,
+      vx: 4,
       vy: 0,
     };
 
     const updated = updateParticle(p, pointer, 800, 200, 16);
 
-    // O cursor está à esquerda (x=70), a partícula está em x=100.
-    // A repulsão deve empurrar a partícula ainda mais para a direita (vx > 0, x > 100)
+    // Como o cursor está em x=150 (à frente), a atração e o momentum puxam a partícula para a direita (vx > 0)
     expect(updated.vx).toBeGreaterThan(0);
     expect(updated.x).toBeGreaterThan(100);
+    // Alpha/brilho aumenta com a proximidade do mouse
+    expect(updated.alpha).toBeGreaterThan(0.5);
   });
 
-  it("não deve sofrer repulsão quando o cursor estiver fora do raio de influência ou inativo", () => {
-    const p: AntigravityParticle = {
+  it("deve manter movimento contínuo dinâmico sem ficar estático mesmo sem o mouse", () => {
+    let p: AntigravityParticle = {
       id: 2,
       x: 100,
       y: 100,
-      baseX: 100,
-      baseY: 100,
-      vx: 0,
-      vy: 0,
+      vx: 0.01, // quase parando
+      vy: 0.01,
       angle: 0,
-      angularVelocity: 0,
+      angularVelocity: 0.01,
       shape: "dash",
-      length: 8,
-      thickness: 1.6,
-      radius: 1,
-      color: "#06B6D4",
+      length: 6,
+      thickness: 1.2,
+      radius: 0,
+      color: "#34D399",
       alpha: 0.5,
-      driftAngle: 0,
-      driftSpeed: 0.3,
-    };
-
-    // Cursor a 400px de distância (bem fora do raio de 140px)
-    const pointerFar: PointerState = {
-      x: 500,
-      y: 500,
-      isActive: true,
-      vx: 0,
-      vy: 0,
-    };
-
-    const updatedFar = updateParticle(p, pointerFar, 800, 200, 16);
-
-    // Sem repulsão forte, velocidade deve ficar restrita à suave deriva orgânica
-    expect(Math.abs(updatedFar.vx)).toBeLessThan(1);
-    expect(Math.abs(updatedFar.vy)).toBeLessThan(1);
-
-    // Cursor inativo
-    const pointerInactive: PointerState = {
-      x: 105,
-      y: 105,
-      isActive: false,
-      vx: 0,
-      vy: 0,
-    };
-
-    const updatedInactive = updateParticle(p, pointerInactive, 800, 200, 16);
-    expect(Math.abs(updatedInactive.vx)).toBeLessThan(1);
-  });
-
-  it("deve amortecer velocidades altas ao longo do tempo (spring & damping)", () => {
-    let p: AntigravityParticle = {
-      id: 3,
-      x: 150,
-      y: 100,
-      baseX: 100,
-      baseY: 100,
-      vx: 12, // velocidade inicial alta após repulsão
-      vy: 8,
-      angle: 0,
-      angularVelocity: 0.1,
-      shape: "dash",
-      length: 8,
-      thickness: 1.6,
-      radius: 1,
-      color: "#F59E0B",
-      alpha: 0.5,
-      driftAngle: 0,
-      driftSpeed: 0.3,
+      baseAlpha: 0.5,
     };
 
     const pointerInactive: PointerState = {
       x: 0,
       y: 0,
       isActive: false,
-      vx: 0,
-      vy: 0,
     };
 
-    // Simula 20 frames de amortecimento e retorno por mola
-    for (let frame = 0; frame < 20; frame++) {
-      p = updateParticle(p, pointerInactive, 800, 200, 16);
-    }
+    p = updateParticle(p, pointerInactive, 800, 200, 16);
 
-    // A velocidade residual deve ser significativamente menor que a inicial (amortecimento)
-    expect(Math.abs(p.vx)).toBeLessThan(6);
-    expect(Math.abs(p.vy)).toBeLessThan(4);
+    // O motor impõe velocidade mínima para nunca congelar
+    const speed = Math.hypot(p.vx, p.vy);
+    expect(speed).toBeGreaterThanOrEqual(0.25);
+  });
+
+  it("deve fazer wrap contínuo suave nas bordas para as partículas continuarem circulando", () => {
+    const p: AntigravityParticle = {
+      id: 3,
+      x: 820, // saiu pela direita (width = 800)
+      y: 100,
+      vx: 2,
+      vy: 0,
+      angle: 0,
+      angularVelocity: 0,
+      shape: "dot",
+      length: 0,
+      thickness: 0,
+      radius: 1.5,
+      color: "#6EE7B7",
+      alpha: 0.5,
+      baseAlpha: 0.5,
+    };
+
+    const pointerInactive: PointerState = {
+      x: 0,
+      y: 0,
+      isActive: false,
+    };
+
+    const updated = updateParticle(p, pointerInactive, 800, 200, 16);
+
+    // Reaparece na borda esquerda para continuar circulando infinitamente
+    expect(updated.x).toBeLessThan(0);
   });
 });
