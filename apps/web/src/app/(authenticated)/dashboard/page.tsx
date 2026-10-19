@@ -37,6 +37,7 @@ import {
 } from "@/lib/leads-api";
 import { BillQuickStartDialog } from "@/components/dashboard/bill-quick-start-dialog";
 import { NewProposalDialog } from "@/components/dashboard/new-proposal-dialog";
+import { AntigravityParticlesCanvas } from "@/components/dashboard/AntigravityParticlesCanvas";
 
 const ACCEPTED_BILL_TYPES =
   ".pdf,.jpg,.jpeg,.png,.heic,.webp,application/pdf,image/jpeg,image/png,image/webp,image/heic";
@@ -456,6 +457,7 @@ export default function DashboardPage(): JSX.Element {
 
       {}
       <section className="upload-hero relative grid grid-cols-1 overflow-hidden rounded-2xl border shadow-[0_1px_2px_rgba(0,0,0,0.05)] md:grid-cols-[1fr_320px]">
+        <AntigravityParticlesCanvas className="pointer-events-none absolute inset-0 z-[1] h-full w-full" />
         <div
           role="button"
           tabIndex={0}
