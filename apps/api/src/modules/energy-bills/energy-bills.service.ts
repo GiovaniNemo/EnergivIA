@@ -691,10 +691,11 @@ export class EnergyBillsService {
 
       if (ext === ".txt") {
         rawText = await response.text();
-        if (this.genAI) {
-          extractedData = await this.extractDataWithGemini(rawText, tenantId, billId);
-        } else if (openAiApiKey) {
+        if (openAiApiKey) {
           extractedData = await this.extractDataWithOpenAI(rawText, openAiApiKey, tenantId, billId);
+        }
+        if (!extractedData && this.genAI) {
+          extractedData = await this.extractDataWithGemini(rawText, tenantId, billId);
         }
       } else if (ext === ".pdf") {
         try {
@@ -706,18 +707,19 @@ export class EnergyBillsService {
           this.logger.warn(`Erro leitura PDF com pdfParse: ${String(pdfErr)}`);
         }
 
-        // Se o PDF tem camada de texto digital, envia direto para a IA interpretar (Gemini primeiro)
+        // Se o PDF tem camada de texto digital, envia direto para a IA interpretar (OpenAI primeiro, Gemini fallback)
         if (rawText && rawText.trim().length >= 30) {
-          if (this.genAI) {
-            extractedData = await this.extractDataWithGemini(rawText, tenantId, billId);
-            if (extractedData) extractionEngine = "AI";
-          } else if (openAiApiKey) {
+          if (openAiApiKey) {
             extractedData = await this.extractDataWithOpenAI(
               rawText,
               openAiApiKey,
               tenantId,
               billId
             );
+            if (extractedData) extractionEngine = "AI";
+          }
+          if (!extractedData && this.genAI) {
+            extractedData = await this.extractDataWithGemini(rawText, tenantId, billId);
             if (extractedData) extractionEngine = "AI";
           }
         }
@@ -727,15 +729,16 @@ export class EnergyBillsService {
           const pdfBuffer = Buffer.from(arrayBuffer);
           const ocrText = await this.runOcrOnBuffer(pdfBuffer);
           if (ocrText && ocrText.trim().length >= 30) {
-            if (this.genAI) {
-              extractedData = await this.extractDataWithGemini(ocrText, tenantId, billId);
-            } else if (openAiApiKey) {
+            if (openAiApiKey) {
               extractedData = await this.extractDataWithOpenAI(
                 ocrText,
                 openAiApiKey,
                 tenantId,
                 billId
               );
+            }
+            if (!extractedData && this.genAI) {
+              extractedData = await this.extractDataWithGemini(ocrText, tenantId, billId);
             }
           }
         }
@@ -746,10 +749,12 @@ export class EnergyBillsService {
           const buf = Buffer.from(arrayBuffer);
           const base64Image = buf.toString("base64");
           const mimeType = ext === ".png" ? "image/png" : "image/jpeg";
-          if (this.genAI) {
-            extractedData = await this.extractVisionWithGemini(
+          // 1. OpenAI Vision (ChatGPT prioridade primária)
+          if (openAiApiKey) {
+            extractedData = await this.extractVisionWithOpenAI(
               base64Image,
               mimeType,
+              openAiApiKey,
               tenantId,
               billId
             );
@@ -757,11 +762,11 @@ export class EnergyBillsService {
               extractionEngine = "VISION_AI";
             }
           }
-          if (!extractedData && openAiApiKey) {
-            extractedData = await this.extractVisionWithOpenAI(
+          // 2. Gemini Vision (Fallback se OpenAI falhar ou não configurado)
+          if (!extractedData && this.genAI) {
+            extractedData = await this.extractVisionWithGemini(
               base64Image,
               mimeType,
-              openAiApiKey,
               tenantId,
               billId
             );

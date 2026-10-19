@@ -290,10 +290,55 @@ describe("WhatsappBotService - Gemini Audio & AI Priority Suite", () => {
   });
 
   describe("Priorização de IA em answerFreeformQuestion", () => {
-    it("deve priorizar Google Gemini para responder dúvidas técnicas e de catálogo sem gastar créditos OpenAI", async () => {
+    it("deve priorizar OpenAI (ChatGPT) para responder dúvidas técnicas e de catálogo", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content:
+                  "Temos inversores Growatt e Deye monofásicos e trifásicos à pronta entrega.",
+              },
+            },
+          ],
+          usage: {
+            prompt_tokens: 80,
+            completion_tokens: 18,
+            total_tokens: 98,
+          },
+        }),
+      });
+      global.fetch = mockFetch;
+
+      const reply = await (service as any).answerFreeformQuestion({
+        userQuestion: "Vocês têm inversor de 5kW em estoque?",
+        organizationId: "tenant-1",
+      });
+
+      expect(reply).toBe(
+        "Temos inversores Growatt e Deye monofásicos e trifásicos à pronta entrega."
+      );
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toBe("https://api.openai.com/v1/chat/completions");
+      expect(JSON.parse(options.body).model).toBe("gpt-4o-mini");
+      expect(mockAiUsage.logUsage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          feature: AiFeature.WHATSAPP_BOT,
+          model: "gpt-4o-mini",
+        })
+      );
+      // Gemini não deve ser chamado quando OpenAI responde com sucesso
+      expect(mockGenAI.getGenerativeModel).not.toHaveBeenCalled();
+    });
+
+    it("deve fazer fallback para Gemini se a chamada OpenAI falhar", async () => {
+      global.fetch = vi.fn().mockRejectedValue(new Error("OpenAI API rate limit 429"));
+
       const mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => "Temos inversores Growatt e Deye monofásicos e trifásicos à pronta entrega.",
+          text: () => "Resposta via fallback Gemini sobre inversores.",
           usageMetadata: {
             promptTokenCount: 100,
             candidatesTokenCount: 20,
@@ -307,13 +352,11 @@ describe("WhatsappBotService - Gemini Audio & AI Priority Suite", () => {
       });
 
       const reply = await (service as any).answerFreeformQuestion({
-        userQuestion: "Vocês têm inversor de 5kW em estoque?",
+        userQuestion: "Vocês têm inversor de 5kW?",
         organizationId: "tenant-1",
       });
 
-      expect(reply).toBe(
-        "Temos inversores Growatt e Deye monofásicos e trifásicos à pronta entrega."
-      );
+      expect(reply).toBe("Resposta via fallback Gemini sobre inversores.");
       expect(mockGenAI.getGenerativeModel).toHaveBeenCalledWith({ model: "gemini-2.0-flash" });
       expect(mockAiUsage.logUsage).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -325,23 +368,65 @@ describe("WhatsappBotService - Gemini Audio & AI Priority Suite", () => {
   });
 
   describe("Priorização de IA em extractFromMediaImage", () => {
-    it("deve utilizar Gemini Vision em primeiro lugar para fotos de faturas", async () => {
+    it("deve priorizar OpenAI Vision para fotos de faturas de energia", async () => {
       mockWhatsappCloud.downloadWhatsappMedia.mockResolvedValue({
         buffer: Buffer.from("imagem-fatura-teste"),
         mimeType: "image/jpeg",
       });
 
+      const spyOpenAIVision = vi.spyOn(service as any, "extractImageWithOpenAI").mockResolvedValue({
+        data: {
+          nome_cliente: "Carlos Silva",
+          distribuidora: "Copel",
+          cidade: "Curitiba",
+          uf: "PR",
+          consumo_mes_atual_kwh: 650,
+          tipo_conexao: "Bifásico",
+          historico_consumo: [{ mes_ano: "Jan/26", consumo_kwh: 650 }],
+        },
+        exactAverageKwh: 650,
+        totalSumKwh: 650,
+        monthCount: 1,
+        isValidForSizing: true,
+        isLegible: true,
+        formattedSummary: "650 kWh",
+      });
+
+      const result = await (service as any).extractFromMediaImage("img-media-1");
+
+      expect(result).toBeDefined();
+      expect(result.isValidForSizing).toBe(true);
+      expect(result.exactAverageKwh).toBe(650);
+      expect(spyOpenAIVision).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        "image/jpeg",
+        "fake-openai-key"
+      );
+      // Gemini não é chamado se OpenAI sucedeu
+      expect(mockGenAI.getGenerativeModel).not.toHaveBeenCalled();
+    });
+
+    it("deve fazer fallback para Gemini Vision se OpenAI Vision falhar", async () => {
+      mockWhatsappCloud.downloadWhatsappMedia.mockResolvedValue({
+        buffer: Buffer.from("imagem-fatura-teste"),
+        mimeType: "image/jpeg",
+      });
+
+      vi.spyOn(service as any, "extractImageWithOpenAI").mockRejectedValue(
+        new Error("OpenAI Vision error")
+      );
+
       const mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
           text: () =>
             JSON.stringify({
-              nome_cliente: "Carlos Silva",
-              distribuidora: "Copel",
-              cidade: "Curitiba",
-              uf: "PR",
-              consumo_mes_atual_kwh: 650,
-              tipo_conexao: "Bifásico",
-              historico_consumo: [{ mes_ano: "Jan/26", consumo_kwh: 650 }],
+              nome_cliente: "Fallback Cliente",
+              distribuidora: "Enel",
+              cidade: "São Paulo",
+              uf: "SP",
+              consumo_mes_atual_kwh: 400,
+              tipo_conexao: "Monofásico",
+              historico_consumo: [{ mes_ano: "Fev/26", consumo_kwh: 400 }],
             }),
         },
       });
@@ -354,7 +439,7 @@ describe("WhatsappBotService - Gemini Audio & AI Priority Suite", () => {
 
       expect(result).toBeDefined();
       expect(result.isValidForSizing).toBe(true);
-      expect(result.exactAverageKwh).toBe(650);
+      expect(result.exactAverageKwh).toBe(400);
       expect(mockGenAI.getGenerativeModel).toHaveBeenCalledWith({ model: "gemini-2.0-flash" });
     });
   });

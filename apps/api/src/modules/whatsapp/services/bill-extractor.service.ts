@@ -345,50 +345,7 @@ export class BillExtractorService {
   ): Promise<BillExtractionResult | null> {
     if (!pdfText || pdfText.trim().length === 0) return null;
 
-    // 1. Provedor Gemini (prioridade primária: gratuito e ultrarrápido)
-    if (this.genAI) {
-      const candidateModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
-
-      for (const modelName of candidateModels) {
-        const startTime = Date.now();
-        try {
-          const model = this.genAI.getGenerativeModel({ model: modelName });
-          const result = await model.generateContent(
-            `${BILL_EXTRACTION_SYSTEM_PROMPT}\n\nTexto da fatura:\n${pdfText}`
-          );
-          const latencyMs = Date.now() - startTime;
-          const usage = result.response.usageMetadata;
-
-          if (usage) {
-            void this.aiUsage.logUsage({
-              organizationId,
-              provider: "google",
-              feature: AiFeature.WHATSAPP_BOT,
-              model: modelName,
-              promptTokens: usage.promptTokenCount || 0,
-              completionTokens: usage.candidatesTokenCount || 0,
-              totalTokens: usage.totalTokenCount || 0,
-              latencyMs,
-              status: "SUCCESS",
-            });
-          }
-
-          const respText = result.response.text();
-          const clean = respText
-            .replace(/```json/g, "")
-            .replace(/```/g, "")
-            .trim();
-          const parsed = JSON.parse(clean) as ExtractedBillData;
-          return processExtractedBillData(parsed, pdfText);
-        } catch (geminiErr) {
-          this.logger.warn(
-            `Tentativa com ${modelName} falhou, tentando próximo modelo/OpenAI: ${String(geminiErr)}`
-          );
-        }
-      }
-    }
-
-    // 2. Provedor OpenAI (fallback de contingência se Gemini não configurado ou falhar)
+    // 1. Provedor OpenAI (prioridade primária solicitada pelo usuário)
     const openAiKey = this.config.get<string>("OPENAI_API_KEY");
     if (openAiKey) {
       const startTime = Date.now();
@@ -441,7 +398,50 @@ export class BillExtractorService {
           }
         }
       } catch (err) {
-        this.logger.warn(`Erro na extração OpenAI (fallback): ${String(err)}`);
+        this.logger.warn(`Erro na extração OpenAI, tentando fallback Gemini: ${String(err)}`);
+      }
+    }
+
+    // 2. Provedor Gemini (fallback entre modelos se OpenAI não configurado ou falhar)
+    if (this.genAI) {
+      const candidateModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
+
+      for (const modelName of candidateModels) {
+        const startTime = Date.now();
+        try {
+          const model = this.genAI.getGenerativeModel({ model: modelName });
+          const result = await model.generateContent(
+            `${BILL_EXTRACTION_SYSTEM_PROMPT}\n\nTexto da fatura:\n${pdfText}`
+          );
+          const latencyMs = Date.now() - startTime;
+          const usage = result.response.usageMetadata;
+
+          if (usage) {
+            void this.aiUsage.logUsage({
+              organizationId,
+              provider: "google",
+              feature: AiFeature.WHATSAPP_BOT,
+              model: modelName,
+              promptTokens: usage.promptTokenCount || 0,
+              completionTokens: usage.candidatesTokenCount || 0,
+              totalTokens: usage.totalTokenCount || 0,
+              latencyMs,
+              status: "SUCCESS",
+            });
+          }
+
+          const respText = result.response.text();
+          const clean = respText
+            .replace(/```json/g, "")
+            .replace(/```/g, "")
+            .trim();
+          const parsed = JSON.parse(clean) as ExtractedBillData;
+          return processExtractedBillData(parsed, pdfText);
+        } catch (geminiErr) {
+          this.logger.warn(
+            `Tentativa com ${modelName} falhou, tentando próximo modelo: ${String(geminiErr)}`
+          );
+        }
       }
     }
 

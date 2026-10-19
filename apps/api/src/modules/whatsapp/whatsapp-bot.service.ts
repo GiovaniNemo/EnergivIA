@@ -2208,7 +2208,24 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       const media = await this.whatsappCloud.downloadWhatsappMedia(mediaId);
       if (!media || !media.buffer) return null;
 
-      // 1. Visão Computacional Direta com Gemini (prioridade primária: gratuito e ultrarrápido)
+      // 1. Visão Computacional OpenAI (ChatGPT prioridade primária solicitada)
+      const openAiKey = this.config.get<string>("OPENAI_API_KEY");
+      if (openAiKey) {
+        try {
+          const fromVision = await this.extractImageWithOpenAI(
+            media.buffer,
+            media.mimeType || mimeType || "image/jpeg",
+            openAiKey
+          );
+          if (fromVision) return fromVision;
+        } catch (openAiErr) {
+          this.logger.warn(
+            `Tentativa OpenAI visão falhou, tentando fallback Gemini: ${String(openAiErr)}`
+          );
+        }
+      }
+
+      // 2. Fallback: Visão Computacional Gemini (se OpenAI falhar ou não configurado)
       if (this.genAI) {
         const candidateModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
         for (const modelName of candidateModels) {
@@ -2238,17 +2255,6 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
             );
           }
         }
-      }
-
-      // 2. Fallback: Visão Computacional OpenAI (se Gemini falhar ou não configurado)
-      const openAiKey = this.config.get<string>("OPENAI_API_KEY");
-      if (openAiKey) {
-        const fromVision = await this.extractImageWithOpenAI(
-          media.buffer,
-          media.mimeType || mimeType || "image/jpeg",
-          openAiKey
-        );
-        if (fromVision) return fromVision;
       }
 
       // 3. Fallback OCR Tesseract local se nenhuma API de IA de visão estiver disponível
@@ -3186,43 +3192,7 @@ REGRAS OBRIGATÓRIAS E INEGOCIÁVEIS:
 CONTEXTO DO CATÁLOGO:
 ${catalogContext}`;
 
-    // 1. Provedor Gemini (prioridade primária: gratuito e ultrarrápido)
-    if (this.genAI) {
-      const candidateModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
-      for (const modelName of candidateModels) {
-        const startTime = Date.now();
-        try {
-          const model = this.genAI.getGenerativeModel({ model: modelName });
-          const result = await model.generateContent([
-            systemPrompt,
-            `Pergunta do integrador: ${userQuestion}`,
-          ]);
-          const latencyMs = Date.now() - startTime;
-          const usage = result.response.usageMetadata;
-          if (usage) {
-            void this.aiUsage.logUsage({
-              organizationId,
-              provider: "google",
-              feature: AiFeature.WHATSAPP_BOT,
-              model: modelName,
-              promptTokens: usage.promptTokenCount || 0,
-              completionTokens: usage.candidatesTokenCount || 0,
-              totalTokens: usage.totalTokenCount || 0,
-              latencyMs,
-              status: "SUCCESS",
-            });
-          }
-          const text = result.response.text()?.trim();
-          if (text) return text;
-        } catch (geminiErr) {
-          this.logger.warn(
-            `Erro no Gemini (${modelName}) em answerFreeformQuestion: ${String(geminiErr)}`
-          );
-        }
-      }
-    }
-
-    // 2. Provedor OpenAI (fallback de contingência se Gemini falhar ou não configurado)
+    // 1. Provedor OpenAI (prioridade primária solicitada para o ChatGPT)
     if (openAiKey) {
       const startTime = Date.now();
       const model = "gpt-4o-mini";
@@ -3266,12 +3236,51 @@ ${catalogContext}`;
 
           const answer = json.choices?.[0]?.message?.content?.trim();
           if (answer) return answer;
+        } else {
+          this.logger.warn(
+            `OpenAI retornou status ${response.status} em answerFreeformQuestion, tentando fallback Gemini`
+          );
         }
       } catch (err) {
-        this.logger.error(
-          "Erro na resposta conversacional de IA no WhatsApp com OpenAI fallback:",
-          err
+        this.logger.warn(
+          `Erro na resposta OpenAI em answerFreeformQuestion, tentando fallback Gemini: ${String(err)}`
         );
+      }
+    }
+
+    // 2. Provedor Gemini (fallback de contingência se OpenAI falhar ou não configurado)
+    if (this.genAI) {
+      const candidateModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
+      for (const modelName of candidateModels) {
+        const startTime = Date.now();
+        try {
+          const model = this.genAI.getGenerativeModel({ model: modelName });
+          const result = await model.generateContent([
+            systemPrompt,
+            `Pergunta do integrador: ${userQuestion}`,
+          ]);
+          const latencyMs = Date.now() - startTime;
+          const usage = result.response.usageMetadata;
+          if (usage) {
+            void this.aiUsage.logUsage({
+              organizationId,
+              provider: "google",
+              feature: AiFeature.WHATSAPP_BOT,
+              model: modelName,
+              promptTokens: usage.promptTokenCount || 0,
+              completionTokens: usage.candidatesTokenCount || 0,
+              totalTokens: usage.totalTokenCount || 0,
+              latencyMs,
+              status: "SUCCESS",
+            });
+          }
+          const text = result.response.text()?.trim();
+          if (text) return text;
+        } catch (geminiErr) {
+          this.logger.warn(
+            `Erro no Gemini (${modelName}) em answerFreeformQuestion fallback: ${String(geminiErr)}`
+          );
+        }
       }
     }
 
