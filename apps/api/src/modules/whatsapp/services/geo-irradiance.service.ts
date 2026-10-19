@@ -62,6 +62,66 @@ export const STATE_NAME_TO_UF: Record<string, string> = {
   TOCANTINS: "TO",
 };
 
+export const UF_TO_STATE_TITLE: Record<string, string> = {
+  AC: "Acre",
+  AL: "Alagoas",
+  AP: "Amapá",
+  AM: "Amazonas",
+  BA: "Bahia",
+  CE: "Ceará",
+  DF: "Distrito Federal",
+  ES: "Espírito Santo",
+  GO: "Goiás",
+  MA: "Maranhão",
+  MT: "Mato Grosso",
+  MS: "Mato Grosso do Sul",
+  MG: "Minas Gerais",
+  PA: "Pará",
+  PB: "Paraíba",
+  PR: "Paraná",
+  PE: "Pernambuco",
+  PI: "Piauí",
+  RJ: "Rio de Janeiro",
+  RN: "Rio Grande do Norte",
+  RS: "Rio Grande do Sul",
+  RO: "Rondônia",
+  RR: "Roraima",
+  SC: "Santa Catarina",
+  SP: "São Paulo",
+  SE: "Sergipe",
+  TO: "Tocantins",
+};
+
+export const STATE_CAPITALS: Record<string, string> = {
+  AC: "Rio Branco",
+  AL: "Maceió",
+  AP: "Macapá",
+  AM: "Manaus",
+  BA: "Salvador",
+  CE: "Fortaleza",
+  DF: "Brasília",
+  ES: "Vitória",
+  GO: "Goiânia",
+  MA: "São Luís",
+  MT: "Cuiabá",
+  MS: "Campo Grande",
+  MG: "Belo Horizonte",
+  PA: "Belém",
+  PB: "João Pessoa",
+  PR: "Curitiba",
+  PE: "Recife",
+  PI: "Teresina",
+  RJ: "Rio de Janeiro",
+  RN: "Natal",
+  RS: "Porto Alegre",
+  RO: "Porto Velho",
+  RR: "Boa Vista",
+  SC: "Florianópolis",
+  SP: "São Paulo",
+  SE: "Aracaju",
+  TO: "Palmas",
+};
+
 export const UF_FALLBACK: Record<string, number> = {
   SP: 4.8,
   PR: 4.9,
@@ -156,11 +216,21 @@ export function parseLocationString(input: string): { city: string; uf: string }
   return { city: raw, uf };
 }
 
+export interface MunicipalityCandidate {
+  city: string;
+  uf: string;
+  hsp: number;
+  stateName?: string;
+  isCapital?: boolean;
+}
+
 export interface HspLookupResult {
   hsp: number;
   city: string;
   uf: string;
   exact: boolean;
+  ambiguous?: boolean;
+  candidates?: MunicipalityCandidate[];
 }
 
 export function isLocationInput(input: string): boolean {
@@ -242,6 +312,7 @@ export class GeoIrradianceService {
           city: entry.city,
           uf: entry.uf,
           exact: true,
+          ambiguous: false,
         };
       }
     }
@@ -258,16 +329,54 @@ export class GeoIrradianceService {
             city: matchWithUf.city,
             uf: matchWithUf.uf,
             exact: true,
+            ambiguous: false,
           };
         }
       }
-      // Se não informou UF, usa a cidade encontrada (ex: Cuiabá -> MT)
-      const bestMatch = cityMatches[0]!;
+
+      // Se a cidade só existe em UM único estado no Brasil:
+      if (cityMatches.length === 1) {
+        const singleMatch = cityMatches[0]!;
+        return {
+          hsp: singleMatch.hsp,
+          city: singleMatch.city,
+          uf: singleMatch.uf,
+          exact: true,
+          ambiguous: false,
+        };
+      }
+
+      // Se a cidade existe em MAIS DE UM estado no Brasil e a UF não foi informada (ou não bateu):
+      // Ambiguidade detectada! Lista todos os estados onde o município existe, priorizando capitais
+      const sortedCandidates: MunicipalityCandidate[] = [...cityMatches]
+        .map((m) => {
+          const isCapital =
+            STATE_CAPITALS[m.uf] !== undefined &&
+            normalizeTextSimple(STATE_CAPITALS[m.uf]!) === normalizeTextSimple(m.city);
+          return {
+            city: m.city,
+            uf: m.uf,
+            hsp: m.hsp,
+            stateName: UF_TO_STATE_TITLE[m.uf] || UF_TO_STATE_NAME[m.uf] || m.uf,
+            isCapital,
+          };
+        })
+        .sort((a, b) => {
+          // Capital vem primeiro (ex: Belém/PA antes de Belém/AL)
+          if (a.isCapital && !b.isCapital) return -1;
+          if (!a.isCapital && b.isCapital) return 1;
+          // Em seguida, ordem alfabética de UF
+          return a.uf.localeCompare(b.uf);
+        });
+
+      const bestMatch = sortedCandidates[0]!;
       return {
         hsp: bestMatch.hsp,
         city: bestMatch.city,
         uf: bestMatch.uf,
-        exact: cityMatches.length === 1,
+        exact: false,
+        ambiguous: true,
+        candidates: sortedCandidates,
       };
     }
 

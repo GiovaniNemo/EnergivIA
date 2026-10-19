@@ -122,11 +122,21 @@ export function parseLocationString(input: string): { city: string; uf: string }
   return { city: raw, uf };
 }
 
+export interface MunicipalityCandidate {
+  city: string;
+  uf: string;
+  hsp: number;
+  stateName?: string;
+  isCapital?: boolean;
+}
+
 export interface HspLookupResult {
   hsp: number;
   city: string;
   uf: string;
   exact: boolean;
+  ambiguous?: boolean;
+  candidates?: MunicipalityCandidate[];
 }
 
 export function getHsp(cidade: string, estado?: string): HspLookupResult {
@@ -151,6 +161,7 @@ export function getHsp(cidade: string, estado?: string): HspLookupResult {
         city: entry.city,
         uf: entry.uf,
         exact: true,
+        ambiguous: false,
       };
     }
   }
@@ -166,19 +177,41 @@ export function getHsp(cidade: string, estado?: string): HspLookupResult {
           city: matchWithUf.city,
           uf: matchWithUf.uf,
           exact: true,
+          ambiguous: false,
         };
       }
     }
-    // Retorna a primeira ocorrência encontrada para a cidade
-    const bestMatch = cityMatches[0];
-    if (bestMatch) {
+
+    if (cityMatches.length === 1) {
+      const singleMatch = cityMatches[0]!;
       return {
-        hsp: bestMatch.hsp,
-        city: bestMatch.city,
-        uf: bestMatch.uf,
+        hsp: singleMatch.hsp,
+        city: singleMatch.city,
+        uf: singleMatch.uf,
         exact: true,
+        ambiguous: false,
       };
     }
+
+    // Ambiguidade detectada
+    const sortedCandidates: MunicipalityCandidate[] = [...cityMatches]
+      .map((m) => ({
+        city: m.city,
+        uf: m.uf,
+        hsp: m.hsp,
+        stateName: UF_TO_STATE_NAME[m.uf] || m.uf,
+      }))
+      .sort((a, b) => a.uf.localeCompare(b.uf));
+
+    const bestMatch = sortedCandidates[0]!;
+    return {
+      hsp: bestMatch.hsp,
+      city: bestMatch.city,
+      uf: bestMatch.uf,
+      exact: false,
+      ambiguous: true,
+      candidates: sortedCandidates,
+    };
   }
 
   // 3. Fallback pela média estadual

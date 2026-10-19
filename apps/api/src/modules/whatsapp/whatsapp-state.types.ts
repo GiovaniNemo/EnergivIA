@@ -6,6 +6,7 @@
 export type WhatsappBotStep =
   | "IDLE" // Menu inicial / Aguardando fatura, consumo em kWh ou potência em kWp
   | "AWAITING_CITY" // Aguardando município e estado (ex: "Maringá/PR")
+  | "AWAITING_CITY_STATE" // Aguardando seleção de estado para município homônimo (ex: Belém -> PA, AL, PB)
   | "AWAITING_GRID_TYPE" // Aguardando padrão da rede elétrica (Mono, Bi, Tri)
   | "AWAITING_ROOF_TYPE" // Aguardando estrutura do telhado (Cerâmica, Fibro, etc.)
   | "AWAITING_KIT_SELECTION" // Aguardando escolha do kit (1-Standard, 2-Elite, 3-Premium)
@@ -47,6 +48,14 @@ export interface WhatsappSessionData {
   selectedTemplateId?: string;
   lastProposalId?: string;
   lastProposalNumber?: string | number;
+  pendingCityCandidates?: Array<{
+    city: string;
+    uf: string;
+    hsp: number;
+    stateName?: string;
+    isCapital?: boolean;
+  }>;
+  pendingCityName?: string;
   [key: string]: any;
 }
 
@@ -62,6 +71,7 @@ export const STEP_PREVIOUS_MAP: Partial<Record<WhatsappBotStep, WhatsappBotStep>
   AWAITING_KIT_SELECTION: "AWAITING_ROOF_TYPE",
   AWAITING_ROOF_TYPE: "AWAITING_GRID_TYPE",
   AWAITING_GRID_TYPE: "AWAITING_CITY",
+  AWAITING_CITY_STATE: "AWAITING_CITY",
 };
 
 /**

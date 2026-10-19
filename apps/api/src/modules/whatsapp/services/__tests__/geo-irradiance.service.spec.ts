@@ -101,5 +101,49 @@ describe("GeoIrradianceService - Municipal Solar Irradiation Suite", () => {
       expect(result.city).toBe("São Paulo");
       expect(result.uf).toBe("SP");
     });
+
+    describe("Unique vs Ambiguous City Detection", () => {
+      it("should mark unique cities without UF as exact and not ambiguous", () => {
+        const result = service.getHsp("Maringá");
+        expect(result.exact).toBe(true);
+        expect(result.ambiguous).toBeFalsy();
+        expect(result.city).toBe("Maringá");
+        expect(result.uf).toBe("PR");
+      });
+
+      it("should mark homonymous city without UF as ambiguous and return candidate states with capital prioritized", () => {
+        const result = service.getHsp("Belém");
+        expect(result.ambiguous).toBe(true);
+        expect(result.candidates).toBeDefined();
+        expect(result.candidates!.length).toBeGreaterThan(1);
+        const ufs = result.candidates!.map((c) => c.uf);
+        expect(ufs).toContain("PA");
+        expect(ufs).toContain("AL");
+        expect(ufs).toContain("PB");
+        // Belém/PA é capital e deve ser a primeira opção listada
+        expect(result.candidates![0].uf).toBe("PA");
+      });
+
+      it("should NOT be ambiguous when user explicitly provides UF for a homonymous city", () => {
+        const resPa = service.getHsp("Belém/PA");
+        expect(resPa.exact).toBe(true);
+        expect(resPa.ambiguous).toBeFalsy();
+        expect(resPa.uf).toBe("PA");
+
+        const resAl = service.getHsp("Belém", "AL");
+        expect(resAl.exact).toBe(true);
+        expect(resAl.ambiguous).toBeFalsy();
+        expect(resAl.uf).toBe("AL");
+      });
+
+      it("should detect ambiguity for other homonymous cities like Pilar (AL/PB)", () => {
+        const result = service.getHsp("Pilar");
+        expect(result.ambiguous).toBe(true);
+        expect(result.candidates).toBeDefined();
+        const ufs = result.candidates!.map((c) => c.uf);
+        expect(ufs).toContain("AL");
+        expect(ufs).toContain("PB");
+      });
+    });
   });
 });

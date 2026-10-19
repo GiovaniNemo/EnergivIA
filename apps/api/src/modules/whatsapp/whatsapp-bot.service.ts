@@ -41,7 +41,10 @@ import {
   getHsp,
   isLocationInput,
   cleanLocationInput,
+  normalizeTextSimple,
   GeoIrradianceService,
+  HspLookupResult,
+  MunicipalityCandidate,
 } from "./services/geo-irradiance.service";
 import { WhatsappGuestTrialService } from "./services/whatsapp-guest-trial.service";
 import {
@@ -3090,6 +3093,120 @@ Regras estritas:
     return parseIntegratorQuoteEntities(text);
   }
 
+  /** Formata a mensagem com as opções numeradas de estados para municípios homônimos */
+  public buildAmbiguousCityPrompt(cityName: string, candidates: MunicipalityCandidate[]): string {
+    const numberEmojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
+    const optionsText = candidates
+      .slice(0, 10)
+      .map((c, idx) => {
+        const emoji = numberEmojis[idx] || `${idx + 1}.`;
+        const capitalBadge = c.isCapital ? " (Capital)" : "";
+        const stateDesc = c.stateName ? ` - ${c.stateName}${capitalBadge}` : "";
+        return `> ${emoji} *${c.city}/${c.uf}*${stateDesc}`;
+      })
+      .join("\n");
+
+    return (
+      `Encontrei mais de um município chamado *${cityName}*. 📍\n` +
+      `Para qual estado será a instalação?\n\n` +
+      optionsText +
+      `\n> 0️⃣ *Voltar / Digitar outra cidade*\n\n` +
+      `_(Responda com o número da opção ou a sigla do estado)_`
+    );
+  }
+
+  /** Finaliza a seleção de localidade identificada e avança para a próxima etapa da simulação */
+  public async finalizeLocationSelection(
+    hspRes: HspLookupResult,
+    sessionCtx: {
+      cidade?: string;
+      estado?: string;
+      hsp?: number;
+      targetKWp?: number;
+      targetModules?: number;
+      consumptionKwh?: number;
+      gridVoltage?: string;
+      roofType?: string;
+      pendingCityCandidates?: MunicipalityCandidate[];
+      pendingCityName?: string;
+      customRatePerKwp?: number;
+    },
+    setStep: (nextStep: WhatsappBotStep, patchData?: Partial<WhatsappSessionData>) => Promise<any>,
+    kitsFor: (opts: { roofType?: string; customRatePerKwp?: number }) => Promise<any[]>
+  ): Promise<string> {
+    delete sessionCtx.pendingCityCandidates;
+    delete sessionCtx.pendingCityName;
+    sessionCtx.cidade = hspRes.city;
+    sessionCtx.estado = hspRes.uf;
+    sessionCtx.hsp = hspRes.hsp;
+
+    const isLargeKit = Boolean(
+      (sessionCtx.targetKWp && sessionCtx.targetKWp >= 8) ||
+      (sessionCtx.targetModules && sessionCtx.targetModules >= 14) ||
+      (sessionCtx.consumptionKwh && sessionCtx.consumptionKwh >= 800)
+    );
+
+    const hasCompleteVoltage = Boolean(sessionCtx.gridVoltage?.includes("V"));
+
+    // Se já possui Padrão Elétrico com tensão e Telhado definidos: Fast-forward direto pros kits!
+    if (hasCompleteVoltage && sessionCtx.roofType) {
+      const quotes = await kitsFor({ roofType: sessionCtx.roofType });
+      if (quotes.length > 0) {
+        await setStep("AWAITING_KIT_SELECTION", {
+          cidade: hspRes.city,
+          uf: hspRes.uf,
+          hsp: hspRes.hsp,
+          gridType: sessionCtx.gridVoltage,
+          roofType: sessionCtx.roofType,
+        });
+        return (
+          `*_Localização Identificada!_* \`${hspRes.city}/${hspRes.uf}\` 📍☀️\n` +
+          `> ⚡ Padrão Elétrico: *${sessionCtx.gridVoltage}*\n` +
+          `> 🏠 Estrutura: *${sessionCtx.roofType}*\n\n` +
+          this.formatQuotesListText(quotes, sessionCtx)
+        );
+      }
+    }
+
+    // Se já possui Padrão Elétrico com tensão, mas falta Telhado: vai para AWAITING_ROOF_TYPE
+    if (hasCompleteVoltage && !sessionCtx.roofType) {
+      await setStep("AWAITING_ROOF_TYPE", {
+        cidade: hspRes.city,
+        uf: hspRes.uf,
+        hsp: hspRes.hsp,
+        gridType: sessionCtx.gridVoltage,
+      });
+      return (
+        `*_Localização Identificada!_* \`${hspRes.city}/${hspRes.uf}\` 📍☀️\n` +
+        `> ⚡ Padrão Elétrico: *${sessionCtx.gridVoltage}*\n\n` +
+        this.ROOF_OPTIONS_TEXT
+      );
+    }
+
+    // Falta Padrão Elétrico (ou tensão 220V/380V não especificada): vai para AWAITING_GRID_TYPE
+    await setStep("AWAITING_GRID_TYPE", {
+      cidade: hspRes.city,
+      uf: hspRes.uf,
+      hsp: hspRes.hsp,
+      roofType: sessionCtx.roofType,
+    });
+    const roofInfo = sessionCtx.roofType ? `> 🏠 Estrutura: *${sessionCtx.roofType}*\n` : "";
+    const gridPrompt = isLargeKit
+      ? this.buildLargeKitGridQuestionText(
+          sessionCtx.targetKWp ? this.formatPowerBadge(sessionCtx.targetKWp) : "grande porte"
+        )
+      : this.GRID_OPTIONS_TEXT;
+
+    return (
+      `*_Localização Identificada!_* 📍☀️\n\n` +
+      `> Cidade: \`${hspRes.city}/${hspRes.uf}\`\n` +
+      `> Irradiação Solar: \`${hspRes.hsp.toFixed(2)} kWh/m²/dia\`\n` +
+      roofInfo +
+      `\n` +
+      gridPrompt
+    );
+  }
+
   /** Etapa 1: lista os grupos de kits (sem preço) para o integrador escolher */
   public formatQuotesListText(
     quotes: any[],
@@ -3670,13 +3787,34 @@ ${catalogContext}`;
     }
 
     // Helper interno para decodificar o estado acumulado da conversa
-    const extractContextFromSession = () => {
+    interface ExtractedSessionContext {
+      consumptionKwh?: number;
+      targetKWp?: number;
+      targetModules?: number;
+      modPowerWUser?: number;
+      cidade?: string;
+      estado?: string;
+      hsp?: number;
+      pendingCityCandidates?: MunicipalityCandidate[];
+      pendingCityName?: string;
+      gridVoltage?: string;
+      roofType?: string;
+      customRatePerKwp?: number;
+      clientName?: string;
+      clientWhatsapp?: string;
+      chosenQuoteIndex: number;
+    }
+
+    const extractContextFromSession = (): ExtractedSessionContext => {
       let consumptionKwh: number | undefined;
       let targetKWp: number | undefined;
       let targetModules: number | undefined;
       let modPowerWUser: number | undefined;
       let cidade: string | undefined = undefined;
       let estado: string | undefined = undefined;
+      let hsp: number | undefined = undefined;
+      let pendingCityCandidates: MunicipalityCandidate[] | undefined = undefined;
+      let pendingCityName: string | undefined = undefined;
       let gridVoltage: string | undefined = undefined;
       let roofType: string | undefined = undefined;
       let customRatePerKwp: number | undefined;
@@ -4131,6 +4269,9 @@ ${catalogContext}`;
         modPowerWUser,
         cidade,
         estado,
+        hsp,
+        pendingCityCandidates,
+        pendingCityName,
         gridVoltage,
         roofType,
         customRatePerKwp,
@@ -4173,6 +4314,25 @@ ${catalogContext}`;
     if (typeof storedSessionData.selectedQuoteIndex === "number") {
       sessionCtx.chosenQuoteIndex = storedSessionData.selectedQuoteIndex;
     }
+    if (storedSessionData.pendingCityCandidates && !sessionCtx.pendingCityCandidates) {
+      sessionCtx.pendingCityCandidates = storedSessionData.pendingCityCandidates;
+    }
+    if (storedSessionData.pendingCityName && !sessionCtx.pendingCityName) {
+      sessionCtx.pendingCityName = storedSessionData.pendingCityName;
+    }
+
+    // Auto-recuperação de candidatos a partir da última mensagem do bot se histórico perdeu metadata
+    if (!sessionCtx.pendingCityCandidates && lastBotMsg.includes("chamado")) {
+      const cityMatchFromBot = lastBotMsg.match(/chamado\s+\*?([^*\n.📍]+)\*?/i);
+      if (cityMatchFromBot && cityMatchFromBot[1]) {
+        const cityNameExtracted = cityMatchFromBot[1].trim();
+        sessionCtx.pendingCityName = cityNameExtracted;
+        const lookup = getHsp(cityNameExtracted);
+        if (lookup.candidates && lookup.candidates.length > 1) {
+          sessionCtx.pendingCityCandidates = lookup.candidates;
+        }
+      }
+    }
 
     if (
       extractionResult &&
@@ -4207,6 +4367,8 @@ ${catalogContext}`;
         clientName: sessionCtx.clientName,
         clientPhone: sessionCtx.clientWhatsapp,
         selectedQuoteIndex: sessionCtx.chosenQuoteIndex,
+        pendingCityCandidates: sessionCtx.pendingCityCandidates,
+        pendingCityName: sessionCtx.pendingCityName,
         ...(patchData || {}),
       };
 
@@ -4858,9 +5020,26 @@ ${catalogContext}`;
       }
 
       if (
+        currentStep === "AWAITING_CITY_STATE" ||
+        Boolean(sessionCtx.pendingCityCandidates && sessionCtx.pendingCityCandidates.length > 0) ||
+        lastBotMsg.includes("Para qual estado será a instalação") ||
+        lastBotMsg.includes("Encontrei mais de um município chamado")
+      ) {
+        delete sessionCtx.pendingCityCandidates;
+        delete sessionCtx.pendingCityName;
+        await setStep("AWAITING_CITY");
+        return (
+          `Certo! Vamos alterar a localização. 📍\n\n` +
+          `Para qual cidade e estado será a instalação? (Ex: \`Cuiabá/MT\`, \`Maringá/PR\`, \`São Paulo/SP\`)`
+        );
+      }
+
+      if (
         currentStep === "AWAITING_GRID_TYPE" ||
         lastBotMsg.includes("Qual o padrão de entrada da instalação?")
       ) {
+        delete sessionCtx.pendingCityCandidates;
+        delete sessionCtx.pendingCityName;
         await setStep("AWAITING_CITY");
         if (sessionCtx.consumptionKwh) {
           return (
@@ -5705,8 +5884,18 @@ ${catalogContext}`;
       if (wantsToChangeLocation) {
         const hspRes = getHsp(incomingText);
         if (hspRes && (isLocationInput(incomingText) || hspRes.exact)) {
+          if (hspRes.ambiguous && hspRes.candidates && hspRes.candidates.length > 1) {
+            await setStep("AWAITING_CITY_STATE", {
+              pendingCityCandidates: hspRes.candidates,
+              pendingCityName: hspRes.city,
+            });
+            return this.buildAmbiguousCityPrompt(hspRes.city, hspRes.candidates);
+          }
+          delete sessionCtx.pendingCityCandidates;
+          delete sessionCtx.pendingCityName;
           sessionCtx.cidade = hspRes.city;
           sessionCtx.estado = hspRes.uf;
+          sessionCtx.hsp = hspRes.hsp;
           await setStep("AWAITING_GRID_TYPE", {
             cidade: hspRes.city,
             uf: hspRes.uf,
@@ -5861,6 +6050,112 @@ ${catalogContext}`;
       );
     }
 
+    const invalidWordsCommon = new Set([
+      "nenhuma",
+      "nenhum",
+      "nada",
+      "nao",
+      "não",
+      "sei nao",
+      "sei não",
+      "nao sei",
+      "não sei",
+      "sei la",
+      "sei lá",
+      "ok",
+      "sim",
+      "teste",
+      "cancelar",
+      "voltar",
+    ]);
+
+    // ESTADO G-2: O Bot perguntou qual é o estado de uma cidade que tem múltiplos homônimos no Brasil (ex: Belém -> PA, AL, PB)
+    const isAskingCityState =
+      currentStep === "AWAITING_CITY_STATE" ||
+      Boolean(sessionCtx.pendingCityCandidates && sessionCtx.pendingCityCandidates.length > 0) ||
+      lastBotMsg.includes("Encontrei mais de um município chamado") ||
+      lastBotMsg.includes("Para qual estado será a instalação?") ||
+      lastBotMsg.includes("Em qual estado será a instalação?");
+
+    if (isAskingCityState) {
+      const candidates = (sessionCtx.pendingCityCandidates || []) as MunicipalityCandidate[];
+      const cityName = sessionCtx.pendingCityName || "informada";
+
+      // 1. Se o usuário digitou 0 ou voltar:
+      if (isBackCommand(incomingText)) {
+        delete sessionCtx.pendingCityCandidates;
+        delete sessionCtx.pendingCityName;
+        await setStep("AWAITING_CITY");
+        return (
+          `Certo! Vamos alterar a localização. 📍\n\n` +
+          `Para qual cidade e estado será a instalação? (Ex: \`Cuiabá/MT\`, \`Maringá/PR\`, \`São Paulo/SP\`)`
+        );
+      }
+
+      // 2. Tenta selecionar por número da opção (1, 2, 3...)
+      const cleanNum = incomingText.trim().replace(/[️⃣.]/g, "");
+      const selectedIndex = parseInt(cleanNum, 10) - 1;
+      let matchedCandidate: MunicipalityCandidate | null =
+        !isNaN(selectedIndex) && selectedIndex >= 0 && selectedIndex < candidates.length
+          ? candidates[selectedIndex] || null
+          : null;
+
+      // 3. Tenta selecionar por sigla do estado (ex: "PA", "AL", "PB") ou nome do estado (ex: "Pará", "Alagoas")
+      if (!matchedCandidate) {
+        const inputNorm = normalizeTextSimple(incomingText);
+        matchedCandidate =
+          candidates.find(
+            (c) =>
+              c.uf.toUpperCase() === inputNorm ||
+              (c.stateName && normalizeTextSimple(c.stateName) === inputNorm) ||
+              inputNorm === c.uf.toUpperCase() ||
+              new RegExp(`\\b${c.uf}\\b`, "i").test(incomingText)
+          ) || null;
+      }
+
+      // 4. Se o usuário enviou uma nova cidade diferente (ex: mudou de ideia e digitou "Maringá" ou "Curitiba"):
+      if (!matchedCandidate) {
+        const newHsp = getHsp(incomingText);
+        if (
+          !invalidWordsCommon.has(lower) &&
+          (isLocationInput(incomingText) || newHsp.exact) &&
+          normalizeTextSimple(newHsp.city) !== normalizeTextSimple(cityName)
+        ) {
+          delete sessionCtx.pendingCityCandidates;
+          delete sessionCtx.pendingCityName;
+          if (newHsp.ambiguous && newHsp.candidates && newHsp.candidates.length > 1) {
+            await setStep("AWAITING_CITY_STATE", {
+              pendingCityCandidates: newHsp.candidates,
+              pendingCityName: newHsp.city,
+            });
+            return this.buildAmbiguousCityPrompt(newHsp.city, newHsp.candidates);
+          }
+          return this.finalizeLocationSelection(newHsp, sessionCtx, setStep, kitsFor);
+        }
+      }
+
+      // 5. Se selecionou com sucesso um dos candidatos:
+      if (matchedCandidate) {
+        delete sessionCtx.pendingCityCandidates;
+        delete sessionCtx.pendingCityName;
+        const finalizedHsp: HspLookupResult = {
+          city: matchedCandidate.city,
+          uf: matchedCandidate.uf,
+          hsp: matchedCandidate.hsp,
+          exact: true,
+          ambiguous: false,
+        };
+        return this.finalizeLocationSelection(finalizedHsp, sessionCtx, setStep, kitsFor);
+      }
+
+      // 6. Resposta não reconhecida: reapresenta as opções
+      return (
+        `Não identifiquei a opção para *${cityName}*. 📍\n\n` +
+        `Por favor, escolha o estado da instalação:\n` +
+        this.buildAmbiguousCityPrompt(cityName, candidates)
+      );
+    }
+
     // ESTADO G: O Bot perguntou a cidade da instalação
     const isAskingCity =
       currentStep === "AWAITING_CITY" ||
@@ -5903,100 +6198,23 @@ ${catalogContext}`;
         );
       }
 
-      const invalidWords = new Set([
-        "nenhuma",
-        "nenhum",
-        "nada",
-        "nao",
-        "não",
-        "sei nao",
-        "sei não",
-        "nao sei",
-        "não sei",
-        "sei la",
-        "sei lá",
-        "ok",
-        "sim",
-        "teste",
-        "cancelar",
-        "voltar",
-      ]);
-
       const hspRes = getHsp(incomingText);
       const isRecognizedLocation =
-        !invalidWords.has(lower) &&
+        !invalidWordsCommon.has(lower) &&
         (isLocationInput(incomingText) || hspRes.exact) &&
-        !invalidWords.has(hspRes.city.toLowerCase());
+        !invalidWordsCommon.has(hspRes.city.toLowerCase());
 
       if (isRecognizedLocation) {
-        sessionCtx.cidade = hspRes.city;
-        sessionCtx.estado = hspRes.uf;
-
-        const isLargeKit = Boolean(
-          (sessionCtx.targetKWp && sessionCtx.targetKWp >= 8) ||
-          (sessionCtx.targetModules && sessionCtx.targetModules >= 14) ||
-          (sessionCtx.consumptionKwh && sessionCtx.consumptionKwh >= 800)
-        );
-
-        const hasCompleteVoltage = Boolean(sessionCtx.gridVoltage?.includes("V"));
-
-        // Se já possui Padrão Elétrico com tensão e Telhado definidos: Fast-forward direto pros kits!
-        if (hasCompleteVoltage && sessionCtx.roofType) {
-          const quotes = await kitsFor({ roofType: sessionCtx.roofType });
-          if (quotes.length > 0) {
-            await setStep("AWAITING_KIT_SELECTION", {
-              cidade: hspRes.city,
-              uf: hspRes.uf,
-              hsp: hspRes.hsp,
-              gridType: sessionCtx.gridVoltage,
-              roofType: sessionCtx.roofType,
-            });
-            return (
-              `*_Localização Identificada!_* \`${hspRes.city}/${hspRes.uf}\` 📍☀️\n` +
-              `> ⚡ Padrão Elétrico: *${sessionCtx.gridVoltage}*\n` +
-              `> 🏠 Estrutura: *${sessionCtx.roofType}*\n\n` +
-              this.formatQuotesListText(quotes, sessionCtx)
-            );
-          }
-        }
-
-        // Se já possui Padrão Elétrico com tensão, mas falta Telhado: vai para AWAITING_ROOF_TYPE
-        if (hasCompleteVoltage && !sessionCtx.roofType) {
-          await setStep("AWAITING_ROOF_TYPE", {
-            cidade: hspRes.city,
-            uf: hspRes.uf,
-            hsp: hspRes.hsp,
-            gridType: sessionCtx.gridVoltage,
+        // Se a cidade existe em mais de um estado no Brasil e o usuário não especificou a UF:
+        if (hspRes.ambiguous && hspRes.candidates && hspRes.candidates.length > 1) {
+          await setStep("AWAITING_CITY_STATE", {
+            pendingCityCandidates: hspRes.candidates,
+            pendingCityName: hspRes.city,
           });
-          return (
-            `*_Localização Identificada!_* \`${hspRes.city}/${hspRes.uf}\` 📍☀️\n` +
-            `> ⚡ Padrão Elétrico: *${sessionCtx.gridVoltage}*\n\n` +
-            this.ROOF_OPTIONS_TEXT
-          );
+          return this.buildAmbiguousCityPrompt(hspRes.city, hspRes.candidates);
         }
 
-        // Falta Padrão Elétrico (ou tensão 220V/380V não especificada): vai para AWAITING_GRID_TYPE
-        await setStep("AWAITING_GRID_TYPE", {
-          cidade: hspRes.city,
-          uf: hspRes.uf,
-          hsp: hspRes.hsp,
-          roofType: sessionCtx.roofType,
-        });
-        const roofInfo = sessionCtx.roofType ? `> 🏠 Estrutura: *${sessionCtx.roofType}*\n` : "";
-        const gridPrompt = isLargeKit
-          ? this.buildLargeKitGridQuestionText(
-              sessionCtx.targetKWp ? this.formatPowerBadge(sessionCtx.targetKWp) : "grande porte"
-            )
-          : this.GRID_OPTIONS_TEXT;
-
-        return (
-          `*_Localização Identificada!_* 📍☀️\n\n` +
-          `> Cidade: \`${hspRes.city}/${hspRes.uf}\`\n` +
-          `> Irradiação Solar: \`${hspRes.hsp.toFixed(2)} kWh/m²/dia\`\n` +
-          roofInfo +
-          `\n` +
-          gridPrompt
-        );
+        return this.finalizeLocationSelection(hspRes, sessionCtx, setStep, kitsFor);
       }
 
       return (
@@ -6040,8 +6258,22 @@ ${catalogContext}`;
                   : "")
             ).trim();
             const hspRes = getHsp(cand);
+            if (hspRes.ambiguous && hspRes.candidates && hspRes.candidates.length > 1) {
+              await setStep("AWAITING_CITY_STATE", {
+                consumptionKwh: consumo,
+                pendingCityCandidates: hspRes.candidates,
+                pendingCityName: hspRes.city,
+              });
+              return (
+                `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n\n` +
+                this.buildAmbiguousCityPrompt(hspRes.city, hspRes.candidates)
+              );
+            }
+            delete sessionCtx.pendingCityCandidates;
+            delete sessionCtx.pendingCityName;
             sessionCtx.cidade = hspRes.city;
             sessionCtx.estado = hspRes.uf;
+            sessionCtx.hsp = hspRes.hsp;
             await setStep("AWAITING_GRID_TYPE", {
               consumptionKwh: consumo,
               cidade: hspRes.city,
@@ -6116,8 +6348,22 @@ ${catalogContext}`;
                 : "")
           ).trim();
           const hspRes = getHsp(cand);
+          if (hspRes.ambiguous && hspRes.candidates && hspRes.candidates.length > 1) {
+            await setStep("AWAITING_CITY_STATE", {
+              kwp: targetKWp,
+              pendingCityCandidates: hspRes.candidates,
+              pendingCityName: hspRes.city,
+            });
+            return (
+              `*_Potência Solicitada:_* \`${formattedPower}\` ☀️\n\n` +
+              this.buildAmbiguousCityPrompt(hspRes.city, hspRes.candidates)
+            );
+          }
+          delete sessionCtx.pendingCityCandidates;
+          delete sessionCtx.pendingCityName;
           sessionCtx.cidade = hspRes.city;
           sessionCtx.estado = hspRes.uf;
+          sessionCtx.hsp = hspRes.hsp;
           await setStep("AWAITING_GRID_TYPE", {
             kwp: targetKWp,
             cidade: hspRes.city,
