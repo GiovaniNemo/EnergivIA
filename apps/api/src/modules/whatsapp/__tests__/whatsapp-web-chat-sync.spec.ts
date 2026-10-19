@@ -346,7 +346,7 @@ describe("WhatsApp & Web Chat Engine Synchronization Suite", () => {
           distribuidora: "Copel",
           cidade: "Maringá",
           uf: "PR",
-          tipo_conexao: "Trifásico",
+          tipo_conexao: "Bifásico",
           historico_consumo: [{ mes_ano: "JAN/26", consumo_kwh: 500 }],
         },
         exactAverageKwh: 500,

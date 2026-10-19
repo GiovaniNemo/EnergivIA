@@ -559,10 +559,10 @@ describe("WhatsApp Bot - Formatação de Mensagens e Degustação Trial", () => 
         contactName: "Carlos",
       });
 
-      // Reconhece a cidade, mostra que a estrutura já é Metálico, e pergunta o padrão elétrico
+      // Reconhece a cidade, mostra que a estrutura já é Metálico, e pergunta a tensão trifásica para o porte de 70 kWp
       expect(replyCity).toContain("Maringá/PR");
       expect(replyCity).toContain("Metálico");
-      expect(replyCity).toContain("Qual o padrão de entrada da instalação?");
+      expect(replyCity).toContain("Qual a tensão da rede trifásica para este sistema de 70 kWp?");
 
       // Atualiza estado simulado da conversa para AWAITING_GRID_TYPE com telhado Metálico
       conversation.metadata.step = "AWAITING_GRID_TYPE";
@@ -573,7 +573,7 @@ describe("WhatsApp Bot - Formatação de Mensagens e Degustação Trial", () => 
         content: replyCity,
       });
 
-      // Integrador responde o padrão elétrico: "2" (Bifásico 127V/220V)
+      // Integrador responde o padrão elétrico: "2" (Trifásico 380V no prompt específico de grande porte)
       const replyGrid = await (botService as any).generateBotResponse({
         conversation,
         incomingText: "2",
@@ -607,10 +607,141 @@ describe("WhatsApp Bot - Formatação de Mensagens e Degustação Trial", () => 
 
       // NÃO deve responder com o menu de boas-vindas genérico
       expect(reply).not.toContain("Como posso ajudar você a gerar orçamentos hoje?");
-      // Deve identificar Anitápolis/SC, telhado Colonial e perguntar o padrão elétrico
+      // Deve identificar Anitápolis/SC, telhado Colonial e perguntar a rede
       expect(reply).toContain("Anitápolis/SC");
       expect(reply).toContain("Cerâmica (Colonial)");
-      expect(reply).toContain("Qual o padrão de entrada da instalação?");
+    });
+
+    it("deve perguntar se a rede é 220V ou 380V quando a fatura extraída tiver padrão trifásico", async () => {
+      const conversation = {
+        id: "conv-bill-trifasica",
+        organizationId: "demo-tenant-id",
+        metadata: {
+          step: "IDLE",
+          isGuestTrial: true,
+        },
+        messages: [],
+      };
+
+      const mockExtraction = {
+        isValidForSizing: true,
+        exactAverageKwh: 3450,
+        monthCount: 12,
+        data: {
+          cidade: "Maringá",
+          uf: "PR",
+          tipo_conexao: "Trifásico",
+        },
+      };
+
+      const reply = await (botService as any).generateBotResponse({
+        conversation,
+        incomingText: "[Documento enviado]",
+        extractionResult: mockExtraction,
+        contactName: "Integrador Solar",
+      });
+
+      // Deve identificar a fatura e perguntar se a rede trifásica é 220V ou 380V
+      expect(reply).toContain("Fatura Analisada com Precisão!");
+      expect(reply).toContain("Trifásico");
+      expect(reply).toContain("A rede trifásica da instalação é 220V ou 380V?");
+      expect(reply).toContain("Trifásico 220V");
+      expect(reply).toContain("Trifásico 380V");
+      expect(reply).not.toContain("Qual a estrutura do telhado?");
+    });
+
+    it("deve registrar Trifásico 220V quando usuário responder 1 ou 220 na pergunta de tensão da fatura", async () => {
+      const conversation = {
+        id: "conv-bill-trifasica-resp-220",
+        organizationId: "demo-tenant-id",
+        metadata: {
+          step: "AWAITING_GRID_TYPE",
+          cidade: "Maringá",
+          uf: "PR",
+          consumptionKwh: 3450,
+          isGuestTrial: true,
+        },
+        messages: [
+          {
+            role: "assistant",
+            content:
+              "*_A rede trifásica da instalação é 220V ou 380V?_* ⚡\n> 1️⃣ *Trifásico 220V*\n> 2️⃣ *Trifásico 380V*",
+          },
+        ],
+      };
+
+      const reply = await (botService as any).generateBotResponse({
+        conversation,
+        incomingText: "1",
+        contactName: "Integrador Solar",
+      });
+
+      // Deve registrar Trifásico 220V e avançar para o telhado
+      expect(reply).toContain("Trifásico 220V");
+      expect(reply).toContain("Qual a estrutura do telhado?");
+    });
+
+    it("deve registrar Trifásico 380V quando usuário responder 2 ou 380 na pergunta de tensão da fatura", async () => {
+      const conversation = {
+        id: "conv-bill-trifasica-resp-380",
+        organizationId: "demo-tenant-id",
+        metadata: {
+          step: "AWAITING_GRID_TYPE",
+          cidade: "Maringá",
+          uf: "PR",
+          consumptionKwh: 3450,
+          isGuestTrial: true,
+        },
+        messages: [
+          {
+            role: "assistant",
+            content:
+              "*_A rede trifásica da instalação é 220V ou 380V?_* ⚡\n> 1️⃣ *Trifásico 220V*\n> 2️⃣ *Trifásico 380V*",
+          },
+        ],
+      };
+
+      const reply = await (botService as any).generateBotResponse({
+        conversation,
+        incomingText: "380",
+        contactName: "Integrador Solar",
+      });
+
+      // Deve registrar Trifásico 380V e avançar para o telhado
+      expect(reply).toContain("Trifásico 380V");
+      expect(reply).toContain("Qual a estrutura do telhado?");
+    });
+
+    it("deve orientar entre 220V e 380V quando o usuário responder apenas 'trifasico' em AWAITING_GRID_TYPE", async () => {
+      const conversation = {
+        id: "conv-generic-trifasico-reply",
+        organizationId: "demo-tenant-id",
+        metadata: {
+          step: "AWAITING_GRID_TYPE",
+          cidade: "Maringá",
+          uf: "PR",
+          kwp: 70,
+          roofType: "Metálico",
+          isGuestTrial: true,
+        },
+        messages: [
+          {
+            role: "assistant",
+            content: "*_Qual o padrão de entrada da instalação?_* ⚡",
+          },
+        ],
+      };
+
+      const reply = await (botService as any).generateBotResponse({
+        conversation,
+        incomingText: "trifasico",
+        contactName: "Integrador",
+      });
+
+      // O bot não pode dar erro genérico, deve perguntar se é 220V ou 380V
+      expect(reply).toContain("A rede trifásica é 220V ou 380V?");
+      expect(reply).toContain("Trifásico 220V");
+      expect(reply).toContain("Trifásico 380V");
     });
   });
 });

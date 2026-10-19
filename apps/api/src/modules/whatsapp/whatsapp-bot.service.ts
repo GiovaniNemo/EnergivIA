@@ -324,6 +324,38 @@ export function parsePowerInput(text: string): number | null {
   return null;
 }
 
+export const DEFAULT_GRID_OPTIONS_TEXT =
+  `*_Qual o padrão de entrada da instalação?_* ⚡\n\n` +
+  `> 1️⃣ *Monofásico 220V*\n` +
+  `> 2️⃣ *Bifásico 127V/220V*\n` +
+  `> 3️⃣ *Trifásico 220V*\n` +
+  `> 4️⃣ *Trifásico 380V*\n` +
+  `> 0️⃣ *Voltar / Corrigir localização ou consumo*\n\n` +
+  `_(Responda com o número da opção)_`;
+
+export const DEFAULT_TRIFASICO_VOLTAGE_QUESTION_TEXT =
+  `*_A rede trifásica da instalação é 220V ou 380V?_* ⚡\n\n` +
+  `_A concessionária não especifica a tensão na fatura, e o modelo do inversor varia conforme a rede:_\n\n` +
+  `> 1️⃣ *Trifásico 220V* (127V / 220V)\n` +
+  `> 2️⃣ *Trifásico 380V* (220V / 380V)\n` +
+  `> 3️⃣ *Bifásico 127V/220V* (caso haja divergência na fatura)\n` +
+  `> 4️⃣ *Monofásico 220V*\n` +
+  `> 0️⃣ *Voltar*\n\n` +
+  `_(Responda 1 para 220V ou 2 para 380V)_`;
+
+export function buildLargeKitGridQuestionText(powerOrKwh: string): string {
+  return (
+    `*_Qual a tensão da rede trifásica para este sistema de ${powerOrKwh}?_* ⚡\n\n` +
+    `_Para instalações desse porte, a conexão é trifásica. Confirme a tensão para dimensionar o inversor correto:_\n\n` +
+    `> 1️⃣ *Trifásico 220V* (127V / 220V)\n` +
+    `> 2️⃣ *Trifásico 380V* (220V / 380V)\n` +
+    `> 3️⃣ *Bifásico 127V/220V*\n` +
+    `> 4️⃣ *Monofásico 220V*\n` +
+    `> 0️⃣ *Voltar*\n\n` +
+    `_(Responda 1 para 220V ou 2 para 380V)_`
+  );
+}
+
 export interface ExtractedIntegratorQuote {
   targetKWp?: number;
   targetModules?: number;
@@ -331,6 +363,7 @@ export interface ExtractedIntegratorQuote {
   consumptionKwh?: number;
   roofType?: string;
   gridVoltage?: string;
+  isTrifasicoGeneric?: boolean;
   cidade?: string;
   estado?: string;
   hsp?: number;
@@ -461,14 +494,15 @@ export function parseIntegratorQuoteEntities(rawText: string): ExtractedIntegrat
   }
 
   // 7. Extração de Padrão Elétrico / Tensão
-  if (/\b(?:bif[áa]sico|bifasico|\bbi\b|127\/220|220\s*bi)\b/i.test(clean)) {
-    gridVoltage = "Bifásico 127V/220V";
-  } else if (/\b(?:trif[áa]sico\s*380|trifasico\s*380|tri\s*380|380\s*v|380v)\b/i.test(clean)) {
+  let isTrifasicoGeneric = false;
+  if (/\b(?:trif[áa]sico\s*380|trifasico\s*380|tri\s*380|380\s*v|380v)\b/i.test(clean)) {
     gridVoltage = "Trifásico 380V";
-  } else if (
-    /\b(?:trif[áa]sico\s*220|trifasico\s*220|tri\s*220|trif[áa]sico|trifasico)\b/i.test(clean)
-  ) {
+  } else if (/\b(?:trif[áa]sico\s*220|trifasico\s*220|tri\s*220)\b/i.test(clean)) {
     gridVoltage = "Trifásico 220V";
+  } else if (/\b(?:trif[áa]sico|trifasico|\btri\b)\b/i.test(clean)) {
+    isTrifasicoGeneric = true;
+  } else if (/\b(?:bif[áa]sico|bifasico|\bbi\b|127\/220|220\s*bi)\b/i.test(clean)) {
+    gridVoltage = "Bifásico 127V/220V";
   } else if (/\b(?:monof[áa]sico|monofasico|\bmono\b|mono\s*220)\b/i.test(clean)) {
     gridVoltage = "Monofásico 220V";
   }
@@ -569,6 +603,7 @@ export function parseIntegratorQuoteEntities(rawText: string): ExtractedIntegrat
     consumptionKwh,
     roofType,
     gridVoltage,
+    isTrifasicoGeneric,
     cidade,
     estado,
     hsp,
@@ -2783,14 +2818,13 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     `> 0️⃣ *Voltar / Corrigir padrão elétrico*\n\n` +
     `_(Responda com o número da opção)_`;
 
-  private readonly GRID_OPTIONS_TEXT =
-    `*_Qual o padrão de entrada da instalação?_* ⚡\n\n` +
-    `> 1️⃣ *Monofásico 220V*\n` +
-    `> 2️⃣ *Bifásico 127V/220V*\n` +
-    `> 3️⃣ *Trifásico 220V*\n` +
-    `> 4️⃣ *Trifásico 380V*\n` +
-    `> 0️⃣ *Voltar / Corrigir localização ou consumo*\n\n` +
-    `_(Responda com o número da opção)_`;
+  private readonly GRID_OPTIONS_TEXT = DEFAULT_GRID_OPTIONS_TEXT;
+
+  private readonly TRIFASICO_VOLTAGE_QUESTION_TEXT = DEFAULT_TRIFASICO_VOLTAGE_QUESTION_TEXT;
+
+  private buildLargeKitGridQuestionText(powerOrKwh: string): string {
+    return buildLargeKitGridQuestionText(powerOrKwh);
+  }
 
   private formatBrl(value: number): string {
     return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -4098,7 +4132,56 @@ ${catalogContext}`;
           ? `baseado no histórico de ${meses} meses da fatura`
           : `baseado no consumo do mês atual da fatura`;
 
-      const conexaoInfo = tipoConexao ? `\n> Padrão de rede identificado: *${tipoConexao}*` : "";
+      const isTrifasico =
+        /trif[áa]sic/i.test(tipoConexao) ||
+        (kwh >= 800 && !/bif[áa]sic|monof[áa]sic/i.test(tipoConexao));
+
+      if (isTrifasico && (!sessionCtx.gridVoltage || !sessionCtx.gridVoltage.includes("V"))) {
+        await setStep("AWAITING_GRID_TYPE", {
+          cidade: extractionResult.data.cidade || sessionCtx.cidade,
+          uf: extractionResult.data.uf
+            ? extractionResult.data.uf.trim().toUpperCase()
+            : sessionCtx.estado,
+          consumptionKwh: kwh,
+        });
+
+        return (
+          `*_Fatura Analisada com Precisão!_* 📄⚡\n\n` +
+          `Consumo médio de \`${kwh.toLocaleString("pt-BR")} kWh/mês\` em \`${cidade}\`.\n` +
+          `> Histórico: *${baseTexto}*\n` +
+          `> Padrão identificado: *Trifásico* ⚡\n\n` +
+          (this.TRIFASICO_VOLTAGE_QUESTION_TEXT || DEFAULT_TRIFASICO_VOLTAGE_QUESTION_TEXT)
+        );
+      }
+
+      let resolvedGrid = sessionCtx.gridVoltage;
+      if (!resolvedGrid) {
+        if (/bif[áa]sic/i.test(tipoConexao)) {
+          resolvedGrid = "Bifásico 127V/220V";
+        } else if (/monof[áa]sic/i.test(tipoConexao)) {
+          resolvedGrid = "Monofásico 220V";
+        }
+      }
+
+      if (!resolvedGrid) {
+        await setStep("AWAITING_GRID_TYPE", {
+          cidade: extractionResult.data.cidade || sessionCtx.cidade,
+          uf: extractionResult.data.uf
+            ? extractionResult.data.uf.trim().toUpperCase()
+            : sessionCtx.estado,
+          consumptionKwh: kwh,
+        });
+
+        return (
+          `*_Fatura Analisada com Precisão!_* 📄⚡\n\n` +
+          `Consumo médio de \`${kwh.toLocaleString("pt-BR")} kWh/mês\` em \`${cidade}\`.\n` +
+          `> Histórico: *${baseTexto}*\n\n` +
+          (this.GRID_OPTIONS_TEXT || DEFAULT_GRID_OPTIONS_TEXT)
+        );
+      }
+
+      sessionCtx.gridVoltage = resolvedGrid;
+      const conexaoInfo = `\n> Padrão de rede identificado: *${resolvedGrid}*`;
 
       await setStep("AWAITING_ROOF_TYPE", {
         cidade: extractionResult.data.cidade || sessionCtx.cidade,
@@ -4106,7 +4189,7 @@ ${catalogContext}`;
           ? extractionResult.data.uf.trim().toUpperCase()
           : sessionCtx.estado,
         consumptionKwh: kwh,
-        gridType: tipoConexao || sessionCtx.gridVoltage,
+        gridType: resolvedGrid,
       });
 
       return (
@@ -5194,7 +5277,10 @@ ${catalogContext}`;
     // ESTADO F: O Bot perguntou o padrão de entrada da rede elétrica
     if (
       currentStep === "AWAITING_GRID_TYPE" ||
-      lastBotMsg.includes("Qual o padrão de entrada da instalação?")
+      lastBotMsg.includes("Qual o padrão de entrada da instalação?") ||
+      lastBotMsg.includes("rede trifásica") ||
+      lastBotMsg.includes("tensão da rede trifásica") ||
+      lastBotMsg.includes("220V ou 380V")
     ) {
       // Verifica se o usuário enviou explicitamente uma localização para corrigir (ex: "Cuiabá/MT", "mudar cidade para Curitiba")
       const wantsToChangeLocation =
@@ -5222,34 +5308,113 @@ ${catalogContext}`;
         }
       }
 
+      const isTrifasicoSpecificPrompt =
+        lastBotMsg.includes("tensão da rede trifásica") ||
+        lastBotMsg.includes("rede trifásica da instalação é 220V ou 380V") ||
+        lastBotMsg.includes("rede trifásica é 220V ou 380V") ||
+        lastBotMsg.includes("A rede trifásica do cliente é 220V ou 380V") ||
+        lastBotMsg.includes("Responda 1 para 220V ou 2 para 380V");
+
       let chosenGrid = "";
-      if (lower === "1" || lower === "1." || lower.includes("1️⃣") || lower.includes("mono")) {
-        chosenGrid = "Monofásico 220V";
-      } else if (
-        lower === "2" ||
-        lower === "2." ||
-        lower.includes("2️⃣") ||
-        lower.includes("bi") ||
-        lower.includes("127/220")
+      if (isTrifasicoSpecificPrompt) {
+        if (
+          lower === "1" ||
+          lower === "1." ||
+          lower.includes("1️⃣") ||
+          lower === "220" ||
+          lower === "220v" ||
+          lower.includes("tri 220") ||
+          lower.includes("tri_220") ||
+          lower.includes("trifásico 220") ||
+          lower.includes("trifasico 220")
+        ) {
+          chosenGrid = "Trifásico 220V";
+        } else if (
+          lower === "2" ||
+          lower === "2." ||
+          lower.includes("2️⃣") ||
+          lower === "380" ||
+          lower === "380v" ||
+          lower.includes("tri 380") ||
+          lower.includes("tri_380") ||
+          lower.includes("trifásico 380") ||
+          lower.includes("trifasico 380")
+        ) {
+          chosenGrid = "Trifásico 380V";
+        } else if (
+          lower === "3" ||
+          lower === "3." ||
+          lower.includes("3️⃣") ||
+          lower.includes("bi") ||
+          lower.includes("127/220")
+        ) {
+          chosenGrid = "Bifásico 127V/220V";
+        } else if (
+          lower === "4" ||
+          lower === "4." ||
+          lower.includes("4️⃣") ||
+          lower.includes("mono")
+        ) {
+          chosenGrid = "Monofásico 220V";
+        }
+      } else {
+        if (lower === "1" || lower === "1." || lower.includes("1️⃣") || lower.includes("mono")) {
+          chosenGrid = "Monofásico 220V";
+        } else if (
+          lower === "2" ||
+          lower === "2." ||
+          lower.includes("2️⃣") ||
+          lower.includes("bi") ||
+          lower.includes("127/220")
+        ) {
+          chosenGrid = "Bifásico 127V/220V";
+        } else if (
+          lower === "3" ||
+          lower === "3." ||
+          lower.includes("3️⃣") ||
+          lower.includes("tri 220") ||
+          lower.includes("tri_220") ||
+          lower.includes("trifásico 220") ||
+          lower.includes("trifasico 220")
+        ) {
+          chosenGrid = "Trifásico 220V";
+        } else if (
+          lower === "4" ||
+          lower === "4." ||
+          lower.includes("4️⃣") ||
+          lower.includes("tri 380") ||
+          lower.includes("tri_380") ||
+          lower.includes("trifásico 380") ||
+          lower.includes("trifasico 380") ||
+          lower === "380" ||
+          lower === "380v"
+        ) {
+          chosenGrid = "Trifásico 380V";
+        } else if (lower === "220" || lower === "220v") {
+          if (sessionCtx.targetKWp && sessionCtx.targetKWp >= 8) {
+            chosenGrid = "Trifásico 220V";
+          } else {
+            chosenGrid = "Monofásico 220V";
+          }
+        }
+      }
+
+      // Se o usuário digitou apenas "trifásico" / "tri" sem especificar a tensão
+      if (
+        !chosenGrid &&
+        (lower === "trifasico" ||
+          lower === "trifásico" ||
+          lower === "tri" ||
+          lower.includes("trifas") ||
+          lower.includes("trifás"))
       ) {
-        chosenGrid = "Bifásico 127V/220V";
-      } else if (
-        lower === "3" ||
-        lower === "3." ||
-        lower.includes("3️⃣") ||
-        lower.includes("tri 220") ||
-        lower.includes("tri_220")
-      ) {
-        chosenGrid = "Trifásico 220V";
-      } else if (
-        lower === "4" ||
-        lower === "4." ||
-        lower.includes("4️⃣") ||
-        lower.includes("tri 380") ||
-        lower.includes("tri_380") ||
-        lower.includes("380")
-      ) {
-        chosenGrid = "Trifásico 380V";
+        return (
+          `*_A rede trifásica é 220V ou 380V?_* ⚡\n\n` +
+          `Como o modelo do inversor varia conforme a tensão da rede, por favor informe:\n\n` +
+          `> 1️⃣ *Trifásico 220V* (127V / 220V)\n` +
+          `> 2️⃣ *Trifásico 380V* (220V / 380V)\n\n` +
+          `_(Responda 1 para 220V ou 2 para 380V)_`
+        );
       }
 
       if (chosenGrid) {
@@ -5273,9 +5438,13 @@ ${catalogContext}`;
         return `*_Padrão Elétrico Registrado:_* \`${chosenGrid}\` ⚡\n\n` + this.ROOF_OPTIONS_TEXT;
       }
 
+      const fallbackPrompt = isTrifasicoSpecificPrompt
+        ? this.TRIFASICO_VOLTAGE_QUESTION_TEXT
+        : this.GRID_OPTIONS_TEXT;
+
       return (
-        `Opção não reconhecida. Por favor, responda com o número da opção desejada (1 a 4) ou envie 0️⃣ para voltar:\n\n` +
-        this.GRID_OPTIONS_TEXT
+        `Opção não reconhecida. Por favor, responda com o número da opção desejada ou envie 0️⃣ para voltar:\n\n` +
+        fallbackPrompt
       );
     }
 
@@ -5350,8 +5519,16 @@ ${catalogContext}`;
         sessionCtx.cidade = hspRes.city;
         sessionCtx.estado = hspRes.uf;
 
-        // Se já possui Padrão Elétrico E Telhado definidos: Fast-forward direto pros kits!
-        if (sessionCtx.gridVoltage && sessionCtx.roofType) {
+        const isLargeKit = Boolean(
+          (sessionCtx.targetKWp && sessionCtx.targetKWp >= 8) ||
+          (sessionCtx.targetModules && sessionCtx.targetModules >= 14) ||
+          (sessionCtx.consumptionKwh && sessionCtx.consumptionKwh >= 800)
+        );
+
+        const hasCompleteVoltage = Boolean(sessionCtx.gridVoltage?.includes("V"));
+
+        // Se já possui Padrão Elétrico com tensão e Telhado definidos: Fast-forward direto pros kits!
+        if (hasCompleteVoltage && sessionCtx.roofType) {
           const quotes = await kitsFor({ roofType: sessionCtx.roofType });
           if (quotes.length > 0) {
             await setStep("AWAITING_KIT_SELECTION", {
@@ -5370,8 +5547,8 @@ ${catalogContext}`;
           }
         }
 
-        // Se já possui Padrão Elétrico, mas falta Telhado: vai para AWAITING_ROOF_TYPE
-        if (sessionCtx.gridVoltage && !sessionCtx.roofType) {
+        // Se já possui Padrão Elétrico com tensão, mas falta Telhado: vai para AWAITING_ROOF_TYPE
+        if (hasCompleteVoltage && !sessionCtx.roofType) {
           await setStep("AWAITING_ROOF_TYPE", {
             cidade: hspRes.city,
             uf: hspRes.uf,
@@ -5385,7 +5562,7 @@ ${catalogContext}`;
           );
         }
 
-        // Falta Padrão Elétrico: vai para AWAITING_GRID_TYPE
+        // Falta Padrão Elétrico (ou tensão 220V/380V não especificada): vai para AWAITING_GRID_TYPE
         await setStep("AWAITING_GRID_TYPE", {
           cidade: hspRes.city,
           uf: hspRes.uf,
@@ -5393,13 +5570,19 @@ ${catalogContext}`;
           roofType: sessionCtx.roofType,
         });
         const roofInfo = sessionCtx.roofType ? `> 🏠 Estrutura: *${sessionCtx.roofType}*\n` : "";
+        const gridPrompt = isLargeKit
+          ? this.buildLargeKitGridQuestionText(
+              sessionCtx.targetKWp ? this.formatPowerBadge(sessionCtx.targetKWp) : "grande porte"
+            )
+          : this.GRID_OPTIONS_TEXT;
+
         return (
           `*_Localização Identificada!_* 📍☀️\n\n` +
           `> Cidade: \`${hspRes.city}/${hspRes.uf}\`\n` +
           `> Irradiação Solar: \`${hspRes.hsp.toFixed(2)} kWh/m²/dia\`\n` +
           roofInfo +
           `\n` +
-          this.GRID_OPTIONS_TEXT
+          gridPrompt
         );
       }
 
@@ -5799,8 +5982,17 @@ ${catalogContext}`;
         );
       }
 
-      // 2. Tem a Cidade, mas Falta o Padrão Elétrico
-      if (!sessionCtx.gridVoltage) {
+      const isLargeKit = Boolean(
+        (sessionCtx.targetKWp && sessionCtx.targetKWp >= 8) ||
+        (sessionCtx.targetModules && sessionCtx.targetModules >= 14) ||
+        (sessionCtx.consumptionKwh && sessionCtx.consumptionKwh >= 800) ||
+        quoteEntities.isTrifasicoGeneric
+      );
+
+      const hasCompleteVoltage = Boolean(sessionCtx.gridVoltage?.includes("V"));
+
+      // 2. Tem a Cidade, mas Falta o Padrão Elétrico ou tensão 220V/380V não especificada
+      if (!hasCompleteVoltage || quoteEntities.isTrifasicoGeneric) {
         await setStep("AWAITING_GRID_TYPE", {
           cidade: sessionCtx.cidade,
           uf: sessionCtx.estado,
@@ -5809,7 +6001,12 @@ ${catalogContext}`;
           consumptionKwh: sessionCtx.consumptionKwh,
           roofType: sessionCtx.roofType,
         });
-        return `${headerText}${detailsBlock}` + this.GRID_OPTIONS_TEXT;
+        const gridPrompt = isLargeKit
+          ? this.buildLargeKitGridQuestionText(
+              sessionCtx.targetKWp ? this.formatPowerBadge(sessionCtx.targetKWp) : "grande porte"
+            )
+          : this.GRID_OPTIONS_TEXT;
+        return `${headerText}${detailsBlock}` + gridPrompt;
       }
 
       // 3. Tem Cidade e Padrão Elétrico, mas Falta o Telhado
