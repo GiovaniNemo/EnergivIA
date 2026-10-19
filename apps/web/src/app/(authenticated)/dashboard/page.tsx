@@ -38,6 +38,12 @@ import {
 import { BillQuickStartDialog } from "@/components/dashboard/bill-quick-start-dialog";
 import { NewProposalDialog } from "@/components/dashboard/new-proposal-dialog";
 import { AntigravityParticlesCanvas } from "@/components/dashboard/AntigravityParticlesCanvas";
+import {
+  AnimatedNumber,
+  formatBRLCompact,
+  formatInteger,
+  formatPercent,
+} from "@/components/dashboard/animated-number";
 
 const ACCEPTED_BILL_TYPES =
   ".pdf,.jpg,.jpeg,.png,.heic,.webp,application/pdf,image/jpeg,image/png,image/webp,image/heic";
@@ -287,6 +293,13 @@ export default function DashboardPage(): JSX.Element {
     return { days, total };
   }, [allProposalsInChart]);
 
+  const isChartDataReady = !proposalsQuery.isLoading && proposalsQuery.data !== undefined;
+  const chartAnimationKey = useMemo(() => {
+    return isChartDataReady
+      ? `chart-ready-${orgId ?? "org"}-${chartPoints.total}`
+      : "chart-loading";
+  }, [isChartDataReady, orgId, chartPoints.total]);
+
   type FeedEntry = {
     kind: keyof typeof FEED_ICON_STYLES;
     icon: typeof Check;
@@ -375,6 +388,8 @@ export default function DashboardPage(): JSX.Element {
   const kpis: {
     label: string;
     value: string;
+    numericValue?: number;
+    formatter?: (val: number) => string;
     delta: string;
     trend: "up" | "down" | "neutral";
     icon: typeof Users;
@@ -382,6 +397,8 @@ export default function DashboardPage(): JSX.Element {
     {
       label: isOwnerOrAdmin ? "Leads da empresa" : "Seus leads este mês",
       value: orgId ? String(leadsThisMonth) : "—",
+      numericValue: orgId ? leadsThisMonth : undefined,
+      formatter: formatInteger,
       delta: stats ? `${stats.totalLeads} no total` : "",
       trend: leadsThisMonth > 0 ? "up" : "neutral",
       icon: Users,
@@ -389,6 +406,8 @@ export default function DashboardPage(): JSX.Element {
     {
       label: isOwnerOrAdmin ? "Propostas da equipe" : "Suas propostas enviadas",
       value: orgId ? String(sentProposals.length) : "—",
+      numericValue: orgId ? sentProposals.length : undefined,
+      formatter: formatInteger,
       delta: proposalsToday > 0 ? `${proposalsToday} enviadas hoje` : "—",
       trend: proposalsToday > 0 ? "up" : "neutral",
       icon: FileText,
@@ -396,6 +415,8 @@ export default function DashboardPage(): JSX.Element {
     {
       label: isOwnerOrAdmin ? "Taxa de conversão (empresa)" : "Sua taxa de conversão",
       value: stats ? `${conversionPct}%` : "—",
+      numericValue: stats ? conversionPct : undefined,
+      formatter: formatPercent,
       delta: stats ? `${stats.dealsWon} fechadas / ${stats.totalLeads} leads` : "",
       trend: conversionPct > 0 ? "up" : "neutral",
       icon: TrendingUp,
@@ -403,6 +424,8 @@ export default function DashboardPage(): JSX.Element {
     {
       label: isOwnerOrAdmin ? "Receita prevista (empresa)" : "Sua receita prevista",
       value: orgId ? formatBRL(forecastRevenue) : "—",
+      numericValue: orgId ? forecastRevenue : undefined,
+      formatter: formatBRLCompact,
       delta: stats
         ? `${(stats.dealsInProposal ?? 0) + (stats.dealsInNegotiation ?? 0)} negócios em aberto`
         : "",
@@ -607,6 +630,12 @@ export default function DashboardPage(): JSX.Element {
               <div className="font-mono text-[26px] font-bold tracking-[-0.01em] text-[var(--color-foreground)]">
                 {isLoading && stat.value === "—" ? (
                   <span className="inline-block h-[26px] w-16 animate-pulse rounded bg-[var(--color-muted)]" />
+                ) : stat.numericValue !== undefined && orgId ? (
+                  <AnimatedNumber
+                    value={stat.numericValue}
+                    formatter={stat.formatter}
+                    duration={1200}
+                  />
                 ) : (
                   stat.value
                 )}
@@ -641,7 +670,17 @@ export default function DashboardPage(): JSX.Element {
               : "Suas propostas — últimos 14 dias"}
           </h3>
           <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-            Volume diário · {chartPoints.total} no período
+            Volume diário ·{" "}
+            {proposalsQuery.isLoading ? (
+              <span className="inline-block h-3 w-5 animate-pulse rounded bg-[var(--color-muted)]" />
+            ) : (
+              <AnimatedNumber
+                value={chartPoints.total}
+                duration={1200}
+                className="font-semibold text-[var(--color-foreground)]"
+              />
+            )}{" "}
+            no período
           </p>
           <div
             className="mt-4 h-[220px] overflow-hidden rounded-xl border border-[var(--color-border)]/50 bg-black/[0.02] dark:bg-black/20 backdrop-blur-xs"
@@ -649,6 +688,7 @@ export default function DashboardPage(): JSX.Element {
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
+                key={chartAnimationKey}
                 data={chartPoints.days}
                 margin={{ top: 12, right: 12, left: 0, bottom: 4 }}
                 barCategoryGap="20%"
@@ -680,7 +720,14 @@ export default function DashboardPage(): JSX.Element {
                   content={<ProposalsBarTooltip />}
                   cursor={{ fill: "rgba(34,197,94,0.08)" }}
                 />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                <Bar
+                  dataKey="count"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={40}
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                >
                   {chartPoints.days.map((point, idx) => (
                     <Cell key={`cell-${idx}`} fill={point.recent ? "#16a34a" : "#cbd5e1"} />
                   ))}
