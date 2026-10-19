@@ -661,13 +661,13 @@ export class WhatsappCloudService {
       const rawStored = rawEntry?.rawMessage;
 
       // Se dentro da mensagem bruta tiver URL direta pública (ex: MinIO/S3 da Evolution), baixa diretamente
-      const audioOrDoc =
-        rawStored?.message?.audioMessage ||
-        rawStored?.message?.pttMessage ||
-        rawStored?.message?.documentMessage ||
-        rawStored?.message?.imageMessage ||
-        rawStored?.audioMessage ||
-        rawStored?.pttMessage;
+      const rawMsg = rawStored?.["message"] as Record<string, unknown> | undefined;
+      const audioOrDoc = (rawMsg?.["audioMessage"] ||
+        rawMsg?.["pttMessage"] ||
+        rawMsg?.["documentMessage"] ||
+        rawMsg?.["imageMessage"] ||
+        rawStored?.["audioMessage"] ||
+        rawStored?.["pttMessage"]) as { url?: string; mimetype?: string } | undefined;
 
       if (
         audioOrDoc?.url &&
@@ -695,7 +695,7 @@ export class WhatsappCloudService {
         const payloadsToTry = [];
         if (rawStored) {
           payloadsToTry.push({
-            message: rawStored.message ? rawStored : { message: rawStored },
+            message: rawStored["message"] ? rawStored : { message: rawStored },
             convertToMp4: false,
           });
         }
