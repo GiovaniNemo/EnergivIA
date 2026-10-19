@@ -476,17 +476,9 @@ export class KitGenerationService {
     };
 
     const minInvPowerKw =
-      input.system_kw >= 1000
-        ? 60
-        : input.system_kw >= 200
-          ? 40
-          : input.system_kw >= 80
-            ? 20
-            : input.system_kw >= 35
-              ? 10
-              : input.system_kw >= 15
-                ? 5
-                : 1;
+      input.target_inverter_qty && input.target_inverter_qty > 1
+        ? 1
+        : Math.max(1, Math.floor(input.system_kw / 1.55));
 
     const scaleCompatibleString = allStringInverters.filter(
       (inv) => getInverterPowerKw(inv) >= minInvPowerKw
@@ -516,6 +508,19 @@ export class KitGenerationService {
     const sortedMicro = sortOtherInverters(allMicroInverters);
     const sortedHybrid = sortOtherInverters(allHybridInverters);
 
+    // Configurações padrão de marcas por quadrante caso o integrador não tenha configurado no perfil
+    const DEFAULT_TIER_MODULE_BRANDS = {
+      standard: ["leapton", "osda", "resun", "dah solar", "dah", "astronergy"],
+      elite: ["astronergy", "canadian", "jinko", "ja solar", "trina"],
+      premium: ["canadian", "jinko", "longi", "trina", "ja solar"],
+    };
+
+    const DEFAULT_TIER_INVERTER_BRANDS = {
+      standard: ["solplanet", "saj", "chint", "sofar", "livoltek"],
+      elite: ["goodwe", "growatt", "deye", "saj", "solplanet"],
+      premium: ["sungrow", "fronius", "huawei", "enphase", "apsystems", "goodwe"],
+    };
+
     // Helper para extrair marcas de um tier garantindo que a marca prioritária (se configurada)
     // apenas tenha precedência DENTRO do tier ao qual ela pertence, sem contaminar os demais tiers.
     const resolveTierBrands = (tierBrands?: string[], priorityBrand?: string | null): string[] => {
@@ -541,25 +546,38 @@ export class KitGenerationService {
     };
 
     const stdModBrands = resolveTierBrands(
-      moduleTiersConfig?.standard,
+      moduleTiersConfig?.standard?.length
+        ? moduleTiersConfig.standard
+        : DEFAULT_TIER_MODULE_BRANDS.standard,
       moduleTiersConfig?.priority
     );
-    const eliteModBrands = resolveTierBrands(moduleTiersConfig?.elite, moduleTiersConfig?.priority);
+    const eliteModBrands = resolveTierBrands(
+      moduleTiersConfig?.elite?.length ? moduleTiersConfig.elite : DEFAULT_TIER_MODULE_BRANDS.elite,
+      moduleTiersConfig?.priority
+    );
     const premModBrands = resolveTierBrands(
-      moduleTiersConfig?.premium,
+      moduleTiersConfig?.premium?.length
+        ? moduleTiersConfig.premium
+        : DEFAULT_TIER_MODULE_BRANDS.premium,
       moduleTiersConfig?.priority
     );
 
     const stdInvBrands = resolveTierBrands(
-      inverterTiersConfig?.standard,
+      inverterTiersConfig?.standard?.length
+        ? inverterTiersConfig.standard
+        : DEFAULT_TIER_INVERTER_BRANDS.standard,
       inverterTiersConfig?.priority
     );
     const eliteInvBrands = resolveTierBrands(
-      inverterTiersConfig?.elite,
+      inverterTiersConfig?.elite?.length
+        ? inverterTiersConfig.elite
+        : DEFAULT_TIER_INVERTER_BRANDS.elite,
       inverterTiersConfig?.priority
     );
     const premInvBrands = resolveTierBrands(
-      inverterTiersConfig?.premium,
+      inverterTiersConfig?.premium?.length
+        ? inverterTiersConfig.premium
+        : DEFAULT_TIER_INVERTER_BRANDS.premium,
       inverterTiersConfig?.priority
     );
 
@@ -649,15 +667,16 @@ export class KitGenerationService {
       }
 
       // 2ª Tentativa: Fallback com candidatos selecionados para a categoria deste tier
+      // NUNCA fixa pinned_inverter_id a menos que o usuário tenha pedido no input
       if (fallbackModule || fallbackInverterId) {
         const candidateInput: GenerateKitInput = {
           ...input,
-          ...(fallbackModule && !input.pinned_module_id
-            ? { pinned_module_id: fallbackModule.id }
-            : {}),
-          ...(fallbackInverterId && !input.pinned_inverter_id
-            ? { pinned_inverter_id: fallbackInverterId }
-            : {}),
+          ...(input.pinned_module_id
+            ? { pinned_module_id: input.pinned_module_id }
+            : fallbackModule
+              ? { pinned_module_id: fallbackModule.id }
+              : {}),
+          ...(input.pinned_inverter_id ? { pinned_inverter_id: input.pinned_inverter_id } : {}),
           inverter_type: invType,
         };
 
@@ -1284,19 +1303,10 @@ export class KitGenerationService {
       microInverters = [];
     }
 
-    // Trava de escala técnica: usinas de médio/grande porte nunca devem considerar
-    // inversores residenciais pequenos no dimensionamento automático
+    // Trava de escala técnica: usinas de qualquer porte nunca devem considerar
+    // inversores residenciais excessivamente pequenos no dimensionamento automático (evita fragmentação indesejada)
     if (!input.target_inverter_qty && !input.pinned_inverter_id) {
-      const minInvPowerKw =
-        input.system_kw >= 200
-          ? 40
-          : input.system_kw >= 80
-            ? 20
-            : input.system_kw >= 35
-              ? 10
-              : input.system_kw >= 15
-                ? 5
-                : 1;
+      const minInvPowerKw = Math.max(1, Math.floor(input.system_kw / 1.55));
       const scaled = stringInverters.filter((inv) => {
         const pKw =
           (inv.specs.nominal_power_w ? inv.specs.nominal_power_w / 1000 : 0) ||

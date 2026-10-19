@@ -62,10 +62,11 @@ function computeStringConfiguration(
   const dcAcRatio = dcPower / acPower;
 
   const isPowerExceeded = dcPower > inv.max_dc_power;
+  const maxAllowedRatio = Math.min(inv.recommended_dc_ac_ratio_max || 1.5, 1.55);
   const ratioOk =
     !isPowerExceeded &&
     dcAcRatio >= (inv.recommended_dc_ac_ratio_min || 1.0) &&
-    dcAcRatio <= (inv.recommended_dc_ac_ratio_max || 1.5);
+    dcAcRatio <= maxAllowedRatio;
 
   const upperBound = Math.min(maxModulesPerString, moduleQuantity);
   for (let mps = upperBound; mps >= minModulesPerString; mps--) {
@@ -121,7 +122,10 @@ function trySizeStringInverters(
 
   const candidateInverters = inverters.filter((inv) => {
     const nominalW = inv.specs.nominal_power_w || inv.specs.max_dc_power / 1.3;
-    const powerMinOk = inv.specs.max_dc_power >= perInverterPowerW * 0.7;
+    // Potência nominal mínima para evitar sobrecarga excessiva (> 155%)
+    const minNominalPowerW = perInverterPowerW / 1.55;
+    const powerMinOk =
+      nominalW >= minNominalPowerW && inv.specs.max_dc_power >= perInverterPowerW * 0.7;
     const powerMaxOk = nominalW <= maxAllowedInverterNominalW;
     return powerMinOk && powerMaxOk;
   });
@@ -141,10 +145,11 @@ function trySizeStringInverters(
       const bRank = getInvRank(b.brandName);
       if (aRank !== bRank) return aRank - bRank;
     }
-    return (
-      Math.abs(a.specs.max_dc_power - perInverterPowerW) -
-      Math.abs(b.specs.max_dc_power - perInverterPowerW)
-    );
+    // Prioriza proximidade com a potência nominal ideal (ratio ~1.25)
+    const targetNominalW = perInverterPowerW / 1.25;
+    const aNominal = a.specs.nominal_power_w || a.specs.max_dc_power / 1.3;
+    const bNominal = b.specs.nominal_power_w || b.specs.max_dc_power / 1.3;
+    return Math.abs(aNominal - targetNominalW) - Math.abs(bNominal - targetNominalW);
   });
 
   for (const module of modules.slice(0, 8)) {
@@ -200,7 +205,7 @@ function trySizeStringInverters(
         finalSubModuleQuantity
       );
       const isPowerExceeded = config.dc_power_w > stringInverter.specs.max_dc_power;
-      const ratioAcceptable = config.dc_ac_ratio >= 0.7 && config.dc_ac_ratio <= 1.7;
+      const ratioAcceptable = config.dc_ac_ratio >= 0.7 && config.dc_ac_ratio <= 1.55;
 
       if (validated.voltage && validated.current && !isPowerExceeded && ratioAcceptable) {
         return {

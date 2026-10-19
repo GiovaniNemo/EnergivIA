@@ -2649,7 +2649,19 @@ Regras estritas:
     organizationId?: string;
     customRatePerKwp?: number;
   }) {
-    void _gridVoltage;
+    let gridTopology: string | undefined = undefined;
+    if (_gridVoltage) {
+      const gv = _gridVoltage.toLowerCase();
+      if (gv.includes("mono")) {
+        gridTopology = "mono_220";
+      } else if (gv.includes("bif") || gv.includes("127")) {
+        gridTopology = "biphasic_127_220";
+      } else if (gv.includes("380")) {
+        gridTopology = "tri_380";
+      } else if (gv.includes("220") && gv.includes("tri")) {
+        gridTopology = "tri_220";
+      }
+    }
 
     let finalTargetKWp = 3.0;
     let monthlyFactor = 130;
@@ -2696,6 +2708,7 @@ Regras estritas:
             inverter_type: (inverterType as any) || "string",
             monthly_yield: monthlyFactor,
             monthly_generation_factor: monthlyFactor,
+            grid_topology: gridTopology,
           },
           organizationId
         );

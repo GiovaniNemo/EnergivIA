@@ -306,4 +306,88 @@ describe("KitGenerationService - Tier Brand Distribution Suite", () => {
     // Premium deve pegar o módulo de maior potência / topo de linha
     expect(premiumTier?.module_brand).toBe("Jinko Solar");
   });
+
+  it("should select single inverters of compatible rating (e.g. 10kW) instead of multiple 3kW inverters for a 10kWp plant", async () => {
+    const mockSolplanet3k = {
+      id: "inv-solplanet-3k",
+      name: "Inversor Solplanet 3kW 220V",
+      brandName: "Solplanet",
+      price: 1500,
+      specs: {
+        type: "string",
+        nominal_power_w: 3000,
+        max_dc_power: 4500,
+        max_dc_voltage: 550,
+        mppt_count: 1,
+        max_strings_per_mppt: 1,
+        mppt_voltage_min: 80,
+        mppt_voltage_max: 500,
+        max_input_current: 16,
+        recommended_dc_ac_ratio_min: 1.0,
+        recommended_dc_ac_ratio_max: 1.5,
+      },
+    };
+
+    const mockSolplanet10k = {
+      id: "inv-solplanet-10k",
+      name: "Inversor Solplanet 10kW 220V",
+      brandName: "Solplanet",
+      price: 3800,
+      specs: {
+        type: "string",
+        nominal_power_w: 10000,
+        max_dc_power: 15000,
+        max_dc_voltage: 600,
+        mppt_count: 3,
+        max_strings_per_mppt: 1,
+        mppt_voltage_min: 100,
+        mppt_voltage_max: 550,
+        max_input_current: 16,
+        recommended_dc_ac_ratio_min: 1.0,
+        recommended_dc_ac_ratio_max: 1.5,
+      },
+    };
+
+    const mockGoodwe10k = {
+      id: "inv-goodwe-10k",
+      name: "Inversor GoodWe 10kW 220V",
+      brandName: "GoodWe",
+      price: 3900,
+      specs: {
+        type: "string",
+        nominal_power_w: 10000,
+        max_dc_power: 15000,
+        max_dc_voltage: 600,
+        mppt_count: 3,
+        max_strings_per_mppt: 1,
+        mppt_voltage_min: 100,
+        mppt_voltage_max: 550,
+        max_input_current: 16,
+        recommended_dc_ac_ratio_min: 1.0,
+        recommended_dc_ac_ratio_max: 1.5,
+      },
+    };
+
+    mockProductRepo.findActiveStringInverters.mockResolvedValue([
+      mockSolplanet3k,
+      mockSolplanet10k,
+      mockGoodwe10k,
+    ]);
+
+    mockPrisma.tenant.findUnique.mockResolvedValue({
+      settings: {},
+    });
+
+    const result = await service.generateDistributorTiers(
+      { system_kw: 10, roof_type: "ceramic" },
+      "org-1"
+    );
+
+    expect(result.tiers).toHaveLength(3);
+    for (const tier of result.tiers) {
+      expect(tier.inverter_qty).toBe(1);
+      expect(tier.inverter_power_kw).toBeGreaterThanOrEqual(7);
+      expect(tier.inverter_power_kw).toBeLessThanOrEqual(12);
+    }
+  });
 });

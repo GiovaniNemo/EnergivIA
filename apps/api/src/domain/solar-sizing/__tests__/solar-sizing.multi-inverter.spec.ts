@@ -248,4 +248,59 @@ describe("Solar Sizing - Multi-Inverter & Single Priority", () => {
       expect(result.module_quantity).toBeGreaterThan(5000);
     }
   });
+
+  it("prioritizes a single 10kW inverter over multiple 3kW inverters and over an overloaded 5kW inverter for a 10kWp plant", () => {
+    const inverter3k: ProductWithSpecs<StringInverterSpec> = {
+      id: "inv-3k-solplanet",
+      name: "Inversor Solplanet 3kW",
+      brandName: "Solplanet",
+      price: 977,
+      specs: {
+        type: "string",
+        nominal_power_w: 3000,
+        max_dc_power: 4500,
+        max_dc_voltage: 550,
+        mppt_count: 1,
+        max_strings_per_mppt: 1,
+        mppt_voltage_min: 80,
+        mppt_voltage_max: 500,
+        max_input_current: 16,
+        recommended_dc_ac_ratio_min: 1.0,
+        recommended_dc_ac_ratio_max: 1.5,
+      },
+    };
+
+    const inverter5kOverload: ProductWithSpecs<StringInverterSpec> = {
+      id: "inv-5k-goodwe",
+      name: "Inversor GoodWe 5kW",
+      brandName: "GoodWe",
+      price: 1697,
+      specs: {
+        type: "string",
+        nominal_power_w: 5000,
+        max_dc_power: 10000,
+        max_dc_voltage: 600,
+        mppt_count: 2,
+        max_strings_per_mppt: 1,
+        mppt_voltage_min: 80,
+        mppt_voltage_max: 550,
+        max_input_current: 20,
+        recommended_dc_ac_ratio_min: 1.0,
+        recommended_dc_ac_ratio_max: 2.0,
+      },
+    };
+
+    const result = sizeSolarSystem({
+      system_kw: 10,
+      modules: [sampleModule],
+      stringInverters: [inverter3k, inverter5kOverload, inverter10k],
+      microInverters: [],
+    });
+
+    expect(result).not.toBeNull();
+    if (result && "inverter_quantity" in result) {
+      expect(result.inverter_quantity).toBe(1);
+      expect(result.inverter.id).toBe("inv-10k-growatt");
+    }
+  });
 });
