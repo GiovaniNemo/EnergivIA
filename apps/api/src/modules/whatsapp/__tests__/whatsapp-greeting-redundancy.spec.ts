@@ -132,4 +132,105 @@ describe("WhatsApp Bot - Greeting Redundancy and Menu Debounce", () => {
     expect(reply).toContain("Como posso ajudar você a gerar orçamentos hoje?");
     expect(reply).toContain("1️⃣ *Enviar fatura de energia*");
   });
+
+  it("deve destravar PROPOSAL_COMPLETED e enviar o Menu Inicial completo quando o cliente enviar 'oi' para iniciar nova cotação", async () => {
+    const conversation: any = {
+      id: "conv-completed",
+      organizationId: "org-1",
+      title: "5544999998888",
+      messages: [
+        {
+          role: "assistant",
+          content: "Sua proposta comercial já foi gerada com sucesso! ☀️",
+          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // sábado (2 dias atrás)
+        },
+      ],
+      metadata: {
+        contactName: "Giuseppe",
+        step: "PROPOSAL_COMPLETED",
+        lastProposalId: "cmvd4fnyg00zboh019znr5rea",
+      },
+    };
+
+    const reply = await (service as any).generateBotResponse({
+      conversation,
+      incomingText: "oi",
+      extractionResult: null,
+      contactName: "Giuseppe",
+    });
+
+    // Deve exibir o menu inicial completo com saudação personalizada
+    expect(reply).toContain("Giuseppe");
+    expect(reply).toContain("Como posso ajudar você a gerar orçamentos hoje?");
+    expect(reply).toContain("1️⃣ *Enviar fatura de energia*");
+    expect(reply).toContain("2️⃣ *Simular por consumo mensal*");
+    expect(reply).toContain("3️⃣ *Simular por potência de pico*");
+    expect(reply).toContain("4️⃣ *Simular por quantidade de placas*");
+
+    // NÃO deve prender na mensagem estática de proposta concluída
+    expect(reply).not.toContain("Sua proposta comercial já foi gerada com sucesso!");
+    expect(reply).not.toContain("Sua proposta mais recente está disponível");
+  });
+
+  it("deve destravar PROPOSAL_COMPLETED mesmo se o cliente enviar 'olá, boa tarde' minutos após a proposta", async () => {
+    const conversation: any = {
+      id: "conv-completed-recent",
+      organizationId: "org-1",
+      title: "5544999998888",
+      messages: [
+        {
+          role: "assistant",
+          content: "Sua proposta comercial já foi gerada com sucesso! ☀️",
+          createdAt: new Date(), // recente
+        },
+      ],
+      metadata: {
+        contactName: "Giuseppe",
+        step: "PROPOSAL_COMPLETED",
+        lastProposalId: "cmvd4fnyg00zboh019znr5rea",
+      },
+    };
+
+    const reply = await (service as any).generateBotResponse({
+      conversation,
+      incomingText: "olá, boa tarde",
+      extractionResult: null,
+      contactName: "Giuseppe",
+    });
+
+    expect(reply).toContain("Como posso ajudar você a gerar orçamentos hoje?");
+    expect(reply).toContain("1️⃣ *Enviar fatura de energia*");
+    expect(reply).not.toContain("Sua proposta comercial já foi gerada com sucesso!");
+  });
+
+  it("deve permitir escolher opção do menu (ex: '2') diretamente após proposta concluída", async () => {
+    const conversation: any = {
+      id: "conv-completed-option",
+      organizationId: "org-1",
+      title: "5544999998888",
+      messages: [
+        {
+          role: "assistant",
+          content: "Sua proposta comercial já foi gerada com sucesso! ☀️",
+          createdAt: new Date(),
+        },
+      ],
+      metadata: {
+        contactName: "Giuseppe",
+        step: "PROPOSAL_COMPLETED",
+        lastProposalId: "cmvd4fnyg00zboh019znr5rea",
+      },
+    };
+
+    const reply = await (service as any).generateBotResponse({
+      conversation,
+      incomingText: "2",
+      extractionResult: null,
+      contactName: "Giuseppe",
+    });
+
+    expect(reply).toContain("Simulação por Consumo Mensal");
+    expect(reply).toContain("consumo médio mensal");
+    expect(reply).not.toContain("Sua proposta comercial já foi gerada com sucesso!");
+  });
 });

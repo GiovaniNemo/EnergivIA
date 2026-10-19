@@ -1456,7 +1456,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       const lastMsg = conversation.messages[conversation.messages.length - 1];
       const timeSinceLastMsg = lastMsg ? Date.now() - new Date(lastMsg.createdAt).getTime() : 0;
 
-      // 15 MINUTOS OU MAIS: Se inativo por mais de 15 minutos no fluxo OU última msg foi encerramento OU inativo > 24h OU nova fatura:
+      // 15 MINUTOS OU MAIS: Se inativo por mais de 15 minutos no fluxo OU última msg foi encerramento OU inativo > 24h OU nova fatura OU proposta concluída > 1h:
       const isInactive15MinInFlow =
         lastMsg && timeSinceLastMsg >= 15 * 60 * 1000 && this.isFlowActive(lastMsg.content);
       const wasClosed =
@@ -1464,8 +1464,21 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         (lastMsg.content.includes("encerramos este atendimento") ||
           lastMsg.content.includes("estou encerrando este atendimento"));
       const isExpired24h = lastMsg && timeSinceLastMsg > SESSION_INACTIVITY_MS;
+      const isCompletedProposalExpired =
+        lastMsg &&
+        timeSinceLastMsg >= 60 * 60 * 1000 &&
+        (lastMsg.content.includes("proposta comercial gerada com sucesso") ||
+          lastMsg.content.includes("proposta mais recente está disponível") ||
+          (conversation.metadata as Record<string, any>)?.["step"] === "PROPOSAL_COMPLETED");
 
-      if (isInactive15MinInFlow || wasClosed || isExpired24h || isNewMedia) {
+      const shouldResetSession =
+        isInactive15MinInFlow ||
+        wasClosed ||
+        isExpired24h ||
+        isNewMedia ||
+        isCompletedProposalExpired;
+
+      if (shouldResetSession) {
         this.logger.log(
           `Resetando contexto para nova sessão: de=${fromWaId}, motivo=${
             isInactive15MinInFlow
@@ -1474,7 +1487,9 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
                 ? "atendimento_encerrado"
                 : isNewMedia
                   ? "nova_midia"
-                  : "inatividade_24h"
+                  : isCompletedProposalExpired
+                    ? "proposta_concluida_expirada_1h"
+                    : "inatividade_24h"
           }`
         );
         await this.prisma.message.deleteMany({
@@ -1501,6 +1516,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
             isGuestTrial,
             trialQuotesUsed: 0,
             trialMaxQuotes: 3,
+            step: "IDLE",
           },
         },
         include: { messages: { orderBy: { createdAt: "asc" } } },
@@ -1508,17 +1524,28 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     } else {
       const currentMeta = (conversation.metadata as Record<string, any>) || {};
       const shouldFlagTrial = isGuestTrial || currentMeta["isGuestTrial"] === true;
+      const updatedMeta: Record<string, any> = {
+        ...currentMeta,
+        customerWaId: fromWaId,
+        contactName: contactName || currentMeta["contactName"],
+        phoneNumberId: phoneNumberId || currentMeta["phoneNumberId"],
+        isGuestTrial: shouldFlagTrial,
+      };
+
+      if (!conversation.messages || conversation.messages.length === 0) {
+        updatedMeta["step"] = "IDLE";
+        if (updatedMeta["sessionData"]) {
+          updatedMeta["sessionData"] = {
+            lastProposalId: updatedMeta["sessionData"]["lastProposalId"],
+          };
+        }
+      }
+
       await this.prisma.conversation.update({
         where: { id: conversation.id },
         data: {
           updatedAt: new Date(),
-          metadata: {
-            ...currentMeta,
-            customerWaId: fromWaId,
-            contactName: contactName || currentMeta["contactName"],
-            phoneNumberId: phoneNumberId || currentMeta["phoneNumberId"],
-            isGuestTrial: shouldFlagTrial,
-          },
+          metadata: updatedMeta,
         },
       });
     }
@@ -3513,7 +3540,9 @@ ${catalogContext}`;
         role: string;
         content?: string | null;
         metadata?: unknown;
+        createdAt?: Date | string;
       }>;
+      updatedAt?: Date | string;
     };
     incomingText: string;
     extractionResult: BillExtractionResult | null;
@@ -3539,6 +3568,99 @@ ${catalogContext}`;
       }
       return this.buildGreetingMenu(resolvedContactName);
     };
+
+    const isGreetingText = (txt: string): boolean => {
+      if (!txt) return false;
+      const clean = txt
+        .replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/[.,!?:;*~_]/g, "");
+
+      const greetingWords = [
+        "oi",
+        "oii",
+        "oiii",
+        "ola",
+        "olá",
+        "opa",
+        "eai",
+        "e aí",
+        "eaí",
+        "bom dia",
+        "boa tarde",
+        "boa noite",
+        "boa",
+        "tudo bem",
+        "tudo bom",
+        "salve",
+        "fala",
+        "hello",
+        "hi",
+        "hey",
+        "menu",
+        "inicio",
+        "início",
+        "iniciar",
+        "comecar",
+        "começar",
+        "novo",
+        "nova",
+        "reiniciar",
+        "reset",
+        "voltar",
+        "gerar",
+        "orçamento",
+        "orcamento",
+        "proposta",
+        "nova proposta",
+        "nova cotação",
+        "nova cotacao",
+        "outro cliente",
+        "cotar",
+        "cotação",
+        "cotacao",
+        "simular",
+        "simulação",
+        "simulacao",
+        "ajuda",
+        "help",
+        "opcoes",
+        "opções",
+      ];
+
+      return (
+        greetingWords.includes(clean) ||
+        clean.startsWith("bom dia") ||
+        clean.startsWith("boa tarde") ||
+        clean.startsWith("boa noite") ||
+        clean.startsWith("ola ") ||
+        clean.startsWith("olá ") ||
+        clean.startsWith("oi ") ||
+        clean.startsWith("opa ") ||
+        clean.startsWith("quero ") ||
+        clean.startsWith("fazer ") ||
+        clean.startsWith("criar ") ||
+        clean.startsWith("iniciar ") ||
+        clean.startsWith("simular ")
+      );
+    };
+
+    // Recupera mensagens do assistente e a última mensagem funcional
+    const assistantMessages = messages.filter((m) => m.role === "assistant");
+    const lastRawBotMsg =
+      assistantMessages.length > 0
+        ? assistantMessages[assistantMessages.length - 1]?.content || ""
+        : "";
+    const functionalAssistantMessages = assistantMessages.filter(
+      (m) =>
+        !m.content?.includes("Você ainda está por aí?") &&
+        !m.content?.includes("encerramos este atendimento")
+    );
+    const lastBotMsg =
+      functionalAssistantMessages.length > 0
+        ? functionalAssistantMessages[functionalAssistantMessages.length - 1]?.content || ""
+        : lastRawBotMsg;
 
     if (incomingText === "[Mensagem de áudio recebida]") {
       return (
@@ -4252,7 +4374,7 @@ ${catalogContext}`;
         .trim()
         .replace(/[.,!?:;*~_]/g, "");
 
-      // Agradecimentos e confirmações comuns
+      // 1. Agradecimentos e confirmações comuns pós-proposta (sempre atendidos com simpatia)
       const gratitudeMatches = [
         "obrigado",
         "obrigada",
@@ -4287,17 +4409,50 @@ ${catalogContext}`;
         );
       }
 
-      // Reinício para nova proposta (compatibilidade retroativa caso o usuário digite "novo")
-      if (
+      // 2. Reinício explícito via comando "novo", "reiniciar", etc.
+      const isRestart =
         lowerClean === "novo" ||
         lowerClean === "reiniciar" ||
         lowerClean === "nova cotação" ||
         lowerClean === "nova cotacao" ||
         lowerClean === "nova proposta" ||
-        lowerClean === "outro cliente"
-      ) {
-        await setStep("IDLE");
+        lowerClean === "outro cliente";
+
+      if (isRestart) {
+        await setStep("IDLE", {
+          cidade: undefined,
+          uf: undefined,
+          hsp: undefined,
+          consumptionKwh: undefined,
+          kwp: undefined,
+          moduleCount: undefined,
+          gridType: undefined,
+          roofType: undefined,
+          quotesList: undefined,
+          selectedQuoteIndex: undefined,
+          selectedTierName: undefined,
+          kwpRate: undefined,
+          quotedSaleBrl: undefined,
+          clientName: undefined,
+          clientPhone: undefined,
+          selectedTemplateId: undefined,
+        });
+
+        sessionCtx.targetKWp = undefined;
+        sessionCtx.targetModules = undefined;
+        sessionCtx.modPowerWUser = undefined;
+        sessionCtx.consumptionKwh = undefined;
+        sessionCtx.roofType = undefined;
+        sessionCtx.gridVoltage = undefined;
+        sessionCtx.cidade = undefined;
+        sessionCtx.estado = undefined;
+        sessionCtx.clientName = undefined;
+        sessionCtx.clientWhatsapp = undefined;
+
         if (isGuestTrial && trialStatus) {
+          if (trialStatus.remaining <= 0) {
+            return this.buildGuestTrialExceededMessage();
+          }
           return (
             `Vamos iniciar uma nova cotação solar! ☀️\n\n` +
             `_(Restam ${trialStatus.remaining} cotações no seu teste gratuito)_\n\n` +
@@ -4310,22 +4465,83 @@ ${catalogContext}`;
         );
       }
 
-      // Mensagem orientadora pós-proposta (nunca exibe o menu frio inicial "Não compreendi sua mensagem")
-      const targetProposalId = storedSessionData["lastProposalId"] || convMeta["lastProposalId"];
-      const appBaseUrl =
-        process.env["APP_BASE_URL"] ||
-        process.env["PUBLIC_WEB_APP_BASE_URL"] ||
-        this.config.get<string>("APP_BASE_URL") ||
-        "https://www.energivia.com.br";
-      const linkMsg = targetProposalId
-        ? `Sua proposta mais recente está disponível em:\n👉 ${appBaseUrl}/proposta/${targetProposalId}\n\n`
-        : "";
+      // 3. Verificação de expiração temporal e saudações
+      const lastAssistantMsg = assistantMessages[assistantMessages.length - 1];
+      const lastAssistantTime =
+        lastAssistantMsg && (lastAssistantMsg as any).createdAt
+          ? new Date((lastAssistantMsg as any).createdAt).getTime()
+          : conversation?.updatedAt
+            ? new Date(conversation.updatedAt).getTime()
+            : 0;
+      const isProposalOlderThan1Hour =
+        lastAssistantTime > 0 && Date.now() - lastAssistantTime >= 60 * 60 * 1000;
 
-      return (
-        `Sua proposta comercial já foi gerada com sucesso! ☀️\n\n` +
-        linkMsg +
-        `Para realizar uma nova cotação, basta enviar outra conta de luz (PDF ou foto) ou informar o consumo em kWh.`
-      );
+      const isGreeting = isGreetingText(incomingText);
+      const isOptionSelection = /^(?:op[çc][ãa]o\s*)?[1-5]\.?$/i.test(lowerClean);
+
+      // Se o usuário enviou uma saudação ("oi", "olá", etc.), escolheu uma opção do menu ou se a proposta já tem mais de 1 hora:
+      if (isGreeting || isOptionSelection || isProposalOlderThan1Hour) {
+        await setStep("IDLE", {
+          cidade: undefined,
+          uf: undefined,
+          hsp: undefined,
+          consumptionKwh: undefined,
+          kwp: undefined,
+          moduleCount: undefined,
+          gridType: undefined,
+          roofType: undefined,
+          quotesList: undefined,
+          selectedQuoteIndex: undefined,
+          selectedTierName: undefined,
+          kwpRate: undefined,
+          quotedSaleBrl: undefined,
+          clientName: undefined,
+          clientPhone: undefined,
+          selectedTemplateId: undefined,
+        });
+
+        sessionCtx.targetKWp = undefined;
+        sessionCtx.targetModules = undefined;
+        sessionCtx.modPowerWUser = undefined;
+        sessionCtx.consumptionKwh = undefined;
+        sessionCtx.roofType = undefined;
+        sessionCtx.gridVoltage = undefined;
+        sessionCtx.cidade = undefined;
+        sessionCtx.estado = undefined;
+        sessionCtx.clientName = undefined;
+        sessionCtx.clientWhatsapp = undefined;
+
+        if (isGuestTrial && trialStatus && trialStatus.remaining <= 0) {
+          return this.buildGuestTrialExceededMessage();
+        }
+
+        // Se for saudação ("oi", "olá", etc.) ou proposta expirada sem ser seleção de opção específica:
+        if (
+          isGreeting ||
+          (!isOptionSelection && isProposalOlderThan1Hour && !quoteEntities.isQuoteRequest)
+        ) {
+          return getGreetingMenu();
+        }
+
+        // Se for opção numérica (1 a 5) ou cotação direta em sessão expirada, deixa fluir para os tratadores de IDLE abaixo
+      } else {
+        // Mensagem orientadora pós-proposta recente (para perguntas não compreendidas logo após a emissão)
+        const targetProposalId = storedSessionData["lastProposalId"] || convMeta["lastProposalId"];
+        const appBaseUrl =
+          process.env["APP_BASE_URL"] ||
+          process.env["PUBLIC_WEB_APP_BASE_URL"] ||
+          this.config.get<string>("APP_BASE_URL") ||
+          "https://www.energivia.com.br";
+        const linkMsg = targetProposalId
+          ? `Sua proposta mais recente está disponível em:\n👉 ${appBaseUrl}/proposta/${targetProposalId}\n\n`
+          : "";
+
+        return (
+          `Sua proposta comercial já foi gerada com sucesso! ☀️\n\n` +
+          linkMsg +
+          `Para realizar uma nova cotação, basta enviar outra conta de luz (PDF ou foto) ou informar o consumo em kWh.`
+        );
+      }
     }
 
     // 1. Se acabou de extrair a fatura com sucesso e dados válidos para dimensionamento
@@ -4501,13 +4717,6 @@ ${catalogContext}`;
       );
     }
 
-    // Recupera a última mensagem do bot para saber o estado atual da conversa
-    const assistantMessages = messages.filter((m) => m.role === "assistant");
-    const lastRawBotMsg =
-      assistantMessages.length > 0
-        ? assistantMessages[assistantMessages.length - 1]?.content || ""
-        : "";
-
     // Se o bot enviou o lembrete de 10 min e o usuário apenas confirmou presença (ex: "sim", "estou aqui", "oi"):
     if (
       lastRawBotMsg.includes("Você ainda está por aí?") &&
@@ -4535,15 +4744,6 @@ ${catalogContext}`;
         return `Maravilha! Continuando de onde paramos:\n\n${priorQuestion}`;
       }
     }
-
-    // Para o fluxo das etapas, recupera a última mensagem funcional (ignorando o lembrete para não perder o passo)
-    const functionalAssistantMessages = assistantMessages.filter(
-      (m) => !m.content?.includes("Você ainda está por aí?")
-    );
-    const lastBotMsg =
-      functionalAssistantMessages.length > 0
-        ? functionalAssistantMessages[functionalAssistantMessages.length - 1]?.content || ""
-        : "";
 
     // Comando global de reinicialização / novo orçamento
     if (isResetCommand(incomingText)) {
