@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Printer } from "lucide-react";
+import { Download, Loader2, Printer } from "lucide-react";
 import { PreviewDocument } from "@/components/proposals/editor/preview-document";
 import { LoadingState } from "@/components/ui/loading-state";
 import {
@@ -18,10 +18,44 @@ import { buildProposalEquipmentItemsFromKit } from "@/components/proposals/edito
 export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.Element {
   const [data, setData] = useState<PublicProposalPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const searchParams = useSearchParams();
   const isPdf = searchParams?.get("pdf") === "true";
   const isPreview = searchParams?.get("preview") === "true" || searchParams?.get("preview") === "1";
   const trackedRef = useRef(false);
+
+  const handleDownloadPdf = async () => {
+    if (isDownloadingPdf) return;
+    setIsDownloadingPdf(true);
+    try {
+      const url = `/api/proxy/public/proposals/${encodeURIComponent(proposalId)}/pdf`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error("Falha ao gerar o PDF da proposta.");
+      }
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      const disposition = res.headers.get("content-disposition");
+      let filename = `Proposta_${data?.proposalNumber ? `${data.proposalNumber}_` : ""}${data?.deal?.lead?.name || "Cliente"}.pdf`;
+      if (disposition && disposition.includes("filename=")) {
+        const match = disposition.match(/filename="?([^";]+)"?/);
+        if (match?.[1]) filename = match[1];
+      }
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("[PublicProposalView] Erro ao baixar PDF:", err);
+      // Fallback: abrir em nova aba para download direto
+      window.open(`/api/proxy/public/proposals/${encodeURIComponent(proposalId)}/pdf`, "_blank");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   useEffect(() => {
     if (!proposalId) return;
@@ -121,15 +155,35 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={isDownloadingPdf}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition-all cursor-pointer disabled:opacity-75 disabled:cursor-wait"
+                title="Baixar arquivo PDF no celular ou computador"
+              >
+                {isDownloadingPdf ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-white" />
+                    <span>Gerando PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 text-white" />
+                    <span>Baixar PDF</span>
+                  </>
+                )}
+              </button>
+
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3.5 py-2 text-xs font-medium text-[var(--color-foreground)] hover:bg-[var(--color-accent)] transition-all shadow-sm cursor-pointer"
-                title="Imprimir ou Salvar como PDF"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-xs font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-accent)] transition-all shadow-sm cursor-pointer"
+                title="Imprimir em impressora conectada"
               >
-                <Printer className="h-4 w-4 text-emerald-500" />
-                <span>Imprimir / Salvar PDF</span>
+                <Printer className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                <span className="hidden sm:inline">Imprimir</span>
               </button>
             </div>
           </div>

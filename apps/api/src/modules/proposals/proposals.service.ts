@@ -1099,10 +1099,36 @@ export class ProposalsService {
   }
 
   async generatePdf(proposalId: string): Promise<Buffer> {
-    // 1. Busca a proposta para pegar o Token Público
-    const proposal = await this.prisma.proposal.findUnique({
-      where: { id: proposalId },
-      select: { id: true, publicToken: true }, // Pegamos apenas o que precisamos
+    const { buffer } = await this.generatePublicPdf(proposalId);
+    return buffer;
+  }
+
+  async generatePublicPdf(idOrToken: string): Promise<{ buffer: Buffer; filename: string }> {
+    const propNumber = !isNaN(Number(idOrToken)) ? Number(idOrToken) : null;
+    const proposal = await this.prisma.proposal.findFirst({
+      where: {
+        OR: [
+          { id: idOrToken },
+          { publicToken: idOrToken },
+          ...(propNumber !== null ? [{ proposalNumber: propNumber }] : []),
+        ],
+        ...soft,
+      },
+      select: {
+        id: true,
+        publicToken: true,
+        proposalNumber: true,
+        title: true,
+        deal: {
+          select: {
+            lead: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!proposal) {
@@ -1114,9 +1140,19 @@ export class ProposalsService {
     const targetUrl = `${webBaseUrl}/proposta/${token}?pdf=true&hide_cookie=1`;
 
     this.logger.log(
-      `Iniciando geração de PDF resiliente para proposta ${proposalId} na URL: ${targetUrl}`
+      `Iniciando geração de PDF público para proposta ${proposal.id} (token: ${token}) na URL: ${targetUrl}`
     );
-    return this.pdfRenderer.renderUrlToPdf({ url: targetUrl });
+    const buffer = await this.pdfRenderer.renderUrlToPdf({ url: targetUrl });
+
+    const clientName = proposal.deal?.lead?.name || "Cliente";
+    const cleanClient = clientName
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "_");
+    const num = proposal.proposalNumber ? `${proposal.proposalNumber}_` : "";
+    const filename = `Proposta_${num}${cleanClient}.pdf`;
+
+    return { buffer, filename };
   }
 
   async renderHtmlPdf(html: string): Promise<Buffer> {
