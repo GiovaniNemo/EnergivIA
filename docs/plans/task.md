@@ -610,3 +610,4 @@
 | task-613 | Implementar página da Central de Ajuda (/ajuda) e componentes modulares | completed | Criados page.tsx, TicketForm, FaqSection, ChannelsSection e TicketSuccessModal |
 | task-614 | Integrar Central de Ajuda no menu lateral (Sidebar/menu.config.ts) e Topbar (UserMenu) | completed | Inserido item Central de Ajuda em GESTÃO no menu.config.ts e no UserMenu do Topbar |
 | task-615 | Validar lint, testes do frontend/backend, realizar commit e push para origin/main | completed | ESLint 0 erros, 58 suítes e 416 testes Vitest 100% aprovados, sincronizado com origin/main |
+| task-616 | Corrigir tipagem de valStr em parsePtBrNumber e parsePowerInput para build do NestJS | completed | Permitido string \| null \| undefined em parsePtBrNumber, adicionado guard em parsePowerInput e build do NestJS aprovado |

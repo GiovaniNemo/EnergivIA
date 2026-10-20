@@ -397,7 +397,7 @@ export function formatPowerBadge(kwp: number): string {
 }
 
 /** Converte números no formato brasileiro (com ponto como milhar e vírgula como decimal) ou internacional */
-export function parsePtBrNumber(valStr: string): number {
+export function parsePtBrNumber(valStr?: string | null): number {
   if (!valStr) return NaN;
   const clean = valStr.trim();
   // Se tem vírgula e pontos (ex: 1.000,50 ou 1.500.000,00)
@@ -475,6 +475,7 @@ export function parsePowerInput(text: string): number | null {
   while ((match = powerCandidateRegex.exec(clean)) !== null) {
     const fullMatch = match[0];
     const valStr = match[1];
+    if (!valStr) continue;
     const unit = match[2]?.toLowerCase() || "";
     const matchIndex = match.index;
     const matchEnd = matchIndex + fullMatch.length;
@@ -3305,7 +3306,7 @@ Regras estritas:
     return parseConsumptionInput(text);
   }
 
-  public parsePtBrNumber(valStr: string): number {
+  public parsePtBrNumber(valStr?: string | null): number {
     return parsePtBrNumber(valStr);
   }
 
