@@ -130,30 +130,128 @@ function formatPhone(phone: string): string {
   return phone;
 }
 
-function extractNameAndPhone(text: string): { name: string; phone?: string } {
-  const cleanText = text.trim();
+export function cleanExtractedName(rawName: string): string {
+  if (!rawName) return "";
+  let s = rawName.trim();
 
-  // Procura padrão de telefone brasileiro: DDD (2 dígitos) seguido de 8 ou 9 dígitos
-  // Ex: 44099117969, 44988117969, (44) 98811-7969, 44 98811-7969, 44-988117969, +5544988117969
-  const contiguousDigitsRegex = /\b(?:\+?55)?([1-9]{2}\d{8,9})\b/;
-  const formattedPhoneRegex =
-    /(?:\+?55\s*)?(?:\(?\s*([1-9]{2})\s*\)?\s*)?(?:(9\s*\d{4}|\d{4})[-.\s]?(\d{4}))\b/;
+  // Remove prefixos conversacionais quando informa ou corrige nome
+  s = s.replace(
+    /^(?:o\s+dela\s+(?:é|eh|e)|o\s+dele\s+(?:é|eh|e)|o\s+nome\s+dela\s+(?:é|eh|e)|o\s+nome\s+dele\s+(?:é|eh|e)|o\s+nome\s+(?:é|eh|e)|nome\s+(?:é|eh|e)|na\s+verdade\s+(?:é|eh|e)|mudar\s+(?:o\s+nome\s+)?(?:para)?|trocar\s+(?:o\s+nome\s+)?(?:para)?|coloca\s+|pode\s+ser)\s+/i,
+    ""
+  );
+
+  // Remove sufixos e conectores de telefone no final ou início (ex: ", e o é", ", e o telefone é", "e o whats:")
+  s = s
+    .replace(
+      /[,;\s]+(?:(?:e|o)\s+)*(?:telefone|whats(?:app)?|cel(?:ular)?|fone|zap|contato|numero|número)?(?:\s+(?:dele|dela))?\s*(?:é|eh|e)?\s*$/i,
+      ""
+    )
+    .replace(
+      /^(?:[,;\s]+|(?:(?:e|o)\s+)+(?:telefone|whats(?:app)?|cel(?:ular)?|fone|zap|contato|numero|número)?(?:\s+(?:dele|dela))?\s*(?:é|eh|e)?\s*)/i,
+      ""
+    )
+    .replace(/\b(?:e\s+o\s+é|e\s+o\s+e|e\s+o|e\s+é|é\s+o)\b/gi, " ")
+    .replace(/^[,;\-/:|()=*~_.\s]+|[,;\-/:|()=*~_.\s]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Stop words residuais que não configuram nome de pessoa
+  const stopWords = new Set([
+    "o",
+    "a",
+    "os",
+    "as",
+    "e",
+    "é",
+    "dele",
+    "dela",
+    "do",
+    "da",
+    "de",
+    "para",
+    "pro",
+    "pra",
+    "meu",
+    "seu",
+    "sua",
+    "whats",
+    "whatsapp",
+    "telefone",
+    "celular",
+    "numero",
+    "número",
+    "zap",
+    "contato",
+  ]);
+  const words = s.split(" ").filter((w) => w.trim().length > 0);
+  if (words.length === 0 || words.every((w) => stopWords.has(w.toLowerCase()))) {
+    return "";
+  }
+
+  // Capitaliza o nome se tiver letras
+  return words
+    .map((w) =>
+      w.length > 2 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()
+    )
+    .join(" ");
+}
+
+export function isNameCorrectionOrErrorNotice(text: string): boolean {
+  if (!text) return false;
+  const norm = text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+  return (
+    /\b(?:ta\s+errado|esta\s+errado|ficou\s+errado|nao\s+e\s+esse|nao\s+e\s+essa|errou|corrigir\s+nome|mudar\s+nome|nome\s+errado|nao\s+o\s+dela|nao\s+o\s+dele)\b/.test(
+      norm
+    ) && !/\b(?:e|eh|chama|para)\s+[a-z]{3,}\s+[a-z]{3,}\b/.test(norm)
+  );
+}
+
+export function extractNameAndPhone(text: string): { name: string; phone?: string } {
+  const cleanText = text.trim();
+  if (!cleanText) return { name: "" };
+
+  // Procura padrão de telefone brasileiro amplo (com ou sem DDD, hífens, traços, espaços ou 55)
+  // Ex: 449-8821-5497, 449-777-7770, (44) 98821-5497, 44 98821-5497, 44988215497, +55 44 98821-5497
+  const phonePattern =
+    /(?:\+?55[\s.-]*)?(?:\(?\s*([1-9]{2})\s*\)?[\s.-]*)?(?:9[\s.-]*)?\d{4}[\s.-]*\d{4}/g;
 
   let foundPhone: string | undefined;
   let matchStr = "";
 
-  const matchContiguous = cleanText.match(contiguousDigitsRegex);
-  if (matchContiguous && matchContiguous[1]) {
-    foundPhone = matchContiguous[1];
-    matchStr = matchContiguous[0];
-  } else {
-    const matchFormatted = cleanText.match(formattedPhoneRegex);
-    if (matchFormatted && matchFormatted[0]) {
-      const d = matchFormatted[0].replace(/\D/g, "");
-      const cleaned = d.startsWith("55") && (d.length === 12 || d.length === 13) ? d.slice(2) : d;
-      if (cleaned.length === 10 || cleaned.length === 11) {
+  let match: RegExpExecArray | null;
+  while ((match = phonePattern.exec(cleanText)) !== null) {
+    const rawMatch = match[0];
+    const digits = rawMatch.replace(/\D/g, "");
+    const cleaned =
+      digits.startsWith("55") && (digits.length === 12 || digits.length === 13)
+        ? digits.slice(2)
+        : digits;
+    if (cleaned.length === 10 || cleaned.length === 11) {
+      const ddd = parseInt(cleaned.slice(0, 2), 10);
+      if (ddd >= 11 && ddd <= 99) {
         foundPhone = cleaned;
-        matchStr = matchFormatted[0];
+        matchStr = rawMatch;
+        break;
+      }
+    }
+  }
+
+  // Fallback: se a mensagem como um todo tiver 10 a 13 dígitos
+  if (!foundPhone) {
+    const allDigits = cleanText.replace(/\D/g, "");
+    const cleaned =
+      allDigits.startsWith("55") && (allDigits.length === 12 || allDigits.length === 13)
+        ? allDigits.slice(2)
+        : allDigits;
+    if (cleaned.length === 10 || cleaned.length === 11) {
+      const ddd = parseInt(cleaned.slice(0, 2), 10);
+      if (ddd >= 11 && ddd <= 99) {
+        foundPhone = cleaned;
+        matchStr = cleanText;
       }
     }
   }
@@ -164,21 +262,7 @@ function extractNameAndPhone(text: string): { name: string; phone?: string } {
     rawName = rawName.replace(matchStr, "");
   }
 
-  // Remove pontuações e termos comuns entre nome e telefone (ex: vírgulas, hífens, "whats:", etc.)
-  rawName = rawName
-    .replace(/\b(?:whats(?:app)?|cel(?:ular)?|tel(?:efone)?|fone|nome)\b:?/gi, "")
-    .replace(/^[,;\-/:|()=*~_\s]+|[,;\-/:|()=*~_\s]+$/g, "")
-    .trim();
-
-  // Capitaliza o nome se tiver letras
-  const formattedName = rawName
-    ? rawName
-        .split(/\s+/)
-        .map((w) =>
-          w.length > 2 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()
-        )
-        .join(" ")
-    : "";
+  const formattedName = cleanExtractedName(rawName);
 
   return {
     name: formattedName,
@@ -5764,6 +5848,10 @@ ${catalogContext}`;
         );
       }
 
+      if (isNameCorrectionOrErrorNotice(incomingText)) {
+        return `Por favor, informe o nome do seu cliente final para a proposta comercial (Ex: João da Silva):`;
+      }
+
       const { name, phone } = extractNameAndPhone(incomingText);
       const effectiveName = name || (phone ? "Cliente" : incomingText.trim());
 
@@ -5824,25 +5912,40 @@ ${catalogContext}`;
       let clientName =
         clientNameMatch?.[1]?.replace(/\*/g, "").trim() || sessionCtx.clientName || "Cliente";
 
-      const { name: newName, phone } = extractNameAndPhone(incomingText);
-      if (newName && !phone) {
-        // Usuário corrigiu apenas o nome
-        sessionCtx.clientName = newName;
-        await setStep("AWAITING_CLIENT_PHONE", { clientName: newName });
-        return `Certo, corrigi o nome para *${newName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
+      // 1. Se o usuário avisou que o nome está errado ("Não, o dela tá errado", "nome errado", etc.)
+      if (isNameCorrectionOrErrorNotice(incomingText)) {
+        await setStep("AWAITING_CLIENT_NAME");
+        return `Sem problemas! Qual o nome correto do seu cliente final para a proposta comercial? (ou digite 0️⃣ para alterar o preço)`;
       }
-      if (newName && phone) {
-        // Usuário enviou nome e telefone
+
+      const { name: newName, phone } = extractNameAndPhone(incomingText);
+      const digits = incomingText.replace(/\D/g, "");
+      const cleanedDigits =
+        digits.startsWith("55") && (digits.length === 12 || digits.length === 13)
+          ? digits.slice(2)
+          : digits;
+      const fallbackPhone =
+        cleanedDigits.length === 10 || cleanedDigits.length === 11 ? cleanedDigits : undefined;
+      const resolvedPhone = phone || fallbackPhone;
+
+      if (!resolvedPhone) {
+        // Usuário enviou apenas um novo nome (sem número de telefone)
+        if (newName && /[a-zA-ZÀ-ÖØ-öø-ÿ]/.test(newName) && newName.length >= 2) {
+          sessionCtx.clientName = newName;
+          await setStep("AWAITING_CLIENT_PHONE", { clientName: newName });
+          return `Certo, corrigi o nome para *${newName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
+        }
+
+        return `Por favor, informe o WhatsApp do cliente com DDD (Ex: \`44 99111-7531\`):\n\n_(Ou digite 0️⃣ para voltar ao nome anterior)_`;
+      }
+
+      // Se informou nome e telefone na mesma mensagem
+      if (newName && /[a-zA-ZÀ-ÖØ-öø-ÿ]/.test(newName) && newName.length >= 2) {
         clientName = newName;
       }
 
-      const digits = incomingText.replace(/\D/g, "");
-      const resolvedPhone = phone || (digits.length >= 8 ? digits : undefined);
-
       sessionCtx.clientName = clientName;
-      if (resolvedPhone) {
-        sessionCtx.clientWhatsapp = resolvedPhone;
-      }
+      sessionCtx.clientWhatsapp = resolvedPhone;
 
       if (isGuestTrial) {
         return generateProposalAndReply(0);
@@ -5860,7 +5963,7 @@ ${catalogContext}`;
       });
       templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
 
-      const phoneDisplay = resolvedPhone ? ` e WhatsApp \`${formatPhone(resolvedPhone)}\`` : "";
+      const phoneDisplay = ` e WhatsApp \`${formatPhone(resolvedPhone)}\``;
 
       return (
         `Cliente *${clientName}*${phoneDisplay} anotado com sucesso! 👤✨\n\n` +

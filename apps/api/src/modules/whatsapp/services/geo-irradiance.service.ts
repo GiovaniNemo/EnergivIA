@@ -247,27 +247,44 @@ export function parseLocationString(input: string): ParsedLocation {
 
   let uf = "";
 
-  // 1. Tenta identificar UF por sigla de 2 letras no final precedida de separador (ex: "/PR", " - PR", " PR", ", PR", "(PR)")
-  const ufMatch = raw.match(/[\s\/\-\(,]([A-Za-z]{2})\)?$/);
-  if (ufMatch && ufMatch[1] && UF_TO_STATE_NAME[ufMatch[1].toUpperCase()]) {
-    uf = ufMatch[1].toUpperCase();
-    raw = raw.substring(0, ufMatch.index).trim();
-  }
+  // 1. Tenta identificar se o final contém conector e nome completo de Estado brasileiro por extenso
+  // (ex: " e Estado de São Paulo", " de São Paulo", " no estado de São Paulo", " do Paraná", " - Paraná")
+  // Ordena por comprimento decrescente para priorizar estados com nomes compostos (ex: "Mato Grosso do Sul" antes de "Mato Grosso")
+  const sortedStateNames = Object.keys(STATE_NAME_TO_UF).sort((a, b) => b.length - a.length);
+  const normRawForState = normalizeTextSimple(raw);
 
-  // 2. Se não encontrou sigla de 2 letras, tenta identificar nome completo de Estado no final (ex: "Maringá - Paraná", "Maringá/Parana")
-  if (!uf) {
-    const stateMatch = raw.match(/[\s\/\-\(,]([A-Za-zÀ-ÖØ-öø-ÿ\s]{4,25})\)?$/);
-    if (stateMatch && stateMatch[1]) {
-      const candStateNorm = normalizeTextSimple(stateMatch[1]);
-      if (STATE_NAME_TO_UF[candStateNorm]) {
-        uf = STATE_NAME_TO_UF[candStateNorm];
-        raw = raw.substring(0, stateMatch.index).trim();
-      }
+  for (const stateName of sortedStateNames) {
+    const escapedState = stateName.replace(/\s+/g, "\\s+");
+    const pattern = new RegExp(
+      `(?:[\\s\\/\\-,]+(?:(?:E\\s+|NO\\s+|NA\\s+|EM\\s+|DO\\s+|DA\\s+|DE\\s+)?ESTADO\\s+(?:DE|DO|DA)\\s+|DE\\s+|DO\\s+|DA\\s+|EM\\s+|NO\\s+|NA\\s+|E\\s+)|[\\s\\/\\-,]+)${escapedState}$`,
+      "i"
+    );
+    const match = normRawForState.match(pattern);
+    if (match && typeof match.index === "number") {
+      uf = STATE_NAME_TO_UF[stateName] || "";
+      raw = raw.substring(0, match.index).trim();
+      break;
     }
   }
 
-  // Remove separadores e pontuações residuais que sobraram no final da cidade
-  raw = raw.replace(/[\s\/\-\(,\."'`*_~]+$/, "").trim();
+  // 2. Se não encontrou por extenso, tenta identificar UF por sigla de 2 letras no final precedida de separador/conector
+  // (ex: "/PR", " - PR", " PR", ", PR", "(PR)", " de SP", " em SP")
+  if (!uf) {
+    const ufMatch = raw.match(/(?:[\s\/\-\(,]+(?:(?:de|do|da|em|no|na)\s+)?)([A-Za-z]{2})\)?$/i);
+    if (ufMatch && ufMatch[1] && UF_TO_STATE_NAME[ufMatch[1].toUpperCase()]) {
+      uf = ufMatch[1].toUpperCase();
+      raw = raw.substring(0, ufMatch.index).trim();
+    }
+  }
+
+  // Remove conectores e separadores residuais que sobraram no final da cidade
+  raw = raw
+    .replace(
+      /(?:[\s\/\-\(,]+(?:e\s+|no\s+|na\s+|em\s+|do\s+|da\s+|de\s+)?(?:estado\s+(?:de|do|da)?)?)$/i,
+      ""
+    )
+    .replace(/[\s\/\-\(,\."'`*_~]+$/, "")
+    .trim();
 
   // 3. Se a cidade ficou vazia (ex: input continha apenas a UF ou Estado)
   if (!raw && uf) {

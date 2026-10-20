@@ -594,3 +594,7 @@
 | task-596 | Adicionar imports explícitos de hooks do React em renderers.tsx e validar ausência de hooks órfãos | completed | Adicionado import com useId, useState, useEffect, useMemo e varredura confirmou 0 pendências |
 | task-597 | Validar compilação do frontend, ESLint e testes automatizados Vitest | completed | ESLint 0 erros, 56 suítes e 400 testes no Vitest aprovados (100%) |
 | task-598 | Realizar commit e push da correção de useId para origin/main | completed | Correção enviada para origin/main |
+| task-599 | Aprimorar parser de cidades e estados com conectores de fala natural em geo-irradiance.service.ts | completed | Suporte a conectores como de, e Estado de, no estado de (ex: para Presidente Prudente e Estado de São Paulo e Presidente Prudente de São Paulo) |
+| task-600 | Robustecer extração de telefone WhatsApp e nomes do cliente em whatsapp-bot.service.ts | completed | Reconhecimento de telefones com hífen no nono dígito (449-8821-5497, 449-777-7770), remoção de conectores e detecção de avisos de correção de nome |
+| task-601 | Escrever suíte de testes unitários dedicada (whatsapp-phone-and-location-parsing.spec.ts) e validar lint | completed | 13 testes cobrindo os casos reais dos 3 prints de WhatsApp, ESLint 0 erros, 413 testes Vitest passando |
+| task-602 | Realizar commit e push das melhorias do WhatsApp Bot para origin/main | completed | Alterações sincronizadas com o repositório remoto |
