@@ -96,9 +96,7 @@ export function TicketSuccessModal({
             </div>
             <div className="flex justify-between text-neutral-500 dark:text-neutral-400">
               <span>Previsão de retorno:</span>
-              <span className="font-medium text-neutral-800 dark:text-neutral-200">
-                Até 4h (urgente) / 24h (geral)
-              </span>
+              <span className="font-medium text-neutral-800 dark:text-neutral-200">Em até 72h</span>
             </div>
           </div>
 

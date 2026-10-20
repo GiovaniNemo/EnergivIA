@@ -15,6 +15,7 @@ import {
   X,
   FileText,
   CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,7 +60,7 @@ const CATEGORIES: CategoryOption[] = [
   {
     key: "reclamacao",
     label: "Reclamação & Ouvidoria",
-    desc: "Canal prioritário e direto com a diretoria e sócios da EnergivIA.",
+    desc: "Canal dedicado para resolução de insatisfações e ouvidoria institucional.",
     icon: MessageSquareWarning,
     badgeColor: "text-amber-500 bg-amber-500/10",
     borderColor: "hover:border-amber-500/40",
@@ -252,10 +253,10 @@ export function TicketForm({ onSuccess }: TicketFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* 1. Seleção de Categoria Visual */}
       <div>
-        <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 mb-2.5">
+        <label className="block text-sm sm:text-base font-bold text-neutral-800 dark:text-neutral-200 mb-3 tracking-normal">
           1. Selecione o Tipo de Solicitação
         </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {CATEGORIES.map((cat) => {
             const isSelected = category === cat.key;
             const Icon = cat.icon;
@@ -264,26 +265,26 @@ export function TicketForm({ onSuccess }: TicketFormProps) {
                 key={cat.key}
                 type="button"
                 onClick={() => setCategory(cat.key)}
-                className={`relative flex flex-col text-left p-3.5 rounded-2xl border transition-all duration-150 ${
+                className={`relative flex flex-col text-left p-5 sm:p-6 rounded-2xl border transition-all duration-150 cursor-pointer ${
                   isSelected
-                    ? "border-emerald-500 bg-emerald-500/[0.04] dark:bg-emerald-500/10 shadow-xs ring-1 ring-emerald-500/30"
+                    ? "border-emerald-500 bg-emerald-500/[0.05] dark:bg-emerald-500/10 shadow-sm ring-2 ring-emerald-500/30"
                     : "border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0f172a]/60 hover:bg-neutral-50 dark:hover:bg-white/[0.02]"
                 } ${cat.borderColor}`}
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className={`p-1.5 rounded-xl ${cat.badgeColor}`}>
-                    <Icon className="h-4 w-4" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`p-2.5 rounded-xl ${cat.badgeColor}`}>
+                    <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
                   </div>
                   {isSelected && (
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white">
-                      <CheckCircle2 className="h-3 w-3" />
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow-xs">
+                      <CheckCircle2 className="h-4 w-4" />
                     </span>
                   )}
                 </div>
-                <div className="font-semibold text-xs text-neutral-900 dark:text-white">
+                <div className="font-bold text-base sm:text-lg text-neutral-900 dark:text-white">
                   {cat.label}
                 </div>
-                <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-2 leading-relaxed">
+                <div className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 mt-1.5 leading-relaxed">
                   {cat.desc}
                 </div>
               </button>
@@ -294,11 +295,11 @@ export function TicketForm({ onSuccess }: TicketFormProps) {
 
       {/* 2. Nível de Severidade (se for Dificuldade ou Reclamação) */}
       {(category === "dificuldade" || category === "reclamacao") && (
-        <div className="p-4 rounded-2xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-white/[0.02]">
-          <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 mb-2">
+        <div className="p-5 sm:p-6 rounded-2xl border border-neutral-200 dark:border-white/10 bg-neutral-50/70 dark:bg-white/[0.02]">
+          <label className="block text-sm sm:text-base font-bold text-neutral-800 dark:text-neutral-200 mb-3">
             Nível de Urgência / Impacto na sua Operação
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {(
               [
                 { key: "baixa", label: "Baixa", desc: "Dúvida simples ou melhoria visual" },
@@ -313,16 +314,16 @@ export function TicketForm({ onSuccess }: TicketFormProps) {
                   key={sev.key}
                   type="button"
                   onClick={() => setSeverity(sev.key)}
-                  className={`p-2.5 rounded-xl border text-center transition-all text-xs font-semibold ${
+                  className={`p-3.5 sm:p-4 rounded-xl border text-center transition-all ${
                     isSelected
                       ? sev.key === "critica"
-                        ? "border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 font-bold"
-                        : "border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold"
-                      : "border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/[0.04]"
+                        ? "border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 font-bold ring-1 ring-red-500/30"
+                        : "border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold ring-1 ring-emerald-500/30"
+                      : "border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/[0.04]"
                   }`}
                 >
-                  <div>{sev.label}</div>
-                  <div className="text-[10px] font-normal text-neutral-500 dark:text-neutral-400 mt-0.5">
+                  <div className="text-sm sm:text-base font-bold">{sev.label}</div>
+                  <div className="text-xs font-normal text-neutral-500 dark:text-neutral-400 mt-1 leading-normal">
                     {sev.desc}
                   </div>
                 </button>
@@ -333,9 +334,9 @@ export function TicketForm({ onSuccess }: TicketFormProps) {
       )}
 
       {/* 3. Assunto e Descrição */}
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 mb-1.5">
+          <label className="block text-sm sm:text-base font-bold text-neutral-800 dark:text-neutral-200 mb-2">
             Assunto do Chamado *
           </label>
           <Input
@@ -345,22 +346,22 @@ export function TicketForm({ onSuccess }: TicketFormProps) {
               category === "melhoria"
                 ? "Ex: Sugestão para adicionar exportação de dados em CSV..."
                 : category === "reclamacao"
-                  ? "Ex: Relato sobre instabilidade no envio de WhatsApp..."
+                  ? "Ex: Relato sobre instabilidade no envio de propostas..."
                   : "Ex: Dificuldade ao calcular economia na proposta #4092..."
             }
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            className="h-11 rounded-xl bg-white dark:bg-[#0f172a]/60 border-neutral-200 dark:border-white/10 text-sm shadow-xs focus:ring-2 focus:ring-emerald-500/20"
+            className="h-12 sm:h-13 px-4 rounded-xl bg-white dark:bg-[#0f172a]/60 border-neutral-200 dark:border-white/10 text-base shadow-xs focus:ring-2 focus:ring-emerald-500/20"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 mb-1.5">
+          <label className="block text-sm sm:text-base font-bold text-neutral-800 dark:text-neutral-200 mb-2">
             Descrição Detalhada *
           </label>
           <Textarea
             required
-            rows={5}
+            rows={6}
             placeholder={
               category === "melhoria"
                 ? "Descreva como você gostaria que essa funcionalidade funcionasse e qual valor traria para o seu dia a dia..."
@@ -368,17 +369,17 @@ export function TicketForm({ onSuccess }: TicketFormProps) {
             }
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="rounded-xl bg-white dark:bg-[#0f172a]/60 border-neutral-200 dark:border-white/10 text-sm shadow-xs focus:ring-2 focus:ring-emerald-500/20 leading-relaxed"
+            className="p-4 rounded-xl bg-white dark:bg-[#0f172a]/60 border-neutral-200 dark:border-white/10 text-base shadow-xs focus:ring-2 focus:ring-emerald-500/20 leading-relaxed min-h-[160px]"
           />
         </div>
       </div>
 
       {/* 4. Upload de Anexos / Evidências */}
       <div>
-        <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 mb-1.5">
+        <label className="block text-sm sm:text-base font-bold text-neutral-800 dark:text-neutral-200 mb-2">
           Anexar Prints de Tela ou Documentos (Opcional)
         </label>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <input
             ref={fileInputRef}
             type="file"
@@ -391,28 +392,28 @@ export function TicketForm({ onSuccess }: TicketFormProps) {
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="default"
             onClick={() => fileInputRef.current?.click()}
-            className="rounded-xl border-dashed border-neutral-300 dark:border-white/15 h-9 text-xs text-neutral-600 dark:text-neutral-300 hover:border-emerald-500"
+            className="rounded-xl border-dashed border-neutral-300 dark:border-white/15 h-11 px-4 text-sm font-semibold text-neutral-700 dark:text-neutral-200 hover:border-emerald-500 hover:text-emerald-600 transition-colors"
           >
-            <Paperclip className="h-3.5 w-3.5 mr-1.5 text-neutral-500" />
+            <Paperclip className="h-4 w-4 mr-2 text-neutral-500" />
             Adicionar Arquivo (PNG, JPG, PDF até 8MB)
           </Button>
 
           {attachments.map((file, idx) => (
             <div
               key={idx}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-800/80 px-2.5 py-1 text-xs text-neutral-700 dark:text-neutral-300"
+              className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-800/80 px-3 py-2 text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 shadow-2xs"
             >
-              <FileText className="h-3 w-3 text-emerald-500" />
-              <span className="max-w-[140px] truncate">{file.filename}</span>
+              <FileText className="h-4 w-4 text-emerald-500 shrink-0" />
+              <span className="max-w-[180px] truncate font-medium">{file.filename}</span>
               <button
                 type="button"
                 onClick={() => removeAttachment(idx)}
-                className="text-neutral-400 hover:text-red-500 ml-1"
+                className="text-neutral-400 hover:text-red-500 ml-1 transition-colors"
                 title="Remover anexo"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
@@ -420,9 +421,9 @@ export function TicketForm({ onSuccess }: TicketFormProps) {
       </div>
 
       {/* 5. Dados de Contato e Retorno */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-neutral-100 dark:border-white/5">
         <div>
-          <label className="block text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+          <label className="block text-xs sm:text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
             Seu Nome
           </label>
           <Input
@@ -430,12 +431,12 @@ export function TicketForm({ onSuccess }: TicketFormProps) {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="h-10 rounded-xl bg-white dark:bg-[#0f172a]/60 border-neutral-200 dark:border-white/10 text-xs"
+            className="h-12 px-4 rounded-xl bg-white dark:bg-[#0f172a]/60 border-neutral-200 dark:border-white/10 text-sm sm:text-base"
           />
         </div>
 
         <div>
-          <label className="block text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+          <label className="block text-xs sm:text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
             E-mail para Resposta *
           </label>
           <Input
@@ -443,12 +444,12 @@ export function TicketForm({ onSuccess }: TicketFormProps) {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-10 rounded-xl bg-white dark:bg-[#0f172a]/60 border-neutral-200 dark:border-white/10 text-xs"
+            className="h-12 px-4 rounded-xl bg-white dark:bg-[#0f172a]/60 border-neutral-200 dark:border-white/10 text-sm sm:text-base"
           />
         </div>
 
         <div>
-          <label className="block text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+          <label className="block text-xs sm:text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
             Telefone / WhatsApp (Opcional)
           </label>
           <Input
@@ -456,41 +457,44 @@ export function TicketForm({ onSuccess }: TicketFormProps) {
             placeholder="(DD) 99999-9999"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="h-10 rounded-xl bg-white dark:bg-[#0f172a]/60 border-neutral-200 dark:border-white/10 text-xs"
+            className="h-12 px-4 rounded-xl bg-white dark:bg-[#0f172a]/60 border-neutral-200 dark:border-white/10 text-sm sm:text-base"
           />
         </div>
       </div>
 
       {/* Mensagem de Erro (se houver) */}
       {errorMsg && (
-        <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm flex items-center gap-2.5">
+          <AlertTriangle className="h-5 w-5 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* Botão de Envio */}
-      <div className="flex items-center justify-between pt-3 border-t border-neutral-100 dark:border-white/5">
-        <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-          Chamados enviados para a diretoria técnica em{" "}
-          <strong className="text-neutral-700 dark:text-neutral-300">
-            contato@energivia.com.br
-          </strong>
-        </p>
+      {/* Botão de Envio e Garantia de Atendimento */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-neutral-100 dark:border-white/5">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-neutral-600 dark:text-neutral-400">
+          <Clock className="h-4 w-4 text-emerald-500 shrink-0" />
+          <span>
+            Resposta garantida em <strong>até 72h</strong> • E-mail oficial:{" "}
+            <strong className="text-neutral-800 dark:text-neutral-200 font-semibold">
+              contato@energivia.com.br
+            </strong>
+          </span>
+        </div>
 
         <Button
           type="submit"
           disabled={submitting}
-          className="h-11 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-md transition-all flex items-center gap-2"
+          className="w-full sm:w-auto h-12 sm:h-13 px-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base shadow-md transition-all flex items-center justify-center gap-2.5"
         >
           {submitting ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
               <span>Registrando Chamado...</span>
             </>
           ) : (
             <>
-              <Send className="h-4 w-4" />
+              <Send className="h-5 w-5" />
               <span>Enviar Solicitação</span>
             </>
           )}

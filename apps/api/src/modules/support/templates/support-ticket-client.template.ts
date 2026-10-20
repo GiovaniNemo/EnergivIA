@@ -57,8 +57,7 @@ export function buildSupportTicketClientTemplate(input: SupportTicketClientTempl
     input.message,
     ``,
     `PRAZO ESTIMADO DE RESPOSTA (SLA):`,
-    `• Questões técnicas críticas: retorno prioritário em até 4 horas úteis.`,
-    `• Dúvidas gerais e solicitações: resposta em até 24 horas úteis.`,
+    `• Previsão de retorno e análise em até 72 horas úteis.`,
     ``,
     `Caso precise adicionar novas evidências ou prints, basta responder diretamente a este e-mail mantendo o assunto original.`,
     ``,
@@ -149,8 +148,7 @@ ${escapeHtml(input.message)}
                         ⏱️ Previsão de Atendimento:
                       </div>
                       <div style="font-size:13px; color:#d1d5db; line-height:1.6;">
-                        • <strong>Problemas técnicos de alta prioridade:</strong> retorno em até 4 horas úteis.<br />
-                        • <strong>Dúvidas de uso, sugestões e solicitações:</strong> resposta em até 24 horas úteis.
+                        • <strong>Previsão de retorno e atendimento:</strong> resposta em até 72 horas úteis.
                       </div>
                     </td>
                   </tr>

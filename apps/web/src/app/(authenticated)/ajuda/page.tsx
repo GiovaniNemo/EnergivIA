@@ -50,8 +50,8 @@ export default function CentralAjudaPage() {
 
           <p className="mt-2 text-sm sm:text-base text-neutral-600 dark:text-neutral-300 leading-relaxed max-w-2xl">
             Abra chamados para suporte técnico, envie sugestões de melhorias ou relate dificuldades
-            diretamente para nossa diretoria e equipe técnica. Cada chamado gera um protocolo
-            corporativo com acompanhamento por e-mail.
+            diretamente para nossa equipe especializada de suporte e engenharia. Cada chamado gera
+            um protocolo corporativo com acompanhamento por e-mail.
           </p>
         </div>
 
@@ -61,7 +61,7 @@ export default function CentralAjudaPage() {
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <Clock className="h-4 w-4" />
             </div>
-            <span>Retorno rápido em até 4h úteis</span>
+            <span>Resposta em até 72h</span>
           </div>
 
           <div className="flex items-center gap-2.5 text-xs text-neutral-700 dark:text-neutral-300 font-medium">
@@ -124,12 +124,12 @@ export default function CentralAjudaPage() {
 
       {/* Conteúdo Dinâmico por Aba */}
       {activeTab === "chamado" && (
-        <div className="max-w-3xl mx-auto rounded-3xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#070b13] p-6 sm:p-9 shadow-sm">
-          <div className="mb-6 pb-4 border-b border-neutral-100 dark:border-white/5">
-            <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+        <div className="max-w-5xl mx-auto rounded-3xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#070b13] p-8 sm:p-12 shadow-sm">
+          <div className="mb-8 pb-5 border-b border-neutral-100 dark:border-white/5">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight">
               Nova Solicitação de Atendimento
             </h2>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+            <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 mt-2">
               Preencha os campos abaixo com o máximo de detalhes possível para agilizar seu
               atendimento.
             </p>

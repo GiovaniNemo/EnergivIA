@@ -14,7 +14,8 @@ export function ChannelsSection() {
           E-mail Corporativo
         </h3>
         <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">
-          Canal direto com a diretoria técnica e sócios para dúvidas, sugestões e suporte.
+          Canal oficial com nossa equipe especializada de suporte e engenharia para dúvidas,
+          sugestões e atendimento.
         </p>
         <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-white/5">
           <a
@@ -39,8 +40,8 @@ export function ChannelsSection() {
           Segunda a Sexta-feira, das 08h00 às 18h00 (Horário de Brasília).
         </p>
         <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-white/5 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
-          <span>Tempo médio de resposta:</span>
-          <span className="font-semibold text-neutral-800 dark:text-neutral-200">Até 4h úteis</span>
+          <span>Tempo estimado de resposta:</span>
+          <span className="font-semibold text-neutral-800 dark:text-neutral-200">Em até 72h</span>
         </div>
       </div>
 
