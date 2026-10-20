@@ -590,3 +590,7 @@
 | task-592 | Atualizar fluxo de conversação, histórico de sessão e perguntas de padrão elétrico em whatsapp-bot.service.ts | completed | Garantir que o bot registre Consumo Registrado e calcule potência correta no dimensionamento |
 | task-593 | Executar suíte de testes do Vitest, lint e validação completa | completed | 56 suítes e 400 testes Vitest aprovados (100%), ESLint código 0 sem warnings |
 | task-594 | Realizar commit e push das alterações para origin/main | completed | Alterações enviadas com sucesso para origin/main |
+| task-595 | Investigar causa raiz de ReferenceError: useId is not defined no Next.js chunk e varrer repositório | completed | Identificado uso de useId, useState, useEffect, useMemo em renderers.tsx sem importação do React |
+| task-596 | Adicionar imports explícitos de hooks do React em renderers.tsx e validar ausência de hooks órfãos | completed | Adicionado import com useId, useState, useEffect, useMemo e varredura confirmou 0 pendências |
+| task-597 | Validar compilação do frontend, ESLint e testes automatizados Vitest | completed | ESLint 0 erros, 56 suítes e 400 testes no Vitest aprovados (100%) |
+| task-598 | Realizar commit e push da correção de useId para origin/main | completed | Correção enviada para origin/main |
