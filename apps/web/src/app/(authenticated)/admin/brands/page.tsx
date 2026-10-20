@@ -7,42 +7,33 @@ import {
   Box,
   Button,
   TextField,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  InputAdornment,
   Select,
   MenuItem,
   InputLabel,
   FormControl,
   OutlinedInput,
   Chip,
-  Avatar,
   Typography,
-  Tooltip,
-  Grid,
-  Checkbox,
   CircularProgress,
 } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
-import ChecklistIcon from "@mui/icons-material/Checklist";
-import SearchIcon from "@mui/icons-material/Search";
-import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
-import BrandingWatermarkOutlinedIcon from "@mui/icons-material/BrandingWatermarkOutlined";
-import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
-import PublicOutlinedIcon from "@mui/icons-material/PublicOutlined";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import {
+  Award,
+  Sparkles,
+  Globe,
+  Boxes,
+  Plus,
+  Search,
+  FileSpreadsheet,
+  Trash2,
+  Pencil,
+  ArrowRight,
+  Layers,
+  X,
+} from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { brandSchema, type BrandFormValues, categoryNames } from "@/lib/admin/schemas";
@@ -50,7 +41,7 @@ import { fetchBrands, createBrand, updateBrand, deleteBrand, type Brand } from "
 import { ImageUpload } from "@/components/admin/products/ImageUpload";
 
 const categoryLabels: Record<string, string> = {
-  module: "Painéis / Módulos",
+  module: "Módulos",
   inverter: "Inversores",
   microinverter: "Microinversores",
   structure_kit: "Estruturas",
@@ -68,6 +59,7 @@ export default function AdminBrandsPage(): JSX.Element {
   const [bulkInput, setBulkInput] = useState("");
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -87,7 +79,7 @@ export default function AdminBrandsPage(): JSX.Element {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "brands"] });
       setDialogOpen(false);
-      form.reset({ name: "", country: "", image_url: "" });
+      form.reset({ name: "", country: "", image_url: "", categories: [] });
     },
   });
 
@@ -190,9 +182,16 @@ export default function AdminBrandsPage(): JSX.Element {
       const matchSearch =
         brand.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (brand.country && brand.country.toLowerCase().includes(searchTerm.toLowerCase()));
-      return matchSearch;
+
+      if (!matchSearch) return false;
+
+      if (selectedCategory !== "ALL") {
+        return (brand.categories || []).includes(selectedCategory);
+      }
+
+      return true;
     });
-  }, [brands, searchTerm]);
+  }, [brands, searchTerm, selectedCategory]);
 
   // Statistics KPIs
   const stats = useMemo(() => {
@@ -263,363 +262,288 @@ export default function AdminBrandsPage(): JSX.Element {
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+    <div className="space-y-6">
       {/* KPI Stats Header */}
-      <Grid container spacing={2}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              borderRadius: 2,
-              bgcolor: "background.paper",
-            }}
-          >
-            <Avatar sx={{ bgcolor: "primary.main", color: "#fff", width: 44, height: 44 }}>
-              <BrandingWatermarkOutlinedIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                Total de Marcas
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                {stats.total}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
+            <Award className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+              Total de Fabricantes
+            </p>
+            <p className="text-2xl font-bold text-white">{stats.total}</p>
+          </div>
+        </div>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              borderRadius: 2,
-              bgcolor: "background.paper",
-            }}
-          >
-            <Avatar sx={{ bgcolor: "success.main", color: "#fff", width: 44, height: 44 }}>
-              <PublicOutlinedIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                Com Identidade / Logo
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                {stats.withLogo}{" "}
-                <Typography component="span" variant="caption" color="text.secondary">
-                  ({stats.total > 0 ? Math.round((stats.withLogo / stats.total) * 100) : 0}%)
-                </Typography>
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
+        <div className="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+              Com Identidade / Logo
+            </p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-white">{stats.withLogo}</span>
+              <span className="text-xs text-zinc-400">
+                ({stats.total > 0 ? Math.round((stats.withLogo / stats.total) * 100) : 0}%)
+              </span>
+            </div>
+          </div>
+        </div>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              borderRadius: 2,
-              bgcolor: "background.paper",
-            }}
-          >
-            <Avatar sx={{ bgcolor: "info.main", color: "#fff", width: 44, height: 44 }}>
-              <CategoryOutlinedIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                Segmentos Cobertos
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                {stats.categoriesCount}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
+        <div className="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+            <Layers className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+              Segmentos Cobertos
+            </p>
+            <p className="text-2xl font-bold text-white">{stats.categoriesCount}</p>
+          </div>
+        </div>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              borderRadius: 2,
-              bgcolor: "background.paper",
-            }}
-          >
-            <Avatar sx={{ bgcolor: "warning.main", color: "#fff", width: 44, height: 44 }}>
-              <Inventory2OutlinedIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                Produtos Vinculados
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                {stats.totalProducts}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
+        <div className="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
+            <Boxes className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+              Produtos Vinculados
+            </p>
+            <p className="text-2xl font-bold text-white">{stats.totalProducts}</p>
+          </div>
+        </div>
+      </div>
 
       {/* Actions & Filters */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        flexWrap="wrap"
-        gap={2}
-        alignItems="center"
-      >
-        <TextField
-          placeholder="Pesquisar marcas ou países..."
-          size="small"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ minWidth: 280, bgcolor: "background.paper" }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon fontSize="small" sx={{ color: "text.secondary" }} />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <Box display="flex" gap={1.5}>
-          <Button
-            variant="outlined"
-            startIcon={<ChecklistIcon />}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-1 items-center gap-3 max-w-xl">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <input
+              type="text"
+              placeholder="Pesquisar marcas ou países de origem..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] py-2.5 pl-10 pr-4 text-sm text-white placeholder-zinc-500 transition-colors focus:border-emerald-500/60 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Category Filter */}
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-zinc-300 focus:border-emerald-500/60 focus:outline-none"
+          >
+            <option value="ALL">Todas as Categorias</option>
+            {categoryNames.map((name) => (
+              <option key={name} value={name}>
+                {categoryLabels[name] || name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
             onClick={() => setBulkDialogOpen(true)}
-            size="medium"
-            sx={{ textTransform: "none", fontWeight: 600 }}
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white"
           >
-            Importar em lote
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
+            <FileSpreadsheet className="h-4 w-4 text-zinc-400" />
+            <span>Importar em lote</span>
+          </button>
+
+          <button
             onClick={handleOpenCreate}
-            size="medium"
-            sx={{ textTransform: "none", fontWeight: 600 }}
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-emerald-950 transition-all hover:bg-emerald-500 active:scale-[0.98]"
           >
-            Nova marca
-          </Button>
-        </Box>
-      </Box>
+            <Plus className="h-4 w-4" />
+            <span>Nova Marca</span>
+          </button>
+        </div>
+      </div>
 
       {/* Barra de Ações em Massa */}
       {selectedIds.length > 0 && (
-        <Paper
-          variant="outlined"
-          sx={{
-            p: 1.5,
-            px: 2,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderRadius: 2,
-            bgcolor: (theme) =>
-              theme.palette.mode === "dark"
-                ? "rgba(31, 127, 155, 0.2)"
-                : "rgba(31, 127, 155, 0.08)",
-            borderColor: "#1f7f9b",
-            boxShadow: "0 2px 8px rgba(31,127,155,0.12)",
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
+        <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-950/30 px-4 py-3 shadow-lg shadow-emerald-950/20">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-emerald-300">
               {selectedIds.length}{" "}
               {selectedIds.length === 1 ? "marca selecionada" : "marcas selecionadas"}
-            </Typography>
-            <Button
-              size="small"
+            </span>
+            <button
               onClick={() => setSelectedIds([])}
-              sx={{ textTransform: "none", fontSize: "0.8rem", color: "text.secondary" }}
+              className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors underline"
             >
               Desmarcar todas
-            </Button>
-          </Box>
-          <Button
-            variant="contained"
-            color="error"
-            size="small"
-            startIcon={
-              bulkDeleting ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                <DeleteIcon fontSize="small" />
-              )
-            }
-            disabled={bulkDeleting}
+            </button>
+          </div>
+
+          <button
             onClick={() => setDeleteConfirmOpen(true)}
-            sx={{ textTransform: "none", fontWeight: 600, px: 2 }}
+            disabled={bulkDeleting}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 transition-colors disabled:opacity-50"
           >
-            Excluir selecionadas ({selectedIds.length})
-          </Button>
-        </Paper>
+            <Trash2 className="h-3.5 w-3.5" />
+            <span>Excluir selecionadas ({selectedIds.length})</span>
+          </button>
+        </div>
       )}
 
       {/* Brands Table */}
-      <Paper variant="outlined" sx={{ overflow: "hidden", borderRadius: 2 }}>
-        <TableContainer>
-          <Table size="medium">
-            <TableHead sx={{ bgcolor: "action.hover" }}>
-              <TableRow>
-                <TableCell padding="checkbox" sx={{ width: 48, pl: 2 }}>
-                  <Checkbox
-                    size="small"
-                    indeterminate={isSomeSelected}
+      <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-xl shadow-black/10">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-[var(--color-border)] bg-zinc-900/60 text-xs uppercase tracking-wider text-zinc-400">
+              <tr>
+                <th className="w-12 px-4 py-3.5">
+                  <input
+                    type="checkbox"
                     checked={isAllSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = isSomeSelected;
+                    }}
                     onChange={handleToggleSelectAll}
-                    inputProps={{ "aria-label": "Selecionar todas as marcas" }}
+                    aria-label="Selecionar todas as marcas"
+                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-zinc-900"
                   />
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Marca</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Categorias Fabricadas</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>País de Origem</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>
-                  Produtos
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>
-                  Ações
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+                </th>
+                <th className="px-4 py-3.5 font-semibold">Marca / Fabricante</th>
+                <th className="px-4 py-3.5 font-semibold">Categorias Atendidas</th>
+                <th className="px-4 py-3.5 font-semibold">Origem</th>
+                <th className="px-4 py-3.5 text-center font-semibold">Catálogo</th>
+                <th className="px-4 py-3.5 text-right font-semibold">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--color-border)]/50">
               {isLoading ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    sx={{ py: 6, textAlign: "center", color: "text.secondary" }}
-                  >
-                    Carregando marcas…
-                  </TableCell>
-                </TableRow>
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-zinc-400">
+                    <CircularProgress size={24} className="mb-2 text-emerald-400" />
+                    <p>Carregando marcas cadastradas...</p>
+                  </td>
+                </tr>
               ) : filteredBrands.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    sx={{ py: 6, textAlign: "center", color: "text.secondary" }}
-                  >
-                    Nenhuma marca encontrada com os filtros aplicados.
-                  </TableCell>
-                </TableRow>
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-zinc-400">
+                    <Award className="mx-auto h-8 w-8 text-zinc-600 mb-2" />
+                    <p className="font-medium text-white">Nenhuma marca encontrada</p>
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Tente ajustar seus termos de busca ou filtros.
+                    </p>
+                  </td>
+                </tr>
               ) : (
                 filteredBrands.map((brand) => {
                   const productCount = brand._count?.products ?? 0;
                   const isRowSelected = selectedIds.includes(brand.id);
+
                   return (
-                    <TableRow
+                    <tr
                       key={brand.id}
-                      hover
-                      selected={isRowSelected}
-                      sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+                      className={`group transition-colors ${
+                        isRowSelected ? "bg-emerald-500/[0.08]" : "hover:bg-white/[0.02]"
+                      }`}
                     >
-                      <TableCell padding="checkbox" sx={{ width: 48, pl: 2 }}>
-                        <Checkbox
-                          size="small"
+                      <td className="px-4 py-3.5">
+                        <input
+                          type="checkbox"
                           checked={isRowSelected}
                           onChange={() => handleToggleSelectRow(brand.id)}
-                          inputProps={{ "aria-label": `Selecionar marca ${brand.name}` }}
+                          aria-label={`Selecionar marca ${brand.name}`}
+                          className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-zinc-900"
                         />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                          <Avatar
-                            src={brand.imageUrl || undefined}
-                            alt={brand.name}
-                            variant="rounded"
-                            sx={{
-                              width: 36,
-                              height: 36,
-                              bgcolor: "action.selected",
-                              color: "text.primary",
-                              fontWeight: 700,
-                              fontSize: "0.85rem",
-                              border: "1px solid",
-                              borderColor: "divider",
-                            }}
-                          >
-                            {brand.name.slice(0, 2).toUpperCase()}
-                          </Avatar>
-                          <Box>
-                            <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      </td>
+
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-700/60 bg-zinc-900 p-1">
+                            {brand.imageUrl ? (
+                              <img
+                                src={brand.imageUrl}
+                                alt={brand.name}
+                                className="h-full w-full object-contain"
+                              />
+                            ) : (
+                              <span className="text-xs font-bold text-zinc-400 uppercase">
+                                {brand.name.slice(0, 2)}
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white group-hover:text-emerald-300 transition-colors">
                               {brand.name}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box display="flex" gap={0.5} flexWrap="wrap">
+                            </p>
+                            {brand.country && (
+                              <p className="text-xs text-zinc-500 flex items-center gap-1">
+                                <Globe className="h-3 w-3" />
+                                <span>{brand.country}</span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-wrap gap-1.5 max-w-sm">
                           {brand.categories && brand.categories.length > 0 ? (
                             brand.categories.map((cat) => (
-                              <Chip
+                              <span
                                 key={cat}
-                                label={categoryLabels[cat] || cat}
-                                size="small"
-                                variant="outlined"
-                                sx={{
-                                  fontSize: "0.75rem",
-                                  fontWeight: 500,
-                                  bgcolor: "background.default",
-                                }}
-                              />
+                                className="inline-flex items-center rounded-md border border-zinc-700/60 bg-zinc-800/80 px-2 py-0.5 text-xs font-medium text-zinc-300"
+                              >
+                                {categoryLabels[cat] || cat}
+                              </span>
                             ))
                           ) : (
-                            <Typography
-                              variant="body2"
-                              color="text.disabled"
-                              sx={{ fontStyle: "italic" }}
-                            >
-                              Nenhuma categoria associada
-                            </Typography>
+                            <span className="text-xs italic text-zinc-500">
+                              Sem categorias vinculadas
+                            </span>
                           )}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {brand.country || "—"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Tooltip title={`Ver produtos de ${brand.name} no Catálogo`}>
-                          <Chip
-                            label={`${productCount} produto(s)`}
-                            size="small"
-                            color={productCount > 0 ? "primary" : "default"}
-                            variant={productCount > 0 ? "filled" : "outlined"}
-                            onClick={() => router.push(`/admin/produtos?brand=${brand.id}`)}
-                            deleteIcon={<ArrowForwardIcon fontSize="small" />}
-                            onDelete={() => router.push(`/admin/produtos?brand=${brand.id}`)}
-                            sx={{ cursor: "pointer", fontWeight: 600 }}
-                          />
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Tooltip title="Editar Marca">
-                          <IconButton
-                            size="small"
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-3.5 text-zinc-300">{brand.country || "—"}</td>
+
+                      <td className="px-4 py-3.5 text-center">
+                        <button
+                          onClick={() => router.push(`/admin/produtos?brand=${brand.id}`)}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                            productCount > 0
+                              ? "bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 border border-emerald-500/30"
+                              : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                          }`}
+                        >
+                          <span>
+                            {productCount} {productCount === 1 ? "item" : "itens"}
+                          </span>
+                          <ArrowRight className="h-3 w-3" />
+                        </button>
+                      </td>
+
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
                             onClick={() => handleOpenEdit(brand)}
-                            aria-label="Editar"
-                            sx={{ color: "text.secondary" }}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+                            title="Editar Marca"
+                            aria-label={`Editar marca ${brand.name}`}
                           >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Excluir Marca">
-                          <IconButton
-                            size="small"
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => {
                               if (
                                 window.confirm(`Deseja realmente excluir a marca ${brand.name}?`)
@@ -627,29 +551,38 @@ export default function AdminBrandsPage(): JSX.Element {
                                 deleteMutation.mutate(brand.id);
                               }
                             }}
-                            aria-label="Excluir"
-                            color="error"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-red-500/15 hover:text-red-400"
+                            title="Excluir Marca"
+                            aria-label={`Excluir marca ${brand.name}`}
                           >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })
               )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Brand Create/Edit Dialog */}
       <Dialog open={dialogOpen} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700, fontSize: "1.25rem", pb: 1 }}>
+        <DialogTitle
+          sx={{
+            fontWeight: 700,
+            fontSize: "1.25rem",
+            pb: 1,
+            bgcolor: "background.paper",
+            color: "text.primary",
+          }}
+        >
           {editingBrand ? `Editar marca: ${editingBrand.name}` : "Nova marca fotovoltaica"}
         </DialogTitle>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <DialogContent sx={{ pt: 1 }}>
+          <DialogContent sx={{ pt: 1, bgcolor: "background.paper" }}>
             <Box display="flex" flexDirection="column" gap={2.5}>
               <Controller
                 name="name"
@@ -725,7 +658,7 @@ export default function AdminBrandsPage(): JSX.Element {
               />
             </Box>
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+          <DialogActions sx={{ px: 3, pb: 2.5, pt: 1, bgcolor: "background.paper" }}>
             <Button onClick={handleClose} sx={{ textTransform: "none" }}>
               Cancelar
             </Button>
@@ -754,10 +687,17 @@ export default function AdminBrandsPage(): JSX.Element {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: 700, fontSize: "1.25rem" }}>
+        <DialogTitle
+          sx={{
+            fontWeight: 700,
+            fontSize: "1.25rem",
+            bgcolor: "background.paper",
+            color: "text.primary",
+          }}
+        >
           Adicionar várias marcas de uma vez
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ bgcolor: "background.paper" }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Cole uma lista de fabricantes abaixo (uma marca por linha). Elas serão cadastradas
             automaticamente.
@@ -773,7 +713,7 @@ export default function AdminBrandsPage(): JSX.Element {
             size="small"
           />
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5, pt: 0 }}>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 0, bgcolor: "background.paper" }}>
           <Button
             onClick={() => setBulkDialogOpen(false)}
             disabled={bulkLoading}
@@ -799,10 +739,17 @@ export default function AdminBrandsPage(): JSX.Element {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: 700, fontSize: "1.15rem" }}>
+        <DialogTitle
+          sx={{
+            fontWeight: 700,
+            fontSize: "1.15rem",
+            bgcolor: "background.paper",
+            color: "text.primary",
+          }}
+        >
           Excluir {selectedIds.length} {selectedIds.length === 1 ? "marca" : "marcas"}?
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ bgcolor: "background.paper" }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
             Tem certeza que deseja excluir as {selectedIds.length} marcas selecionadas? Esta ação
             não pode ser desfeita.
@@ -811,7 +758,7 @@ export default function AdminBrandsPage(): JSX.Element {
             * Por segurança do catálogo, marcas com produtos vinculados não serão removidas.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ p: 2, bgcolor: "background.paper" }}>
           <Button
             onClick={() => setDeleteConfirmOpen(false)}
             disabled={bulkDeleting}
@@ -825,7 +772,11 @@ export default function AdminBrandsPage(): JSX.Element {
             onClick={handleBulkDelete}
             disabled={bulkDeleting}
             startIcon={
-              bulkDeleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />
+              bulkDeleting ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )
             }
             sx={{ textTransform: "none", fontWeight: 600 }}
           >
@@ -833,6 +784,6 @@ export default function AdminBrandsPage(): JSX.Element {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }

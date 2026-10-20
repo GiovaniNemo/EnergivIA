@@ -6,15 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
   Button,
-  TextField,
-  MenuItem,
   IconButton,
   Chip,
   Alert,
   Typography,
-  Paper,
   Avatar,
-  Grid,
   Tooltip,
   Switch,
   Snackbar,
@@ -482,113 +478,59 @@ export default function AdminProductsPage(): JSX.Element {
   }, [searchInput]);
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+    <div className="space-y-6">
       {/* KPI Stats */}
-      <Grid container spacing={2}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              borderRadius: 2,
-              bgcolor: "background.paper",
-            }}
-          >
-            <Avatar sx={{ bgcolor: "primary.main", color: "#fff", width: 44, height: 44 }}>
-              <Inventory2OutlinedIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                Total de Produtos
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                {productsData?.total ?? 0}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
+            <Inventory2OutlinedIcon className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+              Total de Produtos
+            </p>
+            <p className="text-2xl font-bold text-white">{productsData?.total ?? 0}</p>
+          </div>
+        </div>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              borderRadius: 2,
-              bgcolor: "background.paper",
-            }}
-          >
-            <Avatar sx={{ bgcolor: "success.main", color: "#fff", width: 44, height: 44 }}>
-              <CheckCircleOutlineIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                Disponíveis no Catálogo
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                {productsData?.data?.filter((p) => p.active).length ?? 0}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
+        <div className="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400">
+            <CheckCircleOutlineIcon className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+              Disponíveis no Catálogo
+            </p>
+            <p className="text-2xl font-bold text-white">
+              {productsData?.data?.filter((p) => p.active).length ?? 0}
+            </p>
+          </div>
+        </div>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              borderRadius: 2,
-              bgcolor: "background.paper",
-            }}
-          >
-            <Avatar sx={{ bgcolor: "info.main", color: "#fff", width: 44, height: 44 }}>
-              <BrandingWatermarkOutlinedIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                Marcas Parceiras
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                {brands.length}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
+        <div className="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+            <BrandingWatermarkOutlinedIcon className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+              Marcas Parceiras
+            </p>
+            <p className="text-2xl font-bold text-white">{brands.length}</p>
+          </div>
+        </div>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              borderRadius: 2,
-              bgcolor: "background.paper",
-            }}
-          >
-            <Avatar sx={{ bgcolor: "warning.main", color: "#fff", width: 44, height: 44 }}>
-              <CategoryOutlinedIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                Segmentos & Tipos
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                {categories.length}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
+        <div className="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
+            <CategoryOutlinedIcon className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+              Segmentos & Tipos
+            </p>
+            <p className="text-2xl font-bold text-white">{categories.length}</p>
+          </div>
+        </div>
+      </div>
 
       {isError && (
         <Alert severity="error" variant="filled">
@@ -598,77 +540,69 @@ export default function AdminProductsPage(): JSX.Element {
       )}
 
       {/* Filter Bar & DataGrid */}
-      <Paper variant="outlined" sx={{ overflow: "hidden", borderRadius: 2 }}>
-        <Box
-          display="flex"
-          flexWrap="wrap"
-          gap={2}
-          alignItems="center"
-          sx={{ p: 2, borderBottom: 1, borderColor: "divider", bgcolor: "background.paper" }}
-        >
-          <TextField
-            size="small"
-            placeholder="Buscar por nome do produto..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleFilterApply()}
-            sx={{ minWidth: 240 }}
-          />
-          <TextField
-            select
-            size="small"
-            label="Categoria"
+      <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-xl shadow-black/10">
+        <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] bg-zinc-900/50 p-4">
+          <div className="min-w-[240px] flex-1">
+            <input
+              type="text"
+              placeholder="Buscar por nome do produto..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleFilterApply()}
+              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3.5 py-2 text-sm text-white placeholder-zinc-500 transition-colors focus:border-emerald-500/60 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+            />
+          </div>
+
+          <select
             value={params.category ?? ""}
             onChange={(e) =>
               setParams((prev) => ({ ...prev, category: e.target.value || undefined, page: 1 }))
             }
-            sx={{ minWidth: 160 }}
+            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-zinc-300 focus:border-emerald-500/60 focus:outline-none"
           >
-            <MenuItem value="">Todas as Categorias</MenuItem>
+            <option value="">Todas as Categorias</option>
             {categories.map((c) => (
-              <MenuItem key={c.id} value={c.name}>
+              <option key={c.id} value={c.name}>
                 {formatCategoryLabel(c.name)}
-              </MenuItem>
+              </option>
             ))}
-          </TextField>
-          <TextField
-            select
-            size="small"
-            label="Marca"
+          </select>
+
+          <select
             value={params.brand ?? ""}
             onChange={(e) =>
               setParams((prev) => ({ ...prev, brand: e.target.value || undefined, page: 1 }))
             }
-            sx={{ minWidth: 160 }}
+            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-zinc-300 focus:border-emerald-500/60 focus:outline-none"
           >
-            <MenuItem value="">Todas as Marcas</MenuItem>
+            <option value="">Todas as Marcas</option>
             {brands.map((b) => (
-              <MenuItem key={b.id} value={b.id}>
+              <option key={b.id} value={b.id}>
                 {b.name}
-              </MenuItem>
+              </option>
             ))}
-          </TextField>
+          </select>
+
           {(params.category || params.brand || searchInput) && (
-            <Button
-              variant="text"
+            <button
               onClick={() => {
                 setSearchInput("");
                 setParams({ page: 1, pageSize: 25 });
               }}
-              sx={{ textTransform: "none" }}
+              className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors underline px-2 py-1"
             >
               Limpar Filtros
-            </Button>
+            </button>
           )}
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
+
+          <button
             onClick={() => router.push("/admin/produtos/new")}
-            sx={{ ml: "auto", textTransform: "none", fontWeight: 600 }}
+            className="ml-auto inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-emerald-950 transition-all hover:bg-emerald-500 active:scale-[0.98]"
           >
-            Novo Produto
-          </Button>
-        </Box>
+            <AddIcon fontSize="small" />
+            <span>Novo Produto</span>
+          </button>
+        </div>
 
         <Box
           sx={{
@@ -804,7 +738,7 @@ export default function AdminProductsPage(): JSX.Element {
             }}
           />
         </Box>
-      </Paper>
+      </div>
 
       <Snackbar
         open={Boolean(feedback)}
@@ -822,6 +756,6 @@ export default function AdminProductsPage(): JSX.Element {
           </Alert>
         ) : undefined}
       </Snackbar>
-    </Box>
+    </div>
   );
 }

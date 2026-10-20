@@ -4,18 +4,8 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
-  Box,
   Button,
   IconButton,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Alert,
-  Typography,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -26,30 +16,29 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Chip,
-  Avatar,
-  Tooltip,
-  Grid,
-  InputAdornment,
   Divider,
-  Switch,
 } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import AddIcon from "@mui/icons-material/Add";
-import InventoryIcon from "@mui/icons-material/Inventory";
-import SettingsIcon from "@mui/icons-material/Settings";
-import SyncIcon from "@mui/icons-material/Sync";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
-import SearchIcon from "@mui/icons-material/Search";
-import BoltIcon from "@mui/icons-material/Bolt";
-import TableChartOutlinedIcon from "@mui/icons-material/TableChartOutlined";
-import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import AssessmentOutlinedIcon from "@mui/icons-material/AssessmentOutlined";
+import {
+  Truck,
+  Zap,
+  BarChart3,
+  Search,
+  Plus,
+  MoreVertical,
+  Boxes,
+  Key,
+  RefreshCw,
+  UploadCloud,
+  FileText,
+  Pencil,
+  Trash2,
+  ExternalLink,
+  MapPin,
+  CheckCircle2,
+  Clock,
+  ArrowRight,
+  X,
+} from "lucide-react";
 import {
   fetchDistributors,
   deleteDistributor,
@@ -248,9 +237,9 @@ export default function AdminDistributorsPage(): JSX.Element {
           size="small"
           onClick={handleClick}
           aria-label="Mais ações"
-          sx={{ color: "text.secondary" }}
+          sx={{ color: "text.secondary", "&:hover": { color: "text.primary" } }}
         >
-          <MoreVertIcon fontSize="small" />
+          <MoreVertical className="h-4 w-4" />
         </IconButton>
         <Menu
           anchorEl={anchorEl}
@@ -258,6 +247,16 @@ export default function AdminDistributorsPage(): JSX.Element {
           onClose={handleClose}
           transformOrigin={{ horizontal: "right", vertical: "top" }}
           anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+          PaperProps={{
+            sx: {
+              bgcolor: "var(--color-card)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "12px",
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
+              color: "text.primary",
+              minWidth: 220,
+            },
+          }}
         >
           <MenuItem
             onClick={() => {
@@ -266,9 +265,11 @@ export default function AdminDistributorsPage(): JSX.Element {
             }}
           >
             <ListItemIcon>
-              <InventoryIcon fontSize="small" />
+              <Boxes className="h-4 w-4 text-emerald-400" />
             </ListItemIcon>
-            <ListItemText>Gerenciar Catálogo & Preços</ListItemText>
+            <ListItemText primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }}>
+              Catálogo & Preços
+            </ListItemText>
           </MenuItem>
           <MenuItem
             onClick={() => {
@@ -277,9 +278,11 @@ export default function AdminDistributorsPage(): JSX.Element {
             }}
           >
             <ListItemIcon>
-              <SettingsIcon fontSize="small" />
+              <Key className="h-4 w-4 text-blue-400" />
             </ListItemIcon>
-            <ListItemText>Credenciais da API</ListItemText>
+            <ListItemText primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }}>
+              Credenciais da API
+            </ListItemText>
           </MenuItem>
           {d.integrationProvider && (
             <MenuItem
@@ -290,20 +293,28 @@ export default function AdminDistributorsPage(): JSX.Element {
               disabled={syncing === d.id}
             >
               <ListItemIcon>
-                {syncing === d.id ? <CircularProgress size={18} /> : <SyncIcon fontSize="small" />}
+                {syncing === d.id ? (
+                  <CircularProgress size={16} />
+                ) : (
+                  <RefreshCw className="h-4 w-4 text-emerald-400" />
+                )}
               </ListItemIcon>
-              <ListItemText>Sincronizar API Agora</ListItemText>
+              <ListItemText primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }}>
+                Sincronizar API Agora
+              </ListItemText>
             </MenuItem>
           )}
           <MenuItem component="label" disabled={uploading === d.id}>
             <ListItemIcon>
               {uploading === d.id ? (
-                <CircularProgress size={18} />
+                <CircularProgress size={16} />
               ) : (
-                <CloudUploadIcon fontSize="small" />
+                <UploadCloud className="h-4 w-4 text-purple-400" />
               )}
             </ListItemIcon>
-            <ListItemText>Importar Planilha Excel (.xlsx)</ListItemText>
+            <ListItemText primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }}>
+              Importar Planilha (.xlsx)
+            </ListItemText>
             <input
               type="file"
               hidden
@@ -323,11 +334,13 @@ export default function AdminDistributorsPage(): JSX.Element {
             }}
           >
             <ListItemIcon>
-              <AssessmentOutlinedIcon fontSize="small" />
+              <FileText className="h-4 w-4 text-zinc-400" />
             </ListItemIcon>
-            <ListItemText>Relatório da Última Importação</ListItemText>
+            <ListItemText primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }}>
+              Relatório de Importação
+            </ListItemText>
           </MenuItem>
-          <Divider />
+          <Divider sx={{ borderColor: "var(--color-border)" }} />
           <MenuItem
             onClick={() => {
               handleClose();
@@ -335,9 +348,11 @@ export default function AdminDistributorsPage(): JSX.Element {
             }}
           >
             <ListItemIcon>
-              <EditIcon fontSize="small" />
+              <Pencil className="h-4 w-4 text-zinc-400" />
             </ListItemIcon>
-            <ListItemText>Editar Cadastro & Frete</ListItemText>
+            <ListItemText primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }}>
+              Editar Cadastro
+            </ListItemText>
           </MenuItem>
           <MenuItem
             onClick={() => {
@@ -348,9 +363,11 @@ export default function AdminDistributorsPage(): JSX.Element {
             sx={{ color: "error.main" }}
           >
             <ListItemIcon sx={{ color: "inherit" }}>
-              <DeleteIcon fontSize="small" />
+              <Trash2 className="h-4 w-4" />
             </ListItemIcon>
-            <ListItemText>Excluir Fornecedor</ListItemText>
+            <ListItemText primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }}>
+              Excluir Fornecedor
+            </ListItemText>
           </MenuItem>
         </Menu>
       </>
@@ -358,183 +375,120 @@ export default function AdminDistributorsPage(): JSX.Element {
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+    <div className="space-y-6">
       {/* KPI Stats */}
-      <Grid container spacing={2}>
-        <Grid item xs={12} sm={6} md={4}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              borderRadius: 2,
-              bgcolor: "background.paper",
-            }}
-          >
-            <Avatar sx={{ bgcolor: "primary.main", color: "#fff", width: 44, height: 44 }}>
-              <BusinessOutlinedIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                Fornecedores Parceiros
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                {stats.total}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
+            <Truck className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+              Fornecedores Parceiros
+            </p>
+            <p className="text-2xl font-bold text-white">{stats.total}</p>
+          </div>
+        </div>
 
-        <Grid item xs={12} sm={6} md={4}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              borderRadius: 2,
-              bgcolor: "background.paper",
-            }}
-          >
-            <Avatar sx={{ bgcolor: "success.main", color: "#fff", width: 44, height: 44 }}>
-              <BoltIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                Com Sincronização API Ativa
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                {stats.withApi}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
+        <div className="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400">
+            <Zap className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+              Com API Integrada
+            </p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-white">{stats.withApi}</span>
+              <span className="text-xs text-zinc-400">
+                ({stats.total > 0 ? Math.round((stats.withApi / stats.total) * 100) : 0}%)
+              </span>
+            </div>
+          </div>
+        </div>
 
-        <Grid item xs={12} sm={6} md={4}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              borderRadius: 2,
-              bgcolor: "background.paper",
-            }}
-          >
-            <Avatar sx={{ bgcolor: "info.main", color: "#fff", width: 44, height: 44 }}>
-              <TableChartOutlinedIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                Ofertas & Preços em Catálogo
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                {stats.totalItems}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
+        <div className="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+            <BarChart3 className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+              Ofertas em Catálogo
+            </p>
+            <p className="text-2xl font-bold text-white">{stats.totalItems}</p>
+          </div>
+        </div>
+      </div>
 
       {/* Search & Actions */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        flexWrap="wrap"
-        gap={2}
-        alignItems="center"
-      >
-        <TextField
-          placeholder="Pesquisar por nome, CNPJ ou cidade..."
-          size="small"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ minWidth: 300, bgcolor: "background.paper" }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon fontSize="small" sx={{ color: "text.secondary" }} />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <input
+            type="text"
+            placeholder="Pesquisar por nome, CNPJ ou cidade..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] py-2.5 pl-10 pr-4 text-sm text-white placeholder-zinc-500 transition-colors focus:border-emerald-500/60 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        <button
           onClick={() => router.push("/admin/distribuidores/new")}
-          size="medium"
-          sx={{ textTransform: "none", fontWeight: 600 }}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-emerald-950 transition-all hover:bg-emerald-500 active:scale-[0.98]"
         >
-          Adicionar Fornecedor
-        </Button>
-      </Box>
+          <Plus className="h-4 w-4" />
+          <span>Adicionar Fornecedor</span>
+        </button>
+      </div>
 
       {isError && (
-        <Alert severity="error" variant="filled">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
           Não foi possível carregar os fornecedores. {error instanceof Error ? error.message : ""}
-        </Alert>
+        </div>
       )}
 
       {/* Distributors Table */}
-      <Paper variant="outlined" sx={{ overflow: "hidden", borderRadius: 2 }}>
-        <TableContainer>
-          <Table size="medium">
-            <TableHead sx={{ bgcolor: "action.hover" }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Fornecedor</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Integração / Fonte</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>CNPJ / Contato</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Localização</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>
-                  Itens Vinculados
-                </TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>
-                  Status nas Cotações
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>
-                  Ações
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+      <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-xl shadow-black/10">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-[var(--color-border)] bg-zinc-900/60 text-xs uppercase tracking-wider text-zinc-400">
+              <tr>
+                <th className="px-5 py-3.5 font-semibold">Fornecedor</th>
+                <th className="px-5 py-3.5 font-semibold">Integração / Fonte</th>
+                <th className="px-5 py-3.5 font-semibold">CNPJ / Contato</th>
+                <th className="px-5 py-3.5 font-semibold">Localização</th>
+                <th className="px-5 py-3.5 text-center font-semibold">Itens</th>
+                <th className="px-5 py-3.5 text-center font-semibold">Cotações</th>
+                <th className="px-5 py-3.5 text-right font-semibold">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--color-border)]/50">
               {isLoading ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    sx={{ py: 6, textAlign: "center", color: "text.secondary" }}
-                  >
-                    Carregando fornecedores…
-                  </TableCell>
-                </TableRow>
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-zinc-400">
+                    <CircularProgress size={24} className="mb-2 text-emerald-400" />
+                    <p>Carregando fornecedores parceiros...</p>
+                  </td>
+                </tr>
               ) : filteredDistributors.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} sx={{ py: 6, textAlign: "center" }}>
-                    <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                      <LocalShippingOutlinedIcon
-                        sx={{ fontSize: 48, color: "action.disabled", mb: 1 }}
-                      />
-                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                        Nenhum fornecedor encontrado
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>
-                        Cadastre os fornecedores parceiros para cotar e precificar kits
-                        automaticamente.
-                      </Typography>
-                      <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        onClick={() => router.push("/admin/distribuidores/new")}
-                        sx={{ textTransform: "none" }}
-                      >
-                        Adicionar Fornecedor
-                      </Button>
-                    </Box>
-                  </TableCell>
-                </TableRow>
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-zinc-400">
+                    <Truck className="mx-auto h-8 w-8 text-zinc-600 mb-2" />
+                    <p className="font-medium text-white">Nenhum fornecedor encontrado</p>
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Cadastre fornecedores parceiros para cotar kits automaticamente.
+                    </p>
+                  </td>
+                </tr>
               ) : (
                 filteredDistributors.map((d) => {
                   const itemCount = d._count?.distributorProducts ?? 0;
@@ -542,138 +496,127 @@ export default function AdminDistributorsPage(): JSX.Element {
                   const isCotacaoActive = d.active !== false;
 
                   return (
-                    <TableRow
+                    <tr
                       key={d.id}
-                      hover
-                      sx={{
-                        "&:last-child td, &:last-child th": { border: 0 },
-                        opacity: isCotacaoActive ? 1 : 0.72,
-                        transition: "opacity 0.2s ease",
-                      }}
+                      className={`group transition-colors ${
+                        isCotacaoActive ? "hover:bg-white/[0.02]" : "opacity-60 bg-black/10"
+                      }`}
                     >
-                      <TableCell>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                          <Avatar
-                            sx={{
-                              width: 38,
-                              height: 38,
-                              bgcolor: isApiActive ? "primary.dark" : "action.selected",
-                              color: isApiActive ? "#fff" : "text.primary",
-                              fontWeight: 700,
-                              fontSize: "0.85rem",
-                              border: "1px solid",
-                              borderColor: "divider",
-                            }}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl font-bold text-sm border ${
+                              isApiActive
+                                ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                                : "bg-zinc-800 text-zinc-300 border-zinc-700/60"
+                            }`}
                           >
                             {d.name.slice(0, 2).toUpperCase()}
-                          </Avatar>
-                          <Box>
-                            <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white group-hover:text-emerald-300 transition-colors">
                               {d.name}
-                            </Typography>
+                            </p>
                             {d.website && (
-                              <Typography variant="caption" color="text.secondary">
-                                {d.website}
-                              </Typography>
+                              <a
+                                href={
+                                  d.website.startsWith("http") ? d.website : `https://${d.website}`
+                                }
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-emerald-400 transition-colors"
+                              >
+                                <span>{d.website.replace(/^https?:\/\//i, "")}</span>
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
                             )}
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4">
                         {isApiActive ? (
-                          <Chip
-                            icon={<CheckCircleOutlineIcon fontSize="small" />}
-                            label={`API ${d.integrationProvider}`}
-                            size="small"
-                            color="success"
-                            variant="outlined"
-                            sx={{ fontWeight: 600 }}
-                          />
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/60 px-2.5 py-1 text-xs font-medium text-emerald-300">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            API {d.integrationProvider}
+                          </span>
                         ) : (
-                          <Chip
-                            label="Planilha / Manual"
-                            size="small"
-                            variant="outlined"
-                            sx={{ color: "text.secondary" }}
-                          />
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-700/60 bg-zinc-800/80 px-2.5 py-1 text-xs font-medium text-zinc-400">
+                            Planilha / Manual
+                          </span>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{d.cnpj || "—"}</Typography>
-                        {d.email && (
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            {d.email}
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {d.city ? `${d.city} - ${d.state || ""}` : d.state || "—"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Tooltip title={`Ver catálogo e preços de ${d.name}`}>
-                          <Chip
-                            label={`${itemCount} item(ns)`}
-                            size="small"
-                            color={itemCount > 0 ? "primary" : "default"}
-                            variant={itemCount > 0 ? "filled" : "outlined"}
-                            onClick={() => router.push(`/admin/distribuidores/${d.id}/products`)}
-                            deleteIcon={<ArrowForwardIcon fontSize="small" />}
-                            onDelete={() => router.push(`/admin/distribuidores/${d.id}/products`)}
-                            sx={{ cursor: "pointer", fontWeight: 600 }}
-                          />
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Tooltip
-                          title={
-                            isCotacaoActive
-                              ? "Ativo nas cotações (produtos deste fornecedor são considerados no dimensionamento e propostas)"
-                              : "Pausado (produtos deste fornecedor NÃO aparecerão em cotações ou propostas)"
-                          }
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <p className="text-zinc-300 font-mono text-xs">{d.cnpj || "—"}</p>
+                        {d.email && <p className="text-xs text-zinc-500 mt-0.5">{d.email}</p>}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-1.5 text-zinc-300 text-xs">
+                          <MapPin className="h-3.5 w-3.5 text-zinc-500" />
+                          <span>
+                            {d.city ? `${d.city} - ${d.state || ""}` : d.state || "Brasil"}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4 text-center">
+                        <button
+                          onClick={() => router.push(`/admin/distribuidores/${d.id}/products`)}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                            itemCount > 0
+                              ? "bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 border border-emerald-500/30"
+                              : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                          }`}
                         >
-                          <Box
-                            onClick={(e) => e.stopPropagation()}
-                            sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}
-                          >
-                            <Switch
-                              size="small"
-                              checked={isCotacaoActive}
-                              disabled={toggleActiveMutation.isPending}
-                              onChange={(e) =>
-                                toggleActiveMutation.mutate({
-                                  id: d.id,
-                                  active: e.target.checked,
-                                })
-                              }
-                              color="success"
-                            />
-                            <Chip
-                              size="small"
-                              label={isCotacaoActive ? "Ativo" : "Pausado"}
-                              color={isCotacaoActive ? "success" : "default"}
-                              variant={isCotacaoActive ? "filled" : "outlined"}
-                              sx={{
-                                fontWeight: 600,
-                                fontSize: "0.75rem",
-                                minWidth: 64,
-                              }}
-                            />
-                          </Box>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell align="right">
+                          <span>
+                            {itemCount} {itemCount === 1 ? "oferta" : "ofertas"}
+                          </span>
+                          <ArrowRight className="h-3 w-3" />
+                        </button>
+                      </td>
+
+                      <td className="px-5 py-4 text-center">
+                        <button
+                          onClick={() =>
+                            toggleActiveMutation.mutate({
+                              id: d.id,
+                              active: !isCotacaoActive,
+                            })
+                          }
+                          disabled={toggleActiveMutation.isPending}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                            isCotacaoActive
+                              ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                              : "bg-zinc-800 text-zinc-400 border border-zinc-700/60 hover:text-white"
+                          }`}
+                        >
+                          {isCotacaoActive ? (
+                            <>
+                              <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                              <span>Ativo</span>
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="h-3 w-3 text-zinc-500" />
+                              <span>Pausado</span>
+                            </>
+                          )}
+                        </button>
+                      </td>
+
+                      <td className="px-5 py-4 text-right">
                         <RowActions d={d} />
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   );
                 })
               )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Integration Modal */}
       <Dialog
@@ -682,14 +625,14 @@ export default function AdminDistributorsPage(): JSX.Element {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: 700 }}>
+        <DialogTitle sx={{ fontWeight: 700, bgcolor: "background.paper", color: "text.primary" }}>
           Integração API {integrationDialog.distributor?.name}
         </DialogTitle>
-        <DialogContent dividers sx={{ pt: 2 }}>
-          <Alert severity="info" sx={{ mb: 2.5 }}>
+        <DialogContent dividers sx={{ pt: 2, bgcolor: "background.paper" }}>
+          <div className="mb-4 rounded-xl border border-blue-500/30 bg-blue-500/10 p-3.5 text-xs text-blue-200">
             A integração automática sincroniza estoques, preços atualizados e produtos sem
             necessidade de envio manual de planilhas.
-          </Alert>
+          </div>
           <TextField
             label="API Key / Token de Acesso"
             value={apiKey}
@@ -697,7 +640,7 @@ export default function AdminDistributorsPage(): JSX.Element {
             fullWidth
             margin="normal"
             size="small"
-            placeholder="Insira a chave fornecida pelo parceiro / fornecedor"
+            placeholder="Insira a chave fornecida pelo fornecedor"
           />
           <TextField
             label="API Secret / Chave Privada"
@@ -710,7 +653,7 @@ export default function AdminDistributorsPage(): JSX.Element {
             placeholder="Insira a chave secreta"
           />
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
+        <DialogActions sx={{ px: 3, py: 2, bgcolor: "background.paper" }}>
           <Button
             onClick={() => setIntegrationDialog({ open: false, distributor: null })}
             sx={{ textTransform: "none" }}
@@ -751,6 +694,6 @@ export default function AdminDistributorsPage(): JSX.Element {
           }}
         />
       )}
-    </Box>
+    </div>
   );
 }
