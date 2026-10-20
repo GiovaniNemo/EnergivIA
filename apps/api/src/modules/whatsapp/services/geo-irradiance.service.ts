@@ -171,14 +171,70 @@ export function normalizeTextSimple(str: string): string {
     .trim();
 }
 
-export function parseLocationString(input: string): { city: string; uf: string } {
-  if (!input) return { city: "", uf: "" };
+/**
+ * Detecta se a entrada fornecida se refere a um Estado brasileiro (pelo nome por extenso ou UF de 2 letras).
+ * Trata prefixos como "estado de", "no estado de", "em", "para", etc.
+ */
+export function detectStateInput(input: string): {
+  isState: boolean;
+  uf?: string;
+  stateName?: string;
+} {
+  if (!input) return { isState: false };
+  let raw = cleanLocationInput(input);
+
+  // Remove prefixos como "mudar cidade para", "em", "para", "no estado de", "estado de", etc.
+  raw = raw
+    .replace(
+      /^(?:mudar\s+(?:a\s+)?(?:cidade|localidade|estado)(?:\s+para)?|trocar\s+(?:a\s+)?(?:cidade|localidade|estado)(?:\s+para)?|alterar\s+(?:a\s+)?(?:cidade|localidade|estado)(?:\s+para)?|(?:no|na|em|para|o|a)?\s*estado\s+(?:de|do|da)?\s*|(?:cidade|localidade|estado|uf)\s*:?|(?:em|para|no|na)\s+)\s*/i,
+      ""
+    )
+    .trim();
+
+  // Remove aspas ou formatação markdown
+  raw = raw.replace(/^["'`*_~]+|["'`*_~]+$/g, "").trim();
+  raw = raw.replace(/[.,;!?:)]+$/, "").trim();
+
+  const norm = normalizeTextSimple(raw);
+  if (!norm) return { isState: false };
+
+  // 1. Sigla de 2 letras (UF)
+  if (norm.length === 2 && UF_TO_STATE_NAME[norm]) {
+    return {
+      isState: true,
+      uf: norm,
+      stateName: UF_TO_STATE_TITLE[norm] || UF_TO_STATE_NAME[norm] || norm,
+    };
+  }
+
+  // 2. Nome completo do Estado
+  if (STATE_NAME_TO_UF[norm]) {
+    const uf = STATE_NAME_TO_UF[norm];
+    return {
+      isState: true,
+      uf,
+      stateName: UF_TO_STATE_TITLE[uf] || UF_TO_STATE_NAME[uf] || norm,
+    };
+  }
+
+  return { isState: false };
+}
+
+export interface ParsedLocation {
+  city: string;
+  uf: string;
+  isStateOnly?: boolean;
+  stateName?: string;
+}
+
+export function parseLocationString(input: string): ParsedLocation {
+  if (!input) return { city: "", uf: "", isStateOnly: false };
   let raw = cleanLocationInput(input);
 
   // Remove prefixos conversacionais comuns ("mudar cidade para", "cidade:", etc.)
   raw = raw
     .replace(
-      /^(?:mudar\s+(?:a\s+)?cidade(?:\s+para)?|trocar\s+(?:a\s+)?cidade(?:\s+para)?|alterar\s+(?:a\s+)?cidade(?:\s+para)?|cidade\s*:?)\s*/i,
+      /^(?:mudar\s+(?:a\s+)?(?:cidade|localidade|estado)(?:\s+para)?|trocar\s+(?:a\s+)?(?:cidade|localidade|estado)(?:\s+para)?|alterar\s+(?:a\s+)?(?:cidade|localidade|estado)(?:\s+para)?|(?:no|na|em|para|o|a)?\s*estado\s+(?:de|do|da)?\s*|(?:cidade|localidade|estado|uf)\s*:?|(?:em|para|no|na)\s+)\s*/i,
       ""
     )
     .trim();
@@ -191,7 +247,7 @@ export function parseLocationString(input: string): { city: string; uf: string }
 
   let uf = "";
 
-  // 1. Tenta identificar UF por sigla de 2 letras no final (ex: "/PR", " - PR", " PR", ", PR", "(PR)")
+  // 1. Tenta identificar UF por sigla de 2 letras no final precedida de separador (ex: "/PR", " - PR", " PR", ", PR", "(PR)")
   const ufMatch = raw.match(/[\s\/\-\(,]([A-Za-z]{2})\)?$/);
   if (ufMatch && ufMatch[1] && UF_TO_STATE_NAME[ufMatch[1].toUpperCase()]) {
     uf = ufMatch[1].toUpperCase();
@@ -213,6 +269,38 @@ export function parseLocationString(input: string): { city: string; uf: string }
   // Remove separadores e pontuações residuais que sobraram no final da cidade
   raw = raw.replace(/[\s\/\-\(,\."'`*_~]+$/, "").trim();
 
+  // 3. Se a cidade ficou vazia (ex: input continha apenas a UF ou Estado)
+  if (!raw && uf) {
+    return {
+      city: "",
+      uf,
+      isStateOnly: true,
+      stateName: UF_TO_STATE_TITLE[uf] || UF_TO_STATE_NAME[uf] || uf,
+    };
+  }
+
+  // 4. Se não extraiu UF no final, verifica se a entrada inteira é um Estado brasileiro
+  if (!uf) {
+    const stateCheck = detectStateInput(raw);
+    if (stateCheck.isState && stateCheck.uf) {
+      // Exceção: São Paulo e Rio de Janeiro são estados E cidades capitais homônimas
+      const normRaw = normalizeTextSimple(raw);
+      const isExplicitStatePrefix = /(?:estado|uf)/i.test(input);
+      if (!isExplicitStatePrefix && (normRaw === "SAO PAULO" || normRaw === "RIO DE JANEIRO")) {
+        return {
+          city: normRaw === "SAO PAULO" ? "São Paulo" : "Rio de Janeiro",
+          uf: stateCheck.uf,
+        };
+      }
+      return {
+        city: "",
+        uf: stateCheck.uf,
+        isStateOnly: true,
+        stateName: stateCheck.stateName,
+      };
+    }
+  }
+
   return { city: raw, uf };
 }
 
@@ -231,11 +319,16 @@ export interface HspLookupResult {
   exact: boolean;
   ambiguous?: boolean;
   candidates?: MunicipalityCandidate[];
+  isStateOnly?: boolean;
+  stateName?: string;
 }
 
 export function isLocationInput(input: string): boolean {
   if (!input) return false;
   const parsed = parseLocationString(input);
+  if (parsed.isStateOnly && parsed.uf) {
+    return true; // Estado brasileiro reconhecido
+  }
   if (!parsed.city) return false;
   const normCity = normalizeTextSimple(parsed.city);
   if (parsed.uf && BRAZIL_MUNICIPALITIES_DATA.byCityUf[`${normCity}_${parsed.uf}`]) {
@@ -293,6 +386,23 @@ export class GeoIrradianceService {
   getHsp(cidade: string, estado?: string): HspLookupResult {
     const cleanedInput = cleanLocationInput(cidade);
     const parsed = parseLocationString(cleanedInput);
+
+    // 0. Se a entrada informada for exclusivamente um Estado brasileiro (ex: "Alagoas", "AL", "Bahia", "Minas Gerais")
+    if (parsed.isStateOnly && parsed.uf) {
+      const stateUf = parsed.uf;
+      const stateName = parsed.stateName || UF_TO_STATE_TITLE[stateUf] || stateUf;
+      const stateHsp = UF_FALLBACK[stateUf] || 5.0;
+      return {
+        hsp: stateHsp,
+        city: "",
+        uf: stateUf,
+        exact: true,
+        ambiguous: false,
+        isStateOnly: true,
+        stateName,
+      };
+    }
+
     const searchCity = parsed.city || cleanedInput || "São Paulo";
     const rawUfCandidate = (estado || parsed.uf || "").trim();
     const resolvedUf =
@@ -301,6 +411,25 @@ export class GeoIrradianceService {
         : STATE_NAME_TO_UF[normalizeTextSimple(rawUfCandidate)] || rawUfCandidate.toUpperCase();
     const searchUf = resolvedUf;
     const normSearchCity = normalizeTextSimple(searchCity);
+
+    // Se o nome de busca for um Estado brasileiro (excluindo capitais homônimas SP/RJ)
+    if (
+      STATE_NAME_TO_UF[normSearchCity] &&
+      normSearchCity !== "SAO PAULO" &&
+      normSearchCity !== "RIO DE JANEIRO"
+    ) {
+      const stateUf = STATE_NAME_TO_UF[normSearchCity];
+      const stateName = UF_TO_STATE_TITLE[stateUf] || UF_TO_STATE_NAME[stateUf] || stateUf;
+      return {
+        hsp: UF_FALLBACK[stateUf] || 5.0,
+        city: "",
+        uf: stateUf,
+        exact: true,
+        ambiguous: false,
+        isStateOnly: true,
+        stateName,
+      };
+    }
 
     // 1. Consulta prioritária na base oficial completa embutida (5.569 municípios)
     if (searchUf) {

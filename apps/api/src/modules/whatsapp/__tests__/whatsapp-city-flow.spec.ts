@@ -1,11 +1,14 @@
-import { describe, it, expect } from "vitest";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   getHsp,
   isLocationInput,
   parseLocationString,
   cleanLocationInput,
   normalizeTextSimple,
+  GeoIrradianceService,
 } from "../services/geo-irradiance.service";
+import { parseIntegratorQuoteEntities, WhatsappBotService } from "../whatsapp-bot.service";
 
 describe("WhatsApp Bot - City and Location Flow Suite", () => {
   describe("Location String Sanitization & Parsing", () => {
@@ -144,6 +147,229 @@ describe("WhatsApp Bot - City and Location Flow Suite", () => {
         errorMsg.includes("cidade e estado da instalação solar");
 
       expect(isAskingCity).toBe(true);
+    });
+  });
+
+  describe("State Recognition in Integrator Quotes (Alagoas, Bahia, Minas Gerais, etc.)", () => {
+    it("should recognize Alagoas as state AL and not invent a fictitious Alagoas/SP city", () => {
+      const quote = parseIntegratorQuoteEntities("32 kwp metálico em alagoas");
+      expect(quote.isQuoteRequest).toBe(true);
+      expect(quote.targetKWp).toBe(32);
+      expect(quote.roofType).toBe("Metálico");
+      expect(quote.estado).toBe("AL");
+      expect(quote.cidade).toBeUndefined();
+    });
+
+    it("should recognize full state name Minas Gerais without inventing a fictitious city", () => {
+      const quote = parseIntegratorQuoteEntities("cotação 50 kwp solo em Minas Gerais");
+      expect(quote.isQuoteRequest).toBe(true);
+      expect(quote.targetKWp).toBe(50);
+      expect(quote.roofType).toBe("Solo");
+      expect(quote.estado).toBe("MG");
+      expect(quote.cidade).toBeUndefined();
+    });
+
+    it("should recognize state when expressed as UF (ex: em AL)", () => {
+      const quote = parseIntegratorQuoteEntities("32 kwp metálico em AL");
+      expect(quote.isQuoteRequest).toBe(true);
+      expect(quote.targetKWp).toBe(32);
+      expect(quote.roofType).toBe("Metálico");
+      expect(quote.estado).toBe("AL");
+      expect(quote.cidade).toBeUndefined();
+    });
+  });
+
+  describe("End-to-End Bot Flow: State-only quote request and capital selection", () => {
+    let service: any;
+    let mockPrisma: any;
+    let geoIrradiance: GeoIrradianceService;
+
+    beforeEach(() => {
+      mockPrisma = {
+        conversation: {
+          findUnique: vi.fn().mockResolvedValue({ metadata: {} }),
+          findFirst: vi.fn().mockResolvedValue(null),
+          update: vi.fn().mockResolvedValue({}),
+        },
+        message: {
+          create: vi.fn().mockResolvedValue({ id: "msg-123" }),
+        },
+        companyCostRule: {
+          findMany: vi.fn().mockResolvedValue([]),
+        },
+        lead: {
+          create: vi.fn().mockResolvedValue({ id: "lead-123" }),
+        },
+        deal: {
+          create: vi.fn().mockResolvedValue({ id: "deal-123" }),
+        },
+        systemSizing: {
+          create: vi.fn().mockResolvedValue({ id: "sizing-123" }),
+        },
+        simulation: {
+          create: vi.fn().mockResolvedValue({ id: "sim-123" }),
+        },
+        proposalTemplate: {
+          findMany: vi
+            .fn()
+            .mockResolvedValue([{ id: "tpl-123", name: "Modelo Padrão", version: 1 }]),
+          findFirst: vi
+            .fn()
+            .mockResolvedValue({ id: "tpl-123", name: "Modelo Padrão", version: 1 }),
+        },
+        proposalTemplateBlueprint: {
+          findMany: vi.fn().mockResolvedValue([]),
+          findFirst: vi.fn().mockResolvedValue(null),
+        },
+        proposal: {
+          findFirst: vi.fn().mockResolvedValue(null),
+          create: vi.fn().mockResolvedValue({ id: "prop-123", proposalNumber: 101 }),
+        },
+        leadActivityLog: {
+          create: vi.fn().mockResolvedValue({}),
+        },
+        tenant: {
+          findUnique: vi.fn().mockResolvedValue({ settings: {} }),
+        },
+      };
+
+      geoIrradiance = new GeoIrradianceService();
+
+      service = new WhatsappBotService(
+        { get: vi.fn().mockReturnValue("https://www.energivia.com.br") } as any,
+        mockPrisma,
+        { sendTextMessage: vi.fn().mockResolvedValue(undefined) } as any,
+        {} as any,
+        {} as any,
+        geoIrradiance,
+        {} as any,
+        { generateDistributorTiers: vi.fn().mockResolvedValue({ tiers: [] }) } as any
+      );
+    });
+
+    it("should handle '32 kwp metálico em alagoas' by setting state AL and asking for city in Alagoas", async () => {
+      const conversation: any = {
+        id: "conv-alagoas",
+        organizationId: "org-test",
+        title: "Test Alagoas State",
+        metadata: {
+          step: "IDLE",
+          sessionData: {},
+        },
+        messages: [],
+      };
+
+      const reply = await service.generateBotResponse({
+        conversation,
+        incomingText: "32 kwp metálico em alagoas",
+        extractionResult: null,
+      });
+
+      // Não pode inventar Alagoas/SP
+      expect(reply).not.toContain("Alagoas/SP");
+      expect(reply).toContain("32");
+      expect(reply).toContain("Alagoas (AL)");
+      expect(reply).toContain("Para qual cidade de Alagoas será a instalação?");
+      expect(reply).toContain("Maceió/AL");
+
+      expect(mockPrisma.conversation.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "conv-alagoas" },
+          data: expect.objectContaining({
+            metadata: expect.objectContaining({
+              step: "AWAITING_CITY",
+              sessionData: expect.objectContaining({
+                kwp: 32,
+                roofType: "Metálico",
+                uf: "AL",
+              }),
+            }),
+          }),
+        })
+      );
+    });
+
+    it("should accept option 1 to pick capital Maceió/AL when step is AWAITING_CITY and state is AL", async () => {
+      const conversation: any = {
+        id: "conv-alagoas-capital",
+        organizationId: "org-test",
+        title: "Test Alagoas Capital Selection",
+        metadata: {
+          step: "AWAITING_CITY",
+          sessionData: {
+            kwp: 32,
+            roofType: "Metálico",
+            uf: "AL",
+          },
+        },
+        messages: [
+          {
+            role: "assistant",
+            content:
+              "Para qual cidade de Alagoas será a instalação?\n> Responda com a cidade ou 1 para Maceió/AL",
+          },
+        ],
+      };
+
+      const reply = await service.generateBotResponse({
+        conversation,
+        incomingText: "1",
+        extractionResult: null,
+      });
+
+      expect(reply).toContain("Maceió/AL");
+      expect(reply).toContain("Qual a tensão da rede trifásica para este sistema de 32 kWp?");
+
+      expect(mockPrisma.conversation.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "conv-alagoas-capital" },
+          data: expect.objectContaining({
+            metadata: expect.objectContaining({
+              step: "AWAITING_GRID_TYPE",
+              sessionData: expect.objectContaining({
+                cidade: "Maceió",
+                uf: "AL",
+                kwp: 32,
+              }),
+            }),
+          }),
+        })
+      );
+    });
+
+    it("should self-correct active session with corrupt cidade='Alagoas' via defense-in-depth", async () => {
+      const conversation: any = {
+        id: "conv-corrupt-city",
+        organizationId: "org-test",
+        title: "Test Corrupt City Self-Correction",
+        metadata: {
+          step: "AWAITING_GRID_TYPE",
+          sessionData: {
+            cidade: "Alagoas",
+            uf: "SP",
+            kwp: 32,
+            roofType: "Metálico",
+          },
+        },
+        messages: [
+          {
+            role: "assistant",
+            content: "Qual a tensão da rede trifásica para este sistema de 32 kWp?",
+          },
+        ],
+      };
+
+      // O usuário responde com a tensão trifásica
+      const reply = await service.generateBotResponse({
+        conversation,
+        incomingText: "1", // Trifásico 220V
+        extractionResult: null,
+      });
+
+      // A defesa em profundidade corrigiu a cidade para undefined e o estado para AL.
+      // Como não tem cidade, o bot volta para pedir a cidade de Alagoas!
+      expect(reply).not.toContain("Alagoas/SP");
+      expect(reply).toContain("Alagoas");
     });
   });
 });

@@ -45,6 +45,9 @@ import {
   GeoIrradianceService,
   HspLookupResult,
   MunicipalityCandidate,
+  STATE_NAME_TO_UF,
+  UF_TO_STATE_TITLE,
+  STATE_CAPITALS,
 } from "./services/geo-irradiance.service";
 import { WhatsappGuestTrialService } from "./services/whatsapp-guest-trial.service";
 import {
@@ -512,7 +515,7 @@ export function parseIntegratorQuoteEntities(rawText: string): ExtractedIntegrat
 
   // 8. Extração de Cidade / Local de Entrega
   const deliveryCityMatch = clean.match(
-    /(?:entrega\s+em|para|em|cidade(?:\s*de)?|instala[çc][ãa]o\s+em|no\s+munic[íi]pio\s+de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
+    /(?:entrega\s+em|para|em|cidade(?:\s*de)?|instala[çc][ãa]o\s+em|no\s+munic[íi]pio\s+de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
   );
   if (deliveryCityMatch && deliveryCityMatch[1]) {
     const rawCandidate = (
@@ -534,14 +537,20 @@ export function parseIntegratorQuoteEntities(rawText: string): ExtractedIntegrat
     ) {
       const hspRes = getHsp(rawCandidate);
       if (hspRes && (isLocationInput(rawCandidate) || hspRes.exact)) {
-        cidade = hspRes.city;
-        estado = hspRes.uf;
-        hsp = hspRes.hsp;
+        if (hspRes.isStateOnly) {
+          estado = hspRes.uf;
+          hsp = hspRes.hsp;
+          cidade = undefined;
+        } else if (hspRes.city) {
+          cidade = hspRes.city;
+          estado = hspRes.uf;
+          hsp = hspRes.hsp;
+        }
       }
     }
   }
 
-  if (!cidade) {
+  if (!cidade && !estado) {
     const lines = clean
       .split("\n")
       .map((l) => l.trim())
@@ -568,10 +577,17 @@ export function parseIntegratorQuoteEntities(rawText: string): ExtractedIntegrat
       if (isLocationInput(cleanedLine)) {
         const hspRes = getHsp(cleanedLine);
         if (hspRes && (isLocationInput(cleanedLine) || hspRes.exact)) {
-          cidade = hspRes.city;
-          estado = hspRes.uf;
-          hsp = hspRes.hsp;
-          break;
+          if (hspRes.isStateOnly) {
+            estado = hspRes.uf;
+            hsp = hspRes.hsp;
+            cidade = undefined;
+            break;
+          } else if (hspRes.city) {
+            cidade = hspRes.city;
+            estado = hspRes.uf;
+            hsp = hspRes.hsp;
+            break;
+          }
         }
       }
     }
@@ -4108,6 +4124,8 @@ ${catalogContext}`;
         const prevContent = prevAssistantForLead;
         if (
           prevContent.includes("Para qual cidade e estado será a instalação") ||
+          prevContent.includes("Para qual cidade de") ||
+          prevContent.includes("Estado Identificado:") ||
           prevContent.includes("Vamos alterar a localização") ||
           prevContent.includes("Vamos corrigir a localização") ||
           prevContent.includes("Não identifiquei o município") ||
@@ -4116,14 +4134,19 @@ ${catalogContext}`;
           prevContent.includes("informe a cidade e estado")
         ) {
           const hspRes = getHsp(content);
-          if (hspRes.city && (isLocationInput(content) || hspRes.exact)) {
-            cidade = hspRes.city;
-            estado = hspRes.uf;
+          if (isLocationInput(content) || hspRes.exact) {
+            if (hspRes.isStateOnly) {
+              estado = hspRes.uf;
+              cidade = undefined;
+            } else if (hspRes.city) {
+              cidade = hspRes.city;
+              estado = hspRes.uf;
+            }
           }
         }
 
         const cityM = content.match(
-          /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
+          /(?:entrega\s+em|para|em|na cidade de|no munic[íi]pio de|cidade(?:\s*de)?)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
         );
         if (cityM && cityM[1]) {
           const candidate = (
@@ -4139,8 +4162,15 @@ ${catalogContext}`;
             !candLower.includes("metal")
           ) {
             const hspRes = getHsp(candidate);
-            cidade = hspRes.city;
-            estado = hspRes.uf;
+            if (hspRes && (isLocationInput(candidate) || hspRes.exact)) {
+              if (hspRes.isStateOnly) {
+                estado = hspRes.uf;
+                cidade = undefined;
+              } else if (hspRes.city) {
+                cidade = hspRes.city;
+                estado = hspRes.uf;
+              }
+            }
           }
         }
 
@@ -4151,9 +4181,14 @@ ${catalogContext}`;
           (isLocationInput(content) && !prevContent.includes("cliente final"))
         ) {
           const hspRes = getHsp(content);
-          if (hspRes.city) {
-            cidade = hspRes.city;
-            estado = hspRes.uf;
+          if (hspRes && (isLocationInput(content) || hspRes.exact)) {
+            if (hspRes.isStateOnly) {
+              estado = hspRes.uf;
+              cidade = undefined;
+            } else if (hspRes.city) {
+              cidade = hspRes.city;
+              estado = hspRes.uf;
+            }
           }
         }
 
@@ -4285,32 +4320,33 @@ ${catalogContext}`;
     const storedSessionData: WhatsappSessionData = convMeta["sessionData"] || {};
     let currentStep: WhatsappBotStep = convMeta["step"] || "IDLE";
 
-    // Hidrata sessionCtx a partir do sessionData estruturado persistido
-    if (storedSessionData.cidade && !sessionCtx.cidade)
-      sessionCtx.cidade = storedSessionData.cidade;
-    if (storedSessionData.uf && !sessionCtx.estado) sessionCtx.estado = storedSessionData.uf;
-    if (storedSessionData.consumptionKwh && !sessionCtx.consumptionKwh)
-      sessionCtx.consumptionKwh = storedSessionData.consumptionKwh;
-    if (storedSessionData.kwp && !sessionCtx.targetKWp)
-      sessionCtx.targetKWp = storedSessionData.kwp;
-    if (storedSessionData.moduleCount && !sessionCtx.targetModules)
-      sessionCtx.targetModules = storedSessionData.moduleCount;
-    if (storedSessionData.gridType && !sessionCtx.gridVoltage)
-      sessionCtx.gridVoltage = storedSessionData.gridType;
-    if (storedSessionData.roofType && !sessionCtx.roofType)
-      sessionCtx.roofType = storedSessionData.roofType;
-    if (storedSessionData.kwpRate && !sessionCtx.customRatePerKwp)
-      sessionCtx.customRatePerKwp = storedSessionData.kwpRate;
-    if (
-      storedSessionData.clientName &&
-      (!sessionCtx.clientName || sessionCtx.clientName === "Cliente")
-    )
-      sessionCtx.clientName = storedSessionData.clientName;
-    if (
-      storedSessionData.clientPhone &&
-      (!sessionCtx.clientWhatsapp || sessionCtx.clientWhatsapp === "WhatsApp")
-    )
-      sessionCtx.clientWhatsapp = storedSessionData.clientPhone;
+    // Hidrata sessionCtx a partir do sessionData estruturado persistido ou da raiz de convMeta (compatibilidade)
+    const rawCidade = storedSessionData.cidade || convMeta["cidade"];
+    const rawUf = storedSessionData.uf || convMeta["uf"];
+    const rawConsumption = storedSessionData.consumptionKwh ?? convMeta["consumptionKwh"];
+    const rawKwp = storedSessionData.kwp ?? convMeta["kwp"];
+    const rawModuleCount = storedSessionData.moduleCount ?? convMeta["moduleCount"];
+    const rawGridType = storedSessionData.gridType || convMeta["gridType"];
+    const rawRoofType = storedSessionData.roofType || convMeta["roofType"];
+    const rawKwpRate = storedSessionData.kwpRate ?? convMeta["kwpRate"];
+    const rawClientName = storedSessionData.clientName || convMeta["clientName"];
+    const rawClientPhone = storedSessionData.clientPhone || convMeta["clientPhone"];
+
+    if (rawCidade && !sessionCtx.cidade) sessionCtx.cidade = rawCidade;
+    if (rawUf && !sessionCtx.estado) sessionCtx.estado = rawUf;
+    if (rawConsumption !== undefined && !sessionCtx.consumptionKwh)
+      sessionCtx.consumptionKwh = rawConsumption;
+    if (rawKwp !== undefined && !sessionCtx.targetKWp) sessionCtx.targetKWp = rawKwp;
+    if (rawModuleCount !== undefined && !sessionCtx.targetModules)
+      sessionCtx.targetModules = rawModuleCount;
+    if (rawGridType && !sessionCtx.gridVoltage) sessionCtx.gridVoltage = rawGridType;
+    if (rawRoofType && !sessionCtx.roofType) sessionCtx.roofType = rawRoofType;
+    if (rawKwpRate !== undefined && !sessionCtx.customRatePerKwp)
+      sessionCtx.customRatePerKwp = rawKwpRate;
+    if (rawClientName && (!sessionCtx.clientName || sessionCtx.clientName === "Cliente"))
+      sessionCtx.clientName = rawClientName;
+    if (rawClientPhone && (!sessionCtx.clientWhatsapp || sessionCtx.clientWhatsapp === "WhatsApp"))
+      sessionCtx.clientWhatsapp = rawClientPhone;
     if (typeof storedSessionData.selectedQuoteIndex === "number") {
       sessionCtx.chosenQuoteIndex = storedSessionData.selectedQuoteIndex;
     }
@@ -4319,6 +4355,23 @@ ${catalogContext}`;
     }
     if (storedSessionData.pendingCityName && !sessionCtx.pendingCityName) {
       sessionCtx.pendingCityName = storedSessionData.pendingCityName;
+    }
+
+    // Defesa em profundidade: Se a cidade armazenada for na verdade um Estado (ex: "Alagoas", "Bahia", "Minas Gerais")
+    // autocorrige para que a cidade não fique com o nome do estado e o estado não seja distorcido:
+    if (sessionCtx.cidade) {
+      const normStoredCity = normalizeTextSimple(sessionCtx.cidade);
+      if (
+        STATE_NAME_TO_UF[normStoredCity] &&
+        normStoredCity !== "SAO PAULO" &&
+        normStoredCity !== "RIO DE JANEIRO"
+      ) {
+        const correctUf = STATE_NAME_TO_UF[normStoredCity];
+        sessionCtx.estado = correctUf;
+        delete sessionCtx.cidade;
+        delete storedSessionData.cidade;
+        storedSessionData.uf = correctUf;
+      }
     }
 
     // Auto-recuperação de candidatos a partir da última mensagem do bot se histórico perdeu metadata
@@ -5884,6 +5937,23 @@ ${catalogContext}`;
       if (wantsToChangeLocation) {
         const hspRes = getHsp(incomingText);
         if (hspRes && (isLocationInput(incomingText) || hspRes.exact)) {
+          if (hspRes.isStateOnly && hspRes.uf) {
+            const stateTitle = UF_TO_STATE_TITLE[hspRes.uf] || hspRes.uf;
+            const capital = STATE_CAPITALS[hspRes.uf] || "";
+            sessionCtx.estado = hspRes.uf;
+            delete sessionCtx.cidade;
+            await setStep("AWAITING_CITY", {
+              ...storedSessionData,
+              uf: hspRes.uf,
+            });
+            return (
+              `*_Estado Identificado:_* *${stateTitle} (${hspRes.uf})* 📍\n\n` +
+              `Para qual cidade de ${stateTitle} será a instalação?\n` +
+              `> Responda com a cidade (ex: \`${capital}\`) ou responda 1️⃣ para utilizar a capital (*${capital}/${hspRes.uf}*).\n\n` +
+              `_(Ou envie 0️⃣ para voltar ao menu inicial)_`
+            );
+          }
+
           if (hspRes.ambiguous && hspRes.candidates && hspRes.candidates.length > 1) {
             await setStep("AWAITING_CITY_STATE", {
               pendingCityCandidates: hspRes.candidates,
@@ -6021,6 +6091,32 @@ ${catalogContext}`;
 
       if (chosenGrid) {
         sessionCtx.gridVoltage = chosenGrid;
+
+        if (!sessionCtx.cidade) {
+          await setStep("AWAITING_CITY", {
+            ...storedSessionData,
+            gridType: chosenGrid,
+            uf: sessionCtx.estado,
+          });
+          if (sessionCtx.estado) {
+            const stateTitle = UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado;
+            const capital = STATE_CAPITALS[sessionCtx.estado] || "";
+            const capitalPrompt = capital
+              ? ` ou responda 1️⃣ para a capital (*${capital}/${sessionCtx.estado}*)`
+              : "";
+            return (
+              `*_Padrão Elétrico Registrado:_* \`${chosenGrid}\` ⚡\n\n` +
+              `Identifiquei o estado de *${stateTitle} (${sessionCtx.estado})* 📍.\n\n` +
+              `Para qual cidade de ${stateTitle} será a instalação?\n` +
+              `> Responda com a cidade (ex: \`${capital || "Maceió"}\`)${capitalPrompt}.`
+            );
+          }
+          return (
+            `*_Padrão Elétrico Registrado:_* \`${chosenGrid}\` ⚡\n\n` +
+            `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+          );
+        }
+
         if (sessionCtx.roofType) {
           const quotes = await kitsFor({ roofType: sessionCtx.roofType });
           if (quotes.length > 0) {
@@ -6160,6 +6256,8 @@ ${catalogContext}`;
     const isAskingCity =
       currentStep === "AWAITING_CITY" ||
       lastBotMsg.includes("Para qual cidade e estado será a instalação") ||
+      lastBotMsg.includes("Para qual cidade de") ||
+      lastBotMsg.includes("Estado Identificado:") ||
       lastBotMsg.includes("Vamos alterar a localização") ||
       lastBotMsg.includes("Vamos corrigir a localização") ||
       lastBotMsg.includes("Não identifiquei o município") ||
@@ -6170,6 +6268,22 @@ ${catalogContext}`;
       lastBotMsg.includes("cidade e estado da instalação solar");
 
     if (isAskingCity) {
+      // 0. Se já tínhamos um estado pendente e o usuário respondeu "1" ou "capital" para usar a capital daquele estado:
+      const currentKnownUf = sessionCtx.estado || storedSessionData.uf;
+      const isSelectingCapital =
+        (lower === "1" ||
+          lower === "1." ||
+          lower.includes("1️⃣") ||
+          lower === "capital" ||
+          lower.includes("capital")) &&
+        Boolean(currentKnownUf && STATE_CAPITALS[currentKnownUf]);
+
+      if (isSelectingCapital && currentKnownUf && STATE_CAPITALS[currentKnownUf]) {
+        const capitalName = STATE_CAPITALS[currentKnownUf];
+        const capitalHsp = getHsp(capitalName, currentKnownUf);
+        return this.finalizeLocationSelection(capitalHsp, sessionCtx, setStep, kitsFor);
+      }
+
       // Se o usuário digitou "nenhuma", "manter", "mesma", etc. e já tinha uma cidade registrada:
       const keepExistingCity =
         (lower === "nenhuma" ||
@@ -6198,10 +6312,32 @@ ${catalogContext}`;
         );
       }
 
-      const hspRes = getHsp(incomingText);
+      const lookupUf = currentKnownUf || undefined;
+      const hspRes = getHsp(incomingText, lookupUf);
+
+      // Se a resposta for exclusivamente um Estado (ex: usuário digitou "Alagoas" ou "AL" na pergunta de cidade):
+      if (hspRes.isStateOnly && hspRes.uf) {
+        const stateUf = hspRes.uf;
+        const stateTitle = UF_TO_STATE_TITLE[stateUf] || stateUf;
+        const capital = STATE_CAPITALS[stateUf] || "";
+        sessionCtx.estado = stateUf;
+        delete sessionCtx.cidade;
+        await setStep("AWAITING_CITY", {
+          ...storedSessionData,
+          uf: stateUf,
+        });
+        return (
+          `*_Estado Identificado:_* *${stateTitle} (${stateUf})* 📍\n\n` +
+          `Para qual cidade de ${stateTitle} será a instalação?\n` +
+          `> Responda com a cidade (ex: \`${capital}\`) ou responda 1️⃣ para utilizar a capital (*${capital}/${stateUf}*).\n\n` +
+          `_(Ou envie 0️⃣ para voltar ao menu inicial)_`
+        );
+      }
+
       const isRecognizedLocation =
         !invalidWordsCommon.has(lower) &&
         (isLocationInput(incomingText) || hspRes.exact) &&
+        Boolean(hspRes.city) &&
         !invalidWordsCommon.has(hspRes.city.toLowerCase());
 
       if (isRecognizedLocation) {
@@ -6246,7 +6382,7 @@ ${catalogContext}`;
           sessionCtx.consumptionKwh = consumo;
 
           const cityInSameMsg = incomingText.match(
-            /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
+            /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
           );
           if (cityInSameMsg && cityInSameMsg[1]) {
             const cand = (
@@ -6258,6 +6394,22 @@ ${catalogContext}`;
                   : "")
             ).trim();
             const hspRes = getHsp(cand);
+            if (hspRes.isStateOnly && hspRes.uf) {
+              const stateTitle = UF_TO_STATE_TITLE[hspRes.uf] || hspRes.uf;
+              const capital = STATE_CAPITALS[hspRes.uf] || "";
+              sessionCtx.estado = hspRes.uf;
+              delete sessionCtx.cidade;
+              await setStep("AWAITING_CITY", {
+                consumptionKwh: consumo,
+                uf: hspRes.uf,
+              });
+              return (
+                `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n` +
+                `> 📍 Estado: *${stateTitle} (${hspRes.uf})*\n\n` +
+                `Para qual cidade de ${stateTitle} será a instalação?\n` +
+                `> Responda com a cidade (ex: \`${capital}\`) ou responda 1️⃣ para utilizar a capital (*${capital}/${hspRes.uf}*).`
+              );
+            }
             if (hspRes.ambiguous && hspRes.candidates && hspRes.candidates.length > 1) {
               await setStep("AWAITING_CITY_STATE", {
                 consumptionKwh: consumo,
@@ -6298,11 +6450,12 @@ ${catalogContext}`;
 
           await setStep("AWAITING_CITY", {
             consumptionKwh: consumo,
+            uf: sessionCtx.estado,
           });
-          return (
-            `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n\n` +
-            `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
-          );
+          const cityPrompt = sessionCtx.estado
+            ? `Identifiquei o estado de *${UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado} (${sessionCtx.estado})* 📍.\n\nPara qual cidade de ${UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado} será a instalação?\n> Responda com a cidade (ex: \`${STATE_CAPITALS[sessionCtx.estado] || "Maceió"}\`) ou responda 1️⃣ para a capital (*${STATE_CAPITALS[sessionCtx.estado] || "Maceió"}/${sessionCtx.estado}*).`
+            : `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`;
+          return `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n\n${cityPrompt}`;
         }
       }
 
@@ -6336,7 +6489,7 @@ ${catalogContext}`;
         sessionCtx.targetKWp = targetKWp;
         const formattedPower = this.formatPowerBadge(targetKWp);
         const cityInSameMsg = incomingText.match(
-          /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{3,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
+          /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
         );
         if (cityInSameMsg && cityInSameMsg[1]) {
           const cand = (
@@ -6348,6 +6501,22 @@ ${catalogContext}`;
                 : "")
           ).trim();
           const hspRes = getHsp(cand);
+          if (hspRes.isStateOnly && hspRes.uf) {
+            const stateTitle = UF_TO_STATE_TITLE[hspRes.uf] || hspRes.uf;
+            const capital = STATE_CAPITALS[hspRes.uf] || "";
+            sessionCtx.estado = hspRes.uf;
+            delete sessionCtx.cidade;
+            await setStep("AWAITING_CITY", {
+              kwp: targetKWp,
+              uf: hspRes.uf,
+            });
+            return (
+              `*_Potência Solicitada:_* \`${formattedPower}\` ☀️\n` +
+              `> 📍 Estado: *${stateTitle} (${hspRes.uf})*\n\n` +
+              `Para qual cidade de ${stateTitle} será a instalação?\n` +
+              `> Responda com a cidade (ex: \`${capital}\`) ou responda 1️⃣ para utilizar a capital (*${capital}/${hspRes.uf}*).`
+            );
+          }
           if (hspRes.ambiguous && hspRes.candidates && hspRes.candidates.length > 1) {
             await setStep("AWAITING_CITY_STATE", {
               kwp: targetKWp,
@@ -6388,11 +6557,12 @@ ${catalogContext}`;
 
         await setStep("AWAITING_CITY", {
           kwp: targetKWp,
+          uf: sessionCtx.estado,
         });
-        return (
-          `*_Potência Solicitada:_* \`${formattedPower}\` ☀️\n\n` +
-          `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
-        );
+        const kwpCityPrompt = sessionCtx.estado
+          ? `Identifiquei o estado de *${UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado} (${sessionCtx.estado})* 📍.\n\nPara qual cidade de ${UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado} será a instalação?\n> Responda com a cidade (ex: \`${STATE_CAPITALS[sessionCtx.estado] || "Maceió"}\`) ou responda 1️⃣ para a capital (*${STATE_CAPITALS[sessionCtx.estado] || "Maceió"}/${sessionCtx.estado}*).`
+          : `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`;
+        return `*_Potência Solicitada:_* \`${formattedPower}\` ☀️\n\n${kwpCityPrompt}`;
       }
 
       return (
@@ -6610,6 +6780,8 @@ ${catalogContext}`;
       if (quoteEntities.cidade) {
         sessionCtx.cidade = quoteEntities.cidade;
         if (quoteEntities.estado) sessionCtx.estado = quoteEntities.estado;
+      } else if (quoteEntities.estado) {
+        sessionCtx.estado = quoteEntities.estado;
       }
 
       // Monta cabeçalho informativo com base no que foi identificado
@@ -6632,6 +6804,9 @@ ${catalogContext}`;
       const extraDetails: string[] = [];
       if (sessionCtx.cidade && sessionCtx.estado) {
         extraDetails.push(`> 📍 Localidade: \`${sessionCtx.cidade}/${sessionCtx.estado}\``);
+      } else if (sessionCtx.estado) {
+        const stateTitle = UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado;
+        extraDetails.push(`> 📍 Estado: *${stateTitle} (${sessionCtx.estado})*`);
       }
       if (sessionCtx.roofType) {
         extraDetails.push(`> 🏠 Estrutura: *${sessionCtx.roofType}*`);
@@ -6650,7 +6825,23 @@ ${catalogContext}`;
           consumptionKwh: sessionCtx.consumptionKwh,
           roofType: sessionCtx.roofType,
           gridType: sessionCtx.gridVoltage,
+          uf: sessionCtx.estado,
         });
+
+        if (sessionCtx.estado) {
+          const stateTitle = UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado;
+          const capital = STATE_CAPITALS[sessionCtx.estado] || "";
+          const capitalPrompt = capital
+            ? ` ou responda 1️⃣ para a capital (*${capital}/${sessionCtx.estado}*)`
+            : "";
+          return (
+            `${headerText}${detailsBlock}` +
+            `Identifiquei o estado de *${stateTitle} (${sessionCtx.estado})* 📍.\n\n` +
+            `Para qual cidade de ${stateTitle} será a instalação?\n` +
+            `> Responda com a cidade (ex: \`${capital || "Maceió"}\`)${capitalPrompt}.`
+          );
+        }
+
         return (
           `${headerText}${detailsBlock}` +
           `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`

@@ -3,6 +3,7 @@ import {
   GeoIrradianceService,
   normalizeTextSimple,
   parseLocationString,
+  isLocationInput,
   UF_FALLBACK,
 } from "../geo-irradiance.service";
 
@@ -143,6 +144,94 @@ describe("GeoIrradianceService - Municipal Solar Irradiation Suite", () => {
         const ufs = result.candidates!.map((c) => c.uf);
         expect(ufs).toContain("AL");
         expect(ufs).toContain("PB");
+      });
+    });
+
+    describe("Brazilian State Detection (Alagoas, Bahia, Minas Gerais, etc.)", () => {
+      it("should parse state names and UFs without inventing a city", () => {
+        expect(parseLocationString("Alagoas")).toEqual({
+          city: "",
+          uf: "AL",
+          isStateOnly: true,
+          stateName: "Alagoas",
+        });
+        expect(parseLocationString("AL")).toEqual({
+          city: "",
+          uf: "AL",
+          isStateOnly: true,
+          stateName: "Alagoas",
+        });
+        expect(parseLocationString("estado de Alagoas")).toEqual({
+          city: "",
+          uf: "AL",
+          isStateOnly: true,
+          stateName: "Alagoas",
+        });
+        expect(parseLocationString("no estado de Alagoas")).toEqual({
+          city: "",
+          uf: "AL",
+          isStateOnly: true,
+          stateName: "Alagoas",
+        });
+        expect(parseLocationString("Bahia")).toEqual({
+          city: "",
+          uf: "BA",
+          isStateOnly: true,
+          stateName: "Bahia",
+        });
+        expect(parseLocationString("Minas Gerais")).toEqual({
+          city: "",
+          uf: "MG",
+          isStateOnly: true,
+          stateName: "Minas Gerais",
+        });
+        expect(parseLocationString("Paraná")).toEqual({
+          city: "",
+          uf: "PR",
+          isStateOnly: true,
+          stateName: "Paraná",
+        });
+      });
+
+      it("should preserve city when city and state are both provided", () => {
+        expect(parseLocationString("Maceió/AL")).toEqual({
+          city: "Maceió",
+          uf: "AL",
+        });
+        expect(parseLocationString("Maringá - Paraná")).toEqual({
+          city: "Maringá",
+          uf: "PR",
+        });
+      });
+
+      it("should recognize state inputs as valid location inputs", () => {
+        expect(isLocationInput("Alagoas")).toBe(true);
+        expect(isLocationInput("AL")).toBe(true);
+        expect(isLocationInput("Bahia")).toBe(true);
+        expect(isLocationInput("Minas Gerais")).toBe(true);
+      });
+
+      it("should return official state irradiation for Alagoas (AL) and NEVER fallback to Alagoas/SP", () => {
+        const resAlagoas = service.getHsp("Alagoas");
+        expect(resAlagoas.uf).toBe("AL");
+        expect(resAlagoas.isStateOnly).toBe(true);
+        expect(resAlagoas.exact).toBe(true);
+        expect(resAlagoas.hsp).toBe(UF_FALLBACK["AL"]);
+        expect(resAlagoas.city).not.toBe("Alagoas");
+
+        const resAL = service.getHsp("AL");
+        expect(resAL.uf).toBe("AL");
+        expect(resAL.isStateOnly).toBe(true);
+        expect(resAL.exact).toBe(true);
+        expect(resAL.hsp).toBe(UF_FALLBACK["AL"]);
+
+        const resBahia = service.getHsp("Bahia");
+        expect(resBahia.uf).toBe("BA");
+        expect(resBahia.isStateOnly).toBe(true);
+
+        const resMG = service.getHsp("Minas Gerais");
+        expect(resMG.uf).toBe("MG");
+        expect(resMG.isStateOnly).toBe(true);
       });
     });
   });
