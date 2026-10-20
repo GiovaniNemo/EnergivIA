@@ -47,8 +47,6 @@ type KanbanBoardProps<T extends KanbanItemBase> = {
   renderEmptyColumn: (stage: DealStage) => ReactNode;
   renderEmptyClosedRow: (status: ClosedDealStatus) => ReactNode;
   renderItem: (item: T, isDraggingOverlay: boolean) => ReactNode;
-  closedCollapsed?: boolean;
-  onExpandClosed?: () => void;
 };
 
 function parseContainerId(raw: string | number): DealStage | null {
@@ -211,8 +209,6 @@ export function KanbanBoard<T extends KanbanItemBase>({
   renderEmptyColumn,
   renderEmptyClosedRow,
   renderItem,
-  closedCollapsed,
-  onExpandClosed,
 }: KanbanBoardProps<T>): JSX.Element {
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -304,9 +300,7 @@ export function KanbanBoard<T extends KanbanItemBase>({
       onDragCancel={handleDragCancel}
     >
       <div className="w-full max-w-full overflow-x-auto pb-2 [touch-action:pan-x_pan-y] overscroll-x-contain">
-        <div
-          className={`grid min-w-[1050px] lg:min-w-[1150px] gap-3 pb-1 ${closedCollapsed ? "grid-cols-[1fr_1fr_1fr_1fr_52px]" : "grid-cols-5"}`}
-        >
+        <div className="grid min-w-[1050px] lg:min-w-[1150px] gap-3 pb-1 grid-cols-5">
           {stages.map((stage) => {
             const stageItems = grouped.get(stage) ?? [];
             if (stage === "fechado") {
@@ -327,8 +321,6 @@ export function KanbanBoard<T extends KanbanItemBase>({
                   rows={rows}
                   overClosedStatus={overClosedStatus}
                   renderEmptyRow={renderEmptyClosedRow}
-                  columnCollapsed={closedCollapsed}
-                  onExpand={onExpandClosed}
                   renderRowItem={(id) => {
                     const item = stageItems.find((i) => i.id === id);
                     if (!item) return null;

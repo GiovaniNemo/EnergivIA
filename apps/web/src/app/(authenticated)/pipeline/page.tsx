@@ -62,7 +62,7 @@ const STAGE_BAR_COLOR: Record<DealStage, string> = {
   contato: "bg-blue-600",
   proposta: "bg-violet-600",
   negociacao: "bg-emerald-600",
-  fechado: "bg-slate-700",
+  fechado: "bg-slate-500",
 };
 
 const pipelineMenuPaperSx = {
@@ -288,7 +288,6 @@ export default function PipelinePage(): JSX.Element {
   const [assignees, setAssignees] = useState<
     Array<{ userId: string; name: string; subtitle?: string }>
   >([]);
-  const [fechadoExpanded, setFechadoExpanded] = useState(false);
   const [activeFilter, setActiveFilter] = useState<"all" | "overdue" | "noProposal">("all");
   const [activeView, setActiveView] = useState<"kanban" | "tabela" | "prioridades">("kanban");
   const [detailDealId, setDetailDealId] = useState<string | null>(null);
@@ -1720,8 +1719,6 @@ export default function PipelinePage(): JSX.Element {
               items={kanbanItems as unknown as Deal[]}
               onItemsChange={replaceDeals}
               onDropCommit={commitDnDDrop}
-              closedCollapsed={!fechadoExpanded}
-              onExpandClosed={() => setFechadoExpanded(true)}
               renderColumnHeader={(stage, count) => {
                 if (groupBy === "assignee") {
                   const assignee = assignees.find((a) => a.userId === stage);
@@ -1745,29 +1742,6 @@ export default function PipelinePage(): JSX.Element {
                 }
 
                 const stageTotal = stageValues[stage] ?? 0;
-                if (stage === "fechado") {
-                  return (
-                    <div className="flex items-center justify-between pb-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-semibold text-[var(--color-foreground)]">
-                          {STAGE_LABEL[stage]}
-                        </span>
-                        <span className="min-w-[20px] rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-1.5 text-center text-[11px] font-semibold text-[var(--color-muted-foreground)]">
-                          {count}
-                        </span>
-                      </div>
-                      {fechadoExpanded && (
-                        <button
-                          type="button"
-                          onClick={() => setFechadoExpanded(false)}
-                          className="text-[11px] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-                        >
-                          ‹ Recolher
-                        </button>
-                      )}
-                    </div>
-                  );
-                }
                 return (
                   <div className="pb-3">
                     <div className="flex items-center gap-1.5 px-0.5">
