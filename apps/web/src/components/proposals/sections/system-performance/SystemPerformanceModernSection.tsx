@@ -14,6 +14,7 @@ function ModernGlassMetric({
   value,
   footer,
   iconFramed,
+  customAccentColor,
 }: {
   theme: SystemPerformanceTheme;
   icon: LucideIcon;
@@ -22,12 +23,11 @@ function ModernGlassMetric({
   value: string;
   footer: string;
   iconFramed?: boolean;
+  customAccentColor?: string;
 }) {
-  const bar =
-    accent === "primary"
-      ? `linear-gradient(90deg, ${theme.primary}, color-mix(in srgb, ${theme.primary} 52%, ${theme.secondary}))`
-      : `linear-gradient(90deg, ${theme.secondary}, color-mix(in srgb, ${theme.secondary} 52%, ${theme.primary}))`;
-  const glowMain = accent === "primary" ? theme.primary : theme.secondary;
+  const mainColor = customAccentColor || (accent === "primary" ? theme.primary : theme.secondary);
+  const bar = `linear-gradient(90deg, ${mainColor}, color-mix(in srgb, ${mainColor} 40%, transparent))`;
+  const glowMain = mainColor;
 
   return (
     <div
@@ -45,13 +45,13 @@ function ModernGlassMetric({
           boxShadow: `0 12px 40px color-mix(in srgb, ${glowMain} 24%, transparent)`,
         }}
       />
-      <div className="mb-3 flex items-center" style={{ color: theme.primary }}>
+      <div className="mb-3 flex items-center" style={{ color: mainColor }}>
         {iconFramed ? (
           <span
             className="inline-flex rounded-full p-2"
             style={{
-              border: `1px solid color-mix(in srgb, ${theme.primary} 38%, transparent)`,
-              backgroundColor: `color-mix(in srgb, ${theme.primary} 12%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${mainColor} 38%, transparent)`,
+              backgroundColor: `color-mix(in srgb, ${mainColor} 12%, transparent)`,
             }}
           >
             <Icon className="h-5 w-5" strokeWidth={1.5} />
@@ -134,6 +134,7 @@ export function SystemPerformanceModernSection({
         <div className="system-performance-metrics-grid grid gap-4">
           <ModernGlassMetric
             accent="primary"
+            customAccentColor="#f59e0b"
             footer="Estimativa mensal de geração"
             icon={Sun}
             theme={theme}
@@ -142,6 +143,7 @@ export function SystemPerformanceModernSection({
           />
           <ModernGlassMetric
             accent="primary"
+            customAccentColor="#10b981"
             footer="Proporção do consumo atendido"
             icon={Zap}
             iconFramed
@@ -151,6 +153,7 @@ export function SystemPerformanceModernSection({
           />
           <ModernGlassMetric
             accent="secondary"
+            customAccentColor="#22c55e"
             footer="Impacto ambiental estimado"
             icon={Trees}
             theme={theme}
