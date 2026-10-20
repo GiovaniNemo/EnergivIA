@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TemplateBlueprintSummary } from "@/lib/template-blueprints-api";
 import type { ProposalDocumentJson, SavedTemplate, TemplatePreset } from "./types";
@@ -65,24 +66,30 @@ export function ImportTemplateModal({
                   className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] p-3"
                 >
                   <div className="flex items-start gap-2">
-                    <div className="h-36 shrink-0 overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-card)]">
+                    <div className="h-32 w-28 shrink-0 overflow-hidden rounded-lg border border-[var(--color-border)] bg-slate-900">
                       {template.thumbnailUrl ? (
                         <img
                           src={template.thumbnailUrl}
                           alt={`Preview do template ${template.name}`}
-                          className="block h-full w-auto object-contain"
+                          className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full min-w-24 items-center justify-center px-2 text-[10px] text-[var(--color-muted-foreground)]">
-                          Sem preview
+                        <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-gradient-to-br from-emerald-950/40 to-slate-900">
+                          <LayoutTemplate className="h-6 w-6 text-emerald-400 mb-1 opacity-80" />
+                          <span className="text-[10px] font-medium text-slate-300">
+                            Modelo Oficial
+                          </span>
                         </div>
                       )}
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-[var(--color-foreground)]">
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className="font-semibold text-[var(--color-foreground)] line-clamp-2 leading-snug"
+                        title={template.name}
+                      >
                         {template.name}
                       </p>
-                      <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+                      <p className="mt-1 text-xs text-[var(--color-muted-foreground)] line-clamp-3">
                         {template.description ?? ""}
                       </p>
                     </div>
@@ -90,7 +97,7 @@ export function ImportTemplateModal({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="mt-3 border-[var(--color-border)]"
+                    className="mt-3 w-full border-[var(--color-border)] font-semibold"
                     disabled={!onImportCatalog || catalogImportingId !== null}
                     onClick={() => onImportCatalog?.(template.id)}
                   >
@@ -109,25 +116,31 @@ export function ImportTemplateModal({
           {presets.map((template) => (
             <div
               key={template.id}
-              className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] p-3"
+              className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] p-3 flex flex-col justify-between"
             >
-              <div className="flex items-start gap-2">
-                <div className="h-36 shrink-0 overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-card)]">
+              <div className="flex items-start gap-3">
+                <div className="h-32 w-28 shrink-0 overflow-hidden rounded-lg border border-[var(--color-border)] bg-slate-900">
                   {template.thumbnailUrl ? (
                     <img
                       src={template.thumbnailUrl}
                       alt={`Preview do template ${template.name}`}
-                      className="block h-full w-auto object-contain"
+                      className="h-full w-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-full min-w-24 items-center justify-center px-2 text-[10px] text-[var(--color-muted-foreground)]">
-                      Sem preview
+                    <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-gradient-to-br from-sky-950/40 to-slate-900">
+                      <LayoutTemplate className="h-6 w-6 text-sky-400 mb-1 opacity-80" />
+                      <span className="text-[10px] font-medium text-slate-300">Preset Solar</span>
                     </div>
                   )}
                 </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-[var(--color-foreground)]">{template.name}</p>
-                  <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="font-semibold text-[var(--color-foreground)] line-clamp-2 leading-snug"
+                    title={template.name}
+                  >
+                    {template.name}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--color-muted-foreground)] line-clamp-3">
                     {template.description}
                   </p>
                 </div>
@@ -135,7 +148,7 @@ export function ImportTemplateModal({
               <Button
                 size="sm"
                 variant="outline"
-                className="mt-3 border-[var(--color-border)]"
+                className="mt-3 w-full border-[var(--color-border)] font-semibold"
                 onClick={() => onImport(template.payload, template.name)}
               >
                 Carregar preset

@@ -45,15 +45,155 @@ function getStatusBadgeClass(status: "DRAFT" | "PUBLISHED" | "ARCHIVED"): string
 }
 
 function getTemplateThumbnail(template: ProposalTemplateEntity): string | undefined {
-  const maybeStyles = template.config.editor?.styles;
-  if (!maybeStyles || typeof maybeStyles !== "object") return undefined;
-  const raw = (maybeStyles as Record<string, unknown>)[TEMPLATE_THUMBNAIL_DATA_URL_KEY];
-  if (typeof raw !== "string") return undefined;
-  const value = raw.trim();
-  if (!value) return undefined;
-  if (value.startsWith("data:image/")) return value;
-  if (/^https?:\/\//i.test(value) || value.startsWith("/")) return value;
+  const cfg = template.config as unknown as Record<string, unknown> | undefined;
+  if (!cfg) return undefined;
+
+  const ed = cfg.editor as Record<string, unknown> | undefined;
+  const styles = (ed?.styles || cfg.styles) as Record<string, unknown> | undefined;
+
+  // 1. Thumbnail data URL explícito
+  if (styles) {
+    const raw = styles[TEMPLATE_THUMBNAIL_DATA_URL_KEY];
+    if (typeof raw === "string" && raw.trim()) {
+      const v = raw.trim();
+      if (v.startsWith("data:image/") || /^https?:\/\//i.test(v) || v.startsWith("/")) {
+        return v;
+      }
+    }
+
+    // 2. Imagem de capa nos styles
+    const coverObj = styles.cover as Record<string, unknown> | undefined;
+    const coverUrl = coverObj?.imageUrl;
+    if (typeof coverUrl === "string" && coverUrl.trim() && coverUrl !== "undefined") {
+      const v = coverUrl.trim();
+      if (/^https?:\/\//i.test(v) || v.startsWith("/")) return v;
+    }
+  }
+
+  // 3. Imagem de capa nos sections (fields ou content)
+  const sections = (ed?.sections || cfg.sections) as Array<Record<string, unknown>> | undefined;
+  if (Array.isArray(sections)) {
+    const coverSec = sections.find((s) => s.type === "cover" || s.key === "cover");
+    if (coverSec) {
+      const fields = coverSec.fields as Record<string, unknown> | undefined;
+      const content = coverSec.content as Record<string, unknown> | undefined;
+      const bg =
+        fields?.backgroundImage || content?.backgroundImage || fields?.image || content?.image;
+      if (typeof bg === "string" && bg.trim() && bg !== "undefined") {
+        const v = bg.trim();
+        if (/^https?:\/\//i.test(v) || v.startsWith("/")) return v;
+      }
+    }
+  }
+
+  // 4. Tema global
+  const theme = cfg.theme as Record<string, unknown> | undefined;
+  if (theme && typeof theme.coverImageUrl === "string" && theme.coverImageUrl.trim()) {
+    const v = theme.coverImageUrl.trim();
+    if (/^https?:\/\//i.test(v) || v.startsWith("/")) return v;
+  }
+
   return undefined;
+}
+
+function getTemplatePrimaryColor(template: ProposalTemplateEntity): string {
+  const cfg = template.config as unknown as Record<string, unknown> | undefined;
+  const ed = cfg?.editor as Record<string, unknown> | undefined;
+  const styles = (ed?.styles || cfg?.styles) as Record<string, unknown> | undefined;
+  const branding = styles?.branding as Record<string, unknown> | undefined;
+  const color = branding?.primaryColor;
+  if (typeof color === "string" && color.trim()) return color.trim();
+  const theme = cfg?.theme as Record<string, unknown> | undefined;
+  if (theme && typeof theme.primaryColor === "string" && theme.primaryColor.trim()) {
+    return theme.primaryColor.trim();
+  }
+  return "#059669";
+}
+
+function TemplateCardPreview({
+  template,
+  thumbnailUrl,
+}: {
+  template: ProposalTemplateEntity;
+  thumbnailUrl?: string;
+}): JSX.Element {
+  const [imageError, setImageError] = useState(false);
+  const primaryColor = getTemplatePrimaryColor(template);
+
+  const sectionsCount =
+    template.config.editor?.sections?.length ||
+    (template.config.sections as unknown as unknown[])?.length ||
+    0;
+
+  if (thumbnailUrl && !imageError) {
+    return (
+      <div className="relative h-44 w-full overflow-hidden bg-slate-900">
+        <img
+          src={thumbnailUrl}
+          alt={`Preview do template ${template.name}`}
+          onError={() => setImageError(true)}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-card)] via-transparent to-black/30" />
+        {template.isDefault && (
+          <div className="absolute top-3 right-3">
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-950/85 backdrop-blur-md px-2.5 py-1 text-[11px] font-semibold text-emerald-300 shadow-md">
+              <Check className="h-3 w-3" /> Padrão
+            </span>
+          </div>
+        )}
+        {sectionsCount > 0 && (
+          <div className="absolute bottom-2 left-3">
+            <span className="inline-flex items-center gap-1 rounded-md bg-black/60 backdrop-blur-sm px-2 py-0.5 text-[10px] font-medium text-slate-200">
+              {sectionsCount} seções
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Mini mockup elegante quando não houver imagem fotográfica
+  return (
+    <div
+      className="relative flex h-44 w-full flex-col justify-between overflow-hidden p-4 transition-colors"
+      style={{
+        background: `radial-gradient(ellipse at top right, ${primaryColor}25 0%, rgba(15, 23, 42, 0.95) 75%)`,
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <div
+            className="flex h-6 w-6 items-center justify-center rounded-md"
+            style={{ backgroundColor: `${primaryColor}33`, color: primaryColor }}
+          >
+            <LayoutTemplate className="h-3.5 w-3.5" />
+          </div>
+          <span className="text-[11px] font-medium text-slate-400">Proposta Comercial</span>
+        </div>
+        {template.isDefault && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-950/80 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">
+            <Check className="h-3 w-3" /> Padrão
+          </span>
+        )}
+      </div>
+
+      <div className="my-auto space-y-2 rounded-lg border border-white/5 bg-white/[0.03] p-3 backdrop-blur-sm">
+        <div className="h-2 w-3/4 rounded bg-white/20" />
+        <div className="h-1.5 w-1/2 rounded bg-white/10" />
+        <div className="grid grid-cols-3 gap-1.5 pt-1">
+          <div className="h-3.5 rounded bg-white/[0.05]" />
+          <div className="h-3.5 rounded bg-white/[0.05]" />
+          <div className="h-3.5 rounded bg-white/[0.05]" />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-[10px] text-slate-400">
+        <span>v{template.version}</span>
+        {sectionsCount > 0 && <span>{sectionsCount} seções</span>}
+      </div>
+    </div>
+  );
 }
 
 import { useQuery } from "@tanstack/react-query";
@@ -459,40 +599,36 @@ export function TemplateListPage(): JSX.Element {
           </CardHeader>
         </Card>
       ) : (
-        <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(340px,1fr))]">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {templates.map((template) => {
             const thumbnailUrl = getTemplateThumbnail(template);
             return (
               <Card
                 key={template.id}
-                className="border-[var(--color-border)] bg-[var(--color-card)]"
+                className="group flex flex-col overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] transition-all duration-200 hover:border-emerald-500/40 hover:shadow-lg"
               >
-                <CardHeader>
-                  <div className="flex items-start gap-3">
-                    <div className="h-36 shrink-0 overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-background)]">
-                      {thumbnailUrl ? (
-                        <img
-                          src={thumbnailUrl}
-                          alt={`Preview do template ${template.name}`}
-                          className="block h-full w-auto object-contain"
-                        />
-                      ) : (
-                        <div className="flex h-full min-w-24 items-center justify-center px-2 text-[10px] text-[var(--color-muted-foreground)]">
-                          Sem preview
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="line-clamp-1">{template.name}</CardTitle>
-                      <CardDescription className="mt-1 line-clamp-2">
-                        {template.description || "Template sem descrição"}
-                      </CardDescription>
-                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                        {template.isDefault && (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/35 bg-sky-500/12 px-2 py-0.5 text-[10px] font-semibold text-sky-400">
-                            <Check className="h-3 w-3" /> Padrão
-                          </span>
-                        )}
+                <TemplateCardPreview template={template} thumbnailUrl={thumbnailUrl} />
+
+                <div className="flex flex-1 flex-col justify-between p-5">
+                  <div>
+                    <h3
+                      className="text-base font-bold text-[var(--color-foreground)] line-clamp-2 leading-snug group-hover:text-emerald-400 transition-colors"
+                      title={template.name}
+                    >
+                      {template.name}
+                    </h3>
+                    <p
+                      className="mt-1.5 text-xs text-[var(--color-muted-foreground)] line-clamp-2 leading-relaxed"
+                      title={template.description || ""}
+                    >
+                      {template.description ||
+                        "Template pronto para envio de propostas comerciais."}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-[var(--color-border)]/60 flex flex-col gap-3">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-1.5">
                         <span
                           className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] ${getStatusBadgeClass(template.status)}`}
                         >
@@ -502,43 +638,49 @@ export function TemplateListPage(): JSX.Element {
                           v{template.version}
                         </span>
                       </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        {!template.isDefault && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            disabled={settingDefaultId === template.id}
-                            onClick={() => void handleSetDefault(template)}
-                          >
-                            {settingDefaultId === template.id ? "Definindo..." : "Usar como padrão"}
-                          </Button>
-                        )}
-                        {isTrial ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setTemplateUpgradeModalOpen(true)}
-                          >
-                            <Lock className="mr-1 h-3.5 w-3.5" /> Editar
-                          </Button>
-                        ) : (
-                          <Link href={`/proposals/templates/${template.id}`}>
-                            <Button size="sm">Editar</Button>
-                          </Link>
-                        )}
+                      {!template.isDefault && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-[11px] text-[var(--color-muted-foreground)] hover:text-emerald-400"
+                          disabled={settingDefaultId === template.id}
+                          onClick={() => void handleSetDefault(template)}
+                        >
+                          {settingDefaultId === template.id ? "Definindo..." : "Tornar padrão"}
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {isTrial ? (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-red-500/40 text-red-300 hover:bg-red-500/15"
-                          disabled={deletingTemplateId === template.id}
-                          onClick={() => void handleDeleteTemplate(template)}
+                          className="flex-1 h-9 text-xs font-semibold"
+                          onClick={() => setTemplateUpgradeModalOpen(true)}
                         >
-                          {deletingTemplateId === template.id ? "Excluindo..." : "Excluir"}
+                          <Lock className="mr-1.5 h-3.5 w-3.5" /> Editar
                         </Button>
-                      </div>
+                      ) : (
+                        <Link href={`/proposals/templates/${template.id}`} className="flex-1">
+                          <Button size="sm" className="w-full h-9 text-xs font-semibold">
+                            Editar
+                          </Button>
+                        </Link>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-9 px-3 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        disabled={deletingTemplateId === template.id}
+                        onClick={() => void handleDeleteTemplate(template)}
+                        title="Excluir template"
+                      >
+                        Excluir
+                      </Button>
                     </div>
                   </div>
-                </CardHeader>
+                </div>
               </Card>
             );
           })}
