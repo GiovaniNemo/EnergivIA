@@ -97,7 +97,11 @@ export function EditorPanel({
   const quickNavKey = quickNavGroups.join("\0");
 
   useEffect(() => {
-    setActiveQuickGroup(GENERAL_GROUP_TITLE);
+    if (selectedSection?.type === "gallery") {
+      setActiveQuickGroup("Conteúdo");
+    } else {
+      setActiveQuickGroup(GENERAL_GROUP_TITLE);
+    }
     return () => {
       if (tabClickScrollLockTimerRef.current) {
         clearTimeout(tabClickScrollLockTimerRef.current);
@@ -105,7 +109,7 @@ export function EditorPanel({
       }
       tabClickScrollLockRef.current = null;
     };
-  }, [selectedSection?.id]);
+  }, [selectedSection?.id, selectedSection?.type]);
 
   useEffect(() => {
     if (!showGroupQuickNav || quickNavGroups.length < 2) return;
@@ -203,53 +207,75 @@ export function EditorPanel({
       return;
     }
     if (!focusFieldName) return;
-    const pathTarget = Array.from(
-      scrollContainerRef.current?.querySelectorAll<HTMLElement>("[data-editor-field-path]") ?? []
-    ).find((node) => node.dataset["editorFieldPath"] === focusFieldName);
     const baseField = focusFieldName.split("[")[0]?.split(".")[0] ?? focusFieldName;
-    if (focusFieldName.includes("[") && !pathTarget) return;
-    const target = pathTarget ?? fieldRefs.current[baseField];
-    if (!target) return;
-    target.scrollIntoView({ behavior: "smooth", block: "center" });
-    const richTextRoot = target.querySelector<HTMLElement>(
-      ".ProseMirror, [contenteditable='true'][role='textbox']"
+    const targetGroup = groupedFields.find((group) =>
+      group.fields.some((f) => f.name === baseField)
     );
-    const targetIsRichRoot =
-      target.matches(".ProseMirror") ||
-      target.matches("[contenteditable='true'][role='textbox']") ||
-      target.matches("[contenteditable='true']");
-    const isRichField = focusFieldName === "text" || focusFieldName === "title";
-    let focusable: HTMLElement | null = null;
-    if (isRichField && (targetIsRichRoot || richTextRoot)) {
-      focusable = targetIsRichRoot ? target : richTextRoot;
-    } else if (
-      target instanceof HTMLTextAreaElement ||
-      target instanceof HTMLInputElement ||
-      target instanceof HTMLButtonElement
-    ) {
-      focusable = target;
-    } else {
-      focusable =
-        target.querySelector<HTMLElement>("textarea, input") ??
-        target.querySelector<HTMLElement>(
-          ".ProseMirror, [contenteditable='true'], [role='textbox']"
-        ) ??
-        target.querySelector<HTMLElement>("button");
+    if (targetGroup && targetGroup.title !== activeQuickGroup) {
+      setActiveQuickGroup(targetGroup.title);
     }
-    focusable?.focus();
-    if (focusable instanceof HTMLTextAreaElement) {
-      const end = focusable.value.length;
-      focusable.setSelectionRange(end, end);
-      return;
-    }
-    if (focusable instanceof HTMLInputElement) {
-      const selectableInputTypes = new Set(["text", "search", "url", "tel", "password"]);
-      if (selectableInputTypes.has(focusable.type)) {
+
+    const resolveAndFocus = () => {
+      const currentTarget =
+        Array.from(
+          scrollContainerRef.current?.querySelectorAll<HTMLElement>("[data-editor-field-path]") ??
+            []
+        ).find((node) => node.dataset["editorFieldPath"] === focusFieldName) ??
+        fieldRefs.current[baseField];
+
+      if (!currentTarget) return;
+      currentTarget.scrollIntoView({ behavior: "smooth", block: "center" });
+      const richTextRoot = currentTarget.querySelector<HTMLElement>(
+        ".ProseMirror, [contenteditable='true'][role='textbox']"
+      );
+      const targetIsRichRoot =
+        currentTarget.matches(".ProseMirror") ||
+        currentTarget.matches("[contenteditable='true'][role='textbox']") ||
+        currentTarget.matches("[contenteditable='true']");
+      const isRichField = focusFieldName === "text" || focusFieldName === "title";
+      let focusable: HTMLElement | null = null;
+      if (isRichField && (targetIsRichRoot || richTextRoot)) {
+        focusable = targetIsRichRoot ? currentTarget : richTextRoot;
+      } else if (
+        currentTarget instanceof HTMLTextAreaElement ||
+        currentTarget instanceof HTMLInputElement ||
+        currentTarget instanceof HTMLButtonElement
+      ) {
+        focusable = currentTarget;
+      } else {
+        focusable =
+          currentTarget.querySelector<HTMLElement>("textarea, input") ??
+          currentTarget.querySelector<HTMLElement>(
+            ".ProseMirror, [contenteditable='true'], [role='textbox']"
+          ) ??
+          currentTarget.querySelector<HTMLElement>("button");
+      }
+      focusable?.focus();
+      if (focusable instanceof HTMLTextAreaElement) {
         const end = focusable.value.length;
         focusable.setSelectionRange(end, end);
+        return;
       }
-    }
-  }, [selectedSection?.id, focusFieldName, focusRequestToken, editor]);
+      if (focusable instanceof HTMLInputElement) {
+        const selectableInputTypes = new Set(["text", "search", "url", "tel", "password"]);
+        if (selectableInputTypes.has(focusable.type)) {
+          const end = focusable.value.length;
+          focusable.setSelectionRange(end, end);
+        }
+      }
+    };
+
+    resolveAndFocus();
+    const timer = setTimeout(resolveAndFocus, 80);
+    return () => clearTimeout(timer);
+  }, [
+    selectedSection?.id,
+    focusFieldName,
+    focusRequestToken,
+    editor,
+    groupedFields,
+    activeQuickGroup,
+  ]);
 
   return (
     <main className="proposal-editor flex h-[calc(100vh-190px)] min-h-[520px] w-full min-w-0 flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-[0_10px_30px_rgba(2,6,23,0.08)] lg:h-[calc(100vh-160px)] lg:min-h-[640px] lg:w-[clamp(400px,34vw,560px)] lg:shrink-0 lg:p-4">

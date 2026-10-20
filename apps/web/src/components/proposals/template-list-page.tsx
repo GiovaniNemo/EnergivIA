@@ -98,14 +98,15 @@ function getTemplateThumbnail(template: ProposalTemplateEntity): string | undefi
 
 function getTemplatePrimaryColor(template: ProposalTemplateEntity): string {
   const cfg = template.config as unknown as Record<string, unknown> | undefined;
-  const ed = cfg?.editor as Record<string, unknown> | undefined;
-  const styles = (ed?.styles || cfg?.styles) as Record<string, unknown> | undefined;
-  const branding = styles?.branding as Record<string, unknown> | undefined;
-  const color = branding?.primaryColor;
+  const ed = cfg?.["editor"] as Record<string, unknown> | undefined;
+  const styles = (ed?.["styles"] || cfg?.["styles"]) as Record<string, unknown> | undefined;
+  const branding = styles?.["branding"] as Record<string, unknown> | undefined;
+  const color = branding?.["primaryColor"];
   if (typeof color === "string" && color.trim()) return color.trim();
-  const theme = cfg?.theme as Record<string, unknown> | undefined;
-  if (theme && typeof theme.primaryColor === "string" && theme.primaryColor.trim()) {
-    return theme.primaryColor.trim();
+  const theme = cfg?.["theme"] as Record<string, unknown> | undefined;
+  const themeColor = theme?.["primaryColor"];
+  if (typeof themeColor === "string" && themeColor.trim()) {
+    return themeColor.trim();
   }
   return "#059669";
 }
@@ -198,7 +199,6 @@ function TemplateCardPreview({
 
 import { useQuery } from "@tanstack/react-query";
 import { ImportTemplateModal } from "./editor/import-template-modal";
-import { BUILTIN_TEMPLATE_PRESETS } from "./editor/utils";
 import {
   getTemplateBlueprint,
   listPublishedTemplateBlueprints,
@@ -215,13 +215,13 @@ export function TemplateListPage(): JSX.Element {
     user?.planTier === "ESSENCIAL" ||
     Boolean(user?.isTrial === false);
   const isTrial = !isAdmin && (user?.isTrial ?? !hasPaidPlan);
+  const [templates, setTemplates] = useState<ProposalTemplateEntity[]>([]);
   const isLimitReached =
     !isAdmin &&
     !isTrial &&
     user?.customTemplatesLimit !== null &&
     user?.customTemplatesLimit !== undefined &&
     templates.length >= user.customTemplatesLimit;
-  const [templates, setTemplates] = useState<ProposalTemplateEntity[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -496,7 +496,6 @@ export function TemplateListPage(): JSX.Element {
           }
           catalogImportingId={catalogImportingId}
           onImportCatalog={handleImportCatalogBlueprint}
-          presets={BUILTIN_TEMPLATE_PRESETS}
           savedTemplates={[]}
           onImport={handleImportConfig}
         />

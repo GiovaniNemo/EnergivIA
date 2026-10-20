@@ -1,7 +1,16 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  ImageIcon,
+  Link2,
+  Plus,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { ImageDropzone } from "@/components/ui/image-dropzone";
 import { Input } from "@/components/ui/input";
 import { CompactTipTapVariableField } from "../compact-tiptap-variable-field";
@@ -272,6 +281,283 @@ export function renderListField({
   );
 }
 
+function GalleryItemsManager({
+  field,
+  rows,
+  onSectionFieldChange,
+  toFieldPath,
+  focusFieldName,
+  includeId,
+  maxRows,
+  minRows,
+}: {
+  field: DynamicFieldRenderContext["field"];
+  rows: Record<string, string>[];
+  onSectionFieldChange: (fieldName: string, value: unknown) => void;
+  toFieldPath?: (...parts: Array<string | number>) => string;
+  focusFieldName?: string;
+  includeId: boolean;
+  maxRows: number;
+  minRows: number;
+}): JSX.Element {
+  function updateRow(rowIndex: number, column: string, value: string) {
+    const next = [...rows];
+    const patch = { ...next[rowIndex], [column]: value };
+    if (includeId && !patch.id) patch.id = crypto.randomUUID();
+    next[rowIndex] = patch;
+    onSectionFieldChange(field.name, next);
+  }
+
+  function moveRow(fromIndex: number, toIndex: number) {
+    if (toIndex < 0 || toIndex >= rows.length) return;
+    const next = [...rows];
+    const [moved] = next.splice(fromIndex, 1);
+    if (!moved) return;
+    next.splice(toIndex, 0, moved);
+    onSectionFieldChange(field.name, next);
+  }
+
+  function removeRow(rowIndex: number) {
+    const next = rows.filter((_, i) => i !== rowIndex);
+    onSectionFieldChange(field.name, next);
+  }
+
+  function handleFileUpload(rowIndex: number, file: File | undefined) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateRow(rowIndex, "photo", String(reader.result ?? ""));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function addRow() {
+    if (rows.length >= maxRows) return;
+    const newRow: Record<string, string> = {
+      ...(includeId ? { id: crypto.randomUUID() } : {}),
+      photo: "",
+      title: "",
+      description: "",
+    };
+    onSectionFieldChange(field.name, [...rows, newRow]);
+  }
+
+  return (
+    <div className="space-y-3">
+      {rows.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-[var(--color-border)] p-6 text-center bg-[var(--color-card)]/50">
+          <ImageIcon className="mx-auto h-8 w-8 text-[var(--color-muted-foreground)] mb-2 opacity-60" />
+          <p className="text-xs font-medium text-[var(--color-foreground)]">
+            Nenhuma imagem adicionada na galeria
+          </p>
+          <p className="mt-1 text-[11px] text-[var(--color-muted-foreground)]">
+            Adicione fotos das suas instalações solares para demonstrar autoridade e qualidade
+            técnica.
+          </p>
+        </div>
+      ) : null}
+
+      {rows.map((row, rowIndex) => {
+        const photoFieldPath =
+          toFieldPath?.(field.name, rowIndex, "photo") ?? `${field.name}[${rowIndex}].photo`;
+        const titleFieldPath =
+          toFieldPath?.(field.name, rowIndex, "title") ?? `${field.name}[${rowIndex}].title`;
+        const descFieldPath =
+          toFieldPath?.(field.name, rowIndex, "description") ??
+          `${field.name}[${rowIndex}].description`;
+        const isFocused =
+          focusFieldName === photoFieldPath ||
+          focusFieldName === titleFieldPath ||
+          focusFieldName === descFieldPath ||
+          focusFieldName === `${field.name}[${rowIndex}]` ||
+          focusFieldName?.startsWith(`${field.name}[${rowIndex}].`);
+
+        const photoUrl = row.photo?.trim() ?? "";
+        const fileInputId = `gallery-file-input-${rowIndex}`;
+
+        return (
+          <div
+            key={row.id ?? `gallery-item-${rowIndex}`}
+            data-editor-field-path={photoFieldPath}
+            className={`rounded-xl border transition-all p-3.5 space-y-3 bg-[var(--color-background)] ${
+              isFocused
+                ? "border-emerald-400/80 shadow-[0_0_12px_rgba(16,185,129,0.22)] ring-1 ring-emerald-500/50"
+                : "border-[var(--color-border)]"
+            }`}
+          >
+            {/* Header do Card com Número e Ações de Ordenação/Exclusão */}
+            <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)]/60 pb-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="inline-flex items-center rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[11px] font-semibold text-emerald-400 shrink-0">
+                  Foto {rowIndex + 1}
+                </span>
+                {row.title ? (
+                  <span
+                    className="text-xs font-medium text-[var(--color-foreground)] truncate"
+                    title={row.title}
+                  >
+                    {row.title}
+                  </span>
+                ) : (
+                  <span className="text-xs text-[var(--color-muted-foreground)] italic">
+                    Sem título
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  title="Mover para cima"
+                  disabled={rowIndex === 0}
+                  onClick={() => moveRow(rowIndex, rowIndex - 1)}
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)] disabled:opacity-30 disabled:cursor-not-allowed transition"
+                >
+                  <ArrowUp className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  title="Mover para baixo"
+                  disabled={rowIndex === rows.length - 1}
+                  onClick={() => moveRow(rowIndex, rowIndex + 1)}
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)] disabled:opacity-30 disabled:cursor-not-allowed transition"
+                >
+                  <ArrowDown className="h-3.5 w-3.5" />
+                </button>
+                {rows.length > minRows ? (
+                  <button
+                    type="button"
+                    title="Excluir foto"
+                    onClick={() => removeRow(rowIndex)}
+                    className="flex h-7 w-7 items-center justify-center rounded-md border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/50 transition ml-1"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Imagem / Preview */}
+            <div>
+              {photoUrl ? (
+                <div className="space-y-2">
+                  <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-[var(--color-border)] bg-slate-950 flex items-center justify-center">
+                    <img
+                      src={photoUrl}
+                      alt={row.title || `Foto ${rowIndex + 1}`}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <label
+                      htmlFor={fileInputId}
+                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-foreground)] hover:bg-[var(--color-accent)] transition"
+                    >
+                      <Upload className="h-3 w-3 text-emerald-400" />
+                      Trocar foto (upload)
+                    </label>
+                    <input
+                      id={fileInputId}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleFileUpload(rowIndex, e.target.files?.[0])}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => updateRow(rowIndex, "photo", "")}
+                      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-rose-400 hover:bg-rose-500/10 transition"
+                    >
+                      <X className="h-3 w-3" />
+                      Limpar imagem
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label
+                    htmlFor={fileInputId}
+                    className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-[var(--color-border)] bg-[var(--color-card)]/40 p-4 text-center transition hover:border-emerald-500/60 hover:bg-emerald-500/[0.04]"
+                  >
+                    <Upload className="h-5 w-5 text-emerald-400" />
+                    <span className="text-xs font-medium text-[var(--color-foreground)]">
+                      Clique para escolher foto do computador
+                    </span>
+                    <span className="text-[10px] text-[var(--color-muted-foreground)]">
+                      Suporta PNG, JPG, WebP
+                    </span>
+                  </label>
+                  <input
+                    id={fileInputId}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(rowIndex, e.target.files?.[0])}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Input para Colar URL Direta da Foto */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-[var(--color-muted-foreground)] flex items-center gap-1.5">
+                <Link2 className="h-3 w-3 text-emerald-400" />
+                <span>Ou digite / cole o link direto da imagem (URL):</span>
+              </label>
+              <Input
+                value={row.photo ?? ""}
+                onChange={(e) => updateRow(rowIndex, "photo", e.target.value)}
+                placeholder="https://images.unsplash.com/... ou link de imagem"
+                className="h-8 text-xs bg-[var(--color-card)] text-[var(--color-foreground)] border-[var(--color-border)] focus:border-emerald-400"
+              />
+            </div>
+
+            {/* Campos de Título e Legenda da Foto */}
+            <div className="grid gap-2 sm:grid-cols-2 pt-1 border-t border-[var(--color-border)]/60">
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-[var(--color-muted-foreground)]">
+                  Título da obra (opcional):
+                </label>
+                <Input
+                  data-editor-field-path={titleFieldPath}
+                  value={row.title ?? ""}
+                  onChange={(e) => updateRow(rowIndex, "title", e.target.value)}
+                  placeholder="Ex.: Residência Solar em SP"
+                  className="h-8 text-xs bg-[var(--color-card)] text-[var(--color-foreground)] border-[var(--color-border)]"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-[var(--color-muted-foreground)]">
+                  Legenda / Detalhes (opcional):
+                </label>
+                <textarea
+                  data-editor-field-path={descFieldPath}
+                  value={row.description ?? ""}
+                  onChange={(e) => updateRow(rowIndex, "description", e.target.value)}
+                  placeholder="Ex.: 8,5 kWp em telhado cerâmico"
+                  rows={1}
+                  className="w-full resize-y rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-1 text-xs text-[var(--color-foreground)] focus:border-emerald-400 focus:outline-none min-h-[32px] h-[32px]"
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Botão de Adicionar Nova Foto */}
+      <button
+        type="button"
+        disabled={rows.length >= maxRows}
+        onClick={addRow}
+        className="w-full py-2.5 px-3 rounded-xl border border-dashed border-emerald-500/40 bg-emerald-500/[0.06] hover:bg-emerald-500/[0.12] text-emerald-400 hover:text-emerald-300 font-medium text-xs flex items-center justify-center gap-2 transition disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <Plus className="h-4 w-4" />
+        Adicionar Foto na Galeria ({rows.length}/{maxRows})
+      </button>
+    </div>
+  );
+}
+
 export function renderTableField({
   field,
   section,
@@ -289,6 +575,40 @@ export function renderTableField({
   const defaultIcon = field.defaultNewRowIcon ?? "alert-circle";
   const cols = field.columns ?? [];
   const hasPhotoColumn = cols.includes("photo");
+
+  const isGallerySection =
+    section.type === "gallery" ||
+    (hasPhotoColumn && cols.includes("title") && cols.includes("description") && cols.length === 3);
+
+  if (isGallerySection) {
+    return (
+      <div
+        key={field.name}
+        className="rounded-xl border border-[var(--color-border)] p-3 sm:p-4 bg-[var(--color-card)]/40 space-y-3"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-[var(--color-foreground)]">{field.label}</p>
+            {field.helperText ? (
+              <p className="text-[11px] text-[var(--color-muted-foreground)] mt-0.5">
+                {field.helperText}
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <GalleryItemsManager
+          field={field}
+          rows={rows}
+          onSectionFieldChange={onSectionFieldChange}
+          toFieldPath={toFieldPath}
+          focusFieldName={focusFieldName}
+          includeId={includeId}
+          maxRows={maxRows}
+          minRows={minRows}
+        />
+      </div>
+    );
+  }
   const multilineCols = field.tableMultilineColumns ?? [];
   const isTableMultilineColumn = (column: string): boolean =>
     column === "description" || column === "answer" || multilineCols.includes(column);

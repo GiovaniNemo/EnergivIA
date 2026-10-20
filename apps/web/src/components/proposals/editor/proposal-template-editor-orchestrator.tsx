@@ -39,7 +39,7 @@ import { ImportTemplateModal } from "./import-template-modal";
 import { SettingsPanel } from "./settings-panel";
 import { TemplateHistoryModal } from "./template-history-modal";
 import { VariableMark } from "./extensions";
-import { BUILTIN_TEMPLATE_PRESETS, createBaseDocument, createId } from "./utils";
+import { createBaseDocument, createId } from "./utils";
 import {
   getSectionVariantOptions,
   SECTION_DEFAULT_FIELDS,
@@ -1468,7 +1468,6 @@ export function ProposalTemplateEditor({
           }
           catalogImportingId={catalogImportingId}
           onImportCatalog={handleImportCatalogBlueprint}
-          presets={BUILTIN_TEMPLATE_PRESETS}
           savedTemplates={[
             ...(variant === "blueprint"
               ? []
