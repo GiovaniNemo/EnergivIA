@@ -170,7 +170,7 @@ export default function PaymentForm({
         <button
           type="button"
           onClick={() => setShowCouponInput(true)}
-          className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1.5 mx-auto py-1"
+          className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 transition flex items-center gap-1.5 mx-auto py-1"
         >
           <Tag className="w-3.5 h-3.5" />
           Possui um cupom de desconto?
@@ -204,21 +204,21 @@ export default function PaymentForm({
             </button>
           </div>
           {couponError && (
-            <p className="text-[11px] text-red-400 font-medium flex items-center gap-1">
+            <p className="text-[11px] text-red-500 dark:text-red-400 font-medium flex items-center gap-1">
               <AlertTriangle className="w-3 h-3" /> {couponError}
             </p>
           )}
         </form>
       ) : appliedCoupon ? (
-        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between animate-in zoom-in-95 duration-200">
+        <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/30 flex items-center justify-between animate-in zoom-in-95 duration-200">
           <div className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-emerald-400 shrink-0" />
+            <Tag className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-mono font-bold text-xs text-emerald-300">
+                <span className="font-mono font-bold text-xs text-emerald-900 dark:text-emerald-300">
                   {appliedCoupon.code}
                 </span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold uppercase">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-200/80 text-emerald-900 dark:bg-emerald-500/20 dark:text-emerald-300 font-bold uppercase">
                   {appliedCoupon.isLifetimeAdmin
                     ? "Vitalício Admin"
                     : appliedCoupon.duration === "once"
@@ -226,18 +226,18 @@ export default function PaymentForm({
                       : "Ativo"}
                 </span>
                 {appliedCoupon.isPlusExclusive && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold uppercase border border-purple-500/30">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-900 dark:bg-purple-500/20 dark:text-purple-300 font-bold uppercase border border-purple-200 dark:border-purple-500/30">
                     Exclusivo PLUS
                   </span>
                 )}
               </div>
               {appliedCoupon.isLifetimeAdmin ? (
-                <p className="text-[11px] text-emerald-400 font-bold">
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold">
                   Acesso Ilimitado • Sem Cartão
                 </p>
               ) : (
                 discountedFirstPrice !== null && (
-                  <p className="text-[11px] text-emerald-400 font-bold">
+                  <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold">
                     1ª parcela: R$ {discountedFirstPrice.toFixed(2)}{" "}
                     <span className="line-through opacity-60 font-normal text-[10px]">
                       R$ {planPrice?.toFixed(2)}
@@ -250,7 +250,7 @@ export default function PaymentForm({
           <button
             type="button"
             onClick={handleRemoveCoupon}
-            className="text-[var(--color-muted-foreground)] hover:text-red-400 p-1 transition"
+            className="text-[var(--color-muted-foreground)] hover:text-red-500 p-1 transition"
             title="Remover cupom"
           >
             <X className="w-3.5 h-3.5" />

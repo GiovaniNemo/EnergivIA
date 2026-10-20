@@ -598,3 +598,6 @@
 | task-600 | Robustecer extração de telefone WhatsApp e nomes do cliente em whatsapp-bot.service.ts | completed | Reconhecimento de telefones com hífen no nono dígito (449-8821-5497, 449-777-7770), remoção de conectores e detecção de avisos de correção de nome |
 | task-601 | Escrever suíte de testes unitários dedicada (whatsapp-phone-and-location-parsing.spec.ts) e validar lint | completed | 13 testes cobrindo os casos reais dos 3 prints de WhatsApp, ESLint 0 erros, 413 testes Vitest passando |
 | task-602 | Realizar commit e push das melhorias do WhatsApp Bot para origin/main | completed | Alterações sincronizadas com o repositório remoto |
+| task-603 | Modernizar e corrigir contraste da tela de planos (/gestao/meus-planos) no modo claro e escuro | completed | Eliminação de fundos cinza/bege translúcidos nos cards, cards brancos limpos no light mode, bordas temáticas e tipografia de alto contraste |
+| task-604 | Ajustar contraste do cupom de desconto e badges em PaymentForm.tsx | completed | Link de cupom e tags de desconto ajustados para verde/roxo de alta legibilidade em temas claro e escuro |
+| task-605 | Validar lint, testes unitários, commit e push para origin/main | completed | ESLint código 0, 413 testes Vitest aprovados, alterações sincronizadas com origin/main |
