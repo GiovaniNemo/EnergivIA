@@ -601,3 +601,4 @@
 | task-603 | Modernizar e corrigir contraste da tela de planos (/gestao/meus-planos) no modo claro e escuro | completed | Eliminação de fundos cinza/bege translúcidos nos cards, cards brancos limpos no light mode, bordas temáticas e tipografia de alto contraste |
 | task-604 | Ajustar contraste do cupom de desconto e badges em PaymentForm.tsx | completed | Link de cupom e tags de desconto ajustados para verde/roxo de alta legibilidade em temas claro e escuro |
 | task-605 | Validar lint, testes unitários, commit e push para origin/main | completed | ESLint código 0, 413 testes Vitest aprovados, alterações sincronizadas com origin/main |
+| task-606 | Remover riscado line-through e aplicar X vermelho nos recursos não inclusos dos planos | completed | line-through removido e XCircle estilizado com text-red-500 dark:text-red-400 nos cards de planos |
