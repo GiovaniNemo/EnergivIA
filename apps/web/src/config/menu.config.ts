@@ -24,6 +24,7 @@ import {
   Compass,
   SlidersHorizontal,
   UserCheck,
+  LifeBuoy,
 } from "lucide-react";
 
 export type SidebarSectionKey = "operation" | "management" | "admin" | "platform";
@@ -143,6 +144,13 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/configuracoes",
     section: "management",
     requiresRole: "admin",
+  },
+  {
+    label: "Central de Ajuda",
+    icon: LifeBuoy,
+    path: "/ajuda",
+    section: "management",
+    tooltip: "Suporte técnico, sugestões de melhorias, dúvidas e ouvidoria",
   },
 
   {

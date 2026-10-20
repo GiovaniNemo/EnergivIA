@@ -602,4 +602,11 @@
 | task-604 | Ajustar contraste do cupom de desconto e badges em PaymentForm.tsx | completed | Link de cupom e tags de desconto ajustados para verde/roxo de alta legibilidade em temas claro e escuro |
 | task-605 | Validar lint, testes unitários, commit e push para origin/main | completed | ESLint código 0, 413 testes Vitest aprovados, alterações sincronizadas com origin/main |
 | task-606 | Remover riscado line-through e aplicar X vermelho nos recursos não inclusos dos planos | completed | line-through removido e XCircle estilizado com text-red-500 dark:text-red-400 nos cards de planos |
-| task-607 | Desativar assistente flutuante EnergivIA na web (reservado para futuro app mobile) | completed | Flag de ativação IS_AI_ASSISTANT_ENABLED e IS_FLOATING_HUB_ENABLED setadas como false |
+| task-608 | Design e plano de implementação da Central de Ajuda e Suporte Enterprise | completed | Design doc e plano detalhado criados com sucesso |
+| task-609 | Criar DTOs e templates de e-mail corporativo de suporte no backend (apps/api) | completed | DTO CreateSupportTicketDto e templates ricos para equipe e cliente criados |
+| task-610 | Implementar SupportService, SupportController e registrar SupportModule no backend | completed | SupportService, SupportController e SupportModule criados e registrados com sucesso |
+| task-611 | Escrever testes unitários para o SupportService e validar Vitest | completed | 3 testes unitários criados e 100% aprovados no Vitest |
+| task-612 | Implementar rota de proxy no frontend (/api/support/tickets) | completed | Rota Next.js App Router POST criada com resolução de sessão e tenant |
+| task-613 | Implementar página da Central de Ajuda (/ajuda) e componentes modulares | completed | Criados page.tsx, TicketForm, FaqSection, ChannelsSection e TicketSuccessModal |
+| task-614 | Integrar Central de Ajuda no menu lateral (Sidebar/menu.config.ts) e Topbar (UserMenu) | completed | Inserido item Central de Ajuda em GESTÃO no menu.config.ts e no UserMenu do Topbar |
+| task-615 | Validar lint, testes do frontend/backend, realizar commit e push para origin/main | completed | ESLint 0 erros, 58 suítes e 416 testes Vitest 100% aprovados, sincronizado com origin/main |

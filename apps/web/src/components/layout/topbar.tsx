@@ -7,7 +7,17 @@ import { useOrganization } from "@/components/providers/organization-provider";
 import { useSidebar } from "@/components/layout/sidebar-inset";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, LogOut, Menu, UserRound, Timer, AlertTriangle, Search } from "lucide-react";
+import {
+  Moon,
+  Sun,
+  LogOut,
+  Menu,
+  UserRound,
+  Timer,
+  AlertTriangle,
+  Search,
+  LifeBuoy,
+} from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { OrganizationSwitcher } from "@/components/layout/organization-switcher";
 import { NotificationsBell } from "@/components/layout/notifications-bell";
@@ -100,6 +110,14 @@ function UserMenu(): JSX.Element {
           >
             <UserRound className="h-4 w-4 text-[var(--color-muted-foreground)]" />
             Editar perfil
+          </Link>
+          <Link
+            href="/ajuda"
+            className="flex items-center gap-2 px-3.5 py-2.5 text-sm text-[var(--color-foreground)] transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:text-emerald-400"
+            onClick={() => setOpen(false)}
+          >
+            <LifeBuoy className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+            Central de Ajuda
           </Link>
           <a
             href="/auth/logout"

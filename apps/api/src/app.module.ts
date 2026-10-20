@@ -45,6 +45,7 @@ import { AiUsageModule } from "./modules/ai-usage/ai-usage.module";
 import { WebhooksModule } from "./modules/webhooks/webhooks.module";
 import { FeedbacksModule } from "./modules/feedbacks/feedbacks.module";
 import { SearchModule } from "./modules/search/search.module";
+import { SupportModule } from "./modules/support/support.module";
 
 @Module({
   controllers: [HealthController],
@@ -102,6 +103,7 @@ import { SearchModule } from "./modules/search/search.module";
     WebhooksModule,
     FeedbacksModule,
     SearchModule,
+    SupportModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
