@@ -584,3 +584,9 @@
 | task-587 | Modernizar Catálogo de Distribuidores (/admin/distribuidores) com cards visuais, status de integração e cotação | completed | KPI Cards Dark Glass, busca instantânea, tabela moderna com badges de API/Planilha, switches e menu refinado |
 | task-588 | Modernizar Catálogo de Produtos (/admin/produtos) com filtros por tipo, badges de potência (Wp/kW) e visual refinado | completed | KPI Cards Dark Glass, filtros rápidos, badges de potência e layout moderno do DataGrid |
 | task-589 | Executar lint e testes automatizados, validar integridade de todas as telas do Admin Catálogo, commit e push para origin/main | completed | ESLint código 0, 388 testes Vitest aprovados (100%), commit e push para origin/main |
+
+| task-590 | Escrever testes unitários no Vitest cobrindo diferenciação estrita de kWh vs kWp em mensagens de integradores (whatsapp-consumption-kwh-parsing.spec.ts) | completed | Testando casos como sistema solar para consumo de 1000kw hora mês, 1000 kw hora, kw/h, kw/mês vs 5 kwp |
+| task-591 | Implementar parsePtBrNumber, parseConsumptionInput e aprimorar parsePowerInput e parseIntegratorQuoteEntities em whatsapp-bot.service.ts | completed | Extrai consumo corretamente e não confunde kw hora / consumo de kw com potência de pico (kWp) |
+| task-592 | Atualizar fluxo de conversação, histórico de sessão e perguntas de padrão elétrico em whatsapp-bot.service.ts | completed | Garantir que o bot registre Consumo Registrado e calcule potência correta no dimensionamento |
+| task-593 | Executar suíte de testes do Vitest, lint e validação completa | completed | 56 suítes e 400 testes Vitest aprovados (100%), ESLint código 0 sem warnings |
+| task-594 | Realizar commit e push das alterações para origin/main | completed | Alterações enviadas com sucesso para origin/main |

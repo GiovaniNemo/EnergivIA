@@ -312,13 +312,127 @@ export function formatPowerBadge(kwp: number): string {
   return `${kwp} kWp`;
 }
 
+/** Converte números no formato brasileiro (com ponto como milhar e vírgula como decimal) ou internacional */
+export function parsePtBrNumber(valStr: string): number {
+  if (!valStr) return NaN;
+  const clean = valStr.trim();
+  // Se tem vírgula e pontos (ex: 1.000,50 ou 1.500.000,00)
+  if (clean.includes(",") && clean.includes(".")) {
+    return parseFloat(clean.replace(/\./g, "").replace(",", "."));
+  }
+  // Se tem vírgula (ex: 1000,50 ou 7,5)
+  if (clean.includes(",")) {
+    return parseFloat(clean.replace(",", "."));
+  }
+  // Se tem ponto: verificar se é separador de milhar (ex: 1.000 ou 1.500.000) ou decimal (ex: 7.5)
+  if (clean.includes(".")) {
+    const parts = clean.split(".");
+    // Se a última parte tem exatamente 3 dígitos e todas as anteriores são inteiros -> milhar (ex: 1.000, 10.000, 1.500.000)
+    const isThousands = parts.length > 1 && parts.slice(1).every((p) => p.length === 3);
+    if (isThousands) {
+      return parseFloat(clean.replace(/\./g, ""));
+    }
+    return parseFloat(clean);
+  }
+  return parseFloat(clean);
+}
+
+/** Extrai consumo médio mensal em kWh a partir de mensagens naturais em português */
+export function parseConsumptionInput(text: string): number | null {
+  if (!text) return null;
+  const clean = text.replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, "").trim();
+
+  // Pattern 1: Unidades explícitas de consumo de energia
+  // kwh, kw hora(s), kw-hora, kw/hora, kw/h, kw/mês, kw mês, kw hora mês, etc.
+  const unitRegex =
+    /(?:^|[^\w.,])(\d+[\d.,]*)\s*(?:kwh|kw[-/\s]*horas?|kw\/h|kw\s*\/\s*m[eê]s(?:es)?|kw\s+m[eê]s(?:es)?|kwh\s*\/\s*m[eê]s(?:es)?|kwh\s+m[eê]s(?:es)?)(?:\s*\/\s*m[eê]s(?:es)?)?(?:\b|[^\w.,]|$)/i;
+  const unitMatch = clean.match(unitRegex);
+  if (unitMatch && unitMatch[1]) {
+    const val = parsePtBrNumber(unitMatch[1]);
+    if (Number.isFinite(val) && val >= 20 && val <= 500000) {
+      return Math.round(val);
+    }
+  }
+
+  // Pattern 2: Precedido por termos inequívocos de consumo
+  // consumo (médio) (de) X (kw/kwh), gasto de X kw, conta de X kw, fatura de X kw, etc.
+  const keywordPrefixRegex =
+    /(?:consumo|gasto|m[ée]dia|conta|fatura|faturas|consumindo|gastando)\s*(?:m[ée]di[ao])?\s*(?:mensal)?\s*(?:de|em|da)?\s*(\d+[\d.,]*)\s*(?:kwh|kw[-/\s]*horas?|kw\/h|kw\s*\/\s*m[eê]s|kw\s+m[eê]s|kwh\s*\/\s*m[eê]s|kw)?(?:\b|[^\w.,]|$)/i;
+  const kwMatch = clean.match(keywordPrefixRegex);
+  if (kwMatch && kwMatch[1]) {
+    const val = parsePtBrNumber(kwMatch[1]);
+    if (Number.isFinite(val) && val >= 20 && val <= 500000) {
+      return Math.round(val);
+    }
+  }
+
+  // Pattern 3: Seguido por "de consumo", "de gasto", "por mês", "ao mês", "mensais"
+  const suffixRegex =
+    /(?:^|[^\w.,])(\d+[\d.,]*)\s*(?:kwh|kw)?\s*(?:de\s+consumo|de\s+gasto|por\s+m[eê]s|ao\s+m[eê]s|no\s+m[eê]s|mensa(?:l|is))(?:\b|[^\w.,]|$)/i;
+  const suffixMatch = clean.match(suffixRegex);
+  if (suffixMatch && suffixMatch[1]) {
+    const val = parsePtBrNumber(suffixMatch[1]);
+    if (Number.isFinite(val) && val >= 20 && val <= 500000) {
+      return Math.round(val);
+    }
+  }
+
+  return null;
+}
+
 /** Converte entradas textuais de potência (ex: 3000 kwp, 3 mwp, 1.5 gw) para kWp */
 export function parsePowerInput(text: string): number | null {
-  const match = text.match(/(\d+(?:[.,]\d+)?)\s*(gwp|gw|mwp|mw|kwp|kw)\b/i);
-  if (match && match[1]) {
-    const val = parseFloat(match[1].replace(",", "."));
-    if (!Number.isFinite(val) || val <= 0) return null;
-    const unit = (match[2] || "").toLowerCase();
+  if (!text) return null;
+  const clean = text.replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, "").trim();
+
+  // Procurar por todos os candidatos de potência
+  const powerCandidateRegex = /(\d+[\d.,]*)\s*(gwp|gw|mwp|mw|kwp|kw)\b/gi;
+  let match: RegExpExecArray | null;
+  while ((match = powerCandidateRegex.exec(clean)) !== null) {
+    const fullMatch = match[0];
+    const valStr = match[1];
+    const unit = match[2]?.toLowerCase() || "";
+    const matchIndex = match.index;
+    const matchEnd = matchIndex + fullMatch.length;
+
+    // Substring anterior e posterior para análise de contexto
+    const preText = clean.slice(Math.max(0, matchIndex - 35), matchIndex).toLowerCase();
+    const postText = clean.slice(matchEnd, Math.min(clean.length, matchEnd + 35)).toLowerCase();
+
+    // Se a unidade for kW (ou mw/gw) sem 'p', verificar se na verdade é consumo
+    const isKwWithoutP = unit === "kw" || unit === "mw" || unit === "gw";
+
+    // Checagem 1: se postText indica hora ou mês (ex: "kw hora", "kw/h", "kw/hora", "kw/mês", "kw mes", "kw por mês")
+    const isFollowedByConsumption =
+      /^\s*[-/]?\s*horas?\b|^\s*\/h\b|^\s*\/?\s*m[eê]s(?:es)?\b|^\s+(?:por|ao|no|cada)\s+m[eê]s\b|^\s+mensa(?:l|is)\b/.test(
+        postText
+      );
+
+    // Checagem 2: se preText indica consumo (ex: "consumo de", "gasto de", "conta de", "fatura de", "média de")
+    const isPrecededByConsumption =
+      /(?:consumo|gasto|m[ée]dia|conta|fatura|faturas|consumindo|gastando)\s*(?:m[ée]di[ao])?\s*(?:mensal)?\s*(?:de|em|da)?\s*$/.test(
+        preText
+      );
+
+    // Checagem 3: se postText diz "de consumo" ou "de gasto"
+    const isFollowedByDeConsumo = /^\s+(?:de\s+)?(?:consumo|gasto)\b/.test(postText);
+
+    if (
+      isKwWithoutP &&
+      (isFollowedByConsumption || isPrecededByConsumption || isFollowedByDeConsumo)
+    ) {
+      // Este candidato é consumo, NÃO potência de pico!
+      continue;
+    }
+
+    // Mesmo com kwp, se a pessoa escreveu "consumo de 1000 kwp" (erro de digitação raro do usuário):
+    if (isPrecededByConsumption && isFollowedByConsumption) {
+      continue;
+    }
+
+    const val = parsePtBrNumber(valStr);
+    if (!Number.isFinite(val) || val <= 0) continue;
+
     if (unit === "gwp" || unit === "gw") {
       return Math.min(val * 1_000_000, 5_000_000);
     }
@@ -327,6 +441,7 @@ export function parsePowerInput(text: string): number | null {
     }
     return Math.min(val, 5_000_000);
   }
+
   return null;
 }
 
@@ -452,28 +567,25 @@ export function parseIntegratorQuoteEntities(rawText: string): ExtractedIntegrat
     }
   }
 
-  // 4. Extração de Potência explícita (kWp / MWp / GWp / kW) se explicitamente informada ou fallback
+  // 4. Extração de Consumo (kWh / kw hora / kw mês / consumo de X kw)
+  const parsedConsumption = parseConsumptionInput(clean);
+  if (parsedConsumption !== null) {
+    consumptionKwh = parsedConsumption;
+  }
+
+  // 5. Extração de Potência explícita (kWp / MWp / GWp / kW) se explicitamente informada ou fallback
   const directKWp = parsePowerInput(clean);
   if (directKWp !== null && directKWp >= 0.5) {
     targetKWp = directKWp;
-  } else if (!targetKWp) {
+  } else if (!targetKWp && !consumptionKwh) {
     const kwpRegexMatch = clean.match(
-      /(?:cota[çc][ãa]o|or[çc]amento|sistema|usina|pot[êe]ncia)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(kwp|kw|mwp|mw)\b/i
+      /(?:cota[çc][ãa]o|or[çc]amento|sistema|usina|pot[êe]ncia)\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(kwp|mwp|mw)\b/i
     );
     if (kwpRegexMatch && kwpRegexMatch[1]) {
-      const val = parseFloat(kwpRegexMatch[1].replace(",", "."));
-      if (val >= 0.5 && val <= 5_000_000) {
+      const val = parsePtBrNumber(kwpRegexMatch[1]);
+      if (Number.isFinite(val) && val >= 0.5 && val <= 5_000_000) {
         targetKWp = val;
       }
-    }
-  }
-
-  // 5. Extração de Consumo (kWh)
-  const kwhMatch = clean.match(/(?:consumo\s*(?:m[ée]dio)?\s*(?:de\s*)?)?(\d+[\d.,]*)\s*kwh\b/i);
-  if (kwhMatch && kwhMatch[1]) {
-    const rawKwh = Number(kwhMatch[1].replace(/\./g, "").replace(",", "."));
-    if (rawKwh >= 20 && rawKwh <= 500000) {
-      consumptionKwh = Math.round(rawKwh);
     }
   }
 
@@ -3105,6 +3217,14 @@ Regras estritas:
     return parsePowerInput(text);
   }
 
+  public parseConsumptionInput(text: string): number | null {
+    return parseConsumptionInput(text);
+  }
+
+  public parsePtBrNumber(valStr: string): number {
+    return parsePtBrNumber(valStr);
+  }
+
   public parseIntegratorQuoteEntities(text: string): ExtractedIntegratorQuote {
     return parseIntegratorQuoteEntities(text);
   }
@@ -3157,9 +3277,9 @@ Regras estritas:
     sessionCtx.hsp = hspRes.hsp;
 
     const isLargeKit = Boolean(
-      (sessionCtx.targetKWp && sessionCtx.targetKWp >= 8) ||
-      (sessionCtx.targetModules && sessionCtx.targetModules >= 14) ||
-      (sessionCtx.consumptionKwh && sessionCtx.consumptionKwh >= 800)
+      (sessionCtx.targetKWp && sessionCtx.targetKWp >= 15) ||
+      (sessionCtx.targetModules && sessionCtx.targetModules >= 26) ||
+      (sessionCtx.consumptionKwh && sessionCtx.consumptionKwh >= 2500)
     );
 
     const hasCompleteVoltage = Boolean(sessionCtx.gridVoltage?.includes("V"));
@@ -3209,7 +3329,11 @@ Regras estritas:
     const roofInfo = sessionCtx.roofType ? `> 🏠 Estrutura: *${sessionCtx.roofType}*\n` : "";
     const gridPrompt = isLargeKit
       ? this.buildLargeKitGridQuestionText(
-          sessionCtx.targetKWp ? this.formatPowerBadge(sessionCtx.targetKWp) : "grande porte"
+          sessionCtx.targetKWp
+            ? this.formatPowerBadge(sessionCtx.targetKWp)
+            : sessionCtx.consumptionKwh
+              ? `${sessionCtx.consumptionKwh} kWh/mês`
+              : "grande porte"
         )
       : this.GRID_OPTIONS_TEXT;
 
@@ -3905,7 +4029,7 @@ ${catalogContext}`;
             /(?:Consumo Registrado|Consumo m[ée]dio(?: de)?):?[_*\s]*`?(\d+[\d.,]*)`?\s*kWh/i
           );
           if (consM && consM[1]) {
-            const cVal = Math.round(Number(consM[1].replace(/\./g, "").replace(",", ".")));
+            const cVal = Math.round(parsePtBrNumber(consM[1]));
             if (cVal >= 20 && cVal <= 500000) {
               consumptionKwh = cVal;
               targetKWp = undefined;
@@ -3918,7 +4042,7 @@ ${catalogContext}`;
             /(?:Potência Solicitada|Potência Registrada):?[_*\s]*`?([\d.,]+)`?\s*kWp/i
           );
           if (potM && potM[1]) {
-            targetKWp = parseFloat(potM[1].replace(",", "."));
+            targetKWp = parsePtBrNumber(potM[1]);
             consumptionKwh = undefined;
             targetModules = undefined;
             modPowerWUser = undefined;
@@ -4047,8 +4171,8 @@ ${catalogContext}`;
             prevAssistantForLead.includes("potência (kWp)"))
         ) {
           const numM = content.match(/(\d+(?:[.,]\d+)?)/);
-          if (numM && numM[1]) {
-            const pVal = parseFloat(numM[1].replace(",", "."));
+          if (numM && numM[1] && parseConsumptionInput(content) === null) {
+            const pVal = parsePtBrNumber(numM[1]);
             if (pVal >= 0.5 && pVal <= 5_000_000) {
               targetKWp = pVal;
               targetModules = undefined;
@@ -4090,17 +4214,14 @@ ${catalogContext}`;
         }
 
         // 3. Extração de Consumo kWh
-        const kwhM = content.match(
-          /(?:consumo registrado:\s*|consumo m[ée]dio de\s*|consumo\s+(?:de\s+)?|gasto\s+(?:de\s+)?)?(\d+[\d.,]*)\s*(?:kwh|kw)(?:\/m[eê]s)?/i
-        );
-        if (kwhM && kwhM[1] && parsedP === null) {
-          const val = Math.round(Number(kwhM[1].replace(/\./g, "").replace(",", ".")));
-          if (val >= 20 && val <= 500000) {
-            consumptionKwh = val;
+        const parsedConsFromContent = parseConsumptionInput(content);
+        if (parsedConsFromContent !== null) {
+          consumptionKwh = parsedConsFromContent;
+          if (parsedP === null) {
             targetKWp = undefined;
-            targetModules = undefined;
-            modPowerWUser = undefined;
           }
+          targetModules = undefined;
+          modPowerWUser = undefined;
         } else if (
           !isMainMenuMsg &&
           (prevAssistantForLead.includes("Simulação por Consumo Mensal") ||
@@ -4110,7 +4231,7 @@ ${catalogContext}`;
         ) {
           const numM = content.match(/(\d+[\d.,]*)/);
           if (numM && numM[1]) {
-            const val = Math.round(Number(numM[1].replace(/\./g, "").replace(",", ".")));
+            const val = Math.round(parsePtBrNumber(numM[1]));
             if (val >= 20 && val <= 500000) {
               consumptionKwh = val;
               targetKWp = undefined;
@@ -4543,7 +4664,9 @@ ${catalogContext}`;
       lower.includes("[documento enviado") ||
       lower.includes("[foto enviada");
 
-    const hasDirectKwhInput = /(?:consumo|simular)?\s*(\d+[\d.,]*)\s*kwh/i.test(incomingText);
+    const hasDirectKwhInput =
+      parseConsumptionInput(incomingText) !== null ||
+      /(?:consumo|simular)?\s*(\d+[\d.,]*)\s*kwh/i.test(incomingText);
     const quoteEntities = parseIntegratorQuoteEntities(incomingText);
     const isNewQuoteRequest =
       isNewBillSubmission || hasDirectKwhInput || quoteEntities.isQuoteRequest;
@@ -6374,89 +6497,94 @@ ${catalogContext}`;
         lastBotMsg.includes("qual o consumo"));
 
     if (isAskingConsumption) {
-      const kwhMatch = incomingText.match(/(\d+[\d.,]*)\s*(?:kwh|kw)?(?:\/m[eê]s)?/i);
-      if (kwhMatch && kwhMatch[1]) {
-        const rawKwh = Number(kwhMatch[1].replace(/\./g, "").replace(",", "."));
-        if (rawKwh >= 20 && rawKwh <= 500000) {
-          const consumo = Math.round(rawKwh);
-          sessionCtx.consumptionKwh = consumo;
-
-          const cityInSameMsg = incomingText.match(
-            /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
-          );
-          if (cityInSameMsg && cityInSameMsg[1]) {
-            const cand = (
-              cityInSameMsg[1] +
-              (cityInSameMsg[2]
-                ? `/${cityInSameMsg[2]}`
-                : cityInSameMsg[3]
-                  ? `/${cityInSameMsg[3]}`
-                  : "")
-            ).trim();
-            const hspRes = getHsp(cand);
-            if (hspRes.isStateOnly && hspRes.uf) {
-              const stateTitle = UF_TO_STATE_TITLE[hspRes.uf] || hspRes.uf;
-              const capital = STATE_CAPITALS[hspRes.uf] || "";
-              sessionCtx.estado = hspRes.uf;
-              delete sessionCtx.cidade;
-              await setStep("AWAITING_CITY", {
-                consumptionKwh: consumo,
-                uf: hspRes.uf,
-              });
-              return (
-                `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n` +
-                `> 📍 Estado: *${stateTitle} (${hspRes.uf})*\n\n` +
-                `Para qual cidade de ${stateTitle} será a instalação?\n` +
-                `> Responda com a cidade (ex: \`${capital}\`) ou responda 1️⃣ para utilizar a capital (*${capital}/${hspRes.uf}*).`
-              );
-            }
-            if (hspRes.ambiguous && hspRes.candidates && hspRes.candidates.length > 1) {
-              await setStep("AWAITING_CITY_STATE", {
-                consumptionKwh: consumo,
-                pendingCityCandidates: hspRes.candidates,
-                pendingCityName: hspRes.city,
-              });
-              return (
-                `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n\n` +
-                this.buildAmbiguousCityPrompt(hspRes.city, hspRes.candidates)
-              );
-            }
-            delete sessionCtx.pendingCityCandidates;
-            delete sessionCtx.pendingCityName;
-            sessionCtx.cidade = hspRes.city;
-            sessionCtx.estado = hspRes.uf;
-            sessionCtx.hsp = hspRes.hsp;
-            await setStep("AWAITING_GRID_TYPE", {
-              consumptionKwh: consumo,
-              cidade: hspRes.city,
-              uf: hspRes.uf,
-              hsp: hspRes.hsp,
-            });
-            return (
-              `*_Consumo Registrado:_* \`${consumo} kWh/mês\` em \`${hspRes.city}/${hspRes.uf}\` ☀️📍\n\n` +
-              this.GRID_OPTIONS_TEXT
-            );
+      let consumo: number | null = parseConsumptionInput(incomingText);
+      if (consumo === null) {
+        const kwhMatch = incomingText.match(/(\d+[\d.,]*)\s*(?:kwh|kw)?(?:\/m[eê]s)?/i);
+        if (kwhMatch && kwhMatch[1]) {
+          const rawKwh = parsePtBrNumber(kwhMatch[1]);
+          if (Number.isFinite(rawKwh) && rawKwh >= 20 && rawKwh <= 500000) {
+            consumo = Math.round(rawKwh);
           }
-
-          if (sessionCtx.cidade && sessionCtx.estado) {
-            await setStep("AWAITING_GRID_TYPE", {
-              consumptionKwh: consumo,
-            });
-            return (
-              `*_Consumo Registrado:_* \`${consumo} kWh/mês\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
-              this.GRID_OPTIONS_TEXT
-            );
-          }
-
-          await setStep("AWAITING_CITY", {
-            consumptionKwh: consumo,
-            uf: sessionCtx.estado,
-          });
-          const cityPrompt = sessionCtx.estado
-            ? `Identifiquei o estado de *${UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado} (${sessionCtx.estado})* 📍.\n\nPara qual cidade de ${UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado} será a instalação?\n> Responda com a cidade (ex: \`${STATE_CAPITALS[sessionCtx.estado] || "Maceió"}\`) ou responda 1️⃣ para a capital (*${STATE_CAPITALS[sessionCtx.estado] || "Maceió"}/${sessionCtx.estado}*).`
-            : `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`;
-          return `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n\n${cityPrompt}`;
         }
+      }
+      if (consumo !== null) {
+        sessionCtx.consumptionKwh = consumo;
+
+        const cityInSameMsg = incomingText.match(
+          /(?:em|para|na cidade de|no munic[íi]pio de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
+        );
+        if (cityInSameMsg && cityInSameMsg[1]) {
+          const cand = (
+            cityInSameMsg[1] +
+            (cityInSameMsg[2]
+              ? `/${cityInSameMsg[2]}`
+              : cityInSameMsg[3]
+                ? `/${cityInSameMsg[3]}`
+                : "")
+          ).trim();
+          const hspRes = getHsp(cand);
+          if (hspRes.isStateOnly && hspRes.uf) {
+            const stateTitle = UF_TO_STATE_TITLE[hspRes.uf] || hspRes.uf;
+            const capital = STATE_CAPITALS[hspRes.uf] || "";
+            sessionCtx.estado = hspRes.uf;
+            delete sessionCtx.cidade;
+            await setStep("AWAITING_CITY", {
+              consumptionKwh: consumo,
+              uf: hspRes.uf,
+            });
+            return (
+              `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n` +
+              `> 📍 Estado: *${stateTitle} (${hspRes.uf})*\n\n` +
+              `Para qual cidade de ${stateTitle} será a instalação?\n` +
+              `> Responda com a cidade (ex: \`${capital}\`) ou responda 1️⃣ para utilizar a capital (*${capital}/${hspRes.uf}*).`
+            );
+          }
+          if (hspRes.ambiguous && hspRes.candidates && hspRes.candidates.length > 1) {
+            await setStep("AWAITING_CITY_STATE", {
+              consumptionKwh: consumo,
+              pendingCityCandidates: hspRes.candidates,
+              pendingCityName: hspRes.city,
+            });
+            return (
+              `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n\n` +
+              this.buildAmbiguousCityPrompt(hspRes.city, hspRes.candidates)
+            );
+          }
+          delete sessionCtx.pendingCityCandidates;
+          delete sessionCtx.pendingCityName;
+          sessionCtx.cidade = hspRes.city;
+          sessionCtx.estado = hspRes.uf;
+          sessionCtx.hsp = hspRes.hsp;
+          await setStep("AWAITING_GRID_TYPE", {
+            consumptionKwh: consumo,
+            cidade: hspRes.city,
+            uf: hspRes.uf,
+            hsp: hspRes.hsp,
+          });
+          return (
+            `*_Consumo Registrado:_* \`${consumo} kWh/mês\` em \`${hspRes.city}/${hspRes.uf}\` ☀️📍\n\n` +
+            this.GRID_OPTIONS_TEXT
+          );
+        }
+
+        if (sessionCtx.cidade && sessionCtx.estado) {
+          await setStep("AWAITING_GRID_TYPE", {
+            consumptionKwh: consumo,
+          });
+          return (
+            `*_Consumo Registrado:_* \`${consumo} kWh/mês\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
+            this.GRID_OPTIONS_TEXT
+          );
+        }
+
+        await setStep("AWAITING_CITY", {
+          consumptionKwh: consumo,
+          uf: sessionCtx.estado,
+        });
+        const cityPrompt = sessionCtx.estado
+          ? `Identifiquei o estado de *${UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado} (${sessionCtx.estado})* 📍.\n\nPara qual cidade de ${UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado} será a instalação?\n> Responda com a cidade (ex: \`${STATE_CAPITALS[sessionCtx.estado] || "Maceió"}\`) ou responda 1️⃣ para a capital (*${STATE_CAPITALS[sessionCtx.estado] || "Maceió"}/${sessionCtx.estado}*).`
+          : `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`;
+        return `*_Consumo Registrado:_* \`${consumo} kWh/mês\` ☀️\n\n${cityPrompt}`;
       }
 
       return (
@@ -6475,11 +6603,11 @@ ${catalogContext}`;
 
     if (isAskingKwp) {
       let targetKWp = this.parsePowerInput(incomingText);
-      if (targetKWp === null) {
+      if (targetKWp === null && parseConsumptionInput(incomingText) === null) {
         const kwpMatch = incomingText.match(/(\d+(?:[.,]\d+)?)\s*(?:kwp|kw)?/i);
         if (kwpMatch && kwpMatch[1]) {
-          const val = parseFloat(kwpMatch[1].replace(",", "."));
-          if (val >= 0.5 && val <= 5_000_000) {
+          const val = parsePtBrNumber(kwpMatch[1]);
+          if (Number.isFinite(val) && val >= 0.5 && val <= 5_000_000) {
             targetKWp = val;
           }
         }
@@ -6849,9 +6977,9 @@ ${catalogContext}`;
       }
 
       const isLargeKit = Boolean(
-        (sessionCtx.targetKWp && sessionCtx.targetKWp >= 8) ||
-        (sessionCtx.targetModules && sessionCtx.targetModules >= 14) ||
-        (sessionCtx.consumptionKwh && sessionCtx.consumptionKwh >= 800) ||
+        (sessionCtx.targetKWp && sessionCtx.targetKWp >= 15) ||
+        (sessionCtx.targetModules && sessionCtx.targetModules >= 26) ||
+        (sessionCtx.consumptionKwh && sessionCtx.consumptionKwh >= 2500) ||
         quoteEntities.isTrifasicoGeneric
       );
 
@@ -6869,7 +6997,11 @@ ${catalogContext}`;
         });
         const gridPrompt = isLargeKit
           ? this.buildLargeKitGridQuestionText(
-              sessionCtx.targetKWp ? this.formatPowerBadge(sessionCtx.targetKWp) : "grande porte"
+              sessionCtx.targetKWp
+                ? this.formatPowerBadge(sessionCtx.targetKWp)
+                : sessionCtx.consumptionKwh
+                  ? `${sessionCtx.consumptionKwh} kWh/mês`
+                  : "grande porte"
             )
           : this.GRID_OPTIONS_TEXT;
         return `${headerText}${detailsBlock}` + gridPrompt;
