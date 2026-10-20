@@ -7,7 +7,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bot, Star, X } from "lucide-react";
 import { useOrganization } from "../providers/organization-provider";
 
+// Flag de ativação do Hub / Assistente Flutuante EnergivIA na web
+// Desativado no momento conforme diretriz (reservado para quando virar um aplicativo mobile)
+const IS_FLOATING_HUB_ENABLED = false;
+
 export function EnergiviaFloatingHub() {
+  if (!IS_FLOATING_HUB_ENABLED) {
+    return null;
+  }
+  return <EnergiviaFloatingHubContent />;
+}
+
+function EnergiviaFloatingHubContent() {
   const pathname = usePathname();
   const normalizedPath = (pathname ?? "").replace(/\/$/, "") || "/";
   const { user, currentOrganization } = useOrganization();

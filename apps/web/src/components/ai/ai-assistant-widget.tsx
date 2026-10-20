@@ -187,9 +187,18 @@ function ForwardBubble({
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// Flag de ativação do Assistente EnergivIA na web
+// Desativado no momento conforme diretriz (reservado para quando virar um aplicativo mobile)
+const IS_AI_ASSISTANT_ENABLED = false;
 
 export function AIAssistantWidget() {
+  if (!IS_AI_ASSISTANT_ENABLED) {
+    return null;
+  }
+  return <AIAssistantWidgetContent />;
+}
+
+function AIAssistantWidgetContent() {
   const pathname = usePathname();
   const normalizedPath = (pathname ?? "").replace(/\/$/, "") || "/";
   const { user } = useOrganization();

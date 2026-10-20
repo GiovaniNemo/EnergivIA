@@ -602,3 +602,4 @@
 | task-604 | Ajustar contraste do cupom de desconto e badges em PaymentForm.tsx | completed | Link de cupom e tags de desconto ajustados para verde/roxo de alta legibilidade em temas claro e escuro |
 | task-605 | Validar lint, testes unitários, commit e push para origin/main | completed | ESLint código 0, 413 testes Vitest aprovados, alterações sincronizadas com origin/main |
 | task-606 | Remover riscado line-through e aplicar X vermelho nos recursos não inclusos dos planos | completed | line-through removido e XCircle estilizado com text-red-500 dark:text-red-400 nos cards de planos |
+| task-607 | Desativar assistente flutuante EnergivIA na web (reservado para futuro app mobile) | completed | Flag de ativação IS_AI_ASSISTANT_ENABLED e IS_FLOATING_HUB_ENABLED setadas como false |
