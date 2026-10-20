@@ -54,6 +54,12 @@ describe("Diferenciação Estrita de Consumo (kWh) vs Potência de Pico (kWp)", 
       expect(parseConsumptionInput("minha média é de 750 kw hora mês")).toBe(750);
       expect(parseConsumptionInput("1000 kw de consumo")).toBe(1000);
       expect(parseConsumptionInput("1000 kw por mês")).toBe(1000);
+      expect(parseConsumptionInput("450 kwhora")).toBe(450);
+      expect(parseConsumptionInput("450kwhora")).toBe(450);
+      expect(parseConsumptionInput("450 kw-hora")).toBe(450);
+      expect(parseConsumptionInput("450 kw/hora")).toBe(450);
+      expect(parseConsumptionInput("450 kw")).toBe(450);
+      expect(parseConsumptionInput("600 kw")).toBe(600);
     });
 
     it("NÃO deve extrair como consumo expressões que sejam estritamente de potência de pico", () => {
@@ -75,10 +81,14 @@ describe("Diferenciação Estrita de Consumo (kWh) vs Potência de Pico (kWp)", 
       expect(parsePowerInput("1000 kw/mês")).toBeNull();
       expect(parsePowerInput("1000 kw hora")).toBeNull();
       expect(parsePowerInput("gasto de 800 kw")).toBeNull();
+      expect(parsePowerInput("450 kwhora")).toBeNull();
+      expect(parsePowerInput("450kwhora")).toBeNull();
+      expect(parsePowerInput("450 kw")).toBeNull();
     });
 
     it("deve capturar corretamente potências reais em kWp, MWp, GWp e kW puro de sistema", () => {
       expect(parsePowerInput("5 kwp")).toBe(5);
+      expect(parsePowerInput("450 kwp")).toBe(450);
       expect(parsePowerInput("3000 kwp")).toBe(3000);
       expect(parsePowerInput("3 mwp")).toBe(3000);
       expect(parsePowerInput("3.5 MW")).toBe(3500);
@@ -86,6 +96,7 @@ describe("Diferenciação Estrita de Consumo (kWh) vs Potência de Pico (kWp)", 
       expect(parsePowerInput("1.2 GW")).toBe(1_200_000);
       expect(parsePowerInput("sistema de 5 kw")).toBe(5);
       expect(parsePowerInput("usina de 75 kw")).toBe(75);
+      expect(parsePowerInput("usina de 450 kw")).toBe(450);
     });
 
     it("quando a mensagem contém tanto potência quanto consumo, deve extrair a potência correta", () => {
@@ -322,6 +333,60 @@ describe("Diferenciação Estrita de Consumo (kWh) vs Potência de Pico (kWp)", 
       );
       const callArgs = mockKitGenerationService.generateDistributorTiers.mock.calls[0][0];
       expect(callArgs.system_kw).toBeLessThan(15);
+    });
+
+    it("deve interpretar '450 kwhora' após menu de fallback como Consumo Registrado e limpar kWp residual de turnos anteriores", async () => {
+      const fallbackMenu =
+        "Não compreendi sua mensagem. Para gerar uma proposta solar, escolha como deseja iniciar:\n\n" +
+        "> 1️⃣ *Enviar fatura de energia* (PDF ou foto da conta de luz)\n" +
+        "> 2️⃣ *Simular por consumo mensal* (ex: digite 450 kWh)\n" +
+        "> 3️⃣ *Simular por potência de pico* (ex: 5 kWp)\n" +
+        "> 4️⃣ *Simular por quantidade de placas* (ex: 10 módulos)\n\n" +
+        "_(Responda com o número da opção desejada ou envie os dados diretamente)_";
+
+      const conversation: any = {
+        id: "conv-fallback-450-kwhora",
+        organizationId: "org-test",
+        title: "Test 450 kwhora fallback",
+        metadata: {
+          step: "IDLE",
+          // Simula estado residual antigo no banco onde constava kwp: 450 de um teste prévio
+          kwp: 450,
+          sessionData: {
+            kwp: 450,
+          },
+        },
+        messages: [
+          {
+            role: "assistant",
+            content:
+              "*_Potência Solicitada:_* `450 kWp` ☀️\n\nPara qual cidade e estado será a instalação?",
+          },
+          {
+            role: "assistant",
+            content: "Olá! Você ainda está por aí? ☀️",
+          },
+          {
+            role: "assistant",
+            content: "Como não tivemos retorno por aqui, encerramos este atendimento. ☀️",
+          },
+          {
+            role: "assistant",
+            content: fallbackMenu,
+          },
+        ],
+      };
+
+      const reply = await service.generateBotResponse({
+        conversation,
+        incomingText: "450 kwhora",
+        extractionResult: null,
+      });
+
+      expect(reply).toContain("*_Consumo Registrado:_* `450 kWh/mês` ☀️");
+      expect(reply).toContain("Para qual cidade e estado será a instalação?");
+      expect(reply).not.toContain("Potência Solicitada");
+      expect(reply).not.toContain("450 kWp");
     });
   });
 });
