@@ -75,7 +75,7 @@ describe("ProposalTemplatesService - Trial Mode & Official Templates", () => {
     // Tenant in Trial mode has maxCustomTemplates: 0
     mockPrisma.tenant.findUnique.mockResolvedValueOnce({
       id: "tenant-trial",
-      trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days left
+      trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days left
       subscription: null, // Trial
     });
 
@@ -106,7 +106,7 @@ describe("ProposalTemplatesService - Trial Mode & Official Templates", () => {
   it("should BLOCK a trial organization from creating a custom template from scratch (isOfficial: false/undefined)", async () => {
     mockPrisma.tenant.findUnique.mockResolvedValueOnce({
       id: "tenant-trial",
-      trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       subscription: null,
     });
 
@@ -132,7 +132,7 @@ describe("ProposalTemplatesService - Trial Mode & Official Templates", () => {
 
     mockPrisma.tenant.findUnique.mockResolvedValueOnce({
       id: "tenant-trial",
-      trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       subscription: null,
     });
 
@@ -155,7 +155,7 @@ describe("ProposalTemplatesService - Trial Mode & Official Templates", () => {
 
     mockPrisma.tenant.findUnique.mockResolvedValueOnce({
       id: "tenant-trial",
-      trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       subscription: null,
     });
 
@@ -186,7 +186,7 @@ describe("ProposalTemplatesService - Trial Mode & Official Templates", () => {
   it("should BLOCK a trial organization from duplicating templates", async () => {
     mockPrisma.tenant.findUnique.mockResolvedValueOnce({
       id: "tenant-trial",
-      trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       subscription: null,
     });
 

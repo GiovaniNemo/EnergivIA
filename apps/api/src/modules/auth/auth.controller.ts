@@ -40,7 +40,7 @@ export class AuthController {
     const organizations = await this.organizationsService.findAllForUser(user.sub);
 
     let isTrial = false;
-    let trialDaysLeft = 5;
+    let trialDaysLeft = 7;
     let trialExpired = false;
     let proposalsCount = 0;
     let proposalsLimit: number | null = 20;

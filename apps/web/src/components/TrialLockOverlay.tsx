@@ -66,7 +66,7 @@ export function TrialLockOverlay() {
           <span className="leading-snug">
             {user?.isTrialProposalLimitReached
               ? "⚡ Você atingiu o limite de 20 propostas gratuitas do período de teste."
-              : "☀️ Seu período de teste gratuito de 5 dias úteis foi concluído."}{" "}
+              : "☀️ Seu período de teste gratuito de 7 dias úteis foi concluído."}{" "}
             Seu histórico continua salvo! Faça upgrade para continuar gerando propostas comerciais
             com IA.
           </span>

@@ -209,7 +209,7 @@ export function AIAssistantWidget() {
   if (isTrialExpired) {
     lockTitle = "Período de Testes Expirado";
     lockDescription =
-      "Seu período de teste gratuito de 5 dias úteis encerrou. Assine um plano para continuar conversando com a IA e gerando orçamentos.";
+      "Seu período de teste gratuito de 7 dias úteis encerrou. Assine um plano para continuar conversando com a IA e gerando orçamentos.";
   } else if (isTrialLimitReached) {
     lockTitle = "Limite de Testes Atingido";
     lockDescription =

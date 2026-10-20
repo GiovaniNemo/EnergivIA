@@ -65,7 +65,7 @@ export class TrialLockGuard implements CanActivate {
       if (planDetails.trialExpired || count >= 20) {
         throw new ForbiddenException({
           message:
-            "Limite do período de teste gratuito atingido (5 dias úteis ou 20 propostas). Assine um plano para continuar gerando propostas.",
+            "Limite do período de teste gratuito atingido (7 dias úteis ou 20 propostas). Assine um plano para continuar gerando propostas.",
           code: "TRIAL_LIMIT_REACHED",
           trialExpired: planDetails.trialExpired,
           proposalsCount: count,

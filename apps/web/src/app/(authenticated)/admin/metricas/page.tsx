@@ -1333,7 +1333,7 @@ export default function AdminMetricasPage() {
               Feedbacks & Avaliações dos Usuários (NPS & Satisfação)
             </h2>
             <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
-              Opiniões em tempo real coletadas durante os 5 dias de teste free e de assinantes de
+              Opiniões em tempo real coletadas durante os 7 dias de teste free e de assinantes de
               planos pagos
             </p>
           </div>
@@ -1584,7 +1584,7 @@ export default function AdminMetricasPage() {
                         }`}
                       >
                         {item.userPlan?.toUpperCase() === "TRIAL"
-                          ? "☀️ Teste Free (5 dias)"
+                          ? "☀️ Teste Free (7 dias)"
                           : `💎 ${item.userPlan || "Plano Ativo"}`}
                       </span>
 

@@ -281,7 +281,7 @@ function MeusPlanosContent() {
     ? new Date(currentOrganization.createdAt)
     : null;
   const trialDaysLeft =
-    user?.trialDaysLeft ?? (orgCreatedAt ? getTrialDaysLeft(orgCreatedAt, 5) : 5);
+    user?.trialDaysLeft ?? (orgCreatedAt ? getTrialDaysLeft(orgCreatedAt, 7) : 7);
 
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto animate-in fade-in duration-500">
@@ -460,7 +460,7 @@ function MeusPlanosContent() {
                 </span>
               </div>
               <p className="text-sm text-[var(--color-muted-foreground)] mt-0.5">
-                O período gratuito de 5 dias da sua empresa encerrou. Escolha um dos planos abaixo
+                O período gratuito de 7 dias da sua empresa encerrou. Escolha um dos planos abaixo
                 ou resgate um cupom de acesso para continuar gerando propostas.
               </p>
             </div>

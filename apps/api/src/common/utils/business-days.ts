@@ -17,11 +17,11 @@ export function getBusinessDaysDiff(startDate: Date, endDate: Date = new Date())
   return count;
 }
 
-export function getTrialDaysLeft(startDate: Date, maxBusinessDays = 5): number {
+export function getTrialDaysLeft(startDate: Date, maxBusinessDays = 7): number {
   const diff = getBusinessDaysDiff(startDate, new Date());
   return Math.max(0, maxBusinessDays - diff);
 }
 
-export function isTrialExpired(startDate: Date, maxBusinessDays = 5): boolean {
+export function isTrialExpired(startDate: Date, maxBusinessDays = 7): boolean {
   return getBusinessDaysDiff(startDate, new Date()) >= maxBusinessDays;
 }

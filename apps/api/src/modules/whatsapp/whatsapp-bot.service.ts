@@ -1446,7 +1446,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
               `👉 *https://www.energivia.com.br/gestao/meus-planos*`;
       } else if (planStatus.reason === "trial_expired") {
         blockMsg =
-          `Olá! ☀️ O período de teste gratuito de 5 dias úteis da sua organização na *EnergivIA* foi concluído.\n\n` +
+          `Olá! ☀️ O período de teste gratuito de 7 dias úteis da sua organização na *EnergivIA* foi concluído.\n\n` +
           `Para continuar utilizando o assistente de IA, dimensionamentos e propostas comerciais automáticas pelo WhatsApp, escolha o seu plano em:\n` +
           `👉 *https://www.energivia.com.br/gestao/meus-planos*`;
       }

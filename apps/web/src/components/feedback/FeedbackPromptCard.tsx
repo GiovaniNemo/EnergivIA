@@ -97,7 +97,7 @@ export function FeedbackPromptCard() {
     };
     window.addEventListener("open-feedback-prompt", handleOpen);
 
-    // Se a trava dos 5 dias estiver bloqueando o acesso, não exibir a avaliação simultaneamente
+    // Se a trava dos 7 dias estiver bloqueando o acesso, não exibir a avaliação simultaneamente
     if (user?.isTrialLocked || (user?.isTrial && user?.trialExpired)) {
       setIsOpen(false);
       return () => {
@@ -125,16 +125,16 @@ export function FeedbackPromptCard() {
 
     // Regra de exibição automática ÚNICA (1 vez na tela do cliente):
     // 1. Integrador com plano contratado/pago (user?.isTrial === false)
-    // 2. OU completou os 5 dias de teste (trialDaysLeft === 0 ou trialExpired)
+    // 2. OU completou os 7 dias de teste (trialDaysLeft === 0 ou trialExpired)
     const hasPaidPlan = Boolean(
       user?.isTrial === false && user?.planTier && user?.planTier !== "TRIAL"
     );
-    const reachedFiveDays = Boolean(
+    const reachedSevenDays = Boolean(
       user?.isTrial === true &&
       (user?.trialDaysLeft === 0 || user?.trialExpired || user?.isTrialProposalLimitReached)
     );
 
-    if (hasPaidPlan || reachedFiveDays) {
+    if (hasPaidPlan || reachedSevenDays) {
       const timer = setTimeout(() => {
         if (
           !user?.isTrialLocked &&

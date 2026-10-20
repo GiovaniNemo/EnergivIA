@@ -74,7 +74,7 @@ export function Sidebar(): JSX.Element {
   const hasActivePlan = hasActiveSub || isSpecialAccess || user?.isTrial === false;
 
   const createdAt = currentOrganization?.createdAt ? new Date(currentOrganization.createdAt) : null;
-  const trialDaysLeft = user?.trialDaysLeft ?? (createdAt ? getTrialDaysLeft(createdAt, 5) : 5);
+  const trialDaysLeft = user?.trialDaysLeft ?? (createdAt ? getTrialDaysLeft(createdAt, 7) : 7);
 
   const [surface, setSurface] = useState<Surface>("all");
   useEffect(() => {

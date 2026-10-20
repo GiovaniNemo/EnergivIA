@@ -72,8 +72,8 @@ export function getTenantPlanDetails(tenant: {
 
   if (!isSubActive) {
     const createdDate = new Date(tenant.createdAt);
-    const trialDaysLeft = getTrialDaysLeft(createdDate, 5);
-    const trialExpired = isTrialExpired(createdDate, 5);
+    const trialDaysLeft = getTrialDaysLeft(createdDate, 7);
+    const trialExpired = isTrialExpired(createdDate, 7);
     return {
       tier: "TRIAL",
       planName: "Plano Start",

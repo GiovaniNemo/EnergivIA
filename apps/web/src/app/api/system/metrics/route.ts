@@ -190,7 +190,7 @@ export async function GET() {
           id: "fb-3",
           rating: 4,
           comment:
-            "Gostei bastante do teste de 5 dias. O atendimento e as integrações com os distribuidores facilitaram muito.",
+            "Gostei bastante do teste de 7 dias. O atendimento e as integrações com os distribuidores facilitaram muito.",
           tags: ["🤖 IA Precisa"],
           channel: "web",
           userName: "Rodrigo Almeida",

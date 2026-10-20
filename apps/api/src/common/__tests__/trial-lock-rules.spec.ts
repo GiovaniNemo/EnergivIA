@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { getTenantPlanDetails, computeIsTrialLocked } from "../utils/plan-limits";
+import { getTrialDaysLeft, isTrialExpired } from "../utils/business-days";
 
 describe("Trial Lock & Expiration Rules Suite", () => {
-  it("should calculate isTrialLocked as true for normal user when 5-day trial is expired", () => {
+  it("should calculate isTrialLocked as true for normal user when 7-day trial is expired", () => {
     // Data de criação há mais de 10 dias úteis atrás
     const expiredTrialTenant = {
       id: "org-expired-trial",
@@ -23,7 +24,7 @@ describe("Trial Lock & Expiration Rules Suite", () => {
     expect(isLocked).toBe(true);
   });
 
-  it("should calculate isTrialLocked as false for user within the 5 trial days", () => {
+  it("should calculate isTrialLocked as false for user within the 7 trial days", () => {
     const activeTrialTenant = {
       id: "org-active-trial",
       createdAt: new Date(), // Criado hoje
@@ -111,5 +112,11 @@ describe("Trial Lock & Expiration Rules Suite", () => {
       specialAccessActive: true,
     });
     expect(isLocked).toBe(false);
+  });
+
+  it("should default trial duration to 7 business days", () => {
+    const today = new Date();
+    expect(getTrialDaysLeft(today)).toBe(7);
+    expect(isTrialExpired(today)).toBe(false);
   });
 });
