@@ -132,10 +132,10 @@ describe("WhatsApp Bot - Admin Group Alerts Pipeline", () => {
     );
   });
 
-  it("should warn about conflict if another group is already registered, suggesting force flag", async () => {
+  it("should completely ignore messages and commands from other groups when a group is already active", async () => {
     mockPrisma.systemSetting.findUnique.mockResolvedValue({
       key: "ADMIN_WHATSAPP_ALERT_GROUP_JID",
-      value: "old_group@g.us",
+      value: "official_group@g.us",
     });
 
     const payload = {
@@ -143,7 +143,7 @@ describe("WhatsApp Bot - Admin Group Alerts Pipeline", () => {
       instance: "energiv-bot",
       data: {
         key: {
-          remoteJid: "new_group@g.us",
+          remoteJid: "other_random_group@g.us",
           fromMe: false,
           id: "MSG_003",
         },
@@ -155,19 +155,15 @@ describe("WhatsApp Bot - Admin Group Alerts Pipeline", () => {
 
     await service.handleEvolutionWebhookPayload(payload);
 
+    // ZERO replies and ZERO db updates
     expect(mockPrisma.systemSetting.upsert).not.toHaveBeenCalled();
-    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        toWaId: "new_group@g.us",
-        body: expect.stringContaining("#ativar-alertas-force"),
-      })
-    );
+    expect(mockWhatsappCloud.sendTextMessage).not.toHaveBeenCalled();
   });
 
-  it("should overwrite group when #ativar-alertas-force is sent", async () => {
+  it("should completely ignore test commands from unauthorized groups", async () => {
     mockPrisma.systemSetting.findUnique.mockResolvedValue({
       key: "ADMIN_WHATSAPP_ALERT_GROUP_JID",
-      value: "old_group@g.us",
+      value: "official_group@g.us",
     });
 
     const payload = {
@@ -175,33 +171,28 @@ describe("WhatsApp Bot - Admin Group Alerts Pipeline", () => {
       instance: "energiv-bot",
       data: {
         key: {
-          remoteJid: "new_group@g.us",
+          remoteJid: "client_family_group@g.us",
           fromMe: false,
           id: "MSG_004",
         },
         message: {
-          conversation: "#ativar-alertas-force",
+          conversation: "#teste-alerta",
         },
       },
     };
 
     await service.handleEvolutionWebhookPayload(payload);
 
-    expect(mockPrisma.systemSetting.upsert).toHaveBeenCalledWith({
-      where: { key: "ADMIN_WHATSAPP_ALERT_GROUP_JID" },
-      update: { value: "new_group@g.us" },
-      create: { key: "ADMIN_WHATSAPP_ALERT_GROUP_JID", value: "new_group@g.us" },
-    });
-
-    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        toWaId: "new_group@g.us",
-        body: expect.stringContaining("GRUPO DE ALERTAS ENERGIVIA ATIVADO COM SUCESSO!"),
-      })
-    );
+    // Must NOT reply in the client/family group!
+    expect(mockWhatsappCloud.sendTextMessage).not.toHaveBeenCalled();
   });
 
   it("should send test alert on #teste-alerta in group", async () => {
+    mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      key: "ADMIN_WHATSAPP_ALERT_GROUP_JID",
+      value: "1203630283921938@g.us",
+    });
+
     const payload = {
       event: "messages.upsert",
       instance: "energiv-bot",
@@ -259,6 +250,11 @@ describe("WhatsApp Bot - Admin Group Alerts Pipeline", () => {
   });
 
   it("should deactive group on #desativar-alertas", async () => {
+    mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      key: "ADMIN_WHATSAPP_ALERT_GROUP_JID",
+      value: "1203630283921938@g.us",
+    });
+
     const payload = {
       event: "messages.upsert",
       instance: "energiv-bot",

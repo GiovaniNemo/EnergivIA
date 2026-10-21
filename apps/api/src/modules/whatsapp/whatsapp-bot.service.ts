@@ -1247,6 +1247,15 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     // Tratamento de grupos do WhatsApp
     // NOTA: Permite comandos administrativos mesmo se fromMe for true (caso o dono envie do número pareado ao bot)
     if (remoteJid.endsWith("@g.us")) {
+      const activeAlertGroup = await this.getAdminAlertGroupJid();
+
+      // SEGURANÇA E PRIVACIDADE MÁXIMA:
+      // Se o canal oficial de alertas já foi configurado, o robô é terminantemente PROIBIDO de responder em qualquer outro grupo!
+      // Qualquer mensagem ou tentativa de comando vinda de grupos não-autorizados é descartada em silêncio absoluto.
+      if (activeAlertGroup && activeAlertGroup !== remoteJid) {
+        return;
+      }
+
       let msgObj: any = data.message || {};
       if (msgObj.ephemeralMessage?.message) {
         msgObj = msgObj.ephemeralMessage.message;
@@ -1275,16 +1284,22 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         `[WhatsApp Group] Mensagem recebida no grupo ${remoteJid}: "${incomingText}" (fromMe: ${Boolean(key.fromMe)})`
       );
 
-      if (
-        incomingText.includes("#ativar-alerta-force") ||
-        incomingText.includes("#ativar-alertas-force") ||
-        incomingText.includes("#forcar-alerta") ||
-        incomingText.includes("#forcar-alertas")
-      ) {
-        await this.handleAdminGroupActivation(remoteJid, data.pushName, true);
+      // Se NENHUM grupo está ativo ainda, só processa o comando de ativação para definir o canal oficial
+      if (!activeAlertGroup) {
+        if (
+          incomingText.includes("#ativar-alerta") ||
+          incomingText.includes("#ativar-alertas") ||
+          incomingText.includes("#alerta") ||
+          incomingText.includes("ativar alertas") ||
+          incomingText.includes("ativar-alertas") ||
+          incomingText.includes("ativar alerta")
+        ) {
+          await this.handleAdminGroupActivation(remoteJid, data.pushName);
+        }
         return;
       }
 
+      // Se JÁ É o canal oficial de alertas autorizado (remoteJid === activeAlertGroup):
       if (
         incomingText.includes("#teste-alerta") ||
         incomingText.includes("#teste-alertas") ||
@@ -1315,9 +1330,11 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         incomingText.includes("ativar-alertas") ||
         incomingText.includes("ativar alerta")
       ) {
-        await this.handleAdminGroupActivation(remoteJid, data.pushName, false);
+        await this.handleAdminGroupActivation(remoteJid, data.pushName);
         return;
       }
+
+      // Qualquer conversa normal dentro do grupo de alertas é ignorada em silêncio
       return;
     }
 
@@ -1496,20 +1513,11 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
           return;
         }
 
+        // Se já configurado para OUTRO grupo: BLOQUEIO TOTAL E SILENCIOSO!
+        // Nenhuma resposta enviada para não expor a plataforma nem poluir outros grupos.
         this.logger.warn(
-          `[Admin Alerts] Tentativa de ativação no grupo ${groupJid} rejeitada pois já configurado para ${currentJid}.`
+          `[Admin Alerts] BLOQUEADO: Tentativa de ativação no grupo ${groupJid} rejeitada. Já travado para ${currentJid}.`
         );
-        const conflictMsg =
-          `⚠️ *Aviso de Configuração de Alertas*\n\n` +
-          `O canal de alertas executivos do EnergivIA já está vinculado a outro grupo (${currentJid}).\n\n` +
-          `Se você deseja *migrar as notificações para este grupo*, envie neste grupo:\n` +
-          `👉 *#ativar-alertas-force*`;
-
-        await this.whatsappCloud.sendTextMessage({
-          phoneNumberId,
-          toWaId: groupJid,
-          body: conflictMsg,
-        });
         return;
       }
 
