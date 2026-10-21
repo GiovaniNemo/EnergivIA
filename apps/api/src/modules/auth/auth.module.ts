@@ -11,6 +11,7 @@ import { OrganizationsModule } from "../organizations/organizations.module";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { EmailModule } from "../../common/email/email.module";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
+import { NotificationsModule } from "../notifications/notifications.module";
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
     OrganizationsModule,
     PrismaModule,
     EmailModule,
+    NotificationsModule,
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

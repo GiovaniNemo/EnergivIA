@@ -1224,8 +1224,30 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     if (key.fromMe) return;
 
     const remoteJid = key.remoteJid || "";
-    // Ignora grupos e status do WhatsApp
-    if (remoteJid.endsWith("@g.us") || remoteJid.includes("status@broadcast")) {
+    // Ignora status do WhatsApp
+    if (remoteJid.includes("status@broadcast")) {
+      return;
+    }
+
+    // Tratamento de grupos do WhatsApp
+    if (remoteJid.endsWith("@g.us")) {
+      const incomingText = (
+        data.message?.conversation ||
+        data.message?.extendedTextMessage?.text ||
+        data.message?.imageMessage?.caption ||
+        ""
+      )
+        .trim()
+        .toLowerCase();
+
+      if (
+        incomingText.includes("#ativar-alerta") ||
+        incomingText.includes("#ativar-alertas") ||
+        incomingText.includes("#alerta") ||
+        incomingText === "ativar alertas"
+      ) {
+        await this.handleAdminGroupActivation(remoteJid, data.pushName);
+      }
       return;
     }
 
@@ -1366,6 +1388,39 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       phoneNumberId: payload.instance || "evolution",
       contactName,
     });
+  }
+
+  async handleAdminGroupActivation(groupJid: string, senderName?: string) {
+    this.logger.log(
+      `[Admin Alerts] Ativação de grupo de alertas recebida: ${groupJid} (solicitado por ${senderName || "Admin"})`
+    );
+    try {
+      await this.prisma.systemSetting.upsert({
+        where: { key: "ADMIN_WHATSAPP_ALERT_GROUP_JID" },
+        update: { value: groupJid },
+        create: { key: "ADMIN_WHATSAPP_ALERT_GROUP_JID", value: groupJid },
+      });
+
+      const confirmationMsg =
+        `🚨 *GRUPO DE ALERTAS ENERGIVIA ATIVADO COM SUCESSO!* ✅\n\n` +
+        `Olá! Este grupo foi configurado como o canal oficial de notificações executivas da plataforma.\n\n` +
+        `*Você receberá alertas em tempo real de:*\n` +
+        `• 🚨 *Central de Ajuda:* Chamados de suporte, bugs e melhorias;\n` +
+        `• 👤 *Novos Cadastros:* Novos integradores que se registraram;\n` +
+        `• ⏳ *Intenção de Pagamento:* Clientes que chegaram na tela de pagamento;\n` +
+        `• 💳 *Pagamentos Confirmados:* Assinaturas ativadas.\n\n` +
+        `_(Alertas de propostas desativados para este canal)_`;
+
+      const phoneNumberId = this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID")?.trim() || "";
+      await this.whatsappCloud.sendTextMessage({
+        phoneNumberId,
+        toWaId: groupJid,
+        body: confirmationMsg,
+      });
+      this.logger.log(`[Admin Alerts] Confirmação enviada para o grupo ${groupJid}`);
+    } catch (err) {
+      this.logger.error(`[Admin Alerts] Falha ao registrar/responder no grupo ${groupJid}: ${err}`);
+    }
   }
 
   private async resolveAuthorizedTenant(fromWaId: string) {

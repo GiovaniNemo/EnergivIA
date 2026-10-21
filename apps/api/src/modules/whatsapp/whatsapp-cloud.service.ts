@@ -23,6 +23,9 @@ function graphErrorSubcode(errText: string): number | null {
 }
 
 function formatToInternationalWhatsapp(raw: string): string {
+  if (raw && (raw.endsWith("@g.us") || raw.endsWith("@s.whatsapp.net"))) {
+    return raw;
+  }
   const digits = raw.replace(/\D/g, "");
   if (!digits) return "";
   if (digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) {
@@ -187,7 +190,7 @@ export class WhatsappCloudService {
     };
 
     let result = await sendToNumber(cleanNumber);
-    if (!result.ok && cleanNumber.startsWith("55")) {
+    if (!result.ok && cleanNumber.startsWith("55") && !cleanNumber.endsWith("@g.us")) {
       let altNumber: string | null = null;
       if (cleanNumber.length === 12) {
         altNumber = `${cleanNumber.slice(0, 4)}9${cleanNumber.slice(4)}`;

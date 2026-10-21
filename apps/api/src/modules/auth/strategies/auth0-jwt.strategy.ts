@@ -75,6 +75,8 @@ async function fetchAuth0UserInfo(
 }
 
 import { EmailService } from "../../../common/email/email.service";
+import { AdminAlertsService } from "../../notifications/admin-alerts.service";
+import { Optional } from "@nestjs/common";
 
 @Injectable()
 export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
@@ -88,7 +90,9 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService
+    private readonly emailService: EmailService,
+    @Optional()
+    private readonly adminAlerts?: AdminAlertsService
   ) {
     const auth0Domain = config.get<string>("AUTH0_DOMAIN");
     const cleanDomain = auth0Domain ? auth0Domain.replace(/^https?:\/\//, "") : "";
@@ -265,6 +269,15 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
             userName: rawName,
           })
           .catch(() => undefined);
+
+        if (this.adminAlerts) {
+          this.adminAlerts
+            .notifyNewUserRegistration({
+              name: rawName || "Novo Integrador",
+              email: normalizedEmail,
+            })
+            .catch(() => undefined);
+        }
       }
     } else {
       const shouldUpdateFallbackEmail =

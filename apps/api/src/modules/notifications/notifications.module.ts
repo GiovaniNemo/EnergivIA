@@ -7,6 +7,7 @@ import { WhatsappCoreModule } from "../whatsapp/whatsapp-core.module";
 import { NotificationJobsService } from "./notification-jobs.service";
 import { NotificationsController } from "./notifications.controller";
 import { NotificationsService } from "./notifications.service";
+import { AdminAlertsService } from "./admin-alerts.service";
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { NotificationsService } from "./notifications.service";
     forwardRef(() => WhatsappCoreModule),
   ],
   controllers: [NotificationsController],
-  providers: [NotificationsService, NotificationJobsService],
-  exports: [NotificationsService],
+  providers: [NotificationsService, NotificationJobsService, AdminAlertsService],
+  exports: [NotificationsService, AdminAlertsService],
 })
 export class NotificationsModule {}

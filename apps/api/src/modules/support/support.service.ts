@@ -8,6 +8,9 @@ import { getTenantPlanDetails } from "../../common/utils/plan-limits";
 import { buildSupportTicketTeamTemplate } from "./templates/support-ticket-team.template";
 import { buildSupportTicketClientTemplate } from "./templates/support-ticket-client.template";
 
+import { AdminAlertsService } from "../notifications/admin-alerts.service";
+import { Optional } from "@nestjs/common";
+
 export interface SupportTicketResponse {
   success: boolean;
   protocol: string;
@@ -22,7 +25,9 @@ export class SupportService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService
+    private readonly emailService: EmailService,
+    @Optional()
+    private readonly adminAlerts?: AdminAlertsService
   ) {}
 
   generateProtocol(): string {
@@ -185,6 +190,26 @@ export class SupportService {
           `Erro ao enviar confirmação de e-mail ao cliente: ${clientMailErr instanceof Error ? clientMailErr.message : String(clientMailErr)}`
         );
       }
+    }
+
+    // 3. Notificação instantânea para o grupo executivo no WhatsApp (se configurado)
+    if (this.adminAlerts) {
+      this.adminAlerts
+        .notifySupportTicket({
+          protocol,
+          category: dto.category,
+          severity: dto.severity,
+          subject: dto.subject,
+          message: dto.message,
+          name: resolvedUserName || dto.name,
+          email: resolvedUserEmail || dto.email,
+          phone: resolvedPhone || undefined,
+          companyName: resolvedCompanyName || undefined,
+          userPlan: resolvedPlanName,
+        })
+        .catch((err) => {
+          this.logger.warn(`Erro ao enviar alerta de suporte para o grupo WhatsApp: ${err}`);
+        });
     }
 
     return {

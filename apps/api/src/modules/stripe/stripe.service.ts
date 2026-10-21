@@ -1,8 +1,9 @@
-import { Injectable, Logger, BadRequestException } from "@nestjs/common";
+import { Injectable, Logger, BadRequestException, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import Stripe from "stripe";
 import { PrismaService } from "../../prisma/prisma.service";
 import { Prisma } from "@prisma/client";
+import { AdminAlertsService } from "../notifications/admin-alerts.service";
 
 @Injectable()
 export class StripeService {
@@ -11,7 +12,9 @@ export class StripeService {
 
   constructor(
     private configService: ConfigService,
-    private prisma: PrismaService
+    private prisma: PrismaService,
+    @Optional()
+    private adminAlerts?: AdminAlertsService
   ) {
     const secretKey = this.configService.get<string>("STRIPE_SECRET_KEY");
     if (!secretKey) {
@@ -394,6 +397,26 @@ export class StripeService {
     }
 
     const session = await this.stripe.checkout.sessions.create(sessionParams);
+
+    if (this.adminAlerts) {
+      void this.prisma.tenant
+        .findUnique({
+          where: { id: tenantId },
+          select: { name: true, users: { select: { email: true, name: true }, take: 1 } },
+        })
+        .then((t) => {
+          const user = t?.users?.[0];
+          return this.adminAlerts?.notifyCheckoutInitiated({
+            tenantName: t?.name,
+            customerName: user?.name || t?.name,
+            customerEmail: user?.email || undefined,
+            planName: plan.name,
+            planPrice: Number(plan.price),
+          });
+        })
+        .catch((e) => this.logger.warn(`Erro no alerta de checkout iniciado: ${e}`));
+    }
+
     return session;
   }
 
@@ -1302,6 +1325,25 @@ export class StripeService {
     this.logger.log(
       `Subscription activated successfully for tenant ${tenantId}, plan ${plan.name} (${plan.id})`
     );
+
+    if (this.adminAlerts) {
+      void this.prisma.tenant
+        .findUnique({
+          where: { id: tenantId },
+          select: { name: true },
+        })
+        .then((t) => {
+          return this.adminAlerts?.notifyPaymentCompleted({
+            tenantName: t?.name,
+            customerName: session.customer_details?.name || t?.name,
+            customerEmail: session.customer_details?.email || undefined,
+            planName: plan.name,
+            amount: session.amount_total ?? undefined,
+            stripeSubscriptionId: stripeSubscriptionId || undefined,
+          });
+        })
+        .catch((e) => this.logger.warn(`Erro no alerta de pagamento aprovado: ${e}`));
+    }
   }
 
   private async handleSubscriptionUpdated(subscription: Stripe.Subscription) {

@@ -1,0 +1,170 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { AdminAlertsService } from "../admin-alerts.service";
+
+describe("AdminAlertsService", () => {
+  let service: AdminAlertsService;
+  let mockPrisma: any;
+  let mockConfig: any;
+  let mockWhatsappCloud: any;
+
+  beforeEach(() => {
+    mockPrisma = {
+      systemSetting: {
+        findUnique: vi.fn(),
+        upsert: vi.fn(),
+      },
+    };
+
+    mockConfig = {
+      get: vi.fn().mockImplementation((key: string) => {
+        if (key === "WHATSAPP_PHONE_NUMBER_ID") return "phone-123";
+        return null;
+      }),
+    };
+
+    mockWhatsappCloud = {
+      sendTextMessage: vi.fn().mockResolvedValue(true),
+    };
+
+    service = new AdminAlertsService(mockPrisma, mockConfig, mockWhatsappCloud);
+  });
+
+  it("should get alert group JID from database first", async () => {
+    mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      key: AdminAlertsService.GROUP_SETTING_KEY,
+      value: "1203630283921938@g.us",
+    });
+
+    const jid = await service.getAlertGroupJid();
+    expect(jid).toBe("1203630283921938@g.us");
+    expect(mockPrisma.systemSetting.findUnique).toHaveBeenCalledWith({
+      where: { key: AdminAlertsService.GROUP_SETTING_KEY },
+    });
+  });
+
+  it("should fallback to env variable if not in database", async () => {
+    mockPrisma.systemSetting.findUnique.mockResolvedValue(null);
+    mockConfig.get.mockImplementation((key: string) => {
+      if (key === "ADMIN_WHATSAPP_ALERT_GROUP_JID") return "env-group@g.us";
+      return null;
+    });
+
+    const jid = await service.getAlertGroupJid();
+    expect(jid).toBe("env-group@g.us");
+  });
+
+  it("should save alert group JID in system settings", async () => {
+    await service.setAlertGroupJid("1203630283921938@g.us");
+    expect(mockPrisma.systemSetting.upsert).toHaveBeenCalledWith({
+      where: { key: AdminAlertsService.GROUP_SETTING_KEY },
+      update: { value: "1203630283921938@g.us" },
+      create: { key: AdminAlertsService.GROUP_SETTING_KEY, value: "1203630283921938@g.us" },
+    });
+  });
+
+  it("should send support ticket notification to group", async () => {
+    mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      key: AdminAlertsService.GROUP_SETTING_KEY,
+      value: "1203630283921938@g.us",
+    });
+
+    const result = await service.notifySupportTicket({
+      protocol: "TKT-123",
+      category: "dificuldade",
+      severity: "alta",
+      subject: "Erro ao exportar PDF",
+      message: "O botão de exportar não responde.",
+      name: "João Silva",
+      email: "joao@solar.com",
+      phone: "(44) 99999-8888",
+      companyName: "Solar Prime",
+      userPlan: "PRO",
+    });
+
+    expect(result).toBe(true);
+    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toWaId: "1203630283921938@g.us",
+        body: expect.stringContaining("#TKT-123"),
+      })
+    );
+    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining("Dificuldade Técnica / Bug"),
+      })
+    );
+  });
+
+  it("should send new user registration notification to group", async () => {
+    mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      key: AdminAlertsService.GROUP_SETTING_KEY,
+      value: "1203630283921938@g.us",
+    });
+
+    const result = await service.notifyNewUserRegistration({
+      name: "Carlos Integrador",
+      email: "carlos@solar.com",
+      companyName: "Carlos Solar",
+    });
+
+    expect(result).toBe(true);
+    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toWaId: "1203630283921938@g.us",
+        body: expect.stringContaining("Carlos Integrador"),
+      })
+    );
+    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining("NOVO CADASTRO NA PLATAFORMA"),
+      })
+    );
+  });
+
+  it("should send checkout initiated notification to group", async () => {
+    mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      key: AdminAlertsService.GROUP_SETTING_KEY,
+      value: "1203630283921938@g.us",
+    });
+
+    const result = await service.notifyCheckoutInitiated({
+      tenantName: "Solartech",
+      customerName: "Ana Santos",
+      customerEmail: "ana@solartech.com",
+      planName: "Profissional",
+      planPrice: 199.9,
+    });
+
+    expect(result).toBe(true);
+    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toWaId: "1203630283921938@g.us",
+        body: expect.stringContaining("TENTATIVA DE PAGAMENTO (CHECKOUT INICIADO)"),
+      })
+    );
+  });
+
+  it("should send payment completed notification to group", async () => {
+    mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      key: AdminAlertsService.GROUP_SETTING_KEY,
+      value: "1203630283921938@g.us",
+    });
+
+    const result = await service.notifyPaymentCompleted({
+      tenantName: "Solartech",
+      customerName: "Ana Santos",
+      customerEmail: "ana@solartech.com",
+      planName: "Profissional",
+      amount: 19990,
+    });
+
+    expect(result).toBe(true);
+    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toWaId: "1203630283921938@g.us",
+        body: expect.stringContaining("PAGAMENTO CONFIRMADO!"),
+      })
+    );
+  });
+});
