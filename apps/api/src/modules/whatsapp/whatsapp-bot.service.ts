@@ -1210,18 +1210,17 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
     // Normalização: a Evolution pode enviar { event: "messages.upsert", data: { ... } }
     // ou array de dados ou payload direto
-    const event = payload.event;
-    if (event && event !== "messages.upsert") {
+    const event = typeof payload.event === "string" ? payload.event.toLowerCase() : "";
+    if (event && event !== "messages.upsert" && event !== "messages.update") {
       // Ignora status de conexão, contatos, etc.
       return;
     }
 
-    const data = payload.data || payload;
+    const rawData = payload.data || payload;
+    const data = Array.isArray(rawData) ? rawData[0] : rawData;
+    if (!data) return;
     const key = data.key;
     if (!key) return;
-
-    // Ignora mensagens enviadas pelo próprio bot
-    if (key.fromMe) return;
 
     const remoteJid = key.remoteJid || "";
     // Ignora status do WhatsApp
@@ -1230,26 +1229,36 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     }
 
     // Tratamento de grupos do WhatsApp
+    // NOTA: Permite comandos administrativos mesmo se fromMe for true (caso o dono envie do número pareado ao bot)
     if (remoteJid.endsWith("@g.us")) {
       const incomingText = (
         data.message?.conversation ||
         data.message?.extendedTextMessage?.text ||
         data.message?.imageMessage?.caption ||
+        data.message?.buttonsResponseMessage?.selectedDisplayText ||
         ""
       )
         .trim()
         .toLowerCase();
 
+      this.logger.log(
+        `[WhatsApp Group] Mensagem recebida no grupo ${remoteJid}: "${incomingText}" (fromMe: ${Boolean(key.fromMe)})`
+      );
+
       if (
         incomingText.includes("#ativar-alerta") ||
         incomingText.includes("#ativar-alertas") ||
         incomingText.includes("#alerta") ||
-        incomingText === "ativar alertas"
+        incomingText.includes("ativar alertas") ||
+        incomingText.includes("ativar-alertas")
       ) {
         await this.handleAdminGroupActivation(remoteJid, data.pushName);
       }
       return;
     }
+
+    // Ignora mensagens enviadas pelo próprio bot em conversas 1:1
+    if (key.fromMe) return;
 
     const fromWaId = remoteJid.replace(/@.*$/, "").replace(/\D/g, "");
     if (!fromWaId) return;
