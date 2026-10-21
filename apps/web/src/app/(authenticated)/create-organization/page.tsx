@@ -1310,12 +1310,8 @@ export default function CreateOrganizationPage() {
                       </div>
 
                       <p className="text-xs text-[var(--color-muted-foreground)] leading-relaxed">
-                        Qual nome comercial você quer que apareça nas propostas e contratos dos seus
-                        clientes quando utilizar as variáveis do sistema (ex:{" "}
-                        <strong className="font-mono text-[#0f6b86] dark:text-[#38bdf8]">
-                          {"{{nome_empresa}}"}
-                        </strong>
-                        )?
+                        Defina o nome comercial da sua marca para exibição automática nas propostas,
+                        capas e contratos dos seus clientes.
                       </p>
 
                       <Input
@@ -1336,7 +1332,7 @@ export default function CreateOrganizationPage() {
                             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                           ) : null
                         }
-                        helperText="Este é o nome comercial apresentado aos seus clientes em todas as propostas, capas e assinaturas (sem números ou códigos do CNPJ)."
+                        helperText="Nome que será exibido na capa, cabeçalhos e assinaturas das propostas (sem números ou códigos do CNPJ)."
                       />
                     </div>
 

@@ -1045,7 +1045,7 @@ export const SECTION_FIELD_CONFIG: Record<SectionType, DynamicField[]> = {
       type: "text",
       group: "Conteúdo",
       placeholder: "Nome do responsável ou engenheiro",
-      helperText: "Deixe vazio para usar {{nome_empresa}}.",
+      helperText: "Deixe vazio para usar o nome padrão da empresa.",
     },
     {
       name: "companySignerRole",

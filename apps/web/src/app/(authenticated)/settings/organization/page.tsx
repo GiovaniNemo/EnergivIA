@@ -711,7 +711,7 @@ function OrganizationSettingsContent() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: SolarTech Engenharia"
-                helperText="Nome apresentado nas propostas comerciais e variáveis ({{nome_empresa}})."
+                helperText="Nome comercial apresentado aos seus clientes nas propostas e contratos."
                 required
               />
               <Input
