@@ -63,6 +63,20 @@ describe("AdminAlertsService", () => {
     });
   });
 
+  it("should lock alert group once configured and reject changing to another group without force", async () => {
+    mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      key: AdminAlertsService.GROUP_SETTING_KEY,
+      value: "1203630283921938@g.us",
+    });
+
+    const success = await service.setAlertGroupJid("999999999999@g.us");
+    expect(success).toBe(false);
+    expect(mockPrisma.systemSetting.upsert).not.toHaveBeenCalled();
+
+    const isLocked = await service.isAlertGroupLocked();
+    expect(isLocked).toBe(true);
+  });
+
   it("should send support ticket notification to group", async () => {
     mockPrisma.systemSetting.findUnique.mockResolvedValue({
       key: AdminAlertsService.GROUP_SETTING_KEY,

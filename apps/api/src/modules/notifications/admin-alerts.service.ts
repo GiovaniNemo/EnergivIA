@@ -32,15 +32,32 @@ export class AdminAlertsService {
   }
 
   /**
-   * Registra ou atualiza o JID do grupo de alertas administrativos.
+   * Registra o JID do grupo de alertas administrativos.
+   * Trava permanente: uma vez ativado, não pode ser sobrescrito por outro grupo (a menos que force=true).
    */
-  async setAlertGroupJid(groupJid: string): Promise<void> {
+  async setAlertGroupJid(groupJid: string, force = false): Promise<boolean> {
+    const existing = await this.getAlertGroupJid();
+    if (existing && existing !== groupJid && !force) {
+      this.logger.warn(
+        `[Admin Alerts] Tentativa de alterar grupo de alertas bloqueada. Já configurado exclusivamente para: ${existing}`
+      );
+      return false;
+    }
     await this.prisma.systemSetting.upsert({
       where: { key: AdminAlertsService.GROUP_SETTING_KEY },
       update: { value: groupJid },
       create: { key: AdminAlertsService.GROUP_SETTING_KEY, value: groupJid },
     });
     this.logger.log(`[Admin Alerts] Grupo de alertas registrado com sucesso: ${groupJid}`);
+    return true;
+  }
+
+  /**
+   * Verifica se o grupo já está travado/ativo.
+   */
+  async isAlertGroupLocked(): Promise<boolean> {
+    const jid = await this.getAlertGroupJid();
+    return Boolean(jid);
   }
 
   /**

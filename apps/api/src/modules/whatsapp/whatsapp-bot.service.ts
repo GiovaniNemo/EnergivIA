@@ -1432,9 +1432,30 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
   async handleAdminGroupActivation(groupJid: string, senderName?: string) {
     this.logger.log(
-      `[Admin Alerts] Ativação de grupo de alertas recebida: ${groupJid} (solicitado por ${senderName || "Admin"})`
+      `[Admin Alerts] Solicitação de ativação de grupo de alertas: ${groupJid} (solicitado por ${senderName || "Admin"})`
     );
     try {
+      const existing = await this.prisma.systemSetting.findUnique({
+        where: { key: "ADMIN_WHATSAPP_ALERT_GROUP_JID" },
+      });
+
+      if (existing?.value?.trim()) {
+        const currentJid = existing.value.trim();
+        if (currentJid === groupJid) {
+          this.logger.log(
+            `[Admin Alerts] Grupo ${groupJid} já é o canal oficial de alertas. Nenhuma alteração necessária.`
+          );
+          return;
+        }
+
+        // SEGURANÇA ESTRITA: O canal de alertas é exclusivo e bloqueado.
+        // Nenhuma outra pessoa ou grupo pode ativar ou sobrescrever!
+        this.logger.warn(
+          `[Admin Alerts] BLOQUEADO: Tentativa de ativação no grupo ${groupJid} por ${senderName || "desconhecido"} foi recusada. O canal de alertas já está ativado e BLOQUEADO para ${currentJid}.`
+        );
+        return;
+      }
+
       await this.prisma.systemSetting.upsert({
         where: { key: "ADMIN_WHATSAPP_ALERT_GROUP_JID" },
         update: { value: groupJid },
@@ -1443,7 +1464,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
       const confirmationMsg =
         `🚨 *GRUPO DE ALERTAS ENERGIVIA ATIVADO COM SUCESSO!* ✅\n\n` +
-        `Olá! Este grupo foi configurado como o canal oficial de notificações executivas da plataforma.\n\n` +
+        `Olá! Este grupo foi configurado como o canal oficial e *exclusivo* de notificações executivas da plataforma.\n\n` +
+        `🔒 *Segurança:* Este canal foi travado e *não pode mais ser ativado para ninguém nem transferido*.\n\n` +
         `*Você receberá alertas em tempo real de:*\n` +
         `• 🚨 *Central de Ajuda:* Chamados de suporte, bugs e melhorias;\n` +
         `• 👤 *Novos Cadastros:* Novos integradores que se registraram;\n` +
@@ -1467,9 +1489,16 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     success: boolean;
     groupJid?: string;
     subject?: string;
+    alreadyLocked?: boolean;
     groupsFound?: Array<{ id: string; subject: string }>;
   }> {
     try {
+      const existing = await this.getAdminAlertGroupJid();
+      if (existing) {
+        this.logger.log(`[Admin Alerts] Grupo já ativo e bloqueado: ${existing}`);
+        return { success: true, groupJid: existing, alreadyLocked: true };
+      }
+
       const groups = await this.whatsappCloud.fetchAllEvolutionGroups();
       this.logger.log(`[Admin Alerts] Grupos obtidos da Evolution API: ${groups.length}`);
 
