@@ -181,4 +181,42 @@ describe("AdminAlertsService", () => {
       })
     );
   });
+
+  it("should allow updating alert group when force=true even if already locked", async () => {
+    mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      key: AdminAlertsService.GROUP_SETTING_KEY,
+      value: "1203630283921938@g.us",
+    });
+
+    const success = await service.setAlertGroupJid("999999999999@g.us", true);
+    expect(success).toBe(true);
+    expect(mockPrisma.systemSetting.upsert).toHaveBeenCalledWith({
+      where: { key: AdminAlertsService.GROUP_SETTING_KEY },
+      update: { value: "999999999999@g.us" },
+      create: { key: AdminAlertsService.GROUP_SETTING_KEY, value: "999999999999@g.us" },
+    });
+  });
+
+  it("should format location in new registration notification when city/state are provided", async () => {
+    mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      key: AdminAlertsService.GROUP_SETTING_KEY,
+      value: "1203630283921938@g.us",
+    });
+
+    const result = await service.notifyNewUserRegistration({
+      name: "Carlos Ferreira",
+      email: "carlos@sol.com",
+      companyName: "Sol Forte",
+      city: "Maringá",
+      state: "PR",
+    });
+
+    expect(result).toBe(true);
+    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toWaId: "1203630283921938@g.us",
+        body: expect.stringContaining("• *Localização:* Maringá/PR"),
+      })
+    );
+  });
 });

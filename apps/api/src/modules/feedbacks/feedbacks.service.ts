@@ -1,15 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Optional } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CreateFeedbackDto } from "./dto/create-feedback.dto";
 import type { JwtPayload } from "@energivia/types";
 import { getTenantPlanDetails } from "../../common/utils/plan-limits";
+import { AdminAlertsService } from "../notifications/admin-alerts.service";
 
 @Injectable()
 export class FeedbacksService {
   private readonly logger = new Logger(FeedbacksService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly adminAlerts?: AdminAlertsService
+  ) {}
 
   async create(dto: CreateFeedbackDto, user?: JwtPayload, tenantIdFromHeader?: string) {
     let resolvedTenantId =
@@ -115,6 +119,27 @@ export class FeedbacksService {
     this.logger.log(
       `Novo feedback registrado! Nota: ${feedback.rating}/5 | Canal: ${feedback.channel} | Usuário: ${feedback.userName || "Anônimo"}`
     );
+
+    if (this.adminAlerts) {
+      const protocol = `FB-${feedback.id.slice(-6).toUpperCase()}`;
+      const isNegative = typeof feedback.rating === "number" && feedback.rating <= 3;
+      this.adminAlerts
+        .notifySupportTicket({
+          protocol,
+          category: isNegative ? "dificuldade" : "melhoria",
+          severity: typeof feedback.rating === "number" && feedback.rating <= 2 ? "alta" : "media",
+          subject: `Feedback na Plataforma (${feedback.rating || 5}/5 estrelas)`,
+          message:
+            feedback.comment || `Avaliação registrada com nota ${feedback.rating}/5 estrelas.`,
+          name: feedback.userName || "Usuário",
+          email: feedback.userEmail || "",
+          phone: feedback.phone || undefined,
+          userPlan: feedback.userPlan || "TRIAL",
+        })
+        .catch((err) => {
+          this.logger.warn(`Erro não bloqueante ao enviar alerta de feedback: ${err}`);
+        });
+    }
 
     return feedback;
   }

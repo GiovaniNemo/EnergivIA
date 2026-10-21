@@ -143,14 +143,20 @@ export class AdminAlertsService {
     name: string;
     email: string;
     companyName?: string;
+    city?: string | null;
+    state?: string | null;
   }): Promise<boolean> {
     const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+    const location =
+      data.city && data.state ? `${data.city}/${data.state}` : data.city || data.state || null;
+
     const msg =
       `👤 *NOVO CADASTRO NA PLATAFORMA* 🎉\n\n` +
       `Um novo integrador acabou de criar conta no EnergivIA:\n\n` +
       `• *Nome:* ${data.name}\n` +
       `• *E-mail:* ${data.email}\n` +
       (data.companyName ? `• *Empresa:* ${data.companyName}\n` : "") +
+      (location ? `• *Localização:* ${location}\n` : "") +
       `• *Plano Inicial:* TRIAL (7 dias grátis)\n` +
       `• *Data/Hora:* ${now}`;
 

@@ -218,7 +218,8 @@ function buildTemplateSettings(dto: {
 }
 
 import { WhatsappPairingService } from "../whatsapp/whatsapp-pairing.service";
-import { Logger } from "@nestjs/common";
+import { Logger, Optional } from "@nestjs/common";
+import { AdminAlertsService } from "../notifications/admin-alerts.service";
 
 @Injectable()
 export class OrganizationsService {
@@ -227,7 +228,8 @@ export class OrganizationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
-    private readonly whatsappPairing: WhatsappPairingService
+    private readonly whatsappPairing: WhatsappPairingService,
+    @Optional() private readonly adminAlerts?: AdminAlertsService
   ) {}
 
   async generateWhatsappPairingCode(organizationId: string, userId: string) {
@@ -501,6 +503,21 @@ export class OrganizationsService {
         `Falha não bloqueante ao inicializar template padrão para organização ${org.id}: ${templateSeedErr}`
       );
     }
+
+    if (this.adminAlerts) {
+      this.adminAlerts
+        .notifyNewUserRegistration({
+          name: user?.name || commercialName,
+          email: user?.email || "",
+          companyName: commercialName,
+          city: dto.city ?? null,
+          state: dto.state ?? null,
+        })
+        .catch((alertErr) => {
+          this.logger.warn(`Erro não bloqueante ao enviar alerta de cadastro: ${alertErr}`);
+        });
+    }
+
     return {
       ...org,
       cnpj: extractCnpj(org.settings),

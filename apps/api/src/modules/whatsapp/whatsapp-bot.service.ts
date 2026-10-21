@@ -1276,6 +1276,38 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       );
 
       if (
+        incomingText.includes("#ativar-alerta-force") ||
+        incomingText.includes("#ativar-alertas-force") ||
+        incomingText.includes("#forcar-alerta") ||
+        incomingText.includes("#forcar-alertas")
+      ) {
+        await this.handleAdminGroupActivation(remoteJid, data.pushName, true);
+        return;
+      }
+
+      if (
+        incomingText.includes("#teste-alerta") ||
+        incomingText.includes("#teste-alertas") ||
+        incomingText.includes("#alerta-teste")
+      ) {
+        await this.handleAdminGroupTestAlert(remoteJid);
+        return;
+      }
+
+      if (incomingText.includes("#status-alerta") || incomingText.includes("#status-alertas")) {
+        await this.handleAdminGroupStatus(remoteJid);
+        return;
+      }
+
+      if (
+        incomingText.includes("#desativar-alerta") ||
+        incomingText.includes("#desativar-alertas")
+      ) {
+        await this.handleAdminGroupDeactivation(remoteJid);
+        return;
+      }
+
+      if (
         incomingText.includes("#ativar-alerta") ||
         incomingText.includes("#ativar-alertas") ||
         incomingText.includes("#alerta") ||
@@ -1283,7 +1315,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         incomingText.includes("ativar-alertas") ||
         incomingText.includes("ativar alerta")
       ) {
-        await this.handleAdminGroupActivation(remoteJid, data.pushName);
+        await this.handleAdminGroupActivation(remoteJid, data.pushName, false);
+        return;
       }
       return;
     }
@@ -1430,29 +1463,53 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  async handleAdminGroupActivation(groupJid: string, senderName?: string) {
+  async handleAdminGroupActivation(groupJid: string, senderName?: string, force = false) {
     this.logger.log(
-      `[Admin Alerts] Solicitação de ativação de grupo de alertas: ${groupJid} (solicitado por ${senderName || "Admin"})`
+      `[Admin Alerts] Solicitação de ativação de grupo de alertas: ${groupJid} (solicitado por ${senderName || "Admin"}, force=${force})`
     );
     try {
+      const phoneNumberId = this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID")?.trim() || "";
       const existing = await this.prisma.systemSetting.findUnique({
         where: { key: "ADMIN_WHATSAPP_ALERT_GROUP_JID" },
       });
 
-      if (existing?.value?.trim()) {
-        const currentJid = existing.value.trim();
+      const currentJid = existing?.value?.trim();
+
+      if (currentJid && !force) {
         if (currentJid === groupJid) {
-          this.logger.log(
-            `[Admin Alerts] Grupo ${groupJid} já é o canal oficial de alertas. Nenhuma alteração necessária.`
-          );
+          this.logger.log(`[Admin Alerts] Grupo ${groupJid} já é o canal oficial de alertas.`);
+          const alreadyActiveMsg =
+            `✅ *ESTE GRUPO JÁ ESTÁ ATIVO COMO O CANAL DE ALERTAS!* 🚀\n\n` +
+            `Este grupo é o canal oficial configurado para receber notificações executivas do EnergivIA em tempo real:\n\n` +
+            `• 🚨 *Central de Ajuda & Chamados*\n` +
+            `• 👤 *Novos Cadastros de Integradores*\n` +
+            `• ⏳ *Tentativa de Pagamento (Checkout Iniciado)*\n` +
+            `• 💳 *Pagamentos Confirmados*\n\n` +
+            `👉 Para testar o envio de um alerta agora, envie neste grupo:\n` +
+            `*#teste-alerta*`;
+
+          await this.whatsappCloud.sendTextMessage({
+            phoneNumberId,
+            toWaId: groupJid,
+            body: alreadyActiveMsg,
+          });
           return;
         }
 
-        // SEGURANÇA ESTRITA: O canal de alertas é exclusivo e bloqueado.
-        // Nenhuma outra pessoa ou grupo pode ativar ou sobrescrever!
         this.logger.warn(
-          `[Admin Alerts] BLOQUEADO: Tentativa de ativação no grupo ${groupJid} por ${senderName || "desconhecido"} foi recusada. O canal de alertas já está ativado e BLOQUEADO para ${currentJid}.`
+          `[Admin Alerts] Tentativa de ativação no grupo ${groupJid} rejeitada pois já configurado para ${currentJid}.`
         );
+        const conflictMsg =
+          `⚠️ *Aviso de Configuração de Alertas*\n\n` +
+          `O canal de alertas executivos do EnergivIA já está vinculado a outro grupo (${currentJid}).\n\n` +
+          `Se você deseja *migrar as notificações para este grupo*, envie neste grupo:\n` +
+          `👉 *#ativar-alertas-force*`;
+
+        await this.whatsappCloud.sendTextMessage({
+          phoneNumberId,
+          toWaId: groupJid,
+          body: conflictMsg,
+        });
         return;
       }
 
@@ -1464,16 +1521,16 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
       const confirmationMsg =
         `🚨 *GRUPO DE ALERTAS ENERGIVIA ATIVADO COM SUCESSO!* ✅\n\n` +
-        `Olá! Este grupo foi configurado como o canal oficial e *exclusivo* de notificações executivas da plataforma.\n\n` +
-        `🔒 *Segurança:* Este canal foi travado e *não pode mais ser ativado para ninguém nem transferido*.\n\n` +
+        `Olá! Este grupo foi configurado como o canal oficial de notificações executivas da plataforma.\n\n` +
         `*Você receberá alertas em tempo real de:*\n` +
         `• 🚨 *Central de Ajuda:* Chamados de suporte, bugs e melhorias;\n` +
         `• 👤 *Novos Cadastros:* Novos integradores que se registraram;\n` +
         `• ⏳ *Intenção de Pagamento:* Clientes que chegaram na tela de pagamento;\n` +
         `• 💳 *Pagamentos Confirmados:* Assinaturas ativadas.\n\n` +
+        `👉 Para testar o funcionamento agora mesmo, envie neste grupo:\n` +
+        `*#teste-alerta*\n\n` +
         `_(Alertas de propostas desativados para este canal)_`;
 
-      const phoneNumberId = this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID")?.trim() || "";
       await this.whatsappCloud.sendTextMessage({
         phoneNumberId,
         toWaId: groupJid,
@@ -1482,6 +1539,77 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(`[Admin Alerts] Confirmação enviada para o grupo ${groupJid}`);
     } catch (err) {
       this.logger.error(`[Admin Alerts] Falha ao registrar/responder no grupo ${groupJid}: ${err}`);
+    }
+  }
+
+  async handleAdminGroupTestAlert(groupJid: string) {
+    try {
+      const phoneNumberId = this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID")?.trim() || "";
+      const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+      const testMsg =
+        `🔔 *TESTE DE ALERTA OPERACIONAL ENERGIVIA*\n\n` +
+        `Conexão com o WhatsApp funcionando perfeitamente! ✅\n\n` +
+        `• *Status:* Ativo e operacional\n` +
+        `• *ID do Grupo:* \`${groupJid}\`\n` +
+        `• *Data/Hora:* ${now}\n\n` +
+        `Todos os novos chamados da central de ajuda, cadastros na plataforma e pagamentos aprovados serão notificados aqui automaticamente.`;
+
+      await this.whatsappCloud.sendTextMessage({
+        phoneNumberId,
+        toWaId: groupJid,
+        body: testMsg,
+      });
+    } catch (err) {
+      this.logger.error(`[Admin Alerts] Erro ao enviar teste para grupo ${groupJid}: ${err}`);
+    }
+  }
+
+  async handleAdminGroupStatus(groupJid: string) {
+    try {
+      const phoneNumberId = this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID")?.trim() || "";
+      const existing = await this.prisma.systemSetting.findUnique({
+        where: { key: "ADMIN_WHATSAPP_ALERT_GROUP_JID" },
+      });
+      const currentJid = existing?.value?.trim();
+      const isCurrentThisGroup = currentJid === groupJid;
+
+      const statusMsg =
+        `📊 *STATUS DO CANAL DE ALERTAS*\n\n` +
+        `• *Este Grupo:* \`${groupJid}\`\n` +
+        `• *Grupo Vinculado:* \`${currentJid || "Nenhum"}\`\n` +
+        `• *Situação:* ${isCurrentThisGroup ? "🟢 Ativo e Configurado para este grupo" : currentJid ? "🟡 Vinculado a outro canal" : "🔴 Não configurado"}\n\n` +
+        (isCurrentThisGroup
+          ? `_Envie #teste-alerta para testar ou #desativar-alertas para desligar._`
+          : `_Envie #ativar-alertas ou #ativar-alertas-force para vincular a este grupo._`);
+
+      await this.whatsappCloud.sendTextMessage({
+        phoneNumberId,
+        toWaId: groupJid,
+        body: statusMsg,
+      });
+    } catch (err) {
+      this.logger.error(`[Admin Alerts] Erro ao checar status do grupo ${groupJid}: ${err}`);
+    }
+  }
+
+  async handleAdminGroupDeactivation(groupJid: string) {
+    try {
+      const phoneNumberId = this.config.get<string>("WHATSAPP_PHONE_NUMBER_ID")?.trim() || "";
+      await this.prisma.systemSetting.deleteMany({
+        where: { key: "ADMIN_WHATSAPP_ALERT_GROUP_JID" },
+      });
+      const deactMsg =
+        `🛑 *CANAL DE ALERTAS DESATIVADO COM SUCESSO!*\n\n` +
+        `Este grupo não receberá mais notificações automáticas da plataforma.\n\n` +
+        `_Para reativar a qualquer momento, envie *#ativar-alertas*._`;
+
+      await this.whatsappCloud.sendTextMessage({
+        phoneNumberId,
+        toWaId: groupJid,
+        body: deactMsg,
+      });
+    } catch (err) {
+      this.logger.error(`[Admin Alerts] Erro ao desativar alertas para grupo ${groupJid}: ${err}`);
     }
   }
 
@@ -1700,6 +1828,32 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       } else if (interactive?.type === "list_reply") {
         incomingText = (interactive.list_reply?.id || interactive.list_reply?.title || "").trim();
       }
+    }
+
+    // Orientação para ativação de alertas se o comando for enviado em chat privado 1:1
+    const lowerInbound = incomingText.toLowerCase();
+    if (
+      lowerInbound.includes("#ativar-alerta") ||
+      lowerInbound.includes("#ativar-alertas") ||
+      lowerInbound.includes("ativar alertas") ||
+      lowerInbound.includes("#teste-alerta") ||
+      lowerInbound.includes("#status-alertas")
+    ) {
+      const guideMsg =
+        `ℹ️ *Ativação de Alertas Operacionais*\n\n` +
+        `Para receber os alertas de chamados, cadastros e pagamentos:\n\n` +
+        `1. Crie um grupo no WhatsApp (ex: *🚨 Alertas EnergivIA*);\n` +
+        `2. Adicione este número do robô como membro do grupo;\n` +
+        `3. Envie o comando *#ativar-alertas* *DENTRO DO GRUPO* (não aqui no privado);\n` +
+        `4. O robô responderá no grupo confirmando a ativação!\n\n` +
+        `_Dica: Se você já adicionou o robô ao grupo, basta abrir o grupo e digitar *#ativar-alertas* lá._`;
+
+      await this.whatsappCloud.sendTextMessage({
+        phoneNumberId,
+        toWaId: fromWaId,
+        body: guideMsg,
+      });
+      return;
     }
 
     // 3. Verificação de Código de Pareamento (Token de Ativação)

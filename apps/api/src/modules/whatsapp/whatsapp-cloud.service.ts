@@ -238,10 +238,19 @@ export class WhatsappCloudService {
       this.logger.error(
         `[Evolution API] Falha no envio para ${to}: HTTP ${status} err=${errText.slice(0, 300)}`
       );
+      // Grupos do WhatsApp (@g.us) não são suportados pela Meta Cloud API oficial
+      if (to.endsWith("@g.us")) {
+        return false;
+      }
       // Se a Evolution falhar e não houver token da Meta, encerra aqui
       const token = this.config.get<string>("WHATSAPP_ACCESS_TOKEN")?.trim();
       if (!token) return false;
       this.logger.warn(`Tentando fallback via Meta Cloud API para ${to}...`);
+    }
+
+    if (to.endsWith("@g.us")) {
+      this.logger.warn("[WhatsApp] Envio para grupos (@g.us) requer Evolution API ativa.");
+      return false;
     }
 
     // 2. Envio via Meta Cloud API (Oficial)
