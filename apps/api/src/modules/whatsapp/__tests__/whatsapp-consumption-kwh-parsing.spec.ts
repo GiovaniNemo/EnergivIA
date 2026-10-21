@@ -59,6 +59,10 @@ describe("Diferenciação Estrita de Consumo (kWh) vs Potência de Pico (kWp)", 
       expect(parseConsumptionInput("450 kw-hora")).toBe(450);
       expect(parseConsumptionInput("450 kw/hora")).toBe(450);
       expect(parseConsumptionInput("450 kw")).toBe(450);
+      expect(parseConsumptionInput("450kw mes")).toBe(450);
+      expect(parseConsumptionInput("450kw mês")).toBe(450);
+      expect(parseConsumptionInput("450 kw mes")).toBe(450);
+      expect(parseConsumptionInput("450 kw mês")).toBe(450);
       expect(parseConsumptionInput("600 kw")).toBe(600);
     });
 
@@ -84,6 +88,10 @@ describe("Diferenciação Estrita de Consumo (kWh) vs Potência de Pico (kWp)", 
       expect(parsePowerInput("450 kwhora")).toBeNull();
       expect(parsePowerInput("450kwhora")).toBeNull();
       expect(parsePowerInput("450 kw")).toBeNull();
+      expect(parsePowerInput("450kw mes")).toBeNull();
+      expect(parsePowerInput("450kw mês")).toBeNull();
+      expect(parsePowerInput("450 kw mes")).toBeNull();
+      expect(parsePowerInput("450 kw mês")).toBeNull();
     });
 
     it("deve capturar corretamente potências reais em kWp, MWp, GWp e kW puro de sistema", () => {

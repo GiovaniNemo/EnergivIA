@@ -429,7 +429,7 @@ export function parseConsumptionInput(text: string): number | null {
   // Pattern 1: Unidades explícitas de consumo de energia
   // kwh, kw hora(s), kw-hora, kw/hora, kw/h, kw/mês, kw mês, kw hora mês, etc.
   const unitRegex =
-    /(?:^|[^\w.,])(\d+[\d.,]*)\s*(?:kwh|kw[-/\s]*horas?|kw\/h|kw\s*\/\s*m[eê]s(?:es)?|kw\s+m[eê]s(?:es)?|kwh\s*\/\s*m[eê]s(?:es)?|kwh\s+m[eê]s(?:es)?)(?:\s*\/\s*m[eê]s(?:es)?)?(?:\b|[^\w.,]|$)/i;
+    /(?:^|[^\w.,])(\d+[\d.,]*)\s*(?:kwh|kw[-/\s]*horas?|kw\/h|kw[-/\s]*m[eê]s(?:es)?|kwh[-/\s]*m[eê]s(?:es)?)(?:\s*\/\s*m[eê]s(?:es)?)?(?:\b|[^\w.,]|$)/i;
   const unitMatch = clean.match(unitRegex);
   if (unitMatch && unitMatch[1]) {
     const val = parsePtBrNumber(unitMatch[1]);
@@ -505,7 +505,7 @@ export function parsePowerInput(text: string): number | null {
 
     // Checagem 1: se postText indica hora ou mês (ex: "kw hora", "kw/h", "kw/hora", "kw/mês", "kw mes", "kw por mês")
     const isFollowedByConsumption =
-      /^\s*[-/]?\s*horas?\b|^\s*\/h\b|^\s*\/?\s*m[eê]s(?:es)?\b|^\s+(?:por|ao|no|cada)\s+m[eê]s\b|^\s+mensa(?:l|is)\b/.test(
+      /^\s*[-/]?\s*horas?\b|^\s*\/h\b|^\s*[-/]?\s*m[eê]s(?:es)?\b|^\s+(?:por|ao|no|cada)\s+m[eê]s\b|^\s+mensa(?:l|is)\b/.test(
         postText
       );
 
