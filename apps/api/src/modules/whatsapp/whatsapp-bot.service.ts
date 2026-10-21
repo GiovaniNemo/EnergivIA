@@ -966,6 +966,13 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         this.logger.error("Erro ao verificar inatividade de conversas do WhatsApp:", err);
       });
     }, 30_000); // Executa verificação a cada 30 segundos
+
+    // Auto-sincroniza o grupo de alertas executivos do WhatsApp se ainda não configurado
+    setTimeout(() => {
+      this.syncAlertGroup().catch((err) => {
+        this.logger.warn(`[Admin Alerts] AutoSync inicial de grupo não pôde ser concluído: ${err}`);
+      });
+    }, 5000);
   }
 
   onModuleDestroy() {
@@ -1209,16 +1216,25 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     if (!payload) return;
 
     // Normalização: a Evolution pode enviar { event: "messages.upsert", data: { ... } }
-    // ou array de dados ou payload direto
-    const event = typeof payload.event === "string" ? payload.event.toLowerCase() : "";
+    // ou MESSAGES_UPSERT, array de dados ou payload direto
+    const rawEvent = typeof payload.event === "string" ? payload.event.toLowerCase() : "";
+    const event = rawEvent.replace(/[_-]/g, ".");
     if (event && event !== "messages.upsert" && event !== "messages.update") {
       // Ignora status de conexão, contatos, etc.
       return;
     }
 
-    const rawData = payload.data || payload;
+    let rawData = payload.data || payload;
+    if (
+      rawData &&
+      typeof rawData === "object" &&
+      "messages" in rawData &&
+      Array.isArray((rawData as any).messages)
+    ) {
+      rawData = (rawData as any).messages;
+    }
     const data = Array.isArray(rawData) ? rawData[0] : rawData;
-    if (!data) return;
+    if (!data || typeof data !== "object") return;
     const key = data.key;
     if (!key) return;
 
@@ -1231,11 +1247,25 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     // Tratamento de grupos do WhatsApp
     // NOTA: Permite comandos administrativos mesmo se fromMe for true (caso o dono envie do número pareado ao bot)
     if (remoteJid.endsWith("@g.us")) {
+      let msgObj: any = data.message || {};
+      if (msgObj.ephemeralMessage?.message) {
+        msgObj = msgObj.ephemeralMessage.message;
+      }
+      if (msgObj.viewOnceMessage?.message) {
+        msgObj = msgObj.viewOnceMessage.message;
+      }
+      if (msgObj.documentWithCaptionMessage?.message) {
+        msgObj = msgObj.documentWithCaptionMessage.message;
+      }
+
       const incomingText = (
-        data.message?.conversation ||
-        data.message?.extendedTextMessage?.text ||
-        data.message?.imageMessage?.caption ||
-        data.message?.buttonsResponseMessage?.selectedDisplayText ||
+        msgObj.conversation ||
+        msgObj.extendedTextMessage?.text ||
+        msgObj.imageMessage?.caption ||
+        msgObj.videoMessage?.caption ||
+        msgObj.buttonsResponseMessage?.selectedDisplayText ||
+        msgObj.templateButtonReplyMessage?.selectedDisplayText ||
+        msgObj.listResponseMessage?.title ||
         ""
       )
         .trim()
@@ -1250,7 +1280,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         incomingText.includes("#ativar-alertas") ||
         incomingText.includes("#alerta") ||
         incomingText.includes("ativar alertas") ||
-        incomingText.includes("ativar-alertas")
+        incomingText.includes("ativar-alertas") ||
+        incomingText.includes("ativar alerta")
       ) {
         await this.handleAdminGroupActivation(remoteJid, data.pushName);
       }
@@ -1430,6 +1461,43 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     } catch (err) {
       this.logger.error(`[Admin Alerts] Falha ao registrar/responder no grupo ${groupJid}: ${err}`);
     }
+  }
+
+  async syncAlertGroup(): Promise<{
+    success: boolean;
+    groupJid?: string;
+    subject?: string;
+    groupsFound?: Array<{ id: string; subject: string }>;
+  }> {
+    try {
+      const groups = await this.whatsappCloud.fetchAllEvolutionGroups();
+      this.logger.log(`[Admin Alerts] Grupos obtidos da Evolution API: ${groups.length}`);
+
+      const match = groups.find(
+        (g) =>
+          g.subject.toLowerCase().includes("alerta") || g.subject.toLowerCase().includes("alertas")
+      );
+
+      if (match) {
+        await this.handleAdminGroupActivation(match.id, "AutoSync");
+        return { success: true, groupJid: match.id, subject: match.subject };
+      }
+
+      return {
+        success: false,
+        groupsFound: groups,
+      };
+    } catch (err) {
+      this.logger.error(`[Admin Alerts] Erro ao sincronizar grupo de alertas: ${err}`);
+      return { success: false };
+    }
+  }
+
+  async getAdminAlertGroupJid(): Promise<string | null> {
+    const setting = await this.prisma.systemSetting.findUnique({
+      where: { key: "ADMIN_WHATSAPP_ALERT_GROUP_JID" },
+    });
+    return setting?.value?.trim() || null;
   }
 
   private async resolveAuthorizedTenant(fromWaId: string) {

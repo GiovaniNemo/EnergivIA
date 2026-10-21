@@ -190,6 +190,14 @@ export class WhatsappCloudService {
     };
 
     let result = await sendToNumber(cleanNumber);
+    if (!result.ok && cleanNumber.endsWith("@g.us")) {
+      const numericOnly = cleanNumber.replace(/@g\.us$/, "");
+      this.logger.warn(
+        `[Evolution API] Falha para grupo ${cleanNumber} (${result.status}): ${result.errText.slice(0, 100)}. Tentando sem @g.us (${numericOnly})...`
+      );
+      const groupRetry = await sendToNumber(numericOnly);
+      if (groupRetry.ok) return groupRetry;
+    }
     if (!result.ok && cleanNumber.startsWith("55") && !cleanNumber.endsWith("@g.us")) {
       let altNumber: string | null = null;
       if (cleanNumber.length === 12) {
@@ -961,5 +969,45 @@ export class WhatsappCloudService {
     }
 
     return false;
+  }
+
+  async fetchAllEvolutionGroups(): Promise<Array<{ id: string; subject: string }>> {
+    const baseUrl = this.config.get<string>("EVOLUTION_API_URL")?.trim().replace(/\/+$/, "");
+    const apiKey = this.config.get<string>("EVOLUTION_API_KEY")?.trim();
+    const instance = this.config.get<string>("EVOLUTION_INSTANCE_NAME")?.trim() || "energiv-bot";
+
+    if (!baseUrl || !apiKey) {
+      return [];
+    }
+
+    try {
+      const url = `${baseUrl}/group/fetchAllGroups/${encodeURIComponent(instance)}?getParticipants=false`;
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          apikey: apiKey,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        this.logger.warn(`[Evolution API] fetchAllGroups retornou HTTP ${res.status}`);
+        return [];
+      }
+
+      const data = await res.json();
+      if (!Array.isArray(data)) return [];
+
+      return data.map((item) => {
+        const g = item as Record<string, unknown>;
+        return {
+          id: String(g["id"] || g["jid"] || ""),
+          subject: String(g["subject"] || g["name"] || ""),
+        };
+      });
+    } catch (err) {
+      this.logger.error(`[Evolution API] Erro ao buscar grupos: ${err}`);
+      return [];
+    }
   }
 }

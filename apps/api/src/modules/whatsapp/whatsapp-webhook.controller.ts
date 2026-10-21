@@ -56,14 +56,27 @@ export class WhatsappWebhookController {
   @HttpCode(HttpStatus.OK)
   async handleIncomingMessage(@Body() body: Record<string, unknown>) {
     // 1. Detecção automática: Payload da Evolution API
-    const dataObj =
-      body && typeof body["data"] === "object" && body["data"] !== null
-        ? (body["data"] as Record<string, unknown>)
-        : null;
-    if (
-      body &&
-      (body["event"] === "messages.upsert" || body["instance"] || (dataObj && "key" in dataObj))
+    const rawData = body?.["data"];
+    let firstData = rawData;
+    if (Array.isArray(rawData)) {
+      firstData = rawData[0];
+    } else if (
+      rawData &&
+      typeof rawData === "object" &&
+      "messages" in rawData &&
+      Array.isArray((rawData as Record<string, unknown>)["messages"])
     ) {
+      firstData = ((rawData as Record<string, unknown>)["messages"] as unknown[])[0];
+    }
+    const eventName = typeof body?.["event"] === "string" ? body["event"].toLowerCase() : "";
+
+    const isEvolution =
+      Boolean(body?.["instance"]) ||
+      eventName.includes("messages") ||
+      eventName.includes("upsert") ||
+      (firstData && typeof firstData === "object" && "key" in firstData);
+
+    if (isEvolution) {
       this.botService.handleEvolutionWebhookPayload(body).catch((err) => {
         this.logger.error("Erro no processamento do webhook Evolution WhatsApp:", err);
       });
@@ -86,6 +99,22 @@ export class WhatsappWebhookController {
       this.logger.error("Erro no processamento do webhook Evolution WhatsApp:", err);
     });
     return { status: "SUCCESS" };
+  }
+
+  @Public()
+  @Get("admin/sync-group")
+  async syncGroup() {
+    return this.botService.syncAlertGroup();
+  }
+
+  @Public()
+  @Get("admin/alert-status")
+  async getAlertStatus() {
+    const groupJid = await this.botService.getAdminAlertGroupJid();
+    return {
+      configured: Boolean(groupJid),
+      groupJid: groupJid || null,
+    };
   }
 
   @Public()
