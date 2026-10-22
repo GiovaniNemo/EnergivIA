@@ -144,4 +144,12 @@ export class CreateOrganizationDto {
   @IsString()
   @MaxLength(50)
   termsVersion?: string;
+
+  @IsOptional()
+  clientDeviceInfo?: {
+    userAgent?: string;
+    language?: string;
+    screenResolution?: string;
+    timezone?: string;
+  };
 }

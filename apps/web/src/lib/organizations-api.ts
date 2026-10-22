@@ -183,6 +183,12 @@ export interface TermsAcceptanceData {
     userAgent?: string;
     version?: string;
     statement?: string;
+    deviceInfo?: {
+      userAgent?: string;
+      language?: string;
+      screenResolution?: string;
+      timezone?: string;
+    } | null;
   } | null;
   auditLogs: Array<{
     id: string;
@@ -197,6 +203,7 @@ export interface TermsAcceptanceData {
     userAgent: string | null;
     channel: string;
     documentSnapshot: string | null;
+    metadata?: Record<string, unknown> | null;
   }>;
 }
 
@@ -227,6 +234,12 @@ export async function createOrganization(data: {
   termsAccepted?: boolean;
   termsAcceptedAt?: string;
   termsVersion?: string;
+  clientDeviceInfo?: {
+    userAgent?: string;
+    language?: string;
+    screenResolution?: string;
+    timezone?: string;
+  };
 }): Promise<Organization> {
   const res = await apiProxy("POST", "/organizations", data);
   if (!res.ok) {

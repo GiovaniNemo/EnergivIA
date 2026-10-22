@@ -362,6 +362,16 @@ export class OrganizationsService {
     const legalName = dto.razaoSocial?.trim() || dto.name.trim();
     const slug = await this.generateUniqueOrganizationSlug(commercialName);
     const templateSettings = buildTemplateSettings(dto);
+    const finalUserAgent =
+      (clientInfo?.userAgent && !clientInfo.userAgent.toLowerCase().includes("node")
+        ? clientInfo.userAgent
+        : dto.clientDeviceInfo?.userAgent) ||
+      clientInfo?.userAgent ||
+      dto.clientDeviceInfo?.userAgent ||
+      null;
+
+    const finalIp = clientInfo?.ip ?? null;
+
     const org = await this.prisma.tenant.create({
       data: {
         name: commercialName,
@@ -406,10 +416,11 @@ export class OrganizationsService {
             userId,
             userEmail: user?.email ?? null,
             userName: user?.name ?? null,
-            ip: clientInfo?.ip ?? null,
-            userAgent: clientInfo?.userAgent ?? null,
+            ip: finalIp,
+            userAgent: finalUserAgent,
             version: termsVersion,
             statement: termsStatement,
+            deviceInfo: dto.clientDeviceInfo ?? null,
           },
         },
         createdById: userId,
@@ -426,13 +437,17 @@ export class OrganizationsService {
         termsVersion,
         termsType: "TERMS_OF_USE_AND_TECHNICAL_RESPONSIBILITY",
         acceptedAt: acceptedAtDate,
-        ipAddress: clientInfo?.ip ?? null,
-        userAgent: clientInfo?.userAgent ?? null,
+        ipAddress: finalIp,
+        userAgent: finalUserAgent,
         channel: "WEB_ONBOARDING",
         documentSnapshot: termsStatement,
         metadata: {
           organizationName: dto.name,
           cnpj: dto.cnpj ?? null,
+          screenResolution: dto.clientDeviceInfo?.screenResolution ?? null,
+          timezone: dto.clientDeviceInfo?.timezone ?? null,
+          language: dto.clientDeviceInfo?.language ?? null,
+          reportedUserAgent: dto.clientDeviceInfo?.userAgent ?? null,
         },
       },
     });

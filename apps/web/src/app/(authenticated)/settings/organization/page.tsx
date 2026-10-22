@@ -3,7 +3,12 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useOrganization } from "@/components/providers/organization-provider";
-import { updateOrganization, uploadOrganizationLogo } from "@/lib/organizations-api";
+import {
+  updateOrganization,
+  uploadOrganizationLogo,
+  getTermsAcceptance,
+  type TermsAcceptanceData,
+} from "@/lib/organizations-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImageDropzone } from "@/components/ui/image-dropzone";
@@ -26,6 +31,10 @@ import {
   Trash2,
   ShieldCheck,
   AlertTriangle,
+  Clock,
+  Globe,
+  Laptop,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { stripCnpjNumbersFromCompanyName } from "@/lib/company-name-utils";
@@ -232,6 +241,31 @@ function OrganizationSettingsContent() {
       setCnpjAutofillInfo(null);
     }
   }, [currentOrganization]);
+
+  // Auditoria de Conformidade e Aceite dos Termos de Uso
+  const [termsData, setTermsData] = useState<TermsAcceptanceData | null>(null);
+  const [loadingTerms, setLoadingTerms] = useState(false);
+  const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!currentOrganization?.id) return;
+    let isMounted = true;
+    setLoadingTerms(true);
+    getTermsAcceptance(currentOrganization.id)
+      .then((data) => {
+        if (isMounted) setTermsData(data);
+      })
+      .catch(() => {
+        // Falha não-impeditiva
+      })
+      .finally(() => {
+        if (isMounted) setLoadingTerms(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentOrganization?.id]);
 
   const formatCnpj = (value: string) => {
     const digits = value.replace(/\D/g, "").slice(0, 14);
@@ -891,6 +925,138 @@ function OrganizationSettingsContent() {
         </div>
       </form>
 
+      {/* Card de Auditoria e Aceite dos Termos de Uso e Isenção Técnica */}
+      <Card className="border-[var(--color-border)]">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                Conformidade Legal & Aceite dos Termos
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Certidão eletrônica probatória com carimbo de tempo, IP e equipamento nos termos do
+                Marco Civil da Internet (Lei 12.965/14) e LGPD.
+              </CardDescription>
+            </div>
+            {termsData?.termsAccepted && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Termos Aceitos e Vigentes
+              </span>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-1">
+          {loadingTerms ? (
+            <div className="flex items-center gap-2 py-4 text-xs text-[var(--color-muted-foreground)]">
+              <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary)]" />
+              Carregando certidão probatória de termos...
+            </div>
+          ) : termsData?.termsAccepted ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-accent)]/20 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
+                    <Clock className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                    Data e Hora do Aceite
+                  </div>
+                  <p className="text-xs font-medium text-[var(--color-foreground)]">
+                    {termsData.termsAcceptedAt
+                      ? new Date(termsData.termsAcceptedAt).toLocaleString("pt-BR", {
+                          dateStyle: "long",
+                          timeStyle: "medium",
+                        })
+                      : "Aceite registrado no cadastro"}
+                  </p>
+                  <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                    Versão Homologada: <strong>{termsData.termsVersion || "2026-09-22-v1"}</strong>
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-accent)]/20 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
+                    <Globe className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                    Endereço IP Registrado
+                  </div>
+                  <p className="text-xs font-mono font-medium text-[var(--color-foreground)]">
+                    {termsData.currentAcceptance?.ip ||
+                      termsData.auditLogs?.[0]?.ipAddress ||
+                      "IP registrado via conexão segura"}
+                  </p>
+                  <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                    Canal: {termsData.auditLogs?.[0]?.channel || "WEB_ONBOARDING"}
+                  </p>
+                </div>
+              </div>
+
+              {(termsData.currentAcceptance?.userAgent || termsData.auditLogs?.[0]?.userAgent) && (
+                <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-accent)]/10 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
+                    <Laptop className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                    Dispositivo / Equipamento Registrado
+                  </div>
+                  <p className="text-xs font-mono text-[var(--color-foreground)] break-all leading-relaxed">
+                    {termsData.currentAcceptance?.userAgent || termsData.auditLogs?.[0]?.userAgent}
+                  </p>
+                  {(() => {
+                    const meta = termsData.auditLogs?.[0]?.metadata as
+                      | Record<string, unknown>
+                      | undefined;
+                    if (!meta) return null;
+                    const screenRes =
+                      typeof meta.screenResolution === "string" ? meta.screenResolution : null;
+                    const timezone = typeof meta.timezone === "string" ? meta.timezone : null;
+                    const language = typeof meta.language === "string" ? meta.language : null;
+                    if (!screenRes && !timezone && !language) return null;
+
+                    return (
+                      <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-[var(--color-muted-foreground)]">
+                        {screenRes && <span>Tela: {screenRes}</span>}
+                        {timezone && <span>• Fuso: {timezone}</span>}
+                        {language && <span>• Idioma: {language}</span>}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--color-border)]">
+                <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                  Declaração formal de isenção técnica e responsabilidade sobre ART/TRT.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsStatementModalOpen(true)}
+                    className="text-xs h-8 inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Visualizar Declaração Assinada
+                  </Button>
+                  <Link href="/termos-de-uso" target="_blank">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-8 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                    >
+                      Termos na Íntegra &rarr;
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300">
+              Esta organização ainda não possui registro de aceite arquivado.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Equipe da organização</CardTitle>
@@ -938,6 +1104,61 @@ function OrganizationSettingsContent() {
           </CardContent>
         </Card>
       )}
+
+      {/* Modal: Declaração Assinada de Termos */}
+      <Dialog open={isStatementModalOpen} onOpenChange={setIsStatementModalOpen}>
+        <DialogContent size="default" className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+              <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              Certidão Probatória de Aceite Eletrônico
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Registro arquivado no momento da criação da organização ({currentOrganization?.name}).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-accent)]/20 text-xs leading-relaxed text-[var(--color-foreground)] whitespace-pre-wrap">
+              {termsData?.currentAcceptance?.statement ||
+                termsData?.auditLogs?.[0]?.documentSnapshot ||
+                "Declaro que li e concordo com os Termos de Uso da ENERGIVIA LTDA (CNPJ 66.304.358/0001-16) e com a Política de Privacidade. Entendo que o sistema utiliza Inteligência Artificial que está sujeita a imprecisões e erros de leitura. Assumo total responsabilidade pela conferência técnica minuciosa dos dados e pela emissão de ART/TRT sobre toda e qualquer proposta gerada pela plataforma ou pelo WhatsApp."}
+            </div>
+
+            <div className="rounded-lg bg-zinc-900 text-zinc-300 p-3 text-[11px] font-mono space-y-1">
+              <div>
+                Organização: {currentOrganization?.name} ({currentOrganization?.id})
+              </div>
+              <div>Versão Homologada: {termsData?.termsVersion || "2026-09-22-v1"}</div>
+              <div>Data UTC: {termsData?.termsAcceptedAt || "Registrado"}</div>
+              <div>
+                IP:{" "}
+                {termsData?.currentAcceptance?.ip ||
+                  termsData?.auditLogs?.[0]?.ipAddress ||
+                  "Conexão Segura"}
+              </div>
+              {(termsData?.currentAcceptance?.userAgent ||
+                termsData?.auditLogs?.[0]?.userAgent) && (
+                <div className="break-all">
+                  Dispositivo:{" "}
+                  {termsData.currentAcceptance?.userAgent || termsData.auditLogs?.[0]?.userAgent}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsStatementModalOpen(false)}
+            >
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal: Cadastrar Nova Empresa */}
       <Dialog

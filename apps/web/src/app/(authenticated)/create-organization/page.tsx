@@ -541,6 +541,16 @@ export default function CreateOrganizationPage() {
     setLoading(true);
     try {
       const termsAcceptedAt = new Date().toISOString();
+      const clientDeviceInfo =
+        typeof window !== "undefined"
+          ? {
+              userAgent: window.navigator.userAgent,
+              language: window.navigator.language,
+              screenResolution: `${window.screen?.width || 0}x${window.screen?.height || 0}`,
+              timezone: Intl?.DateTimeFormat?.().resolvedOptions()?.timeZone || undefined,
+            }
+          : undefined;
+
       const organization = await createOrganization({
         name: finalProposalCompanyName,
         proposalCompanyName: finalProposalCompanyName,
@@ -550,6 +560,7 @@ export default function CreateOrganizationPage() {
         termsAccepted: true,
         termsAcceptedAt,
         termsVersion: "2026-09-22-v1",
+        clientDeviceInfo,
         templateRegion: cityState.trim() || undefined,
         referralSource: (selectedSourceOption?.label ?? selectedReferralSource.trim()) || undefined,
         referredBy: referredBy.trim() || undefined,

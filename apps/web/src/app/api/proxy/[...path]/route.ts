@@ -106,6 +106,34 @@ async function proxy(request: NextRequest, params: { path: string[] }, method: s
   }
   if (orgId) headers["X-Organization-Id"] = orgId;
 
+  // Repasse de cabeçalhos de auditoria e identificação de dispositivo/rede
+  const clientUserAgent = request.headers.get("user-agent");
+  if (clientUserAgent) {
+    headers["User-Agent"] = clientUserAgent;
+  }
+
+  const clientIp = (request as any).ip;
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const realIp = request.headers.get("x-real-ip");
+  if (forwardedFor) {
+    headers["X-Forwarded-For"] = forwardedFor;
+  } else if (realIp) {
+    headers["X-Forwarded-For"] = realIp;
+  } else if (clientIp) {
+    headers["X-Forwarded-For"] = clientIp;
+  }
+
+  if (realIp) {
+    headers["X-Real-IP"] = realIp;
+  } else if (clientIp) {
+    headers["X-Real-IP"] = clientIp;
+  }
+
+  const acceptLanguage = request.headers.get("accept-language");
+  if (acceptLanguage) {
+    headers["Accept-Language"] = acceptLanguage;
+  }
+
   const fetchOptions: RequestInit = {
     method,
     headers,

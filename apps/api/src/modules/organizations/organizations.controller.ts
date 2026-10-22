@@ -35,7 +35,8 @@ export class OrganizationsController {
       req.ip ||
       "";
     const ip = rawIp.split(",")[0]?.trim() || undefined;
-    const userAgent = (req.headers["user-agent"] as string) || undefined;
+    const userAgent =
+      (req.headers["user-agent"] as string) || dto.clientDeviceInfo?.userAgent || undefined;
     return this.organizations.create(user.sub, dto, { ip, userAgent });
   }
 
