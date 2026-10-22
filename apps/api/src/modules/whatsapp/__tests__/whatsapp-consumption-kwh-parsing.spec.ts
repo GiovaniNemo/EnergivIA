@@ -63,6 +63,15 @@ describe("Diferenciação Estrita de Consumo (kWh) vs Potência de Pico (kWp)", 
       expect(parseConsumptionInput("450kw mês")).toBe(450);
       expect(parseConsumptionInput("450 kw mes")).toBe(450);
       expect(parseConsumptionInput("450 kw mês")).toBe(450);
+      expect(parseConsumptionInput("450kw/m")).toBe(450);
+      expect(parseConsumptionInput("450 kw/m")).toBe(450);
+      expect(parseConsumptionInput("450kwh/m")).toBe(450);
+      expect(parseConsumptionInput("450 kwh/m")).toBe(450);
+      expect(parseConsumptionInput("450w mes")).toBe(450);
+      expect(parseConsumptionInput("450 w mes")).toBe(450);
+      expect(parseConsumptionInput("450w/mês")).toBe(450);
+      expect(parseConsumptionInput("450 w/mes")).toBe(450);
+      expect(parseConsumptionInput("450 watts mês")).toBe(450);
       expect(parseConsumptionInput("600 kw")).toBe(600);
     });
 
@@ -92,6 +101,12 @@ describe("Diferenciação Estrita de Consumo (kWh) vs Potência de Pico (kWp)", 
       expect(parsePowerInput("450kw mês")).toBeNull();
       expect(parsePowerInput("450 kw mes")).toBeNull();
       expect(parsePowerInput("450 kw mês")).toBeNull();
+      expect(parsePowerInput("450kw/m")).toBeNull();
+      expect(parsePowerInput("450 kw/m")).toBeNull();
+      expect(parsePowerInput("450kwh/m")).toBeNull();
+      expect(parsePowerInput("450 kwh/m")).toBeNull();
+      expect(parsePowerInput("450w mes")).toBeNull();
+      expect(parsePowerInput("450 w mes")).toBeNull();
     });
 
     it("deve capturar corretamente potências reais em kWp, MWp, GWp e kW puro de sistema", () => {
@@ -395,6 +410,232 @@ describe("Diferenciação Estrita de Consumo (kWh) vs Potência de Pico (kWp)", 
       expect(reply).toContain("Para qual cidade e estado será a instalação?");
       expect(reply).not.toContain("Potência Solicitada");
       expect(reply).not.toContain("450 kWp");
+    });
+
+    it("deve reproduzir exatamente o print: 450kw mes após menu inicial de degustação", async () => {
+      const guestMenu = service.buildGuestGreetingMenu("Teste", 3);
+
+      const conversation: any = {
+        id: "conv-guest-print",
+        organizationId: "org-test",
+        title: "Test guest 450kw mes",
+        metadata: {
+          step: "IDLE",
+          sessionData: {},
+        },
+        messages: [
+          {
+            role: "assistant",
+            content: guestMenu,
+          },
+        ],
+      };
+
+      const reply1 = await service.generateBotResponse({
+        conversation,
+        incomingText: "450kw mes",
+        extractionResult: null,
+      });
+
+      console.log("DEBUG: reply1 =>", reply1);
+
+      expect(reply1).toContain("*_Consumo Registrado:_* `450 kWh/mês` ☀️");
+      expect(reply1).not.toContain("Potência Solicitada");
+      expect(reply1).not.toContain("450 kWp");
+    });
+
+    it("quando conversa já tem proposta concluída com 450 kWp antigo e o usuário envia '450kw mes'", async () => {
+      const conversation: any = {
+        id: "cmvh83f6400eunx01yzmpwyyb",
+        organizationId: "org-test",
+        title: "5511965821052",
+        metadata: {
+          step: "PROPOSAL_COMPLETED",
+          contactName: "Robson Meira",
+          sessionData: {
+            uf: "SP",
+            hsp: 4.51,
+            kwp: 450,
+            cidade: "Cotia",
+            kwpRate: 2800,
+            gridType: "Trifásico 220V",
+            roofType: "Cerâmico (Colonial)",
+            clientName: "Robson Meira",
+          },
+          kwp: 450,
+        },
+        messages: [
+          {
+            role: "assistant",
+            content:
+              "*_Potência Solicitada:_* `450 kWp` ☀️\n\nPara qual cidade e estado será a instalação?",
+          },
+          { role: "user", content: "Cotia/ São Paulo" },
+          {
+            role: "assistant",
+            content:
+              "*_Localização Identificada!_* 📍☀️\n\n> Cidade: `Cotia/SP`\n> Irradiação Solar: `4.51 kWh/m²/dia`\n\n*_Qual a tensão da rede trifásica para este sistema de 450 kWp?_* ⚡",
+          },
+          {
+            role: "assistant",
+            content:
+              "*_Proposta Comercial Gerada com Sucesso!_* 📋✨\n\nCliente: *Robson Meira*\n\n> ☀️ *Potência:* `451.36 kWp`",
+          },
+        ],
+      };
+
+      const reply = await service.generateBotResponse({
+        conversation,
+        incomingText: "450kw mes",
+        extractionResult: null,
+      });
+
+      console.log("REPLY FOR POST-PROPOSAL 450kw mes:", reply);
+
+      expect(reply).toContain("*_Consumo Registrado:_* `450 kWh/mês` ☀️");
+      expect(reply).not.toContain("Potência Solicitada");
+      expect(reply).not.toContain("450 kWp");
+    });
+
+    it("deve aceitar correção de consumo quando o bot está perguntando a cidade", async () => {
+      const conversation: any = {
+        id: "conv-correct-city-step",
+        organizationId: "org-test",
+        title: "5511965821052",
+        metadata: {
+          step: "AWAITING_CITY",
+          sessionData: {
+            kwp: 450,
+          },
+          kwp: 450,
+        },
+        messages: [
+          {
+            role: "assistant",
+            content:
+              "*_Potência Solicitada:_* `450 kWp` ☀️\n\nPara qual cidade e estado será a instalação? (Ex: `Maringá/PR`, `Presidente Prudente/SP`)",
+          },
+        ],
+      };
+
+      const reply = await service.generateBotResponse({
+        conversation,
+        incomingText: "não, é 450 kwh",
+        extractionResult: null,
+      });
+
+      console.log("REPLY FOR CORRECTION AT CITY STEP:", reply);
+
+      expect(reply).toContain("*_Consumo Registrado:_* `450 kWh/mês` ☀️");
+      expect(reply).toContain("Para qual cidade e estado será a instalação?");
+      expect(reply).not.toContain("Não identifiquei o município");
+      expect(reply).not.toContain("Potência Solicitada");
+      expect(reply).not.toContain("450 kWp");
+    });
+
+    it("deve permitir corrigir dimensionamento se usuário digitar 450W ou relatar erro na confirmação de preço", async () => {
+      const conversation: any = {
+        id: "conv-correct-price-step",
+        organizationId: "org-test",
+        title: "5511965821052",
+        metadata: {
+          step: "AWAITING_PRICE_CONFIRMATION",
+          sessionData: {
+            kwp: 450,
+            cidade: "Cotia",
+            uf: "SP",
+            roofType: "Cerâmica (Colonial)",
+            selectedQuoteIndex: 0,
+          },
+        },
+        messages: [
+          {
+            role: "assistant",
+            content:
+              "*_Como você deseja prosseguir para esta cotação?_*\n\n> 1️⃣ *Seguir com o preço padrão* (`R$ 2.800,00/kWp` — Total: `R$ 1.263.808,00`)",
+          },
+        ],
+      };
+
+      const reply = await service.generateBotResponse({
+        conversation,
+        incomingText: "450W",
+        extractionResult: null,
+      });
+
+      console.log("REPLY FOR 450W AT PRICE STEP:", reply);
+
+      expect(reply).not.toContain("Opção não reconhecida");
+      expect(reply).toContain("Consumo Registrado");
+      expect(reply).toContain("450 kWh/mês");
+      expect(reply).toContain("4.1 kWp");
+    });
+
+    it("deve acolher reclamação 'está cotando errado' e permitir corrigir dimensionamento", async () => {
+      const conversation: any = {
+        id: "conv-errado-step",
+        organizationId: "org-test",
+        title: "5511965821052",
+        metadata: {
+          step: "AWAITING_PRICE_CONFIRMATION",
+          sessionData: {
+            kwp: 450,
+            cidade: "Cotia",
+            uf: "SP",
+            roofType: "Cerâmica (Colonial)",
+            selectedQuoteIndex: 0,
+          },
+        },
+        messages: [
+          {
+            role: "assistant",
+            content:
+              "*_Como você deseja prosseguir para esta cotação?_*\n\n> 1️⃣ *Seguir com o preço padrão* (`R$ 2.800,00/kWp` — Total: `R$ 1.263.808,00`)",
+          },
+        ],
+      };
+
+      const reply = await service.generateBotResponse({
+        conversation,
+        incomingText: "está cotando errado",
+        extractionResult: null,
+      });
+
+      expect(reply).not.toContain("Opção não reconhecida");
+      expect(reply).toContain("Compreendido! Vamos corrigir o dimensionamento");
+      expect(reply).toContain("informe o consumo mensal");
+    });
+
+    it("deve permitir corrigir dimensionamento no passo de rede elétrica (AWAITING_GRID_TYPE)", async () => {
+      const conversation: any = {
+        id: "conv-grid-correct",
+        organizationId: "org-test",
+        title: "5511965821052",
+        metadata: {
+          step: "AWAITING_GRID_TYPE",
+          sessionData: {
+            kwp: 450,
+            cidade: "Cotia",
+            uf: "SP",
+          },
+        },
+        messages: [
+          {
+            role: "assistant",
+            content: "*_Qual a tensão da rede trifásica para este sistema de 450 kWp?_* ⚡",
+          },
+        ],
+      };
+
+      const reply = await service.generateBotResponse({
+        conversation,
+        incomingText: "não, é 450 kwh",
+        extractionResult: null,
+      });
+
+      expect(reply).not.toContain("Opção não reconhecida");
+      expect(reply).toContain("Consumo Registrado");
+      expect(reply).toContain("450 kWh/mês");
     });
   });
 });

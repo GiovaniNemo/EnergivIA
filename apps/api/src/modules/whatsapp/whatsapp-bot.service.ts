@@ -302,6 +302,15 @@ function parseKwpRate(
     return null;
   }
 
+  // Não interpretar unidades inequívocas de consumo, equipamentos ou usinas como preço
+  if (
+    /(?:kwh|kw[-/\s]*horas?|kw\/h|[-/\s]m[eê]s|placas?|m[oó]dulos?|pain[eé]is?|usina|gerador)/i.test(
+      clean
+    )
+  ) {
+    return null;
+  }
+
   // Padrão com 'k', ex: "3k", "2.8k", "2,5k"
   const kMatch = clean.match(/(?:r\$\s*)?(\d+(?:[.,]\d+)?)\s*k\b/i);
   if (kMatch && kMatch[1]) {
@@ -427,9 +436,9 @@ export function parseConsumptionInput(text: string): number | null {
   const clean = text.replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, "").trim();
 
   // Pattern 1: Unidades explícitas de consumo de energia
-  // kwh, kw hora(s), kw-hora, kw/hora, kw/h, kw/mês, kw mês, kw hora mês, etc.
+  // kwh, kw hora(s), kw-hora, kw/hora, kw/h, kw/mês, kw mês, kw hora mês, kw/m, w/mês, w mes, watts mês, etc.
   const unitRegex =
-    /(?:^|[^\w.,])(\d+[\d.,]*)\s*(?:kwh|kw[-/\s]*horas?|kw\/h|kw[-/\s]*m[eê]s(?:es)?|kwh[-/\s]*m[eê]s(?:es)?)(?:\s*\/\s*m[eê]s(?:es)?)?(?:\b|[^\w.,]|$)/i;
+    /(?:^|[^\w.,])(\d+[\d.,]*)\s*(?:kwh|kw[-/\s]*horas?|kw\/h|kw[-/\s]*(?:m[eê]s(?:es)?|m\b)|kwh[-/\s]*(?:m[eê]s(?:es)?|m\b)|w[-/\s]*(?:m[eê]s(?:es)?|m\b|horas?|h\b)|watts?[-/\s]*(?:m[eê]s(?:es)?|m\b|horas?))(?:[-/\s]*m[eê]s(?:es)?)?(?:\b|[^\w.,]|$)/i;
   const unitMatch = clean.match(unitRegex);
   if (unitMatch && unitMatch[1]) {
     const val = parsePtBrNumber(unitMatch[1]);
@@ -441,7 +450,7 @@ export function parseConsumptionInput(text: string): number | null {
   // Pattern 2: Precedido por termos inequívocos de consumo
   // consumo (médio) (de) X (kw/kwh), gasto de X kw, conta de X kw, fatura de X kw, etc.
   const keywordPrefixRegex =
-    /(?:consumo|gasto|m[ée]dia|conta|fatura|faturas|consumindo|gastando)\s*(?:m[ée]di[ao])?\s*(?:mensal)?\s*(?:de|em|da)?\s*(\d+[\d.,]*)\s*(?:kwh|kw[-/\s]*horas?|kw\/h|kw\s*\/\s*m[eê]s|kw\s+m[eê]s|kwh\s*\/\s*m[eê]s|kw)?(?:\b|[^\w.,]|$)/i;
+    /(?:consumo|gasto|m[ée]dia|conta|fatura|faturas|consumindo|gastando)\s*(?:m[ée]di[ao])?\s*(?:mensal)?\s*(?:de|em|da)?\s*(\d+[\d.,]*)\s*(?:kwh|kw[-/\s]*horas?|kw\/h|kw\s*\/\s*m[eê]s|kw\s+m[eê]s|kwh\s*\/\s*m[eê]s|kw|w)?(?:\b|[^\w.,]|$)/i;
   const kwMatch = clean.match(keywordPrefixRegex);
   if (kwMatch && kwMatch[1]) {
     const val = parsePtBrNumber(kwMatch[1]);
@@ -452,7 +461,7 @@ export function parseConsumptionInput(text: string): number | null {
 
   // Pattern 3: Seguido por "de consumo", "de gasto", "por mês", "ao mês", "mensais"
   const suffixRegex =
-    /(?:^|[^\w.,])(\d+[\d.,]*)\s*(?:kwh|kw)?\s*(?:de\s+consumo|de\s+gasto|por\s+m[eê]s|ao\s+m[eê]s|no\s+m[eê]s|mensa(?:l|is))(?:\b|[^\w.,]|$)/i;
+    /(?:^|[^\w.,])(\d+[\d.,]*)\s*(?:kwh|kw|w)?\s*(?:de\s+consumo|de\s+gasto|por\s+m[eê]s|ao\s+m[eê]s|no\s+m[eê]s|mensa(?:l|is))(?:\b|[^\w.,]|$)/i;
   const suffixMatch = clean.match(suffixRegex);
   if (suffixMatch && suffixMatch[1]) {
     const val = parsePtBrNumber(suffixMatch[1]);
@@ -461,17 +470,20 @@ export function parseConsumptionInput(text: string): number | null {
     }
   }
 
-  // Pattern 4: Número isolado expressivo com 'kw' puro (sem 'p') que representa consumo (ex: 450 kw, 600 kw)
-  // quando não precedido por termos explícitos de gerador/usina/sistema/kit
-  const standaloneKwMatch = clean.match(/(?:^|[^\w.,])(\d+[\d.,]*)\s*kw(?:\b|[^\w.,]|$)/i);
+  // Pattern 4: Número isolado com 'kw' ou 'w' puro (sem 'p') que representa consumo (ex: 450 kw, 600 kw, 450w)
+  // quando não precedido por termos explícitos de gerador/usina/sistema/kit e não acompanhado de módulo/placa
+  const standaloneKwMatch = clean.match(
+    /(?:^|[^\w.,])(\d+[\d.,]*)\s*(?:kw|w|watts?)(?:\b|[^\w.,]|$)/i
+  );
   if (standaloneKwMatch && standaloneKwMatch[1]) {
+    const hasModuleKeyword = /(?:placas?|m[oó]dulos?|pain[eé]is?|paineis?)/i.test(clean);
     const preKeyword =
       /(?:sistema|usina|pot[êe]ncia|gerador|kit|inversor|planta)\s*(?:de)?\s*$/i.test(
         clean.slice(0, standaloneKwMatch.index || 0)
       );
-    if (!preKeyword) {
+    if (!preKeyword && !hasModuleKeyword) {
       const val = parsePtBrNumber(standaloneKwMatch[1]);
-      if (Number.isFinite(val) && val >= 50 && val <= 500000) {
+      if (Number.isFinite(val) && val >= 30 && val <= 500000) {
         return Math.round(val);
       }
     }
@@ -503,9 +515,9 @@ export function parsePowerInput(text: string): number | null {
     // Se a unidade for kW (ou mw/gw) sem 'p', verificar se na verdade é consumo
     const isKwWithoutP = unit === "kw" || unit === "mw" || unit === "gw";
 
-    // Checagem 1: se postText indica hora ou mês (ex: "kw hora", "kw/h", "kw/hora", "kw/mês", "kw mes", "kw por mês")
+    // Checagem 1: se postText indica hora ou mês (ex: "kw hora", "kw/h", "kw/hora", "kw/mês", "kw mes", "kw por mês", "kw/m")
     const isFollowedByConsumption =
-      /^\s*[-/]?\s*horas?\b|^\s*\/h\b|^\s*[-/]?\s*m[eê]s(?:es)?\b|^\s+(?:por|ao|no|cada)\s+m[eê]s\b|^\s+mensa(?:l|is)\b/.test(
+      /^\s*[-/]?\s*horas?\b|^\s*\/h\b|^\s*[-/]?\s*(?:m[eê]s(?:es)?|m\b)|^\s+(?:por|ao|no|cada)\s+m[eê]s\b|^\s+mensa(?:l|is)\b/.test(
         postText
       );
 
@@ -697,6 +709,17 @@ export function parseIntegratorQuoteEntities(rawText: string): ExtractedIntegrat
       if (Number.isFinite(val) && val >= 0.5 && val <= 5_000_000) {
         targetKWp = val;
       }
+    }
+  }
+
+  // Se detectamos consumo (kWh) e a mensagem NÃO teve explicitamente "kwp/mwp" ou termo explícito de usina/sistema de potência,
+  // prioriza SEMPRE o consumo e descarta qualquer potência equivocada:
+  if (consumptionKwh !== undefined && targetKWp !== undefined) {
+    const hasExplicitKwp =
+      /\b(?:\d+[\d.,]*)\s*(?:kwp|mwp|gwp)\b/i.test(clean) ||
+      /(?:sistema|usina|gerador|kit)\s*(?:de\s+)?(?:\d+[\d.,]*)\s*(?:kwp|mwp|kw)\b/i.test(clean);
+    if (!hasExplicitKwp) {
+      targetKWp = undefined;
     }
   }
 
@@ -5133,6 +5156,176 @@ ${catalogContext}`;
     const isNewQuoteRequest =
       isNewBillSubmission || hasDirectKwhInput || quoteEntities.isQuoteRequest;
 
+    // Helper: intercepta correções dinâmicas de dimensionamento (ou reclamações de cotação errada) em qualquer etapa
+    const handleDimensioningCorrection = async (): Promise<string | null> => {
+      const isReportingError =
+        lower.includes("errad") ||
+        lower.includes("não é isso") ||
+        lower.includes("nao e isso") ||
+        lower.includes("tá errado") ||
+        lower.includes("ta errado") ||
+        lower.includes("cotando errado") ||
+        lower.includes("cotação errada") ||
+        lower.includes("muito car") ||
+        lower.includes("muito alt");
+
+      if (isReportingError) {
+        sessionCtx.targetKWp = undefined;
+        sessionCtx.targetModules = undefined;
+        sessionCtx.consumptionKwh = undefined;
+        sessionCtx.modPowerWUser = undefined;
+        sessionCtx.chosenQuoteIndex = 0;
+        await setStep("AWAITING_CITY", {
+          cidade: sessionCtx.cidade,
+          uf: sessionCtx.estado,
+          roofType: sessionCtx.roofType,
+          kwp: undefined,
+          moduleCount: undefined,
+          consumptionKwh: undefined,
+        });
+        return (
+          `Compreendido! Vamos corrigir o dimensionamento da sua cotação. 📝☀️\n\n` +
+          `Por favor, informe o consumo mensal (ex: \`450 kWh\`), a potência desejada (ex: \`5 kWp\`) ou a quantidade de placas (ex: \`10 placas\`).\n\n` +
+          `_(Ou informe consumo e cidade juntos: ex: \`450 kWh em ${sessionCtx.cidade || "Cotia"}/${sessionCtx.estado || "SP"}\`)_`
+        );
+      }
+
+      const correctedConsumption = parseConsumptionInput(incomingText);
+      const correctedPower = parsePowerInput(incomingText);
+      const pureNumMatchCorrection = incomingText.trim().match(/^(\d{2,5})$/);
+      const pureValCorrection =
+        pureNumMatchCorrection && pureNumMatchCorrection[1]
+          ? parseInt(pureNumMatchCorrection[1], 10)
+          : null;
+      const isPureNumConsumption =
+        pureValCorrection !== null &&
+        pureValCorrection >= 30 &&
+        pureValCorrection <= 50000 &&
+        (!sessionCtx.targetKWp || pureValCorrection < 500 || pureValCorrection > 25000);
+
+      const hasCorrection =
+        correctedConsumption !== null ||
+        correctedPower !== null ||
+        quoteEntities.isQuoteRequest ||
+        isPureNumConsumption;
+
+      if (!hasCorrection) {
+        return null;
+      }
+
+      // Aplica a correção no sessionCtx
+      if (correctedConsumption !== null && correctedPower === null) {
+        sessionCtx.consumptionKwh = correctedConsumption;
+        sessionCtx.targetKWp = undefined;
+        sessionCtx.targetModules = undefined;
+        sessionCtx.modPowerWUser = undefined;
+      } else if (isPureNumConsumption && pureValCorrection !== null) {
+        sessionCtx.consumptionKwh = pureValCorrection;
+        sessionCtx.targetKWp = undefined;
+        sessionCtx.targetModules = undefined;
+        sessionCtx.modPowerWUser = undefined;
+      } else if (correctedPower !== null && correctedPower >= 0.5) {
+        sessionCtx.targetKWp = correctedPower;
+        sessionCtx.consumptionKwh = undefined;
+        sessionCtx.targetModules = undefined;
+        sessionCtx.modPowerWUser = undefined;
+      } else if (quoteEntities.targetModules) {
+        sessionCtx.targetModules = quoteEntities.targetModules;
+        sessionCtx.modPowerWUser = quoteEntities.modPowerWUser;
+        sessionCtx.consumptionKwh = undefined;
+        sessionCtx.targetKWp = undefined;
+      } else if (quoteEntities.consumptionKwh) {
+        sessionCtx.consumptionKwh = quoteEntities.consumptionKwh;
+        sessionCtx.targetKWp = undefined;
+        sessionCtx.targetModules = undefined;
+        sessionCtx.modPowerWUser = undefined;
+      } else if (quoteEntities.targetKWp) {
+        sessionCtx.targetKWp = quoteEntities.targetKWp;
+        sessionCtx.consumptionKwh = undefined;
+        sessionCtx.targetModules = undefined;
+        sessionCtx.modPowerWUser = undefined;
+      }
+
+      sessionCtx.chosenQuoteIndex = 0;
+
+      let header = "";
+      if (sessionCtx.consumptionKwh) {
+        header = `*_Consumo Registrado:_* \`${sessionCtx.consumptionKwh} kWh/mês\` ☀️\n`;
+      } else if (sessionCtx.targetKWp) {
+        header = `*_Potência Solicitada:_* \`${this.formatPowerBadge(sessionCtx.targetKWp)}\` ☀️\n`;
+      } else if (sessionCtx.targetModules) {
+        header = `*_Quantidade Solicitada:_* \`${sessionCtx.targetModules} placas\` ☀️\n`;
+      }
+
+      // 1. Falta a cidade
+      if (!sessionCtx.cidade) {
+        await setStep("AWAITING_CITY", {
+          kwp: sessionCtx.targetKWp,
+          moduleCount: sessionCtx.targetModules,
+          consumptionKwh: sessionCtx.consumptionKwh,
+          uf: sessionCtx.estado,
+        });
+        return (
+          header +
+          `\nPara qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`
+        );
+      }
+
+      // 2. Se já tem telhado e cidade, calcula os novos kits imediatamente!
+      if (sessionCtx.roofType) {
+        const newQuotes = await kitsFor({ roofType: sessionCtx.roofType });
+        if (newQuotes.length > 0) {
+          await setStep("AWAITING_KIT_SELECTION", {
+            cidade: sessionCtx.cidade,
+            uf: sessionCtx.estado,
+            kwp: sessionCtx.targetKWp,
+            moduleCount: sessionCtx.targetModules,
+            consumptionKwh: sessionCtx.consumptionKwh,
+            roofType: sessionCtx.roofType,
+            gridType: sessionCtx.gridVoltage,
+            selectedQuoteIndex: 0,
+          });
+          return (
+            header +
+            `> 📍 Localidade: \`${sessionCtx.cidade}/${sessionCtx.estado}\`\n` +
+            `> 🏠 Estrutura: *${sessionCtx.roofType}*\n\n` +
+            this.formatQuotesListText(newQuotes, sessionCtx)
+          );
+        }
+      }
+
+      // 3. Se falta padrão elétrico
+      if (!sessionCtx.gridVoltage) {
+        await setStep("AWAITING_GRID_TYPE", {
+          cidade: sessionCtx.cidade,
+          uf: sessionCtx.estado,
+          kwp: sessionCtx.targetKWp,
+          moduleCount: sessionCtx.targetModules,
+          consumptionKwh: sessionCtx.consumptionKwh,
+        });
+        return (
+          header +
+          `> 📍 Localidade: \`${sessionCtx.cidade}/${sessionCtx.estado}\`\n\n` +
+          this.GRID_OPTIONS_TEXT
+        );
+      }
+
+      // 4. Se falta telhado
+      await setStep("AWAITING_ROOF_TYPE", {
+        cidade: sessionCtx.cidade,
+        uf: sessionCtx.estado,
+        kwp: sessionCtx.targetKWp,
+        moduleCount: sessionCtx.targetModules,
+        consumptionKwh: sessionCtx.consumptionKwh,
+        gridType: sessionCtx.gridVoltage,
+      });
+      return (
+        header +
+        `> 📍 Localidade: \`${sessionCtx.cidade}/${sessionCtx.estado}\`\n\n` +
+        this.ROOF_OPTIONS_TEXT
+      );
+    };
+
     if (currentStep === "PROPOSAL_COMPLETED" && isNewQuoteRequest) {
       if (isGuestTrial && trialStatus && trialStatus.remaining <= 0) {
         return this.buildGuestTrialExceededMessage();
@@ -5741,6 +5934,10 @@ ${catalogContext}`;
         });
         return this.buildPriceQuestionText(quotes[idx], orgDefaultRate);
       }
+
+      const correctionResult = await handleDimensioningCorrection();
+      if (correctionResult) return correctionResult;
+
       return (
         `Opção não reconhecida.\n\n` +
         `Qual opção você prefere para o seu cliente?\n` +
@@ -6412,6 +6609,9 @@ ${catalogContext}`;
         );
       }
 
+      const correctionResult = await handleDimensioningCorrection();
+      if (correctionResult) return correctionResult;
+
       return (
         `Opção de telhado não reconhecida. Por favor, responda com o número da opção (1 a 7) ou envie 0️⃣ para voltar:\n\n` +
         this.ROOF_OPTIONS_TEXT
@@ -6490,6 +6690,9 @@ ${catalogContext}`;
         );
       }
 
+      const correctionResult = await handleDimensioningCorrection();
+      if (correctionResult) return correctionResult;
+
       return `Opção não reconhecida.\n\n` + this.buildPriceQuestionText(quote, orgDefaultRate);
     }
 
@@ -6514,6 +6717,9 @@ ${catalogContext}`;
           parsedRateObj.isDerivedFromTotal
         );
       }
+
+      const customPriceCorrection = await handleDimensioningCorrection();
+      if (customPriceCorrection) return customPriceCorrection;
 
       return (
         `Valor não reconhecido. Por favor, informe o preço por kWp desejado:\n\n` +
@@ -6740,6 +6946,9 @@ ${catalogContext}`;
         return `*_Padrão Elétrico Registrado:_* \`${chosenGrid}\` ⚡\n\n` + this.ROOF_OPTIONS_TEXT;
       }
 
+      const gridCorrection = await handleDimensioningCorrection();
+      if (gridCorrection) return gridCorrection;
+
       const fallbackPrompt = isTrifasicoSpecificPrompt
         ? this.TRIFASICO_VOLTAGE_QUESTION_TEXT
         : this.GRID_OPTIONS_TEXT;
@@ -6872,6 +7081,43 @@ ${catalogContext}`;
       lastBotMsg.includes("cidade e estado da instalação solar");
 
     if (isAskingCity) {
+      // Se o usuário enviou uma correção ou novo dado de consumo/potência em vez de cidade (ex: "não, é 450 kwh", "450 kw hora", "450kw mes", "mudar para 600 kwh"):
+      const correctedConsumption = parseConsumptionInput(incomingText);
+      const correctedPower = parsePowerInput(incomingText);
+      if (correctedConsumption !== null && correctedPower === null) {
+        sessionCtx.consumptionKwh = correctedConsumption;
+        sessionCtx.targetKWp = undefined;
+        sessionCtx.targetModules = undefined;
+        sessionCtx.modPowerWUser = undefined;
+        await setStep("AWAITING_CITY", {
+          consumptionKwh: correctedConsumption,
+          kwp: undefined,
+          moduleCount: undefined,
+          uf: sessionCtx.estado,
+        });
+        const prompt = sessionCtx.estado
+          ? `Identifiquei o estado de *${UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado} (${sessionCtx.estado})* 📍.\n\nPara qual cidade de ${UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado} será a instalação?\n> Responda com a cidade (ex: \`${STATE_CAPITALS[sessionCtx.estado] || "Maceió"}\`) ou responda 1️⃣ para a capital (*${STATE_CAPITALS[sessionCtx.estado] || "Maceió"}/${sessionCtx.estado}*).`
+          : `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`;
+        return `*_Consumo Registrado:_* \`${correctedConsumption} kWh/mês\` ☀️\n\n${prompt}`;
+      }
+      if (correctedPower !== null && correctedPower >= 0.5) {
+        sessionCtx.targetKWp = correctedPower;
+        sessionCtx.consumptionKwh = undefined;
+        sessionCtx.targetModules = undefined;
+        sessionCtx.modPowerWUser = undefined;
+        const formattedPower = this.formatPowerBadge(correctedPower);
+        await setStep("AWAITING_CITY", {
+          kwp: correctedPower,
+          consumptionKwh: undefined,
+          moduleCount: undefined,
+          uf: sessionCtx.estado,
+        });
+        const prompt = sessionCtx.estado
+          ? `Identifiquei o estado de *${UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado} (${sessionCtx.estado})* 📍.\n\nPara qual cidade de ${UF_TO_STATE_TITLE[sessionCtx.estado] || sessionCtx.estado} será a instalação?\n> Responda com a cidade (ex: \`${STATE_CAPITALS[sessionCtx.estado] || "Maceió"}\`) ou responda 1️⃣ para a capital (*${STATE_CAPITALS[sessionCtx.estado] || "Maceió"}/${sessionCtx.estado}*).`
+          : `Para qual cidade e estado será a instalação? (Ex: \`Maringá/PR\`, \`Presidente Prudente/SP\`)`;
+        return `*_Potência Solicitada:_* \`${formattedPower}\` ☀️\n\n${prompt}`;
+      }
+
       // 0. Se já tínhamos um estado pendente e o usuário respondeu "1" ou "capital" para usar a capital daquele estado:
       const currentKnownUf = sessionCtx.estado || storedSessionData.uf;
       const isSelectingCapital =
@@ -7588,9 +7834,14 @@ ${catalogContext}`;
       const pureVal = parseInt(pureNumMatch[1], 10);
       if (pureVal >= 30 && pureVal <= 50000) {
         sessionCtx.consumptionKwh = pureVal;
+        sessionCtx.targetKWp = undefined;
+        sessionCtx.targetModules = undefined;
+        sessionCtx.modPowerWUser = undefined;
         if (sessionCtx.cidade && sessionCtx.estado) {
           await setStep("AWAITING_GRID_TYPE", {
             consumptionKwh: pureVal,
+            kwp: undefined,
+            moduleCount: undefined,
           });
           return (
             `*_Consumo Registrado:_* \`${pureVal} kWh/mês\` em \`${sessionCtx.cidade}/${sessionCtx.estado}\` ☀️📍\n\n` +
@@ -7599,6 +7850,8 @@ ${catalogContext}`;
         }
         await setStep("AWAITING_CITY", {
           consumptionKwh: pureVal,
+          kwp: undefined,
+          moduleCount: undefined,
         });
         return (
           `*_Consumo Registrado:_* \`${pureVal} kWh/mês\` ☀️\n\n` +
