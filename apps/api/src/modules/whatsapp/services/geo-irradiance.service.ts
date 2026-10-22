@@ -609,3 +609,321 @@ const defaultGeoService = new GeoIrradianceService();
 export function getHsp(cidade: string, estado?: string): HspLookupResult {
   return defaultGeoService.getHsp(cidade, estado);
 }
+
+export interface ExtractedLocationResult {
+  city?: string;
+  uf?: string;
+  hsp?: number;
+  exact?: boolean;
+  isStateOnly?: boolean;
+  stateName?: string;
+}
+
+/**
+ * Extrai cidade e/ou estado brasileiro de qualquer texto livre (WhatsApp/áudio/mensagens naturais)
+ * mesmo sem prefixos obrigatórios (como 'em', 'para') ou quebras de linha.
+ */
+export function extractLocationFromFreeText(rawText: string): ExtractedLocationResult | null {
+  if (!rawText) return null;
+  const clean = cleanLocationInput(rawText);
+  if (!clean) return null;
+
+  const SOLAR_EXCLUDED_TOKENS = new Set([
+    "PAINEL",
+    "PAINEIS",
+    "MODULO",
+    "MODULOS",
+    "PLACA",
+    "PLACAS",
+    "INVERSOR",
+    "INVERSORES",
+    "MICROINVERSOR",
+    "MICRO",
+    "BATERIA",
+    "BATERIAS",
+    "ESTRUTURA",
+    "ESTRUTURAS",
+    "TELHADO",
+    "TELHADOS",
+    "METALICO",
+    "METALICA",
+    "FIBRO",
+    "FIBROCIMENTO",
+    "FIBROMADEIRA",
+    "FIBROMETAL",
+    "AMIANTO",
+    "ONDULADA",
+    "CERAMICA",
+    "CERAMICO",
+    "COLONIAL",
+    "ROMANA",
+    "FRANCESA",
+    "SOLO",
+    "LAJE",
+    "TRIFASICO",
+    "BIFASICO",
+    "MONOFASICO",
+    "TRI",
+    "BI",
+    "MONO",
+    "KWP",
+    "MWP",
+    "GWP",
+    "KWH",
+    "KW",
+    "MW",
+    "WATT",
+    "WATTS",
+    "VOLTS",
+    "VOLT",
+    "V",
+    "FAZ",
+    "FAZER",
+    "QUERO",
+    "PRECISO",
+    "COTA",
+    "COTACAO",
+    "COTAR",
+    "ORCAMENTO",
+    "ORCAR",
+    "SIMULAR",
+    "SIMULACAO",
+    "SISTEMA",
+    "USINA",
+    "GERADOR",
+    "KIT",
+    "PROPOSTA",
+    "REDE",
+    "PADRAO",
+    "ENTRADA",
+    "BOM DIA",
+    "BOA TARDE",
+    "BOA NOITE",
+    "OLA",
+    "OI",
+    "POR FAVOR",
+    "PFV",
+    "OBRIGADO",
+  ]);
+
+  // 1. Padrão: [Cidade] [/ ou - ou espaço] [UF de 2 letras]
+  // Ex: "maringa pr", "Maringá/PR", "Maringá - PR", "campinas sp", "londrina pr"
+  const ufPattern =
+    /(?:^|[^\wÀ-ÖØ-öø-ÿ])([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,40}?)\s*(?:[\/\-]\s*|\s+)(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b/gi;
+  let ufMatch: RegExpExecArray | null;
+  while ((ufMatch = ufPattern.exec(clean)) !== null) {
+    const rawCandBefore = ufMatch[1]?.trim() || "";
+    const matchedUf = ufMatch[2]?.toUpperCase() || "";
+    if (!rawCandBefore || !matchedUf) continue;
+
+    const words = rawCandBefore
+      .split(/\s+/)
+      .map((w) => w.replace(/^[^\wÀ-ÖØ-öø-ÿ]+|[^\wÀ-ÖØ-öø-ÿ]+$/g, "").trim())
+      .filter(Boolean);
+
+    // Prioriza o nome de cidade mais longo que casar na base oficial da UF
+    for (let count = Math.min(5, words.length); count >= 1; count--) {
+      const candidatePhrase = words.slice(words.length - count).join(" ");
+      const normCand = normalizeTextSimple(candidatePhrase);
+      if (SOLAR_EXCLUDED_TOKENS.has(normCand)) continue;
+
+      const key = `${normCand}_${matchedUf}`;
+      const entry = BRAZIL_MUNICIPALITIES_DATA.byCityUf[key];
+      if (entry) {
+        return {
+          city: entry.city,
+          uf: entry.uf,
+          hsp: entry.hsp,
+          exact: true,
+        };
+      }
+    }
+  }
+
+  // 2. Padrão: [Cidade] [/ ou - ou espaço ou "em" / "no" / "do"] [Nome do Estado por extenso]
+  // Ex: "maringá paraná", "maringa no paraná", "campinas são paulo", "belo horizonte minas gerais"
+  const sortedStateNames = Object.keys(STATE_NAME_TO_UF).sort((a, b) => b.length - a.length);
+  const normClean = normalizeTextSimple(clean);
+  for (const stateName of sortedStateNames) {
+    const escapedState = stateName.replace(/\s+/g, "\\s+");
+    const stateRegex = new RegExp(
+      `(?:^|[\\s\\/\\-,])([A-Za-zÀ-ÖØ-öø-ÿ\\s'-]{2,40}?)\\s*(?:[\\/\\-]\\s*|\\s+(?:no|na|em|do|da|de|estado\\s+(?:de|do|da))?\\s*)${escapedState}\\b`,
+      "i"
+    );
+    const sMatch = clean.match(stateRegex);
+    if (sMatch && sMatch[1]) {
+      const rawCandBefore = sMatch[1].trim();
+      const stateUf = STATE_NAME_TO_UF[stateName]!;
+      const words = rawCandBefore
+        .split(/\s+/)
+        .map((w) => w.replace(/^[^\wÀ-ÖØ-öø-ÿ]+|[^\wÀ-ÖØ-öø-ÿ]+$/g, "").trim())
+        .filter(Boolean);
+
+      for (let count = Math.min(5, words.length); count >= 1; count--) {
+        const candidatePhrase = words.slice(words.length - count).join(" ");
+        const normCand = normalizeTextSimple(candidatePhrase);
+        if (SOLAR_EXCLUDED_TOKENS.has(normCand)) continue;
+
+        const key = `${normCand}_${stateUf}`;
+        const entry = BRAZIL_MUNICIPALITIES_DATA.byCityUf[key];
+        if (entry) {
+          return {
+            city: entry.city,
+            uf: entry.uf,
+            hsp: entry.hsp,
+            exact: true,
+          };
+        }
+      }
+    }
+  }
+
+  // 3. Padrão com prefixo explícito de localização ("em", "para", "entrega em", "cidade de", etc.)
+  const deliveryCityMatch = clean.match(
+    /(?:entrega\s+em|para|em|cidade(?:\s*de)?|instala[çc][ãa]o\s+em|no\s+munic[íi]pio\s+de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
+  );
+  if (deliveryCityMatch && deliveryCityMatch[1]) {
+    const rawCandidate = (
+      deliveryCityMatch[1] +
+      (deliveryCityMatch[2]
+        ? `/${deliveryCityMatch[2]}`
+        : deliveryCityMatch[3]
+          ? `/${deliveryCityMatch[3]}`
+          : "")
+    ).trim();
+    const candLower = rawCandidate.toLowerCase();
+    if (
+      !candLower.includes("pain") &&
+      !candLower.includes("modul") &&
+      !candLower.includes("invers") &&
+      !candLower.includes("estrut") &&
+      !candLower.includes("telhad") &&
+      !candLower.includes("bater")
+    ) {
+      const hspRes = getHsp(rawCandidate);
+      if (hspRes && (isLocationInput(rawCandidate) || hspRes.exact)) {
+        if (hspRes.isStateOnly) {
+          return {
+            city: undefined,
+            uf: hspRes.uf,
+            hsp: hspRes.hsp,
+            isStateOnly: true,
+            stateName: hspRes.stateName,
+          };
+        } else if (hspRes.city) {
+          return {
+            city: hspRes.city,
+            uf: hspRes.uf,
+            hsp: hspRes.hsp,
+            exact: hspRes.exact,
+          };
+        }
+      }
+    }
+  }
+
+  // 4. Se mencionou apenas Estado brasileiro (ex: "em Alagoas", "em Minas Gerais", "em AL")
+  for (const stateName of sortedStateNames) {
+    const escapedState = stateName.replace(/\s+/g, "\\s+");
+    const stateOnlyRegex = new RegExp(
+      `\\b(?:em|no|na|para|estado(?:\\s+de)?)\\s+${escapedState}\\b`,
+      "i"
+    );
+    if (stateOnlyRegex.test(normClean)) {
+      const stateUf = STATE_NAME_TO_UF[stateName]!;
+      return {
+        city: undefined,
+        uf: stateUf,
+        hsp: UF_FALLBACK[stateUf] || 5.0,
+        isStateOnly: true,
+        stateName: UF_TO_STATE_TITLE[stateUf] || stateName,
+      };
+    }
+  }
+
+  // 4b. UF isolada após preposição (ex: "em AL", "no PR", "em SP")
+  const ufOnlyRegex =
+    /\b(?:em|no|na|para|estado(?:\s+de)?)\s+(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b/i;
+  const ufOnlyMatch = clean.match(ufOnlyRegex);
+  if (ufOnlyMatch && ufOnlyMatch[1]) {
+    const stateUf = ufOnlyMatch[1].toUpperCase();
+    return {
+      city: undefined,
+      uf: stateUf,
+      hsp: UF_FALLBACK[stateUf] || 5.0,
+      isStateOnly: true,
+      stateName: UF_TO_STATE_TITLE[stateUf] || stateUf,
+    };
+  }
+
+  // 5. Linhas avulsas (split por \n)
+  const lines = clean
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length > 1) {
+    for (const line of lines) {
+      const lineLower = line.toLowerCase();
+      if (
+        lineLower.includes("painel") ||
+        lineLower.includes("módulo") ||
+        lineLower.includes("modulo") ||
+        lineLower.includes("placa") ||
+        lineLower.includes("inversor") ||
+        lineLower.includes("bateria") ||
+        lineLower.includes("telhado") ||
+        lineLower.includes("estrutura") ||
+        lineLower.includes("cabo") ||
+        lineLower.includes("string") ||
+        lineLower.includes("boa tarde") ||
+        lineLower.includes("bom dia")
+      ) {
+        continue;
+      }
+      const cleanedLine = cleanLocationInput(line);
+      if (isLocationInput(cleanedLine)) {
+        const hspRes = getHsp(cleanedLine);
+        if (hspRes && (isLocationInput(cleanedLine) || hspRes.exact)) {
+          if (hspRes.isStateOnly) {
+            return {
+              city: undefined,
+              uf: hspRes.uf,
+              hsp: hspRes.hsp,
+              isStateOnly: true,
+              stateName: hspRes.stateName,
+            };
+          } else if (hspRes.city) {
+            return {
+              city: hspRes.city,
+              uf: hspRes.uf,
+              hsp: hspRes.hsp,
+              exact: hspRes.exact,
+            };
+          }
+        }
+      }
+    }
+  }
+
+  // 6. Cidade isolada sem UF mencionada no texto (ex: "em Maringá", "em Campinas")
+  const words = clean.split(/[\s,.;:!?]+/).filter(Boolean);
+  for (let i = 0; i < words.length; i++) {
+    for (let len = 1; len <= 3 && i + len <= words.length; len++) {
+      const phrase = words.slice(i, i + len).join(" ");
+      const normPhrase = normalizeTextSimple(phrase);
+      if (normPhrase.length < 4 || SOLAR_EXCLUDED_TOKENS.has(normPhrase)) continue;
+      const cityMatches = BRAZIL_MUNICIPALITIES_DATA.byCity[normPhrase];
+      if (cityMatches && cityMatches.length === 1) {
+        const single = cityMatches[0]!;
+        return {
+          city: single.city,
+          uf: single.uf,
+          hsp: single.hsp,
+          exact: true,
+        };
+      }
+    }
+  }
+
+  return null;
+}

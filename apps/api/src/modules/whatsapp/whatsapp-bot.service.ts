@@ -40,7 +40,6 @@ import { KitGenerationService } from "../kit/kit-generation.service";
 import {
   getHsp,
   isLocationInput,
-  cleanLocationInput,
   normalizeTextSimple,
   GeoIrradianceService,
   HspLookupResult,
@@ -48,6 +47,7 @@ import {
   STATE_NAME_TO_UF,
   UF_TO_STATE_TITLE,
   STATE_CAPITALS,
+  extractLocationFromFreeText,
 } from "./services/geo-irradiance.service";
 import { WhatsappGuestTrialService } from "./services/whatsapp-guest-trial.service";
 import {
@@ -747,95 +747,63 @@ export function parseIntegratorQuoteEntities(rawText: string): ExtractedIntegrat
 
   // 7. Extração de Padrão Elétrico / Tensão
   let isTrifasicoGeneric = false;
-  if (/\b(?:trif[áa]sico\s*380|trifasico\s*380|tri\s*380|380\s*v|380v)\b/i.test(clean)) {
+  if (
+    /\b(?:trif[áa]sico\s*380|trifasico\s*380|tri\s*380|380\s*v(?:olts?)?|380v|trezentos\s+e\s+oitenta\s*(?:v|volts?)?)\b/i.test(
+      clean
+    )
+  ) {
     gridVoltage = "Trifásico 380V";
-  } else if (/\b(?:trif[áa]sico\s*220|trifasico\s*220|tri\s*220)\b/i.test(clean)) {
+  } else if (
+    /\b(?:trif[áa]sico\s*220|trifasico\s*220|tri\s*220|220\s*v?\s*tri(?:f[áa]sico)?|duzentos\s+e\s+vinte\s*tri(?:f[áa]sico)?)\b/i.test(
+      clean
+    )
+  ) {
     gridVoltage = "Trifásico 220V";
+  } else if (
+    /\b(?:bif[áa]sico\s*220|bifasico\s*220|bi\s*220|220\s*bi|127\/220|127\s*\/\s*220|bif[áa]sico|bifasico|\bbi\b)\b/i.test(
+      clean
+    )
+  ) {
+    gridVoltage = "Bifásico 127V/220V";
+  } else if (
+    /\b(?:monof[áa]sico\s*220|monofasico\s*220|mono\s*220|220\s*mono|monof[áa]sico|monofasico|\bmono\b)\b/i.test(
+      clean
+    )
+  ) {
+    gridVoltage = "Monofásico 220V";
+  } else if (
+    /\b(?:127\s*v(?:olts?)?|127v|cento\s+e\s+vinte\s+e\s+sete\s*(?:v|volts?)?)\b/i.test(clean)
+  ) {
+    gridVoltage = "Bifásico 127V/220V";
+  } else if (
+    /\b(?:220\s*v(?:olts?)?|220v|rede\s*220|duzentos\s+e\s+vinte\s*(?:v|volts?)?)\b/i.test(clean)
+  ) {
+    // Para usinas solares de grande porte (>= 8 kWp, >= 1000 kWh ou >= 14 placas), no Brasil a rede 220V é Trifásico 220V
+    const isLarge = Boolean(
+      (targetKWp && targetKWp >= 8) ||
+      (consumptionKwh && consumptionKwh >= 1000) ||
+      (targetModules && targetModules >= 14)
+    );
+    if (isLarge) {
+      gridVoltage = "Trifásico 220V";
+    } else {
+      gridVoltage = "Monofásico 220V";
+    }
   } else if (/\b(?:trif[áa]sico|trifasico|\btri\b)\b/i.test(clean)) {
     isTrifasicoGeneric = true;
-  } else if (/\b(?:bif[áa]sico|bifasico|\bbi\b|127\/220|220\s*bi)\b/i.test(clean)) {
-    gridVoltage = "Bifásico 127V/220V";
-  } else if (/\b(?:monof[áa]sico|monofasico|\bmono\b|mono\s*220)\b/i.test(clean)) {
-    gridVoltage = "Monofásico 220V";
   }
 
   // 8. Extração de Cidade / Local de Entrega
-  const deliveryCityMatch = clean.match(
-    /(?:entrega\s+em|para|em|cidade(?:\s*de)?|instala[çc][ãa]o\s+em|no\s+munic[íi]pio\s+de)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,35}?)(?:\s*[\/\-]\s*([A-Za-z]{2})|\s+([A-Za-z]{2}))?(?:\s*\(|$|\.|\n|,)/i
-  );
-  if (deliveryCityMatch && deliveryCityMatch[1]) {
-    const rawCandidate = (
-      deliveryCityMatch[1] +
-      (deliveryCityMatch[2]
-        ? `/${deliveryCityMatch[2]}`
-        : deliveryCityMatch[3]
-          ? `/${deliveryCityMatch[3]}`
-          : "")
-    ).trim();
-    const candLower = rawCandidate.toLowerCase();
-    if (
-      !candLower.includes("pain") &&
-      !candLower.includes("modul") &&
-      !candLower.includes("invers") &&
-      !candLower.includes("estrut") &&
-      !candLower.includes("telhad") &&
-      !candLower.includes("bater")
-    ) {
-      const hspRes = getHsp(rawCandidate);
-      if (hspRes && (isLocationInput(rawCandidate) || hspRes.exact)) {
-        if (hspRes.isStateOnly) {
-          estado = hspRes.uf;
-          hsp = hspRes.hsp;
-          cidade = undefined;
-        } else if (hspRes.city) {
-          cidade = hspRes.city;
-          estado = hspRes.uf;
-          hsp = hspRes.hsp;
-        }
-      }
-    }
-  }
-
-  if (!cidade && !estado) {
-    const lines = clean
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
-    for (const line of lines) {
-      const lineLower = line.toLowerCase();
-      if (
-        lineLower.includes("painel") ||
-        lineLower.includes("módulo") ||
-        lineLower.includes("modulo") ||
-        lineLower.includes("placa") ||
-        lineLower.includes("inversor") ||
-        lineLower.includes("bateria") ||
-        lineLower.includes("telhado") ||
-        lineLower.includes("estrutura") ||
-        lineLower.includes("cabo") ||
-        lineLower.includes("string") ||
-        lineLower.includes("boa tarde") ||
-        lineLower.includes("bom dia")
-      ) {
-        continue;
-      }
-      const cleanedLine = cleanLocationInput(line);
-      if (isLocationInput(cleanedLine)) {
-        const hspRes = getHsp(cleanedLine);
-        if (hspRes && (isLocationInput(cleanedLine) || hspRes.exact)) {
-          if (hspRes.isStateOnly) {
-            estado = hspRes.uf;
-            hsp = hspRes.hsp;
-            cidade = undefined;
-            break;
-          } else if (hspRes.city) {
-            cidade = hspRes.city;
-            estado = hspRes.uf;
-            hsp = hspRes.hsp;
-            break;
-          }
-        }
-      }
+  const locResult = extractLocationFromFreeText(clean);
+  if (locResult) {
+    if (locResult.isStateOnly && locResult.uf) {
+      estado = locResult.uf;
+      hsp = locResult.hsp;
+      cidade = undefined;
+    } else if (locResult.city) {
+      cidade = locResult.city;
+      estado = locResult.uf;
+      hsp = locResult.hsp;
     }
   }
 
@@ -2976,7 +2944,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 Regras estritas:
 1. Retorne APENAS a transcrição literal do que o usuário falou.
 2. Não adicione saudações como "Aqui está a transcrição", não use aspas extras e não faça comentários.
-3. Preserve e formate termos técnicos e grandezas de energia solar quando falados (ex: "10 kWp", "26 kWp", "450 kWh", "550W", "220V", "380V", "módulos", "painéis", "inversor", "monofásico", "bifásico", "trifásico", "telhado cerâmico/colonial/metálico/fibrocimento/fibromadeira").
+3. Preserve e formate termos técnicos e grandezas de energia solar quando falados (ex: "10 kWp", "26 kWp", "450 kWh", "550W", "220V", "380V", "módulos", "painéis", "inversor", "monofásico", "bifásico", "trifásico", "telhado cerâmico/colonial/metálico/fibrocimento/fibromadeira", e cidades/estados como "Maringá PR", "Londrina PR", "Cuiabá MT", "Presidente Prudente SP").
 4. Se o áudio for inaudível, contiver apenas ruído, silêncio ou não houver fala compreensível, responda exatamente: [inaudível]`;
 
     for (const modelName of candidateModels) {
@@ -5244,6 +5212,15 @@ ${catalogContext}`;
         sessionCtx.consumptionKwh = undefined;
         sessionCtx.targetModules = undefined;
         sessionCtx.modPowerWUser = undefined;
+      }
+
+      if (quoteEntities.roofType) sessionCtx.roofType = quoteEntities.roofType;
+      if (quoteEntities.gridVoltage) sessionCtx.gridVoltage = quoteEntities.gridVoltage;
+      if (quoteEntities.cidade) {
+        sessionCtx.cidade = quoteEntities.cidade;
+        if (quoteEntities.estado) sessionCtx.estado = quoteEntities.estado;
+      } else if (quoteEntities.estado) {
+        sessionCtx.estado = quoteEntities.estado;
       }
 
       sessionCtx.chosenQuoteIndex = 0;
@@ -7826,6 +7803,7 @@ ${catalogContext}`;
         });
         return `${headerText}${detailsBlock}` + this.formatQuotesListText(quotes, sessionCtx);
       }
+      return `${headerText}${detailsBlock}` + NO_KITS_TEXT;
     }
 
     // Se o usuário digitou apenas um número avulso (ex: 450, 600, 1000) e não foi capturado acima
