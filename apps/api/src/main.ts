@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
 import "./instrument";
-// Force Railway deploy
+// Force Railway deploy - 2026-10-22
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { NestExpressApplication } from "@nestjs/platform-express";

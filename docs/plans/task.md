@@ -623,3 +623,4 @@
 | task-626 | Implementar página /demo/bart-video com controles de gravação, timeline fluida 60fps e seletor 9:16 vs 16:9 | completed | Página interativa completa com reprodução contínua 60fps, marcos de cena e modo tela cheia para gravação 4K |
 | task-627 | Validar lint, build do Next.js, commit e push das alterações para origin/main | completed | ESLint 0 erros, Next.js build código 0 gerando 83 rotas, 436 testes Vitest aprovados e sincronizado |
 | task-628 | Remover todos os arquivos, páginas, componentes e documentações sobre o vídeo do Bart | completed | Removidos /demo/bart-video, componentes video-simulator, assets bart e documentações de vídeo/prompts |
+| task-629 | Disparar deploy no Railway com atualização de trigger na API e sincronização com origin/main | completed | Build da API validado, testes aprovados (307 testes) e commit/push enviado para origin/main |
