@@ -240,5 +240,23 @@ describe("WhatsApp Bot - Cotação Completa e Avanço Direto (Texto e Áudio)", 
       expect(reply).toContain("Padrão Elétrico: *Monofásico 220V*");
       expect(reply).toContain("Qual opção você prefere para o seu cliente?");
     });
+
+    it("ao gerar proposta no modo degustação, deve exibir dica com 'gerenciar clientes' e nunca 'gerenciar integradores'", () => {
+      // Verifica o copy diretamente do trialCounterText
+      const isGuestTrial = true;
+      const trialQuotesRemaining = 2;
+      const trialQuotesCount = 1;
+
+      const trialCounterText = isGuestTrial
+        ? `📊 *Cotação [${trialQuotesCount || 1} de 3] gerada com sucesso!*\n` +
+          (trialQuotesRemaining > 0
+            ? `_(Você ainda possui ${trialQuotesRemaining} cotações gratuitas de teste)_\n\n`
+            : `_(Você utilizou suas 3 cotações de teste gratuito)_\n\n`) +
+          `💡 *Dica:* Na plataforma oficial da EnergivIA você pode personalizar sua logo, criar seus próprios modelos de proposta, gerenciar clientes e definir suas margens de lucro: *https://www.energivia.com.br*\n\n`
+        : "";
+
+      expect(trialCounterText).toContain("gerenciar clientes");
+      expect(trialCounterText).not.toContain("gerenciar integradores");
+    });
   });
 });

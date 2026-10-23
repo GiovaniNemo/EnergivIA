@@ -6347,7 +6347,7 @@ ${catalogContext}`;
           (trialQuotesRemaining > 0
             ? `_(Você ainda possui ${trialQuotesRemaining} cotaç${trialQuotesRemaining === 1 ? "ão gratuita" : "ões gratuitas"} de teste)_\n\n`
             : `_(Você utilizou suas 3 cotações de teste gratuito)_\n\n`) +
-          `💡 *Dica:* Na plataforma oficial da EnergivIA você pode personalizar sua logo, criar seus próprios modelos de proposta, gerenciar integradores e definir suas margens de lucro: *https://www.energivia.com.br*\n\n`
+          `💡 *Dica:* Na plataforma oficial da EnergivIA você pode personalizar sua logo, criar seus próprios modelos de proposta, gerenciar clientes e definir suas margens de lucro: *https://www.energivia.com.br*\n\n`
         : "";
 
       const integratorSummaryMsg =
