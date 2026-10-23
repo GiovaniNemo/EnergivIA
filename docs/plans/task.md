@@ -679,3 +679,4 @@
 | task-683 | Validação Completa da Suíte de Testes, Compilação e Commit/Push | completed | 66 arquivos de teste e 482 testes Vitest aprovados; build NestJS validado e alterações sincronizadas com origin/main |
 | task-684 | Atualizar Plus como Mais Escolhido e novos valores nos cards (R$ 97, R$ 197, R$ 397) | completed | Badge Mais Escolhido no Plus, ancoragens 137/297/797 e descontos Economize R$ 100 / R$ 400 preservando cupons e assinaturas ativas |
 | task-685 | Validação de build, testes automatizados e commit/push | completed | Build @energivia/api e @energivia/web aprovados, 482 testes Vitest passando |
+| task-686 | Otimização do Dockerfile e .dockerignore para acelerar build no Railway de 25min para ~4min | completed | Adicionado .dockerignore, PUPPETEER_SKIP_CHROMIUM_DOWNLOAD no builder e remoção de apps web/worker/mobile antes do runtime |

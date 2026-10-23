@@ -1,0 +1,15 @@
+.git
+.github
+.vscode
+.agents
+docs
+tests
+**/*.spec.ts
+**/*.test.ts
+**/*.md
+.turbo
+apps/web/.next
+apps/web/node_modules
+apps/mobile
+apps/video
+apps/worker
