@@ -655,3 +655,5 @@
 | task-659 | Implementar migração Prisma 20261023131500_add_user_phone_and_onboarding e aplicar no Neon DB | completed | Migration criada e aplicada com sucesso com prisma migrate deploy no Neon DB |
 | task-660 | Validar testes automatizados e integridade da tabela User | completed | 41 arquivos de teste e 333 testes Vitest aprovados com 100% de sucesso |
 | task-661 | Commit e push das alterações para origin/main | completed | Migração 20261023131500 sincronizada com o repositório remoto |
+| task-662 | Remover comportamento sticky do header do Catálogo Master em AdminLayout para não sobrepor o conteúdo durante o scroll | completed | Removido sticky top-0 z-30 de header em apps/web/src/app/(authenticated)/admin/layout.tsx |
+| task-663 | Validar lint, build e commit/push para origin/main | completed | Header rola naturalmente com o topo da página sem descer ou sobrepor formulários |

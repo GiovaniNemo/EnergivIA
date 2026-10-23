@@ -101,8 +101,8 @@ export default function AdminLayout({ children }: { children: ReactNode }): JSX.
   return (
     <AdminThemeProvider>
       <div className="min-h-screen bg-[var(--color-background)] pb-12 text-[var(--color-text)]">
-        {/* Header Dark Glass */}
-        <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-background)]/85 backdrop-blur-xl">
+        {/* Header Catálogo Master */}
+        <header className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
