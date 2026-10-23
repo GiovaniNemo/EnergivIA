@@ -611,9 +611,12 @@ export interface ExtractedIntegratorQuote {
   cidade?: string;
   estado?: string;
   hsp?: number;
+  inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
   inverterDescription?: string;
   inverterPowerKw?: number;
   hasBattery?: boolean;
+  batteryKwh?: number;
+  batteryQty?: number;
   isQuoteRequest: boolean;
 }
 

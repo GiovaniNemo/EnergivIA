@@ -8,6 +8,7 @@ export type WhatsappBotStep =
   | "AWAITING_CITY" // Aguardando município e estado (ex: "Maringá/PR")
   | "AWAITING_CITY_STATE" // Aguardando seleção de estado para município homônimo (ex: Belém -> PA, AL, PB)
   | "AWAITING_GRID_TYPE" // Aguardando padrão da rede elétrica (Mono, Bi, Tri)
+  | "AWAITING_BATTERY_STORAGE" // Aguardando capacidade/quantidade de baterias para sistema híbrido
   | "AWAITING_ROOF_TYPE" // Aguardando estrutura do telhado (Cerâmica, Fibro, etc.)
   | "AWAITING_KIT_SELECTION" // Aguardando escolha do kit (1-Standard, 2-Elite, 3-Premium)
   | "AWAITING_PRICE_CONFIRMATION" // Confirmar preço padrão ou digitar outro
@@ -29,6 +30,11 @@ export interface WhatsappSessionData {
   moduleCount?: number;
   gridType?: string;
   roofType?: string;
+  inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
+  batteryKwh?: number;
+  batteryQty?: number;
+  batteryVoltageType?: "LV" | "HV";
+  hasBms?: boolean;
   quotesList?: Array<{
     distributorName: string;
     kwp: number;
@@ -70,6 +76,7 @@ export const STEP_PREVIOUS_MAP: Partial<Record<WhatsappBotStep, WhatsappBotStep>
   AWAITING_PRICE_CONFIRMATION: "AWAITING_KIT_SELECTION",
   AWAITING_KIT_SELECTION: "AWAITING_ROOF_TYPE",
   AWAITING_ROOF_TYPE: "AWAITING_GRID_TYPE",
+  AWAITING_BATTERY_STORAGE: "AWAITING_GRID_TYPE",
   AWAITING_GRID_TYPE: "AWAITING_CITY",
   AWAITING_CITY_STATE: "AWAITING_CITY",
 };
