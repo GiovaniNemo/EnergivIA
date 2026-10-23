@@ -210,6 +210,14 @@ export const MENU_ITEMS: MenuItem[] = [
     requiresRole: "platform",
     tooltip: "Gestão de whitelist com inclusão por e-mail e revogação unificada de Web e WhatsApp",
   },
+  {
+    label: "Integradores & Ativação",
+    icon: Users,
+    path: "/admin/integradores",
+    section: "admin",
+    requiresRole: "platform",
+    tooltip: "Monitoramento de desistências de cadastro, integradores inativos e ativos",
+  },
 
   {
     label: "Fila de Financiamentos",
