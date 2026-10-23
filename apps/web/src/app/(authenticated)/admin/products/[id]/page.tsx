@@ -179,16 +179,6 @@ export default function EditProductPage(): JSX.Element {
             >
               Voltar
             </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              startIcon={<SaveIcon />}
-              onClick={methods.handleSubmit(onSubmit)}
-              disabled={updateMutation.isPending}
-              sx={{ textTransform: "none", fontWeight: 600, px: 3 }}
-            >
-              {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
-            </Button>
           </Box>
         </Box>
 
@@ -199,7 +189,6 @@ export default function EditProductPage(): JSX.Element {
               brands={brands}
               categoryName={effectiveCategoryName}
               productId={id}
-              isSaving={updateMutation.isPending}
             />
           </form>
         </Paper>
@@ -236,12 +225,13 @@ export default function EditProductPage(): JSX.Element {
             type="submit"
             variant="contained"
             color="primary"
+            size="large"
             startIcon={<SaveIcon />}
             onClick={methods.handleSubmit(onSubmit)}
             disabled={updateMutation.isPending}
-            sx={{ textTransform: "none", fontWeight: 700, px: 4, py: 1 }}
+            sx={{ textTransform: "none", fontWeight: 700, px: 4, py: 1.2 }}
           >
-            {updateMutation.isPending ? "Salvando Alterações..." : "Salvar Alterações do Produto"}
+            {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
           </Button>
         </Box>
       </Box>

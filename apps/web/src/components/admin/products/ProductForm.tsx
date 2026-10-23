@@ -32,7 +32,6 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import SaveIcon from "@mui/icons-material/Save";
 import { SpecsModuleForm } from "./SpecsModuleForm";
 import { SpecsInverterForm } from "./SpecsInverterForm";
 import { SpecsMicroInverterForm } from "./SpecsMicroInverterForm";
@@ -152,7 +151,6 @@ interface ProductFormProps {
   categoryName: CategoryName | null;
   productId?: string;
   defaultTab?: number;
-  isSaving?: boolean;
 }
 
 export function ProductForm({
@@ -161,18 +159,16 @@ export function ProductForm({
   categoryName,
   productId,
   defaultTab = 0,
-  isSaving,
 }: ProductFormProps): JSX.Element {
   const [tabIndex, setTabIndex] = useState(defaultTab);
   const {
     control,
     setValue,
     getValues,
-    formState: { errors, submitCount, isSubmitting },
+    formState: { errors, submitCount },
   } = useFormContext();
   const SpecForm = categoryName ? categoryToSpecForm[categoryName] : null;
   const hasErrors = submitCount > 0 && Object.keys(errors).length > 0;
-  const isSavingEffective = isSaving ?? isSubmitting;
 
   const productName = useWatch({ name: "name", control });
   const datasheetUrl = useWatch({ name: "datasheet_url", control });
@@ -474,41 +470,17 @@ export function ProductForm({
             )}
           />
 
-          {/* Bottom Action Bar for Tab 0 */}
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            flexWrap="wrap"
-            gap={2}
-            sx={{ pt: 2, borderTop: 1, borderColor: "divider" }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              {hasSpecs
-                ? "✓ Ficha técnica já possui especificações cadastradas."
-                : "Defina os parâmetros técnicos na aba Ficha Técnica após salvar as informações gerais."}
-            </Typography>
-            <Box display="flex" gap={1.5}>
-              {categoryName && (
-                <Button
-                  variant="outlined"
-                  onClick={() => setTabIndex(1)}
-                  sx={{ textTransform: "none", fontWeight: 600 }}
-                >
-                  Avançar para Ficha Técnica →
-                </Button>
-              )}
+          {categoryName && (
+            <Box display="flex" justifyContent="flex-end" sx={{ pt: 1 }}>
               <Button
-                type="submit"
-                variant="contained"
-                startIcon={<SaveIcon />}
-                disabled={Boolean(isSavingEffective)}
-                sx={{ textTransform: "none", fontWeight: 700, px: 3 }}
+                variant="outlined"
+                onClick={() => setTabIndex(1)}
+                sx={{ textTransform: "none", fontWeight: 600 }}
               >
-                {isSavingEffective ? "Salvando..." : "Salvar Alterações"}
+                Avançar para Ficha Técnica →
               </Button>
             </Box>
-          </Box>
+          )}
         </Box>
       )}
 
@@ -610,60 +582,15 @@ export function ProductForm({
             </Box>
           </Box>
 
-          {/* Dedicated Bottom Action Bar for Tab 1 with Save Button */}
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2.5,
-              borderRadius: 2,
-              bgcolor: "background.paper",
-              border: "1px solid",
-              borderColor: "primary.main",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 2,
-              boxShadow: 2,
-              mt: 1,
-            }}
-          >
-            <Box display="flex" alignItems="center" gap={1}>
-              <Button
-                variant="outlined"
-                onClick={() => setTabIndex(0)}
-                sx={{ textTransform: "none" }}
-              >
-                ← Informações Gerais
-              </Button>
-              <Button
-                variant="text"
-                startIcon={<AutoAwesomeIcon />}
-                onClick={() => handleLookupHomologation(true)}
-                disabled={isLookingUp}
-                sx={{ textTransform: "none" }}
-              >
-                {isLookingUp ? "Consultando..." : "Reconsultar Catálogo"}
-              </Button>
-            </Box>
+          <Box display="flex" justifyContent="flex-start" sx={{ pt: 1 }}>
             <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              size="large"
-              startIcon={<SaveIcon />}
-              disabled={Boolean(isSavingEffective)}
-              sx={{
-                textTransform: "none",
-                fontWeight: 700,
-                px: 4,
-                py: 1.2,
-                fontSize: "1rem",
-              }}
+              variant="outlined"
+              onClick={() => setTabIndex(0)}
+              sx={{ textTransform: "none" }}
             >
-              {isSavingEffective ? "Salvando alterações..." : "Salvar Produto & Especificações"}
+              ← Informações Gerais
             </Button>
-          </Paper>
+          </Box>
         </Box>
       )}
 

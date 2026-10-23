@@ -661,3 +661,5 @@
 | task-665 | Implementar auto-preenchimento inteligente em ProductForm (homologação oficial, inferência por nome e auto-leitura de datasheet) | completed | Preenchimento automático com IA/catálogo oficial homologado, inferência de estruturas e auto-extração de datasheet PDF |
 | task-666 | Adicionar barra de ação com botão Salvar no rodapé do formulário e barra flutuante em admin/products | completed | Botão Salvar visível ao final do formulário nas abas e barra de ação flutuante permanente no rodapé da página |
 | task-667 | Validar lint, testes unitários, build e realizar commit/push para origin/main | completed | ESLint aprovado com 0 erros, 333 testes Vitest aprovados e alterações sincronizadas com origin/main |
+| task-668 | Deduplicar botões de salvar: remover botões redundantes do cabeçalho superior e do interior das abas, mantendo barra inferior única | completed | Removido + Criar Produto do topo e botões internos de abas; mantido único botão Salvar Produto / Salvar Alterações na barra flutuante |
+| task-669 | Validar lint, testar e sincronizar alterações com origin/main | completed | ESLint validado com 0 erros e enviado para origin/main |

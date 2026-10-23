@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Box, Button, Paper, Typography, Breadcrumbs, Link as MuiLink } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import AddIcon from "@mui/icons-material/Add";
+import SaveIcon from "@mui/icons-material/Save";
 import { ProductForm } from "@/components/admin/products/ProductForm";
 import { buildProductSchema, categoryNames, type CategoryName } from "@/lib/admin/schemas";
 import { fetchBrands, fetchCategories, createProduct } from "@/lib/admin-api";
@@ -147,16 +147,6 @@ export default function NewProductPage(): JSX.Element {
             >
               Voltar
             </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={methods.handleSubmit(onSubmit)}
-              disabled={createMutation.isPending}
-              sx={{ textTransform: "none", fontWeight: 600, px: 3 }}
-            >
-              {createMutation.isPending ? "Salvando..." : "Criar Produto"}
-            </Button>
           </Box>
         </Box>
 
@@ -166,7 +156,6 @@ export default function NewProductPage(): JSX.Element {
               categories={categories}
               brands={brands}
               categoryName={effectiveCategoryName}
-              isSaving={createMutation.isPending}
             />
           </form>
         </Paper>
@@ -203,12 +192,13 @@ export default function NewProductPage(): JSX.Element {
             type="submit"
             variant="contained"
             color="primary"
-            startIcon={<AddIcon />}
+            size="large"
+            startIcon={<SaveIcon />}
             onClick={methods.handleSubmit(onSubmit)}
             disabled={createMutation.isPending}
-            sx={{ textTransform: "none", fontWeight: 700, px: 4, py: 1 }}
+            sx={{ textTransform: "none", fontWeight: 700, px: 4, py: 1.2 }}
           >
-            {createMutation.isPending ? "Criando Produto..." : "Criar e Salvar Produto"}
+            {createMutation.isPending ? "Salvando..." : "Salvar Produto"}
           </Button>
         </Box>
       </Box>

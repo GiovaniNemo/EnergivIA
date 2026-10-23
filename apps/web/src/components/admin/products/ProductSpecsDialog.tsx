@@ -534,7 +534,6 @@ export function ProductSpecsDialog({
                 categoryName={effectiveCategoryName || (product?.category?.name as CategoryName)}
                 productId={productId ?? undefined}
                 defaultTab={defaultTab}
-                isSaving={updateMutation.isPending}
               />
             </form>
           </FormProvider>
