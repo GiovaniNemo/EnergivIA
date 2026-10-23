@@ -637,11 +637,31 @@ export function parseIntegratorQuoteEntities(rawText: string): ExtractedIntegrat
   let cidade: string | undefined;
   let estado: string | undefined;
   let hsp: number | undefined;
+  let inverterType: "string" | "microinverter" | "hybrid" | "off_grid" | undefined;
   let inverterDescription: string | undefined;
   let inverterPowerKw: number | undefined;
   let hasBattery = false;
+  let batteryKwh: number | undefined;
+  let batteryQty: number | undefined;
 
-  // 1. Extração de Inversor
+  // 1. Extração de Inversor e Tecnologia (Microinversor / Híbrido)
+  const isMicro =
+    /\b(?:microinversor(?:es)?|micro)\b/i.test(clean) ||
+    /\b(?:hoymiles|apsystems|tsun|delsolar\s*micro)\b/i.test(clean);
+
+  const isHybrid =
+    /\b(?:h[íi]brido(?:s)?|hybrid|off[- ]?grid)\b/i.test(clean) ||
+    /\bdeye\s+h[íi]brido\b/i.test(clean);
+
+  const isExplicitString =
+    /\b(?:inversor\s+string|string\s+inversor|inversor\s+convencional)\b/i.test(clean);
+
+  if (isMicro && !isExplicitString) {
+    inverterType = "microinverter";
+  } else if (isHybrid && !isExplicitString) {
+    inverterType = "hybrid";
+  }
+
   const invPowerMatch = clean.match(
     /(?:inversor|h[íi]brido|deye|growatt|solis|sungrow|huawei|saj)\s*(?:h[íi]brido\s*)?(\d+(?:[.,]\d+)?)\s*(?:k|kw)?\b/i
   );
@@ -658,9 +678,48 @@ export function parseIntegratorQuoteEntities(rawText: string): ExtractedIntegrat
     inverterDescription = invLineMatch[0].trim();
   }
 
-  // 2. Extração de Bateria
-  if (/(?:0?\d+\s+)?bateria\b/i.test(clean)) {
-    hasBattery = true;
+  // 2. Extração de Bateria (kWh ou quantidade de unidades)
+  const isNoBattery =
+    /\b(?:sem|zero|nenhuma|0)\s*(?:baterias?|m[oó]dulos?|packs?|kwh\s*de\s*bateria)\b/i.test(
+      clean
+    ) || /\bapenas\s*(?:o\s*)?inversor\s*(?:h[íi]brido)?\b/i.test(clean);
+
+  if (isNoBattery) {
+    hasBattery = false;
+    batteryQty = 0;
+  } else {
+    // 2.1 Capacidade em kWh (ex: "10.24 kWh de bateria", "5kwh bateria", "bateria de 15 kwh")
+    const batteryKwhMatch =
+      clean.match(/(?:baterias?|armazenamento)[^\d\n]*(\d+(?:[.,]\d+)?)\s*(?:kwh|kw)\b/i) ||
+      clean.match(/(\d+(?:[.,]\d+)?)\s*(?:kwh|kw)\s*(?:de\s+)?(?:baterias?|armazenamento)\b/i);
+    if (batteryKwhMatch && batteryKwhMatch[1]) {
+      const kwh = parseFloat(batteryKwhMatch[1].replace(",", "."));
+      if (kwh > 0 && kwh <= 2000) {
+        batteryKwh = kwh;
+        hasBattery = true;
+      }
+    }
+
+    // 2.2 Quantidade de unidades de bateria (ex: "2 baterias", "4 módulos de bateria", "1 bateria de lítio")
+    const batteryQtyMatch =
+      clean.match(/(\d+)\s*(?:baterias?|m[oó]dulos?\s*de\s*bateria|packs?\s*de\s*bateria)\b/i) ||
+      clean.match(/(\d+)\s*(?:unidades?|un|packs?)\s*(?:de\s+)?baterias?\b/i);
+    if (batteryQtyMatch && batteryQtyMatch[1]) {
+      const qty = parseInt(batteryQtyMatch[1], 10);
+      if (qty > 0 && qty <= 100) {
+        batteryQty = qty;
+        hasBattery = true;
+      }
+    }
+
+    if (!hasBattery && /(?:0?\d+\s+)?bateria\b/i.test(clean)) {
+      hasBattery = true;
+    }
+  }
+
+  // Se o usuário solicitou baterias, infere sistema híbrido se não foi explicitado
+  if (hasBattery && !inverterType) {
+    inverterType = "hybrid";
   }
 
   // 3. Extração de Módulos / Painéis / Placas e seus Watts
@@ -843,9 +902,12 @@ export function parseIntegratorQuoteEntities(rawText: string): ExtractedIntegrat
     cidade,
     estado,
     hsp,
+    inverterType,
     inverterDescription,
     inverterPowerKw,
     hasBattery,
+    batteryKwh,
+    batteryQty,
     isQuoteRequest,
   };
 }
