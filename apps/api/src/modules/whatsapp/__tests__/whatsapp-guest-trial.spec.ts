@@ -580,11 +580,30 @@ describe("WhatsApp Bot - Formatação de Mensagens e Degustação Trial", () => 
         contactName: "Carlos",
       });
 
-      // O bot NÃO DEVE perguntar o telhado de novo (Qual a estrutura do telhado?), deve ir DIRETO pros kits!
+      // O bot NÃO DEVE perguntar o telhado de novo (Qual a estrutura do telhado?), mas deve perguntar a tecnologia do inversor!
       expect(replyGrid).not.toContain("Qual a estrutura do telhado?");
-      expect(replyGrid).toContain("Standard");
-      expect(replyGrid).toContain("Elite");
+      expect(replyGrid).toContain("Qual tecnologia de inversor você prefere");
       expect(replyGrid).toContain("Metálico");
+
+      conversation.messages.push({
+        role: "user",
+        content: "2",
+      });
+      conversation.messages.push({
+        role: "assistant",
+        content: replyGrid,
+      });
+
+      // Integrador escolhe a tecnologia: "1" (String)
+      const replyTech = await (botService as any).generateBotResponse({
+        conversation,
+        incomingText: "1",
+        contactName: "Carlos",
+      });
+
+      expect(replyTech).toContain("Standard");
+      expect(replyTech).toContain("Elite");
+      expect(replyTech).toContain("Metálico");
     });
 
     it("deve processar mensagem de integrador com saudação no início sem cair no menu de boas-vindas", async () => {

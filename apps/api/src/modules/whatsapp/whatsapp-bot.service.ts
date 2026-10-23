@@ -3697,6 +3697,14 @@ Regras estritas:
 
   private readonly GRID_OPTIONS_TEXT = DEFAULT_GRID_OPTIONS_TEXT;
 
+  public readonly INVERTER_TYPE_OPTIONS_TEXT =
+    `*_Qual tecnologia de inversor você prefere para esta cotação?_* ⚡\n\n` +
+    `> 1️⃣ *Inversor Tradicional (String)* (Mais comum para telhados convencionais)\n` +
+    `> 2️⃣ *Microinversor* (Ideal para múltiplas águas ou sombreamentos)\n` +
+    `> 3️⃣ *Inversor Híbrido* (Com suporte a baterias para backup/armazenamento)\n` +
+    `> 0️⃣ *Voltar / Corrigir estrutura*\n\n` +
+    `_(Responda com o número da opção desejada)_`;
+
   public readonly BATTERY_STORAGE_OPTIONS_TEXT =
     `*_Qual o armazenamento de bateria desejado para este sistema híbrido?_* 🔋\n\n` +
     `Você pode responder informando a capacidade em *kWh*, a *quantidade de baterias* ou indicar *sem bateria*:\n\n` +
@@ -3960,8 +3968,8 @@ Regras estritas:
 
     quoteText += `Qual opção você prefere para o seu cliente?\n`;
     quoteText += `_(Responda com o número ou nome da opção: 1 Standard, 2 Elite ou 3 Premium. Na sequência você define o preço por kWp)_\n`;
-    quoteText += `> 💡 Quer cotar com outra tecnologia? Envie *micro*, *híbrido* ou *string* para recalcular esta potência.\n`;
-    quoteText += `> 0️⃣ *Voltar / Alterar estrutura*\n\n`;
+    quoteText += `> 💡 *Quer trocar de tecnologia?* Envie *micro*, *híbrido* ou *string* para recalcular esta potência.\n`;
+    quoteText += `> 0️⃣ *Voltar / Escolher tecnologia*\n\n`;
     quoteText += `Equipe *_EnergivIA._*`;
     return quoteText;
   }
@@ -4012,6 +4020,7 @@ Regras estritas:
       `> 2️⃣ *Simular por consumo mensal* (ex: \`450 kWh\`)\n` +
       `> 3️⃣ *Simular por potência de pico* (ex: \`5 kWp\`)\n` +
       `> 4️⃣ *Simular por quantidade de placas* (ex: \`10 módulos\`)\n\n` +
+      `> 💡 *Tecnologias Suportadas:* Inversor Tradicional (String), Microinversor e Inversor Híbrido (com baterias).\n\n` +
       `_(Responda com o número da opção ou envie a conta de luz diretamente)_\n\n` +
       `Equipe *_EnergivIA._*`
     );
@@ -4029,6 +4038,7 @@ Regras estritas:
       `> 2️⃣ *Simular por consumo mensal* (ex: \`450 kWh\`)\n` +
       `> 3️⃣ *Simular por potência de pico* (ex: \`5 kWp\`)\n` +
       `> 4️⃣ *Simular por quantidade de placas* (ex: \`10 módulos\`)\n\n` +
+      `> 💡 *Tecnologias Suportadas:* Inversor Tradicional (String), Microinversor e Inversor Híbrido (com baterias).\n\n` +
       `_(Responda com o número da opção ou envie a conta de luz diretamente)_\n\n` +
       `Equipe *_EnergivIA._*`
     );
@@ -4665,7 +4675,30 @@ ${catalogContext}`;
             content.match(/>\s*🏠\s*Estrutura:\s*\*([^*]+)\*/i) ||
             content.match(/>\s*Estrutura:\s*\*([^*]+)\*/i);
           if (roofM && roofM[1]) {
-            roofType = roofM[1].replace(/\*/g, "").trim();
+            const rawRoof = roofM[1].replace(/[*_`]/g, "").trim();
+            const validRoofList = [
+              "Cerâmica (Colonial)",
+              "Fibrocimento",
+              "Metálico",
+              "Solo",
+              "Laje",
+              "Fibrometal",
+              "Sem estrutura",
+            ];
+            const matchedValid = validRoofList.find(
+              (vr) =>
+                rawRoof.toLowerCase() === vr.toLowerCase() ||
+                rawRoof.toLowerCase().includes(vr.toLowerCase()) ||
+                vr.toLowerCase().includes(rawRoof.toLowerCase())
+            );
+            if (
+              matchedValid &&
+              rawRoof.length >= 4 &&
+              !rawRoof.includes("voltar") &&
+              !rawRoof.includes("alterar")
+            ) {
+              roofType = matchedValid;
+            }
           }
 
           const bothM = content.match(/Cliente \*([^*]+)\* e WhatsApp \*([^*]+)\*/i);
@@ -6090,6 +6123,16 @@ ${catalogContext}`;
         currentStep === "AWAITING_KIT_SELECTION" ||
         lastBotMsg.includes("Qual opção você prefere para o seu cliente")
       ) {
+        await setStep("AWAITING_INVERTER_TYPE");
+        return (
+          `Certo! Vamos escolher a tecnologia do inversor. ⚡\n\n` + this.INVERTER_TYPE_OPTIONS_TEXT
+        );
+      }
+
+      if (
+        currentStep === "AWAITING_INVERTER_TYPE" ||
+        lastBotMsg.includes("Qual tecnologia de inversor você prefere")
+      ) {
         await setStep("AWAITING_ROOF_TYPE");
         return `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
       }
@@ -6925,6 +6968,19 @@ ${catalogContext}`;
       lastBotMsg.includes("armazenamento de bateria desejado") ||
       lastBotMsg.includes("Qual o armazenamento de bateria")
     ) {
+      if (
+        lower === "voltar" ||
+        lower === "retornar" ||
+        lower === "mudar inversor" ||
+        lower === "trocar tecnologia" ||
+        lower === "trocar inversor"
+      ) {
+        await setStep("AWAITING_INVERTER_TYPE");
+        return (
+          `Certo! Vamos escolher a tecnologia do inversor. ⚡\n\n` + this.INVERTER_TYPE_OPTIONS_TEXT
+        );
+      }
+
       // 1. Verificar se o usuário optou por sem bateria
       const isSemBateria =
         lower === "0" ||
@@ -7079,6 +7135,91 @@ ${catalogContext}`;
       );
     }
 
+    // ESTADO D.2: O Bot perguntou a tecnologia de inversor (1-String, 2-Micro, 3-Híbrido)
+    if (
+      currentStep === "AWAITING_INVERTER_TYPE" ||
+      lastBotMsg.includes("Qual tecnologia de inversor você prefere")
+    ) {
+      if (isBackCommand(incomingText)) {
+        await setStep("AWAITING_ROOF_TYPE");
+        return `Certo! Vamos alterar a estrutura do telhado. 🏠\n\n` + this.ROOF_OPTIONS_TEXT;
+      }
+
+      // Opção 1: Inversor Tradicional (String)
+      const isChoiceString =
+        lower === "1" ||
+        lower === "1." ||
+        lower.includes("1️⃣") ||
+        lower === "string" ||
+        lower === "tradicional" ||
+        lower === "inversor tradicional" ||
+        lower.includes("string") ||
+        lower.includes("tradicional");
+
+      // Opção 2: Microinversor
+      const isChoiceMicro =
+        lower === "2" ||
+        lower === "2." ||
+        lower.includes("2️⃣") ||
+        lower === "micro" ||
+        lower === "microinversor" ||
+        lower === "microinversores" ||
+        lower.includes("micro");
+
+      // Opção 3: Inversor Híbrido
+      const isChoiceHybrid =
+        lower === "3" ||
+        lower === "3." ||
+        lower.includes("3️⃣") ||
+        lower === "hibrido" ||
+        lower === "híbrido" ||
+        lower === "inversor hibrido" ||
+        lower === "inversor híbrido" ||
+        lower.includes("hibrid") ||
+        lower.includes("híbrid");
+
+      if (isChoiceString) {
+        sessionCtx.inverterType = "string";
+        const quotes = await kitsFor({ inverterType: "string" });
+        if (quotes.length === 0) return NO_KITS_TEXT;
+        await setStep("AWAITING_KIT_SELECTION", { inverterType: "string" });
+        return (
+          `*_Tecnologia Selecionada:_* \`Inversor Tradicional (String)\` ⚡\n` +
+          `> 🏠 Estrutura: *${sessionCtx.roofType || "Estrutura Padrão"}*\n\n` +
+          this.formatQuotesListText(quotes, sessionCtx)
+        );
+      }
+
+      if (isChoiceMicro) {
+        sessionCtx.inverterType = "microinverter";
+        const quotes = await kitsFor({ inverterType: "microinverter" });
+        if (quotes.length === 0) return NO_KITS_TEXT;
+        await setStep("AWAITING_KIT_SELECTION", { inverterType: "microinverter" });
+        return (
+          `*_Tecnologia Selecionada:_* \`Microinversor\` ⚡\n` +
+          `> 🏠 Estrutura: *${sessionCtx.roofType || "Estrutura Padrão"}*\n\n` +
+          this.formatQuotesListText(quotes, sessionCtx)
+        );
+      }
+
+      if (isChoiceHybrid) {
+        sessionCtx.inverterType = "hybrid";
+        await setStep("AWAITING_BATTERY_STORAGE", { inverterType: "hybrid" });
+        return (
+          `*_Tecnologia Selecionada:_* \`Inversor Híbrido\` ⚡\n\n` +
+          this.BATTERY_STORAGE_OPTIONS_TEXT
+        );
+      }
+
+      const correctionResult = await handleDimensioningCorrection();
+      if (correctionResult) return correctionResult;
+
+      return (
+        `Opção não reconhecida. Por favor, responda com o número da opção desejada (1, 2 ou 3) ou envie 0️⃣ para voltar:\n\n` +
+        this.INVERTER_TYPE_OPTIONS_TEXT
+      );
+    }
+
     // ESTADO E: O Bot perguntou a estrutura do telhado OU o usuário respondeu a estrutura
     const roofMatch = [
       { key: "1", name: "Cerâmica (Colonial)" },
@@ -7119,14 +7260,37 @@ ${catalogContext}`;
       if (roofMatch) {
         const selectedRoof = roofMatch.name;
         sessionCtx.roofType = selectedRoof;
-        const quotes = await kitsFor({ roofType: selectedRoof });
-        if (quotes.length === 0) return NO_KITS_TEXT;
 
-        await setStep("AWAITING_KIT_SELECTION", { roofType: selectedRoof });
+        // Se o integrador já especificou a tecnologia previamente:
+        if (sessionCtx.inverterType) {
+          if (
+            sessionCtx.inverterType === "hybrid" &&
+            !sessionCtx.hasBattery &&
+            sessionCtx.batteryKwh === undefined &&
+            sessionCtx.batteryQty === undefined
+          ) {
+            await setStep("AWAITING_BATTERY_STORAGE", { roofType: selectedRoof });
+            return (
+              `*_Estrutura Selecionada:_* \`${selectedRoof}\` 🏠\n\n` +
+              this.BATTERY_STORAGE_OPTIONS_TEXT
+            );
+          }
 
+          const quotes = await kitsFor({ roofType: selectedRoof });
+          if (quotes.length === 0) return NO_KITS_TEXT;
+
+          await setStep("AWAITING_KIT_SELECTION", { roofType: selectedRoof });
+
+          return (
+            `*_Estrutura Selecionada:_* \`${selectedRoof}\` 🏠\n\n` +
+            this.formatQuotesListText(quotes, sessionCtx)
+          );
+        }
+
+        // Caso contrário, pergunta a tecnologia desejada de forma evidente!
+        await setStep("AWAITING_INVERTER_TYPE", { roofType: selectedRoof });
         return (
-          `*_Estrutura Selecionada:_* \`${selectedRoof}\` 🏠\n\n` +
-          this.formatQuotesListText(quotes, sessionCtx)
+          `*_Estrutura Selecionada:_* \`${selectedRoof}\` 🏠\n\n` + this.INVERTER_TYPE_OPTIONS_TEXT
         );
       }
 
@@ -7465,18 +7629,30 @@ ${catalogContext}`;
         }
 
         if (sessionCtx.roofType) {
-          const quotes = await kitsFor({ roofType: sessionCtx.roofType });
-          if (quotes.length > 0) {
-            await setStep("AWAITING_KIT_SELECTION", {
-              gridType: chosenGrid,
-              roofType: sessionCtx.roofType,
-            });
-            return (
-              `*_Padrão Elétrico Registrado:_* \`${chosenGrid}\` ⚡\n` +
-              `> 🏠 Estrutura: *${sessionCtx.roofType}*\n\n` +
-              this.formatQuotesListText(quotes, sessionCtx)
-            );
+          if (sessionCtx.inverterType) {
+            const quotes = await kitsFor({ roofType: sessionCtx.roofType });
+            if (quotes.length > 0) {
+              await setStep("AWAITING_KIT_SELECTION", {
+                gridType: chosenGrid,
+                roofType: sessionCtx.roofType,
+              });
+              return (
+                `*_Padrão Elétrico Registrado:_* \`${chosenGrid}\` ⚡\n` +
+                `> 🏠 Estrutura: *${sessionCtx.roofType}*\n\n` +
+                this.formatQuotesListText(quotes, sessionCtx)
+              );
+            }
           }
+
+          await setStep("AWAITING_INVERTER_TYPE", {
+            gridType: chosenGrid,
+            roofType: sessionCtx.roofType,
+          });
+          return (
+            `*_Padrão Elétrico Registrado:_* \`${chosenGrid}\` ⚡\n` +
+            `> 🏠 Estrutura: *${sessionCtx.roofType}*\n\n` +
+            this.INVERTER_TYPE_OPTIONS_TEXT
+          );
         }
 
         await setStep("AWAITING_ROOF_TYPE", { gridType: chosenGrid });

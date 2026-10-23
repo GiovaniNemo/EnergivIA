@@ -237,7 +237,7 @@ describe("WhatsApp Bot - Deterministic Finite State Machine (FSM)", () => {
       );
     });
 
-    it("should transition from AWAITING_ROOF_TYPE to AWAITING_KIT_SELECTION when roof structure is selected", async () => {
+    it("should transition from AWAITING_ROOF_TYPE to AWAITING_INVERTER_TYPE when roof structure is selected", async () => {
       const conversation: any = {
         id: "conv-004",
         organizationId: "org-test",
@@ -261,16 +261,63 @@ describe("WhatsApp Bot - Deterministic Finite State Machine (FSM)", () => {
       });
 
       expect(reply).toContain("Estrutura Selecionada");
-      expect(reply).toContain("Qual opção você prefere para o seu cliente");
+      expect(reply).toContain("Qual tecnologia de inversor você prefere");
 
       expect(mockPrisma.conversation.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "conv-004" },
           data: expect.objectContaining({
             metadata: expect.objectContaining({
-              step: "AWAITING_KIT_SELECTION",
+              step: "AWAITING_INVERTER_TYPE",
               sessionData: expect.objectContaining({
                 roofType: "Cerâmica (Colonial)",
+              }),
+            }),
+          }),
+        })
+      );
+    });
+
+    it("should transition from AWAITING_INVERTER_TYPE to AWAITING_KIT_SELECTION when technology is chosen", async () => {
+      const conversation: any = {
+        id: "conv-004-tech",
+        organizationId: "org-test",
+        title: "Test Session",
+        metadata: {
+          step: "AWAITING_INVERTER_TYPE",
+          sessionData: {
+            consumptionKwh: 450,
+            cidade: "Maringá",
+            uf: "PR",
+            gridType: "Monofásico 220V",
+            roofType: "Cerâmica (Colonial)",
+          },
+        },
+        messages: [
+          {
+            role: "assistant",
+            content: "Qual tecnologia de inversor você prefere para esta cotação? ⚡",
+          },
+        ],
+      };
+
+      const reply = await (service as any).generateBotResponse({
+        conversation,
+        incomingText: "1", // String
+        extractionResult: null,
+      });
+
+      expect(reply).toContain("Tecnologia Selecionada");
+      expect(reply).toContain("Qual opção você prefere para o seu cliente");
+
+      expect(mockPrisma.conversation.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "conv-004-tech" },
+          data: expect.objectContaining({
+            metadata: expect.objectContaining({
+              step: "AWAITING_KIT_SELECTION",
+              sessionData: expect.objectContaining({
+                inverterType: "string",
               }),
             }),
           }),

@@ -335,15 +335,33 @@ describe("Diferenciação Estrita de Consumo (kWh) vs Potência de Pico (kWp)", 
 
       const reply4 = await service.generateBotResponse({
         conversation,
-        incomingText: "1",
+        incomingText: "1", // Cerâmica
         extractionResult: null,
       });
 
-      // Asserções Turno 4:
-      expect(reply4).toContain("dimensionados para o consumo de `1000 kWh/mês` em `Gurupi/TO`");
-      expect(reply4).toContain("7.61 kWp");
-      expect(reply4).not.toContain("1.000 kWp");
-      expect(reply4).not.toContain("1 MWp");
+      expect(reply4).toContain("Estrutura Selecionada");
+      expect(reply4).toContain("Qual tecnologia de inversor você prefere");
+
+      conversation.messages.push({
+        role: "user",
+        content: "1",
+      });
+      conversation.messages.push({
+        role: "assistant",
+        content: reply4,
+      });
+
+      const reply5 = await service.generateBotResponse({
+        conversation,
+        incomingText: "1", // String
+        extractionResult: null,
+      });
+
+      // Asserções Turno 5:
+      expect(reply5).toContain("dimensionados para o consumo de `1000 kWh/mês` em `Gurupi/TO`");
+      expect(reply5).toContain("7.61 kWp");
+      expect(reply5).not.toContain("1.000 kWp");
+      expect(reply5).not.toContain("1 MWp");
 
       // O dimensionamento enviado para o KitGenerationService deve dimensionar ~7.4 kWp para 1000 kWh e NÃO 1000 kWp!
       expect(mockKitGenerationService.generateDistributorTiers).toHaveBeenCalledWith(
