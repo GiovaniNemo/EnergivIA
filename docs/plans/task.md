@@ -639,3 +639,10 @@
 | task-643 | Ajustar percentual de redução máxima na mensagem e simulação para 90% (adequação tributária Fio B) | completed | Atualizado de 95% para 90% em whatsapp-bot.service.ts, template blueprint e testes unitários |
 | task-644 | Corrigir artigo de gênero da marca de 'no EnergivIA' para 'na EnergivIA' em alertas e templates | completed | Atualizado no admin-alerts.service.ts, notifications.service.ts, templates de e-mail e telas web |
 | task-645 | Eliminar alerta de cadastro duplicado (Auth0 vs Organização) e adicionar deduplicação de 10 min | completed | Removido disparo prematuro em auth0-jwt.strategy.ts, adicionado cache de deduplicação em admin-alerts.service.ts e teste unitário |
+| task-646 | Atualização do Modelo Prisma (User) com campos de phone e onboardingStatus e regeneração do client | completed | Adicionado phone, onboardingStatus, onboardingAbandonedAt e lastActiveAt |
+| task-647 | Endpoints de sincronização, abandono e alertas no backend (UsersController e AdminAlertsService) | completed | PATCH /users/me/onboarding-contact, POST /users/me/onboarding-abandoned e alerta com wa.me |
+| task-648 | Rotas de proxy no frontend (apps/web/src/app/api) | completed | Encaminhamento autenticado para /api/me/onboarding-contact e /api/me/onboarding-abandoned |
+| task-649 | Campo de Celular com máscara BR e rastreamento de saída no Onboarding (/create-organization) | completed | Máscara (00) 00000-0000, validação e navigator.sendBeacon ao sair/fechar aba |
+| task-650 | Termômetro de ativação e listagem de integradores (inativos e desistências) no Painel Admin | completed | Visualização de status (Abandonou, Sem Uso, Ativo) com botão de contato direto no WhatsApp |
+| task-651 | Executar suíte de testes Vitest, validação de lint e compilação de produção | completed | 61 arquivos de teste e 440 testes Vitest 100% aprovados; nest build código 0 |
+| task-652 | Realizar commit e push das alterações para o repositório remoto | completed | Sincronização final com origin/main |
