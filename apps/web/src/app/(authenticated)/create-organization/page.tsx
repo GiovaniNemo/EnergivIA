@@ -10,6 +10,8 @@ import {
   uploadOrganizationLogo,
   getDistributorAvailableBrands,
   type BrandTierSelection,
+  updateOnboardingContact,
+  notifyOnboardingAbandoned,
 } from "@/lib/organizations-api";
 import { BrandTierSelector } from "@/components/ui/brand-tier-selector";
 import { stripCnpjNumbersFromCompanyName } from "@/lib/company-name-utils";
@@ -62,8 +64,18 @@ import {
   SlidersHorizontal,
   Sun,
   Cpu,
+  Phone,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
+
+function formatBrPhone(val: string): string {
+  const clean = val.replace(/\D/g, "").slice(0, 11);
+  if (clean.length === 0) return "";
+  if (clean.length <= 2) return `(${clean}`;
+  if (clean.length <= 6) return `(${clean.slice(0, 2)}) ${clean.slice(2)}`;
+  if (clean.length <= 10) return `(${clean.slice(0, 2)}) ${clean.slice(2, 6)}-${clean.slice(6)}`;
+  return `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7, 11)}`;
+}
 
 interface ReferralSourceOption {
   id: string;
@@ -297,11 +309,42 @@ export default function CreateOrganizationPage() {
   const [proposalCompanyName, setProposalCompanyName] = useState("");
   const [isProposalCompanyTouched, setIsProposalCompanyTouched] = useState(false);
   const [cnpj, setCnpj] = useState("");
+  const [phone, setPhone] = useState("");
+  const isCompletedRef = useRef(false);
   const [cep, setCep] = useState("");
   const [cityState, setCityState] = useState("");
   const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
   const [isSearchingCep, setIsSearchingCep] = useState(false);
   const [cnpjLookupSuccess, setCnpjLookupSuccess] = useState(false);
+
+  useEffect(() => {
+    const currentPhone = (user as unknown as { phone?: string })?.phone;
+    if (currentPhone && !phone) {
+      setPhone(formatBrPhone(currentPhone));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (!isCompletedRef.current) {
+        notifyOnboardingAbandoned(step);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden" && !isCompletedRef.current) {
+        notifyOnboardingAbandoned(step);
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [step]);
   const [logoUrl, setLogoUrl] = useState("");
   const [referralSources, setReferralSources] =
     useState<ReferralSourceOption[]>(DEFAULT_REFERRAL_SOURCES);
@@ -551,8 +594,11 @@ export default function CreateOrganizationPage() {
             }
           : undefined;
 
+      isCompletedRef.current = true;
+      const cleanPhone = phone.replace(/\D/g, "");
       const organization = await createOrganization({
         name: finalProposalCompanyName,
+        phone: cleanPhone || undefined,
         proposalCompanyName: finalProposalCompanyName,
         razaoSocial: name.trim() || finalProposalCompanyName,
         logoUrl: logoUrl || undefined,
@@ -617,6 +663,12 @@ export default function CreateOrganizationPage() {
         setError("Informe o nome da empresa.");
         return;
       }
+      const cleanPhone = phone.replace(/\D/g, "");
+      if (cleanPhone.length < 10) {
+        setError("Informe o celular / WhatsApp do integrador (com DDD).");
+        return;
+      }
+      void updateOnboardingContact(cleanPhone);
       if (!selectedReferralSource) {
         setError("Selecione como você conheceu a EnergivIA.");
         return;
@@ -973,6 +1025,38 @@ export default function CreateOrganizationPage() {
                       endAdornment={
                         name.trim() ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : null
                       }
+                    />
+
+                    <Input
+                      label="Celular / WhatsApp do Integrador *"
+                      value={phone}
+                      onChange={(e) => {
+                        const formatted = formatBrPhone(e.target.value);
+                        setPhone(formatted);
+                        const clean = formatted.replace(/\D/g, "");
+                        if (clean.length >= 10) {
+                          void updateOnboardingContact(clean);
+                        }
+                      }}
+                      onBlur={() => {
+                        const clean = phone.replace(/\D/g, "");
+                        if (clean.length >= 10) {
+                          void updateOnboardingContact(clean);
+                        }
+                      }}
+                      placeholder="(11) 99999-9999"
+                      maxLength={15}
+                      required
+                      className="w-full font-mono text-sm"
+                      startAdornment={
+                        <Phone className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                      }
+                      endAdornment={
+                        phone.replace(/\D/g, "").length >= 10 ? (
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        ) : null
+                      }
+                      helperText="Seu WhatsApp para contato e suporte direto da equipe."
                     />
 
                     <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">

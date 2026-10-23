@@ -209,6 +209,7 @@ export interface TermsAcceptanceData {
 
 export async function createOrganization(data: {
   name: string;
+  phone?: string;
   proposalCompanyName?: string;
   razaoSocial?: string;
   logoUrl?: string;
@@ -247,6 +248,28 @@ export async function createOrganization(data: {
     throw new Error(err.message ?? "Falha ao criar organização.");
   }
   return res.json();
+}
+
+export async function updateOnboardingContact(phone: string): Promise<void> {
+  await fetch("/api/me/onboarding-contact", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone }),
+  }).catch(() => undefined);
+}
+
+export function notifyOnboardingAbandoned(step: number): void {
+  const payload = JSON.stringify({ step });
+  if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+    navigator.sendBeacon("/api/me/onboarding-abandoned", payload);
+  } else {
+    fetch("/api/me/onboarding-abandoned", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+      keepalive: true,
+    }).catch(() => undefined);
+  }
 }
 
 export async function getTermsAcceptance(organizationId: string): Promise<TermsAcceptanceData> {
