@@ -144,6 +144,10 @@ model User {
   tenantId  String?
   auth0Sub  String?  @unique @map("auth0_sub")
   picture   String?
+  phone     String?
+  onboardingStatus String? @default("IN_PROGRESS") @map("onboarding_status")
+  onboardingAbandonedAt DateTime? @map("onboarding_abandoned_at")
+  lastActiveAt DateTime? @map("last_active_at")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
@@ -165,6 +169,7 @@ model User {
   @@index([tenantId])
   @@index([deletedAt])
   @@index([auth0Sub])
+  @@index([onboardingStatus])
 }
 
 enum UserRole {
