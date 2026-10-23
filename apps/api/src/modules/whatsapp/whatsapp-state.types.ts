@@ -31,10 +31,12 @@ export interface WhatsappSessionData {
   gridType?: string;
   roofType?: string;
   inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
+  inverterDescription?: string;
   batteryKwh?: number;
   batteryQty?: number;
   batteryVoltageType?: "LV" | "HV";
   hasBms?: boolean;
+  hasBattery?: boolean;
   quotesList?: Array<{
     distributorName: string;
     kwp: number;

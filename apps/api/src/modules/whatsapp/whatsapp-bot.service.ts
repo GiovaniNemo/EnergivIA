@@ -3311,6 +3311,11 @@ Regras estritas:
     roofType,
     gridVoltage: _gridVoltage,
     inverterType,
+    batteryKwh,
+    batteryQty,
+    batteryVoltageType: _batteryVoltageType,
+    hasBms,
+    hasBattery,
     organizationId,
     customRatePerKwp,
   }: {
@@ -3323,6 +3328,11 @@ Regras estritas:
     roofType?: string;
     gridVoltage?: string;
     inverterType?: string;
+    batteryKwh?: number;
+    batteryQty?: number;
+    batteryVoltageType?: "LV" | "HV";
+    hasBms?: boolean;
+    hasBattery?: boolean;
     organizationId?: string;
     customRatePerKwp?: number;
   }) {
@@ -3339,6 +3349,15 @@ Regras estritas:
         gridTopology = "tri_220";
       }
     }
+
+    const mappedInverterType: "string" | "microinverter" | "hybrid" | "off_grid" =
+      inverterType === "micro" || inverterType === "microinverter"
+        ? "microinverter"
+        : inverterType === "hybrid"
+          ? "hybrid"
+          : inverterType === "off_grid"
+            ? "off_grid"
+            : "string";
 
     let finalTargetKWp = 3.0;
     let monthlyFactor = 130;
@@ -3382,7 +3401,7 @@ Regras estritas:
           {
             system_kw: safeKwp,
             roof_type: mappedRoofType,
-            inverter_type: (inverterType as any) || "string",
+            inverter_type: mappedInverterType,
             monthly_yield: monthlyFactor,
             monthly_generation_factor: monthlyFactor,
             grid_topology: gridTopology,
@@ -3401,13 +3420,30 @@ Regras estritas:
             const realSystemKwp = t.kit_result.system_power_kw;
             const totalPrice = uniformTotalPrice;
             const invQty = t.inverter_qty || t.kit_result.inverter?.quantity || 1;
-            const invLabel = invQty > 1 ? `${invQty}x Inversores` : `1x Inversor`;
+            const isMicro = mappedInverterType === "microinverter";
+            const invLabel = isMicro
+              ? `${invQty}x Microinversor${invQty > 1 ? "es" : ""}`
+              : invQty > 1
+                ? `${invQty}x Inversores`
+                : `1x Inversor`;
             const kitItems = [
               `• ${t.module_qty}x Módulos ${t.module_brand} ${t.module_power_w}W`,
               `• ${invLabel} ${t.inverter_brand} ${t.inverter_power_kw}kW`,
             ];
             if (roofLabel !== "Sem estrutura") {
               kitItems.push(`• Estrutura: ${roofLabel}`);
+            }
+
+            if (mappedInverterType === "hybrid" && (hasBattery || batteryQty || batteryKwh)) {
+              const bQty = batteryQty || (batteryKwh ? Math.ceil(batteryKwh / 5.12) : 1);
+              const bKwh = batteryKwh || Math.round(bQty * 5.12 * 100) / 100;
+              const batBrand = t.inverter_brand || "Deye";
+              kitItems.push(
+                `• ${bQty}x Bateria${bQty > 1 ? "s" : ""} de Lítio ${batBrand} (${bKwh} kWh)`
+              );
+              if (hasBms) {
+                kitItems.push(`• 1x Control Box / BMS de Cluster ${batBrand} HV`);
+              }
             }
 
             const structuredItems = (t.kit_result.kit_items || []).map((it) => ({
@@ -3570,13 +3606,32 @@ Regras estritas:
         });
       }
 
-      const invLabel = invCount > 1 ? `${invCount}x Inversores` : `1x Inversor`;
+      const isMicro = mappedInverterType === "microinverter";
+      const isHybrid = mappedInverterType === "hybrid";
+      const invLabel = isMicro
+        ? `${invCount}x Microinversor${invCount > 1 ? "es" : ""}`
+        : isHybrid
+          ? `1x Inversor Híbrido`
+          : invCount > 1
+            ? `${invCount}x Inversores`
+            : `1x Inversor`;
       const kitItems = [
         `• ${moduleQty}x Módulos ${cfg.moduleBrand} ${modulePowerW}W`,
         `• ${invLabel} ${cfg.inverterBrand} ${invPower}kW`,
       ];
       if (roofLabel !== "Sem estrutura") {
         kitItems.push(`• Estrutura: ${roofLabel}`);
+      }
+      if (isHybrid && (hasBattery || batteryQty || batteryKwh)) {
+        const bQty = batteryQty || (batteryKwh ? Math.ceil(batteryKwh / 5.12) : 1);
+        const bKwh = batteryKwh || Math.round(bQty * 5.12 * 100) / 100;
+        const batBrand = cfg.inverterBrand || "Deye";
+        kitItems.push(
+          `• ${bQty}x Bateria${bQty > 1 ? "s" : ""} de Lítio ${batBrand} (${bKwh} kWh)`
+        );
+        if (hasBms) {
+          kitItems.push(`• 1x Control Box / BMS de Cluster ${batBrand} HV`);
+        }
       }
 
       return {
@@ -3905,6 +3960,7 @@ Regras estritas:
 
     quoteText += `Qual opção você prefere para o seu cliente?\n`;
     quoteText += `_(Responda com o número ou nome da opção: 1 Standard, 2 Elite ou 3 Premium. Na sequência você define o preço por kWp)_\n`;
+    quoteText += `> 💡 Quer cotar com outra tecnologia? Envie *micro*, *híbrido* ou *string* para recalcular esta potência.\n`;
     quoteText += `> 0️⃣ *Voltar / Alterar estrutura*\n\n`;
     quoteText += `Equipe *_EnergivIA._*`;
     return quoteText;
@@ -4441,6 +4497,13 @@ ${catalogContext}`;
       clientName?: string;
       clientWhatsapp?: string;
       chosenQuoteIndex: number;
+      inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
+      inverterDescription?: string;
+      batteryKwh?: number;
+      batteryQty?: number;
+      batteryVoltageType?: "LV" | "HV";
+      hasBms?: boolean;
+      hasBattery?: boolean;
     }
 
     const extractContextFromSession = (): ExtractedSessionContext => {
@@ -4459,6 +4522,13 @@ ${catalogContext}`;
       let clientName: string | undefined = undefined;
       let clientWhatsapp: string | undefined = undefined;
       let chosenQuoteIndex = 0;
+      let inverterType: "string" | "microinverter" | "hybrid" | "off_grid" | undefined = undefined;
+      let inverterDescription: string | undefined = undefined;
+      let batteryKwh: number | undefined = undefined;
+      let batteryQty: number | undefined = undefined;
+      let batteryVoltageType: "LV" | "HV" | undefined = undefined;
+      let hasBms: boolean | undefined = undefined;
+      let hasBattery: boolean | undefined = undefined;
 
       for (let i = 0; i < messages.length; i++) {
         const m = messages[i];
@@ -4474,6 +4544,14 @@ ${catalogContext}`;
           if (meta["gridVoltage"]) gridVoltage = String(meta["gridVoltage"]);
           if (meta["roofType"]) roofType = String(meta["roofType"]);
           if (meta["customRatePerKwp"]) customRatePerKwp = Number(meta["customRatePerKwp"]);
+          if (meta["inverterType"]) inverterType = meta["inverterType"] as any;
+          if (meta["inverterDescription"])
+            inverterDescription = String(meta["inverterDescription"]);
+          if (meta["batteryKwh"] !== undefined) batteryKwh = Number(meta["batteryKwh"]);
+          if (meta["batteryQty"] !== undefined) batteryQty = Number(meta["batteryQty"]);
+          if (meta["batteryVoltageType"]) batteryVoltageType = meta["batteryVoltageType"] as any;
+          if (meta["hasBms"] !== undefined) hasBms = Boolean(meta["hasBms"]);
+          if (meta["hasBattery"] !== undefined) hasBattery = Boolean(meta["hasBattery"]);
         }
 
         const content = typeof m.content === "string" ? m.content : "";
@@ -4944,6 +5022,13 @@ ${catalogContext}`;
         clientName,
         clientWhatsapp,
         chosenQuoteIndex,
+        inverterType,
+        inverterDescription,
+        batteryKwh,
+        batteryQty,
+        batteryVoltageType,
+        hasBms,
+        hasBattery,
       };
     };
 
@@ -4962,6 +5047,15 @@ ${catalogContext}`;
     const rawKwpRate = storedSessionData.kwpRate ?? convMeta["kwpRate"];
     const rawClientName = storedSessionData.clientName || convMeta["clientName"];
     const rawClientPhone = storedSessionData.clientPhone || convMeta["clientPhone"];
+    const rawInverterType = storedSessionData.inverterType || (convMeta["inverterType"] as any);
+    const rawInverterDescription =
+      storedSessionData.inverterDescription || (convMeta["inverterDescription"] as any);
+    const rawBatteryKwh = storedSessionData.batteryKwh ?? (convMeta["batteryKwh"] as any);
+    const rawBatteryQty = storedSessionData.batteryQty ?? (convMeta["batteryQty"] as any);
+    const rawBatteryVoltageType =
+      storedSessionData.batteryVoltageType || (convMeta["batteryVoltageType"] as any);
+    const rawHasBms = storedSessionData.hasBms ?? (convMeta["hasBms"] as any);
+    const rawHasBattery = storedSessionData.hasBattery ?? (convMeta["hasBattery"] as any);
 
     if (rawCidade && !sessionCtx.cidade) sessionCtx.cidade = rawCidade;
     if (rawUf && !sessionCtx.estado) sessionCtx.estado = rawUf;
@@ -4994,6 +5088,18 @@ ${catalogContext}`;
       sessionCtx.clientName = rawClientName;
     if (rawClientPhone && (!sessionCtx.clientWhatsapp || sessionCtx.clientWhatsapp === "WhatsApp"))
       sessionCtx.clientWhatsapp = rawClientPhone;
+    if (rawInverterType && !sessionCtx.inverterType) sessionCtx.inverterType = rawInverterType;
+    if (rawInverterDescription && !sessionCtx.inverterDescription)
+      sessionCtx.inverterDescription = rawInverterDescription;
+    if (rawBatteryKwh !== undefined && sessionCtx.batteryKwh === undefined)
+      sessionCtx.batteryKwh = rawBatteryKwh;
+    if (rawBatteryQty !== undefined && sessionCtx.batteryQty === undefined)
+      sessionCtx.batteryQty = rawBatteryQty;
+    if (rawBatteryVoltageType && !sessionCtx.batteryVoltageType)
+      sessionCtx.batteryVoltageType = rawBatteryVoltageType;
+    if (rawHasBms !== undefined && sessionCtx.hasBms === undefined) sessionCtx.hasBms = rawHasBms;
+    if (rawHasBattery !== undefined && sessionCtx.hasBattery === undefined)
+      sessionCtx.hasBattery = rawHasBattery;
     if (typeof storedSessionData.selectedQuoteIndex === "number") {
       sessionCtx.chosenQuoteIndex = storedSessionData.selectedQuoteIndex;
     }
@@ -5050,25 +5156,6 @@ ${catalogContext}`;
         sessionCtx.consumptionKwh = extractionResult.exactAverageKwh;
       }
     }
-
-    const rawInverterType = storedSessionData.inverterType || convMeta["inverterType"];
-    const rawBatteryKwh = storedSessionData.batteryKwh ?? convMeta["batteryKwh"];
-    const rawBatteryQty = storedSessionData.batteryQty ?? convMeta["batteryQty"];
-    const rawBatteryVoltageType =
-      storedSessionData.batteryVoltageType || convMeta["batteryVoltageType"];
-    const rawHasBms = storedSessionData.hasBms ?? convMeta["hasBms"];
-    const rawHasBattery = storedSessionData.hasBattery ?? convMeta["hasBattery"];
-
-    if (rawInverterType && !sessionCtx.inverterType) sessionCtx.inverterType = rawInverterType;
-    if (rawBatteryKwh !== undefined && sessionCtx.batteryKwh === undefined)
-      sessionCtx.batteryKwh = rawBatteryKwh;
-    if (rawBatteryQty !== undefined && sessionCtx.batteryQty === undefined)
-      sessionCtx.batteryQty = rawBatteryQty;
-    if (rawBatteryVoltageType && !sessionCtx.batteryVoltageType)
-      sessionCtx.batteryVoltageType = rawBatteryVoltageType;
-    if (rawHasBms !== undefined && sessionCtx.hasBms === undefined) sessionCtx.hasBms = rawHasBms;
-    if (rawHasBattery !== undefined && sessionCtx.hasBattery === undefined)
-      sessionCtx.hasBattery = rawHasBattery;
 
     // Helper determinístico para atualizar estado e dados acumulados
     const setStep = async (nextStep: WhatsappBotStep, patchData?: Partial<WhatsappSessionData>) => {
@@ -5383,34 +5470,32 @@ ${catalogContext}`;
         );
       }
 
-      // 2. Se falta padrão elétrico
-      if (!sessionCtx.gridVoltage) {
-        await setStep("AWAITING_GRID_TYPE", {
-          cidade: sessionCtx.cidade,
-          uf: sessionCtx.estado,
-          kwp: sessionCtx.targetKWp,
-          moduleCount: sessionCtx.targetModules,
-          consumptionKwh: sessionCtx.consumptionKwh,
-          roofType: sessionCtx.roofType,
-          inverterType: sessionCtx.inverterType,
-          batteryKwh: sessionCtx.batteryKwh,
-          batteryQty: sessionCtx.batteryQty,
-          hasBattery: sessionCtx.hasBattery,
-        });
-        return (
-          header +
-          `> 📍 Localidade: \`${sessionCtx.cidade}/${sessionCtx.estado}\`\n\n` +
-          this.GRID_OPTIONS_TEXT
-        );
-      }
-
-      // 3. Se é inversor híbrido e ainda não informou a bateria
+      // 2. Se é inversor híbrido e ainda não informou a bateria
       if (
         sessionCtx.inverterType === "hybrid" &&
         sessionCtx.hasBattery === undefined &&
         sessionCtx.batteryKwh === undefined &&
         sessionCtx.batteryQty === undefined
       ) {
+        if (!sessionCtx.gridVoltage) {
+          await setStep("AWAITING_GRID_TYPE", {
+            cidade: sessionCtx.cidade,
+            uf: sessionCtx.estado,
+            kwp: sessionCtx.targetKWp,
+            moduleCount: sessionCtx.targetModules,
+            consumptionKwh: sessionCtx.consumptionKwh,
+            roofType: sessionCtx.roofType,
+            inverterType: sessionCtx.inverterType,
+            batteryKwh: sessionCtx.batteryKwh,
+            batteryQty: sessionCtx.batteryQty,
+            hasBattery: sessionCtx.hasBattery,
+          });
+          return (
+            header +
+            `> 📍 Localidade: \`${sessionCtx.cidade}/${sessionCtx.estado}\`\n\n` +
+            this.GRID_OPTIONS_TEXT
+          );
+        }
         await setStep("AWAITING_BATTERY_STORAGE", {
           cidade: sessionCtx.cidade,
           uf: sessionCtx.estado,
@@ -5429,7 +5514,7 @@ ${catalogContext}`;
         );
       }
 
-      // 4. Se já tem telhado e cidade, calcula os novos kits imediatamente!
+      // 3. Se já tem telhado e cidade, calcula os novos kits imediatamente!
       if (sessionCtx.roofType) {
         const newQuotes = await kitsFor({ roofType: sessionCtx.roofType });
         if (newQuotes.length > 0) {
@@ -5454,6 +5539,27 @@ ${catalogContext}`;
             this.formatQuotesListText(newQuotes, sessionCtx)
           );
         }
+      }
+
+      // 4. Se falta padrão elétrico
+      if (!sessionCtx.gridVoltage) {
+        await setStep("AWAITING_GRID_TYPE", {
+          cidade: sessionCtx.cidade,
+          uf: sessionCtx.estado,
+          kwp: sessionCtx.targetKWp,
+          moduleCount: sessionCtx.targetModules,
+          consumptionKwh: sessionCtx.consumptionKwh,
+          roofType: sessionCtx.roofType,
+          inverterType: sessionCtx.inverterType,
+          batteryKwh: sessionCtx.batteryKwh,
+          batteryQty: sessionCtx.batteryQty,
+          hasBattery: sessionCtx.hasBattery,
+        });
+        return (
+          header +
+          `> 📍 Localidade: \`${sessionCtx.cidade}/${sessionCtx.estado}\`\n\n` +
+          this.GRID_OPTIONS_TEXT
+        );
       }
 
       // 5. Se falta telhado
@@ -6070,6 +6176,95 @@ ${catalogContext}`;
       currentStep === "AWAITING_KIT_SELECTION" ||
       lastBotMsg.includes("Qual opção você prefere para o seu cliente")
     ) {
+      // 0. ALTERNÂNCIA RÁPIDA DE TECNOLOGIA: micro, hibrido, string
+      const cleanLower = lower.replace(/[\*\_]/g, "").trim();
+      const isSwitchToMicro =
+        cleanLower === "micro" ||
+        cleanLower === "microinversor" ||
+        cleanLower === "microinversores" ||
+        cleanLower.startsWith("cotar micro") ||
+        cleanLower.startsWith("com micro");
+
+      const isSwitchToHybrid =
+        cleanLower === "hibrido" ||
+        cleanLower === "híbrido" ||
+        cleanLower === "bateria" ||
+        cleanLower === "baterias" ||
+        cleanLower.startsWith("cotar hibrido") ||
+        cleanLower.startsWith("cotar híbrido");
+
+      const isSwitchToString =
+        cleanLower === "string" ||
+        cleanLower === "convencional" ||
+        cleanLower === "inversor string" ||
+        cleanLower.startsWith("cotar string");
+
+      if (isSwitchToMicro) {
+        sessionCtx.inverterType = "microinverter";
+        const newQuotes = await kitsFor({ inverterType: "microinverter" });
+        if (newQuotes.length > 0) {
+          await setStep("AWAITING_KIT_SELECTION", {
+            inverterType: "microinverter",
+            selectedQuoteIndex: 0,
+          });
+          return (
+            `*_Tecnologia Atualizada:_* \`Microinversores\` ⚡\n\n` +
+            this.formatQuotesListText(newQuotes, sessionCtx)
+          );
+        }
+      }
+
+      if (isSwitchToString) {
+        sessionCtx.inverterType = "string";
+        sessionCtx.hasBattery = false;
+        sessionCtx.batteryQty = 0;
+        sessionCtx.batteryKwh = 0;
+        sessionCtx.hasBms = false;
+        const newQuotes = await kitsFor({ inverterType: "string" });
+        if (newQuotes.length > 0) {
+          await setStep("AWAITING_KIT_SELECTION", {
+            inverterType: "string",
+            hasBattery: false,
+            batteryQty: 0,
+            batteryKwh: 0,
+            hasBms: false,
+            selectedQuoteIndex: 0,
+          });
+          return (
+            `*_Tecnologia Atualizada:_* \`Inversor Convencional (String)\` ⚡\n\n` +
+            this.formatQuotesListText(newQuotes, sessionCtx)
+          );
+        }
+      }
+
+      if (isSwitchToHybrid) {
+        sessionCtx.inverterType = "hybrid";
+        if (
+          sessionCtx.hasBattery === undefined &&
+          sessionCtx.batteryKwh === undefined &&
+          sessionCtx.batteryQty === undefined
+        ) {
+          await setStep("AWAITING_BATTERY_STORAGE", {
+            inverterType: "hybrid",
+          });
+          return (
+            `*_Tecnologia Atualizada:_* \`Inversor Híbrido\` ⚡\n\n` +
+            this.BATTERY_STORAGE_OPTIONS_TEXT
+          );
+        }
+        const newQuotes = await kitsFor({ inverterType: "hybrid" });
+        if (newQuotes.length > 0) {
+          await setStep("AWAITING_KIT_SELECTION", {
+            inverterType: "hybrid",
+            selectedQuoteIndex: 0,
+          });
+          return (
+            `*_Tecnologia Atualizada:_* \`Inversor Híbrido\` ⚡\n\n` +
+            this.formatQuotesListText(newQuotes, sessionCtx)
+          );
+        }
+      }
+
       const quotes = await kitsFor();
       if (quotes.length === 0) return NO_KITS_TEXT;
       const idx = this.resolveQuoteIndexFromText(incomingText, quotes.length);
@@ -6146,6 +6341,12 @@ ${catalogContext}`;
         estado: sessionCtx.estado || "SP",
         roofType: sessionCtx.roofType || "Cerâmica (Colonial)",
         gridVoltage: sessionCtx.gridVoltage,
+        inverterType: sessionCtx.inverterType,
+        batteryKwh: sessionCtx.batteryKwh,
+        batteryQty: sessionCtx.batteryQty,
+        batteryVoltageType: sessionCtx.batteryVoltageType,
+        hasBms: sessionCtx.hasBms,
+        hasBattery: sessionCtx.hasBattery,
         organizationId: conversation.organizationId,
         customRatePerKwp: sessionCtx.customRatePerKwp,
       });

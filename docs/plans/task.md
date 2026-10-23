@@ -674,6 +674,6 @@
 | task-678 | Extensão de Tipagens e DTOs da Sessão WhatsApp (inverterType, baterias, FSM AWAITING_BATTERY_STORAGE) | completed | Tipos WhatsappBotStep, WhatsappSessionData, STEP_PREVIOUS_MAP e ExtractedIntegratorQuote estendidos e validados |
 | task-679 | Parser de Entidades de Microinversor, Inversor Híbrido e Baterias (kWh e Unidades) | completed | parseIntegratorQuoteEntities extrai microinversores, híbridos e baterias por kWh ou quantidade (10 testes aprovados) |
 | task-680 | Estado Conversacional Aberto de Baterias e Trava Técnica Deye HV/LV | completed | Fluxo AWAITING_BATTERY_STORAGE em aberto com suporte a kWh, unidades, sem bateria e trava Deye HV (5 testes aprovados) |
-| task-681 | Integração de Microinversor e Híbrido com Cálculo de Kits (KitGenerationService e BOM) | in-progress | Repasse de tecnologia para calculateDistributorKits e inclusão de baterias/BMS no kit |
-| task-682 | Apresentação no WhatsApp e Comando Rápido de Alternância (formatQuotesListText e atalho de troca) | not-started | Labels dinâmicos no WhatsApp e recálculo com 1 comando (micro, hibrido, string) |
-| task-683 | Validação Completa da Suíte de Testes, Compilação e Commit/Push | not-started | Executar testes Vitest no backend, build de produção e sincronizar com origin/main |
+| task-681 | Integração de Microinversor e Híbrido com Cálculo de Kits (KitGenerationService e BOM) | completed | Repasse de tecnologia para calculateDistributorKits e inclusão de baterias/BMS no kit (5 testes aprovados) |
+| task-682 | Apresentação no WhatsApp e Comando Rápido de Alternância (formatQuotesListText e atalho de troca) | completed | Labels dinâmicos no WhatsApp e recálculo com 1 comando (micro, hibrido, string) |
+| task-683 | Validação Completa da Suíte de Testes, Compilação e Commit/Push | completed | 66 arquivos de teste e 482 testes Vitest aprovados; build NestJS validado e alterações sincronizadas com origin/main |
