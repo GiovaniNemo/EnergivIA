@@ -229,4 +229,26 @@ describe("AdminAlertsService", () => {
       })
     );
   });
+
+  it("should suppress duplicate registration alerts for the same email within 10 minutes", async () => {
+    mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      key: AdminAlertsService.GROUP_SETTING_KEY,
+      value: "1203630283921938@g.us",
+    });
+
+    const firstResult = await service.notifyNewUserRegistration({
+      name: "Vinicius Santos",
+      email: "vinicius@teste.com",
+    });
+    expect(firstResult).toBe(true);
+    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledTimes(1);
+
+    const secondResult = await service.notifyNewUserRegistration({
+      name: "Vinicius Santos",
+      email: "vinicius@teste.com",
+      companyName: "Vinicius Solar",
+    });
+    expect(secondResult).toBe(true);
+    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledTimes(1);
+  });
 });

@@ -638,3 +638,4 @@
 | task-642 | Encurtar rota da proposta para /p/[id] e suportar domínio neutro/white-label na mensagem para cliente | completed | Criado /p/[id], clientProposalBaseUrl suporta CLIENT_PROPOSAL_BASE_URL/PROPOSAL_PUBLIC_BASE_URL, rota encurtada e 10 testes Vitest aprovados |
 | task-643 | Ajustar percentual de redução máxima na mensagem e simulação para 90% (adequação tributária Fio B) | completed | Atualizado de 95% para 90% em whatsapp-bot.service.ts, template blueprint e testes unitários |
 | task-644 | Corrigir artigo de gênero da marca de 'no EnergivIA' para 'na EnergivIA' em alertas e templates | completed | Atualizado no admin-alerts.service.ts, notifications.service.ts, templates de e-mail e telas web |
+| task-645 | Eliminar alerta de cadastro duplicado (Auth0 vs Organização) e adicionar deduplicação de 10 min | completed | Removido disparo prematuro em auth0-jwt.strategy.ts, adicionado cache de deduplicação em admin-alerts.service.ts e teste unitário |

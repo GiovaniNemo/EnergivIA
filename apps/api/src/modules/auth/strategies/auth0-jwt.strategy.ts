@@ -269,15 +269,6 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
             userName: rawName,
           })
           .catch(() => undefined);
-
-        if (this.adminAlerts) {
-          this.adminAlerts
-            .notifyNewUserRegistration({
-              name: rawName || "Novo Integrador",
-              email: normalizedEmail,
-            })
-            .catch(() => undefined);
-        }
       }
     } else {
       const shouldUpdateFallbackEmail =

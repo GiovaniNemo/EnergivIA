@@ -136,6 +136,8 @@ export class AdminAlertsService {
     return this.sendToAlertGroup(msg);
   }
 
+  private readonly recentRegistrations = new Map<string, number>();
+
   /**
    * 2. Alerta de Novo Cadastro de Integrador na Plataforma
    */
@@ -146,6 +148,17 @@ export class AdminAlertsService {
     city?: string | null;
     state?: string | null;
   }): Promise<boolean> {
+    const emailKey = (data.email || "").trim().toLowerCase();
+    if (emailKey) {
+      const nowMs = Date.now();
+      const lastSent = this.recentRegistrations.get(emailKey);
+      if (lastSent && nowMs - lastSent < 10 * 60 * 1000) {
+        this.logger.log(`[Admin Alerts] Alerta de cadastro duplicado suprimido para ${emailKey}`);
+        return true;
+      }
+      this.recentRegistrations.set(emailKey, nowMs);
+    }
+
     const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
     const location =
       data.city && data.state ? `${data.city}/${data.state}` : data.city || data.state || null;
