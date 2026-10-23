@@ -385,11 +385,6 @@ export function ProductForm({
                       });
                     }
                   });
-                  setLookupAlert({
-                    type: "success",
-                    message:
-                      "Especificações elétricas e mecânicas extraídas com sucesso a partir do PDF!",
-                  });
                 }}
               />
             )}
