@@ -164,7 +164,9 @@ describe("AdminAlertsService", () => {
     );
     expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: expect.stringContaining("Um novo integrador acabou de criar conta na EnergivIA:"),
+        body: expect.stringContaining(
+          "Um integrador iniciou o cadastro mas saiu da página antes de concluir:"
+        ),
       })
     );
     expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
