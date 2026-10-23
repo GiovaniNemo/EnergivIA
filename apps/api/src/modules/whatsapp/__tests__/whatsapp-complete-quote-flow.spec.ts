@@ -258,5 +258,33 @@ describe("WhatsApp Bot - Cotação Completa e Avanço Direto (Texto e Áudio)", 
       expect(trialCounterText).toContain("gerenciar clientes");
       expect(trialCounterText).not.toContain("gerenciar integradores");
     });
+
+    it("deve gerar link encurtado /p/[id] para a mensagem encaminhável do cliente e suportar domínio neutro/white-label", () => {
+      const proposalId = "cmvjy4tpm016djk017w9qplph";
+
+      // 1. Padrão: /p/[id]
+      const defaultAppBaseUrl = "https://www.energivia.com.br";
+      const defaultClientLink = `${defaultAppBaseUrl}/p/${proposalId}`;
+      expect(defaultClientLink).toBe("https://www.energivia.com.br/p/cmvjy4tpm016djk017w9qplph");
+      expect(defaultClientLink).not.toContain("/proposta/");
+
+      // 2. Com domínio neutro (PROPOSAL_PUBLIC_BASE_URL ou CLIENT_PROPOSAL_BASE_URL)
+      const neutralBase = "https://meuprojeto.solar";
+      const neutralClientLink = `${neutralBase}/p/${proposalId}`;
+      expect(neutralClientLink).toBe("https://meuprojeto.solar/p/cmvjy4tpm016djk017w9qplph");
+      expect(neutralClientLink).not.toContain("energivia");
+
+      // 3. Valida formatação do texto da mensagem do cliente
+      const clientName = "Carlos Silva";
+      const clientForwardMsg =
+        `Olá, *${clientName}*! Tudo bem?\n\n` +
+        `Elaborei sua proposta de energia solar sob medida. O sistema projetado terá *12 kWp* de potência...\n\n` +
+        `Acesse sua proposta comercial completa com os equipamentos e simulação no link abaixo:\n` +
+        `${neutralClientLink}\n\n` +
+        `Qualquer dúvida ou ajuste que precisar, estou à disposição!`;
+
+      expect(clientForwardMsg).toContain("https://meuprojeto.solar/p/cmvjy4tpm016djk017w9qplph");
+      expect(clientForwardMsg).not.toContain("energivia");
+    });
   });
 });

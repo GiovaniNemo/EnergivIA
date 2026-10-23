@@ -6331,13 +6331,23 @@ ${catalogContext}`;
         this.config.get<string>("NEXT_PUBLIC_APP_URL") ||
         "https://www.energivia.com.br";
 
+      const clientProposalBaseUrl = (
+        process.env["CLIENT_PROPOSAL_BASE_URL"] ||
+        process.env["PROPOSAL_PUBLIC_BASE_URL"] ||
+        process.env["PROPOSAL_SHORT_URL_BASE"] ||
+        this.config.get<string>("CLIENT_PROPOSAL_BASE_URL") ||
+        this.config.get<string>("PROPOSAL_PUBLIC_BASE_URL") ||
+        this.config.get<string>("PROPOSAL_SHORT_URL_BASE") ||
+        appBaseUrl
+      ).replace(/\/$/, "");
+
       const integratorPreviewLink = proposalId
         ? `${appBaseUrl}/proposta/${proposalId}?preview=true`
         : `${appBaseUrl}/propostas`;
 
       const clientProposalLink = proposalId
-        ? `${appBaseUrl}/proposta/${proposalId}`
-        : `${appBaseUrl}/propostas`;
+        ? `${clientProposalBaseUrl}/p/${proposalId}`
+        : `${clientProposalBaseUrl}/p`;
 
       const estimatedGenerationKwh =
         selectedQuote.estimatedGeneration || Math.round(selectedQuote.kwp * 130);
