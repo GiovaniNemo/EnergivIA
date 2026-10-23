@@ -677,3 +677,5 @@
 | task-681 | Integração de Microinversor e Híbrido com Cálculo de Kits (KitGenerationService e BOM) | completed | Repasse de tecnologia para calculateDistributorKits e inclusão de baterias/BMS no kit (5 testes aprovados) |
 | task-682 | Apresentação no WhatsApp e Comando Rápido de Alternância (formatQuotesListText e atalho de troca) | completed | Labels dinâmicos no WhatsApp e recálculo com 1 comando (micro, hibrido, string) |
 | task-683 | Validação Completa da Suíte de Testes, Compilação e Commit/Push | completed | 66 arquivos de teste e 482 testes Vitest aprovados; build NestJS validado e alterações sincronizadas com origin/main |
+| task-684 | Atualizar Plus como Mais Escolhido e novos valores nos cards (R$ 97, R$ 197, R$ 397) | completed | Badge Mais Escolhido no Plus, ancoragens 137/297/797 e descontos Economize R$ 100 / R$ 400 preservando cupons e assinaturas ativas |
+| task-685 | Validação de build, testes automatizados e commit/push | completed | Build @energivia/api e @energivia/web aprovados, 482 testes Vitest passando |

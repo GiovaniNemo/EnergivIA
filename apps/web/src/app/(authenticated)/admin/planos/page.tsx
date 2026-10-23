@@ -1145,12 +1145,25 @@ export default function AdminPlanosPage() {
                               {(() => {
                                 const lower = (plan.name || "").toLowerCase();
                                 let orig: number | null = null;
-                                if (lower.includes("essencial") || Math.abs(priceNum - 99.99) < 1)
-                                  orig = 169.99;
-                                else if (lower.includes("plus") || Math.abs(priceNum - 399.99) < 1)
-                                  orig = 699.99;
-                                else if (lower.includes("pro") || Math.abs(priceNum - 199.99) < 1)
-                                  orig = 299.99;
+                                if (
+                                  lower.includes("essencial") ||
+                                  lower.includes("standard") ||
+                                  Math.abs(priceNum - 97) < 5 ||
+                                  Math.abs(priceNum - 99.99) < 5
+                                )
+                                  orig = 137.0;
+                                else if (
+                                  lower.includes("plus") ||
+                                  Math.abs(priceNum - 397) < 5 ||
+                                  Math.abs(priceNum - 399.99) < 5
+                                )
+                                  orig = 797.0;
+                                else if (
+                                  lower.includes("pro") ||
+                                  Math.abs(priceNum - 197) < 5 ||
+                                  Math.abs(priceNum - 199.99) < 5
+                                )
+                                  orig = 297.0;
 
                                 return (
                                   <>

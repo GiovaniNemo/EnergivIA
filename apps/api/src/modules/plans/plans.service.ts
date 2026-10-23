@@ -24,23 +24,51 @@ export class PlansService implements OnModuleInit {
   private async syncDefaultPlans() {
     const plans = await this.prisma.plan.findMany();
     for (const plan of plans) {
+      const lower = plan.name.toLowerCase();
+      let targetPrice: number | null = null;
+      if (lower.includes("plus")) {
+        if (Number(plan.price) !== 397) targetPrice = 397;
+      } else if (lower.includes("pro") || lower.includes("profissional")) {
+        if (Number(plan.price) !== 197) targetPrice = 197;
+      } else if (
+        lower.includes("essencial") ||
+        lower.includes("standard") ||
+        lower.includes("básico") ||
+        lower.includes("basic")
+      ) {
+        if (Number(plan.price) !== 97) targetPrice = 97;
+      }
+
       // Se o plano já possui configuração de features válida com bulletPoints no banco, não sobrescreve
+      let needFeaturesUpdate = true;
       if (plan.features && typeof plan.features === "object" && !Array.isArray(plan.features)) {
         const raw = plan.features as Record<string, unknown>;
         const rawPoints = raw["bulletPoints"];
         if (Array.isArray(rawPoints) && rawPoints.length > 0) {
-          continue;
+          needFeaturesUpdate = false;
         }
       }
 
-      const normalized = normalizePlanFeatures(plan.features, plan.name);
-      await this.prisma.plan.update({
-        where: { id: plan.id },
-        data: {
-          features: normalized as unknown as Prisma.InputJsonValue,
-        },
-      });
-      this.logger.log(`Initialized structured features for plan "${plan.name}" (${plan.id})`);
+      const updateData: Prisma.PlanUpdateInput = {};
+      if (targetPrice !== null) {
+        updateData.price = targetPrice;
+      }
+      if (needFeaturesUpdate) {
+        updateData.features = normalizePlanFeatures(
+          plan.features,
+          plan.name
+        ) as unknown as Prisma.InputJsonValue;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await this.prisma.plan.update({
+          where: { id: plan.id },
+          data: updateData,
+        });
+        this.logger.log(
+          `Synced plan "${plan.name}" (${plan.id}) with price=${targetPrice ?? plan.price}`
+        );
+      }
     }
   }
 

@@ -54,11 +54,23 @@ function getOriginalPrice(planName: string, currentPrice: number): number | null
   if (
     lower.includes("essencial") ||
     lower.includes("standard") ||
-    Math.abs(currentPrice - 99.99) < 1
+    lower.includes("básic") ||
+    Math.abs(currentPrice - 97) < 5 ||
+    Math.abs(currentPrice - 99.99) < 5
   )
-    return 169.99;
-  if (lower.includes("plus") || Math.abs(currentPrice - 399.99) < 1) return 699.99;
-  if (lower.includes("pro") || Math.abs(currentPrice - 199.99) < 1) return 299.99;
+    return 137.0;
+  if (
+    lower.includes("plus") ||
+    Math.abs(currentPrice - 397) < 5 ||
+    Math.abs(currentPrice - 399.99) < 5
+  )
+    return 797.0;
+  if (
+    lower.includes("pro") ||
+    Math.abs(currentPrice - 197) < 5 ||
+    Math.abs(currentPrice - 199.99) < 5
+  )
+    return 297.0;
   return null;
 }
 
@@ -530,8 +542,10 @@ function MeusPlanosContent() {
                 (planNameLower.includes("pro") || planNameLower.includes("profissional")) &&
                 !isPlus;
               const isBasic =
-                planNameLower.includes("essencial") || planNameLower.includes("básic");
-              const isHighlighted = isCurrentPlan ? true : isPro;
+                planNameLower.includes("essencial") ||
+                planNameLower.includes("básic") ||
+                planNameLower.includes("standard");
+              const isHighlighted = isCurrentPlan ? true : isPlus;
               const originalPrice = getOriginalPrice(plan.name, priceNum);
               const feats = parseFeatures(plan.features, plan.name, isBasic, isPro, isPlus);
 
@@ -542,9 +556,9 @@ function MeusPlanosContent() {
                     isCurrentPlan
                       ? "bg-white dark:bg-slate-900/80 border-2 border-emerald-500 shadow-xl shadow-emerald-500/10 ring-2 ring-emerald-500/20"
                       : isPlus
-                        ? "bg-white dark:bg-slate-900/80 border-2 border-purple-400/80 dark:border-purple-500/50 shadow-xl shadow-purple-500/10"
-                        : isHighlighted
-                          ? "bg-white dark:bg-slate-900/80 border-2 border-amber-400 dark:border-yellow-500/70 shadow-xl shadow-amber-500/10 ring-1 ring-amber-400/20"
+                        ? "bg-white dark:bg-slate-900/80 border-2 border-amber-400 dark:border-yellow-500/70 shadow-xl shadow-amber-500/10 ring-1 ring-amber-400/20"
+                        : isPro
+                          ? "bg-white dark:bg-slate-900/80 border-2 border-purple-400/80 dark:border-purple-500/50 shadow-xl shadow-purple-500/10"
                           : "bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-white/10 shadow-lg shadow-slate-200/50 dark:shadow-none hover:border-slate-300 dark:hover:border-white/20"
                   }`}
                 >
@@ -554,20 +568,20 @@ function MeusPlanosContent() {
                       <ShieldCheck className="w-3.5 h-3.5" />
                       Seu Plano Atual
                     </div>
+                  ) : isPlus ? (
+                    <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 text-xs font-extrabold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider shadow-sm flex items-center gap-1 z-10">
+                      <Sparkles className="w-3.5 h-3.5 fill-slate-950" /> Mais Escolhido
+                    </div>
                   ) : isUpgrade ? (
                     <div
                       className={`absolute top-0 right-0 text-xs font-extrabold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider flex items-center gap-1 shadow-md z-10 ${
-                        isPlus
+                        isPro
                           ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-500/20"
                           : "bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950"
                       }`}
                     >
                       <TrendingUp className="w-3.5 h-3.5" />
                       Disponível p/ Upgrade
-                    </div>
-                  ) : isHighlighted ? (
-                    <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 text-xs font-extrabold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider shadow-sm flex items-center gap-1 z-10">
-                      <CheckCircle2 className="w-3 h-3" /> Mais Escolhido
                     </div>
                   ) : null}
 
@@ -577,9 +591,9 @@ function MeusPlanosContent() {
                       isCurrentPlan
                         ? "border-emerald-100 dark:border-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/20"
                         : isPlus
-                          ? "border-purple-100 dark:border-purple-500/20 bg-purple-50/40 dark:bg-purple-950/20"
-                          : isHighlighted
-                            ? "border-amber-100 dark:border-yellow-500/20 bg-amber-50/40 dark:bg-amber-950/20"
+                          ? "border-amber-100 dark:border-yellow-500/20 bg-amber-50/40 dark:bg-amber-950/20"
+                          : isPro
+                            ? "border-purple-100 dark:border-purple-500/20 bg-purple-50/40 dark:bg-purple-950/20"
                             : "border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]"
                     }`}
                   >
@@ -589,9 +603,9 @@ function MeusPlanosContent() {
                           isCurrentPlan
                             ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30"
                             : isPlus
-                              ? "bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-500/15 dark:text-purple-400 dark:border-purple-500/30"
-                              : isHighlighted
-                                ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-yellow-500/15 dark:text-yellow-400 dark:border-yellow-500/30"
+                              ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-yellow-500/15 dark:text-yellow-400 dark:border-yellow-500/30"
+                              : isPro
+                                ? "bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-500/15 dark:text-purple-400 dark:border-purple-500/30"
                                 : "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-white/10"
                         }`}
                       >
@@ -609,7 +623,7 @@ function MeusPlanosContent() {
                           {isPlus
                             ? "Para empresas com grande escala e franquias"
                             : isPro
-                              ? "O mais popular • Alta conversão e automação"
+                              ? "Alta conversão e automação"
                               : "Ideal para começar a gerar propostas"}
                         </p>
                       </div>
@@ -624,11 +638,17 @@ function MeusPlanosContent() {
                           <span
                             className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full border ${
                               isPlus
-                                ? "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30"
-                                : "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30"
+                                ? "bg-amber-100 text-amber-900 border-amber-200 dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-500/30"
+                                : isPro
+                                  ? "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30"
+                                  : "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30"
                             }`}
                           >
-                            ECONOMIZE {Math.round((1 - priceNum / originalPrice) * 100)}%
+                            {isPlus
+                              ? "ECONOMIZE R$ 400"
+                              : isPro
+                                ? "ECONOMIZE R$ 100"
+                                : `ECONOMIZE ${Math.round((1 - priceNum / originalPrice) * 100)}%`}
                           </span>
                         </div>
                       )}

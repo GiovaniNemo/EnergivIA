@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useOrganization } from "./providers/organization-provider";
 import PaymentWrapper from "./PaymentForm";
-import { Rocket, Gem, CheckCircle2, XCircle, LockKeyhole, LogOut } from "lucide-react";
+import { Rocket, Gem, CheckCircle2, XCircle, LockKeyhole, LogOut, Sparkles } from "lucide-react";
 import {
   type PlanFeatureItem,
   normalizePlanFeatures,
@@ -169,31 +169,40 @@ export function TrialLockOverlay() {
                 const planPrice = Number(plan?.price ?? 0);
                 const planNameLower = planName.toLowerCase();
                 const isBasic =
-                  planNameLower.includes("essencial") || planNameLower.includes("básic");
+                  planNameLower.includes("essencial") ||
+                  planNameLower.includes("básic") ||
+                  planNameLower.includes("standard");
                 const isPlus = planNameLower.includes("plus");
                 const isPro = planNameLower.includes("pro") && !isPlus;
-                const isHighlighted = isPro;
+                const isHighlighted = isPlus;
 
                 let originalPrice: number | null = null;
-                if (isBasic || Math.abs(planPrice - 99.99) < 1) originalPrice = 169.99;
-                else if (isPlus || Math.abs(planPrice - 399.99) < 1) originalPrice = 699.99;
-                else if (isPro || Math.abs(planPrice - 199.99) < 1) originalPrice = 299.99;
+                if (isBasic || Math.abs(planPrice - 97) < 5 || Math.abs(planPrice - 99.99) < 5)
+                  originalPrice = 137.0;
+                else if (
+                  isPlus ||
+                  Math.abs(planPrice - 397) < 5 ||
+                  Math.abs(planPrice - 399.99) < 5
+                )
+                  originalPrice = 797.0;
+                else if (isPro || Math.abs(planPrice - 197) < 5 || Math.abs(planPrice - 199.99) < 5)
+                  originalPrice = 297.0;
 
                 // Cores e Icones baseados no plano
                 const cardBorder = isHighlighted
                   ? "border-yellow-500/60 shadow-[0_0_30px_rgba(234,179,8,0.15)] ring-1 ring-yellow-500/40"
-                  : isPlus
+                  : isPro
                     ? "border-purple-500/40 shadow-[0_0_20px_rgba(168,85,247,0.12)] ring-1 ring-purple-500/30"
                     : "border-gray-800";
-                const iconBg = isPlus
-                  ? "bg-purple-500/15 text-purple-400 border-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.2)]"
-                  : isHighlighted
-                    ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                const iconBg = isHighlighted
+                  ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                  : isPro
+                    ? "bg-purple-500/15 text-purple-400 border-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.2)]"
                     : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
-                const priceColor = isPlus
-                  ? "text-purple-400"
-                  : isHighlighted
-                    ? "text-yellow-400"
+                const priceColor = isHighlighted
+                  ? "text-yellow-400"
+                  : isPro
+                    ? "text-purple-400"
                     : "text-emerald-400";
 
                 return (
@@ -203,7 +212,8 @@ export function TrialLockOverlay() {
                   >
                     {isHighlighted && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-950 px-3 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase shadow-[0_0_12px_rgba(250,204,21,0.5)] flex items-center gap-1">
-                        <span>⭐️</span> MAIS ESCOLHIDO
+                        <Sparkles className="w-3 h-3 fill-yellow-950 text-yellow-950" /> MAIS
+                        ESCOLHIDO
                       </div>
                     )}
 
@@ -240,11 +250,13 @@ export function TrialLockOverlay() {
                           <span
                             className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full border ${
                               isPlus
-                                ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
-                                : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                                ? "bg-amber-500/20 text-yellow-300 border-yellow-500/30"
+                                : isPro
+                                  ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+                                  : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
                             }`}
                           >
-                            -{Math.round((1 - planPrice / originalPrice) * 100)}% OFF
+                            {isPlus ? "ECONOMIZE R$ 400" : isPro ? "ECONOMIZE R$ 100" : "-30% OFF"}
                           </span>
                         </div>
                       )}
