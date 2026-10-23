@@ -39,6 +39,11 @@ export class CreateOrganizationDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(30)
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(20)
   cep?: string;
 

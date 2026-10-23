@@ -1,4 +1,13 @@
-import { Controller, Get, UseGuards, Param } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Body,
+  UseGuards,
+  Param,
+  UnauthorizedException,
+} from "@nestjs/common";
 import type { JwtPayload } from "@energivia/types";
 import { UsersService } from "./users.service";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
@@ -11,6 +20,23 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 @UseGuards(UnifiedAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Patch("me/onboarding-contact")
+  updateOnboardingContact(@CurrentUser() user: JwtPayload, @Body() body: { phone?: string }) {
+    if (!user?.sub) throw new UnauthorizedException("Sessão inválida.");
+    return this.usersService.updateOnboardingContact(user.sub, body);
+  }
+
+  @Post("me/onboarding-abandoned")
+  markOnboardingAbandoned(@CurrentUser() user: JwtPayload, @Body() body: { step?: number }) {
+    if (!user?.sub) throw new UnauthorizedException("Sessão inválida.");
+    return this.usersService.markOnboardingAbandoned(user.sub, body);
+  }
+
+  @Get("admin/activation-status")
+  getActivationStatus() {
+    return this.usersService.getActivationStatusList();
+  }
 
   @Get()
   @UseGuards(RolesGuard)

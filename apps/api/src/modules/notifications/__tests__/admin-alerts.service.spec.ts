@@ -119,6 +119,7 @@ describe("AdminAlertsService", () => {
     const result = await service.notifyNewUserRegistration({
       name: "Carlos Integrador",
       email: "carlos@solar.com",
+      phone: "(11) 98888-7777",
       companyName: "Carlos Solar",
     });
 
@@ -131,7 +132,34 @@ describe("AdminAlertsService", () => {
     );
     expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: expect.stringContaining("NOVO CADASTRO NA PLATAFORMA"),
+        body: expect.stringContaining("wa.me/5511988887777"),
+      })
+    );
+  });
+
+  it("should send onboarding abandoned notification with wa.me link to group", async () => {
+    mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      key: AdminAlertsService.GROUP_SETTING_KEY,
+      value: "1203630283921938@g.us",
+    });
+
+    const result = await service.notifyOnboardingAbandoned({
+      name: "Mariana Solar",
+      email: "mariana@solar.com",
+      phone: "(44) 99999-1234",
+      step: 1,
+    });
+
+    expect(result).toBe(true);
+    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toWaId: "1203630283921938@g.us",
+        body: expect.stringContaining("CADASTRO NÃO FINALIZADO (ABANDONO)"),
+      })
+    );
+    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining("wa.me/5544999991234"),
       })
     );
     expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(

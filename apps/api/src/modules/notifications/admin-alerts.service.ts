@@ -144,6 +144,7 @@ export class AdminAlertsService {
   async notifyNewUserRegistration(data: {
     name: string;
     email: string;
+    phone?: string | null;
     companyName?: string;
     city?: string | null;
     state?: string | null;
@@ -163,15 +164,62 @@ export class AdminAlertsService {
     const location =
       data.city && data.state ? `${data.city}/${data.state}` : data.city || data.state || null;
 
+    const rawDigits = (data.phone || "").replace(/\D/g, "");
+    const waLink =
+      rawDigits.length >= 10
+        ? `https://wa.me/${rawDigits.startsWith("55") ? rawDigits : `55${rawDigits}`}`
+        : null;
+
     const msg =
       `👤 *NOVO CADASTRO NA PLATAFORMA* 🎉\n\n` +
       `Um novo integrador acabou de criar conta na EnergivIA:\n\n` +
       `• *Nome:* ${data.name}\n` +
       `• *E-mail:* ${data.email}\n` +
+      (data.phone ? `• *WhatsApp:* ${data.phone}${waLink ? ` (${waLink})` : ""}\n` : "") +
       (data.companyName ? `• *Empresa:* ${data.companyName}\n` : "") +
       (location ? `• *Localização:* ${location}\n` : "") +
       `• *Plano Inicial:* TRIAL (7 dias grátis)\n` +
       `• *Data/Hora:* ${now}`;
+
+    return this.sendToAlertGroup(msg);
+  }
+
+  /**
+   * 2.1. Alerta de Cadastro Não Finalizado (Desistência/Abandono no Onboarding)
+   */
+  async notifyOnboardingAbandoned(data: {
+    name: string;
+    email: string;
+    phone?: string | null;
+    step?: string | number;
+  }): Promise<boolean> {
+    const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+    const rawDigits = (data.phone || "").replace(/\D/g, "");
+    const waLink =
+      rawDigits.length >= 10
+        ? `https://wa.me/${rawDigits.startsWith("55") ? rawDigits : `55${rawDigits}`}`
+        : null;
+
+    const stepLabel =
+      data.step === 1
+        ? "Passo 1 (Dados da Empresa)"
+        : data.step === 2
+          ? "Passo 2 (Perfil do Integrador)"
+          : data.step === 3
+            ? "Passo 3 (Propostas Inteligentes)"
+            : String(data.step || "Passo 1");
+
+    const msg =
+      `🚨 *CADASTRO NÃO FINALIZADO (ABANDONO)* ⚠️\n\n` +
+      `Um integrador iniciou o cadastro mas saiu da página antes de concluir:\n\n` +
+      `• *Nome:* ${data.name}\n` +
+      `• *E-mail:* ${data.email}\n` +
+      (data.phone ? `• *WhatsApp:* ${data.phone}\n` : "") +
+      (waLink ? `• *Falar com Integrador:* ${waLink}\n` : "") +
+      `• *Etapa onde parou:* ${stepLabel}\n` +
+      `• *Status:* Onboarding Incompleto\n` +
+      `• *Data/Hora:* ${now}\n\n` +
+      `_Dica: Entre em contato ativo para entender a dúvida e ajudar a concluir o setup._`;
 
     return this.sendToAlertGroup(msg);
   }

@@ -310,7 +310,7 @@ export class OrganizationsService {
     // Bloqueia criação de múltiplas organizações para usuários no plano gratuito / Start
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { role: true, email: true, name: true },
+      select: { role: true, email: true, name: true, phone: true },
     });
     const roleStr = String(user?.role || "").toUpperCase();
     const isPrivileged = roleStr === "ADMIN" || roleStr === "PLATFORM";
@@ -519,11 +519,28 @@ export class OrganizationsService {
       );
     }
 
+    try {
+      const cleanPhone = (dto.phone || "").replace(/\D/g, "");
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          onboardingStatus: "COMPLETED",
+          lastActiveAt: new Date(),
+          ...(cleanPhone ? { phone: cleanPhone } : {}),
+        },
+      });
+    } catch (userStatusErr) {
+      this.logger.warn(
+        `Falha não bloqueante ao atualizar status de onboarding do usuário ${userId}: ${userStatusErr}`
+      );
+    }
+
     if (this.adminAlerts) {
       this.adminAlerts
         .notifyNewUserRegistration({
           name: user?.name || commercialName,
           email: user?.email || "",
+          phone: dto.phone || user?.phone || null,
           companyName: commercialName,
           city: dto.city ?? null,
           state: dto.state ?? null,

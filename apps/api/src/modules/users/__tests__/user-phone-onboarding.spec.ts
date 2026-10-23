@@ -65,6 +65,7 @@ describe("UsersService - Onboarding Phone & Status Tracking", () => {
         name: "Carlos Integrador",
         phone: "11988887777",
         onboardingStatus: "IN_PROGRESS",
+        organizationMemberships: [],
       });
 
       mockPrisma.user.update.mockResolvedValue({
@@ -90,6 +91,67 @@ describe("UsersService - Onboarding Phone & Status Tracking", () => {
       });
 
       expect(result.onboardingStatus).toBe("ABANDONED");
+    });
+  });
+
+  describe("getActivationStatusList", () => {
+    it("should classify abandoned, inactive, and active integrators", async () => {
+      mockPrisma.user.findMany.mockResolvedValue([
+        {
+          id: "usr_abandoned",
+          name: "Abandono Onboarding",
+          email: "abandoned@test.com",
+          phone: "11999991111",
+          onboardingStatus: "ABANDONED",
+          organizationMemberships: [],
+          createdAt: new Date(),
+        },
+        {
+          id: "usr_inactive",
+          name: "Cadastrado Sem Propostas",
+          email: "inactive@test.com",
+          phone: "11999992222",
+          onboardingStatus: "COMPLETED",
+          organizationMemberships: [
+            {
+              organization: {
+                id: "org_1",
+                name: "Empresa Solar 1",
+                _count: { proposals: 0 },
+              },
+            },
+          ],
+          createdAt: new Date(),
+        },
+        {
+          id: "usr_active",
+          name: "Integrador Ativo",
+          email: "active@test.com",
+          phone: "11999993333",
+          onboardingStatus: "COMPLETED",
+          organizationMemberships: [
+            {
+              organization: {
+                id: "org_2",
+                name: "Empresa Solar 2",
+                _count: { proposals: 5 },
+              },
+            },
+          ],
+          createdAt: new Date(),
+        },
+      ]);
+
+      const res = await service.getActivationStatusList();
+
+      expect(res.summary.total).toBe(3);
+      expect(res.summary.abandoned).toBe(1);
+      expect(res.summary.registeredNoUsage).toBe(1);
+      expect(res.summary.active).toBe(1);
+
+      expect(res.items[0]?.activationStatus).toBe("ABANDONED_ONBOARDING");
+      expect(res.items[1]?.activationStatus).toBe("REGISTERED_NO_USAGE");
+      expect(res.items[2]?.activationStatus).toBe("ACTIVE");
     });
   });
 });
