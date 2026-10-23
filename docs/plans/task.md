@@ -657,3 +657,7 @@
 | task-661 | Commit e push das alterações para origin/main | completed | Migração 20261023131500 sincronizada com o repositório remoto |
 | task-662 | Remover comportamento sticky do header do Catálogo Master em AdminLayout para não sobrepor o conteúdo durante o scroll | completed | Removido sticky top-0 z-30 de header em apps/web/src/app/(authenticated)/admin/layout.tsx |
 | task-663 | Validar lint, build e commit/push para origin/main | completed | Header rola naturalmente com o topo da página sem descer ou sobrepor formulários |
+| task-664 | Ampliar SpecsPreviewCard.tsx para suportar todas as categorias (hybrid_inverter, battery, off_grid, bms, etc.) e fallback dinâmico | completed | Suporte a inversores híbridos, off-grid, baterias, MPPT, topologia, chips visuais e fallback universal para qualquer especificação |
+| task-665 | Implementar auto-preenchimento inteligente em ProductForm (homologação oficial, inferência por nome e auto-leitura de datasheet) | completed | Preenchimento automático com IA/catálogo oficial homologado, inferência de estruturas e auto-extração de datasheet PDF |
+| task-666 | Adicionar barra de ação com botão Salvar no rodapé do formulário e barra flutuante em admin/products | completed | Botão Salvar visível ao final do formulário nas abas e barra de ação flutuante permanente no rodapé da página |
+| task-667 | Validar lint, testes unitários, build e realizar commit/push para origin/main | completed | ESLint aprovado com 0 erros, 333 testes Vitest aprovados e alterações sincronizadas com origin/main |

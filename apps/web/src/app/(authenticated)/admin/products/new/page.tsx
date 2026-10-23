@@ -166,9 +166,51 @@ export default function NewProductPage(): JSX.Element {
               categories={categories}
               brands={brands}
               categoryName={effectiveCategoryName}
+              isSaving={createMutation.isPending}
             />
           </form>
         </Paper>
+
+        {/* Persistent bottom floating action bar so Save is always visible */}
+        <Box
+          sx={{
+            position: "sticky",
+            bottom: 16,
+            zIndex: 10,
+            bgcolor: "background.paper",
+            p: 2,
+            borderRadius: 2,
+            boxShadow: 4,
+            border: 1,
+            borderColor: "divider",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 2,
+          }}
+        >
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={() => router.push("/admin/produtos")}
+            sx={{ textTransform: "none" }}
+          >
+            Voltar ao Catálogo
+          </Button>
+
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={methods.handleSubmit(onSubmit)}
+            disabled={createMutation.isPending}
+            sx={{ textTransform: "none", fontWeight: 700, px: 4, py: 1 }}
+          >
+            {createMutation.isPending ? "Criando Produto..." : "Criar e Salvar Produto"}
+          </Button>
+        </Box>
       </Box>
     </FormProvider>
   );

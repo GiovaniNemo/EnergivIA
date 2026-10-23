@@ -199,9 +199,51 @@ export default function EditProductPage(): JSX.Element {
               brands={brands}
               categoryName={effectiveCategoryName}
               productId={id}
+              isSaving={updateMutation.isPending}
             />
           </form>
         </Paper>
+
+        {/* Persistent bottom floating action bar so Save is always visible */}
+        <Box
+          sx={{
+            position: "sticky",
+            bottom: 16,
+            zIndex: 10,
+            bgcolor: "background.paper",
+            p: 2,
+            borderRadius: 2,
+            boxShadow: 4,
+            border: 1,
+            borderColor: "divider",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 2,
+          }}
+        >
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={() => router.push("/admin/produtos")}
+            sx={{ textTransform: "none" }}
+          >
+            Voltar ao Catálogo
+          </Button>
+
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            startIcon={<SaveIcon />}
+            onClick={methods.handleSubmit(onSubmit)}
+            disabled={updateMutation.isPending}
+            sx={{ textTransform: "none", fontWeight: 700, px: 4, py: 1 }}
+          >
+            {updateMutation.isPending ? "Salvando Alterações..." : "Salvar Alterações do Produto"}
+          </Button>
+        </Box>
       </Box>
     </FormProvider>
   );

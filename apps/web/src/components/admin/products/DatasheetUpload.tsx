@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
@@ -14,6 +14,7 @@ interface DatasheetUploadProps {
   productCategory?: string;
   productName?: string;
   onExtractedSpecs: (specs: Record<string, unknown>) => void;
+  autoExtractIfEmpty?: boolean;
 }
 
 export function DatasheetUpload({
@@ -22,12 +23,14 @@ export function DatasheetUpload({
   productCategory,
   productName,
   onExtractedSpecs,
+  autoExtractIfEmpty = false,
 }: DatasheetUploadProps): JSX.Element {
   const [error, setError] = useState<string>("");
   const [successMsg, setSuccessMsg] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
+  const autoExtractedRef = useRef(false);
 
   const accept = useMemo(() => ".pdf", []);
 
@@ -46,6 +49,13 @@ export function DatasheetUpload({
       setIsExtracting(false);
     }
   };
+
+  useEffect(() => {
+    if (value && autoExtractIfEmpty && !autoExtractedRef.current && !isExtracting) {
+      autoExtractedRef.current = true;
+      void handleExtractFromExistingPdf();
+    }
+  }, [value, autoExtractIfEmpty]);
 
   const handleFileChange = async (file: File | null) => {
     if (!file) return;

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useFormContext, Controller, useWatch } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import {
   Alert,
   Box,
+  Button,
   TextField,
   MenuItem,
   FormControlLabel,
@@ -30,6 +31,8 @@ import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import SaveIcon from "@mui/icons-material/Save";
 import { SpecsModuleForm } from "./SpecsModuleForm";
 import { SpecsInverterForm } from "./SpecsInverterForm";
 import { SpecsMicroInverterForm } from "./SpecsMicroInverterForm";
@@ -44,7 +47,12 @@ import { SpecsStringBoxForm } from "./SpecsStringBoxForm";
 import { SpecsPreviewCard } from "./SpecsPreviewCard";
 import { ImageUpload } from "./ImageUpload";
 import { DatasheetUpload } from "./DatasheetUpload";
-import { fetchDistributorsByProduct, type ProductDistributorOffer } from "@/lib/admin-api";
+import {
+  fetchDistributorsByProduct,
+  lookupEquipmentHomologation,
+  type ProductDistributorOffer,
+} from "@/lib/admin-api";
+import { inferStructureSpecsFromName, normalizeCategory } from "@/lib/product-specs-status";
 import type { CategoryName } from "@/lib/admin/schemas";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -144,6 +152,7 @@ interface ProductFormProps {
   categoryName: CategoryName | null;
   productId?: string;
   defaultTab?: number;
+  isSaving?: boolean;
 }
 
 export function ProductForm({
@@ -152,17 +161,133 @@ export function ProductForm({
   categoryName,
   productId,
   defaultTab = 0,
+  isSaving,
 }: ProductFormProps): JSX.Element {
   const [tabIndex, setTabIndex] = useState(defaultTab);
   const {
     control,
     setValue,
-    formState: { errors, submitCount },
+    getValues,
+    formState: { errors, submitCount, isSubmitting },
   } = useFormContext();
   const SpecForm = categoryName ? categoryToSpecForm[categoryName] : null;
   const hasErrors = submitCount > 0 && Object.keys(errors).length > 0;
+  const isSavingEffective = isSaving ?? isSubmitting;
 
   const productName = useWatch({ name: "name", control });
+  const datasheetUrl = useWatch({ name: "datasheet_url", control });
+  const currentSpecs = useWatch({ name: "specs", control }) as Record<string, unknown> | undefined;
+
+  const hasSpecs = Boolean(
+    currentSpecs &&
+    typeof currentSpecs === "object" &&
+    Object.values(currentSpecs).some((v) => v !== null && v !== undefined && v !== "")
+  );
+
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [lookupAlert, setLookupAlert] = useState<{
+    type: "success" | "info" | "warning" | "error";
+    message: string;
+  } | null>(null);
+  const autoLookupDoneRef = useRef(false);
+
+  const handleLookupHomologation = async (isManual = true) => {
+    const rawName = getValues("name") || productName;
+    const currentName = typeof rawName === "string" ? rawName.trim() : "";
+
+    if (!currentName || currentName.length < 3) {
+      if (isManual) {
+        setLookupAlert({
+          type: "warning",
+          message:
+            "Informe o nome do produto na aba 'Informações Gerais' para buscar especificações automáticas.",
+        });
+      }
+      return;
+    }
+
+    setIsLookingUp(true);
+    setLookupAlert(null);
+
+    try {
+      const normCat = normalizeCategory(categoryName);
+
+      // 1. Se for estrutura, infere primeiro por padrão no nome
+      if (normCat === "structure_kit" || normCat === "profile") {
+        const inferred = inferStructureSpecsFromName(currentName);
+        if (Object.keys(inferred).length > 0) {
+          Object.entries(inferred).forEach(([k, v]) => {
+            if (v !== undefined && v !== null) {
+              setValue(`specs.${k}`, v, { shouldDirty: true, shouldValidate: true });
+            }
+          });
+          setLookupAlert({
+            type: "success",
+            message:
+              "Especificações de estrutura inferidas com sucesso a partir do nome do produto!",
+          });
+          setIsLookingUp(false);
+          return;
+        }
+      }
+
+      // 2. Consulta a base de homologação e catálogo oficial
+      const result = await lookupEquipmentHomologation(currentName);
+      if (result?.specs && Object.keys(result.specs).length > 0) {
+        Object.entries(result.specs).forEach(([k, v]) => {
+          if (v !== undefined && v !== null) {
+            setValue(`specs.${k}`, v, { shouldDirty: true, shouldValidate: true });
+          }
+        });
+
+        // Tenta associar fabricante correspondente
+        if (result.brand && brands.length > 0) {
+          const currentBrandId = getValues("brand_id");
+          if (!currentBrandId) {
+            const bTarget = result.brand.trim().toUpperCase();
+            const matchedBrand = brands.find(
+              (b) =>
+                b.name.trim().toUpperCase() === bTarget ||
+                bTarget.includes(b.name.trim().toUpperCase())
+            );
+            if (matchedBrand) {
+              setValue("brand_id", matchedBrand.id, { shouldDirty: true, shouldValidate: true });
+            }
+          }
+        }
+
+        setLookupAlert({
+          type: "success",
+          message: `Especificações preenchidas automaticamente via Catálogo Homologado (${result.brand ? `${result.brand} ` : ""}${result.matchedModel || ""})!`,
+        });
+      } else {
+        if (isManual) {
+          setLookupAlert({
+            type: "info",
+            message:
+              "Nenhuma homologação exata encontrada para este nome no catálogo oficial. Você pode anexar o Datasheet em PDF para extração via IA ou preencher os campos abaixo.",
+          });
+        }
+      }
+    } catch (err: unknown) {
+      if (isManual) {
+        setLookupAlert({
+          type: "error",
+          message: (err as Error)?.message || "Erro ao consultar base de homologação.",
+        });
+      }
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
+
+  // Preenchimento automático ao acessar a aba de Ficha Técnica se ainda não tiver especificações
+  useEffect(() => {
+    if (tabIndex === 1 && !hasSpecs && !datasheetUrl && !autoLookupDoneRef.current) {
+      autoLookupDoneRef.current = true;
+      void handleLookupHomologation(false);
+    }
+  }, [tabIndex, hasSpecs, datasheetUrl]);
 
   // Fetch distributor offers if editing an existing product
   const { data: distributorOffers = [], isLoading: isLoadingOffers } = useQuery({
@@ -348,17 +473,96 @@ export function ProductForm({
               />
             )}
           />
+
+          {/* Bottom Action Bar for Tab 0 */}
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            flexWrap="wrap"
+            gap={2}
+            sx={{ pt: 2, borderTop: 1, borderColor: "divider" }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              {hasSpecs
+                ? "✓ Ficha técnica já possui especificações cadastradas."
+                : "Defina os parâmetros técnicos na aba Ficha Técnica após salvar as informações gerais."}
+            </Typography>
+            <Box display="flex" gap={1.5}>
+              {categoryName && (
+                <Button
+                  variant="outlined"
+                  onClick={() => setTabIndex(1)}
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Avançar para Ficha Técnica →
+                </Button>
+              )}
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<SaveIcon />}
+                disabled={Boolean(isSavingEffective)}
+                sx={{ textTransform: "none", fontWeight: 700, px: 3 }}
+              >
+                {isSavingEffective ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </Box>
+          </Box>
         </Box>
       )}
 
       {/* TAB 1: Technical Specs & Datasheet AI */}
       {tabIndex === 1 && categoryName && (
         <Box display="flex" flexDirection="column" gap={3} sx={{ pt: 1 }}>
-          <Alert severity="info" sx={{ borderRadius: 2 }}>
-            Faça upload do Datasheet oficial em PDF para que a{" "}
-            <strong>Inteligência Artificial da EnergivIA</strong> extraia as especificações
-            elétricas e mecânicas automaticamente.
-          </Alert>
+          {/* Homologation & AI Auto-fill Banner */}
+          <Box
+            sx={{
+              p: 2,
+              borderRadius: 2,
+              bgcolor: "background.paper",
+              border: "1px solid",
+              borderColor: "divider",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 2,
+            }}
+          >
+            <Box display="flex" alignItems="center" gap={1.5}>
+              <AutoAwesomeIcon color="primary" />
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  Preenchimento Automático &amp; Homologação Oficial
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Busca especificações elétricas e mecânicas no catálogo oficial homologado ou
+                  extrai do PDF com IA.
+                </Typography>
+              </Box>
+            </Box>
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={isLookingUp ? <CircularProgress size={16} /> : <AutoAwesomeIcon />}
+              disabled={isLookingUp}
+              onClick={() => handleLookupHomologation(true)}
+              sx={{ textTransform: "none", fontWeight: 600 }}
+            >
+              {isLookingUp ? "Consultando Catálogo..." : "Buscar Especificações com IA"}
+            </Button>
+          </Box>
+
+          {lookupAlert && (
+            <Alert
+              severity={lookupAlert.type}
+              onClose={() => setLookupAlert(null)}
+              sx={{ borderRadius: 2 }}
+            >
+              {lookupAlert.message}
+            </Alert>
+          )}
 
           <Controller
             name="datasheet_url"
@@ -369,6 +573,7 @@ export function ProductForm({
                 onChange={(url) => field.onChange(url)}
                 productCategory={categoryName ?? undefined}
                 productName={productName as string | undefined}
+                autoExtractIfEmpty={!hasSpecs}
                 onExtractedSpecs={(specs) => {
                   Object.entries(specs).forEach(([key, value]) => {
                     if (value !== null && value !== undefined) {
@@ -377,6 +582,11 @@ export function ProductForm({
                         shouldValidate: true,
                       });
                     }
+                  });
+                  setLookupAlert({
+                    type: "success",
+                    message:
+                      "Especificações elétricas e mecânicas extraídas com sucesso a partir do PDF!",
                   });
                 }}
               />
@@ -395,10 +605,65 @@ export function ProductForm({
                 {SpecForm && <SpecForm />}
               </Paper>
             </Box>
-            <Box minWidth={260}>
+            <Box minWidth={260} width={{ xs: "100%", md: 340 }}>
               <SpecsPreviewCard categoryName={categoryName} />
             </Box>
           </Box>
+
+          {/* Dedicated Bottom Action Bar for Tab 1 with Save Button */}
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2.5,
+              borderRadius: 2,
+              bgcolor: "background.paper",
+              border: "1px solid",
+              borderColor: "primary.main",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 2,
+              boxShadow: 2,
+              mt: 1,
+            }}
+          >
+            <Box display="flex" alignItems="center" gap={1}>
+              <Button
+                variant="outlined"
+                onClick={() => setTabIndex(0)}
+                sx={{ textTransform: "none" }}
+              >
+                ← Informações Gerais
+              </Button>
+              <Button
+                variant="text"
+                startIcon={<AutoAwesomeIcon />}
+                onClick={() => handleLookupHomologation(true)}
+                disabled={isLookingUp}
+                sx={{ textTransform: "none" }}
+              >
+                {isLookingUp ? "Consultando..." : "Reconsultar Catálogo"}
+              </Button>
+            </Box>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              size="large"
+              startIcon={<SaveIcon />}
+              disabled={Boolean(isSavingEffective)}
+              sx={{
+                textTransform: "none",
+                fontWeight: 700,
+                px: 4,
+                py: 1.2,
+                fontSize: "1rem",
+              }}
+            >
+              {isSavingEffective ? "Salvando alterações..." : "Salvar Produto & Especificações"}
+            </Button>
+          </Paper>
         </Box>
       )}
 
