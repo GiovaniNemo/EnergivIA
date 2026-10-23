@@ -8,8 +8,9 @@ export type WhatsappBotStep =
   | "AWAITING_CITY" // Aguardando município e estado (ex: "Maringá/PR")
   | "AWAITING_CITY_STATE" // Aguardando seleção de estado para município homônimo (ex: Belém -> PA, AL, PB)
   | "AWAITING_GRID_TYPE" // Aguardando padrão da rede elétrica (Mono, Bi, Tri)
-  | "AWAITING_BATTERY_STORAGE" // Aguardando capacidade/quantidade de baterias para sistema híbrido
   | "AWAITING_ROOF_TYPE" // Aguardando estrutura do telhado (Cerâmica, Fibro, etc.)
+  | "AWAITING_INVERTER_TYPE" // Aguardando tecnologia do inversor (1-String, 2-Micro, 3-Híbrido)
+  | "AWAITING_BATTERY_STORAGE" // Aguardando capacidade/quantidade de baterias para sistema híbrido
   | "AWAITING_KIT_SELECTION" // Aguardando escolha do kit (1-Standard, 2-Elite, 3-Premium)
   | "AWAITING_PRICE_CONFIRMATION" // Confirmar preço padrão ou digitar outro
   | "AWAITING_CUSTOM_PRICE" // Digitação manual de R$/kWp ou valor total
@@ -76,9 +77,10 @@ export const STEP_PREVIOUS_MAP: Partial<Record<WhatsappBotStep, WhatsappBotStep>
   AWAITING_CLIENT_NAME: "AWAITING_PRICE_CONFIRMATION",
   AWAITING_CUSTOM_PRICE: "AWAITING_PRICE_CONFIRMATION",
   AWAITING_PRICE_CONFIRMATION: "AWAITING_KIT_SELECTION",
-  AWAITING_KIT_SELECTION: "AWAITING_ROOF_TYPE",
+  AWAITING_KIT_SELECTION: "AWAITING_INVERTER_TYPE",
+  AWAITING_BATTERY_STORAGE: "AWAITING_INVERTER_TYPE",
+  AWAITING_INVERTER_TYPE: "AWAITING_ROOF_TYPE",
   AWAITING_ROOF_TYPE: "AWAITING_GRID_TYPE",
-  AWAITING_BATTERY_STORAGE: "AWAITING_GRID_TYPE",
   AWAITING_GRID_TYPE: "AWAITING_CITY",
   AWAITING_CITY_STATE: "AWAITING_CITY",
 };
