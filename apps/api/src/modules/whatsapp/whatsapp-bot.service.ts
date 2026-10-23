@@ -1488,7 +1488,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
           this.logger.log(`[Admin Alerts] Grupo ${groupJid} já é o canal oficial de alertas.`);
           const alreadyActiveMsg =
             `✅ *ESTE GRUPO JÁ ESTÁ ATIVO COMO O CANAL DE ALERTAS!* 🚀\n\n` +
-            `Este grupo é o canal oficial configurado para receber notificações executivas do EnergivIA em tempo real:\n\n` +
+            `Este grupo é o canal oficial configurado para receber notificações executivas da EnergivIA em tempo real:\n\n` +
             `• 🚨 *Central de Ajuda & Chamados*\n` +
             `• 👤 *Novos Cadastros de Integradores*\n` +
             `• ⏳ *Tentativa de Pagamento (Checkout Iniciado)*\n` +

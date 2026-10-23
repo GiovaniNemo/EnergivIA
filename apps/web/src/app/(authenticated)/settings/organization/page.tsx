@@ -659,7 +659,7 @@ function OrganizationSettingsContent() {
             )}
           </div>
           <p className="text-[var(--color-muted-foreground)]">
-            Nome, CNPJ, localização e logotipo da sua empresa no EnergivIA.
+            Nome, CNPJ, localização e logotipo da sua empresa na EnergivIA.
           </p>
         </div>
         <Button

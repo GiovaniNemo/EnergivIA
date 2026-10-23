@@ -356,7 +356,7 @@ export function ProductForm({
         <Box display="flex" flexDirection="column" gap={3} sx={{ pt: 1 }}>
           <Alert severity="info" sx={{ borderRadius: 2 }}>
             Faça upload do Datasheet oficial em PDF para que a{" "}
-            <strong>Inteligência Artificial do EnergivIA</strong> extraia as especificações
+            <strong>Inteligência Artificial da EnergivIA</strong> extraia as especificações
             elétricas e mecânicas automaticamente.
           </Alert>
 

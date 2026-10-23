@@ -134,6 +134,16 @@ describe("AdminAlertsService", () => {
         body: expect.stringContaining("NOVO CADASTRO NA PLATAFORMA"),
       })
     );
+    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining("Um novo integrador acabou de criar conta na EnergivIA:"),
+      })
+    );
+    expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.not.stringContaining("no EnergivIA"),
+      })
+    );
   });
 
   it("should send checkout initiated notification to group", async () => {

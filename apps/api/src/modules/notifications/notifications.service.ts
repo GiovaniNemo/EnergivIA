@@ -497,7 +497,7 @@ export class NotificationsService {
 
           <div style="text-align: center;">
             <a href="${params.proposalUrl}" style="display: inline-block; background-color: #10b981; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px; padding: 12px 28px; border-radius: 10px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
-              Acessar Proposta no EnergivIA →
+              Acessar Proposta na EnergivIA →
             </a>
           </div>
         </div>
@@ -539,7 +539,7 @@ export class NotificationsService {
       `📄 *Proposta:* ${params.proposalTitle}\n` +
       `👤 *Cliente:* ${params.leadName}\n` +
       `⏰ *Horário:* ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}\n\n` +
-      `👉 *Acesse no EnergivIA:* ${params.fullProposalUrl}`;
+      `👉 *Acesse na EnergivIA:* ${params.fullProposalUrl}`;
 
     for (const phone of phones) {
       const activeConv = await this.findActiveQuotationConversation(params.tenantId, phone);
@@ -778,7 +778,7 @@ export class NotificationsService {
 
           <div style="text-align: center;">
             <a href="${params.proposalUrl}" style="display: inline-block; background-color: ${badgeColor}; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px; padding: 12px 28px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-              Ver Detalhes no EnergivIA →
+              Ver Detalhes na EnergivIA →
             </a>
           </div>
         </div>

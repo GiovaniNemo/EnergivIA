@@ -152,7 +152,7 @@ export class AdminAlertsService {
 
     const msg =
       `👤 *NOVO CADASTRO NA PLATAFORMA* 🎉\n\n` +
-      `Um novo integrador acabou de criar conta no EnergivIA:\n\n` +
+      `Um novo integrador acabou de criar conta na EnergivIA:\n\n` +
       `• *Nome:* ${data.name}\n` +
       `• *E-mail:* ${data.email}\n` +
       (data.companyName ? `• *Empresa:* ${data.companyName}\n` : "") +

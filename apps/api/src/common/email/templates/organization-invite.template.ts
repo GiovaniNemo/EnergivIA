@@ -26,7 +26,7 @@ export function buildOrganizationInviteTemplate(input: OrganizationInviteTemplat
   const text = [
     `Olá!`,
     ``,
-    `${input.inviterName} convidou você para participar da organização "${input.organizationName}" no Energivia.`,
+    `${input.inviterName} convidou você para participar da organização "${input.organizationName}" na EnergivIA.`,
     `Entre na sua conta para aceitar automaticamente o convite:`,
     input.loginUrl,
     ``,
@@ -122,7 +122,7 @@ export function buildOrganizationInviteTemplate(input: OrganizationInviteTemplat
             <tr>
               <td style="padding:20px 30px; background:#0b0f19; border-top:1px solid #1f2937; text-align:center; color:#6b7280; font-size:12px;">
                 <p style="margin:0 0 4px;"><strong>EnergivIA</strong> • Tecnologia para o Futuro da Energia Solar</p>
-                <p style="margin:0;">Este é um e-mail transacional oficial do EnergivIA.</p>
+                <p style="margin:0;">Este é um e-mail transacional oficial da EnergivIA.</p>
               </td>
             </tr>
 

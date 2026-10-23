@@ -42,7 +42,7 @@ export function buildSupportTicketClientTemplate(input: SupportTicketClientTempl
   const textLines = [
     `Olá, ${firstName}!`,
     ``,
-    `Confirmamos o recebimento da sua solicitação através da Central de Ajuda do EnergivIA.`,
+    `Confirmamos o recebimento da sua solicitação através da Central de Ajuda da EnergivIA.`,
     `Nossa equipe de suporte técnico e produto já foi notificada e está analisando as informações enviadas.`,
     ``,
     `SEU PROTOCOLO DE ATENDIMENTO:`,
