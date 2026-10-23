@@ -274,17 +274,19 @@ describe("WhatsApp Bot - Cotação Completa e Avanço Direto (Texto e Áudio)", 
       expect(neutralClientLink).toBe("https://meuprojeto.solar/p/cmvjy4tpm016djk017w9qplph");
       expect(neutralClientLink).not.toContain("energivia");
 
-      // 3. Valida formatação do texto da mensagem do cliente
+      // 3. Valida formatação do texto da mensagem do cliente (redução de até 90% por conta do Fio B)
       const clientName = "Carlos Silva";
       const clientForwardMsg =
         `Olá, *${clientName}*! Tudo bem?\n\n` +
-        `Elaborei sua proposta de energia solar sob medida. O sistema projetado terá *12 kWp* de potência...\n\n` +
+        `Elaborei sua proposta de energia solar sob medida. O sistema projetado terá *12 kWp* de potência, com geração média estimada de *1400 kWh/mês* e redução de até *90%* na sua conta de luz.\n\n` +
         `Acesse sua proposta comercial completa com os equipamentos e simulação no link abaixo:\n` +
         `${neutralClientLink}\n\n` +
         `Qualquer dúvida ou ajuste que precisar, estou à disposição!`;
 
       expect(clientForwardMsg).toContain("https://meuprojeto.solar/p/cmvjy4tpm016djk017w9qplph");
       expect(clientForwardMsg).not.toContain("energivia");
+      expect(clientForwardMsg).toContain("redução de até *90%* na sua conta de luz");
+      expect(clientForwardMsg).not.toContain("95%");
     });
   });
 });

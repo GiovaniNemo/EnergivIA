@@ -235,7 +235,7 @@ export const EDITORIAL_SOLAR_EXECUTIVE_DOCUMENT: ProposalEditorDocument = {
           {
             id: "sol-b1",
             icon: "badge-percent",
-            text: "Redução de até 95% do custo mensal com energia elétrica",
+            text: "Redução de até 90% do custo mensal com energia elétrica",
           },
           {
             id: "sol-b2",

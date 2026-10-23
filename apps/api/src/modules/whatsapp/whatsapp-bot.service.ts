@@ -6112,7 +6112,7 @@ ${catalogContext}`;
           },
         });
 
-        const monthlySavingsVal = Math.round(effectiveConsumption * 0.95);
+        const monthlySavingsVal = Math.round(effectiveConsumption * 0.9);
         const calculatedPayback =
           monthlySavingsVal > 0
             ? Math.max(1, Math.round((quotedSaleBrl / (monthlySavingsVal * 12)) * 10) / 10)
@@ -6376,7 +6376,7 @@ ${catalogContext}`;
 
       const clientForwardMsg =
         `Olá, *${clientName}*! Tudo bem?\n\n` +
-        `Elaborei sua proposta de energia solar sob medida. O sistema projetado terá *${selectedQuote.kwp} kWp* de potência, com geração média estimada de *${estimatedGenerationKwh} kWh/mês* e redução de até *95%* na sua conta de luz.\n\n` +
+        `Elaborei sua proposta de energia solar sob medida. O sistema projetado terá *${selectedQuote.kwp} kWp* de potência, com geração média estimada de *${estimatedGenerationKwh} kWh/mês* e redução de até *90%* na sua conta de luz.\n\n` +
         `Acesse sua proposta comercial completa com os equipamentos e simulação no link abaixo:\n` +
         `${clientProposalLink}\n\n` +
         `Qualquer dúvida ou ajuste que precisar, estou à disposição!`;

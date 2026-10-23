@@ -636,3 +636,4 @@
 | task-640 | Validar suite completa de testes do WhatsApp, executar build e realizar commit e push para origin/main | completed | 20 arquivos de teste Vitest (208 testes) aprovados, build NestJS código 0 e alterações sincronizadas |
 | task-641 | Corrigir texto da dica do WhatsApp Bot de 'gerenciar integradores' para 'gerenciar clientes' | completed | Substituído 'gerenciar integradores' por 'gerenciar clientes' em trialCounterText no whatsapp-bot.service.ts |
 | task-642 | Encurtar rota da proposta para /p/[id] e suportar domínio neutro/white-label na mensagem para cliente | completed | Criado /p/[id], clientProposalBaseUrl suporta CLIENT_PROPOSAL_BASE_URL/PROPOSAL_PUBLIC_BASE_URL, rota encurtada e 10 testes Vitest aprovados |
+| task-643 | Ajustar percentual de redução máxima na mensagem e simulação para 90% (adequação tributária Fio B) | completed | Atualizado de 95% para 90% em whatsapp-bot.service.ts, template blueprint e testes unitários |
