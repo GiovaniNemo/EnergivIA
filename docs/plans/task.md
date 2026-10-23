@@ -671,3 +671,9 @@
 | task-675 | Brainstorming: Propor 2-3 abordagens arquiteturais para cotação de Micro e Híbrido sem alongar o fluxo atual | completed | Usuário aprovou Abordagem 1 com suporte a baterias (kWh ou quantidade) e validação rigorosa de rede mono/bifásico para híbrido |
 | task-676 | Brainstorming: Obter validação do usuário e apresentar design detalhado | completed | Design apresentado e validado com regras de HV/LV Deye, BMS e formato em aberto |
 | task-677 | Brainstorming: Registrar documento de design em docs/plans/ e preparar transição para plano de implementação | completed | Documento salvo em docs/plans/2026-10-23-whatsapp-cotacoes-micro-hibrido-design.md |
+| task-678 | Extensão de Tipagens e DTOs da Sessão WhatsApp (inverterType, baterias, FSM AWAITING_BATTERY_STORAGE) | not-started | whatsapp-state.types.ts, whatsapp-bot.service.ts e whatsapp-state-machine.spec.ts |
+| task-679 | Parser de Entidades de Microinversor, Inversor Híbrido e Baterias (kWh e Unidades) | not-started | parseIntegratorQuoteEntities com suporte a microinversores, híbridos e baterias abertas |
+| task-680 | Estado Conversacional Aberto de Baterias e Trava Técnica Deye HV/LV | not-started | Handler de AWAITING_BATTERY_STORAGE com validação técnica de Alta Tensão (min 4 bat + BMS) |
+| task-681 | Integração de Microinversor e Híbrido com Cálculo de Kits (KitGenerationService e BOM) | not-started | Repasse de tecnologia para calculateDistributorKits e inclusão de baterias/BMS no kit |
+| task-682 | Apresentação no WhatsApp e Comando Rápido de Alternância (formatQuotesListText e atalho de troca) | not-started | Labels dinâmicos no WhatsApp e recálculo com 1 comando (micro, hibrido, string) |
+| task-683 | Validação Completa da Suíte de Testes, Compilação e Commit/Push | not-started | Executar testes Vitest no backend, build de produção e sincronizar com origin/main |
