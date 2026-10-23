@@ -663,3 +663,4 @@
 | task-667 | Validar lint, testes unitários, build e realizar commit/push para origin/main | completed | ESLint aprovado com 0 erros, 333 testes Vitest aprovados e alterações sincronizadas com origin/main |
 | task-668 | Deduplicar botões de salvar: remover botões redundantes do cabeçalho superior e do interior das abas, mantendo barra inferior única | completed | Removido + Criar Produto do topo e botões internos de abas; mantido único botão Salvar Produto / Salvar Alterações na barra flutuante |
 | task-669 | Validar lint, testar e sincronizar alterações com origin/main | completed | ESLint validado com 0 erros e enviado para origin/main |
+| task-670 | Converter barra inferior de sticky para fixed (bottom: 0) com espaçamento de segurança para não cobrir campos | completed | Barra de ação fixada rigidamente no rodapé (position: fixed) com pb: 12 no container para não sobrepor o switch ou campos do formulário |

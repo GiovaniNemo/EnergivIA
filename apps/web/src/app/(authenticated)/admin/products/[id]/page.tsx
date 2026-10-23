@@ -143,7 +143,7 @@ export default function EditProductPage(): JSX.Element {
 
   return (
     <FormProvider {...methods}>
-      <Box display="flex" flexDirection="column" gap={3}>
+      <Box display="flex" flexDirection="column" gap={3} sx={{ pb: 12 }}>
         {/* Header with Navigation */}
         <Box
           display="flex"
@@ -183,7 +183,7 @@ export default function EditProductPage(): JSX.Element {
         </Box>
 
         <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, bgcolor: "background.paper" }}>
-          <form onSubmit={methods.handleSubmit(onSubmit)}>
+          <form id="edit-product-form" onSubmit={methods.handleSubmit(onSubmit)}>
             <ProductForm
               categories={categories}
               brands={brands}
@@ -193,46 +193,61 @@ export default function EditProductPage(): JSX.Element {
           </form>
         </Paper>
 
-        {/* Persistent bottom floating action bar so Save is always visible */}
+        {/* Barra de ação verdadeiramente fixa no rodapé da janela */}
         <Box
           sx={{
-            position: "sticky",
-            bottom: 16,
-            zIndex: 10,
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1000,
             bgcolor: "background.paper",
-            p: 2,
-            borderRadius: 2,
-            boxShadow: 4,
-            border: 1,
+            borderTop: 1,
             borderColor: "divider",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 2,
+            boxShadow: "0 -4px 20px rgba(0, 0, 0, 0.45)",
+            py: 1.5,
           }}
         >
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBackIcon />}
-            onClick={() => router.push("/admin/produtos")}
-            sx={{ textTransform: "none" }}
+          <Box
+            sx={{
+              maxWidth: "1280px",
+              mx: "auto",
+              px: { xs: 2, sm: 3, lg: 4 },
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 2,
+            }}
           >
-            Voltar ao Catálogo
-          </Button>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={() => router.push("/admin/produtos")}
+              sx={{ textTransform: "none" }}
+            >
+              Voltar ao Catálogo
+            </Button>
 
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            size="large"
-            startIcon={<SaveIcon />}
-            onClick={methods.handleSubmit(onSubmit)}
-            disabled={updateMutation.isPending}
-            sx={{ textTransform: "none", fontWeight: 700, px: 4, py: 1.2 }}
-          >
-            {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
-          </Button>
+            <Button
+              type="submit"
+              form="edit-product-form"
+              variant="contained"
+              color="primary"
+              size="large"
+              startIcon={<SaveIcon />}
+              onClick={methods.handleSubmit(onSubmit)}
+              disabled={updateMutation.isPending}
+              sx={{
+                textTransform: "none",
+                fontWeight: 700,
+                px: 4,
+                py: 1.2,
+                fontSize: "0.95rem",
+              }}
+            >
+              {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </Box>
         </Box>
       </Box>
     </FormProvider>
