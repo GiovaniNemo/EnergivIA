@@ -646,3 +646,12 @@
 | task-650 | Termômetro de ativação e listagem de integradores (inativos e desistências) no Painel Admin | completed | Visualização de status (Abandonou, Sem Uso, Ativo) com botão de contato direto no WhatsApp |
 | task-651 | Executar suíte de testes Vitest, validação de lint e compilação de produção | completed | 61 arquivos de teste e 440 testes Vitest 100% aprovados; nest build código 0 |
 | task-652 | Realizar commit e push das alterações para o repositório remoto | completed | Sincronização final com origin/main |
+| task-653 | Brainstorming: Explorar contexto do dimensionamento de inversores (string, micro e híbrido/baterias) no WhatsApp | completed | Contexto de KitGenerationService, parseIntegratorQuoteEntities e FSM mapeado |
+| task-654 | Brainstorming: Levantar requisitos e comportamento do fluxo de seleção/detecção de tecnologia no WhatsApp | completed | Usuário solicitou apenas sugestões e sinalizou que o fluxo atual já está longo demais |
+| task-655 | Brainstorming: Propor 2-3 abordagens arquiteturais com foco em encurtar o fluxo e tratar String/Micro/Híbrido | completed | Sugestões de simplificação e aceleração do fluxo apresentadas ao usuário |
+| task-656 | Brainstorming: Apresentar design modular e obter aprovação do usuário | completed | Aguardando direcionamento do usuário sobre a abordagem preferida |
+| task-657 | Brainstorming: Registrar documento de design em docs/plans/ e preparar transição para plano de implementação | not-started | Pausado conforme solicitação do usuário de não implementar nada no momento |
+| task-658 | Debugging: Identificar causa raiz do erro Prisma P2022 (User.phone inexistente no banco) | completed | Schema Prisma continha campos adicionados sem migração executada no Neon DB |
+| task-659 | Implementar migração Prisma 20261023131500_add_user_phone_and_onboarding e aplicar no Neon DB | completed | Migration criada e aplicada com sucesso com prisma migrate deploy no Neon DB |
+| task-660 | Validar testes automatizados e integridade da tabela User | completed | 41 arquivos de teste e 333 testes Vitest aprovados com 100% de sucesso |
+| task-661 | Commit e push das alterações para origin/main | completed | Migração 20261023131500 sincronizada com o repositório remoto |
