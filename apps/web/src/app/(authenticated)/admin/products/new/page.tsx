@@ -111,7 +111,7 @@ export default function NewProductPage(): JSX.Element {
 
   return (
     <FormProvider {...methods}>
-      <Box display="flex" flexDirection="column" gap={3} sx={{ pb: 12 }}>
+      <Box display="flex" flexDirection="column" gap={3}>
         {/* Header with Navigation */}
         <Box
           display="flex"
@@ -151,71 +151,51 @@ export default function NewProductPage(): JSX.Element {
         </Box>
 
         <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, bgcolor: "background.paper" }}>
-          <form id="new-product-form" onSubmit={methods.handleSubmit(onSubmit)}>
+          <form onSubmit={methods.handleSubmit(onSubmit)}>
             <ProductForm
               categories={categories}
               brands={brands}
               categoryName={effectiveCategoryName}
             />
+
+            {/* Linha de ações no rodapé do formulário */}
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              flexWrap="wrap"
+              gap={2}
+              sx={{ pt: 3, mt: 3, borderTop: 1, borderColor: "divider" }}
+            >
+              <Button
+                variant="outlined"
+                startIcon={<ArrowBackIcon />}
+                onClick={() => router.push("/admin/produtos")}
+                sx={{ textTransform: "none" }}
+              >
+                Voltar ao Catálogo
+              </Button>
+
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                size="large"
+                startIcon={<SaveIcon />}
+                disabled={createMutation.isPending}
+                sx={{
+                  textTransform: "none",
+                  fontWeight: 700,
+                  px: 4,
+                  py: 1.2,
+                  fontSize: "0.95rem",
+                }}
+              >
+                {createMutation.isPending ? "Salvando..." : "Salvar Produto"}
+              </Button>
+            </Box>
           </form>
         </Paper>
-
-        {/* Barra de ação verdadeiramente fixa no rodapé da janela */}
-        <Box
-          sx={{
-            position: "fixed",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: 1000,
-            bgcolor: "background.paper",
-            borderTop: 1,
-            borderColor: "divider",
-            boxShadow: "0 -4px 20px rgba(0, 0, 0, 0.45)",
-            py: 1.5,
-          }}
-        >
-          <Box
-            sx={{
-              maxWidth: "1280px",
-              mx: "auto",
-              px: { xs: 2, sm: 3, lg: 4 },
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 2,
-            }}
-          >
-            <Button
-              variant="outlined"
-              startIcon={<ArrowBackIcon />}
-              onClick={() => router.push("/admin/produtos")}
-              sx={{ textTransform: "none" }}
-            >
-              Voltar ao Catálogo
-            </Button>
-
-            <Button
-              type="submit"
-              form="new-product-form"
-              variant="contained"
-              color="primary"
-              size="large"
-              startIcon={<SaveIcon />}
-              onClick={methods.handleSubmit(onSubmit)}
-              disabled={createMutation.isPending}
-              sx={{
-                textTransform: "none",
-                fontWeight: 700,
-                px: 4,
-                py: 1.2,
-                fontSize: "0.95rem",
-              }}
-            >
-              {createMutation.isPending ? "Salvando..." : "Salvar Produto"}
-            </Button>
-          </Box>
-        </Box>
       </Box>
     </FormProvider>
   );
