@@ -256,7 +256,7 @@ export function TrialLockOverlay() {
                                   : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
                             }`}
                           >
-                            {isPlus ? "ECONOMIZE R$ 400" : isPro ? "ECONOMIZE R$ 100" : "-30% OFF"}
+                            {`ECONOMIZE ${Math.round((1 - planPrice / originalPrice) * 100)}%`}
                           </span>
                         </div>
                       )}

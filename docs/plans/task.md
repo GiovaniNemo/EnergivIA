@@ -685,3 +685,4 @@
 | task-689 | Handler do Estado AWAITING_INVERTER_TYPE (Opções 1 String, 2 Micro, 3 Híbrido e 0 Voltar) | completed | Processamento de escolhas com geração de kits ou armazenamento de bateria e navegação retroativa |
 | task-690 | Atualização do Menu Inicial (buildGreetingMenu) e Correção do Regex Residual de Telhado ()*) | completed | Tecnologias evidenciadas no menu inicial e whitelist estrita de estruturas prevenindo bug de parênteses |
 | task-691 | Validação Completa de Testes, Compilação NestJS/NextJS, Commit e Push | completed | 45 arquivos de teste e 360 testes Vitest aprovados; build NestJS compilado com sucesso e sincronizado no Git |
+| task-692 | Ajustar badges dos cards de planos para porcentagem de desconto (ECONOMIZE %) | completed | Substituído valores fixos em reais por percentual de desconto dinâmico (29%, 34%, 50%) em gestao/meus-planos e TrialLockOverlay |

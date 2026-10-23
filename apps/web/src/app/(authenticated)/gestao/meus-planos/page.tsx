@@ -644,11 +644,7 @@ function MeusPlanosContent() {
                                   : "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30"
                             }`}
                           >
-                            {isPlus
-                              ? "ECONOMIZE R$ 400"
-                              : isPro
-                                ? "ECONOMIZE R$ 100"
-                                : `ECONOMIZE ${Math.round((1 - priceNum / originalPrice) * 100)}%`}
+                            {`ECONOMIZE ${Math.round((1 - priceNum / originalPrice) * 100)}%`}
                           </span>
                         </div>
                       )}
