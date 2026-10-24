@@ -762,6 +762,10 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
             </svg>
           </div>
 
+          <div style="display: flex; justify-content: flex-end; margin-top: -4px; margin-bottom: 12px;">
+            <button type="button" class="toggle-link" style="font-size: 12.5px; color: #94a3b8;" onclick="handleForgotPassword()">Esqueci minha senha</button>
+          </div>
+
           <button type="submit" id="login-submit-btn" class="glow-btn">
             Entrar
           </button>
@@ -977,12 +981,104 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
         setMode(targetMode);
       }
 
-      function showError(msg, formMode) {
+      function parseAuth0Error(err, defaultMessage) {
+        if (!err) return defaultMessage || "Ocorreu um erro. Tente novamente.";
+        if (typeof err === "string") return err;
+
+        // 1. Caso de complexidade de senha com regras detalhadas
+        if (err.description && typeof err.description === "object") {
+          if (Array.isArray(err.description.rules)) {
+            var failed = err.description.rules
+              .filter(function(r) { return !r.verified; })
+              .map(function(r) { return r.message; });
+            if (failed.length > 0) {
+              return "Requisitos da senha: " + failed.join("; ");
+            }
+          }
+          if (err.description.message) {
+            return String(err.description.message);
+          }
+        }
+
+        // 2. Política de senha textual
+        if (err.policy && typeof err.policy === "string") {
+          return "Senha inválida: " + err.policy;
+        }
+
+        // 3. Descrição textual do erro
+        var rawDesc = (typeof err.description === "string" && err.description) ||
+                      (typeof err.error_description === "string" && err.error_description) ||
+                      (typeof err.message === "string" && err.message) ||
+                      "";
+
+        if (rawDesc) {
+          if (/user already exists/i.test(rawDesc) || /user_exists/i.test(rawDesc)) {
+            return "Este e-mail já possui cadastro. Use a opção 'Entrar' ou 'Esqueci minha senha'.";
+          }
+          if (/password is too weak/i.test(rawDesc) || /PasswordStrengthError/i.test(rawDesc)) {
+            return "A senha é muito fraca. Utilize pelo menos 8 caracteres, com letras maiúsculas, minúsculas, números e símbolos.";
+          }
+          if (/wrong email or password/i.test(rawDesc) || /invalid credentials/i.test(rawDesc)) {
+            return "E-mail ou senha incorretos.";
+          }
+          if (/too many attempts/i.test(rawDesc)) {
+            return "Muitas tentativas sem sucesso. Aguarde alguns minutos ou redefina sua senha.";
+          }
+          return rawDesc;
+        }
+
+        if (err.code === "user_exists" || err.error === "user_exists") {
+          return "Este e-mail já possui cadastro. Clique em 'Entrar' para acessar sua conta.";
+        }
+        if (err.code === "invalid_password" || err.name === "PasswordStrengthError") {
+          return "A senha precisa ter no mínimo 8 caracteres, contendo números, letras e caracteres especiais.";
+        }
+        if (err.name && typeof err.name === "string" && err.name !== "Error") {
+          return "Atenção: " + err.name;
+        }
+
+        return defaultMessage || "Erro ao processar sua solicitação. Verifique os dados e tente novamente.";
+      }
+
+      function showError(errOrMsg, formMode, fallback) {
+        var message = typeof errOrMsg === "string" ? errOrMsg : parseAuth0Error(errOrMsg, fallback);
         var targetId = formMode === "signup" ? "error-alert-signup" : "error-alert-login";
         var el = document.getElementById(targetId);
         if (el) {
-          el.innerText = msg;
+          el.innerText = message;
           el.style.display = "block";
+        }
+      }
+
+      function handleForgotPassword() {
+        var email = document.getElementById("login-email-input").value;
+        if (!email) {
+          showError("Digite seu e-mail corporativo no campo acima para redefinir a senha.", "login");
+          document.getElementById("login-email-input").focus();
+          return;
+        }
+
+        function getDbConnection() {
+          if (config.databaseConnection) return config.databaseConnection;
+          if (config.connections && config.connections.length > 0) {
+            var first = config.connections[0];
+            return typeof first === "object" && first !== null ? first.name : first;
+          }
+          return "Username-Password-Authentication";
+        }
+
+        var dbConn = getDbConnection();
+        if (webAuth && typeof webAuth.changePassword === "function") {
+          webAuth.changePassword({
+            connection: dbConn,
+            email: email
+          }, function(err) {
+            if (err) {
+              showError(err, "login", "Erro ao solicitar redefinição de senha.");
+            } else {
+              alert("Enviamos um e-mail para " + email + " com o link para redefinir sua senha!");
+            }
+          });
         }
       }
 
@@ -1025,7 +1121,7 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
           password: password
         }, function(err) {
           if (err) {
-            showError(err.description || err.message || "E-mail ou senha incorretos.", "login");
+            showError(err, "login", "E-mail ou senha incorretos.");
             if (submitBtn) {
               submitBtn.disabled = false;
               submitBtn.innerText = "Entrar";
@@ -1073,7 +1169,7 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
           password: password
         }, function(err) {
           if (err) {
-            showError(err.description || err.message || "Erro ao realizar cadastro.", "signup");
+            showError(err, "signup", "Erro ao realizar cadastro.");
             if (submitBtn) {
               submitBtn.disabled = false;
               submitBtn.innerText = "Criar Conta Grátis";
@@ -1087,7 +1183,7 @@ Copie todo o bloco abaixo e cole na aba **Login** do painel do Auth0:
             password: password
           }, function(loginErr) {
             if (loginErr) {
-              showError(loginErr.description || "Cadastro concluído. Efetue login para continuar.", "signup");
+              showError(loginErr, "signup", "Cadastro concluído. Efetue login para continuar.");
               if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerText = "Criar Conta Grátis";

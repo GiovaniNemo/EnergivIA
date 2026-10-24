@@ -285,6 +285,45 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
       },
     });
 
+    // Se o usuário não foi encontrado pelo auth0Sub mas temos o e-mail,
+    // verifica se a conta já existia no banco (ex: conta recriada no Auth0 após exclusão/reset de senha)
+    if (!user && normalizedEmail) {
+      const existingUserByEmail = await this.prisma.user.findFirst({
+        where: {
+          email: { equals: normalizedEmail, mode: "insensitive" },
+          deletedAt: null,
+        },
+        include: {
+          organizationMemberships: {
+            where: { status: "ACCEPTED" },
+            include: { organization: true },
+          },
+        },
+      });
+
+      if (existingUserByEmail) {
+        user = await this.prisma.user.update({
+          where: { id: existingUserByEmail.id },
+          data: {
+            auth0Sub,
+            ...(rawName && (existingUserByEmail.name === "User" || !existingUserByEmail.name)
+              ? { name: rawName }
+              : {}),
+            ...(rawPicture && !existingUserByEmail.picture ? { picture: rawPicture } : {}),
+            ...(isAuthorizedSalesRep && existingUserByEmail.role !== "PLATFORM_SALES"
+              ? { role: "PLATFORM_SALES" }
+              : {}),
+          },
+          include: {
+            organizationMemberships: {
+              where: { status: "ACCEPTED" },
+              include: { organization: true },
+            },
+          },
+        });
+      }
+    }
+
     if (!user) {
       const generatedRefCode = isAuthorizedSalesRep
         ? this.generateSalesRepReferralCode(rawName, auth0Sub)
