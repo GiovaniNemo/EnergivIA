@@ -216,4 +216,81 @@ describe("WhatsApp Bot - Module Quantity Simulation Flow", () => {
 
     expect(infoCabecalho).toBe("para `20 módulos` em `Maringá/PR`");
   });
+
+  it("should NOT leak old city, roof and grid when starting a new quote with 'quero 10 placas' from greeting menu", () => {
+    // Simula mensagens de cotação anterior concluída seguida do menu de saudação
+    const pastMessages = [
+      {
+        role: "assistant",
+        content:
+          "Parabéns, João! Sua proposta comercial de energia solar está pronta! 🎉\n\n" +
+          "> 📍 Localidade: Maringá/PR\n" +
+          "> 🏠 Estrutura: Cerâmica (Colonial)\n" +
+          "> ⚡ Padrão Elétrico: Monofásico 220V\n\n" +
+          "Link da proposta: https://www.energivia.com.br/proposta/123",
+      },
+      {
+        role: "user",
+        content: "bom dia",
+      },
+      {
+        role: "assistant",
+        content:
+          "Bom dia Marcelo! Tudo bem? ☀️\n" +
+          "Sou seu assistente de vendas e dimensionamento da EnergivIA.\n\n" +
+          "Como posso ajudar você a gerar orçamentos hoje?\n\n" +
+          "> 1️⃣ Enviar fatura de energia (PDF ou foto)\n" +
+          "> 2️⃣ Simular por consumo mensal (ex: 450 kWh)\n" +
+          "> 3️⃣ Simular por potência de pico (ex: 5 kWp)\n" +
+          "> 4️⃣ Simular por quantidade de placas (ex: 10 módulos)\n\n" +
+          "(Responda com o número da opção ou envie a conta de luz diretamente)",
+      },
+    ];
+
+    // Simula a lógica de extractContextFromSession com reset no menu/conclusão
+    let cidade: string | undefined = "Maringá";
+    let roofType: string | undefined = "Cerâmica (Colonial)";
+    let gridVoltage: string | undefined = "Monofásico 220V";
+    let targetModules: number | undefined = undefined;
+
+    for (const m of pastMessages) {
+      if (
+        m.role === "assistant" &&
+        (m.content.includes("Como posso ajudar você a gerar orçamentos hoje") ||
+          m.content.includes("Sua proposta comercial de energia solar está pronta"))
+      ) {
+        cidade = undefined;
+        roofType = undefined;
+        gridVoltage = undefined;
+        targetModules = undefined;
+      }
+    }
+
+    // Após o menu inicial, o contexto deve estar completamente limpo
+    expect(cidade).toBeUndefined();
+    expect(roofType).toBeUndefined();
+    expect(gridVoltage).toBeUndefined();
+
+    // Usuário envia "quero 10 placas"
+    const incomingText = "quero 10 placas";
+    const modMatch = incomingText.match(/(\d+)\s*(?:placas?|m[oó]dulos?)/i);
+    expect(modMatch).toBeTruthy();
+    targetModules = parseInt(modMatch![1], 10);
+    expect(targetModules).toBe(10);
+
+    // Como cidade está undefined, NÃO pode ir direto para escolha do kit!
+    // Deve perguntar a cidade e estado da instalação primeiro
+    const hasCity = Boolean(cidade);
+    expect(hasCity).toBe(false);
+
+    const nextAction = !hasCity
+      ? "AWAITING_CITY"
+      : !gridVoltage
+        ? "AWAITING_GRID_TYPE"
+        : !roofType
+          ? "AWAITING_ROOF_TYPE"
+          : "FAST_FORWARD_KITS";
+
+    expect(nextAction).toBe("AWAITING_CITY");
+  });
 });

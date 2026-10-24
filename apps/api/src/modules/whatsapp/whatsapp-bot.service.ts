@@ -4867,7 +4867,7 @@ ${catalogContext}`;
 
         // 7. Nome e WhatsApp do Cliente (pode ser detectado pelas confirmações do assistente)
         if (m.role === "assistant") {
-          // Se o assistente exibiu o menu principal ou iniciou um novo fluxo, reseta o dimensionamento anterior
+          // Se o assistente exibiu o menu principal ou concluiu/reiniciou um fluxo, reseta todos os dados da cotação anterior
           if (
             content.includes("Como posso ajudar você a gerar orçamentos hoje") ||
             content.includes("Sou seu assistente de vendas") ||
@@ -4875,6 +4875,10 @@ ${catalogContext}`;
             content.includes("Não compreendi sua mensagem") ||
             content.includes("encerramos este atendimento") ||
             content.includes("Quando quiser iniciar uma nova cotação") ||
+            content.includes("Sua proposta comercial de energia solar está pronta") ||
+            content.includes("Link da proposta comercial") ||
+            content.includes("Proposta Comercial gerada com sucesso") ||
+            content.includes("Sessão reiniciada com sucesso") ||
             (content.includes("Simular por consumo mensal") &&
               content.includes("Simular por potência de pico"))
           ) {
@@ -4882,6 +4886,24 @@ ${catalogContext}`;
             targetKWp = undefined;
             targetModules = undefined;
             modPowerWUser = undefined;
+            cidade = undefined;
+            estado = undefined;
+            hsp = undefined;
+            pendingCityCandidates = undefined;
+            pendingCityName = undefined;
+            gridVoltage = undefined;
+            roofType = undefined;
+            customRatePerKwp = undefined;
+            clientName = undefined;
+            clientWhatsapp = undefined;
+            chosenQuoteIndex = 0;
+            inverterType = undefined;
+            inverterDescription = undefined;
+            batteryKwh = undefined;
+            batteryQty = undefined;
+            batteryVoltageType = undefined;
+            hasBms = undefined;
+            hasBattery = undefined;
           } else if (
             content.includes("Simulação por Quantidade de Módulos") ||
             content.includes("placas solares você deseja no kit")
@@ -5023,6 +5045,41 @@ ${catalogContext}`;
           }
 
           continue; // Não analisa mensagens do bot para evitar capturar exemplos de texto
+        }
+
+        if (
+          lowerC === "novo" ||
+          lowerC === "reiniciar" ||
+          lowerC === "nova cotação" ||
+          lowerC === "nova cotacao" ||
+          lowerC === "nova proposta" ||
+          lowerC === "menu" ||
+          lowerC === "início" ||
+          lowerC === "inicio"
+        ) {
+          consumptionKwh = undefined;
+          targetKWp = undefined;
+          targetModules = undefined;
+          modPowerWUser = undefined;
+          cidade = undefined;
+          estado = undefined;
+          hsp = undefined;
+          pendingCityCandidates = undefined;
+          pendingCityName = undefined;
+          gridVoltage = undefined;
+          roofType = undefined;
+          customRatePerKwp = undefined;
+          clientName = undefined;
+          clientWhatsapp = undefined;
+          chosenQuoteIndex = 0;
+          inverterType = undefined;
+          inverterDescription = undefined;
+          batteryKwh = undefined;
+          batteryQty = undefined;
+          batteryVoltageType = undefined;
+          hasBms = undefined;
+          hasBattery = undefined;
+          continue;
         }
 
         const quoteEnt = parseIntegratorQuoteEntities(content);
@@ -5367,6 +5424,31 @@ ${catalogContext}`;
     let currentStep: WhatsappBotStep = convMeta["step"] || "IDLE";
 
     // Hidrata sessionCtx a partir do sessionData estruturado persistido ou da raiz de convMeta (compatibilidade)
+    const isAtMenuOrCompleted =
+      currentStep === "IDLE" ||
+      currentStep === "PROPOSAL_COMPLETED" ||
+      lastBotMsg.includes("Como posso ajudar você a gerar orçamentos hoje") ||
+      lastBotMsg.includes("Sou seu assistente de vendas e dimensionamento") ||
+      lastBotMsg.includes("Sessão reiniciada com sucesso") ||
+      lastBotMsg.includes("Sua proposta comercial de energia solar está pronta") ||
+      lastBotMsg.includes("Link da proposta comercial") ||
+      lastBotMsg.includes("Proposta Comercial gerada com sucesso");
+
+    const isNewBillSubmission =
+      Boolean(extractionResult) ||
+      incomingText.startsWith("[Documento enviado") ||
+      incomingText.startsWith("[Foto enviada") ||
+      lower.includes("[documento enviado") ||
+      lower.includes("[foto enviada");
+
+    const hasDirectKwhInput =
+      parseConsumptionInput(incomingText) !== null ||
+      /(?:consumo|simular)?\s*(\d+[\d.,]*)\s*kwh/i.test(incomingText);
+    const quoteEntities = parseIntegratorQuoteEntities(incomingText);
+    const isNewQuoteRequest =
+      isNewBillSubmission ||
+      (isAtMenuOrCompleted && (hasDirectKwhInput || quoteEntities.isQuoteRequest));
+
     const rawCidade = storedSessionData.cidade || convMeta["cidade"];
     const rawUf = storedSessionData.uf || convMeta["uf"];
     const rawConsumption = storedSessionData.consumptionKwh ?? convMeta["consumptionKwh"];
@@ -5387,49 +5469,56 @@ ${catalogContext}`;
     const rawHasBms = storedSessionData.hasBms ?? (convMeta["hasBms"] as any);
     const rawHasBattery = storedSessionData.hasBattery ?? (convMeta["hasBattery"] as any);
 
-    if (rawCidade && !sessionCtx.cidade) sessionCtx.cidade = rawCidade;
-    if (rawUf && !sessionCtx.estado) sessionCtx.estado = rawUf;
-    if (
-      rawConsumption !== undefined &&
-      !sessionCtx.consumptionKwh &&
-      !sessionCtx.targetKWp &&
-      !sessionCtx.targetModules
-    )
-      sessionCtx.consumptionKwh = rawConsumption;
-    if (
-      rawKwp !== undefined &&
-      !sessionCtx.targetKWp &&
-      !sessionCtx.consumptionKwh &&
-      !sessionCtx.targetModules
-    )
-      sessionCtx.targetKWp = rawKwp;
-    if (
-      rawModuleCount !== undefined &&
-      !sessionCtx.targetModules &&
-      !sessionCtx.consumptionKwh &&
-      !sessionCtx.targetKWp
-    )
-      sessionCtx.targetModules = rawModuleCount;
-    if (rawGridType && !sessionCtx.gridVoltage) sessionCtx.gridVoltage = rawGridType;
-    if (rawRoofType && !sessionCtx.roofType) sessionCtx.roofType = rawRoofType;
-    if (rawKwpRate !== undefined && !sessionCtx.customRatePerKwp)
-      sessionCtx.customRatePerKwp = rawKwpRate;
-    if (rawClientName && (!sessionCtx.clientName || sessionCtx.clientName === "Cliente"))
-      sessionCtx.clientName = rawClientName;
-    if (rawClientPhone && (!sessionCtx.clientWhatsapp || sessionCtx.clientWhatsapp === "WhatsApp"))
-      sessionCtx.clientWhatsapp = rawClientPhone;
-    if (rawInverterType && !sessionCtx.inverterType) sessionCtx.inverterType = rawInverterType;
-    if (rawInverterDescription && !sessionCtx.inverterDescription)
-      sessionCtx.inverterDescription = rawInverterDescription;
-    if (rawBatteryKwh !== undefined && sessionCtx.batteryKwh === undefined)
-      sessionCtx.batteryKwh = rawBatteryKwh;
-    if (rawBatteryQty !== undefined && sessionCtx.batteryQty === undefined)
-      sessionCtx.batteryQty = rawBatteryQty;
-    if (rawBatteryVoltageType && !sessionCtx.batteryVoltageType)
-      sessionCtx.batteryVoltageType = rawBatteryVoltageType;
-    if (rawHasBms !== undefined && sessionCtx.hasBms === undefined) sessionCtx.hasBms = rawHasBms;
-    if (rawHasBattery !== undefined && sessionCtx.hasBattery === undefined)
-      sessionCtx.hasBattery = rawHasBattery;
+    // CRUCIAL: Se a conversa estiver ociosa (menu inicial), com proposta concluída, ou se enviou uma nova fatura,
+    // NUNCA hidrata dados de localização (cidade/UF), padrão de rede, telhado ou potência de cotações antigas!
+    if (!isAtMenuOrCompleted && !isNewBillSubmission) {
+      if (rawCidade && !sessionCtx.cidade) sessionCtx.cidade = rawCidade;
+      if (rawUf && !sessionCtx.estado) sessionCtx.estado = rawUf;
+      if (
+        rawConsumption !== undefined &&
+        !sessionCtx.consumptionKwh &&
+        !sessionCtx.targetKWp &&
+        !sessionCtx.targetModules
+      )
+        sessionCtx.consumptionKwh = rawConsumption;
+      if (
+        rawKwp !== undefined &&
+        !sessionCtx.targetKWp &&
+        !sessionCtx.consumptionKwh &&
+        !sessionCtx.targetModules
+      )
+        sessionCtx.targetKWp = rawKwp;
+      if (
+        rawModuleCount !== undefined &&
+        !sessionCtx.targetModules &&
+        !sessionCtx.consumptionKwh &&
+        !sessionCtx.targetKWp
+      )
+        sessionCtx.targetModules = rawModuleCount;
+      if (rawGridType && !sessionCtx.gridVoltage) sessionCtx.gridVoltage = rawGridType;
+      if (rawRoofType && !sessionCtx.roofType) sessionCtx.roofType = rawRoofType;
+      if (rawKwpRate !== undefined && !sessionCtx.customRatePerKwp)
+        sessionCtx.customRatePerKwp = rawKwpRate;
+      if (rawClientName && (!sessionCtx.clientName || sessionCtx.clientName === "Cliente"))
+        sessionCtx.clientName = rawClientName;
+      if (
+        rawClientPhone &&
+        (!sessionCtx.clientWhatsapp || sessionCtx.clientWhatsapp === "WhatsApp")
+      )
+        sessionCtx.clientWhatsapp = rawClientPhone;
+      if (rawInverterType && !sessionCtx.inverterType) sessionCtx.inverterType = rawInverterType;
+      if (rawInverterDescription && !sessionCtx.inverterDescription)
+        sessionCtx.inverterDescription = rawInverterDescription;
+      if (rawBatteryKwh !== undefined && sessionCtx.batteryKwh === undefined)
+        sessionCtx.batteryKwh = rawBatteryKwh;
+      if (rawBatteryQty !== undefined && sessionCtx.batteryQty === undefined)
+        sessionCtx.batteryQty = rawBatteryQty;
+      if (rawBatteryVoltageType && !sessionCtx.batteryVoltageType)
+        sessionCtx.batteryVoltageType = rawBatteryVoltageType;
+      if (rawHasBms !== undefined && sessionCtx.hasBms === undefined) sessionCtx.hasBms = rawHasBms;
+      if (rawHasBattery !== undefined && sessionCtx.hasBattery === undefined)
+        sessionCtx.hasBattery = rawHasBattery;
+    }
     if (typeof storedSessionData.selectedQuoteIndex === "number") {
       sessionCtx.chosenQuoteIndex = storedSessionData.selectedQuoteIndex;
     }
@@ -5530,6 +5619,52 @@ ${catalogContext}`;
           sessionCtx.batteryVoltageType = patchData.batteryVoltageType;
         if (patchData.hasBms !== undefined) sessionCtx.hasBms = patchData.hasBms;
         if (patchData.hasBattery !== undefined) sessionCtx.hasBattery = patchData.hasBattery;
+      }
+
+      if (nextStep === "IDLE") {
+        delete updatedSessionData.cidade;
+        delete updatedSessionData.uf;
+        delete updatedSessionData.consumptionKwh;
+        delete updatedSessionData.kwp;
+        delete updatedSessionData.moduleCount;
+        delete updatedSessionData.gridType;
+        delete updatedSessionData.roofType;
+        delete updatedSessionData.inverterType;
+        delete updatedSessionData.inverterDescription;
+        delete updatedSessionData.batteryKwh;
+        delete updatedSessionData.batteryQty;
+        delete updatedSessionData.batteryVoltageType;
+        delete updatedSessionData.hasBms;
+        delete updatedSessionData.hasBattery;
+        delete updatedSessionData.kwpRate;
+        delete updatedSessionData.clientName;
+        delete updatedSessionData.clientPhone;
+        delete updatedSessionData.selectedQuoteIndex;
+        delete updatedSessionData.pendingCityCandidates;
+        delete updatedSessionData.pendingCityName;
+        delete updatedSessionData.quotesList;
+
+        sessionCtx.cidade = undefined;
+        sessionCtx.estado = undefined;
+        sessionCtx.consumptionKwh = undefined;
+        sessionCtx.targetKWp = undefined;
+        sessionCtx.targetModules = undefined;
+        sessionCtx.modPowerWUser = undefined;
+        sessionCtx.gridVoltage = undefined;
+        sessionCtx.roofType = undefined;
+        sessionCtx.inverterType = undefined;
+        sessionCtx.inverterDescription = undefined;
+        sessionCtx.batteryKwh = undefined;
+        sessionCtx.batteryQty = undefined;
+        sessionCtx.batteryVoltageType = undefined;
+        sessionCtx.hasBms = undefined;
+        sessionCtx.hasBattery = undefined;
+        sessionCtx.customRatePerKwp = undefined;
+        sessionCtx.clientName = undefined;
+        sessionCtx.clientWhatsapp = undefined;
+        sessionCtx.chosenQuoteIndex = 0;
+        sessionCtx.pendingCityCandidates = undefined;
+        sessionCtx.pendingCityName = undefined;
       }
 
       conversation.metadata = {
@@ -5652,19 +5787,6 @@ ${catalogContext}`;
 
     // 0.2 Se a conversa estiver no estado PROPOSAL_COMPLETED (proposta já gerada com sucesso)
     // MAS SE O USUÁRIO ENVIOU UMA NOVA FATURA OU DADOS DE UMA NOVA COTAÇÃO, NÃO BLOQUEIA!
-    const isNewBillSubmission =
-      Boolean(extractionResult) ||
-      incomingText.startsWith("[Documento enviado") ||
-      incomingText.startsWith("[Foto enviada") ||
-      lower.includes("[documento enviado") ||
-      lower.includes("[foto enviada");
-
-    const hasDirectKwhInput =
-      parseConsumptionInput(incomingText) !== null ||
-      /(?:consumo|simular)?\s*(\d+[\d.,]*)\s*kwh/i.test(incomingText);
-    const quoteEntities = parseIntegratorQuoteEntities(incomingText);
-    const isNewQuoteRequest =
-      isNewBillSubmission || hasDirectKwhInput || quoteEntities.isQuoteRequest;
 
     // Helper: intercepta correções dinâmicas de dimensionamento (ou reclamações de cotação errada) em qualquer etapa
     const handleDimensioningCorrection = async (): Promise<string | null> => {
@@ -8845,6 +8967,31 @@ ${catalogContext}`;
 
     // ESTADO I/J/K: Entrada Direta de Cotação de Integrador (Potência, Módulos, Consumo, Telhado, Rede, Cidade)
     if (quoteEntities.isQuoteRequest) {
+      const isStartingNewQuote =
+        currentStep === "IDLE" ||
+        currentStep === "PROPOSAL_COMPLETED" ||
+        isAtMenuOrCompleted ||
+        (!sessionCtx.targetKWp && !sessionCtx.targetModules && !sessionCtx.consumptionKwh);
+
+      if (isStartingNewQuote) {
+        sessionCtx.cidade = quoteEntities.cidade || undefined;
+        sessionCtx.estado = quoteEntities.estado || undefined;
+        sessionCtx.roofType = quoteEntities.roofType || undefined;
+        sessionCtx.gridVoltage = quoteEntities.gridVoltage || undefined;
+        sessionCtx.inverterType = quoteEntities.inverterType || undefined;
+        sessionCtx.inverterDescription = quoteEntities.inverterDescription || undefined;
+        sessionCtx.batteryKwh =
+          quoteEntities.batteryKwh !== undefined ? quoteEntities.batteryKwh : undefined;
+        sessionCtx.batteryQty =
+          quoteEntities.batteryQty !== undefined ? quoteEntities.batteryQty : undefined;
+        sessionCtx.hasBattery =
+          quoteEntities.hasBattery !== undefined ? quoteEntities.hasBattery : undefined;
+        sessionCtx.customRatePerKwp = undefined;
+        sessionCtx.clientName = undefined;
+        sessionCtx.clientWhatsapp = undefined;
+        sessionCtx.chosenQuoteIndex = 0;
+      }
+
       if (quoteEntities.targetKWp) {
         sessionCtx.targetKWp = quoteEntities.targetKWp;
         if (!quoteEntities.consumptionKwh) {
