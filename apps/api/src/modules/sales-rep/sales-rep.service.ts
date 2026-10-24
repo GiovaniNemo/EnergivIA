@@ -146,7 +146,7 @@ export class SalesRepService {
           select: { id: true, name: true, email: true, phone: true },
         },
         subscription: {
-          select: { status: true, planTier: true },
+          select: { status: true },
         },
         salesNotes: {
           orderBy: { createdAt: "desc" },
