@@ -128,7 +128,8 @@ export function SalesRepManagementSection(): JSX.Element {
 
   const handleCopyLink = async (link: string, code: string) => {
     try {
-      await navigator.clipboard.writeText(link);
+      const cleanLink = link.replace("app.energivia.com.br", "www.energivia.com.br");
+      await navigator.clipboard.writeText(cleanLink);
       setCopiedCode(code);
       setTimeout(() => setCopiedCode(null), 2500);
     } catch {

@@ -15,7 +15,8 @@ export function SalesRepLinkCard({
 }: SalesRepLinkCardProps): JSX.Element {
   const [copied, setCopied] = useState(false);
 
-  const finalLink = referralLink || "https://app.energivia.com.br/cadastro";
+  const rawLink = referralLink || "https://www.energivia.com.br/cadastro";
+  const finalLink = rawLink.replace("app.energivia.com.br", "www.energivia.com.br");
 
   const handleCopy = async () => {
     try {

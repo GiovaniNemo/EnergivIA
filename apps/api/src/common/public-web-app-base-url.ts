@@ -26,9 +26,9 @@ export function resolveAuthAppBaseUrl(): string {
   for (const raw of candidates) {
     if (typeof raw !== "string") continue;
     const t = raw.trim().replace(/\/+$/, "");
-    if (/^https?:\/\//i.test(t)) return t;
+    if (/^https?:\/\//i.test(t)) return t.replace("app.energivia.com.br", "www.energivia.com.br");
   }
   return process.env["NODE_ENV"] === "production"
-    ? "https://app.energivia.com.br"
+    ? "https://www.energivia.com.br"
     : "http://localhost:3000";
 }

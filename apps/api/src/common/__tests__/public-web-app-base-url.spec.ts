@@ -34,7 +34,7 @@ describe("public-web-app-base-url resolution", () => {
     process.env["NODE_ENV"] = "production";
 
     expect(resolvePublicWebAppBaseUrl()).toBe("https://www.energivia.com.br");
-    expect(resolveAuthAppBaseUrl()).toBe("https://app.energivia.com.br");
+    expect(resolveAuthAppBaseUrl()).toBe("https://www.energivia.com.br");
   });
 
   it("should prioritize PUBLIC_PROPOSAL_SITE_URL and strip trailing slashes", () => {

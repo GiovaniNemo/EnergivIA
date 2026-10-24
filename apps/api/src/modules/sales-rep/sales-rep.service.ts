@@ -111,6 +111,17 @@ export class SalesRepService {
     return `${baseSlug}-${suffix}`;
   }
 
+  private resolveAppUrl(): string {
+    const raw =
+      process.env["PUBLIC_PROPOSAL_SITE_URL"] ||
+      process.env["FRONTEND_URL"] ||
+      process.env["WEB_APP_URL"] ||
+      process.env["APP_URL"] ||
+      process.env["NEXT_PUBLIC_APP_URL"] ||
+      "https://www.energivia.com.br";
+    return raw.trim().replace(/\/+$/, "").replace("app.energivia.com.br", "www.energivia.com.br");
+  }
+
   async getStoredEntries(): Promise<StoredSalesRepEntry[]> {
     try {
       const row = await this.prisma.systemSetting.findUnique({
@@ -181,7 +192,7 @@ export class SalesRepService {
       this.logger.warn("Erro ao buscar usuários PLATFORM_SALES no banco:", err);
     }
 
-    const appUrl = (process.env["APP_URL"] || "https://app.energivia.com.br").replace(/\/+$/, "");
+    const appUrl = this.resolveAppUrl();
     const results: SalesRepManagementItem[] = [];
 
     for (const entry of Array.from(map.values())) {
@@ -326,7 +337,7 @@ export class SalesRepService {
     const found = list.find((item) => item.email.toLowerCase() === cleanEmail);
     if (found) return found;
 
-    const appUrl = (process.env["APP_URL"] || "https://app.energivia.com.br").replace(/\/+$/, "");
+    const appUrl = this.resolveAppUrl();
     const previewCode = this.slugify(dto.name || cleanEmail.split("@")[0] || "rep");
     return {
       ...updatedEntry,
@@ -406,7 +417,7 @@ export class SalesRepService {
       });
     }
 
-    const appUrl = (process.env["APP_URL"] || "https://app.energivia.com.br").replace(/\/+$/, "");
+    const appUrl = this.resolveAppUrl();
     return {
       referralCode: code,
       referralLink: `${appUrl}/cadastro?ref=${code}`,
