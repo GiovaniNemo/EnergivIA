@@ -30,6 +30,36 @@ export const UF_TO_STATE_NAME: Record<string, string> = {
   TO: "TOCANTINS",
 };
 
+export const STATE_NAME_TO_UF: Record<string, string> = {
+  ACRE: "AC",
+  ALAGOAS: "AL",
+  AMAPA: "AP",
+  AMAZONAS: "AM",
+  BAHIA: "BA",
+  CEARA: "CE",
+  "DISTRITO FEDERAL": "DF",
+  "ESPIRITO SANTO": "ES",
+  GOIAS: "GO",
+  MARANHAO: "MA",
+  "MATO GROSSO": "MT",
+  "MATO GROSSO DO SUL": "MS",
+  "MINAS GERAIS": "MG",
+  PARA: "PA",
+  PARAIBA: "PB",
+  PARANA: "PR",
+  PERNAMBUCO: "PE",
+  PIAUI: "PI",
+  "RIO DE JANEIRO": "RJ",
+  "RIO GRANDE DO NORTE": "RN",
+  "RIO GRANDE DO SUL": "RS",
+  RONDONIA: "RO",
+  RORAIMA: "RR",
+  "SANTA CATARINA": "SC",
+  "SAO PAULO": "SP",
+  SERGIPE: "SE",
+  TOCANTINS: "TO",
+};
+
 export const UF_FALLBACK: Record<string, number> = {
   SP: 4.8,
   PR: 4.9,
@@ -122,6 +152,23 @@ export function parseLocationString(input: string): { city: string; uf: string }
   return { city: raw, uf };
 }
 
+export function normalizeMunicipalNumerals(str: string): string {
+  if (!str) return "";
+  return str
+    .replace(/\bSEGUNDO\b/gi, "II")
+    .replace(/\b2\b/g, "II")
+    .replace(/\bPRIMEIRO\b/gi, "I")
+    .replace(/\b1\b/g, "I")
+    .replace(/\bTERCEIRO\b/gi, "III")
+    .replace(/\b3\b/g, "III")
+    .replace(/\bQUARTO\b/gi, "IV")
+    .replace(/\b4\b/g, "IV")
+    .replace(/\bQUINTO\b/gi, "V")
+    .replace(/\b5\b/g, "V")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export interface MunicipalityCandidate {
   city: string;
   uf: string;
@@ -150,11 +197,16 @@ export function getHsp(cidade: string, estado?: string): HspLookupResult {
       : STATE_NAME_TO_UF[normalizeTextSimple(rawUfCandidate)] || rawUfCandidate.toUpperCase();
   const searchUf = resolvedUf;
   const normSearchCity = normalizeTextSimple(searchCity);
+  const normSearchCityNum = normalizeMunicipalNumerals(normSearchCity);
 
   // 1. Consulta prioritária na base oficial completa embutida (5.569 municípios)
   if (searchUf) {
     const key = `${normSearchCity}_${searchUf}`;
-    const entry = BRAZIL_MUNICIPALITIES_DATA.byCityUf[key];
+    const entry =
+      BRAZIL_MUNICIPALITIES_DATA.byCityUf[key] ||
+      (normSearchCityNum !== normSearchCity
+        ? BRAZIL_MUNICIPALITIES_DATA.byCityUf[`${normSearchCityNum}_${searchUf}`]
+        : undefined);
     if (entry) {
       return {
         hsp: entry.hsp,
@@ -167,7 +219,10 @@ export function getHsp(cidade: string, estado?: string): HspLookupResult {
   }
 
   // 2. Se a UF não foi informada ou não bateu exatamente, busca pelo nome da cidade no Brasil
-  const cityMatches = BRAZIL_MUNICIPALITIES_DATA.byCity[normSearchCity];
+  let cityMatches = BRAZIL_MUNICIPALITIES_DATA.byCity[normSearchCity];
+  if ((!cityMatches || cityMatches.length === 0) && normSearchCityNum !== normSearchCity) {
+    cityMatches = BRAZIL_MUNICIPALITIES_DATA.byCity[normSearchCityNum];
+  }
   if (cityMatches && cityMatches.length > 0) {
     if (searchUf) {
       const matchWithUf = cityMatches.find((m) => m.uf === searchUf);

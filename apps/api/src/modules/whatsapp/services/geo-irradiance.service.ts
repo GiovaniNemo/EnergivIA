@@ -329,6 +329,35 @@ export interface MunicipalityCandidate {
   isCapital?: boolean;
 }
 
+export interface MunicipalityCoordinateEntry {
+  city: string;
+  uf: string;
+  lat: number;
+  lon: number;
+  hsp: number;
+}
+
+/**
+ * Normaliza numerais ordinais e cardinais comumente usados em municípios brasileiros
+ * (ex: "Pedro segundo" -> "Pedro II", "Pedro 2" -> "Pedro II", "São João 1" -> "São João I")
+ */
+export function normalizeMunicipalNumerals(str: string): string {
+  if (!str) return "";
+  return str
+    .replace(/\bSEGUNDO\b/gi, "II")
+    .replace(/\b2\b/g, "II")
+    .replace(/\bPRIMEIRO\b/gi, "I")
+    .replace(/\b1\b/g, "I")
+    .replace(/\bTERCEIRO\b/gi, "III")
+    .replace(/\b3\b/g, "III")
+    .replace(/\bQUARTO\b/gi, "IV")
+    .replace(/\b4\b/g, "IV")
+    .replace(/\bQUINTO\b/gi, "V")
+    .replace(/\b5\b/g, "V")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export interface HspLookupResult {
   hsp: number;
   city: string;
@@ -338,6 +367,7 @@ export interface HspLookupResult {
   candidates?: MunicipalityCandidate[];
   isStateOnly?: boolean;
   stateName?: string;
+  distanceKm?: number;
 }
 
 export function isLocationInput(input: string): boolean {
@@ -348,15 +378,27 @@ export function isLocationInput(input: string): boolean {
   }
   if (!parsed.city) return false;
   const normCity = normalizeTextSimple(parsed.city);
-  if (parsed.uf && BRAZIL_MUNICIPALITIES_DATA.byCityUf[`${normCity}_${parsed.uf}`]) {
+  const normCityNum = normalizeMunicipalNumerals(normCity);
+  if (
+    parsed.uf &&
+    (BRAZIL_MUNICIPALITIES_DATA.byCityUf[`${normCity}_${parsed.uf}`] ||
+      BRAZIL_MUNICIPALITIES_DATA.byCityUf[`${normCityNum}_${parsed.uf}`])
+  ) {
     return true;
   }
-  if (BRAZIL_MUNICIPALITIES_DATA.byCity[normCity]?.length) {
+  if (
+    BRAZIL_MUNICIPALITIES_DATA.byCity[normCity]?.length ||
+    BRAZIL_MUNICIPALITIES_DATA.byCity[normCityNum]?.length
+  ) {
     return true;
   }
   const clean = cleanLocationInput(input);
   const normClean = normalizeTextSimple(clean);
-  if (BRAZIL_MUNICIPALITIES_DATA.byCity[normClean]?.length) {
+  const normCleanNum = normalizeMunicipalNumerals(normClean);
+  if (
+    BRAZIL_MUNICIPALITIES_DATA.byCity[normClean]?.length ||
+    BRAZIL_MUNICIPALITIES_DATA.byCity[normCleanNum]?.length
+  ) {
     return true;
   }
   return false;
@@ -366,6 +408,7 @@ export function isLocationInput(input: string): boolean {
 export class GeoIrradianceService {
   private readonly logger = new Logger(GeoIrradianceService.name);
   private cachedHspCsv: string[] | null = null;
+  private municipalityCoordinates: MunicipalityCoordinateEntry[] = [];
 
   constructor() {
     this.loadHspCsv();
@@ -378,13 +421,22 @@ export class GeoIrradianceService {
         path.join(process.cwd(), "..", "hsp_brasil_todos_municipios hsp_medio_anual.csv"),
         path.join(process.cwd(), "..", "..", "hsp_brasil_todos_municipios hsp_medio_anual.csv"),
         path.join(__dirname, "..", "..", "..", "hsp_brasil_todos_municipios hsp_medio_anual.csv"),
+        path.join(
+          __dirname,
+          "..",
+          "..",
+          "..",
+          "..",
+          "hsp_brasil_todos_municipios hsp_medio_anual.csv"
+        ),
       ];
 
       for (const p of candidates) {
         if (fs.existsSync(p)) {
           this.cachedHspCsv = fs.readFileSync(p, "utf8").split("\n");
+          this.parseCoordinatesFromCsv();
           this.logger.log(
-            `Base de irradiação municipal (CSV) carregada com sucesso (${this.cachedHspCsv.length} linhas).`
+            `Base de irradiação municipal (CSV) carregada com sucesso (${this.cachedHspCsv.length} linhas, ${this.municipalityCoordinates.length} coordenadas indexadas).`
           );
           break;
         }
@@ -394,6 +446,103 @@ export class GeoIrradianceService {
         `Aviso: Falha ao carregar CSV de HSP, usando base embutida oficial: ${String(err)}`
       );
     }
+  }
+
+  private parseCoordinatesFromCsv(): void {
+    if (!this.cachedHspCsv) return;
+    this.municipalityCoordinates = [];
+    for (let i = 1; i < this.cachedHspCsv.length; i++) {
+      const line = this.cachedHspCsv[i];
+      if (!line) continue;
+      const parts = line.split(";");
+      if (parts.length < 7) continue;
+
+      let lon = parseFloat(parts[1] || "");
+      let lat = parseFloat(parts[2] || "");
+      if (isNaN(lon) || isNaN(lat)) continue;
+
+      // Normalização de escala do arquivo original INPE
+      if (lon < -100) lon /= 10;
+      if (lat < -35) lat /= 10;
+
+      const cityName = parts[3]?.trim();
+      const rawState = parts[5]
+        ?.trim()
+        ?.toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      const uf = STATE_NAME_TO_UF[rawState || ""] || "";
+      const hsp = (parseFloat(parts[6] || "") || 5000) / 1000;
+
+      if (cityName && uf) {
+        this.municipalityCoordinates.push({
+          city: cityName,
+          uf,
+          lat,
+          lon,
+          hsp,
+        });
+      }
+    }
+  }
+
+  /**
+   * Localiza o município brasileiro mais próximo com base em coordenadas GPS (latitude, longitude).
+   * Utiliza a fórmula de Haversine para precisão quilométrica na Terra.
+   */
+  findClosestMunicipality(
+    targetLat: number,
+    targetLon: number
+  ): { city: string; uf: string; hsp: number; distanceKm: number } | null {
+    if (!Number.isFinite(targetLat) || !Number.isFinite(targetLon)) return null;
+    if (this.municipalityCoordinates.length === 0) {
+      this.loadHspCsv();
+    }
+    if (this.municipalityCoordinates.length === 0) return null;
+
+    let closest: MunicipalityCoordinateEntry | null = null;
+    let minDistanceKm = Infinity;
+
+    const R = 6371; // Raio da Terra em km
+    const rad = Math.PI / 180;
+    const phi1 = targetLat * rad;
+
+    for (const item of this.municipalityCoordinates) {
+      const phi2 = item.lat * rad;
+      const deltaPhi = (item.lat - targetLat) * rad;
+      const deltaLambda = (item.lon - targetLon) * rad;
+
+      const a =
+        Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+        Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distanceKm = R * c;
+
+      if (distanceKm < minDistanceKm) {
+        minDistanceKm = distanceKm;
+        closest = item;
+      }
+    }
+
+    if (!closest) return null;
+
+    // Se estiver a mais de 350 km do município mais próximo, não considera como ponto brasileiro válido
+    if (minDistanceKm > 350) {
+      return null;
+    }
+
+    const norm = normalizeTextSimple(closest.city);
+    const normNum = normalizeMunicipalNumerals(norm);
+    const officialEntry =
+      BRAZIL_MUNICIPALITIES_DATA.byCityUf[`${norm}_${closest.uf}`] ||
+      BRAZIL_MUNICIPALITIES_DATA.byCityUf[`${normNum}_${closest.uf}`];
+
+    return {
+      city: officialEntry?.city || closest.city,
+      uf: officialEntry?.uf || closest.uf,
+      hsp: officialEntry?.hsp || closest.hsp,
+      distanceKm: Math.round(minDistanceKm * 10) / 10,
+    };
   }
 
   /**
@@ -428,6 +577,7 @@ export class GeoIrradianceService {
         : STATE_NAME_TO_UF[normalizeTextSimple(rawUfCandidate)] || rawUfCandidate.toUpperCase();
     const searchUf = resolvedUf;
     const normSearchCity = normalizeTextSimple(searchCity);
+    const normSearchCityNum = normalizeMunicipalNumerals(normSearchCity);
 
     // Se o nome de busca for um Estado brasileiro (excluindo capitais homônimas SP/RJ)
     if (
@@ -451,7 +601,11 @@ export class GeoIrradianceService {
     // 1. Consulta prioritária na base oficial completa embutida (5.569 municípios)
     if (searchUf) {
       const key = `${normSearchCity}_${searchUf}`;
-      const entry = BRAZIL_MUNICIPALITIES_DATA.byCityUf[key];
+      const entry =
+        BRAZIL_MUNICIPALITIES_DATA.byCityUf[key] ||
+        (normSearchCityNum !== normSearchCity
+          ? BRAZIL_MUNICIPALITIES_DATA.byCityUf[`${normSearchCityNum}_${searchUf}`]
+          : undefined);
       if (entry) {
         return {
           hsp: entry.hsp,
@@ -464,7 +618,10 @@ export class GeoIrradianceService {
     }
 
     // 2. Se a UF não foi informada ou não bateu exatamente, busca pelo nome da cidade no Brasil
-    const cityMatches = BRAZIL_MUNICIPALITIES_DATA.byCity[normSearchCity];
+    let cityMatches = BRAZIL_MUNICIPALITIES_DATA.byCity[normSearchCity];
+    if ((!cityMatches || cityMatches.length === 0) && normSearchCityNum !== normSearchCity) {
+      cityMatches = BRAZIL_MUNICIPALITIES_DATA.byCity[normSearchCityNum];
+    }
     if (cityMatches && cityMatches.length > 0) {
       // Se tiver UF informada, tenta filtrar
       if (searchUf) {
@@ -608,6 +765,13 @@ export class GeoIrradianceService {
 const defaultGeoService = new GeoIrradianceService();
 export function getHsp(cidade: string, estado?: string): HspLookupResult {
   return defaultGeoService.getHsp(cidade, estado);
+}
+
+export function findClosestMunicipality(
+  lat: number,
+  lon: number
+): { city: string; uf: string; hsp: number; distanceKm: number } | null {
+  return defaultGeoService.findClosestMunicipality(lat, lon);
 }
 
 export interface ExtractedLocationResult {
@@ -905,14 +1069,19 @@ export function extractLocationFromFreeText(rawText: string): ExtractedLocationR
     }
   }
 
-  // 6. Cidade isolada sem UF mencionada no texto (ex: "em Maringá", "em Campinas")
+  // 6. Cidade isolada sem UF mencionada no texto (ex: "em Maringá", "em Campinas", "em Pedro segundo")
   const words = clean.split(/[\s,.;:!?]+/).filter(Boolean);
   for (let i = 0; i < words.length; i++) {
     for (let len = 1; len <= 3 && i + len <= words.length; len++) {
       const phrase = words.slice(i, i + len).join(" ");
       const normPhrase = normalizeTextSimple(phrase);
+      const normPhraseNum = normalizeMunicipalNumerals(normPhrase);
       if (normPhrase.length < 4 || SOLAR_EXCLUDED_TOKENS.has(normPhrase)) continue;
-      const cityMatches = BRAZIL_MUNICIPALITIES_DATA.byCity[normPhrase];
+      const cityMatches =
+        BRAZIL_MUNICIPALITIES_DATA.byCity[normPhrase] ||
+        (normPhraseNum !== normPhrase
+          ? BRAZIL_MUNICIPALITIES_DATA.byCity[normPhraseNum]
+          : undefined);
       if (cityMatches && cityMatches.length === 1) {
         const single = cityMatches[0]!;
         return {

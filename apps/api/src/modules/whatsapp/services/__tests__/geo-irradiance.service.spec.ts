@@ -234,5 +234,47 @@ describe("GeoIrradianceService - Municipal Solar Irradiation Suite", () => {
         expect(resMG.isStateOnly).toBe(true);
       });
     });
+
+    describe("Numeral Normalization & Roman Numerals (Pedro II / PI)", () => {
+      it("should match 'Pedro segundo, Piauí' to Pedro II - PI with exact match", () => {
+        expect(isLocationInput("Pedro segundo, Piauí")).toBe(true);
+        expect(isLocationInput("Pedro 2, PI")).toBe(true);
+        expect(isLocationInput("Pedro segundo")).toBe(true);
+
+        const res = service.getHsp("Pedro segundo, Piauí");
+        expect(res.city).toBe("Pedro II");
+        expect(res.uf).toBe("PI");
+        expect(res.exact).toBe(true);
+        expect(res.hsp).toBeGreaterThan(5.0);
+
+        const res2 = service.getHsp("Pedro 2, PI");
+        expect(res2.city).toBe("Pedro II");
+        expect(res2.uf).toBe("PI");
+        expect(res2.exact).toBe(true);
+      });
+    });
+
+    describe("GPS Coordinates / Maps Pin Closest Municipality", () => {
+      it("should find Pedro II / PI from exact or nearby GPS coordinates", () => {
+        const match = service.findClosestMunicipality(-4.4285, -41.453);
+        expect(match).not.toBeNull();
+        expect(match?.city).toBe("Pedro II");
+        expect(match?.uf).toBe("PI");
+        expect(match?.distanceKm).toBe(0);
+      });
+
+      it("should find Maringá / PR from GPS coordinates", () => {
+        const match = service.findClosestMunicipality(-23.42, -51.93);
+        expect(match).not.toBeNull();
+        expect(match?.city).toBe("Maringá");
+        expect(match?.uf).toBe("PR");
+        expect(match?.distanceKm).toBeLessThan(5);
+      });
+
+      it("should return null for coordinates far outside Brazil", () => {
+        const match = service.findClosestMunicipality(48.8566, 2.3522); // Paris
+        expect(match).toBeNull();
+      });
+    });
   });
 });

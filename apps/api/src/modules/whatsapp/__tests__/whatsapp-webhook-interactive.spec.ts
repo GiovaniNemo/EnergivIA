@@ -117,4 +117,35 @@ describe("WhatsappBotService - Webhook Interactive Normalization", () => {
     expect(arg.message.type).toBe("text");
     expect(arg.message.text.body).toBe("1");
   });
+
+  it("should parse Evolution API locationMessage (Google Maps pin) into location message", async () => {
+    const payload = {
+      event: "messages.upsert",
+      data: {
+        key: {
+          id: "evo_msg_loc_1",
+          remoteJid: "558681159674@s.whatsapp.net",
+          fromMe: false,
+        },
+        pushName: "Integrador Piauí",
+        message: {
+          locationMessage: {
+            degreesLatitude: -4.4285,
+            degreesLongitude: -41.453,
+            name: "Pedro II",
+            address: "Pedro II, PI",
+          },
+        },
+      },
+    };
+
+    await service.handleEvolutionWebhookPayload(payload);
+
+    expect(mockProcessSingleMessage).toHaveBeenCalledTimes(1);
+    const arg = mockProcessSingleMessage.mock.calls[0][0];
+    expect(arg.message.type).toBe("location");
+    expect(arg.message.location.latitude).toBe(-4.4285);
+    expect(arg.message.location.longitude).toBe(-41.453);
+    expect(arg.message.location.name).toBe("Pedro II");
+  });
 });

@@ -72,6 +72,13 @@ interface WebhookMessage {
     button_reply?: { id?: string; title?: string };
     list_reply?: { id?: string; title?: string; description?: string };
   };
+  location?: {
+    latitude: number;
+    longitude: number;
+    name?: string;
+    address?: string;
+    url?: string;
+  };
 }
 
 interface WebhookPayload {
@@ -119,15 +126,33 @@ function expandInboundPhoneCandidates(raw: string): string[] {
   return [...out];
 }
 
-function formatPhone(phone: string): string {
+export function formatPhone(phone: string): string {
+  if (!phone) return "";
   const d = phone.replace(/\D/g, "");
-  if (d.length === 11) {
-    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  const normalized = d.startsWith("55") && (d.length === 12 || d.length === 13) ? d.slice(2) : d;
+  if (normalized.length === 11) {
+    return `(${normalized.slice(0, 2)}) ${normalized.slice(2, 7)}-${normalized.slice(7)}`;
   }
-  if (d.length === 10) {
-    return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  if (normalized.length === 10) {
+    return `(${normalized.slice(0, 2)}) ${normalized.slice(2, 6)}-${normalized.slice(6)}`;
   }
   return phone;
+}
+
+export function isValidClientName(name: string): boolean {
+  if (!name) return false;
+  const clean = name.trim();
+  if (clean.length < 2) return false;
+  // Deve conter ao menos uma letra
+  if (!/[a-zA-ZÀ-ÖØ-öø-ÿ]/.test(clean)) return false;
+  // Não pode conter excesso de dígitos (números de telefone ou sequências)
+  const digits = clean.replace(/\D/g, "");
+  if (digits.length >= 6) return false;
+  const lower = clean.toLowerCase();
+  if (/^(voltar|retornar|menu|iniciar|reiniciar|ajuda|cancelar|sair|0|0️⃣)$/.test(lower))
+    return false;
+  if (/^(?:telefone|whatsapp|whats|celular|fone|zap|numero|número)$/.test(lower)) return false;
+  return true;
 }
 
 export function cleanExtractedName(rawName: string): string {
@@ -136,18 +161,20 @@ export function cleanExtractedName(rawName: string): string {
 
   // Remove prefixos conversacionais quando informa ou corrige nome
   s = s.replace(
-    /^(?:o\s+dela\s+(?:é|eh|e)|o\s+dele\s+(?:é|eh|e)|o\s+nome\s+dela\s+(?:é|eh|e)|o\s+nome\s+dele\s+(?:é|eh|e)|o\s+nome\s+(?:é|eh|e)|nome\s+(?:é|eh|e)|na\s+verdade\s+(?:é|eh|e)|mudar\s+(?:o\s+nome\s+)?(?:para)?|trocar\s+(?:o\s+nome\s+)?(?:para)?|coloca\s+|pode\s+ser)\s+/i,
+    /^(?:(?:o\s+)?nome\s+(?:do\s+cliente(?:\s+final)?|da\s+cliente(?:\s+final)?|do\s+meu\s+cliente|da\s+minha\s+cliente|dele|dela)?\s*(?:é|eh|e|:)?|(?:o\s+)?(?:meu\s+)?cliente(?:\s+final)?\s*(?:é|eh|e|se\s+chama|:)|(?:ele|ela)\s+(?:se\s+)?chama|se\s+chama|(?:o\s+)?nome\s*(?:é|eh|e|:)?|(?:o\s+dela|o\s+dele)\s*(?:é|eh|e|:)?|na\s+verdade\s+(?:é|eh|e|:)?|mudar\s+(?:o\s+nome\s+)?(?:para|pro)?|trocar\s+(?:o\s+nome\s+)?(?:para|pro)?|coloca\s+|colocar\s+|pode\s+ser)\s+/i,
     ""
   );
+
+  s = s.replace(/^(?:cliente|nome)\s*:\s*/i, "");
 
   // Remove sufixos e conectores de telefone no final ou início (ex: ", e o é", ", e o telefone é", "e o whats:")
   s = s
     .replace(
-      /[,;\s]+(?:(?:e|o)\s+)*(?:telefone|whats(?:app)?|cel(?:ular)?|fone|zap|contato|numero|número)?(?:\s+(?:dele|dela))?\s*(?:é|eh|e)?\s*$/i,
+      /[,;\s]+(?:(?:e|o)\s+)*(?:telefone|whats(?:app)?|cel(?:ular)?|fone|zap|contato|numero|número)?(?:\s+(?:dele|dela|do\s+cliente))?\s*(?:é|eh|e|:)?\s*$/i,
       ""
     )
     .replace(
-      /^(?:[,;\s]+|(?:(?:e|o)\s+)+(?:telefone|whats(?:app)?|cel(?:ular)?|fone|zap|contato|numero|número)?(?:\s+(?:dele|dela))?\s*(?:é|eh|e)?\s*)/i,
+      /^(?:[,;\s]+|(?:(?:e|o)\s+)+(?:telefone|whats(?:app)?|cel(?:ular)?|fone|zap|contato|numero|número)?(?:\s+(?:dele|dela|do\s+cliente))?\s*(?:é|eh|e|:)?\s*)/i,
       ""
     )
     .replace(/\b(?:e\s+o\s+é|e\s+o\s+e|e\s+o|e\s+é|é\s+o)\b/gi, " ")
@@ -163,6 +190,7 @@ export function cleanExtractedName(rawName: string): string {
     "as",
     "e",
     "é",
+    "eh",
     "dele",
     "dela",
     "do",
@@ -172,6 +200,7 @@ export function cleanExtractedName(rawName: string): string {
     "pro",
     "pra",
     "meu",
+    "minha",
     "seu",
     "sua",
     "whats",
@@ -182,6 +211,9 @@ export function cleanExtractedName(rawName: string): string {
     "número",
     "zap",
     "contato",
+    "cliente",
+    "final",
+    "nome",
   ]);
   const words = s.split(" ").filter((w) => w.trim().length > 0);
   if (words.length === 0 || words.every((w) => stopWords.has(w.toLowerCase()))) {
@@ -217,7 +249,7 @@ export function extractNameAndPhone(text: string): { name: string; phone?: strin
   // Procura padrão de telefone brasileiro amplo (com ou sem DDD, hífens, traços, espaços ou 55)
   // Ex: 449-8821-5497, 449-777-7770, (44) 98821-5497, 44 98821-5497, 44988215497, +55 44 98821-5497
   const phonePattern =
-    /(?:\+?55[\s.-]*)?(?:\(?\s*([1-9]{2})\s*\)?[\s.-]*)?(?:9[\s.-]*)?\d{4}[\s.-]*\d{4}/g;
+    /(?:\+?55[\s.-]*)?(?:\(?\s*([1-9]{2})\s*\)?[\s.-]*)?(?:9[\s.-]*)?\d{4,5}[\s.-]*\d{4}/g;
 
   let foundPhone: string | undefined;
   let matchStr = "";
@@ -251,7 +283,14 @@ export function extractNameAndPhone(text: string): { name: string; phone?: strin
       const ddd = parseInt(cleaned.slice(0, 2), 10);
       if (ddd >= 11 && ddd <= 99) {
         foundPhone = cleaned;
-        matchStr = cleanText;
+        const firstDigitIdx = cleanText.search(/\d/);
+        const lastDigitIdx =
+          cleanText.length - 1 - cleanText.split("").reverse().join("").search(/\d/);
+        if (firstDigitIdx >= 0 && lastDigitIdx >= firstDigitIdx) {
+          matchStr = cleanText.slice(firstDigitIdx, lastDigitIdx + 1);
+        } else {
+          matchStr = cleanText;
+        }
       }
     }
   }
@@ -1521,6 +1560,19 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         "";
       mappedMessage.text = { body: tId };
     }
+    // 6. Localização / Google Maps (Evolution API / Baileys)
+    else if (messageContent.locationMessage || messageContent.liveLocationMessage) {
+      msgType = "location";
+      const loc = messageContent.locationMessage || messageContent.liveLocationMessage;
+      mappedMessage.type = "location";
+      mappedMessage.location = {
+        latitude: Number(loc.degreesLatitude ?? loc.latitude),
+        longitude: Number(loc.degreesLongitude ?? loc.longitude),
+        name: loc.name || "",
+        address: loc.address || "",
+        url: loc.url || "",
+      };
+    }
 
     if (msgType === "unknown") {
       this.logger.debug(
@@ -1891,6 +1943,35 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         ).trim();
       } else if (interactive?.type === "list_reply") {
         incomingText = (interactive.list_reply?.id || interactive.list_reply?.title || "").trim();
+      }
+    } else if (msgType === "location" && message.location) {
+      const loc = message.location;
+      let resolvedLoc: { city: string; uf: string; hsp: number } | null = null;
+
+      // 1º Tenta extrair pelo nome ou endereço do pino do Maps
+      if (loc.name || loc.address) {
+        const fullAddress = `${loc.name || ""} ${loc.address || ""}`.trim();
+        const extracted = extractLocationFromFreeText(fullAddress);
+        if (extracted && extracted.city && extracted.uf) {
+          resolvedLoc = { city: extracted.city, uf: extracted.uf, hsp: extracted.hsp || 5.0 };
+        }
+      }
+
+      // 2º Se não encontrou por texto, calcula o município brasileiro mais próximo pelas coordenadas GPS (Haversine)
+      if (!resolvedLoc && Number.isFinite(loc.latitude) && Number.isFinite(loc.longitude)) {
+        const closest = this.geoIrradiance.findClosestMunicipality(loc.latitude, loc.longitude);
+        if (closest) {
+          resolvedLoc = { city: closest.city, uf: closest.uf, hsp: closest.hsp };
+        }
+      }
+
+      if (resolvedLoc) {
+        incomingText = `${resolvedLoc.city}/${resolvedLoc.uf}`;
+        this.logger.log(
+          `[WhatsApp Location] Pino do Maps recebido (${loc.latitude}, ${loc.longitude}): resolvido para ${incomingText} (HSP: ${resolvedLoc.hsp})`
+        );
+      } else {
+        incomingText = (loc.address || loc.name || "Localização compartilhada").trim();
       }
     }
 
@@ -2266,6 +2347,11 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       } else {
         incomingText = "[Mensagem de áudio recebida]";
       }
+    } else if (msgType === "location") {
+      // incomingText já foi resolvido em linhas anteriores para "Cidade/UF"
+      if (!incomingText || incomingText.startsWith("[Mensagem")) {
+        incomingText = "Localização compartilhada";
+      }
     } else {
       incomingText = `[Mensagem do tipo ${msgType} recebida]`;
     }
@@ -2282,31 +2368,40 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         content: incomingText,
         channel: "whatsapp",
         metadata:
-          extractionResult &&
-          extractionResult.isValidForSizing &&
-          extractionResult.exactAverageKwh >= 20
+          msgType === "location"
             ? {
-                exactAverageKwh: extractionResult.exactAverageKwh,
-                monthCount: extractionResult.monthCount,
-                totalSumKwh: extractionResult.totalSumKwh,
-                cidade: extractionResult.data.cidade,
-                uf: extractionResult.data.uf,
-                isValidForSizing: true,
+                isLocation: true,
+                latitude: message.location?.latitude,
+                longitude: message.location?.longitude,
+                address: message.location?.address,
+                name: message.location?.name,
+                resolvedLocation: incomingText,
               }
-            : extractionResult
+            : extractionResult &&
+                extractionResult.isValidForSizing &&
+                extractionResult.exactAverageKwh >= 20
               ? {
-                  isValidForSizing: false,
-                  isLegible: false,
-                  rejectionReason: extractionResult.rejectionReason,
+                  exactAverageKwh: extractionResult.exactAverageKwh,
+                  monthCount: extractionResult.monthCount,
+                  totalSumKwh: extractionResult.totalSumKwh,
+                  cidade: extractionResult.data.cidade,
+                  uf: extractionResult.data.uf,
+                  isValidForSizing: true,
                 }
-              : isAudioMsg
+              : extractionResult
                 ? {
-                    isAudio: true,
-                    originalAudioId: audioMediaId,
-                    transcription:
-                      incomingText !== "[Mensagem de áudio recebida]" ? incomingText : undefined,
+                    isValidForSizing: false,
+                    isLegible: false,
+                    rejectionReason: extractionResult.rejectionReason,
                   }
-                : undefined,
+                : isAudioMsg
+                  ? {
+                      isAudio: true,
+                      originalAudioId: audioMediaId,
+                      transcription:
+                        incomingText !== "[Mensagem de áudio recebida]" ? incomingText : undefined,
+                    }
+                  : undefined,
       },
     });
 
@@ -4769,9 +4864,8 @@ ${catalogContext}`;
           }
           if (
             parsedName &&
-            parsedName.length >= 2 &&
-            !parsedName.toLowerCase().startsWith("voltar") &&
-            !parsedName.toLowerCase().startsWith("0")
+            isValidClientName(parsedName) &&
+            !prevAssistantForLead.includes("E qual o WhatsApp dele")
           ) {
             clientName = parsedName;
           }
@@ -6337,7 +6431,10 @@ ${catalogContext}`;
       const availableTemplates = await this.getAvailableTemplates(conversation.organizationId);
       const chosenTemplate = availableTemplates[chosenTemplateIndex] || availableTemplates[0];
 
-      let clientName = sessionCtx.clientName || "Cliente";
+      let clientName =
+        sessionCtx.clientName && isValidClientName(sessionCtx.clientName)
+          ? sessionCtx.clientName
+          : "Cliente";
       let clientWhatsapp =
         sessionCtx.clientWhatsapp && sessionCtx.clientWhatsapp !== "WhatsApp"
           ? sessionCtx.clientWhatsapp
@@ -6832,20 +6929,29 @@ ${catalogContext}`;
       }
 
       const { name, phone } = extractNameAndPhone(incomingText);
-      const effectiveName = name || (phone ? "Cliente" : incomingText.trim());
+      const digits = incomingText.replace(/\D/g, "");
+      const cleanedDigits =
+        digits.startsWith("55") && (digits.length === 12 || digits.length === 13)
+          ? digits.slice(2)
+          : digits;
+      const detectedPhone =
+        phone ||
+        (cleanedDigits.length === 10 || cleanedDigits.length === 11 ? cleanedDigits : undefined);
 
-      // Se o usuário já enviou o Nome E o WhatsApp na mesma mensagem (ex: "cezar 44988117969" ou "cezar, 44099117969")
-      if (phone && name) {
-        sessionCtx.clientName = effectiveName;
-        sessionCtx.clientWhatsapp = phone;
+      const hasValidName = isValidClientName(name);
+
+      // Se o usuário já enviou o Nome E o WhatsApp na mesma mensagem (ex: "cezar 44988117969" ou "nome do cliente é Lucas Gabriel e o whatsapp é 44988117969")
+      if (detectedPhone && hasValidName) {
+        sessionCtx.clientName = name;
+        sessionCtx.clientWhatsapp = detectedPhone;
 
         if (isGuestTrial) {
           return generateProposalAndReply(0);
         }
 
         await setStep("AWAITING_TEMPLATE_SELECTION", {
-          clientName: effectiveName,
-          clientPhone: phone,
+          clientName: name,
+          clientPhone: detectedPhone,
         });
 
         const templates = await this.getAvailableTemplates(conversation.organizationId);
@@ -6856,7 +6962,7 @@ ${catalogContext}`;
         templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
 
         return (
-          `Cliente *${effectiveName}* e WhatsApp \`${formatPhone(phone)}\` registrados com sucesso! 👤✨\n\n` +
+          `Cliente *${name}* e WhatsApp \`${formatPhone(detectedPhone)}\` registrados com sucesso! 👤✨\n\n` +
           `*_Qual modelo de proposta comercial você deseja usar para o seu cliente?_*\n\n` +
           `${templateListText}\n` +
           `_(Responda com o número da opção desejada ou digite 0️⃣ para corrigir o nome/telefone)_`
@@ -6864,16 +6970,21 @@ ${catalogContext}`;
       }
 
       // Se enviou apenas o telefone sem nome
-      if (phone && !name) {
-        sessionCtx.clientWhatsapp = phone;
-        await setStep("AWAITING_CLIENT_NAME", { clientPhone: phone });
-        return `Anotado o WhatsApp \`${formatPhone(phone)}\`! E qual o *nome* do seu cliente final para a proposta comercial?`;
+      if (detectedPhone && !hasValidName) {
+        sessionCtx.clientWhatsapp = detectedPhone;
+        await setStep("AWAITING_CLIENT_NAME", { clientPhone: detectedPhone });
+        return `Anotado o WhatsApp \`${formatPhone(detectedPhone)}\`! E qual o *nome* do seu cliente final para a proposta comercial?`;
       }
 
       // Se enviou apenas o nome
-      sessionCtx.clientName = effectiveName;
-      await setStep("AWAITING_CLIENT_PHONE", { clientName: effectiveName });
-      return `Certo, vou registrar o cliente *${effectiveName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
+      if (hasValidName) {
+        sessionCtx.clientName = name;
+        await setStep("AWAITING_CLIENT_PHONE", { clientName: name });
+        return `Certo, vou registrar o cliente *${name}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
+      }
+
+      // Se não for nem telefone nem nome válido (ex: apenas números soltos ou caracteres inválidos)
+      return `Por favor, informe o *nome* do seu cliente final para a proposta comercial (Ex: João da Silva):\n\n_(Ou envie 0️⃣ para voltar e ver os kits disponíveis)_`;
     }
 
     // ESTADO C: O Bot pediu o WhatsApp do cliente final -> Apresenta os modelos de proposta
@@ -6909,7 +7020,7 @@ ${catalogContext}`;
 
       if (!resolvedPhone) {
         // Usuário enviou apenas um novo nome (sem número de telefone)
-        if (newName && /[a-zA-ZÀ-ÖØ-öø-ÿ]/.test(newName) && newName.length >= 2) {
+        if (isValidClientName(newName)) {
           sessionCtx.clientName = newName;
           await setStep("AWAITING_CLIENT_PHONE", { clientName: newName });
           return `Certo, corrigi o nome para *${newName}*. E qual o WhatsApp dele com DDD? (ou digite 0️⃣ para voltar)`;
@@ -6919,7 +7030,7 @@ ${catalogContext}`;
       }
 
       // Se informou nome e telefone na mesma mensagem
-      if (newName && /[a-zA-ZÀ-ÖØ-öø-ÿ]/.test(newName) && newName.length >= 2) {
+      if (isValidClientName(newName)) {
         clientName = newName;
       }
 
