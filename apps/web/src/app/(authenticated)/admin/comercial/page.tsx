@@ -91,18 +91,18 @@ export default function AdminComercialPage(): JSX.Element {
   };
 
   return (
-    <div className="min-h-screen bg-[#02040a] text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6 text-zinc-900 dark:text-zinc-100">
       {/* Header Principal */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-zinc-200 dark:border-zinc-800">
         <div>
-          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-1">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 mb-1">
             <Handshake className="h-3.5 w-3.5" />
             Product-Led Sales
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
             Portal Comercial EnergivIA
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+          <p className="text-xs sm:text-sm text-zinc-500 dark:text-slate-400 mt-0.5">
             Gestão de carteira de integradores, acompanhamento de ativação no trial e liberação de
             vendedores.
           </p>
@@ -117,7 +117,7 @@ export default function AdminComercialPage(): JSX.Element {
               fetchSummary();
               fetchTenants();
             }}
-            className="border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 gap-2 text-xs"
+            className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 gap-2 text-xs shadow-xs"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             <span>Atualizar</span>
@@ -127,14 +127,14 @@ export default function AdminComercialPage(): JSX.Element {
 
       {/* Abas Super Admin (apenas visíveis se for Super Admin da Plataforma) */}
       {isPlatform && (
-        <div className="flex items-center gap-2 border-b border-white/[0.08] pb-1">
+        <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-1">
           <button
             type="button"
             onClick={() => setActiveTab("carteira")}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all ${
               activeTab === "carteira"
-                ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-                : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
+                ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-500/30 font-semibold shadow-xs"
+                : "text-zinc-600 dark:text-slate-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 border border-transparent"
             }`}
           >
             <Briefcase className="h-4 w-4" />
@@ -145,13 +145,13 @@ export default function AdminComercialPage(): JSX.Element {
             onClick={() => setActiveTab("equipe")}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all ${
               activeTab === "equipe"
-                ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-                : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
+                ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-500/30 font-semibold shadow-xs"
+                : "text-zinc-600 dark:text-slate-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 border border-transparent"
             }`}
           >
             <UserPlus className="h-4 w-4" />
             <span>Liberação & Equipe de Vendedores</span>
-            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-500/30 font-bold">
               Admin
             </span>
           </button>

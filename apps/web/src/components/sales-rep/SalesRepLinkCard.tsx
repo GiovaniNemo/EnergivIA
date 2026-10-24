@@ -36,18 +36,22 @@ export function SalesRepLinkCard({
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-950/20 via-slate-900/60 to-slate-900/40 p-6 backdrop-blur-xl shadow-xl">
+    <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 dark:border-emerald-500/20 bg-gradient-to-r from-emerald-50/70 via-white to-emerald-50/30 dark:from-emerald-950/20 dark:via-slate-900/60 dark:to-slate-900/40 p-6 backdrop-blur-xl shadow-xs dark:shadow-xl">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold tracking-wider text-emerald-400 uppercase">
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold tracking-wider text-emerald-700 dark:text-emerald-400 uppercase">
             <Sparkles className="h-3.5 w-3.5" />
             Link Exclusivo de Indicação
-            {referralCode && <span className="font-mono text-emerald-300">({referralCode})</span>}
+            {referralCode && (
+              <span className="font-mono text-emerald-800 dark:text-emerald-300">
+                ({referralCode})
+              </span>
+            )}
           </div>
-          <h3 className="text-xl font-bold tracking-tight text-white">
+          <h3 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">
             Atribuição Automática de Integradores
           </h3>
-          <p className="text-sm text-slate-400 max-w-xl">
+          <p className="text-sm text-zinc-600 dark:text-slate-400 max-w-xl">
             Envie este link para empresas solares. Qualquer integrador que iniciar o cadastro por
             ele será vinculado automaticamente à sua carteira de vendas e comissão.
           </p>
@@ -59,7 +63,7 @@ export function SalesRepLinkCard({
               type="text"
               readOnly
               value={finalLink}
-              className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-xs font-mono text-slate-300 outline-none focus:border-emerald-500/50"
+              className="w-full rounded-xl border border-zinc-300 dark:border-white/10 bg-white dark:bg-black/40 px-3.5 py-2.5 text-xs font-mono text-zinc-800 dark:text-slate-300 outline-none focus:border-emerald-500/50 shadow-inner dark:shadow-none"
             />
           </div>
 
@@ -69,16 +73,18 @@ export function SalesRepLinkCard({
               variant="outline"
               size="sm"
               onClick={handleCopy}
-              className="h-10 px-3.5 border-white/10 bg-white/5 hover:bg-white/10 text-white gap-2 transition-all"
+              className="h-10 px-3.5 border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-zinc-50 dark:hover:bg-white/10 text-zinc-700 dark:text-white gap-2 transition-all shadow-xs"
             >
               {copied ? (
                 <>
-                  <Check className="h-4 w-4 text-emerald-400" />
-                  <span className="text-emerald-400 font-medium">Copiado!</span>
+                  <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                    Copiado!
+                  </span>
                 </>
               ) : (
                 <>
-                  <Copy className="h-4 w-4 text-slate-300" />
+                  <Copy className="h-4 w-4 text-zinc-500 dark:text-slate-300" />
                   <span>Copiar</span>
                 </>
               )}
@@ -88,7 +94,7 @@ export function SalesRepLinkCard({
               type="button"
               size="sm"
               onClick={handleShareWhatsApp}
-              className="h-10 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-medium gap-2 shadow-lg shadow-emerald-950/50 transition-all"
+              className="h-10 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-medium gap-2 shadow-sm transition-all"
             >
               <Share2 className="h-4 w-4" />
               <span>WhatsApp</span>
