@@ -104,3 +104,41 @@ export async function createSalesRepNote(
     body: JSON.stringify(data),
   });
 }
+
+export interface AuthorizedSalesRep {
+  email: string;
+  name?: string | null;
+  commissionRate?: number;
+  status: "ACTIVE" | "REVOKED";
+  createdAt: string;
+  revokedAt?: string | null;
+  notes?: string;
+  userId?: string | null;
+  userName?: string | null;
+  referralCode?: string | null;
+  referralLink?: string | null;
+  isRegistered: boolean;
+  tenantsCount: number;
+}
+
+export async function listAuthorizedSalesReps(): Promise<AuthorizedSalesRep[]> {
+  return apiRequest<AuthorizedSalesRep[]>("/sales-rep/admin/reps");
+}
+
+export async function authorizeSalesRep(data: {
+  email: string;
+  name?: string;
+  commissionRate?: number;
+  notes?: string;
+}): Promise<AuthorizedSalesRep> {
+  return apiRequest<AuthorizedSalesRep>("/sales-rep/admin/reps", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function revokeSalesRep(email: string): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>(`/sales-rep/admin/reps/${encodeURIComponent(email)}`, {
+    method: "DELETE",
+  });
+}

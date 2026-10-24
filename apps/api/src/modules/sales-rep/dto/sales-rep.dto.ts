@@ -19,3 +19,20 @@ export class ListTenantsQueryDto {
   @IsString()
   search?: string;
 }
+
+export class AuthorizeSalesRepDto {
+  @IsString()
+  @IsNotEmpty()
+  email!: string;
+
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  commissionRate?: number; // e.g. 10 or 0.10
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}

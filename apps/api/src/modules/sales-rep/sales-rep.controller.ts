@@ -1,6 +1,20 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
 import { SalesRepService, isPlatformSuperAdmin } from "./sales-rep.service";
-import { CreateSalesActivityNoteDto, ListTenantsQueryDto } from "./dto/sales-rep.dto";
+import {
+  AuthorizeSalesRepDto,
+  CreateSalesActivityNoteDto,
+  ListTenantsQueryDto,
+} from "./dto/sales-rep.dto";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
 import { PlatformSalesGuard } from "../../common/guards/platform-sales.guard";
 import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator";
@@ -44,5 +58,29 @@ export class SalesRepController {
   ) {
     const isSuperAdmin = isPlatformSuperAdmin(user);
     return this.salesRepService.addNote(user.sub, tenantId, isSuperAdmin, dto);
+  }
+
+  @Get("admin/reps")
+  listAuthorizedReps(@CurrentUser() user: JwtPayload) {
+    if (!isPlatformSuperAdmin(user)) {
+      throw new ForbiddenException("Acesso restrito a administradores da plataforma.");
+    }
+    return this.salesRepService.listAuthorizedReps();
+  }
+
+  @Post("admin/reps")
+  authorizeSalesRep(@CurrentUser() user: JwtPayload, @Body() dto: AuthorizeSalesRepDto) {
+    if (!isPlatformSuperAdmin(user)) {
+      throw new ForbiddenException("Acesso restrito a administradores da plataforma.");
+    }
+    return this.salesRepService.authorizeSalesRep(dto);
+  }
+
+  @Delete("admin/reps/:email")
+  revokeSalesRep(@CurrentUser() user: JwtPayload, @Param("email") email: string) {
+    if (!isPlatformSuperAdmin(user)) {
+      throw new ForbiddenException("Acesso restrito a administradores da plataforma.");
+    }
+    return this.salesRepService.revokeSalesRep(email);
   }
 }

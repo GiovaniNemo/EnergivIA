@@ -12,6 +12,7 @@ describe("SalesRepService", () => {
       user: {
         findUnique: vi.fn(),
         findFirst: vi.fn(),
+        findMany: vi.fn(),
         update: vi.fn(),
       },
       tenant: {
@@ -22,6 +23,10 @@ describe("SalesRepService", () => {
       salesActivityNote: {
         create: vi.fn(),
         findMany: vi.fn(),
+      },
+      systemSetting: {
+        findUnique: vi.fn(),
+        upsert: vi.fn(),
       },
     };
 
@@ -214,6 +219,115 @@ describe("SalesRepService", () => {
       const res = await service.getReferralLink("rep-2");
       expect(mockPrisma.user.update).toHaveBeenCalled();
       expect(res.referralLink).toBeDefined();
+    });
+  });
+
+  describe("Whitelist & Sales Rep Management", () => {
+    it("should authorize a new sales rep and update existing user to PLATFORM_SALES", async () => {
+      mockPrisma.systemSetting.findUnique.mockResolvedValue(null);
+      mockPrisma.systemSetting.upsert.mockResolvedValue({});
+      mockPrisma.user.findFirst.mockResolvedValue({
+        id: "user-123",
+        name: "Marcos Paulo",
+        email: "marcos@vendas.com",
+        referralCode: null,
+      });
+      mockPrisma.user.update.mockResolvedValue({});
+      mockPrisma.tenant.count.mockResolvedValue(0);
+
+      const result = await service.authorizeSalesRep({
+        email: "marcos@vendas.com",
+        name: "Marcos Paulo",
+        commissionRate: 15,
+      });
+
+      expect(mockPrisma.systemSetting.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { key: "sales_rep_whitelist" },
+        })
+      );
+
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "user-123" },
+          data: expect.objectContaining({
+            role: "PLATFORM_SALES",
+            commissionRate: 0.15,
+          }),
+        })
+      );
+
+      expect(result.email).toBe("marcos@vendas.com");
+      expect(result.status).toBe("ACTIVE");
+      expect(result.isRegistered).toBe(true);
+    });
+
+    it("should authorize a new sales rep before they register in the system", async () => {
+      mockPrisma.systemSetting.findUnique.mockResolvedValue(null);
+      mockPrisma.systemSetting.upsert.mockResolvedValue({});
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+
+      const result = await service.authorizeSalesRep({
+        email: "futuro.vendedor@gmail.com",
+        name: "Futuro Vendedor",
+        commissionRate: 10,
+      });
+
+      expect(mockPrisma.systemSetting.upsert).toHaveBeenCalled();
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+
+      expect(result.email).toBe("futuro.vendedor@gmail.com");
+      expect(result.status).toBe("ACTIVE");
+      expect(result.isRegistered).toBe(false);
+      expect(result.referralLink).toContain("/cadastro?ref=");
+    });
+
+    it("should reject invalid email format", async () => {
+      await expect(
+        service.authorizeSalesRep({
+          email: "invalid-email",
+        })
+      ).rejects.toThrow("E-mail de vendedor inválido.");
+    });
+
+    it("should revoke sales rep and demote existing user from PLATFORM_SALES to SALES", async () => {
+      mockPrisma.systemSetting.findUnique.mockResolvedValue({
+        value: JSON.stringify([
+          {
+            email: "marcos@vendas.com",
+            status: "ACTIVE",
+            commissionRate: 10,
+            createdAt: new Date().toISOString(),
+          },
+        ]),
+      });
+      mockPrisma.systemSetting.upsert.mockResolvedValue({});
+      mockPrisma.user.findFirst.mockResolvedValue({
+        id: "user-123",
+        role: "PLATFORM_SALES",
+      });
+      mockPrisma.user.update.mockResolvedValue({});
+
+      const result = await service.revokeSalesRep("marcos@vendas.com");
+      expect(result.success).toBe(true);
+
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: "user-123" },
+        data: { role: "SALES" },
+      });
+    });
+
+    it("should verify if email is authorized", async () => {
+      mockPrisma.systemSetting.findUnique.mockResolvedValue({
+        value: JSON.stringify([
+          { email: "ativo@vendas.com", status: "ACTIVE" },
+          { email: "revogado@vendas.com", status: "REVOKED" },
+        ]),
+      });
+
+      expect(await service.isEmailAuthorized("ativo@vendas.com")).toBe(true);
+      expect(await service.isEmailAuthorized("revogado@vendas.com")).toBe(false);
+      expect(await service.isEmailAuthorized("desconhecido@vendas.com")).toBe(false);
     });
   });
 });

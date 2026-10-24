@@ -179,6 +179,40 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
     };
   }
 
+  private async getSalesRepWhitelistEntry(email: string): Promise<{
+    email: string;
+    name?: string;
+    commissionRate?: number;
+    status: "ACTIVE" | "REVOKED";
+  } | null> {
+    try {
+      const row = await this.prisma.systemSetting.findUnique({
+        where: { key: "sales_rep_whitelist" },
+      });
+      if (!row || !row.value) return null;
+      const parsed = JSON.parse(row.value);
+      if (!Array.isArray(parsed)) return null;
+      const clean = email.trim().toLowerCase();
+      return parsed.find((item: { email?: string }) => item.email?.toLowerCase() === clean) || null;
+    } catch {
+      return null;
+    }
+  }
+
+  private generateSalesRepReferralCode(name?: string, idHint?: string): string {
+    const baseSlug =
+      (name || "vendedor")
+        .toString()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "rep";
+    const suffix = (idHint || Math.random().toString(36).substring(2, 6)).slice(-4).toLowerCase();
+    return `${baseSlug}-${suffix}`;
+  }
+
   async validate(
     req: { headers?: Record<string, string | string[] | undefined> },
     payload: Auth0Payload
@@ -236,6 +270,11 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
       ? req.headers["x-organization-id"][0]
       : (req.headers?.["x-organization-id"] as string | undefined);
 
+    const salesRepEntry = normalizedEmail
+      ? await this.getSalesRepWhitelistEntry(normalizedEmail)
+      : null;
+    const isAuthorizedSalesRep = salesRepEntry?.status === "ACTIVE";
+
     let user = await this.prisma.user.findFirst({
       where: { auth0Sub, deletedAt: null },
       include: {
@@ -247,12 +286,25 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
     });
 
     if (!user) {
+      const generatedRefCode = isAuthorizedSalesRep
+        ? this.generateSalesRepReferralCode(rawName, auth0Sub)
+        : undefined;
+      const commissionRate =
+        isAuthorizedSalesRep && salesRepEntry?.commissionRate
+          ? Number(salesRepEntry.commissionRate) / 100
+          : isAuthorizedSalesRep
+            ? 0.1
+            : undefined;
+
       user = await this.prisma.user.create({
         data: {
           auth0Sub,
           email: normalizedEmail ?? `${auth0Sub}@auth0.user`,
           name: rawName ?? "User",
           picture: rawPicture ?? undefined,
+          role: isAuthorizedSalesRep ? "PLATFORM_SALES" : "SALES",
+          referralCode: generatedRefCode,
+          commissionRate,
         },
         include: {
           organizationMemberships: {
@@ -278,13 +330,37 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
         !!rawName && (user.name === "User" || user.name.trim().length === 0);
       const shouldUpdateFallbackPicture = !!rawPicture && !user.picture;
 
-      if (shouldUpdateFallbackEmail || shouldUpdateFallbackName || shouldUpdateFallbackPicture) {
+      const shouldPromoteToSales =
+        isAuthorizedSalesRep && (user.role !== "PLATFORM_SALES" || !user.referralCode);
+      const shouldDemoteFromSales =
+        salesRepEntry?.status === "REVOKED" && user.role === "PLATFORM_SALES";
+
+      let nextReferralCode = user.referralCode;
+      if (shouldPromoteToSales && !nextReferralCode) {
+        nextReferralCode = this.generateSalesRepReferralCode(user.name || rawName, user.id);
+      }
+
+      if (
+        shouldUpdateFallbackEmail ||
+        shouldUpdateFallbackName ||
+        shouldUpdateFallbackPicture ||
+        shouldPromoteToSales ||
+        shouldDemoteFromSales
+      ) {
         user = await this.prisma.user.update({
           where: { id: user.id },
           data: {
             ...(shouldUpdateFallbackEmail && { email: normalizedEmail }),
             ...(shouldUpdateFallbackName && { name: rawName }),
             ...(shouldUpdateFallbackPicture && { picture: rawPicture }),
+            ...(shouldPromoteToSales && {
+              role: "PLATFORM_SALES",
+              referralCode: nextReferralCode,
+              commissionRate: salesRepEntry?.commissionRate
+                ? Number(salesRepEntry.commissionRate) / 100
+                : 0.1,
+            }),
+            ...(shouldDemoteFromSales && { role: "SALES" }),
           },
           include: {
             organizationMemberships: {

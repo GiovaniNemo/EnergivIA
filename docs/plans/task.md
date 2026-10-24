@@ -693,3 +693,9 @@
 | task-697 | Frontend: Captura e Persistência do Link do Vendedor (?ref=...) | completed | Utilitário referral-tracker com cookie e localStorage de 30 dias e integração com criação de organização |
 | task-698 | Frontend: Portal Comercial do Vendedor (/admin/comercial, KPIs, Tabela e Drawer) | completed | Interface Obsidian Dark criada com KPIs, tabela com health score, drawer de notas e link exclusivo |
 | task-699 | Validação Completa, Testes Automatizados e Commit/Push | completed | 24 testes Vitest aprovados com 100% de sucesso, build do Next.js aprovado e sincronizado no Git |
+| task-700 | DTOs e Whitelist no Backend (sales_rep_whitelist em SystemSetting e métodos em SalesRepService) | completed | Implementado armazenamento de vendedores liberados, listagem, cadastro e revogação |
+| task-701 | Endpoints de Administração em SalesRepController (GET, POST, DELETE /sales-rep/admin/reps) | completed | Endpoints implementados com proteção estrita a Super Admins |
+| task-702 | Atribuição Automática no Registro/Login em Auth0JwtStrategy para e-mails liberados | completed | Auto-promoção para PLATFORM_SALES e geração de link exclusivo no signup/login |
+| task-703 | Interface de Liberação e Gestão de Vendedores no Frontend (SalesRepManagementSection e abas em /admin/comercial) | completed | Interface Obsidian Dark com abas, formulário de e-mail, tabela com status e links |
+| task-704 | Testes Automatizados no Backend (unit tests para whitelist e auto-assignment) | completed | 13 testes Vitest aprovados com 100% de sucesso cobrindo autorização, listagem e revogação |
+| task-705 | Validação de Build (api e web), Commit e Push para origin/main | completed | Builds do NestJS e NextJS aprovados (84 rotas) e alterações sincronizadas com o repositório remoto |
