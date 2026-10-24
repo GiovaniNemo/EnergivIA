@@ -205,10 +205,21 @@ export function SalesRepTenantsTable({
                           </span>
                         </div>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle2 className="h-3 w-3" />
-                          Plano Ativo
-                        </span>
+                        <div className="inline-flex flex-col gap-1 items-start">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Plano Ativo
+                          </span>
+                          {t.currentInstallment && (
+                            <span
+                              className="inline-flex items-center text-[10px] font-mono text-emerald-300/90 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/20"
+                              title={`Parcela ${t.currentInstallment.installment} (${t.currentInstallment.tierLabel})`}
+                            >
+                              {t.currentInstallment.installment}ª parcela •{" "}
+                              {t.currentInstallment.rate}%
+                            </span>
+                          )}
+                        </div>
                       )}
                     </td>
 

@@ -13,10 +13,46 @@ import type {
   ListTenantsQueryDto,
 } from "./dto/sales-rep.dto";
 
+export interface CommissionTiers {
+  firstMonth: number; // 20 (%)
+  months2To12: number; // 10 (%)
+  months13Plus: number; // 5 (%)
+}
+
+export const DEFAULT_COMMISSION_TIERS: CommissionTiers = {
+  firstMonth: 20,
+  months2To12: 10,
+  months13Plus: 5,
+};
+
+export function calculateTenantInstallment(
+  createdAt: Date | string,
+  tiers: CommissionTiers = DEFAULT_COMMISSION_TIERS
+): {
+  installmentNumber: number;
+  ratePercentage: number;
+} {
+  const now = new Date();
+  const created = new Date(createdAt);
+  const diffMs = Math.max(0, now.getTime() - created.getTime());
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  const installmentNumber = Math.max(1, Math.floor(diffDays / 30.4375) + 1);
+
+  let ratePercentage = tiers.months13Plus;
+  if (installmentNumber === 1) {
+    ratePercentage = tiers.firstMonth;
+  } else if (installmentNumber <= 12) {
+    ratePercentage = tiers.months2To12;
+  }
+
+  return { installmentNumber, ratePercentage };
+}
+
 export interface StoredSalesRepEntry {
   email: string;
   name?: string;
-  commissionRate?: number; // e.g. 10
+  commissionRate?: number; // fallback legado (ex: 10)
+  commissionTiers?: CommissionTiers;
   status: "ACTIVE" | "REVOKED";
   createdAt: string;
   revokedAt?: string | null;
@@ -30,6 +66,7 @@ export interface SalesRepManagementItem extends StoredSalesRepEntry {
   referralLink?: string | null;
   isRegistered: boolean;
   tenantsCount: number;
+  commissionTiers: CommissionTiers;
 }
 
 const SETTING_KEY = "sales_rep_whitelist";
@@ -191,6 +228,14 @@ export class SalesRepService {
         referralLink = `${appUrl}/cadastro?ref=${previewCode}`;
       }
 
+      const repTiers: CommissionTiers = entry.commissionTiers ?? {
+        firstMonth: 20,
+        months2To12: user?.commissionRate
+          ? Number(user.commissionRate) * 100
+          : (entry.commissionRate ?? 10),
+        months13Plus: 5,
+      };
+
       results.push({
         ...entry,
         userId: user?.id || null,
@@ -199,9 +244,8 @@ export class SalesRepService {
         referralLink,
         isRegistered: Boolean(user),
         tenantsCount,
-        commissionRate: user?.commissionRate
-          ? Number(user.commissionRate) * 100
-          : (entry.commissionRate ?? 10),
+        commissionRate: repTiers.months2To12,
+        commissionTiers: repTiers,
       });
     }
 
@@ -214,14 +258,15 @@ export class SalesRepService {
       throw new BadRequestException("E-mail de vendedor inválido.");
     }
 
-    let rate = dto.commissionRate ?? 10;
-    if (rate > 1) {
-      // 10 -> 10%
-    } else if (rate > 0 && rate <= 1) {
-      rate = rate * 100;
-    } else {
-      rate = 10;
-    }
+    const firstMonth = dto.commissionFirstMonth ?? 20;
+    const months2To12 = dto.commissionMonths2To12 ?? dto.commissionRate ?? 10;
+    const months13Plus = dto.commissionMonths13Plus ?? 5;
+
+    const commissionTiers: CommissionTiers = {
+      firstMonth: Number(firstMonth) || 20,
+      months2To12: Number(months2To12) || 10,
+      months13Plus: Number(months13Plus) || 5,
+    };
 
     const stored = await this.getStoredEntries();
     const existingIndex = stored.findIndex((s) => s.email.toLowerCase() === cleanEmail);
@@ -231,7 +276,8 @@ export class SalesRepService {
     const updatedEntry: StoredSalesRepEntry = {
       email: cleanEmail,
       name: dto.name?.trim() || existing?.name,
-      commissionRate: rate,
+      commissionRate: commissionTiers.months2To12,
+      commissionTiers,
       status: "ACTIVE",
       notes: dto.notes?.trim() || existing?.notes || "Liberado via Painel Comercial",
       createdAt: existing?.createdAt || now,
@@ -271,7 +317,7 @@ export class SalesRepService {
         data: {
           role: "PLATFORM_SALES",
           referralCode: code,
-          commissionRate: rate / 100,
+          commissionRate: commissionTiers.months2To12 / 100,
         },
       });
     }
@@ -290,6 +336,7 @@ export class SalesRepService {
       referralLink: `${appUrl}/cadastro?ref=${previewCode}`,
       isRegistered: Boolean(user),
       tenantsCount: 0,
+      commissionTiers,
     };
   }
 
@@ -394,27 +441,41 @@ export class SalesRepService {
     const totalTenants = tenants.length;
     let activeTenants = 0;
     let totalProposals = 0;
+    let estimatedCommission = 0;
+
+    const stored = await this.getStoredEntries();
+    const repEmail = user?.id
+      ? (
+          await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { email: true },
+          })
+        )?.email
+      : undefined;
+    const cleanUserEmail = (repEmail || "").toLowerCase().trim();
+    const whitelistEntry = stored.find((e) => e.email.toLowerCase() === cleanUserEmail);
+    const repTiers: CommissionTiers = whitelistEntry?.commissionTiers ?? DEFAULT_COMMISSION_TIERS;
 
     for (const t of tenants) {
       const hasActiveSub = t.subscription?.status === "active";
       const hasPaidPlan = Boolean(t.subscriptionPlan && t.subscriptionPlan !== "TRIAL");
       if (hasActiveSub || hasPaidPlan) {
         activeTenants++;
+        const { ratePercentage } = calculateTenantInstallment(t.createdAt, repTiers);
+        estimatedCommission += 197 * (ratePercentage / 100);
       }
       totalProposals += t._count?.proposals || 0;
     }
 
     const trialTenants = totalTenants - activeTenants;
-    const rate = Number(user?.commissionRate ?? 0.1);
-    // Projeção baseada em ticket médio do plano Plus (R$ 197) * taxa de comissão
-    const estimatedCommission = activeTenants * 197 * rate;
 
     return {
       totalTenants,
       trialTenants,
       activeTenants,
       totalProposals,
-      commissionRate: rate,
+      commissionRate: repTiers.months2To12 / 100,
+      commissionTiers: repTiers,
       estimatedCommission,
       referralCode: referral.referralCode,
       referralLink: referral.referralLink,
@@ -469,6 +530,7 @@ export class SalesRepService {
       const hasActiveSub = t.subscription?.status === "active";
       const hasPaidPlan = Boolean(t.subscriptionPlan && t.subscriptionPlan !== "TRIAL");
       const isTrial = !hasActiveSub && !hasPaidPlan;
+      const installmentInfo = calculateTenantInstallment(t.createdAt);
 
       return {
         id: t.id,
@@ -481,6 +543,12 @@ export class SalesRepService {
         isTrial,
         trialDaysLeft,
         hasActiveSubscription: hasActiveSub,
+        currentInstallment: !isTrial
+          ? {
+              installmentNumber: installmentInfo.installmentNumber,
+              commissionPercent: installmentInfo.ratePercentage,
+            }
+          : null,
         proposalsCount: t._count.proposals,
         billsCount: t._count.energyBills,
         hasWhatsappConnected: (t.whatsappInboundPhones?.length ?? 0) > 0,

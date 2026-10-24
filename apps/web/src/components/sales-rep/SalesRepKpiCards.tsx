@@ -42,7 +42,9 @@ export function SalesRepKpiCards({ summary, loading }: SalesRepKpiCardsProps): J
     {
       title: "Comissão Estimada / Mês",
       value: formatCurrency(summary?.estimatedCommission ?? 0),
-      description: `Com base em taxa de ${(Number(summary?.commissionRate ?? 0.1) * 100).toFixed(0)}%`,
+      description: summary?.commissionTiers
+        ? `Regra: ${summary.commissionTiers.firstMonth}% (1ª) · ${summary.commissionTiers.months2To12}% (2ª-12ª) · ${summary.commissionTiers.months13Plus}% (13ª+)`
+        : "Regra: 20% (1ª) · 10% (2ª-12ª) · 5% (13ª+)",
       icon: Banknote,
       accent: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
     },

@@ -35,7 +35,9 @@ export function SalesRepManagementSection(): JSX.Element {
   // Form states
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [commissionRate, setCommissionRate] = useState("10");
+  const [commissionFirstMonth, setCommissionFirstMonth] = useState("20");
+  const [commissionMonths2To12, setCommissionMonths2To12] = useState("10");
+  const [commissionMonths13Plus, setCommissionMonths13Plus] = useState("5");
   const [notes, setNotes] = useState("");
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(
     null
@@ -70,22 +72,25 @@ export function SalesRepManagementSection(): JSX.Element {
     setSubmitting(true);
     setFeedback(null);
     try {
-      const rateNum = Number(commissionRate) || 10;
       await authorizeSalesRep({
         email: email.trim(),
         name: name.trim() || undefined,
-        commissionRate: rateNum,
+        commissionFirstMonth: Number(commissionFirstMonth) || 20,
+        commissionMonths2To12: Number(commissionMonths2To12) || 10,
+        commissionMonths13Plus: Number(commissionMonths13Plus) || 5,
         notes: notes.trim() || undefined,
       });
 
       setFeedback({
         type: "success",
-        message: `Vendedor ${email} liberado com sucesso! Se ele já possuir cadastro, o acesso já está ativo. Caso contrário, será ativado no primeiro login.`,
+        message: `Vendedor ${email} liberado com sucesso com a regra de comissionamento escalonada (20% na 1ª parcela, 10% da 2ª à 12ª e 5% a partir da 13ª)!`,
       });
 
       setEmail("");
       setName("");
-      setCommissionRate("10");
+      setCommissionFirstMonth("20");
+      setCommissionMonths2To12("10");
+      setCommissionMonths13Plus("5");
       setNotes("");
       await fetchReps();
     } catch (err) {
@@ -227,7 +232,7 @@ export function SalesRepManagementSection(): JSX.Element {
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4">
             {/* E-mail (Obrigatório) */}
-            <div className="sm:col-span-5 space-y-1.5">
+            <div className="sm:col-span-6 space-y-1.5">
               <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                 <Mail className="h-3.5 w-3.5 text-slate-400" />
                 <span>E-mail do Vendedor *</span>
@@ -243,7 +248,7 @@ export function SalesRepManagementSection(): JSX.Element {
             </div>
 
             {/* Nome (Opcional) */}
-            <div className="sm:col-span-4 space-y-1.5">
+            <div className="sm:col-span-6 space-y-1.5">
               <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                 <User className="h-3.5 w-3.5 text-slate-400" />
                 <span>Nome Completo</span>
@@ -256,23 +261,101 @@ export function SalesRepManagementSection(): JSX.Element {
                 className="bg-slate-950/70 border-white/10 text-white placeholder:text-slate-600 text-xs sm:text-sm focus:border-emerald-500/50"
               />
             </div>
+          </div>
 
-            {/* Comissão % */}
-            <div className="sm:col-span-3 space-y-1.5">
-              <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
-                <Percent className="h-3.5 w-3.5 text-slate-400" />
-                <span>Comissão (%)</span>
-              </label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                step="0.5"
-                value={commissionRate}
-                onChange={(e) => setCommissionRate(e.target.value)}
-                placeholder="10"
-                className="bg-slate-950/70 border-white/10 text-white placeholder:text-slate-600 text-xs sm:text-sm focus:border-emerald-500/50"
-              />
+          {/* Seção de Comissionamento Escalonado por Tempo de Permanência */}
+          <div className="rounded-xl border border-white/[0.08] bg-slate-950/50 p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Percent className="h-4 w-4 text-emerald-400" />
+                <span className="text-xs font-semibold text-white">
+                  Regra de Comissionamento Escalonada
+                </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                  Padrão 20% · 10% · 5%
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-400">
+                A comissão evolui conforme a permanência do cliente
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* 1ª Parcela */}
+              <div className="space-y-1 bg-slate-900/60 p-3 rounded-lg border border-white/[0.06]">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-medium text-emerald-400">
+                    1ª Parcela (Mês 1)
+                  </label>
+                  <span className="text-[10px] text-slate-500 uppercase">Ativação</span>
+                </div>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value={commissionFirstMonth}
+                    onChange={(e) => setCommissionFirstMonth(e.target.value)}
+                    placeholder="20"
+                    className="bg-slate-950 border-white/10 text-white text-xs sm:text-sm pr-7 focus:border-emerald-500/50 font-mono font-bold"
+                  />
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                    %
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400">Primeira mensalidade paga pelo cliente</p>
+              </div>
+
+              {/* 2ª à 12ª Parcela */}
+              <div className="space-y-1 bg-slate-900/60 p-3 rounded-lg border border-white/[0.06]">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-medium text-slate-300">2ª à 12ª Parcela</label>
+                  <span className="text-[10px] text-slate-500 uppercase">1º Ano</span>
+                </div>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value={commissionMonths2To12}
+                    onChange={(e) => setCommissionMonths2To12(e.target.value)}
+                    placeholder="10"
+                    className="bg-slate-950 border-white/10 text-white text-xs sm:text-sm pr-7 focus:border-emerald-500/50 font-mono font-bold"
+                  />
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                    %
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400">Do 2º mês até completar 1 ano</p>
+              </div>
+
+              {/* 13ª Parcela em diante */}
+              <div className="space-y-1 bg-slate-900/60 p-3 rounded-lg border border-white/[0.06]">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-medium text-slate-400">
+                    13ª Parcela em diante
+                  </label>
+                  <span className="text-[10px] text-slate-500 uppercase">Recorrência</span>
+                </div>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value={commissionMonths13Plus}
+                    onChange={(e) => setCommissionMonths13Plus(e.target.value)}
+                    placeholder="5"
+                    className="bg-slate-950 border-white/10 text-white text-xs sm:text-sm pr-7 focus:border-emerald-500/50 font-mono font-bold"
+                  />
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                    %
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400">A partir do 2º ano (vitalício)</p>
+              </div>
             </div>
           </div>
 
@@ -324,7 +407,7 @@ export function SalesRepManagementSection(): JSX.Element {
                   <th className="py-3 px-4">Vendedor</th>
                   <th className="py-3 px-4">Status de Cadastro</th>
                   <th className="py-3 px-4">Link de Indicação</th>
-                  <th className="py-3 px-4">Comissão</th>
+                  <th className="py-3 px-4">Comissão Escalonada</th>
                   <th className="py-3 px-4">Integradores</th>
                   <th className="py-3 px-4 text-right">Ação</th>
                 </tr>
@@ -407,9 +490,23 @@ export function SalesRepManagementSection(): JSX.Element {
                         )}
                       </td>
 
-                      {/* Comissão */}
+                      {/* Comissão Escalonada */}
                       <td className="py-3.5 px-4 text-slate-300 font-medium">
-                        {rep.commissionRate ?? 10}%
+                        {rep.commissionTiers ? (
+                          <div className="flex flex-col gap-0.5 text-[11px]">
+                            <span className="text-emerald-400 font-semibold">
+                              1ª parc: {rep.commissionTiers.firstMonth}%
+                            </span>
+                            <span className="text-slate-300">
+                              2ª a 12ª: {rep.commissionTiers.months2To12}%
+                            </span>
+                            <span className="text-slate-400">
+                              13ª+: {rep.commissionTiers.months13Plus}%
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs">{rep.commissionRate ?? 10}%</span>
+                        )}
                       </td>
 
                       {/* Integradores */}
@@ -442,7 +539,9 @@ export function SalesRepManagementSection(): JSX.Element {
                               authorizeSalesRep({
                                 email: rep.email,
                                 name: rep.name || undefined,
-                                commissionRate: rep.commissionRate,
+                                commissionFirstMonth: rep.commissionTiers?.firstMonth ?? 20,
+                                commissionMonths2To12: rep.commissionTiers?.months2To12 ?? 10,
+                                commissionMonths13Plus: rep.commissionTiers?.months13Plus ?? 5,
                               }).then(fetchReps)
                             }
                             className="h-7 px-2.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 text-[11px]"
@@ -464,7 +563,7 @@ export function SalesRepManagementSection(): JSX.Element {
       <div className="rounded-2xl border border-white/[0.06] bg-slate-900/30 p-5 space-y-2">
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
           <Info className="h-4 w-4 text-emerald-400" />
-          <span>Como funciona a liberação de vendedores?</span>
+          <span>Como funciona a liberação de vendedores e comissionamento?</span>
         </div>
         <ul className="text-xs text-slate-400 space-y-1.5 list-disc list-inside">
           <li>
@@ -477,6 +576,12 @@ export function SalesRepManagementSection(): JSX.Element {
             na lista com status &quot;Aguardando Cadastro&quot;. Assim que fizer login ou cadastro
             pelo Auth0/Google com este mesmo e-mail, o sistema reconhece a liberação e ativa a conta
             dele automaticamente.
+          </li>
+          <li>
+            <strong className="text-slate-200">Comissão Escalonada no Tempo:</strong> Na 1ª parcela
+            de cada integrador (ativação), o vendedor recebe 20%. Da 2ª até a 12ª parcela (1º ano),
+            recebe 10%. A partir da 13ª parcela em diante (recorrência contínua), a comissão é de
+            5%.
           </li>
           <li>
             <strong className="text-slate-200">Atribuição de comissão:</strong> Todo integrador que

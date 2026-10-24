@@ -1,9 +1,22 @@
+export interface CommissionTiers {
+  firstMonth: number; // 20 (%)
+  months2To12: number; // 10 (%)
+  months13Plus: number; // 5 (%)
+}
+
+export const DEFAULT_COMMISSION_TIERS: CommissionTiers = {
+  firstMonth: 20,
+  months2To12: 10,
+  months13Plus: 5,
+};
+
 export interface SalesRepSummary {
   totalTenants: number;
   trialTenants: number;
   activeTenants: number;
   totalProposals: number;
   commissionRate: number;
+  commissionTiers?: CommissionTiers;
   estimatedCommission: number;
   referralCode: string;
   referralLink: string;
@@ -20,6 +33,10 @@ export interface SalesRepTenant {
   isTrial: boolean;
   trialDaysLeft: number;
   hasActiveSubscription: boolean;
+  currentInstallment?: {
+    installmentNumber: number;
+    commissionPercent: number;
+  } | null;
   proposalsCount: number;
   billsCount: number;
   hasWhatsappConnected: boolean;
@@ -109,6 +126,7 @@ export interface AuthorizedSalesRep {
   email: string;
   name?: string | null;
   commissionRate?: number;
+  commissionTiers?: CommissionTiers;
   status: "ACTIVE" | "REVOKED";
   createdAt: string;
   revokedAt?: string | null;
@@ -128,6 +146,9 @@ export async function listAuthorizedSalesReps(): Promise<AuthorizedSalesRep[]> {
 export async function authorizeSalesRep(data: {
   email: string;
   name?: string;
+  commissionFirstMonth?: number;
+  commissionMonths2To12?: number;
+  commissionMonths13Plus?: number;
   commissionRate?: number;
   notes?: string;
 }): Promise<AuthorizedSalesRep> {

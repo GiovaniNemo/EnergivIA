@@ -699,3 +699,8 @@
 | task-703 | Interface de Liberação e Gestão de Vendedores no Frontend (SalesRepManagementSection e abas em /admin/comercial) | completed | Interface Obsidian Dark com abas, formulário de e-mail, tabela com status e links |
 | task-704 | Testes Automatizados no Backend (unit tests para whitelist e auto-assignment) | completed | 13 testes Vitest aprovados com 100% de sucesso cobrindo autorização, listagem e revogação |
 | task-705 | Validação de Build (api e web), Commit e Push para origin/main | completed | Builds do NestJS e NextJS aprovados (84 rotas) e alterações sincronizadas com o repositório remoto |
+| task-706 | Modelo e Cálculo de Comissionamento Escalonado (20% 1ª parcela, 10% 2ª a 12ª, 5% 13ª+) no Backend | completed | Implementado CommissionTiers, calculateTenantInstallment e projeção precisa nos KPIs |
+| task-707 | Atualização dos DTOs e Whitelist de Vendedores com suporte a faixas de comissão | completed | AuthorizeSalesRepDto e persistência no SystemSetting atualizados com faixas escalonadas |
+| task-708 | Atualização da Interface de Liberação (SalesRepManagementSection.tsx) com campos escalonados 20%/10%/5% | completed | Substituído campo único por 3 campos (1ª parcela 20%, 2ª a 12ª 10%, 13ª+ 5%), tabela com detalhamento de faixas e card explicativo |
+| task-709 | Atualização dos Cards de KPIs e Tabela de Integradores com indicador de parcela atual | completed | Exibição da regra escalonada no card de comissão e badge de parcela atual (ex: 1ª parcela • 20%) na tabela de clientes pagantes |
+| task-710 | Testes Automatizados no Vitest, Validação de Build (api e web), Commit e Push para origin/main | completed | 15 testes Vitest aprovados com 100% de sucesso, build NestJS e NextJS aprovados (84 rotas) e sincronização remota |

@@ -30,7 +30,16 @@ export class AuthorizeSalesRepDto {
   name?: string;
 
   @IsOptional()
-  commissionRate?: number; // e.g. 10 or 0.10
+  commissionFirstMonth?: number; // e.g. 20 (%)
+
+  @IsOptional()
+  commissionMonths2To12?: number; // e.g. 10 (%)
+
+  @IsOptional()
+  commissionMonths13Plus?: number; // e.g. 5 (%)
+
+  @IsOptional()
+  commissionRate?: number; // legacy fallback (e.g. 10 or 0.10)
 
   @IsOptional()
   @IsString()

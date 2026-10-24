@@ -76,6 +76,60 @@ describe("SalesRepService", () => {
       expect(result.totalProposals).toBe(17);
       expect(result.referralCode).toBe("carlos");
       expect(result.referralLink).toContain("?ref=carlos");
+      expect(result.commissionTiers).toEqual({
+        firstMonth: 20,
+        months2To12: 10,
+        months13Plus: 5,
+      });
+      // 1 active tenant on 1st month (R$ 197/mo) with 20% = R$ 39.40
+      expect(result.estimatedCommission).toBeCloseTo(39.4, 1);
+    });
+
+    it("should calculate tiered commission correctly based on tenant age", async () => {
+      mockPrisma.user.findFirst.mockResolvedValue({
+        id: "rep-tiered",
+        commissionRate: 0.1,
+      });
+
+      const dayMs = 24 * 60 * 60 * 1000;
+      const now = new Date();
+      // Tenant 1: created 10 days ago -> 1st month (20% of 197 = 39.4)
+      const t1Date = new Date(now.getTime() - 10 * dayMs);
+      // Tenant 2: created 90 days ago (~3rd month) -> 2nd-12th month (10% of 197 = 19.7)
+      const t2Date = new Date(now.getTime() - 90 * dayMs);
+      // Tenant 3: created 450 days ago (~15th month) -> 13th+ month (5% of 197 = 9.85)
+      const t3Date = new Date(now.getTime() - 450 * dayMs);
+
+      mockPrisma.tenant.findMany.mockResolvedValue([
+        {
+          id: "t-1",
+          createdAt: t1Date,
+          subscriptionPlan: "PRO",
+          subscription: { status: "active" },
+          _count: { proposals: 2 },
+        },
+        {
+          id: "t-2",
+          createdAt: t2Date,
+          subscriptionPlan: "PRO",
+          subscription: { status: "active" },
+          _count: { proposals: 5 },
+        },
+        {
+          id: "t-3",
+          createdAt: t3Date,
+          subscriptionPlan: "PRO",
+          subscription: { status: "active" },
+          _count: { proposals: 8 },
+        },
+      ]);
+
+      const result = await service.getDashboardSummary("rep-tiered", false);
+
+      expect(result.totalTenants).toBe(3);
+      expect(result.activeTenants).toBe(3);
+      // Total estimated commission: 39.4 + 19.7 + 9.85 = 68.95
+      expect(result.estimatedCommission).toBeCloseTo(68.95, 1);
     });
 
     it("should query all tenants when user is super admin", async () => {
@@ -260,6 +314,31 @@ describe("SalesRepService", () => {
       expect(result.email).toBe("marcos@vendas.com");
       expect(result.status).toBe("ACTIVE");
       expect(result.isRegistered).toBe(true);
+      expect(result.commissionTiers).toEqual({
+        firstMonth: 20,
+        months2To12: 15,
+        months13Plus: 5,
+      });
+    });
+
+    it("should authorize sales rep with custom commission tiers", async () => {
+      mockPrisma.systemSetting.findUnique.mockResolvedValue(null);
+      mockPrisma.systemSetting.upsert.mockResolvedValue({});
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+
+      const result = await service.authorizeSalesRep({
+        email: "especialista@vendas.com",
+        name: "Especialista Top",
+        commissionFirstMonth: 25,
+        commissionMonths2To12: 12,
+        commissionMonths13Plus: 7,
+      });
+
+      expect(result.commissionTiers).toEqual({
+        firstMonth: 25,
+        months2To12: 12,
+        months13Plus: 7,
+      });
     });
 
     it("should authorize a new sales rep before they register in the system", async () => {
