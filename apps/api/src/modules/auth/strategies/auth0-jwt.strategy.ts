@@ -359,6 +359,7 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
       platformAdminEmails.includes(user.email.toLowerCase());
 
     const isPlatformAdmin = isPlatformFromClaim || isPlatformFromEnv;
+    const isPlatformSales = (user.role as string) === "PLATFORM_SALES";
 
     const memberships = user.organizationMemberships;
     if (memberships.length === 0) {
@@ -366,7 +367,11 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
         sub: user.id,
         email: user.email,
         tenantId: "",
-        role: isPlatformAdmin ? ("PLATFORM" as const) : "VIEWER",
+        role: isPlatformAdmin
+          ? ("PLATFORM" as const)
+          : isPlatformSales
+            ? ("PLATFORM_SALES" as const)
+            : "VIEWER",
       };
     }
 
@@ -386,7 +391,9 @@ export class Auth0JwtStrategy extends PassportStrategy(Strategy, "auth0-jwt") {
       tenantId: active.organizationId,
       role: isPlatformAdmin
         ? ("PLATFORM" as const)
-        : (active.role as OrgRole & import("@energivia/types").UserRole),
+        : isPlatformSales
+          ? ("PLATFORM_SALES" as const)
+          : (active.role as OrgRole & import("@energivia/types").UserRole),
     };
   }
 }

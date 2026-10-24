@@ -54,7 +54,8 @@ function isStandaloneAdminPath(pathname: string | null): boolean {
     normalized.startsWith("/admin/metricas") ||
     normalized.startsWith("/admin/sistema") ||
     normalized.startsWith("/admin/acessos-especiais") ||
-    normalized.startsWith("/admin/integradores")
+    normalized.startsWith("/admin/integradores") ||
+    normalized.startsWith("/admin/comercial")
   );
 }
 
@@ -68,19 +69,24 @@ export default function AdminLayout({ children }: { children: ReactNode }): JSX.
   const globalRole = (user?.role || "").toUpperCase();
   const orgRole = (currentOrganization?.role || "").toUpperCase();
 
+  const isPlatformSales = globalRole === "PLATFORM_SALES" || orgRole === "PLATFORM_SALES";
+
   const isPlatform =
     globalRole === "PLATFORM" ||
     globalRole === "SUPERADMIN" ||
     orgRole === "PLATFORM" ||
     PLATFORM_ADMIN_EMAILS.includes(userEmail);
 
+  const canAccessAdmin =
+    isPlatform || (isPlatformSales && pathname?.startsWith("/admin/comercial"));
+
   useEffect(() => {
-    if (user && !isPlatform) {
+    if (user && !canAccessAdmin) {
       router.replace("/painel");
     }
-  }, [user, isPlatform, router]);
+  }, [user, canAccessAdmin, router]);
 
-  if (user && !isPlatform) {
+  if (user && !canAccessAdmin) {
     return null;
   }
 

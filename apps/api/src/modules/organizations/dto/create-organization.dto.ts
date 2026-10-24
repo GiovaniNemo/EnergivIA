@@ -138,6 +138,11 @@ export class CreateOrganizationDto {
   referredBy?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  referralCode?: string;
+
+  @IsOptional()
   @IsBoolean()
   termsAccepted?: boolean;
 

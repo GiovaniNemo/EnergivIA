@@ -47,10 +47,16 @@ model Tenant {
   aiUsageLogs           AiUsageLog[]
   feedbacks             PlatformFeedback[]
   termsAcceptances      TermsAcceptanceLog[]
+  salesRepId            String?              @map("sales_rep_id")
+  referralCode          String?              @map("referral_code")
+  salesRep              User?                @relation("TenantSalesRep", fields: [salesRepId], references: [id], onDelete: SetNull)
+  salesNotes            SalesActivityNote[]
 
   @@index([slug])
   @@index([deletedAt])
   @@index([createdById])
+  @@index([salesRepId])
+  @@index([referralCode])
 }
 
 model TenantWhatsappInboundPhone {
@@ -164,6 +170,10 @@ model User {
   aiUsageLogs       AiUsageLog[]
   feedbacks         PlatformFeedback[]
   termsAcceptances  TermsAcceptanceLog[]
+  referralCode      String?              @unique @map("referral_code")
+  commissionRate    Decimal?             @default(0.10) @db.Decimal(5, 4) @map("commission_rate")
+  assignedTenants   Tenant[]             @relation("TenantSalesRep")
+  salesNotes        SalesActivityNote[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -176,6 +186,24 @@ enum UserRole {
   ADMIN
   SALES
   ENGINEER
+  PLATFORM_SALES
+}
+
+model SalesActivityNote {
+  id         String   @id @default(cuid())
+  tenantId   String   @map("tenant_id")
+  salesRepId String   @map("sales_rep_id")
+  content    String   @db.Text
+  stage      String   @default("TRIAL_ONBOARDING")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  salesRep User   @relation(fields: [salesRepId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([salesRepId])
+  @@map("sales_activity_notes")
 }
 
 model Lead {

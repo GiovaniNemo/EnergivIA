@@ -46,6 +46,7 @@ import { WebhooksModule } from "./modules/webhooks/webhooks.module";
 import { FeedbacksModule } from "./modules/feedbacks/feedbacks.module";
 import { SearchModule } from "./modules/search/search.module";
 import { SupportModule } from "./modules/support/support.module";
+import { SalesRepModule } from "./modules/sales-rep/sales-rep.module";
 
 @Module({
   controllers: [HealthController],
@@ -104,6 +105,7 @@ import { SupportModule } from "./modules/support/support.module";
     FeedbacksModule,
     SearchModule,
     SupportModule,
+    SalesRepModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: SentryGlobalFilter },

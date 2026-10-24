@@ -14,6 +14,7 @@ import {
   notifyOnboardingAbandoned,
 } from "@/lib/organizations-api";
 import { BrandTierSelector } from "@/components/ui/brand-tier-selector";
+import { getStoredReferralCode } from "@/lib/referral-tracker";
 import { stripCnpjNumbersFromCompanyName } from "@/lib/company-name-utils";
 import { triggerWelcomeIntroSplash } from "@/components/layout/welcome-intro-splash";
 import { Button } from "@/components/ui/button";
@@ -610,6 +611,7 @@ export default function CreateOrganizationPage() {
         templateRegion: cityState.trim() || undefined,
         referralSource: (selectedSourceOption?.label ?? selectedReferralSource.trim()) || undefined,
         referredBy: referredBy.trim() || undefined,
+        referralCode: getStoredReferralCode() || undefined,
         defaultKwpRate: defaultKwpRate ? Number(defaultKwpRate) : 2800,
         preferredModuleBrands: (() => {
           const list: string[] = [];

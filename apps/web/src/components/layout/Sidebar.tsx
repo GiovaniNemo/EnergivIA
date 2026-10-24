@@ -50,6 +50,8 @@ export function Sidebar(): JSX.Element {
   const globalRole = (user?.role || "").toUpperCase();
   const orgRole = (currentOrganization?.role || "").toUpperCase();
 
+  const isPlatformSales = globalRole === "PLATFORM_SALES" || orgRole === "PLATFORM_SALES";
+
   const isPlatform =
     globalRole === "PLATFORM" ||
     globalRole === "SUPERADMIN" ||
@@ -90,10 +92,16 @@ export function Sidebar(): JSX.Element {
           if (item.section !== sectionKey) return false;
 
           if (surface === "admin" && !ADMIN_SURFACE_SECTIONS.has(sectionKey)) return false;
-          if (surface === "app" && !APP_SURFACE_SECTIONS.has(sectionKey) && !isPlatform)
+          if (
+            surface === "app" &&
+            !APP_SURFACE_SECTIONS.has(sectionKey) &&
+            !(isPlatform || isPlatformSales)
+          )
             return false;
 
           if (item.requiresRole === "platform" && !isPlatform) return false;
+          if (item.requiresRole === "platform_sales" && !(isPlatform || isPlatformSales))
+            return false;
           if ((item.requiresRole === "admin" || item.requiresRole === "owner") && !isOwnerOrAdmin)
             return false;
           return true;

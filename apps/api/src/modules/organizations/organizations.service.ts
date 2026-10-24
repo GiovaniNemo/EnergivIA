@@ -372,11 +372,31 @@ export class OrganizationsService {
 
     const finalIp = clientInfo?.ip ?? null;
 
+    const rawRef = dto.referralCode?.trim() || dto.referredBy?.trim() || null;
+    let assignedSalesRepId: string | null = null;
+    let validReferralCode: string | null = null;
+
+    if (rawRef) {
+      const salesRepUser = await this.prisma.user.findFirst({
+        where: {
+          referralCode: { equals: rawRef, mode: "insensitive" },
+          deletedAt: null,
+        },
+        select: { id: true, referralCode: true },
+      });
+      if (salesRepUser) {
+        assignedSalesRepId = salesRepUser.id;
+        validReferralCode = salesRepUser.referralCode || rawRef;
+      }
+    }
+
     const org = await this.prisma.tenant.create({
       data: {
         name: commercialName,
         slug,
         logoUrl: dto.logoUrl ?? undefined,
+        salesRepId: assignedSalesRepId,
+        referralCode: validReferralCode,
         settings: {
           proposalCompanyName: commercialName,
           razaoSocial: legalName,

@@ -686,3 +686,10 @@
 | task-690 | Atualização do Menu Inicial (buildGreetingMenu) e Correção do Regex Residual de Telhado ()*) | completed | Tecnologias evidenciadas no menu inicial e whitelist estrita de estruturas prevenindo bug de parênteses |
 | task-691 | Validação Completa de Testes, Compilação NestJS/NextJS, Commit e Push | completed | 45 arquivos de teste e 360 testes Vitest aprovados; build NestJS compilado com sucesso e sincronizado no Git |
 | task-692 | Ajustar badges dos cards de planos para porcentagem de desconto (ECONOMIZE %) | completed | Substituído valores fixos em reais por percentual de desconto dinâmico (29%, 34%, 50%) em gestao/meus-planos e TrialLockOverlay |
+| task-693 | Atualização do Modelo de Dados no Prisma (role PLATFORM_SALES, referralCode, commissionRate, salesRepId, SalesActivityNote) | completed | Prisma schema atualizado com relações, migrações e geração de tipos (3 testes vitest aprovados) |
+| task-694 | Guard de Segurança e Autorização no Backend (PlatformSalesGuard) | completed | PlatformSalesGuard implementado com validação de PLATFORM_SALES e Super Admins (5 testes vitest aprovados) |
+| task-695 | Backend: Módulo e Serviço de Vendedores (SalesRepService, Controller e Module) | completed | Endpoints /sales-rep/summary, /tenants, /referral-link e notas implementados (8 testes vitest aprovados) |
+| task-696 | Backend: Atribuição Automática de Cadastro (?ref=codigo em criação de organização) | completed | Vinculação automática do Tenant ao salesRepId a partir do referralCode (3 testes vitest aprovados) |
+| task-697 | Frontend: Captura e Persistência do Link do Vendedor (?ref=...) | completed | Utilitário referral-tracker com cookie e localStorage de 30 dias e integração com criação de organização |
+| task-698 | Frontend: Portal Comercial do Vendedor (/admin/comercial, KPIs, Tabela e Drawer) | completed | Interface Obsidian Dark criada com KPIs, tabela com health score, drawer de notas e link exclusivo |
+| task-699 | Validação Completa, Testes Automatizados e Commit/Push | completed | 24 testes Vitest aprovados com 100% de sucesso, build do Next.js aprovado e sincronizado no Git |

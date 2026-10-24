@@ -2,7 +2,7 @@ import type { TenantId } from "./tenant";
 
 export type UserId = string;
 
-export type UserRole = "ADMIN" | "SALES" | "ENGINEER";
+export type UserRole = "ADMIN" | "SALES" | "ENGINEER" | "PLATFORM_SALES";
 
 export interface UserBase {
   email: string;

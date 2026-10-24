@@ -2,7 +2,7 @@ import type { UserRole } from "./user.js";
 
 export type OrgRole = "OWNER" | "ADMIN" | "ENGINEER" | "SALES" | "VIEWER";
 
-export type PlatformRole = "PLATFORM";
+export type PlatformRole = "PLATFORM" | "PLATFORM_SALES";
 
 export type AnyRole = OrgRole | PlatformRole;
 

@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 
 export type SidebarSectionKey = "operation" | "management" | "admin" | "platform";
-export type SidebarRole = "admin" | "owner" | "platform";
+export type SidebarRole = "admin" | "owner" | "platform" | "platform_sales";
 
 export type MenuItem = {
   label: string;
@@ -217,6 +217,14 @@ export const MENU_ITEMS: MenuItem[] = [
     section: "admin",
     requiresRole: "platform",
     tooltip: "Monitoramento de desistências de cadastro, integradores inativos e ativos",
+  },
+  {
+    label: "Comercial",
+    icon: Handshake,
+    path: "/admin/comercial",
+    section: "admin",
+    requiresRole: "platform_sales",
+    tooltip: "Portal Comercial e Gestão de Vendedores da plataforma",
   },
 
   {

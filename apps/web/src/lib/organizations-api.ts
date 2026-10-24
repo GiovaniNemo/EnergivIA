@@ -232,6 +232,7 @@ export async function createOrganization(data: {
   inverterBrandTiers?: BrandTierSelection;
   referralSource?: string;
   referredBy?: string;
+  referralCode?: string;
   termsAccepted?: boolean;
   termsAcceptedAt?: string;
   termsVersion?: string;
