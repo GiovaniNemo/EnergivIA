@@ -182,27 +182,6 @@ export const MENU_ITEMS: MenuItem[] = [
     requiresRole: "platform",
   },
   {
-    label: "Métricas",
-    icon: ChartColumn,
-    path: "/admin/metricas",
-    section: "admin",
-    requiresRole: "platform",
-  },
-  {
-    label: "Sistema",
-    icon: Shield,
-    path: "/admin/sistema",
-    section: "admin",
-    requiresRole: "platform",
-  },
-  {
-    label: "Gestão de Planos",
-    icon: CreditCard,
-    path: "/admin/planos",
-    section: "admin",
-    requiresRole: "platform",
-  },
-  {
     label: "Acessos Especiais",
     icon: UserCheck,
     path: "/admin/acessos-especiais",
@@ -227,6 +206,27 @@ export const MENU_ITEMS: MenuItem[] = [
     tooltip: "Portal Comercial e Gestão de Vendedores da plataforma",
   },
 
+  {
+    label: "Métricas",
+    icon: ChartColumn,
+    path: "/admin/metricas",
+    section: "platform",
+    requiresRole: "platform",
+  },
+  {
+    label: "Sistema",
+    icon: Shield,
+    path: "/admin/sistema",
+    section: "platform",
+    requiresRole: "platform",
+  },
+  {
+    label: "Gestão de Planos",
+    icon: CreditCard,
+    path: "/admin/planos",
+    section: "platform",
+    requiresRole: "platform",
+  },
   {
     label: "Fila de Financiamentos",
     icon: ListChecks,
