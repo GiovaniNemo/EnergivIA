@@ -155,17 +155,214 @@ export function isValidClientName(name: string): boolean {
   return true;
 }
 
+export function convertSpokenNumbersToDigits(text: string): string {
+  if (!text) return "";
+  let s = text;
+
+  const norm = s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  const hasPhoneContext =
+    /\b(?:telefone|whatsapp|whats|celular|zap|fone|numero|número|contato|ddd|prefixo)\b/i.test(s);
+
+  const numberWordPattern =
+    /\b(?:zero|um|uma|dois|duas|tres|três|quatro|cinco|seis|meia|sete|oito|nove|dez|onze|doze|treze|quatorze|catorze|quinze|dezesseis|dezessete|dezoito|dezenove|vinte|trinta|quarenta|cinquenta|sessenta|setenta|oitenta|noventa)\b/gi;
+  const matchCount = (norm.match(numberWordPattern) || []).length;
+
+  // Se não tem contexto de telefone e tem menos de 3 números falados, não converte palavras para evitar falsos positivos
+  if (!hasPhoneContext && matchCount < 3) {
+    // Mesmo sem palavras por extenso, se houver dígitos soltos espaçados (ex: "44 9 8821 5497"), agrupa-os
+    return s.replace(/(?:\b\d{1,4}[,\s\-]+){2,}\d{1,4}\b/g, (match) => {
+      const digitsOnly = match.replace(/\D/g, "");
+      if (digitsOnly.length >= 8 && digitsOnly.length <= 13) {
+        return digitsOnly;
+      }
+      return match;
+    });
+  }
+
+  // Remove prefixos como "ddd" ou "prefixo" antes dos dígitos
+  s = s.replace(/\b(?:ddd|código\s+de\s+[aá]rea|prefixo)\s*:?\s*/gi, " ");
+
+  const tensCompound: [RegExp, string][] = [
+    [/\bvinte\s+e\s+(?:um|uma)\b/gi, "21"],
+    [/\bvinte\s+e\s+(?:dois|duas)\b/gi, "22"],
+    [/\bvinte\s+e\s+(?:três|tres)\b/gi, "23"],
+    [/\bvinte\s+e\s+quatro\b/gi, "24"],
+    [/\bvinte\s+e\s+cinco\b/gi, "25"],
+    [/\bvinte\s+e\s+(?:seis|meia)\b/gi, "26"],
+    [/\bvinte\s+e\s+sete\b/gi, "27"],
+    [/\bvinte\s+e\s+oito\b/gi, "28"],
+    [/\bvinte\s+e\s+nove\b/gi, "29"],
+
+    [/\btrinta\s+e\s+(?:um|uma)\b/gi, "31"],
+    [/\btrinta\s+e\s+(?:dois|duas)\b/gi, "32"],
+    [/\btrinta\s+e\s+(?:três|tres)\b/gi, "33"],
+    [/\btrinta\s+e\s+quatro\b/gi, "34"],
+    [/\btrinta\s+e\s+cinco\b/gi, "35"],
+    [/\btrinta\s+e\s+(?:seis|meia)\b/gi, "36"],
+    [/\btrinta\s+e\s+sete\b/gi, "37"],
+    [/\btrinta\s+e\s+oito\b/gi, "38"],
+    [/\btrinta\s+e\s+nove\b/gi, "39"],
+
+    [/\bquarenta\s+e\s+(?:um|uma)\b/gi, "41"],
+    [/\bquarenta\s+e\s+(?:dois|duas)\b/gi, "42"],
+    [/\bquarenta\s+e\s+(?:três|tres)\b/gi, "43"],
+    [/\bquarenta\s+e\s+quatro\b/gi, "44"],
+    [/\bquarenta\s+e\s+cinco\b/gi, "45"],
+    [/\bquarenta\s+e\s+(?:seis|meia)\b/gi, "46"],
+    [/\bquarenta\s+e\s+sete\b/gi, "47"],
+    [/\bquarenta\s+e\s+oito\b/gi, "48"],
+    [/\bquarenta\s+e\s+nove\b/gi, "49"],
+
+    [/\bcinquenta\s+e\s+(?:um|uma)\b/gi, "51"],
+    [/\bcinquenta\s+e\s+(?:dois|duas)\b/gi, "52"],
+    [/\bcinquenta\s+e\s+(?:três|tres)\b/gi, "53"],
+    [/\bcinquenta\s+e\s+quatro\b/gi, "54"],
+    [/\bcinquenta\s+e\s+cinco\b/gi, "55"],
+    [/\bcinquenta\s+e\s+(?:seis|meia)\b/gi, "56"],
+    [/\bcinquenta\s+e\s+sete\b/gi, "57"],
+    [/\bcinquenta\s+e\s+oito\b/gi, "58"],
+    [/\bcinquenta\s+e\s+nove\b/gi, "59"],
+
+    [/\bsessenta\s+e\s+(?:um|uma)\b/gi, "61"],
+    [/\bsessenta\s+e\s+(?:dois|duas)\b/gi, "62"],
+    [/\bsessenta\s+e\s+(?:três|tres)\b/gi, "63"],
+    [/\bsessenta\s+e\s+quatro\b/gi, "64"],
+    [/\bsessenta\s+e\s+cinco\b/gi, "65"],
+    [/\bsessenta\s+e\s+(?:seis|meia)\b/gi, "66"],
+    [/\bsessenta\s+e\s+sete\b/gi, "67"],
+    [/\bsessenta\s+e\s+oito\b/gi, "68"],
+    [/\bsessenta\s+e\s+nove\b/gi, "69"],
+
+    [/\bsetenta\s+e\s+(?:um|uma)\b/gi, "71"],
+    [/\bsetenta\s+e\s+(?:dois|duas)\b/gi, "72"],
+    [/\bsetenta\s+e\s+(?:três|tres)\b/gi, "73"],
+    [/\bsetenta\s+e\s+quatro\b/gi, "74"],
+    [/\bsetenta\s+e\s+cinco\b/gi, "75"],
+    [/\bsetenta\s+e\s+(?:seis|meia)\b/gi, "76"],
+    [/\bsetenta\s+e\s+sete\b/gi, "77"],
+    [/\bsetenta\s+e\s+oito\b/gi, "78"],
+    [/\bsetenta\s+e\s+nove\b/gi, "79"],
+
+    [/\boitenta\s+e\s+(?:um|uma)\b/gi, "81"],
+    [/\boitenta\s+e\s+(?:dois|duas)\b/gi, "82"],
+    [/\boitenta\s+e\s+(?:três|tres)\b/gi, "83"],
+    [/\boitenta\s+e\s+quatro\b/gi, "84"],
+    [/\boitenta\s+e\s+cinco\b/gi, "85"],
+    [/\boitenta\s+e\s+(?:seis|meia)\b/gi, "86"],
+    [/\boitenta\s+e\s+sete\b/gi, "87"],
+    [/\boitenta\s+e\s+oito\b/gi, "88"],
+    [/\boitenta\s+e\s+nove\b/gi, "89"],
+
+    [/\bnoventa\s+e\s+(?:um|uma)\b/gi, "91"],
+    [/\bnoventa\s+e\s+(?:dois|duas)\b/gi, "92"],
+    [/\bnoventa\s+e\s+(?:três|tres)\b/gi, "93"],
+    [/\bnoventa\s+e\s+quatro\b/gi, "94"],
+    [/\bnoventa\s+e\s+cinco\b/gi, "95"],
+    [/\bnoventa\s+e\s+(?:seis|meia)\b/gi, "96"],
+    [/\bnoventa\s+e\s+sete\b/gi, "97"],
+    [/\bnoventa\s+e\s+oito\b/gi, "98"],
+    [/\bnoventa\s+e\s+nove\b/gi, "99"],
+  ];
+
+  for (const [regex, val] of tensCompound) {
+    s = s.replace(regex, ` ${val} `);
+  }
+
+  const tensStandalone: [RegExp, string][] = [
+    [/\bdez\b/gi, "10"],
+    [/\bonze\b/gi, "11"],
+    [/\bdoze\b/gi, "12"],
+    [/\btreze\b/gi, "13"],
+    [/\b(?:quatorze|catorze)\b/gi, "14"],
+    [/\bquinze\b/gi, "15"],
+    [/\bdezesseis\b/gi, "16"],
+    [/\bdezessete\b/gi, "17"],
+    [/\bdezoito\b/gi, "18"],
+    [/\bdezenove\b/gi, "19"],
+    [/\bvinte\b/gi, "20"],
+    [/\btrinta\b/gi, "30"],
+    [/\bquarenta\b/gi, "40"],
+    [/\bcinquenta\b/gi, "50"],
+    [/\bsessenta\b/gi, "60"],
+    [/\bsetenta\b/gi, "70"],
+    [/\boitenta\b/gi, "80"],
+    [/\bnoventa\b/gi, "90"],
+  ];
+
+  for (const [regex, val] of tensStandalone) {
+    s = s.replace(regex, ` ${val} `);
+  }
+
+  const digitsMap: [RegExp, string][] = [
+    [/\bzero\b/gi, "0"],
+    [/\b(?:um|uma)\b/gi, "1"],
+    [/\b(?:dois|duas)\b/gi, "2"],
+    [/\b(?:três|tres)\b/gi, "3"],
+    [/\bquatro\b/gi, "4"],
+    [/\bcinco\b/gi, "5"],
+    [/\b(?:seis|meia|meia-dúzia|meia\s+dúzia)\b/gi, "6"],
+    [/\bsete\b/gi, "7"],
+    [/\boito\b/gi, "8"],
+    [/\bnove\b/gi, "9"],
+  ];
+
+  for (const [regex, val] of digitsMap) {
+    s = s.replace(regex, ` ${val} `);
+  }
+
+  // Agrupa clusters de dígitos espaçados que formam telefones (entre 8 e 13 dígitos)
+  s = s.replace(/(?:\b\d{1,4}[,\s\-]+){2,}\d{1,4}\b/g, (match) => {
+    const digitsOnly = match.replace(/\D/g, "");
+    if (digitsOnly.length >= 8 && digitsOnly.length <= 13) {
+      return digitsOnly;
+    }
+    return match;
+  });
+
+  return s.replace(/\s+/g, " ").trim();
+}
+
+export function isNameOrPhoneCorrectionIntent(text: string): boolean {
+  if (!text) return false;
+  const norm = text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+  return (
+    /\b(?:ta\s+errado|esta\s+errado|ficou\s+errado|errou|corrigir|corrige|mudar|muda|trocar|troca|alterar|altera|substituir|substitui)\b/.test(
+      norm
+    ) ||
+    /\b(?:nao\s+e\s+(?:esse|essa|o\s+nome|o\s+telefone|o\s+numero|o\s+zap))\b/.test(norm) ||
+    /\b(?:o\s+(?:nome|telefone|numero|zap)\s+(?:correto|certo)\s+(?:e|eh|e))\b/.test(norm) ||
+    /\b(?:nome\s+errado|telefone\s+errado|numero\s+errado|zap\s+errado)\b/.test(norm) ||
+    /\b(?:na\s+verdade\s+(?:o\s+nome|o\s+telefone|o\s+zap|o\s+numero))\b/.test(norm)
+  );
+}
+
 export function cleanExtractedName(rawName: string): string {
   if (!rawName) return "";
   let s = rawName.trim();
 
-  // Remove prefixos conversacionais quando informa ou corrige nome
-  s = s.replace(
-    /^(?:(?:o\s+)?nome\s+(?:do\s+cliente(?:\s+final)?|da\s+cliente(?:\s+final)?|do\s+meu\s+cliente|da\s+minha\s+cliente|dele|dela)?\s*(?:é|eh|e|:)?|(?:o\s+)?(?:meu\s+)?cliente(?:\s+final)?\s*(?:é|eh|e|se\s+chama|:)|(?:ele|ela)\s+(?:se\s+)?chama|se\s+chama|(?:o\s+)?nome\s*(?:é|eh|e|:)?|(?:o\s+dela|o\s+dele)\s*(?:é|eh|e|:)?|na\s+verdade\s+(?:é|eh|e|:)?|mudar\s+(?:o\s+nome\s+)?(?:para|pro)?|trocar\s+(?:o\s+nome\s+)?(?:para|pro)?|coloca\s+|colocar\s+|pode\s+ser)\s+/i,
-    ""
-  );
-
-  s = s.replace(/^(?:cliente|nome)\s*:\s*/i, "");
+  // Remove prefixos conversacionais e de correção quando informa ou corrige nome (itera para múltiplos prefixos encadeados)
+  let prev = "";
+  let iterations = 0;
+  while (prev !== s && iterations < 5) {
+    prev = s;
+    s = s.replace(
+      /^(?:(?:não|nao),?\s*)?(?:(?:o\s+)?(?:nome|número|numero|telefone|whatsapp|whats|zap)?(?:\s+(?:do|da|dele|dela)(?:\s+(?:meu|minha))?\s*cliente(?:\s+final)?)?\s*(?:tá|ta|esta|está|ficou)?\s*errado,?\s*|(?:errou\s+(?:o\s+nome)?,?\s*)|(?:não|nao)\s+é\s+(?:esse|essa|o\s+dela|o\s+dele),?\s*|(?:corrige|corrigir|trocar|troca|mudar|muda|alterar|altera|atualizar|atualiza|colocar|coloca|botar|bota)\s+(?:aí|ai)?,?\s*(?:(?:o|a)\s+)?(?:nome|número|numero|telefone|whatsapp|whats|zap)?(?:\s+(?:do|da|dele|dela)(?:\s+(?:meu|minha))?\s*cliente(?:\s+final)?)?\s*(?:para|pro|pra|por|como)?:?\s*|(?:na\s+verdade\s+(?:o\s+nome\s+)?(?:dele|dela|do\s+cliente)?\s*(?:é|eh|e|:)?\s*)|(?:o\s+nome\s+(?:correto|certo)\s*(?:agora\s+)?(?:é|eh|e|:)?\s*)|(?:(?:o\s+)?nome\s+(?:do\s+cliente(?:\s+final)?|da\s+cliente(?:\s+final)?|do\s+meu\s+cliente|da\s+minha\s+cliente|dele|dela)?\s*(?:é|eh|e|:)?\s*)|(?:(?:o\s+)?(?:meu\s+)?cliente(?:\s+final)?\s*(?:é|eh|e|se\s+chama|:)\s*)|(?:(?:ele|ela)\s+(?:se\s+)?chama\s*)|(?:se\s+chama\s*)|(?:(?:o\s+)?nome\s*(?:é|eh|e|:)?\s*)|(?:(?:o\s+dela|o\s+dele)\s*(?:é|eh|e|:)?\s*)|(?:(?:do|da)\s+(?:meu\s+|minha\s+)?cliente(?:\s+final)?\s*(?:para|pro|pra|é|eh|e|como)?:?\s*)|(?:pode\s+ser\s+))\s*/i,
+      ""
+    );
+    s = s.replace(/^(?:cliente|nome)\s*:\s*/i, "");
+    s = s.replace(/^(?:para|pro|pra|como)\s+/i, "");
+    s = s.replace(/^[,;\-/:|()=*~_.\s]+/, "");
+    iterations++;
+  }
 
   // Remove sufixos e conectores de telefone no final ou início (ex: ", e o é", ", e o telefone é", "e o whats:")
   s = s
@@ -214,6 +411,9 @@ export function cleanExtractedName(rawName: string): string {
     "cliente",
     "final",
     "nome",
+    "errado",
+    "correto",
+    "certo",
   ]);
   const words = s.split(" ").filter((w) => w.trim().length > 0);
   if (words.length === 0 || words.every((w) => stopWords.has(w.toLowerCase()))) {
@@ -243,7 +443,8 @@ export function isNameCorrectionOrErrorNotice(text: string): boolean {
 }
 
 export function extractNameAndPhone(text: string): { name: string; phone?: string } {
-  const cleanText = text.trim();
+  const converted = convertSpokenNumbersToDigits(text);
+  const cleanText = converted.trim();
   if (!cleanText) return { name: "" };
 
   // Procura padrão de telefone brasileiro amplo (com ou sem DDD, hífens, traços, espaços ou 55)
@@ -2343,7 +2544,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
       if (transcribed && transcribed.trim().length > 0) {
         this.logger.log(`Áudio transcrito com sucesso via Gemini: "${transcribed}"`);
-        incomingText = transcribed.trim();
+        incomingText = convertSpokenNumbersToDigits(transcribed.trim());
       } else {
         incomingText = "[Mensagem de áudio recebida]";
       }
@@ -3105,7 +3306,9 @@ Regras estritas:
 1. Retorne APENAS a transcrição literal do que o usuário falou.
 2. Não adicione saudações como "Aqui está a transcrição", não use aspas extras e não faça comentários.
 3. Preserve e formate termos técnicos e grandezas de energia solar quando falados (ex: "10 kWp", "26 kWp", "450 kWh", "550W", "220V", "380V", "módulos", "painéis", "inversor", "monofásico", "bifásico", "trifásico", "telhado cerâmico/colonial/metálico/fibrocimento/fibromadeira", e cidades/estados como "Maringá PR", "Londrina PR", "Cuiabá MT", "Presidente Prudente SP").
-4. Se o áudio for inaudível, contiver apenas ruído, silêncio ou não houver fala compreensível, responda exatamente: [inaudível]`;
+4. Quando números de telefone ou WhatsApp forem falados (ex: "quarenta e quatro nove oito...", "ddd quarenta e quatro..."), transcreva os números preferencialmente como dígitos numéricos (ex: "44 98821-5497"). Trate a palavra "meia" como o dígito 6 quando falada no contexto de dígitos de telefone.
+5. Preserve nomes de clientes e pessoas com clareza e fidelidade (ex: "Lucas Gabriel", "João da Silva", "Marcelo Teste").
+6. Se o áudio for inaudível, contiver apenas ruído, silêncio ou não houver fala compreensível, responda exatamente: [inaudível]`;
 
     for (const modelName of candidateModels) {
       const startTime = Date.now();
@@ -3195,7 +3398,7 @@ Regras estritas:
       formData.append("language", "pt");
       formData.append(
         "prompt",
-        "Cotação de energia solar fotovoltaica, kWp, kWh, módulos, inversores, telhado metálico, fibromadeira, fibrocimento, cerâmica, colonial, laje, solo, 220V, 380V"
+        "Cotação de energia solar, nome do cliente Lucas Gabriel, João da Silva, telefone WhatsApp 44 98821-5497, kWp, kWh, módulos, inversores, telhado metálico, fibromadeira, fibrocimento, cerâmica, colonial, 220V, 380V"
       );
 
       const resp = await fetch("https://api.openai.com/v1/audio/transcriptions", {
@@ -5750,6 +5953,96 @@ ${catalogContext}`;
         .trim()
         .replace(/[.,!?:;*~_]/g, "");
 
+      // 0. Correção de Nome e/ou Telefone pós-proposta (via áudio ou texto)
+      const { name: correctedName, phone: correctedPhone } = extractNameAndPhone(incomingText);
+      const isCorrection =
+        isNameOrPhoneCorrectionIntent(incomingText) ||
+        (isValidClientName(correctedName) && /\b(?:nome|cliente|chama)\b/i.test(incomingText)) ||
+        (correctedPhone && /\b(?:telefone|whatsapp|whats|zap|numero|número)\b/i.test(incomingText));
+
+      if (isCorrection && (isValidClientName(correctedName) || correctedPhone)) {
+        const targetProposalId = storedSessionData["lastProposalId"] || convMeta["lastProposalId"];
+
+        if (targetProposalId) {
+          try {
+            const proposal = await this.prisma.proposal.findUnique({
+              where: { id: targetProposalId },
+              include: { deal: true },
+            });
+
+            if (proposal) {
+              const newName = isValidClientName(correctedName) ? correctedName : undefined;
+              const newPhone = correctedPhone || undefined;
+
+              if (newName) {
+                await this.prisma.proposal.update({
+                  where: { id: targetProposalId },
+                  data: {
+                    title: `Proposta Comercial - ${newName}`,
+                    ...(newPhone ? { clientContactWhatsapp: newPhone } : {}),
+                  },
+                });
+
+                if (proposal.dealId) {
+                  await this.prisma.deal.update({
+                    where: { id: proposal.dealId },
+                    data: {
+                      title: `Sistema Fotovoltaico - ${newName}`,
+                    },
+                  });
+
+                  if (proposal.deal?.leadId) {
+                    await this.prisma.lead.update({
+                      where: { id: proposal.deal.leadId },
+                      data: {
+                        name: newName,
+                        ...(newPhone ? { whatsapp: newPhone } : {}),
+                      },
+                    });
+                  }
+                }
+                sessionCtx.clientName = newName;
+              } else if (newPhone && proposal.deal?.leadId) {
+                await this.prisma.lead.update({
+                  where: { id: proposal.deal.leadId },
+                  data: { whatsapp: newPhone },
+                });
+                await this.prisma.proposal.update({
+                  where: { id: targetProposalId },
+                  data: { clientContactWhatsapp: newPhone },
+                });
+                sessionCtx.clientWhatsapp = newPhone;
+              }
+            }
+          } catch (updateErr) {
+            this.logger.error(
+              "Erro ao atualizar proposta existente com correção de nome/telefone:",
+              updateErr
+            );
+          }
+        }
+
+        const effectiveName = sessionCtx.clientName || correctedName || "Cliente";
+        const effectivePhone = sessionCtx.clientWhatsapp || correctedPhone;
+
+        const appBaseUrl =
+          process.env["APP_BASE_URL"] ||
+          process.env["PUBLIC_WEB_APP_BASE_URL"] ||
+          this.config.get<string>("APP_BASE_URL") ||
+          "https://www.energivia.com.br";
+        const proposalLink = targetProposalId ? `${appBaseUrl}/proposta/${targetProposalId}` : "";
+
+        return (
+          `Dados corrigidos com sucesso na proposta comercial! 👤✨\n\n` +
+          `> Cliente: *${effectiveName}*\n` +
+          (effectivePhone ? `> WhatsApp: \`${formatPhone(effectivePhone)}\`\n\n` : `\n`) +
+          (proposalLink
+            ? `*_Link atualizado da proposta:_* 🔗\n${proposalLink}\n\n` +
+              `_💡 O nome e o contato do cliente já foram atualizados no sistema e no PDF._`
+            : `_Os dados do cliente foram atualizados para as próximas cotações._`)
+        );
+      }
+
       // 1. Agradecimentos e confirmações comuns pós-proposta (sempre atendidos com simpatia)
       const gratitudeMatches = [
         "obrigado",
@@ -7068,6 +7361,64 @@ ${catalogContext}`;
       currentStep === "AWAITING_TEMPLATE_SELECTION" ||
       lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar")
     ) {
+      // 1. Verifica se o usuário solicitou correção de dados (via áudio ou texto)
+      const { name: correctedName, phone: correctedPhone } = extractNameAndPhone(incomingText);
+      const isCorrection =
+        isNameOrPhoneCorrectionIntent(incomingText) ||
+        isNameCorrectionOrErrorNotice(incomingText) ||
+        (correctedPhone && !/^[1-5]$/.test(incomingText.trim())) ||
+        (isValidClientName(correctedName) && !/^[1-5]$/.test(incomingText.trim()));
+
+      if (isCorrection) {
+        let updated = false;
+        if (isValidClientName(correctedName)) {
+          sessionCtx.clientName = correctedName;
+          updated = true;
+        }
+        if (correctedPhone) {
+          sessionCtx.clientWhatsapp = correctedPhone;
+          updated = true;
+        }
+
+        if (updated) {
+          const clientName = sessionCtx.clientName || "Cliente";
+          const clientPhone = sessionCtx.clientWhatsapp || "";
+          await setStep("AWAITING_TEMPLATE_SELECTION", {
+            clientName,
+            clientPhone,
+          });
+
+          const templates = await this.getAvailableTemplates(conversation.organizationId);
+          let templateListText = "";
+          templates.forEach((t, i) => {
+            templateListText += `> ${this.numToEmoji(i + 1)} *${t.name}*\n`;
+          });
+          templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
+
+          const phoneDisplay = clientPhone ? ` e WhatsApp \`${formatPhone(clientPhone)}\`` : "";
+
+          return (
+            `Dados corrigidos com sucesso! 👤✨\n\n` +
+            `> Cliente: *${clientName}*${phoneDisplay}\n\n` +
+            `*_Qual modelo de proposta comercial você deseja usar para o seu cliente?_*\n\n` +
+            `${templateListText}\n` +
+            `_(Responda com o número da opção desejada ou digite 0️⃣ para corrigir o nome/telefone)_`
+          );
+        }
+      }
+
+      // 2. Se enviou 0 ou voltar:
+      if (
+        lower === "0" ||
+        lower === "0️⃣" ||
+        lower === "voltar" ||
+        lower === "rever" ||
+        isNameCorrectionOrErrorNotice(incomingText)
+      ) {
+        await setStep("AWAITING_CLIENT_NAME");
+        return `Sem problemas! Qual o nome correto do seu cliente final para a proposta comercial? (Ex: João da Silva)`;
+      }
+
       const templateChoiceStr = incomingText.replace(/\D/g, "");
       const chosenTemplateIndex = templateChoiceStr ? parseInt(templateChoiceStr, 10) - 1 : 0;
       return generateProposalAndReply(chosenTemplateIndex);

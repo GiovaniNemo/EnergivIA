@@ -6,6 +6,8 @@ import {
   isNameCorrectionOrErrorNotice,
   isValidClientName,
   formatPhone,
+  convertSpokenNumbersToDigits,
+  isNameOrPhoneCorrectionIntent,
 } from "../whatsapp-bot.service";
 
 describe("WhatsApp Bot - Location and Phone Parsing Robustness", () => {
@@ -120,6 +122,16 @@ describe("WhatsApp Bot - Location and Phone Parsing Robustness", () => {
       expect(cleanExtractedName("o cliente se chama Lucas Gabriel")).toBe("Lucas Gabriel");
       expect(cleanExtractedName("o zap é")).toBe("");
       expect(cleanExtractedName("o número do cliente é")).toBe("");
+      expect(cleanExtractedName("o nome tá errado, o nome correto é Lucas Gabriel")).toBe(
+        "Lucas Gabriel"
+      );
+      expect(cleanExtractedName("não, o nome dele é Lucas Gabriel")).toBe("Lucas Gabriel");
+      expect(cleanExtractedName("corrige o nome para Lucas Gabriel")).toBe("Lucas Gabriel");
+      expect(cleanExtractedName("muda o nome do cliente para Lucas Gabriel")).toBe("Lucas Gabriel");
+      expect(cleanExtractedName("errou o nome, o nome do cliente é Lucas Gabriel")).toBe(
+        "Lucas Gabriel"
+      );
+      expect(cleanExtractedName("na verdade o nome dele é Lucas Gabriel")).toBe("Lucas Gabriel");
     });
 
     it("should detect name correction or error notice phrases", () => {
@@ -128,6 +140,17 @@ describe("WhatsApp Bot - Location and Phone Parsing Robustness", () => {
       expect(isNameCorrectionOrErrorNotice("ficou errado")).toBe(true);
       expect(isNameCorrectionOrErrorNotice("Marcelo Teste")).toBe(false);
       expect(isNameCorrectionOrErrorNotice("Elisa Mendes")).toBe(false);
+    });
+
+    it("should detect name or phone correction intent in audio and text", () => {
+      expect(
+        isNameOrPhoneCorrectionIntent("o nome tá errado, o nome correto é Lucas Gabriel")
+      ).toBe(true);
+      expect(isNameOrPhoneCorrectionIntent("corrige o telefone para 44 98821-5497")).toBe(true);
+      expect(isNameOrPhoneCorrectionIntent("não é esse o nome, é Lucas Gabriel")).toBe(true);
+      expect(isNameOrPhoneCorrectionIntent("o zap dele tá errado")).toBe(true);
+      expect(isNameOrPhoneCorrectionIntent("muda o nome do cliente para Lucas Gabriel")).toBe(true);
+      expect(isNameOrPhoneCorrectionIntent("Lucas Gabriel")).toBe(false);
     });
 
     it("should extract client name and phone from combined sentence", () => {
@@ -140,6 +163,70 @@ describe("WhatsApp Bot - Location and Phone Parsing Robustness", () => {
       const res2 = extractNameAndPhone("Lucas Gabriel 44988215497");
       expect(res2.name).toBe("Lucas Gabriel");
       expect(res2.phone).toBe("44988215497");
+
+      const res3 = extractNameAndPhone(
+        "o nome tá errado, o nome é Lucas Gabriel e o whatsapp é 44 98821-5497"
+      );
+      expect(res3.name).toBe("Lucas Gabriel");
+      expect(res3.phone).toBe("44988215497");
+    });
+  });
+
+  describe("Spoken Numbers to Digits (Audio Messages)", () => {
+    it("should convert spoken numbers in audio to telephone digits", () => {
+      const text1 =
+        "o telefone dele é quarenta e quatro nove oito oito dois um cinco quatro nove sete";
+      expect(convertSpokenNumbersToDigits(text1)).toBe("o telefone dele é 44988215497");
+
+      const text2 =
+        "meu cliente se chama Lucas Gabriel e o whatsapp é quarenta e quatro nove nove um dois três quatro cinco meia sete";
+      expect(convertSpokenNumbersToDigits(text2)).toBe(
+        "meu cliente se chama Lucas Gabriel e o whatsapp é 44991234567"
+      );
+
+      const text3 = "zero quatro um nove oito sete seis cinco quatro três dois";
+      expect(convertSpokenNumbersToDigits(text3)).toBe("04198765432");
+
+      const text4 = "o telefone é 44 9 8821 5497";
+      expect(convertSpokenNumbersToDigits(text4)).toBe("o telefone é 44988215497");
+
+      const text5 = "ddd quarenta e quatro nove oito oito dois um cinco quatro nove sete";
+      expect(convertSpokenNumbersToDigits(text5)).toBe("44988215497");
+    });
+
+    it("should not alter non-phone phrases with single numbers", () => {
+      expect(convertSpokenNumbersToDigits("quero um orçamento para 500 kwh")).toBe(
+        "quero um orçamento para 500 kwh"
+      );
+      expect(convertSpokenNumbersToDigits("preciso de uma proposta comercial")).toBe(
+        "preciso de uma proposta comercial"
+      );
+    });
+
+    it("should extract name and phone seamlessly from spoken audio text", () => {
+      const spoken =
+        "o nome do cliente é Lucas Gabriel e o telefone dele é quarenta e quatro nove oito oito dois um cinco quatro nove sete";
+      const res = extractNameAndPhone(spoken);
+      expect(res.name).toBe("Lucas Gabriel");
+      expect(res.phone).toBe("44988215497");
+    });
+
+    it("should handle correction audio phrases seamlessly", () => {
+      const audioCorrection1 =
+        "o nome ficou errado, na verdade é Lucas Gabriel e o telefone é quarenta e quatro nove oito oito dois um cinco quatro nove sete";
+      const res1 = extractNameAndPhone(audioCorrection1);
+      expect(res1.name).toBe("Lucas Gabriel");
+      expect(res1.phone).toBe("44988215497");
+
+      const audioCorrection2 =
+        "corrige o zap para meia sete nove nove um dois três quatro cinco seis sete";
+      const res2 = extractNameAndPhone(audioCorrection2);
+      expect(res2.phone).toBe("67991234567");
+
+      const audioCorrection3 =
+        "o nome tá certo mas o zap é quarenta e quatro nove nove oito oito sete sete seis seis";
+      const res3 = extractNameAndPhone(audioCorrection3);
+      expect(res3.phone).toBe("4499887766");
     });
   });
 
