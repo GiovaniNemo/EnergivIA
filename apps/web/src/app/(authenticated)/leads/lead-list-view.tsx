@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   BarChart3,
   Calendar,
+  Download,
   Flame,
   Plus,
   Search,
@@ -36,6 +37,7 @@ import {
 } from "@/lib/lead-activity";
 import {
   createLead,
+  downloadContactsVCard,
   getLeadsDashboardStats,
   listLeads,
   waMeUrl,
@@ -136,6 +138,19 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
 
   const [nextStepOpen, setNextStepOpen] = useState(false);
   const [nextStepRow, setNextStepRow] = useState<LeadListItem | null>(null);
+  const [exportingVCard, setExportingVCard] = useState(false);
+
+  const handleExportVCard = async () => {
+    if (!currentOrganizationId) return;
+    try {
+      setExportingVCard(true);
+      await downloadContactsVCard(currentOrganizationId);
+    } catch (err: unknown) {
+      console.error("Erro ao exportar contatos:", err);
+    } finally {
+      setExportingVCard(false);
+    }
+  };
 
   const createForm = useForm<LeadFormValues>({
     resolver: zodResolver(leadFormSchema),
@@ -237,47 +252,61 @@ export function LeadListView({ mode }: { mode: ViewMode }): JSX.Element {
           <h1 className="text-3xl font-bold tracking-tight">{copy.title}</h1>
           <p className="mt-1 text-[var(--color-muted-foreground)]">{copy.subtitle}</p>
         </div>
-        <Dialog
-          open={createOpen}
-          onOpenChange={(open) => {
-            setCreateOpen(open);
-            if (open) {
-              createForm.reset(emptyLeadForm);
-              createForm.clearErrors();
-              setCreateError(null);
-            }
-          }}
-        >
-          <Button type="button" onClick={() => setCreateOpen(true)} className="gap-2 shrink-0">
-            <UserPlus className="h-4 w-4" />
-            Novo cliente
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            type="button"
+            disabled={exportingVCard || orgLoading}
+            onClick={handleExportVCard}
+            className="gap-2 shrink-0 border-[var(--color-border)]"
+            title="Exportar arquivo .vcf para importar todos os contatos no celular e liberar o Status do WhatsApp"
+          >
+            <Download className="h-4 w-4" />
+            {exportingVCard ? "Exportando…" : "Salvar no celular (.vcf)"}
           </Button>
-          <DialogContent showCloseButton className="max-w-md">
-            <DialogHeader className="pr-8">
-              <DialogTitle>Novo cliente</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={submitCreate} className="grid gap-3">
-              <div className="grid gap-3 py-2">
-                <LeadContactFields
-                  control={createForm.control}
-                  errors={createForm.formState.errors}
-                  idsPrefix="new-lead"
-                />
-                {createError ? (
-                  <p className="text-sm text-red-600 dark:text-red-400">{createError}</p>
-                ) : null}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" type="button" onClick={() => setCreateOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={createForm.formState.isSubmitting}>
-                  {createForm.formState.isSubmitting ? "Salvando…" : "Criar cliente"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+
+          <Dialog
+            open={createOpen}
+            onOpenChange={(open) => {
+              setCreateOpen(open);
+              if (open) {
+                createForm.reset(emptyLeadForm);
+                createForm.clearErrors();
+                setCreateError(null);
+              }
+            }}
+          >
+            <Button type="button" onClick={() => setCreateOpen(true)} className="gap-2 shrink-0">
+              <UserPlus className="h-4 w-4" />
+              Novo cliente
+            </Button>
+            <DialogContent showCloseButton className="max-w-md">
+              <DialogHeader className="pr-8">
+                <DialogTitle>Novo cliente</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={submitCreate} className="grid gap-3">
+                <div className="grid gap-3 py-2">
+                  <LeadContactFields
+                    control={createForm.control}
+                    errors={createForm.formState.errors}
+                    idsPrefix="new-lead"
+                  />
+                  {createError ? (
+                    <p className="text-sm text-red-600 dark:text-red-400">{createError}</p>
+                  ) : null}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" type="button" onClick={() => setCreateOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={createForm.formState.isSubmitting}>
+                    {createForm.formState.isSubmitting ? "Salvando…" : "Criar cliente"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card className="border-[var(--color-border)] bg-[var(--color-card)] w-full max-w-full min-w-0 overflow-hidden">

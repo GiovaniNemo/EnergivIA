@@ -1012,3 +1012,22 @@ export async function downloadProposalPdf(
   }
   return res.blob();
 }
+
+/**
+ * Baixa arquivo vCard (.vcf) contendo todos os contatos para importação no celular
+ */
+export async function downloadContactsVCard(organizationId: string): Promise<void> {
+  const res = await apiProxy("GET", "/leads/export-vcf", undefined, organizationId);
+  if (!res.ok) {
+    throw new Error("Falha ao exportar contatos");
+  }
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `contatos-energivia-${new Date().toISOString().slice(0, 10)}.vcf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+}

@@ -33,6 +33,7 @@ describe("WhatsApp Bot - Admin Group Alerts Pipeline", () => {
 
     mockWhatsappCloud = {
       sendTextMessage: vi.fn().mockResolvedValue(true),
+      sendDocumentMessage: vi.fn().mockResolvedValue(true),
       fetchAllEvolutionGroups: vi.fn().mockResolvedValue([]),
       registerEvolutionRawMessage: vi.fn(),
       registerMediaBuffer: vi.fn(),
@@ -305,7 +306,22 @@ describe("WhatsApp Bot - Admin Group Alerts Pipeline", () => {
     expect(mockPrisma.systemSetting.upsert).not.toHaveBeenCalled();
   });
 
-  it("should reply with group guidance if #ativar-alertas is sent in private 1:1 chat", async () => {
+  it("should send vcard document on #contatos command to allow phone contacts import", async () => {
+    mockPrisma.lead = {
+      findMany: vi.fn().mockResolvedValue([
+        {
+          name: "Cliente Teste",
+          whatsapp: "44998877665",
+          email: "teste@solar.com",
+          company: "Solar ME",
+        },
+      ]),
+    };
+    mockPrisma.conversation = {
+      findMany: vi.fn().mockResolvedValue([]),
+    };
+    mockPrisma.tenant.findFirst = vi.fn().mockResolvedValue({ id: "tenant-demo" });
+
     const payload = {
       event: "messages.upsert",
       instance: "energiv-bot",
@@ -313,11 +329,11 @@ describe("WhatsApp Bot - Admin Group Alerts Pipeline", () => {
         key: {
           remoteJid: "5544999998888@s.whatsapp.net",
           fromMe: false,
-          id: "MSG_PRIVATE_ACT",
+          id: "MSG_VCF_EXPORT",
         },
-        pushName: "Giovani",
+        pushName: "Giovani Admin",
         message: {
-          conversation: "#ativar-alertas",
+          conversation: "#contatos",
         },
       },
     };
@@ -327,7 +343,15 @@ describe("WhatsApp Bot - Admin Group Alerts Pipeline", () => {
     expect(mockWhatsappCloud.sendTextMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         toWaId: "5544999998888",
-        body: expect.stringContaining("Ativação de Alertas Operacionais"),
+        body: expect.stringContaining("Exportação da sua Agenda (.vcf)"),
+      })
+    );
+
+    expect(mockWhatsappCloud.sendDocumentMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toWaId: "5544999998888",
+        mimetype: "text/vcard",
+        fileName: expect.stringMatching(/^contatos-energivia-.*\.vcf$/),
       })
     );
   });

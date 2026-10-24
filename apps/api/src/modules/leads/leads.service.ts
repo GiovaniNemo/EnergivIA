@@ -14,6 +14,11 @@ import type { QueryLeadsDto } from "./dto/query-leads.dto";
 import type { AppendLeadActivityDto } from "./dto/append-lead-activity.dto";
 import { LeadActivityLogService } from "../lead-activity-log/lead-activity-log.service";
 import { softDeleteWhere as soft } from "../../prisma/soft-delete";
+import {
+  generateVCard,
+  formatInternationalPhone,
+  type ContactVCardItem,
+} from "./utils/vcard-generator";
 
 function normalizeWhatsapp(raw: string): string {
   const digits = raw.replace(/\D/g, "");
@@ -461,6 +466,79 @@ export class LeadsService {
         proposalCount: d._count.proposals,
         updatedAt: d.updatedAt.toISOString(),
       })),
+    };
+  }
+
+  async exportContactsVCard(
+    tenantId: string
+  ): Promise<{ vcard: string; totalContacts: number; fileName: string }> {
+    const leads = await this.prisma.lead.findMany({
+      where: { tenantId, deletedAt: null },
+      select: { name: true, whatsapp: true, email: true, company: true },
+    });
+
+    const conversations = await this.prisma.conversation.findMany({
+      where: { organizationId: tenantId, channel: "whatsapp" },
+      select: { title: true, metadata: true },
+    });
+
+    const contactsMap = new Map<string, ContactVCardItem>();
+
+    // 1. Leads cadastrados (clientes)
+    for (const l of leads) {
+      const phone = formatInternationalPhone(l.whatsapp || "");
+      if (!phone || phone.length < 10) continue;
+      contactsMap.set(phone, {
+        name: l.name,
+        phone,
+        email: l.email || undefined,
+        company: l.company || undefined,
+        role: "Cliente",
+      });
+    }
+
+    // 2. Conversas do WhatsApp (integradores)
+    for (const c of conversations) {
+      const meta =
+        c.metadata && typeof c.metadata === "object" ? (c.metadata as Record<string, unknown>) : {};
+      const sessionData =
+        meta.sessionData && typeof meta.sessionData === "object"
+          ? (meta.sessionData as Record<string, unknown>)
+          : {};
+      const raw =
+        typeof c.title === "string" && c.title.match(/^\d+$/)
+          ? c.title
+          : String(meta.customerWaId || meta.phone || "");
+      const phone = formatInternationalPhone(raw);
+      if (!phone || phone.length < 10) continue;
+
+      const existing = contactsMap.get(phone);
+      const contactName =
+        (typeof meta.contactName === "string" && meta.contactName) ||
+        (typeof sessionData.clientName === "string" && sessionData.clientName) ||
+        "Integrador Solar";
+
+      if (!existing) {
+        contactsMap.set(phone, {
+          name: contactName,
+          phone,
+          role: "Integrador Solar",
+        });
+      } else if (existing.name === "Integrador" || existing.name === "Integrador Solar") {
+        if (contactName && contactName !== "Integrador" && contactName !== "Integrador Solar") {
+          existing.name = contactName;
+        }
+      }
+    }
+
+    const items = Array.from(contactsMap.values());
+    const vcard = generateVCard(items);
+    const dateStr = new Date().toISOString().slice(0, 10);
+
+    return {
+      vcard,
+      totalContacts: items.length,
+      fileName: `contatos-energivia-${dateStr}.vcf`,
     };
   }
 }

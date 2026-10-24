@@ -56,6 +56,11 @@ import {
   isResetCommand,
   isBackCommand,
 } from "./whatsapp-state.types";
+import {
+  generateVCard,
+  formatInternationalPhone,
+  type ContactVCardItem,
+} from "../leads/utils/vcard-generator";
 export type { WhatsappBotStep, WhatsappSessionData };
 
 interface WebhookMessage {
@@ -2070,6 +2075,108 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async handleContactsVCardExport(params: {
+    tenantId: string;
+    phoneNumberId: string;
+    toWaId: string;
+  }): Promise<void> {
+    try {
+      const leads = await this.prisma.lead.findMany({
+        where: { tenantId: params.tenantId, deletedAt: null },
+        select: { name: true, whatsapp: true, email: true, company: true },
+      });
+
+      const conversations = await this.prisma.conversation.findMany({
+        where: { organizationId: params.tenantId, channel: "whatsapp" },
+        select: { title: true, metadata: true },
+      });
+
+      const contactsMap = new Map<string, ContactVCardItem>();
+
+      for (const l of leads) {
+        const phone = formatInternationalPhone(l.whatsapp || "");
+        if (!phone || phone.length < 10) continue;
+        contactsMap.set(phone, {
+          name: l.name,
+          phone,
+          email: l.email || undefined,
+          company: l.company || undefined,
+          role: "Cliente",
+        });
+      }
+
+      for (const c of conversations) {
+        const meta =
+          c.metadata && typeof c.metadata === "object"
+            ? (c.metadata as Record<string, unknown>)
+            : {};
+        const sessionData =
+          meta.sessionData && typeof meta.sessionData === "object"
+            ? (meta.sessionData as Record<string, unknown>)
+            : {};
+        const raw =
+          typeof c.title === "string" && c.title.match(/^\d+$/)
+            ? c.title
+            : String(meta.customerWaId || meta.phone || "");
+        const phone = formatInternationalPhone(raw);
+        if (!phone || phone.length < 10) continue;
+
+        const existing = contactsMap.get(phone);
+        const contactName =
+          (typeof meta.contactName === "string" && meta.contactName) ||
+          (typeof sessionData.clientName === "string" && sessionData.clientName) ||
+          "Integrador Solar";
+
+        if (!existing) {
+          contactsMap.set(phone, {
+            name: contactName,
+            phone,
+            role: "Integrador Solar",
+          });
+        } else if (existing.name === "Integrador" || existing.name === "Integrador Solar") {
+          if (contactName && contactName !== "Integrador" && contactName !== "Integrador Solar") {
+            existing.name = contactName;
+          }
+        }
+      }
+
+      const items = Array.from(contactsMap.values());
+      const vcard = generateVCard(items);
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const fileName = `contatos-energivia-${dateStr}.vcf`;
+
+      const introMsg =
+        `📲 *Exportação da sua Agenda (.vcf)* ☀️\n\n` +
+        `Encontrei *${items.length} contatos* (integradores e clientes) vinculados à sua conta.\n\n` +
+        `Estou enviando o arquivo da agenda logo abaixo.\n` +
+        `👉 *Basta tocar no arquivo recebido e selecionar "Salvar contatos" ou "Importar" no seu celular!*\n\n` +
+        `_Isso adicionará todos os números à agenda do seu aparelho, liberando imediatamente o recurso de *Status do WhatsApp*._`;
+
+      await this.whatsappCloud.sendTextMessage({
+        phoneNumberId: params.phoneNumberId,
+        toWaId: params.toWaId,
+        body: introMsg,
+      });
+
+      await this.whatsappCloud.sendDocumentMessage({
+        phoneNumberId: params.phoneNumberId,
+        toWaId: params.toWaId,
+        fileName,
+        documentBase64: Buffer.from(vcard, "utf-8").toString("base64"),
+        mimetype: "text/vcard",
+        caption: "📁 Toque para importar todos os contatos no seu celular",
+      });
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`[Contacts Export] Erro ao exportar contatos vCard: ${errMsg}`);
+      await this.whatsappCloud.sendTextMessage({
+        phoneNumberId: params.phoneNumberId,
+        toWaId: params.toWaId,
+        body: "❌ Ocorreu um erro ao gerar o arquivo de contatos. Por favor, tente novamente em instantes.",
+      });
+    }
+  }
+
   async syncAlertGroup(): Promise<{
     success: boolean;
     groupJid?: string;
@@ -2340,6 +2447,33 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         body: guideMsg,
       });
       return;
+    }
+
+    // Interceptação de comando de exportação de contatos (.vcf) para salvar na agenda do celular
+    const isContactsExport =
+      lowerInbound.startsWith("#contato") ||
+      lowerInbound.startsWith("#exportar-contato") ||
+      lowerInbound.startsWith("#salvar-contato") ||
+      lowerInbound.startsWith("#vcf") ||
+      lowerInbound === "exportar contatos" ||
+      lowerInbound === "salvar contatos" ||
+      lowerInbound === "baixar contatos";
+
+    if (isContactsExport) {
+      const authorizedTenant = await this.resolveAuthorizedTenant(fromWaId);
+      const tenantId =
+        authorizedTenant?.id ||
+        (await this.prisma.tenant.findFirst({ where: { deletedAt: null }, select: { id: true } }))
+          ?.id;
+
+      if (tenantId) {
+        await this.handleContactsVCardExport({
+          tenantId,
+          phoneNumberId,
+          toWaId: fromWaId,
+        });
+        return;
+      }
     }
 
     // 3. Verificação de Código de Pareamento (Token de Ativação)

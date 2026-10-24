@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Res,
+} from "@nestjs/common";
+import type { Response } from "express";
 import type { JwtPayload } from "@energivia/types";
 import { LeadsService } from "./leads.service";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
@@ -9,10 +21,18 @@ import { UpdateLeadDto } from "./dto/update-lead.dto";
 import { QueryLeadsDto } from "./dto/query-leads.dto";
 import { AppendLeadActivityDto } from "./dto/append-lead-activity.dto";
 
-@Controller("leads")
+@Controller(["leads", "api/leads"])
 @UseGuards(UnifiedAuthGuard)
 export class LeadsController {
   constructor(private readonly leadsService: LeadsService) {}
+
+  @Get("export-vcf")
+  async exportVCard(@TenantId() tenantId: string, @Res() res: Response) {
+    const { vcard, fileName } = await this.leadsService.exportContactsVCard(tenantId);
+    res.setHeader("Content-Type", "text/vcard; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.send(vcard);
+  }
 
   @Post()
   create(
