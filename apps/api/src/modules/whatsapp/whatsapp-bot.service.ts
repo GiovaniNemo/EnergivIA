@@ -1211,6 +1211,146 @@ export function isWhatsappPdfRequest(text: string): boolean {
   return false;
 }
 
+export function resolveQuoteIndexFromText(
+  text: string,
+  quotesOrMax: number | any[]
+): number | null {
+  if (!text || typeof text !== "string") return null;
+
+  const max = Array.isArray(quotesOrMax) ? quotesOrMax.length : quotesOrMax;
+  if (typeof max !== "number" || max <= 0) return null;
+
+  const quotes = Array.isArray(quotesOrMax) ? quotesOrMax : [];
+
+  // Normaliza acentuações e caracteres especiais
+  const clean = text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[*_~`#>]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!clean) return null;
+
+  // Se o texto for puramente padrão de rede elétrico (ex: "bifásico", "padrão trifásico", "rede mono")
+  if (
+    /\b(?:monofasico|bifasico|trifasico|padrao\s+(?:mono|bi|tri)|rede\s+(?:mono|bi|tri)|127v|220v|380v)\b/i.test(
+      clean
+    )
+  ) {
+    return null;
+  }
+
+  // Se contém medida com unidade de energia/placa (ex: "10 placas", "500 kwh", "5 kwp")
+  // e NÃO menciona explicitamente termos de escolha como "kit", "opcao", "standard", "elite", "premium"
+  const hasTechnicalUnit = /\b(?:\d+\s*(?:kwh|kwp|watts?|w|placas?|paineis|modulos?))\b/i.test(
+    clean
+  );
+  const hasSelectionWord =
+    /\b(?:kit|opcao|standar[td]?|elite|premium|padra[oõ]|padrao|primeir[oa]|segund[oa]|terceir[oa]|escolho|prefiro|vai\s+de|manda|fica\s+com)\b/i.test(
+      clean
+    );
+  if (hasTechnicalUnit && !hasSelectionWord) {
+    return null;
+  }
+
+  // 1. Se quotes contiver distribuidora customizada (ex: "Solis", "Growatt", "Deye"), verifica menção
+  if (quotes.length > 0) {
+    for (let i = 0; i < quotes.length; i++) {
+      const distName = quotes[i]?.distributorName;
+      if (
+        distName &&
+        typeof distName === "string" &&
+        !["standard", "elite", "premium"].includes(distName.toLowerCase())
+      ) {
+        const cleanDist = distName
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
+        const distRegex = new RegExp(`\\b${cleanDist}\\b`, "i");
+        if (distRegex.test(clean)) {
+          return i < max ? i : null;
+        }
+      }
+    }
+  }
+
+  // 2. Pontuação por Tiers para desambiguação inteligente
+  let scoreStandard = 0;
+  let scoreElite = 0;
+  let scorePremium = 0;
+
+  // --- Tier 0: Standard ---
+  // Variações fonéticas de "standard": standar (sem d), standard, standart, estandar, estandard, estande
+  // e termos comuns: padrao, primeiro(a), opcao 1, kit 1, mais recomendado
+  const standardNameRegex = /\b(?:standar[td]?|estandar[td]?|estande)\b/i;
+  const standardPadraoRegex = /\b(?:padra[oõ]|padrao)\b/i;
+  const standardOptionRegex =
+    /\b(?:primeir[oa]|1[oºaª]|opcao\s*(?:1|um)|kit\s*(?:1|um)|numero\s*(?:1|um)|n[oº]?\s*(?:1|um)|mais\s+recomendad[oa]|recomendad[oa])\b/i;
+
+  // --- Tier 1: Elite ---
+  // Variações: elite, eliter, segundo(a), opcao 2, kit 2, intermediario(a), do meio
+  const eliteNameRegex = /\b(?:elite|eliter|elit)\b/i;
+  const eliteOptionRegex =
+    /\b(?:segund[oa]|2[oºaª]|opcao\s*(?:2|dois|duas)|kit\s*(?:2|dois|duas)|numero\s*(?:2|dois|duas)|n[oº]?\s*(?:2|dois|duas)|intermediari[oa]|do\s+meio)\b/i;
+
+  // --- Tier 2: Premium ---
+  // Variações: premium, premio, premiun, premyun, terceiro(a), opcao 3, kit 3, o melhor, mais completo, top
+  const premiumNameRegex = /\b(?:premium|premio|premiun|premyun|premiu)\b/i;
+  const premiumOptionRegex =
+    /\b(?:terceir[oa]|3[oºaª]|opcao\s*(?:3|tres)|kit\s*(?:3|tres)|numero\s*(?:3|tres)|n[oº]?\s*(?:3|tres)|mais\s+complet[oa]|o\s+melhor|melhor\s+kit|top|mais\s+top)\b/i;
+
+  // Helper: detecta se um termo foi explicitamente negado (ex: "não quero o standard", "em vez do standard prefiro o elite")
+  const isNegated = (termRegex: RegExp) => {
+    const negationPattern = new RegExp(
+      `(?:\\b(?:n[aã]o|sem)\\s+(?:(?:quero|vou|vai|precisa|gostei|curti)\\s+)?|ao\\s+inv[eé]s\\s+d[eao]s?|em\\s+vez\\s+d[eao]s?)\\s*(?:(?:o|a|do|da|de|pelo|pela|pro|pra|um|uma)\\s+)*(?:kit\\s+)?(?:opcao\\s+)?${termRegex.source}`,
+      "i"
+    );
+    return negationPattern.test(clean);
+  };
+
+  if (standardNameRegex.test(clean) && !isNegated(standardNameRegex)) scoreStandard += 10;
+  if (standardPadraoRegex.test(clean) && !isNegated(standardPadraoRegex)) scoreStandard += 8;
+  if (standardOptionRegex.test(clean) && !isNegated(standardOptionRegex)) scoreStandard += 6;
+
+  if (eliteNameRegex.test(clean) && !isNegated(eliteNameRegex)) scoreElite += 10;
+  if (eliteOptionRegex.test(clean) && !isNegated(eliteOptionRegex)) scoreElite += 6;
+
+  if (premiumNameRegex.test(clean) && !isNegated(premiumNameRegex)) scorePremium += 10;
+  if (premiumOptionRegex.test(clean) && !isNegated(premiumOptionRegex)) scorePremium += 6;
+
+  const highestScore = Math.max(scoreStandard, scoreElite, scorePremium);
+  if (highestScore > 0) {
+    if (highestScore === scoreStandard && max >= 1) return 0;
+    if (highestScore === scoreElite && max >= 2) return 1;
+    if (highestScore === scorePremium && max >= 3) return 2;
+  }
+
+  // 3. Fallback de dígitos ou cardinais/ordinais isolados (excluindo unidades de dimensão)
+  const textWithoutUnits = clean.replace(
+    /\b[1-9]\s*(?:placas?|paineis|modulos?|kwh|kwp|watts?|w)\b/gi,
+    ""
+  );
+
+  const digitMatch = textWithoutUnits.match(/\b([1-9])\b/);
+  if (digitMatch && digitMatch[1]) {
+    const digitIdx = parseInt(digitMatch[1], 10) - 1;
+    if (digitIdx >= 0 && digitIdx < max) {
+      return digitIdx;
+    }
+  }
+
+  // Números por extenso em português quando usados isolados ou como escolha
+  if (/\b(?:um|uma)\b/i.test(textWithoutUnits) && max >= 1) return 0;
+  if (/\b(?:dois|duas)\b/i.test(textWithoutUnits) && max >= 2) return 1;
+  if (/\b(?:tres)\b/i.test(textWithoutUnits) && max >= 3) return 2;
+  if (/\b(?:quatro)\b/i.test(textWithoutUnits) && max >= 4) return 3;
+  if (/\b(?:cinco)\b/i.test(textWithoutUnits) && max >= 5) return 4;
+
+  return null;
+}
+
 @Injectable()
 export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WhatsappBotService.name);
@@ -3306,9 +3446,10 @@ Regras estritas:
 1. Retorne APENAS a transcrição literal do que o usuário falou.
 2. Não adicione saudações como "Aqui está a transcrição", não use aspas extras e não faça comentários.
 3. Preserve e formate termos técnicos e grandezas de energia solar quando falados (ex: "10 kWp", "26 kWp", "450 kWh", "550W", "220V", "380V", "módulos", "painéis", "inversor", "monofásico", "bifásico", "trifásico", "telhado cerâmico/colonial/metálico/fibrocimento/fibromadeira", e cidades/estados como "Maringá PR", "Londrina PR", "Cuiabá MT", "Presidente Prudente SP").
-4. Quando números de telefone ou WhatsApp forem falados (ex: "quarenta e quatro nove oito...", "ddd quarenta e quatro..."), transcreva os números preferencialmente como dígitos numéricos (ex: "44 98821-5497"). Trate a palavra "meia" como o dígito 6 quando falada no contexto de dígitos de telefone.
-5. Preserve nomes de clientes e pessoas com clareza e fidelidade (ex: "Lucas Gabriel", "João da Silva", "Marcelo Teste").
-6. Se o áudio for inaudível, contiver apenas ruído, silêncio ou não houver fala compreensível, responda exatamente: [inaudível]`;
+4. Preserve opções e escolhas de kits solares: 'Opção 1 Standard' (ou 'Standard', 'kit Standard', 'standar'), 'Opção 2 Elite' (ou 'Elite', 'kit Elite') e 'Opção 3 Premium' (ou 'Premium', 'kit Premium'). Se falado 'standar', transcreva preferencialmente como 'Standard'.
+5. Quando números de telefone ou WhatsApp forem falados (ex: "quarenta e quatro nove oito...", "ddd quarenta e quatro..."), transcreva os números preferencialmente como dígitos numéricos (ex: "44 98821-5497"). Trate a palavra "meia" como o dígito 6 quando falada no contexto de dígitos de telefone.
+6. Preserve nomes de clientes e pessoas com clareza e fidelidade (ex: "Lucas Gabriel", "João da Silva", "Marcelo Teste").
+7. Se o áudio for inaudível, contiver apenas ruído, silêncio ou não houver fala compreensível, responda exatamente: [inaudível]`;
 
     for (const modelName of candidateModels) {
       const startTime = Date.now();
@@ -3398,7 +3539,7 @@ Regras estritas:
       formData.append("language", "pt");
       formData.append(
         "prompt",
-        "Cotação de energia solar, nome do cliente Lucas Gabriel, João da Silva, telefone WhatsApp 44 98821-5497, kWp, kWh, módulos, inversores, telhado metálico, fibromadeira, fibrocimento, cerâmica, colonial, 220V, 380V"
+        "Cotação de energia solar, nome do cliente Lucas Gabriel, João da Silva, telefone WhatsApp 44 98821-5497, kWp, kWh, módulos, inversores, telhado metálico, fibromadeira, fibrocimento, cerâmica, colonial, 220V, 380V, Opção 1 Standard, Opção 2 Elite, Opção 3 Premium, kit Standard, kit Elite, kit Premium"
       );
 
       const resp = await fetch("https://api.openai.com/v1/audio/transcriptions", {
@@ -4021,18 +4162,8 @@ Regras estritas:
     return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  private resolveQuoteIndexFromText(text: string, max: number): number | null {
-    const l = text.toLowerCase();
-    let idx: number | null = null;
-    if (l.includes("standard")) idx = 0;
-    else if (l.includes("elite")) idx = 1;
-    else if (l.includes("premium")) idx = 2;
-    else {
-      const m = l.match(/\b([1-9])\b/);
-      if (m && m[1]) idx = parseInt(m[1], 10) - 1;
-    }
-    if (idx === null || idx < 0 || idx >= max) return null;
-    return idx;
+  public resolveQuoteIndexFromText(text: string, quotesOrMax: number | any[]): number | null {
+    return resolveQuoteIndexFromText(text, quotesOrMax);
   }
 
   /** Etapa 2: kit escolhido -> pergunta o preço de venda por kWp */
@@ -6819,7 +6950,7 @@ ${catalogContext}`;
 
       const quotes = await kitsFor();
       if (quotes.length === 0) return NO_KITS_TEXT;
-      const idx = this.resolveQuoteIndexFromText(incomingText, quotes.length);
+      const idx = this.resolveQuoteIndexFromText(incomingText, quotes);
       if (idx !== null && quotes[idx]) {
         sessionCtx.chosenQuoteIndex = idx;
         const orgDefaultRate = await this.getOrganizationDefaultKwpRate(

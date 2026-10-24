@@ -366,6 +366,47 @@ describe("WhatsApp Bot - Deterministic Finite State Machine (FSM)", () => {
       );
     });
 
+    it("should transition from AWAITING_KIT_SELECTION to AWAITING_PRICE_CONFIRMATION when audio transcribed 'standar' without number 1", async () => {
+      const conversation: any = {
+        id: "conv-005b",
+        organizationId: "org-test",
+        title: "Test Session Audio",
+        metadata: {
+          step: "AWAITING_KIT_SELECTION",
+          sessionData: {
+            consumptionKwh: 450,
+            cidade: "Maringá",
+            uf: "PR",
+            gridType: "Monofásico 220V",
+            roofType: "Cerâmica (Colonial)",
+          },
+        },
+        messages: [{ role: "assistant", content: "Qual opção você prefere para o seu cliente?" }],
+      };
+
+      const reply = await (service as any).generateBotResponse({
+        conversation,
+        incomingText: "standar", // falado no áudio sem o dígito 1
+        extractionResult: null,
+      });
+
+      expect(reply).toContain("Como você deseja prosseguir para esta cotação");
+
+      expect(mockPrisma.conversation.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "conv-005b" },
+          data: expect.objectContaining({
+            metadata: expect.objectContaining({
+              step: "AWAITING_PRICE_CONFIRMATION",
+              sessionData: expect.objectContaining({
+                selectedQuoteIndex: 0,
+              }),
+            }),
+          }),
+        })
+      );
+    });
+
     it("should transition from AWAITING_PRICE_CONFIRMATION to AWAITING_CLIENT_NAME when price is confirmed", async () => {
       const conversation: any = {
         id: "conv-006",
