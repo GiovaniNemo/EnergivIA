@@ -317,35 +317,6 @@ export default function CreateOrganizationPage() {
   const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
   const [isSearchingCep, setIsSearchingCep] = useState(false);
   const [cnpjLookupSuccess, setCnpjLookupSuccess] = useState(false);
-
-  useEffect(() => {
-    const currentPhone = (user as unknown as { phone?: string })?.phone;
-    if (currentPhone && !phone) {
-      setPhone(formatBrPhone(currentPhone));
-    }
-  }, [user]);
-
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (!isCompletedRef.current) {
-        notifyOnboardingAbandoned(step);
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden" && !isCompletedRef.current) {
-        notifyOnboardingAbandoned(step);
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [step]);
   const [logoUrl, setLogoUrl] = useState("");
   const [referralSources, setReferralSources] =
     useState<ReferralSourceOption[]>(DEFAULT_REFERRAL_SOURCES);
@@ -388,6 +359,40 @@ export default function CreateOrganizationPage() {
   const segmentRef = useRef<HTMLButtonElement | null>(null);
   const lastSearchedCnpj = useRef<string>("");
   const lastSearchedCep = useRef<string>("");
+  const stepRef = useRef(step);
+
+  useEffect(() => {
+    stepRef.current = step;
+  }, [step]);
+
+  useEffect(() => {
+    const currentPhone = (user as unknown as { phone?: string })?.phone;
+    if (currentPhone && !phone) {
+      setPhone(formatBrPhone(currentPhone));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (!isCompletedRef.current) {
+        notifyOnboardingAbandoned(stepRef.current);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden" && !isCompletedRef.current) {
+        notifyOnboardingAbandoned(stepRef.current);
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   useEffect(() => {
     setLoadingBrands(true);
