@@ -379,18 +379,10 @@ export default function CreateOrganizationPage() {
       }
     };
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden" && !isCompletedRef.current) {
-        notifyOnboardingAbandoned(stepRef.current);
-      }
-    };
-
     window.addEventListener("beforeunload", handleBeforeUnload);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 

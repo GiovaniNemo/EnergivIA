@@ -18,6 +18,7 @@ export class UsersService {
       where: { id: userId },
       data: {
         phone: rawDigits || null,
+        onboardingStatus: "IN_PROGRESS",
         lastActiveAt: new Date(),
       },
       select: {
@@ -45,9 +46,16 @@ export class UsersService {
     }
 
     // Se o usuário já concluiu o onboarding e possui organização, não marca como abandono
-    if ((user.organizationMemberships?.length ?? 0) > 0) {
+    if ((user.organizationMemberships?.length ?? 0) > 0 || user.onboardingStatus === "COMPLETED") {
       return { success: true, onboardingStatus: "COMPLETED", alreadyCompleted: true };
     }
+
+    const now = Date.now();
+    const lastAbandonedAt = user.onboardingAbandonedAt
+      ? new Date(user.onboardingAbandonedAt).getTime()
+      : 0;
+    // Cooldown de 30 minutos: se um alerta já foi enviado recentemente para este integrador, não duplicar alerta no WhatsApp
+    const isWithinCooldown = lastAbandonedAt > 0 && now - lastAbandonedAt < 30 * 60 * 1000;
 
     const updated = await this.prisma.user.update({
       where: { id: userId },
@@ -58,7 +66,7 @@ export class UsersService {
       },
     });
 
-    if (this.adminAlerts) {
+    if (this.adminAlerts && !isWithinCooldown) {
       this.adminAlerts
         .notifyOnboardingAbandoned({
           name: user.name || "Integrador",
@@ -72,6 +80,7 @@ export class UsersService {
     return {
       success: true,
       onboardingStatus: updated.onboardingStatus,
+      alertDispatched: !isWithinCooldown,
     };
   }
 

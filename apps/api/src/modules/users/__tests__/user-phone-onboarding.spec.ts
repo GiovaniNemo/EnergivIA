@@ -22,7 +22,7 @@ describe("UsersService - Onboarding Phone & Status Tracking", () => {
   });
 
   describe("updateOnboardingContact", () => {
-    it("should sanitize and update user phone number", async () => {
+    it("should sanitize and update user phone number and set status to IN_PROGRESS", async () => {
       mockPrisma.user.findFirst.mockResolvedValue({
         id: "usr_123",
         email: "integrador@solar.com",
@@ -44,6 +44,7 @@ describe("UsersService - Onboarding Phone & Status Tracking", () => {
         where: { id: "usr_123" },
         data: {
           phone: "11988887777",
+          onboardingStatus: "IN_PROGRESS",
           lastActiveAt: expect.any(Date),
         },
         select: expect.objectContaining({
@@ -91,6 +92,35 @@ describe("UsersService - Onboarding Phone & Status Tracking", () => {
       });
 
       expect(result.onboardingStatus).toBe("ABANDONED");
+    });
+
+    it("should not dispatch duplicate alert if user already had an alert sent within cooldown", async () => {
+      const mockAdminAlerts = {
+        notifyOnboardingAbandoned: vi.fn().mockResolvedValue(undefined),
+      };
+      const serviceWithAlerts = new UsersService(mockPrisma, mockAdminAlerts as any);
+
+      // Usuário com alerta enviado há apenas 2 minutos
+      const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+      mockPrisma.user.findFirst.mockResolvedValue({
+        id: "usr_123",
+        email: "integrador@solar.com",
+        name: "Carlos Integrador",
+        phone: "11988887777",
+        onboardingStatus: "ABANDONED",
+        onboardingAbandonedAt: twoMinutesAgo,
+        organizationMemberships: [],
+      });
+
+      mockPrisma.user.update.mockResolvedValue({
+        id: "usr_123",
+        onboardingStatus: "ABANDONED",
+      });
+
+      const result = await serviceWithAlerts.markOnboardingAbandoned("usr_123", { step: 2 });
+
+      expect(result.alertDispatched).toBe(false);
+      expect(mockAdminAlerts.notifyOnboardingAbandoned).not.toHaveBeenCalled();
     });
   });
 
