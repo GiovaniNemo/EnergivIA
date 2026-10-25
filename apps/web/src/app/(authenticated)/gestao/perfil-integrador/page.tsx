@@ -16,7 +16,10 @@ import Snackbar from "@mui/material/Snackbar";
 import {
   SlidersHorizontal,
   Sun,
-  Cpu,
+  Zap,
+  Plug,
+  BatteryCharging,
+  Layers,
   CheckCircle2,
   Check,
   Loader2,
@@ -24,9 +27,13 @@ import {
   DollarSign,
   TrendingUp,
   CreditCard,
+  ShieldCheck,
 } from "lucide-react";
 import type { CardRateMode } from "@energivia/shared-types";
 import { calculateCardInstallments } from "@/lib/proposal-payment-utils";
+
+type TopTab = "commercial" | "brands";
+type TechTab = "modules" | "inverters" | "micro" | "hybrid";
 
 export default function PerfilIntegradorPage(): JSX.Element {
   const { currentOrganization, currentOrganizationId, refetch, user } = useOrganization();
@@ -35,9 +42,14 @@ export default function PerfilIntegradorPage(): JSX.Element {
   const canEdit =
     effectiveRole === "OWNER" || effectiveRole === "ADMIN" || effectiveRole === "PLATFORM";
 
+  const [activeTab, setActiveTab] = useState<TopTab>("commercial");
+  const [activeTech, setActiveTech] = useState<TechTab>("modules");
+
   const [availableBrands, setAvailableBrands] = useState<DistributorAvailableBrands>({
     modules: [],
     inverters: [],
+    microInverters: [],
+    hybridInverters: [],
   });
   const [loadingBrands, setLoadingBrands] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -51,6 +63,18 @@ export default function PerfilIntegradorPage(): JSX.Element {
     priority: null,
   });
   const [inverterTiers, setInverterTiers] = useState<BrandTierSelection>({
+    standard: [],
+    elite: [],
+    premium: [],
+    priority: null,
+  });
+  const [microInverterTiers, setMicroInverterTiers] = useState<BrandTierSelection>({
+    standard: [],
+    elite: [],
+    premium: [],
+    priority: null,
+  });
+  const [hybridInverterTiers, setHybridInverterTiers] = useState<BrandTierSelection>({
     standard: [],
     elite: [],
     premium: [],
@@ -78,7 +102,12 @@ export default function PerfilIntegradorPage(): JSX.Element {
     getDistributorAvailableBrands()
       .then((data) => {
         if (!cancelled && data) {
-          setAvailableBrands(data);
+          setAvailableBrands({
+            modules: data.modules || [],
+            inverters: data.inverters || [],
+            microInverters: data.microInverters || [],
+            hybridInverters: data.hybridInverters || [],
+          });
         }
       })
       .catch(() => {})
@@ -120,6 +149,28 @@ export default function PerfilIntegradorPage(): JSX.Element {
           elite: inv[1] ? [inv[1]] : [],
           premium: inv[2] ? [inv[2]] : [],
           priority: inv[0] || null,
+        });
+      }
+      if (currentOrganization.microInverterBrandTiers) {
+        setMicroInverterTiers(currentOrganization.microInverterBrandTiers);
+      } else if (Array.isArray(currentOrganization.preferredMicroInverterBrands)) {
+        const micro = currentOrganization.preferredMicroInverterBrands;
+        setMicroInverterTiers({
+          standard: micro[0] ? [micro[0]] : [],
+          elite: micro[1] ? [micro[1]] : [],
+          premium: micro[2] ? [micro[2]] : [],
+          priority: micro[0] || null,
+        });
+      }
+      if (currentOrganization.hybridInverterBrandTiers) {
+        setHybridInverterTiers(currentOrganization.hybridInverterBrandTiers);
+      } else if (Array.isArray(currentOrganization.preferredHybridInverterBrands)) {
+        const hyb = currentOrganization.preferredHybridInverterBrands;
+        setHybridInverterTiers({
+          standard: hyb[0] ? [hyb[0]] : [],
+          elite: hyb[1] ? [hyb[1]] : [],
+          premium: hyb[2] ? [hyb[2]] : [],
+          priority: hyb[0] || null,
         });
       }
       if (currentOrganization.cardPaymentDefaults) {
@@ -166,8 +217,12 @@ export default function PerfilIntegradorPage(): JSX.Element {
           defaultKwpRate: rate,
           moduleBrandTiers: moduleTiers,
           inverterBrandTiers: inverterTiers,
+          microInverterBrandTiers: microInverterTiers,
+          hybridInverterBrandTiers: hybridInverterTiers,
           preferredModuleBrands: compileBrands(moduleTiers),
           preferredInverterBrands: compileBrands(inverterTiers),
+          preferredMicroInverterBrands: compileBrands(microInverterTiers),
+          preferredHybridInverterBrands: compileBrands(hybridInverterTiers),
           cardPaymentDefaults: {
             maxInstallments: cardMaxInstallments,
             rateMode: cardRateMode,
@@ -216,10 +271,19 @@ export default function PerfilIntegradorPage(): JSX.Element {
     });
   }, [cardMaxInstallments, cardRateMode, cardRateValue]);
 
+  const assignedCount = (tiers: BrandTierSelection): number => {
+    const set = new Set([
+      ...(tiers.standard || []),
+      ...(tiers.elite || []),
+      ...(tiers.premium || []),
+    ]);
+    return set.size;
+  };
+
   return (
-    <div className="mx-auto max-w-5xl space-y-6 pb-20">
+    <div className="mx-auto max-w-6xl space-y-6 pb-20">
       {/* Cabeçalho da Página */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--color-border)] pb-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--color-border)] pb-5">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-[#1f7f9b] uppercase tracking-wider">
             <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -229,8 +293,8 @@ export default function PerfilIntegradorPage(): JSX.Element {
             Perfil do Integrador
           </h1>
           <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-            Defina o valor base de venda por kWp e configure suas preferências de marcas para as
-            cotações.
+            Configure seu valor de venda por kWp, taxas de cartão e preferências de equipamentos
+            para cotações.
           </p>
         </div>
 
@@ -272,191 +336,191 @@ export default function PerfilIntegradorPage(): JSX.Element {
         </Alert>
       )}
 
-      {/* CARD 1: PREÇO BASE DE VENDA POR KWP */}
-      <Card className="border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1f7f9b]/15 text-[#1f7f9b] dark:text-[#38bdf8]">
-                <DollarSign className="h-5 w-5" />
-              </span>
-              <div>
-                <CardTitle className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50">
-                  Preço Base de Venda por kWp (R$/kWp)
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal mt-0.5">
-                  Valor sugerido automaticamente ao gerar novas propostas e dimensionamentos
-                </CardDescription>
-              </div>
-            </div>
-            <span className="self-start sm:self-auto rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1 text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
-              Padrão EnergivIA: R$ 2.800/kWp
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            <div className="space-y-3">
-              <label className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-                Valor por kWp na sua região
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-bold text-zinc-500 dark:text-zinc-400">
-                  R$
-                </span>
-                <input
-                  type="number"
-                  min={500}
-                  max={25000}
-                  step={50}
-                  disabled={!canEdit}
-                  value={defaultKwpRate || ""}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setDefaultKwpRate(isNaN(val) ? 2800 : val);
-                  }}
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-3 pl-11 pr-16 text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 shadow-sm focus:border-[#1f7f9b] focus:outline-none focus:ring-2 focus:ring-[#1f7f9b]/25 disabled:bg-zinc-100 dark:disabled:bg-zinc-800/50"
-                />
-                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                  / kWp
-                </span>
-              </div>
+      {/* TOP TABS DE NAVEGAÇÃO SEGMENTADA */}
+      <div className="flex items-center gap-3 border-b border-zinc-200 dark:border-zinc-800">
+        <button
+          type="button"
+          onClick={() => setActiveTab("commercial")}
+          className={`inline-flex items-center gap-2.5 pb-3 px-1 text-sm sm:text-base font-bold border-b-2 transition cursor-pointer ${
+            activeTab === "commercial"
+              ? "border-[#1f7f9b] text-[#0A4A63] dark:text-[#38bdf8]"
+              : "border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+          }`}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          <span>Regras Comerciais & kWp</span>
+        </button>
 
-              {/* Botões de preset rápido */}
-              <div className="space-y-1.5 pt-1">
-                <span className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 font-medium">
-                  Valores rápidos de referência:
+        <button
+          type="button"
+          onClick={() => setActiveTab("brands")}
+          className={`inline-flex items-center gap-2.5 pb-3 px-1 text-sm sm:text-base font-bold border-b-2 transition cursor-pointer ${
+            activeTab === "brands"
+              ? "border-[#1f7f9b] text-[#0A4A63] dark:text-[#38bdf8]"
+              : "border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+          }`}
+        >
+          <Layers className="h-4 w-4" />
+          <span>Catálogo & Preferências de Marcas</span>
+          <span className="rounded-full bg-[#1f7f9b]/15 text-[#1f7f9b] dark:text-[#38bdf8] px-2 py-0.5 text-xs font-semibold">
+            4 Tecnologias
+          </span>
+        </button>
+      </div>
+
+      {/* ABA 1: REGRAS COMERCIAIS & KWP (GRID DE 2 COLUNAS) */}
+      {activeTab === "commercial" && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          {/* CARD PREÇO BASE DE VENDA POR KWP */}
+          <Card className="border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
+            <CardHeader className="pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1f7f9b]/15 text-[#1f7f9b] dark:text-[#38bdf8]">
+                    <DollarSign className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <CardTitle className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50">
+                      Preço Base por kWp (R$/kWp)
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal mt-0.5">
+                      Sugerido automaticamente em novas propostas
+                    </CardDescription>
+                  </div>
+                </div>
+                <span className="self-start sm:self-auto rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                  Padrão: R$ 2.800/kWp
                 </span>
-                <div className="flex flex-wrap gap-2">
-                  {[2400, 2600, 2800, 3000, 3200, 3500].map((rate) => (
-                    <button
-                      key={rate}
-                      type="button"
-                      disabled={!canEdit}
-                      onClick={() => setDefaultKwpRate(rate)}
-                      className={`rounded-lg px-3 py-1.5 text-xs sm:text-sm font-semibold transition cursor-pointer ${
-                        defaultKwpRate === rate
-                          ? "bg-[#1f7f9b] text-white border border-[#1f7f9b] shadow-sm font-bold"
-                          : "bg-zinc-100 dark:bg-zinc-800/90 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                      }`}
-                    >
-                      R$ {rate.toLocaleString("pt-BR")}
-                    </button>
-                  ))}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="space-y-3">
+                <label className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  Valor por kWp na sua região
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-bold text-zinc-500 dark:text-zinc-400">
+                    R$
+                  </span>
+                  <input
+                    type="number"
+                    min={500}
+                    max={25000}
+                    step={50}
+                    disabled={!canEdit}
+                    value={defaultKwpRate || ""}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setDefaultKwpRate(isNaN(val) ? 2800 : val);
+                    }}
+                    className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-3 pl-11 pr-16 text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 shadow-sm focus:border-[#1f7f9b] focus:outline-none focus:ring-2 focus:ring-[#1f7f9b]/25 disabled:bg-zinc-100 dark:disabled:bg-zinc-800/50"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                    / kWp
+                  </span>
+                </div>
+
+                {/* Botões de preset rápido */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-xs text-zinc-700 dark:text-zinc-300 font-medium">
+                    Valores rápidos de referência:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {[2400, 2600, 2800, 3000, 3200, 3500].map((rate) => (
+                      <button
+                        key={rate}
+                        type="button"
+                        disabled={!canEdit}
+                        onClick={() => setDefaultKwpRate(rate)}
+                        className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
+                          defaultKwpRate === rate
+                            ? "bg-[#1f7f9b] text-white border border-[#1f7f9b] shadow-sm font-bold"
+                            : "bg-zinc-100 dark:bg-zinc-800/90 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                        }`}
+                      >
+                        R$ {rate.toLocaleString("pt-BR")}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed pt-1">
-                Esse valor permite calibrar seus orçamentos para a realidade de mercado da sua
-                cidade e estado, sem a necessidade de reconfigurar a cada cotação.
-              </p>
-            </div>
-
-            {/* Preview ao vivo de simulação */}
-            <div className="rounded-xl border border-zinc-200/90 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 p-4 space-y-3.5">
-              <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200">
-                <TrendingUp className="h-4 w-4 text-[#1f7f9b] dark:text-[#38bdf8]" />
-                <span>Impacto estimado em Propostas Comerciais</span>
+              {/* Preview ao vivo de simulação */}
+              <div className="rounded-xl border border-zinc-200/90 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200">
+                  <TrendingUp className="h-4 w-4 text-[#1f7f9b] dark:text-[#38bdf8]" />
+                  <span>Impacto estimado em Propostas Comerciais</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {simulationPreviews.map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-xl border border-zinc-200/90 dark:border-zinc-800/90 bg-white dark:bg-zinc-900 p-2.5 shadow-xs"
+                    >
+                      <p className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 truncate">
+                        {item.label}
+                      </p>
+                      <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                        {item.kwp.toLocaleString("pt-BR")} kWp
+                      </p>
+                      <p className="text-sm font-extrabold text-[#0A4A63] dark:text-[#38bdf8] mt-1">
+                        R$ {item.total.toLocaleString("pt-BR")}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 italic">
+                  * Valores brutos finais com base em R$ {defaultKwpRate.toLocaleString("pt-BR")}
+                  /kWp.
+                </p>
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                {simulationPreviews.map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-xl border border-zinc-200/90 dark:border-zinc-800/90 bg-white dark:bg-zinc-900 p-3 shadow-xs transition-colors"
-                  >
-                    <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 truncate">
-                      {item.label}
-                    </p>
-                    <p className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
-                      {item.kwp.toLocaleString("pt-BR")} kWp
-                    </p>
-                    <p className="text-base font-extrabold text-[#0A4A63] dark:text-[#38bdf8] mt-1">
-                      R$ {item.total.toLocaleString("pt-BR")}
-                    </p>
+            </CardContent>
+          </Card>
+
+          {/* CARD TAXAS DE CARTÃO / MAQUININHA */}
+          <Card className="border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
+            <CardHeader className="pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                    <CreditCard className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <CardTitle className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50">
+                      Taxas de Maquininha / Cartão
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal mt-0.5">
+                      Parcelamento automático nas propostas
+                    </CardDescription>
                   </div>
-                ))}
+                </div>
+                <span className="self-start sm:self-auto rounded-full bg-blue-50 dark:bg-blue-950/50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
+                  {cardMaxInstallments}x • {cardRateValue}% (
+                  {cardRateMode === "monthly_pct"
+                    ? "a.m."
+                    : cardRateMode === "manual"
+                      ? "manual"
+                      : "repassar"}
+                  )
+                </span>
               </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 italic">
-                * Valores brutos finais simulados com base no valor de R${" "}
-                {defaultKwpRate.toLocaleString("pt-BR")}/kWp configurado.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* CARD 2: PREFERÊNCIA DE MARCAS DE MÓDULOS */}
-      <BrandTierSelector
-        title="Preferência de Marcas de Módulos"
-        subtitle="Organize as marcas ativas por categoria (Standard, Elite, Premium) e defina a prioridade de cotação"
-        icon={<Sun className="h-5 w-5" />}
-        categoryLabel="módulos"
-        availableBrands={availableBrands.modules}
-        value={moduleTiers}
-        onChange={setModuleTiers}
-        loading={loadingBrands}
-      />
-
-      {/* CARD 3: PREFERÊNCIA DE MARCAS DE INVERSORES */}
-      <BrandTierSelector
-        title="Preferência de Marcas de Inversores"
-        subtitle="Organize os inversores por categoria de proposta (Standard, Elite, Premium) e defina a prioridade"
-        icon={<Cpu className="h-5 w-5" />}
-        categoryLabel="inversores"
-        availableBrands={availableBrands.inverters}
-        value={inverterTiers}
-        onChange={setInverterTiers}
-        loading={loadingBrands}
-      />
-
-      {/* CARD 4: TAXAS PADRÃO DE MAQUININHA / CARTÃO DE CRÉDITO */}
-      <Card className="border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400">
-                <CreditCard className="h-5 w-5" />
-              </span>
-              <div>
-                <CardTitle className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50">
-                  Taxas Padrão de Maquininha / Cartão de Crédito
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal mt-0.5">
-                  Calcule parcelas automaticamente nas novas propostas sem precisar consultar a
-                  maquininha toda vez
-                </CardDescription>
-              </div>
-            </div>
-            <span className="self-start sm:self-auto rounded-full bg-blue-50 dark:bg-blue-950/50 px-3 py-1 text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
-              Padrão: {cardMaxInstallments}x com {cardRateValue}% (
-              {cardRateMode === "monthly_pct"
-                ? "ao mês"
-                : cardRateMode === "manual"
-                  ? "manual"
-                  : "repassar taxa"}
-              )
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            <div className="space-y-4">
+            </CardHeader>
+            <CardContent className="space-y-4">
               {/* Modo de taxa */}
               <div className="space-y-1.5">
                 <label className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-                  Método de cálculo da maquininha
+                  Método de cálculo
                 </label>
                 <div className="flex rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900/60 p-1 text-xs">
                   <button
                     type="button"
                     disabled={!canEdit}
                     onClick={() => setCardRateMode("total_pct")}
-                    className={`flex-1 rounded-lg py-2 font-semibold transition text-center cursor-pointer ${
+                    className={`flex-1 rounded-lg py-1.5 font-semibold transition text-center cursor-pointer ${
                       cardRateMode === "total_pct"
                         ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm"
                         : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
                     }`}
-                    title="Cálculo automático da maquininha: embute a taxa para você receber 100% livre na conta (sem descontos)"
                   >
                     Repassar Taxa (%)
                   </button>
@@ -464,12 +528,11 @@ export default function PerfilIntegradorPage(): JSX.Element {
                     type="button"
                     disabled={!canEdit}
                     onClick={() => setCardRateMode("monthly_pct")}
-                    className={`flex-1 rounded-lg py-2 font-semibold transition text-center cursor-pointer ${
+                    className={`flex-1 rounded-lg py-1.5 font-semibold transition text-center cursor-pointer ${
                       cardRateMode === "monthly_pct"
                         ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm"
                         : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
                     }`}
-                    title="Aplica taxa de juros fixa ao mês dividida nas parcelas da maquininha ou banco"
                   >
                     Juros ao Mês (% a.m.)
                   </button>
@@ -477,27 +540,19 @@ export default function PerfilIntegradorPage(): JSX.Element {
                     type="button"
                     disabled={!canEdit}
                     onClick={() => setCardRateMode("manual")}
-                    className={`flex-1 rounded-lg py-2 font-semibold transition text-center cursor-pointer ${
+                    className={`flex-1 rounded-lg py-1.5 font-semibold transition text-center cursor-pointer ${
                       cardRateMode === "manual"
                         ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm"
                         : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
                     }`}
-                    title="Você digita diretamente o valor de cada parcela em reais na tela da proposta"
                   >
                     Valor Manual (R$)
                   </button>
                 </div>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-normal">
-                  {cardRateMode === "total_pct"
-                    ? "Repasse da maquininha: calcula o valor exato para o cliente pagar a taxa e você receber o valor da proposta 100% limpo na sua conta."
-                    : cardRateMode === "monthly_pct"
-                      ? "Juros mensais: aplica uma taxa de juros fixa ao mês dividida no número de parcelas escolhido."
-                      : "Valor manual: você digita diretamente o valor da parcela em reais na tela de edição da proposta."}
-                </p>
               </div>
 
               {/* Taxa % */}
-              {cardRateMode !== "manual" ? (
+              {cardRateMode !== "manual" && (
                 <div className="space-y-2">
                   <label className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
                     {cardRateMode === "monthly_pct"
@@ -520,8 +575,7 @@ export default function PerfilIntegradorPage(): JSX.Element {
                     </span>
                   </div>
 
-                  {/* Presets rápidos */}
-                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  <div className="flex flex-wrap gap-1.5">
                     {(cardRateMode === "total_pct"
                       ? [8, 10, 12, 14, 16]
                       : [1.0, 1.2, 1.49, 1.99, 2.49]
@@ -542,12 +596,12 @@ export default function PerfilIntegradorPage(): JSX.Element {
                     ))}
                   </div>
                 </div>
-              ) : null}
+              )}
 
               {/* Parcelas padrão */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-                  Número de parcelas padrão sugerido
+                  Número de parcelas padrão
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {[1, 2, 3, 6, 10, 12, 15, 18, 21].map((n) => (
@@ -556,7 +610,7 @@ export default function PerfilIntegradorPage(): JSX.Element {
                       type="button"
                       disabled={!canEdit}
                       onClick={() => setCardMaxInstallments(n)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition border cursor-pointer ${
+                      className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition border cursor-pointer ${
                         cardMaxInstallments === n
                           ? "bg-blue-600 text-white border-blue-600 shadow-sm font-bold"
                           : "border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
@@ -571,7 +625,7 @@ export default function PerfilIntegradorPage(): JSX.Element {
               {/* Descrição padrão */}
               <div className="space-y-1.5">
                 <label className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-                  Nota / Condição da maquininha
+                  Condição exibida na proposta
                 </label>
                 <input
                   type="text"
@@ -582,61 +636,211 @@ export default function PerfilIntegradorPage(): JSX.Element {
                   className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-2 px-3 text-xs text-zinc-900 dark:text-zinc-100 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25"
                 />
               </div>
-            </div>
 
-            {/* Preview da maquininha */}
-            <div className="rounded-xl border border-zinc-200/90 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 p-4 space-y-3.5">
-              <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200">
-                <CreditCard className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <span>Simulação da Maquininha (Base: R$ 20.000,00)</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="rounded-xl border border-zinc-200/90 dark:border-zinc-800/90 bg-white dark:bg-zinc-900 p-3 shadow-xs">
-                  <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
-                    Parcela ({cardMaxInstallments}x)
-                  </p>
-                  <p className="text-base font-extrabold text-blue-600 dark:text-blue-400 mt-1">
-                    {cardSimulation.installmentAmount.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </p>
+              {/* Preview da simulação do cartão */}
+              <div className="rounded-xl border border-zinc-200/90 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 p-3.5 space-y-2.5">
+                <div className="flex items-center gap-2 text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                  <CreditCard className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span>Simulação ao vivo (Base R$ 20.000)</span>
                 </div>
-                <div className="rounded-xl border border-zinc-200/90 dark:border-zinc-800/90 bg-white dark:bg-zinc-900 p-3 shadow-xs">
-                  <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
-                    Total com encargos
-                  </p>
-                  <p className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 mt-1">
-                    {cardSimulation.totalAmount.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-lg border border-zinc-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-2.5">
+                    <p className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">
+                      Parcela ({cardMaxInstallments}x)
+                    </p>
+                    <p className="text-sm font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
+                      {cardSimulation.installmentAmount.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-zinc-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-2.5">
+                    <p className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">
+                      Total c/ taxa
+                    </p>
+                    <p className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                      {cardSimulation.totalAmount.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-2.5 text-xs text-blue-800 dark:text-blue-300 space-y-1">
-                <p className="font-semibold">
-                  Taxa embutida para o cliente:{" "}
-                  {cardSimulation.totalInterestAmount.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
-                </p>
-                <p className="text-[11px] opacity-90">
-                  {cardRateMode === "total_pct"
-                    ? "Na maquininha, ao descontar a taxa configurada, sua empresa recebe exatamente os R$ 20.000,00 integrais."
-                    : cardRateMode === "monthly_pct"
-                      ? "Cálculo com taxa de juros fixa ao mês repassada nas parcelas."
-                      : "No modo manual, você informará o valor real na proposta."}
-                </p>
-              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ABA 2: CATÁLOGO & PREFERÊNCIAS DE MARCAS */}
+      {activeTab === "brands" && (
+        <div className="space-y-6">
+          {/* SELETOR DE TECNOLOGIAS EM PÍLULAS */}
+          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-2 sm:p-2.5 shadow-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Módulos */}
+              <button
+                type="button"
+                onClick={() => setActiveTech("modules")}
+                className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-bold transition cursor-pointer ${
+                  activeTech === "modules"
+                    ? "bg-[#1f7f9b] text-white shadow-sm"
+                    : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                }`}
+              >
+                <Sun className="h-4 w-4" />
+                <span>Módulos Fotovoltaicos</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                    activeTech === "modules"
+                      ? "bg-white/20 text-white"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                  }`}
+                >
+                  {assignedCount(moduleTiers)}/{availableBrands.modules?.length || 0}
+                </span>
+              </button>
+
+              {/* Inversores String */}
+              <button
+                type="button"
+                onClick={() => setActiveTech("inverters")}
+                className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-bold transition cursor-pointer ${
+                  activeTech === "inverters"
+                    ? "bg-[#1f7f9b] text-white shadow-sm"
+                    : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                }`}
+              >
+                <Zap className="h-4 w-4" />
+                <span>Inversores Tradicionais (String)</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                    activeTech === "inverters"
+                      ? "bg-white/20 text-white"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                  }`}
+                >
+                  {assignedCount(inverterTiers)}/{availableBrands.inverters?.length || 0}
+                </span>
+              </button>
+
+              {/* Microinversores */}
+              <button
+                type="button"
+                onClick={() => setActiveTech("micro")}
+                className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-bold transition cursor-pointer ${
+                  activeTech === "micro"
+                    ? "bg-[#1f7f9b] text-white shadow-sm"
+                    : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                }`}
+              >
+                <Plug className="h-4 w-4" />
+                <span>Microinversores</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                    activeTech === "micro"
+                      ? "bg-white/20 text-white"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                  }`}
+                >
+                  {assignedCount(microInverterTiers)}/{availableBrands.microInverters?.length || 0}
+                </span>
+              </button>
+
+              {/* Inversores Híbridos */}
+              <button
+                type="button"
+                onClick={() => setActiveTech("hybrid")}
+                className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-bold transition cursor-pointer ${
+                  activeTech === "hybrid"
+                    ? "bg-[#1f7f9b] text-white shadow-sm"
+                    : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                }`}
+              >
+                <BatteryCharging className="h-4 w-4" />
+                <span>Inversores Híbridos</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                    activeTech === "hybrid"
+                      ? "bg-white/20 text-white"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                  }`}
+                >
+                  {assignedCount(hybridInverterTiers)}/
+                  {availableBrands.hybridInverters?.length || 0}
+                </span>
+              </button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* PAINEL ATIVO DE ACORDO COM A TECNOLOGIA */}
+          {activeTech === "modules" && (
+            <BrandTierSelector
+              title="Preferência de Marcas de Módulos"
+              subtitle="Organize os módulos homologados por tier (Standard, Elite, Premium) e defina a prioridade de cotação"
+              icon={<Sun className="h-5 w-5" />}
+              categoryLabel="módulos"
+              availableBrands={availableBrands.modules}
+              value={moduleTiers}
+              onChange={setModuleTiers}
+              loading={loadingBrands}
+            />
+          )}
+
+          {activeTech === "inverters" && (
+            <BrandTierSelector
+              title="Preferência de Inversores Tradicionais (String)"
+              subtitle="Organize os inversores convencionais por categoria de proposta (Standard, Elite, Premium) e defina a prioridade"
+              icon={<Zap className="h-5 w-5" />}
+              categoryLabel="inversores"
+              availableBrands={availableBrands.inverters}
+              value={inverterTiers}
+              onChange={setInverterTiers}
+              loading={loadingBrands}
+            />
+          )}
+
+          {activeTech === "micro" && (
+            <BrandTierSelector
+              title="Preferência de Microinversores"
+              subtitle="Organize os microinversores homologados por tier para orçamentos com tecnologia modular MLPE"
+              icon={<Plug className="h-5 w-5" />}
+              categoryLabel="microinversores"
+              availableBrands={availableBrands.microInverters || []}
+              value={microInverterTiers}
+              onChange={setMicroInverterTiers}
+              loading={loadingBrands}
+            />
+          )}
+
+          {activeTech === "hybrid" && (
+            <BrandTierSelector
+              title="Preferência de Inversores Híbridos"
+              subtitle="Organize inversores híbridos com suporte a armazenamento por baterias nos tiers Standard, Elite e Premium"
+              icon={<BatteryCharging className="h-5 w-5" />}
+              categoryLabel="inversores híbridos"
+              availableBrands={availableBrands.hybridInverters || []}
+              value={hybridInverterTiers}
+              onChange={setHybridInverterTiers}
+              loading={loadingBrands}
+            />
+          )}
+
+          {/* DICA DE VALIDAÇÃO DE CATÁLOGO */}
+          <div className="flex items-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/70 p-4 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
+            <ShieldCheck className="h-5 w-5 text-[#1f7f9b] dark:text-[#38bdf8] shrink-0" />
+            <p>
+              O sistema utiliza as marcas ativas configuradas em cada tier para abastecer
+              automaticamente as cotações via WhatsApp, propostas web e dimensionamentos solares com
+              total precisão.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Botão de ação fixo na base */}
-      <div className="flex items-center justify-end gap-3 pt-3">
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
         <Button
           type="button"
           onClick={handleSave}
