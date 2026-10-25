@@ -19,7 +19,7 @@ interface BrandTierSelectorProps {
   title: string;
   subtitle: string;
   icon: React.ReactNode;
-  categoryLabel: "módulos" | "inversores";
+  categoryLabel: "módulos" | "inversores" | "microinversores" | "inversores híbridos";
   availableBrands: string[];
   value: BrandTierSelection;
   onChange: (val: BrandTierSelection) => void;
@@ -129,7 +129,7 @@ export function BrandTierSelector({
     if (nextPriority === brand) {
       // Pick another assigned brand as priority
       const remaining = [...nextStandard, ...nextElite, ...nextPremium];
-      nextPriority = remaining.length > 0 ? remaining[0] : null;
+      nextPriority = remaining.length > 0 ? (remaining[0] ?? null) : null;
     }
 
     onChange({
@@ -150,30 +150,75 @@ export function BrandTierSelector({
   const handleAutoSuggest = () => {
     if (availableBrands.length === 0) return;
 
-    // Distribute available brands smartly into Standard, Elite and Premium
-    const brands = [...availableBrands];
+    const PRESETS_BY_CATEGORY: Record<
+      BrandTierSelectorProps["categoryLabel"],
+      { standard: string[]; elite: string[]; premium: string[] }
+    > = {
+      módulos: {
+        standard: ["leapton", "osda", "resun", "dah solar", "dah", "astronergy"],
+        elite: ["astronergy", "canadian", "jinko", "ja solar", "trina"],
+        premium: ["canadian", "jinko", "longi", "trina", "ja solar"],
+      },
+      inversores: {
+        standard: ["solplanet", "saj", "chint", "sofar", "livoltek"],
+        elite: ["growatt", "deye", "solis", "saj", "goodwe"],
+        premium: ["sungrow", "fronius", "huawei", "enphase", "apsystems", "goodwe"],
+      },
+      microinversores: {
+        standard: ["nep", "northern electric power", "tsun", "saj", "deye"],
+        elite: ["growatt", "deye", "hoymiles", "saj"],
+        premium: ["goodwe", "enphase", "apsystems", "hoymiles", "growatt"],
+      },
+      "inversores híbridos": {
+        standard: ["deye", "growatt", "livoltek"],
+        elite: ["goodwe", "solis", "growatt", "deye"],
+        premium: ["huawei", "fronius", "sungrow", "goodwe", "deye"],
+      },
+    };
+
+    const targetPreset = PRESETS_BY_CATEGORY[categoryLabel];
     const newStd: string[] = [];
     const newElite: string[] = [];
     const newPrem: string[] = [];
+    const assigned = new Set<string>();
 
-    if (brands.length >= 3) {
-      newStd.push(brands[0]);
-      newElite.push(brands[1]);
-      newPrem.push(brands[2]);
-      // If there are more, distribute
-      for (let i = 3; i < brands.length; i++) {
-        if (i % 3 === 0) newStd.push(brands[i]);
-        else if (i % 3 === 1) newElite.push(brands[i]);
-        else newPrem.push(brands[i]);
+    const matchesPreset = (brand: string, presetKeywords: string[]) => {
+      const lower = brand.toLowerCase();
+      return presetKeywords.some((kw) => lower.includes(kw) || kw.includes(lower));
+    };
+
+    // 1. Prioriza encaixe das marcas homologadas nos tiers conforme reputação e custo
+    for (const b of availableBrands) {
+      if (matchesPreset(b, targetPreset.premium)) {
+        newPrem.push(b);
+        assigned.add(b);
+      } else if (matchesPreset(b, targetPreset.elite)) {
+        newElite.push(b);
+        assigned.add(b);
+      } else if (matchesPreset(b, targetPreset.standard)) {
+        newStd.push(b);
+        assigned.add(b);
       }
-    } else {
-      // If fewer than 3 brands exist in catalog, place what exists
-      if (brands[0]) newStd.push(brands[0]);
-      if (brands[1]) newElite.push(brands[1]);
-      if (brands[2]) newPrem.push(brands[2]);
     }
 
-    const defaultPriority = newPrem[0] || newElite[0] || newStd[0] || null;
+    // 2. Distribui de forma equilibrada marcas não identificadas nos presets
+    const remaining = availableBrands.filter((b) => !assigned.has(b));
+    remaining.forEach((b, idx) => {
+      if (idx % 3 === 0) newStd.push(b);
+      else if (idx % 3 === 1) newElite.push(b);
+      else newPrem.push(b);
+    });
+
+    // 3. Fallback defensivo se todos caíram no mesmo tier ou vazio
+    if (newStd.length === 0 && newElite.length === 0 && newPrem.length === 0) {
+      availableBrands.forEach((b, idx) => {
+        if (idx % 3 === 0) newStd.push(b);
+        else if (idx % 3 === 1) newElite.push(b);
+        else newPrem.push(b);
+      });
+    }
+
+    const defaultPriority = newPrem[0] ?? newElite[0] ?? newStd[0] ?? null;
 
     onChange({
       standard: newStd,
