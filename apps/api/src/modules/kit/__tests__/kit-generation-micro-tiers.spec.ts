@@ -74,6 +74,38 @@ describe("KitGenerationService - Microinverter & Hybrid Tiers", () => {
     },
   };
 
+  const mockMicroSaj = {
+    id: "micro-saj-1",
+    name: "Microinversor SAJ 2000W",
+    brandName: "SAJ",
+    price: 1950,
+    specs: {
+      type: "micro",
+      channels: 4,
+      min_module_power: 400,
+      max_module_power: 650,
+      max_input_voltage: 60,
+      max_input_current: 16,
+      nominal_power_w: 2000,
+    },
+  };
+
+  const mockMicroGrowatt = {
+    id: "micro-growatt-1",
+    name: "Microinversor Growatt 2000W",
+    brandName: "Growatt",
+    price: 2200,
+    specs: {
+      type: "micro",
+      channels: 4,
+      min_module_power: 400,
+      max_module_power: 650,
+      max_input_voltage: 60,
+      max_input_current: 16,
+      nominal_power_w: 2000,
+    },
+  };
+
   const mockStructure = { id: "struct-1", name: "Estrutura Cerâmico", price: 200 };
   const mockCable = { id: "cable-1", name: "Cabo Solar 6mm", price: 5 };
   const mockConnector = { id: "conn-1", name: "Conector MC4", price: 15 };
@@ -103,7 +135,13 @@ describe("KitGenerationService - Microinverter & Hybrid Tiers", () => {
       findActiveStringInverters: vi.fn().mockResolvedValue([]),
       findActiveMicroInverters: vi
         .fn()
-        .mockResolvedValue([mockMicroNep, mockMicroDeye, mockMicroGoodwe]),
+        .mockResolvedValue([
+          mockMicroSaj,
+          mockMicroGrowatt,
+          mockMicroNep,
+          mockMicroDeye,
+          mockMicroGoodwe,
+        ]),
       findActiveHybridInverters: vi.fn().mockResolvedValue([]),
       findActiveOffGridInverters: vi.fn().mockResolvedValue([]),
       findStructureKitsByRoofType: vi.fn().mockResolvedValue([mockStructure]),
@@ -143,8 +181,17 @@ describe("KitGenerationService - Microinverter & Hybrid Tiers", () => {
     expect(premium.inverter_brand).toBe("DEYE");
   });
 
-  it("should distribute distinct microinverter brands across Standard, Elite and Premium by default without repeating GoodWe in all 3", async () => {
-    mockPrisma.tenant.findUnique.mockResolvedValue({ settings: {} });
+  it("should strictly quote SAJ for Standard, Growatt for Elite, and DEYE for Premium as configured by integrator in UI", async () => {
+    mockPrisma.tenant.findUnique.mockResolvedValue({
+      settings: {
+        microInverterBrandTiers: {
+          standard: ["SAJ"],
+          elite: ["Growatt", "GoodWe"],
+          premium: ["DEYE", "NEP"],
+          priority: "DEYE",
+        },
+      },
+    });
 
     const res = await service.generateDistributorTiers(
       {
@@ -155,9 +202,70 @@ describe("KitGenerationService - Microinverter & Hybrid Tiers", () => {
     );
 
     expect(res.tiers).toHaveLength(3);
-    const brands = res.tiers.map((t) => t.inverter_brand);
-    // Deve conter mais de uma marca diferente (não pode ser [GoodWe, GoodWe, GoodWe])
+    const [standard, elite, premium] = res.tiers;
+    expect(standard.inverter_brand).toBe("SAJ");
+    expect(elite.inverter_brand).toBe("Growatt");
+    expect(premium.inverter_brand).toBe("DEYE");
+  });
+
+  it("should find the tier's configured brand across other distributors even if the initial baseline distributor only has GoodWe", async () => {
+    mockPrisma.tenant.findUnique.mockResolvedValue({
+      settings: {
+        microInverterBrandTiers: {
+          standard: ["SAJ"],
+          elite: ["Growatt", "GoodWe"],
+          premium: ["DEYE", "NEP"],
+          priority: "DEYE",
+        },
+      },
+    });
+
+    // Baseline distributor dist-1 only carries GoodWe, dist-2 carries SAJ, dist-3 carries DEYE & Growatt
+    mockPrisma.distributor.findMany.mockResolvedValue([
+      { id: "dist-1" },
+      { id: "dist-2" },
+      { id: "dist-3" },
+    ]);
+
+    mockProductRepo.findActiveMicroInverters.mockImplementation(async (source: any) => {
+      if (source?.distributorId === "dist-1") return [mockMicroGoodwe];
+      if (source?.distributorId === "dist-2") return [mockMicroSaj];
+      if (source?.distributorId === "dist-3") return [mockMicroGrowatt, mockMicroDeye];
+      return [mockMicroSaj, mockMicroGrowatt, mockMicroGoodwe, mockMicroDeye, mockMicroNep];
+    });
+
+    const res = await service.generateDistributorTiers(
+      { system_kw: 6, inverter_type: "microinverter" },
+      "org-1"
+    );
+
+    expect(res.tiers).toHaveLength(3);
+    const [standard, elite, premium] = res.tiers;
+    expect(standard.inverter_brand).toBe("SAJ");
+    expect(["Growatt", "GoodWe"]).toContain(elite.inverter_brand);
+    expect(premium.inverter_brand).toBe("DEYE");
+  });
+
+  it("should randomize and distribute distinct brands across all 3 tiers when no preferences are defined", async () => {
+    mockPrisma.tenant.findUnique.mockResolvedValue({ settings: {} });
+
+    mockProductRepo.findActiveMicroInverters.mockResolvedValue([
+      mockMicroSaj,
+      mockMicroGrowatt,
+      mockMicroGoodwe,
+      mockMicroDeye,
+      mockMicroNep,
+    ]);
+
+    const res = await service.generateDistributorTiers(
+      { system_kw: 6, inverter_type: "microinverter" },
+      "org-1"
+    );
+
+    expect(res.tiers).toHaveLength(3);
+    const [standard, elite, premium] = res.tiers;
+    const brands = [standard.inverter_brand, elite.inverter_brand, premium.inverter_brand];
     const uniqueBrands = new Set(brands);
-    expect(uniqueBrands.size).toBeGreaterThanOrEqual(2);
+    expect(uniqueBrands.size).toBe(3);
   });
 });

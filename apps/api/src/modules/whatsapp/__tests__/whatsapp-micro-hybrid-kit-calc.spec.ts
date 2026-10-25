@@ -281,4 +281,38 @@ describe("WhatsApp Bot - Microinverter & Hybrid Kit Calculation & Fast Switch", 
     expect(elite.invName).toBe("Solis");
     expect(premium.invName).toBe("Huawei");
   });
+
+  it("should respect microInverterBrandTiers (SAJ, Growatt, DEYE) in WhatsApp contingency fallback", async () => {
+    (botService as any).kitGeneration = null;
+    mockPrisma.tenant.findUnique.mockResolvedValue({
+      id: "org-1",
+      settings: {
+        microInverterBrandTiers: {
+          standard: ["SAJ"],
+          elite: ["Growatt", "GoodWe"],
+          premium: ["DEYE", "NEP"],
+          priority: "DEYE",
+        },
+      },
+    });
+
+    const quotes = await (botService as any).calculateDistributorKits({
+      consumptionKwh: 600,
+      cidade: "Maringá",
+      estado: "PR",
+      roofType: "Metálico",
+      gridVoltage: "Monofásico 220V",
+      inverterType: "microinverter",
+      organizationId: "org-1",
+    });
+
+    expect(quotes.length).toBe(3);
+    const standard = quotes.find((q: any) => q.distributorId === "kwp-standard");
+    const elite = quotes.find((q: any) => q.distributorId === "kwp-elite");
+    const premium = quotes.find((q: any) => q.distributorId === "kwp-premium");
+
+    expect(standard.invName).toBe("SAJ");
+    expect(elite.invName).toBe("Growatt");
+    expect(premium.invName).toBe("DEYE");
+  });
 });

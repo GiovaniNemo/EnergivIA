@@ -31,15 +31,19 @@ function selectMicroInverter(
       module.specs.power_w >= m.specs.min_module_power
   );
   if (compatible.length === 0) return null;
-  const prefs = preferredInverterBrands ?? [];
-  const matchesPref = (brand: string) =>
-    prefs.length === 0 || prefs.some((p) => brand.toLowerCase().includes(p.toLowerCase()));
+  const prefs = (preferredInverterBrands ?? []).map((p) => p.trim().toLowerCase()).filter(Boolean);
+  const getBrandRank = (brand: string): number => {
+    if (prefs.length === 0) return 9999;
+    const bLower = (brand || "").trim().toLowerCase();
+    const idx = prefs.findIndex((p) => bLower.includes(p) || p.includes(bLower));
+    return idx === -1 ? 9999 : idx;
+  };
 
   compatible.sort((a, b) => {
     if (prefs.length > 0) {
-      const aPref = matchesPref(a.brandName) ? 1 : 0;
-      const bPref = matchesPref(b.brandName) ? 1 : 0;
-      if (aPref !== bPref) return bPref - aPref;
+      const aRank = getBrandRank(a.brandName);
+      const bRank = getBrandRank(b.brandName);
+      if (aRank !== bRank) return aRank - bRank;
     }
     return a.specs.max_module_power - b.specs.max_module_power;
   });
@@ -152,81 +156,102 @@ function trySizeStringInverters(
     return Math.abs(aNominal - targetNominalW) - Math.abs(bNominal - targetNominalW);
   });
 
-  for (const module of modules.slice(0, 8)) {
-    let totalModuleQuantity = Math.round(systemPowerW / module.specs.power_w);
-    let subModuleQuantity = Math.round(totalModuleQuantity / inverterQty);
-    if (subModuleQuantity < 4) subModuleQuantity = 4;
-    totalModuleQuantity = subModuleQuantity * inverterQty;
+  const cleanPrefInv = (preferredInvBrands ?? [])
+    .map((p) => p.trim().toLowerCase())
+    .filter(Boolean);
+  const preferredCandidates =
+    cleanPrefInv.length > 0
+      ? candidateInverters.filter((inv) => {
+          const bLower = (inv.brandName || "").trim().toLowerCase();
+          return cleanPrefInv.some((p) => bLower.includes(p) || p.includes(bLower));
+        })
+      : [];
 
-    // 1. Configuração com ratio ideal
-    for (const stringInverter of candidateInverters) {
-      const isSmallInverter = stringInverter.specs.max_dc_power <= 10000;
-      const finalSubModuleQuantity = isSmallInverter
-        ? Math.max(subModuleQuantity, 4)
-        : subModuleQuantity;
-      const finalTotalModules = finalSubModuleQuantity * inverterQty;
+  const trySizeWithList = (inverterList: typeof candidateInverters) => {
+    for (const module of modules.slice(0, 8)) {
+      let totalModuleQuantity = Math.round(systemPowerW / module.specs.power_w);
+      let subModuleQuantity = Math.round(totalModuleQuantity / inverterQty);
+      if (subModuleQuantity < 4) subModuleQuantity = 4;
+      totalModuleQuantity = subModuleQuantity * inverterQty;
 
-      const { config, validated } = computeStringConfiguration(
-        module,
-        stringInverter,
-        finalSubModuleQuantity
-      );
-      const isPowerExceeded = config.dc_power_w > stringInverter.specs.max_dc_power;
+      // 1. Configuração com ratio ideal
+      for (const stringInverter of inverterList) {
+        const isSmallInverter = stringInverter.specs.max_dc_power <= 10000;
+        const finalSubModuleQuantity = isSmallInverter
+          ? Math.max(subModuleQuantity, 4)
+          : subModuleQuantity;
+        const finalTotalModules = finalSubModuleQuantity * inverterQty;
 
-      if (validated.voltage && validated.current && validated.dc_ac_ratio && !isPowerExceeded) {
-        return {
+        const { config, validated } = computeStringConfiguration(
           module,
-          inverter: stringInverter,
-          module_quantity: finalTotalModules,
-          inverter_quantity: inverterQty,
-          string_configuration: {
-            modules_per_string: config.modules_per_string,
-            string_count: config.string_count * inverterQty,
-            total_modules: finalTotalModules,
-            dc_power_w: config.dc_power_w * inverterQty,
-            dc_ac_ratio: config.dc_ac_ratio,
-          },
-          validated,
-        };
+          stringInverter,
+          finalSubModuleQuantity
+        );
+        const isPowerExceeded = config.dc_power_w > stringInverter.specs.max_dc_power;
+
+        if (validated.voltage && validated.current && validated.dc_ac_ratio && !isPowerExceeded) {
+          return {
+            module,
+            inverter: stringInverter,
+            module_quantity: finalTotalModules,
+            inverter_quantity: inverterQty,
+            string_configuration: {
+              modules_per_string: config.modules_per_string,
+              string_count: config.string_count * inverterQty,
+              total_modules: finalTotalModules,
+              dc_power_w: config.dc_power_w * inverterQty,
+              dc_ac_ratio: config.dc_ac_ratio,
+            },
+            validated,
+          };
+        }
+      }
+
+      // 2. Fallback de ratio aceitável (0.7 a 1.7)
+      for (const stringInverter of inverterList) {
+        const isSmallInverter = stringInverter.specs.max_dc_power <= 10000;
+        const finalSubModuleQuantity = isSmallInverter
+          ? Math.max(subModuleQuantity, 4)
+          : subModuleQuantity;
+        const finalTotalModules = finalSubModuleQuantity * inverterQty;
+
+        const { config, validated } = computeStringConfiguration(
+          module,
+          stringInverter,
+          finalSubModuleQuantity
+        );
+        const isPowerExceeded = config.dc_power_w > stringInverter.specs.max_dc_power;
+        const ratioAcceptable = config.dc_ac_ratio >= 0.7 && config.dc_ac_ratio <= 1.55;
+
+        if (validated.voltage && validated.current && !isPowerExceeded && ratioAcceptable) {
+          return {
+            module,
+            inverter: stringInverter,
+            module_quantity: finalTotalModules,
+            inverter_quantity: inverterQty,
+            string_configuration: {
+              modules_per_string: config.modules_per_string,
+              string_count: config.string_count * inverterQty,
+              total_modules: finalTotalModules,
+              dc_power_w: config.dc_power_w * inverterQty,
+              dc_ac_ratio: config.dc_ac_ratio,
+            },
+            validated: { ...validated, dc_ac_ratio: true },
+          };
+        }
       }
     }
+    return null;
+  };
 
-    // 2. Fallback de ratio aceitável (0.7 a 1.7)
-    for (const stringInverter of candidateInverters) {
-      const isSmallInverter = stringInverter.specs.max_dc_power <= 10000;
-      const finalSubModuleQuantity = isSmallInverter
-        ? Math.max(subModuleQuantity, 4)
-        : subModuleQuantity;
-      const finalTotalModules = finalSubModuleQuantity * inverterQty;
-
-      const { config, validated } = computeStringConfiguration(
-        module,
-        stringInverter,
-        finalSubModuleQuantity
-      );
-      const isPowerExceeded = config.dc_power_w > stringInverter.specs.max_dc_power;
-      const ratioAcceptable = config.dc_ac_ratio >= 0.7 && config.dc_ac_ratio <= 1.55;
-
-      if (validated.voltage && validated.current && !isPowerExceeded && ratioAcceptable) {
-        return {
-          module,
-          inverter: stringInverter,
-          module_quantity: finalTotalModules,
-          inverter_quantity: inverterQty,
-          string_configuration: {
-            modules_per_string: config.modules_per_string,
-            string_count: config.string_count * inverterQty,
-            total_modules: finalTotalModules,
-            dc_power_w: config.dc_power_w * inverterQty,
-            dc_ac_ratio: config.dc_ac_ratio,
-          },
-          validated: { ...validated, dc_ac_ratio: true },
-        };
-      }
-    }
+  // Se houver marcas preferidas, tenta primeiro estritamente com elas
+  if (preferredCandidates.length > 0) {
+    const prefResult = trySizeWithList(preferredCandidates);
+    if (prefResult) return prefResult;
   }
 
-  return null;
+  // Fallback para todos os inversores candidatos
+  return trySizeWithList(candidateInverters);
 }
 
 export function sizeSolarSystem(input: SolarSizingInput): SizingResult | null {
@@ -320,6 +345,51 @@ export function sizeSolarSystem(input: SolarSizingInput): SizingResult | null {
   }
 
   // 3. Fallback ou escolha por microinversor
+  const cleanPrefInvBrands = (input.preferred_inverter_brands ?? [])
+    .map((p) => p.trim().toLowerCase())
+    .filter(Boolean);
+
+  // Se marcas preferidas foram passadas, tenta primeiro dimensionar com microinversores estritamente da marca preferida
+  if (cleanPrefInvBrands.length > 0) {
+    const preferredMicroInverters = input.microInverters.filter((m) => {
+      const bLower = (m.brandName || "").trim().toLowerCase();
+      return cleanPrefInvBrands.some((p) => bLower.includes(p) || p.includes(bLower));
+    });
+
+    if (preferredMicroInverters.length > 0) {
+      for (const module of modules.slice(0, 8)) {
+        let moduleQuantity = Math.round(systemPowerW / module.specs.power_w);
+        if (moduleQuantity < 4) moduleQuantity = 4;
+
+        const microInverter = selectMicroInverter(
+          preferredMicroInverters,
+          module,
+          input.preferred_inverter_brands
+        );
+        if (microInverter) {
+          const channels = microInverter.specs.channels;
+          const microQuantity = Math.ceil(moduleQuantity / channels);
+          const voltageOk = module.specs.voc <= microInverter.specs.max_input_voltage;
+          const currentOk = module.specs.imp <= microInverter.specs.max_input_current;
+          const powerOk =
+            module.specs.power_w <= microInverter.specs.max_module_power &&
+            module.specs.power_w >= microInverter.specs.min_module_power;
+
+          if (voltageOk && currentOk && powerOk) {
+            return {
+              module,
+              inverter: microInverter,
+              module_quantity: moduleQuantity,
+              microinverter_quantity: microQuantity,
+              validated: { voltage: voltageOk, current: currentOk, power: powerOk },
+            } satisfies MicroSizingResult;
+          }
+        }
+      }
+    }
+  }
+
+  // Se não fechou com marca preferida ou não há preferências, busca entre todos os microinversores compatíveis
   for (const module of modules.slice(0, 8)) {
     let moduleQuantity = Math.round(systemPowerW / module.specs.power_w);
     if (moduleQuantity < 4) moduleQuantity = 4;

@@ -552,28 +552,6 @@ export class KitGenerationService {
     const effectiveStringInverters =
       scaleCompatibleString.length > 0 ? scaleCompatibleString : allStringInverters;
 
-    const sortOtherInverters = <T extends { brandName: string; price: number }>(
-      inverters: T[]
-    ): T[] => {
-      return [...inverters].sort((a, b) => {
-        const aBrand = (a.brandName || "").toLowerCase().trim();
-        const bBrand = (b.brandName || "").toLowerCase().trim();
-        const aIdx = preferredInverterBrands.findIndex(
-          (p) => aBrand.includes(p) || p.includes(aBrand)
-        );
-        const bIdx = preferredInverterBrands.findIndex(
-          (p) => bBrand.includes(p) || p.includes(bBrand)
-        );
-        const aRank = aIdx === -1 ? 9999 : aIdx;
-        const bRank = bIdx === -1 ? 9999 : bIdx;
-        if (aRank !== bRank) return aRank - bRank;
-        return a.price - b.price;
-      });
-    };
-
-    const sortedMicro = sortOtherInverters(allMicroInverters);
-    const sortedHybrid = sortOtherInverters(allHybridInverters);
-
     // Configurações padrão de marcas por quadrante caso o integrador não tenha configurado no perfil
     const DEFAULT_TIER_MODULE_BRANDS = {
       standard: ["leapton", "osda", "resun", "dah solar", "dah", "astronergy"],
@@ -623,6 +601,59 @@ export class KitGenerationService {
       return cleaned;
     };
 
+    const activeInverterTiers =
+      input.inverter_type === "microinverter"
+        ? microInverterTiersConfig || inverterTiersConfig
+        : input.inverter_type === "hybrid"
+          ? hybridInverterTiersConfig || inverterTiersConfig
+          : inverterTiersConfig;
+
+    const hasUserInverterTiers = Boolean(
+      activeInverterTiers &&
+      ((activeInverterTiers.standard && activeInverterTiers.standard.length > 0) ||
+        (activeInverterTiers.elite && activeInverterTiers.elite.length > 0) ||
+        (activeInverterTiers.premium && activeInverterTiers.premium.length > 0))
+    );
+
+    const defaultInverterBrands =
+      input.inverter_type === "microinverter"
+        ? DEFAULT_TIER_MICRO_BRANDS
+        : input.inverter_type === "hybrid"
+          ? DEFAULT_TIER_HYBRID_BRANDS
+          : DEFAULT_TIER_INVERTER_BRANDS;
+
+    const requestedInverterType = input.inverter_type;
+    const invertersForType: ProductWithSpecs<InverterSpec>[] =
+      requestedInverterType === "microinverter"
+        ? allMicroInverters
+        : requestedInverterType === "hybrid"
+          ? allHybridInverters
+          : effectiveStringInverters;
+
+    const activeAvailableInvBrands = Array.from(
+      new Set(
+        invertersForType.map((i) => i.brandName?.trim()).filter((b): b is string => Boolean(b))
+      )
+    );
+
+    let stdInvBrandsFallback = defaultInverterBrands.standard;
+    let eliteInvBrandsFallback = defaultInverterBrands.elite;
+    let premInvBrandsFallback = defaultInverterBrands.premium;
+
+    // Se o integrador NÃO configurou preferências na tela, diversifica e randomiza entre as marcas ativas disponíveis no catálogo
+    if (!hasUserInverterTiers && activeAvailableInvBrands.length >= 2) {
+      const shuffledInvBrands = [...activeAvailableInvBrands].sort(() => Math.random() - 0.5);
+      const b0 = shuffledInvBrands[0];
+      const b1 =
+        shuffledInvBrands.find((b) => b !== b0) || shuffledInvBrands[1 % shuffledInvBrands.length];
+      const b2 =
+        shuffledInvBrands.find((b) => b !== b0 && b !== b1) ||
+        shuffledInvBrands[2 % shuffledInvBrands.length];
+      if (b0) stdInvBrandsFallback = [b0];
+      if (b1) eliteInvBrandsFallback = [b1];
+      if (b2) premInvBrandsFallback = [b2];
+    }
+
     const stdModBrands = resolveTierBrands(
       moduleTiersConfig?.standard?.length
         ? moduleTiersConfig.standard
@@ -640,34 +671,16 @@ export class KitGenerationService {
       moduleTiersConfig?.priority
     );
 
-    const activeInverterTiers =
-      input.inverter_type === "microinverter"
-        ? microInverterTiersConfig || inverterTiersConfig
-        : input.inverter_type === "hybrid"
-          ? hybridInverterTiersConfig || inverterTiersConfig
-          : inverterTiersConfig;
-
-    const defaultInverterBrands =
-      input.inverter_type === "microinverter"
-        ? DEFAULT_TIER_MICRO_BRANDS
-        : input.inverter_type === "hybrid"
-          ? DEFAULT_TIER_HYBRID_BRANDS
-          : DEFAULT_TIER_INVERTER_BRANDS;
-
     const stdInvBrands = resolveTierBrands(
-      activeInverterTiers?.standard?.length
-        ? activeInverterTiers.standard
-        : defaultInverterBrands.standard,
+      activeInverterTiers?.standard?.length ? activeInverterTiers.standard : stdInvBrandsFallback,
       activeInverterTiers?.priority
     );
     const eliteInvBrands = resolveTierBrands(
-      activeInverterTiers?.elite?.length ? activeInverterTiers.elite : defaultInverterBrands.elite,
+      activeInverterTiers?.elite?.length ? activeInverterTiers.elite : eliteInvBrandsFallback,
       activeInverterTiers?.priority
     );
     const premInvBrands = resolveTierBrands(
-      activeInverterTiers?.premium?.length
-        ? activeInverterTiers.premium
-        : defaultInverterBrands.premium,
+      activeInverterTiers?.premium?.length ? activeInverterTiers.premium : premInvBrandsFallback,
       activeInverterTiers?.priority
     );
 
@@ -703,29 +716,41 @@ export class KitGenerationService {
         ? sortedByPricePerW[Math.floor(sortedByPricePerW.length / 2)]?.module
         : sortedByPricePerW[1]?.module || sortedByPricePerW[0]?.module;
 
-    const sortedStringByPrice = [...effectiveStringInverters].sort((a, b) => a.price - b.price);
-    let economicCandidateInverter: ProductWithSpecs<InverterSpec> | undefined =
-      sortedStringByPrice[0];
-    let costBenefitCandidateInverter: ProductWithSpecs<InverterSpec> | undefined =
-      sortedStringByPrice.length > 2
-        ? sortedStringByPrice[Math.floor(sortedStringByPrice.length / 2)]
-        : sortedStringByPrice[1] || sortedStringByPrice[0];
-    let premiumCandidateInverter: ProductWithSpecs<InverterSpec> | undefined =
-      sortedStringByPrice.length > 1
-        ? sortedStringByPrice[sortedStringByPrice.length - 1]
-        : sortedStringByPrice[0];
+    const findCandidateForBrands = (
+      inverters: ProductWithSpecs<InverterSpec>[],
+      brands: string[]
+    ): ProductWithSpecs<InverterSpec> | undefined => {
+      if (brands.length === 0) return undefined;
+      const bLowers = brands.map((b) => b.toLowerCase().trim()).filter(Boolean);
+      for (const brand of bLowers) {
+        const found = inverters.find((i) => {
+          const invBrand = (i.brandName || "").toLowerCase().trim();
+          return invBrand.includes(brand) || brand.includes(invBrand);
+        });
+        if (found) return found;
+      }
+      return undefined;
+    };
 
-    const requestedInverterType = input.inverter_type;
-    if (requestedInverterType === "microinverter" && sortedMicro.length > 0) {
-      economicCandidateInverter = sortedMicro[0];
-      costBenefitCandidateInverter = sortedMicro.length > 2 ? sortedMicro[1] : sortedMicro[0];
+    let economicCandidateInverter = findCandidateForBrands(invertersForType, stdInvBrands);
+    let costBenefitCandidateInverter = findCandidateForBrands(invertersForType, eliteInvBrands);
+    let premiumCandidateInverter = findCandidateForBrands(invertersForType, premInvBrands);
+
+    const sortedPool = [...invertersForType].sort((a, b) => a.price - b.price);
+    if (!economicCandidateInverter && sortedPool.length > 0) {
+      economicCandidateInverter = sortedPool[0];
+    }
+    if (!costBenefitCandidateInverter && sortedPool.length > 0) {
+      costBenefitCandidateInverter =
+        sortedPool.find((i) => i.id !== economicCandidateInverter?.id) || sortedPool[0];
+    }
+    if (!premiumCandidateInverter && sortedPool.length > 0) {
       premiumCandidateInverter =
-        sortedMicro.length > 1 ? sortedMicro[sortedMicro.length - 1] : sortedMicro[0];
-    } else if (requestedInverterType === "hybrid" && sortedHybrid.length > 0) {
-      economicCandidateInverter = sortedHybrid[0];
-      costBenefitCandidateInverter = sortedHybrid.length > 2 ? sortedHybrid[1] : sortedHybrid[0];
-      premiumCandidateInverter =
-        sortedHybrid.length > 1 ? sortedHybrid[sortedHybrid.length - 1] : sortedHybrid[0];
+        sortedPool.find(
+          (i) => i.id !== economicCandidateInverter?.id && i.id !== costBenefitCandidateInverter?.id
+        ) ||
+        sortedPool[sortedPool.length - 1] ||
+        sortedPool[0];
     }
 
     // Helper unificado para montagem de cada tier respeitando sua distribuição
@@ -738,27 +763,48 @@ export class KitGenerationService {
     ): Promise<BuiltKit> => {
       const invType = targetInverterType || input.inverter_type || "string";
 
-      // 1ª Tentativa: Montagem dinâmica com as marcas específicas do tier
-      // Não fixa IDs aleatórios para permitir que o motor de dimensionamento avalie
-      // livremente todos os inversores e módulos compatíveis com a potência requisitada.
+      const isInvBrandCompliant = (kit: BuiltKit): boolean => {
+        if (!tierInvBrands || tierInvBrands.length === 0) return true;
+        const bLower = (kit.sizingResult.inverter.brandName || "").toLowerCase().trim();
+        return tierInvBrands.some((target) => {
+          const tLower = target.toLowerCase().trim();
+          return bLower.includes(tLower) || tLower.includes(bLower);
+        });
+      };
+
+      const isModBrandCompliant = (kit: BuiltKit): boolean => {
+        if (!tierModBrands || tierModBrands.length === 0) return true;
+        const bLower = (kit.sizingResult.module.brandName || "").toLowerCase().trim();
+        return tierModBrands.some((target) => {
+          const tLower = target.toLowerCase().trim();
+          return bLower.includes(tLower) || tLower.includes(bLower);
+        });
+      };
+
+      const trialInput: GenerateKitInput = {
+        ...input,
+        pinned_module_id: input.pinned_module_id,
+        pinned_inverter_id: input.pinned_inverter_id,
+        inverter_type: invType,
+      };
+
+      // 1ª Tentativa: Montagem dinâmica na fonte primária (source)
       if (tierModBrands.length > 0 || tierInvBrands.length > 0) {
-        const trialInput: GenerateKitInput = {
-          ...input,
-          pinned_module_id: input.pinned_module_id,
-          pinned_inverter_id: input.pinned_inverter_id,
-          inverter_type: invType,
-        };
-
         const res = await this.buildKit(trialInput, roofType, source, tierModBrands, tierInvBrands);
+        if (res && isInvBrandCompliant(res) && isModBrandCompliant(res)) {
+          return res;
+        }
 
-        if (res) return res;
+        let bestPartial: BuiltKit | null = res && isInvBrandCompliant(res) ? res : null;
 
-        // Se não fechou com a fonte primária, tenta distribuidores ativos com as marcas do tier
+        // Se a fonte primária não atendeu a marca do tier, busca entre os distribuidores ativos
         const activeDistributors = await this.prisma.distributor.findMany({
           where: { active: true },
           select: { id: true },
         });
+
         for (const dist of activeDistributors) {
+          if (source.distributorId && dist.id === source.distributorId) continue;
           const distRes = await this.buildKit(
             trialInput,
             roofType,
@@ -766,12 +812,54 @@ export class KitGenerationService {
             tierModBrands,
             tierInvBrands
           );
-          if (distRes) return distRes;
+          if (distRes && isInvBrandCompliant(distRes) && isModBrandCompliant(distRes)) {
+            return distRes;
+          }
+          if (distRes && isInvBrandCompliant(distRes) && !bestPartial) {
+            bestPartial = distRes;
+          }
+        }
+
+        // Tenta também no catálogo ativo geral ({}) para permitir cruzar componentes
+        const globalRes = await this.buildKit(
+          trialInput,
+          roofType,
+          {},
+          tierModBrands,
+          tierInvBrands
+        );
+        if (globalRes && isInvBrandCompliant(globalRes) && isModBrandCompliant(globalRes)) {
+          return globalRes;
+        }
+        if (globalRes && isInvBrandCompliant(globalRes) && !bestPartial) {
+          bestPartial = globalRes;
+        }
+
+        if (bestPartial) {
+          return bestPartial;
         }
       }
 
-      // 2ª Tentativa: Fallback com candidatos selecionados para a categoria deste tier
-      // NUNCA fixa pinned_inverter_id a menos que o usuário tenha pedido no input
+      // 2ª Tentativa: Fixar inversor candidato da marca do tier (se disponível)
+      if (fallbackInverterId) {
+        const candidateInput: GenerateKitInput = {
+          ...input,
+          ...(input.pinned_module_id
+            ? { pinned_module_id: input.pinned_module_id }
+            : fallbackModule
+              ? { pinned_module_id: fallbackModule.id }
+              : {}),
+          ...(input.pinned_inverter_id
+            ? { pinned_inverter_id: input.pinned_inverter_id }
+            : { pinned_inverter_id: fallbackInverterId }),
+          inverter_type: invType,
+        };
+
+        const res = await this.buildKit(candidateInput, roofType, {}, tierModBrands, tierInvBrands);
+        if (res && isInvBrandCompliant(res)) return res;
+      }
+
+      // 3ª Tentativa: Fallback com fallbackModule na fonte primária
       if (fallbackModule || fallbackInverterId) {
         const candidateInput: GenerateKitInput = {
           ...input,
@@ -780,7 +868,11 @@ export class KitGenerationService {
             : fallbackModule
               ? { pinned_module_id: fallbackModule.id }
               : {}),
-          ...(input.pinned_inverter_id ? { pinned_inverter_id: input.pinned_inverter_id } : {}),
+          ...(input.pinned_inverter_id
+            ? { pinned_inverter_id: input.pinned_inverter_id }
+            : fallbackInverterId
+              ? { pinned_inverter_id: fallbackInverterId }
+              : {}),
           inverter_type: invType,
         };
 
@@ -794,7 +886,7 @@ export class KitGenerationService {
         if (res) return res;
       }
 
-      // 3ª Tentativa: Fallback de segurança no kit base
+      // 4ª Tentativa: Fallback de segurança no kit base
       return baseBuilt!;
     };
 
@@ -817,18 +909,11 @@ export class KitGenerationService {
     );
 
     // 5. Monta kit Alta Performance (Premium) respeitando estritamente marcas de Premium
-    let premiumFallbackInverterId = premiumCandidateInverter?.id;
-    if (requestedInverterType === "microinverter" && sortedMicro.length > 0) {
-      premiumFallbackInverterId = premiumCandidateInverter?.id || sortedMicro[0]?.id;
-    } else if (requestedInverterType === "hybrid" && sortedHybrid.length > 0) {
-      premiumFallbackInverterId = premiumCandidateInverter?.id || sortedHybrid[0]?.id;
-    }
-
     const premiumBuilt = await buildTier(
       premModBrands,
       premInvBrands,
       premiumCandidateModule,
-      premiumFallbackInverterId,
+      premiumCandidateInverter?.id,
       requestedInverterType
     );
 

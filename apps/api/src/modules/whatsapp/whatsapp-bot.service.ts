@@ -4061,6 +4061,20 @@ Regras estritas:
     let preferredInverterBrand = "Growatt";
     let preferredMicroInverterBrand = "Hoymiles";
     let preferredHybridInverterBrand = "Deye";
+
+    let modTiers:
+      | { standard?: string[]; elite?: string[]; premium?: string[]; priority?: string | null }
+      | undefined;
+    let invTiers:
+      | { standard?: string[]; elite?: string[]; premium?: string[]; priority?: string | null }
+      | undefined;
+    let microTiers:
+      | { standard?: string[]; elite?: string[]; premium?: string[]; priority?: string | null }
+      | undefined;
+    let hybridTiers:
+      | { standard?: string[]; elite?: string[]; premium?: string[]; priority?: string | null }
+      | undefined;
+
     if (organizationId) {
       try {
         const tenant = await this.prisma.tenant.findUnique({
@@ -4091,6 +4105,25 @@ Regras estritas:
           settings["preferredHybridInverterBrands"].length > 0
         ) {
           preferredHybridInverterBrand = String(settings["preferredHybridInverterBrands"][0]);
+        }
+
+        if (settings["moduleBrandTiers"] && typeof settings["moduleBrandTiers"] === "object") {
+          modTiers = settings["moduleBrandTiers"] as typeof modTiers;
+        }
+        if (settings["inverterBrandTiers"] && typeof settings["inverterBrandTiers"] === "object") {
+          invTiers = settings["inverterBrandTiers"] as typeof invTiers;
+        }
+        if (
+          settings["microInverterBrandTiers"] &&
+          typeof settings["microInverterBrandTiers"] === "object"
+        ) {
+          microTiers = settings["microInverterBrandTiers"] as typeof microTiers;
+        }
+        if (
+          settings["hybridInverterBrandTiers"] &&
+          typeof settings["hybridInverterBrandTiers"] === "object"
+        ) {
+          hybridTiers = settings["hybridInverterBrandTiers"] as typeof hybridTiers;
         }
       } catch {}
     }
@@ -4130,21 +4163,56 @@ Regras estritas:
       }
     }
 
-    const standardInverterBrand = isMicro
-      ? preferredMicroInverterBrand || "NEP"
-      : isHybrid
-        ? preferredHybridInverterBrand || "Deye"
-        : preferredInverterBrand || "Solplanet";
+    let standardInverterBrand: string;
+    let eliteInverterBrand: string;
+    let premiumInverterBrand: string;
 
-    const eliteInverterBrand = isMicro
-      ? preferredMicroInverterBrand && preferredMicroInverterBrand.toLowerCase() !== "nep"
-        ? preferredMicroInverterBrand
-        : "Hoymiles"
-      : isHybrid
-        ? preferredHybridInverterBrand || "Deye"
-        : preferredInverterBrand || "Growatt";
+    if (isMicro) {
+      if (
+        microTiers?.standard?.length ||
+        microTiers?.elite?.length ||
+        microTiers?.premium?.length
+      ) {
+        standardInverterBrand = microTiers.standard?.[0] || "SAJ";
+        eliteInverterBrand = microTiers.elite?.[0] || "Growatt";
+        premiumInverterBrand = microTiers.premium?.[0] || microTiers.priority || "DEYE";
+      } else {
+        standardInverterBrand = preferredMicroInverterBrand || "NEP";
+        eliteInverterBrand =
+          preferredMicroInverterBrand && preferredMicroInverterBrand.toLowerCase() !== "nep"
+            ? preferredMicroInverterBrand
+            : "Hoymiles";
+        premiumInverterBrand = "GoodWe";
+      }
+    } else if (isHybrid) {
+      if (
+        hybridTiers?.standard?.length ||
+        hybridTiers?.elite?.length ||
+        hybridTiers?.premium?.length
+      ) {
+        standardInverterBrand = hybridTiers.standard?.[0] || "Deye";
+        eliteInverterBrand = hybridTiers.elite?.[0] || "Growatt";
+        premiumInverterBrand = hybridTiers.premium?.[0] || hybridTiers.priority || "Huawei";
+      } else {
+        standardInverterBrand = preferredHybridInverterBrand || "Deye";
+        eliteInverterBrand = preferredHybridInverterBrand || "Deye";
+        premiumInverterBrand = "Huawei";
+      }
+    } else {
+      if (invTiers?.standard?.length || invTiers?.elite?.length || invTiers?.premium?.length) {
+        standardInverterBrand = invTiers.standard?.[0] || "Solplanet";
+        eliteInverterBrand = invTiers.elite?.[0] || "Growatt";
+        premiumInverterBrand = invTiers.premium?.[0] || invTiers.priority || "Sungrow";
+      } else {
+        standardInverterBrand = preferredInverterBrand || "Solplanet";
+        eliteInverterBrand = preferredInverterBrand || "Growatt";
+        premiumInverterBrand = "Huawei";
+      }
+    }
 
-    const premiumInverterBrand = isMicro ? "GoodWe" : isHybrid ? "Huawei" : "Huawei";
+    const standardModuleBrand = modTiers?.standard?.[0] || preferredModuleBrand || "DAH Solar";
+    const eliteModuleBrand = modTiers?.elite?.[0] || preferredModuleBrand || "Canadian Solar";
+    const premiumModuleBrand = modTiers?.premium?.[0] || "Jinko Solar";
 
     const tiers = [
       {
@@ -4153,7 +4221,7 @@ Regras estritas:
         distributorId: "kwp-standard",
         materialCostFactor: 0.88,
         inverterBrand: standardInverterBrand,
-        moduleBrand: preferredModuleBrand || "DAH Solar",
+        moduleBrand: standardModuleBrand,
       },
       {
         id: "cost_benefit",
@@ -4161,7 +4229,7 @@ Regras estritas:
         distributorId: "kwp-elite",
         materialCostFactor: 1.0,
         inverterBrand: eliteInverterBrand,
-        moduleBrand: preferredModuleBrand || "Canadian Solar",
+        moduleBrand: eliteModuleBrand,
       },
       {
         id: "premium",
@@ -4169,7 +4237,7 @@ Regras estritas:
         distributorId: "kwp-premium",
         materialCostFactor: 1.15,
         inverterBrand: premiumInverterBrand,
-        moduleBrand: "Jinko Solar",
+        moduleBrand: premiumModuleBrand,
       },
     ];
 
