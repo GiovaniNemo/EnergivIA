@@ -723,7 +723,7 @@
 | task-727 | Persistência de microInverterBrandTiers e hybridInverterBrandTiers no Backend (organizations.service e DTOs) | completed | DTOs e OrganizationsService atualizados com suporte a micro e híbridos, testes aprovados |
 | task-728 | Inteligência de Tiers de Microinversores e Híbridos em KitGenerationService | completed | Aplicado DEFAULT_TIER_MICRO_BRANDS e DEFAULT_TIER_HYBRID_BRANDS, activeInverterTiers e candidatos econômicos/premium de micro/híbridos, testes aprovados |
 | task-729 | Sincronização de preferências de micro e híbridos no WhatsApp Bot (whatsapp-bot.service.ts) | completed | calculateDistributorKits atualizado para carregar preferredMicroInverterBrands e preferredHybridInverterBrands, e gerar kits de contingência e etiquetas corretas, 7 testes aprovados |
-| task-730 | Extensão de Tipos e API Client no Frontend (organizations-api.ts) | in-progress | Atualizar DistributorAvailableBrands, Organization e payloads |
-| task-731 | Aprimoramento de BrandTierSelector com sugestão inteligente por tecnologia (módulos, string, micro, híbridos) | not-started | Implementar sugestão inteligente customizada e labels dinâmicos |
+| task-730 | Extensão de Tipos e API Client no Frontend (organizations-api.ts) | completed | Adicionado microInverters e hybridInverters em DistributorAvailableBrands, tipos em Organization e payloads |
+| task-731 | Aprimoramento de BrandTierSelector com sugestão inteligente por tecnologia (módulos, string, micro, híbridos) | in-progress | Implementar sugestão inteligente customizada e labels dinâmicos |
 | task-732 | Redesign completo do Perfil do Integrador em Abas (Regras Comerciais & kWp vs Preferências de Marcas) | not-started | Grid de 2 colunas para regras comerciais e pílulas segmentadas com contadores para as 4 tecnologias |
 | task-733 | Validação completa: testes unitários (backend e frontend), build NestJS/NextJS, commit e push | not-started | Garantir 100% de sucesso sem regressões |

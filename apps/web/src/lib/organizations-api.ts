@@ -35,8 +35,12 @@ export interface Organization {
   defaultKwpRate?: number | null;
   preferredModuleBrands?: string[];
   preferredInverterBrands?: string[];
+  preferredMicroInverterBrands?: string[];
+  preferredHybridInverterBrands?: string[];
   moduleBrandTiers?: BrandTierSelection | null;
   inverterBrandTiers?: BrandTierSelection | null;
+  microInverterBrandTiers?: BrandTierSelection | null;
+  hybridInverterBrandTiers?: BrandTierSelection | null;
   cardPaymentDefaults?: OrganizationCardPaymentDefaults | null;
   subscription?: {
     status: string;
@@ -228,8 +232,12 @@ export async function createOrganization(data: {
   defaultKwpRate?: number;
   preferredModuleBrands?: string[];
   preferredInverterBrands?: string[];
+  preferredMicroInverterBrands?: string[];
+  preferredHybridInverterBrands?: string[];
   moduleBrandTiers?: BrandTierSelection;
   inverterBrandTiers?: BrandTierSelection;
+  microInverterBrandTiers?: BrandTierSelection;
+  hybridInverterBrandTiers?: BrandTierSelection;
   referralSource?: string;
   referredBy?: string;
   referralCode?: string;
@@ -328,12 +336,14 @@ export async function getOrganization(id: string, organizationId?: string): Prom
 export interface DistributorAvailableBrands {
   modules: string[];
   inverters: string[];
+  microInverters?: string[];
+  hybridInverters?: string[];
 }
 
 export async function getDistributorAvailableBrands(): Promise<DistributorAvailableBrands> {
   const res = await apiProxy("GET", "/brands/distributor-available");
   if (!res.ok) {
-    return { modules: [], inverters: [] };
+    return { modules: [], inverters: [], microInverters: [], hybridInverters: [] };
   }
   return res.json();
 }
@@ -358,8 +368,12 @@ export async function updateOrganization(
     defaultKwpRate?: number;
     preferredModuleBrands?: string[];
     preferredInverterBrands?: string[];
+    preferredMicroInverterBrands?: string[];
+    preferredHybridInverterBrands?: string[];
     moduleBrandTiers?: BrandTierSelection;
     inverterBrandTiers?: BrandTierSelection;
+    microInverterBrandTiers?: BrandTierSelection;
+    hybridInverterBrandTiers?: BrandTierSelection;
     cardPaymentDefaults?: OrganizationCardPaymentDefaults;
   },
   organizationId?: string
