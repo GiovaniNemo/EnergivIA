@@ -222,4 +222,63 @@ describe("WhatsApp Bot - Microinverter & Hybrid Kit Calculation & Fast Switch", 
     expect(conversation.metadata.sessionData.inverterType).toBe("string");
     expect(reply).toContain("Inversor Convencional (String)");
   });
+
+  it("should use organization preferredMicroInverterBrands and microinverter labels in contingency fallback", async () => {
+    (botService as any).kitGeneration = null;
+    mockPrisma.tenant.findUnique.mockResolvedValue({
+      id: "org-1",
+      settings: {
+        preferredMicroInverterBrands: ["Deye", "Hoymiles"],
+      },
+    });
+
+    const quotes = await (botService as any).calculateDistributorKits({
+      consumptionKwh: 600,
+      cidade: "Maringá",
+      estado: "PR",
+      roofType: "Metálico",
+      gridVoltage: "Monofásico 220V",
+      inverterType: "microinverter",
+      organizationId: "org-1",
+    });
+
+    expect(quotes.length).toBe(3);
+    const standard = quotes.find((q: any) => q.distributorId === "kwp-standard");
+    const elite = quotes.find((q: any) => q.distributorId === "kwp-elite");
+    const premium = quotes.find((q: any) => q.distributorId === "kwp-premium");
+
+    expect(standard.invName).toBe("Deye");
+    expect(elite.invName).toBe("Deye");
+    expect(premium.invName).toBe("GoodWe");
+    expect(standard.items.some((i: string) => i.includes("Microinversor"))).toBe(true);
+  });
+
+  it("should use organization preferredHybridInverterBrands in contingency fallback", async () => {
+    (botService as any).kitGeneration = null;
+    mockPrisma.tenant.findUnique.mockResolvedValue({
+      id: "org-1",
+      settings: {
+        preferredHybridInverterBrands: ["Solis"],
+      },
+    });
+
+    const quotes = await (botService as any).calculateDistributorKits({
+      consumptionKwh: 800,
+      cidade: "Maringá",
+      estado: "PR",
+      roofType: "Metálico",
+      gridVoltage: "Trifásico 380V",
+      inverterType: "hybrid",
+      organizationId: "org-1",
+    });
+
+    expect(quotes.length).toBe(3);
+    const standard = quotes.find((q: any) => q.distributorId === "kwp-standard");
+    const elite = quotes.find((q: any) => q.distributorId === "kwp-elite");
+    const premium = quotes.find((q: any) => q.distributorId === "kwp-premium");
+
+    expect(standard.invName).toBe("Solis");
+    expect(elite.invName).toBe("Solis");
+    expect(premium.invName).toBe("Huawei");
+  });
 });

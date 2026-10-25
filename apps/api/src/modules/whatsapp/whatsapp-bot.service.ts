@@ -4059,6 +4059,8 @@ Regras estritas:
     // Busca marcas preferenciais cadastradas pelo integrador no tenant.settings
     let preferredModuleBrand = "DAH Solar";
     let preferredInverterBrand = "Growatt";
+    let preferredMicroInverterBrand = "Hoymiles";
+    let preferredHybridInverterBrand = "Deye";
     if (organizationId) {
       try {
         const tenant = await this.prisma.tenant.findUnique({
@@ -4078,8 +4080,23 @@ Regras estritas:
         ) {
           preferredInverterBrand = String(settings["preferredInverterBrands"][0]);
         }
+        if (
+          Array.isArray(settings["preferredMicroInverterBrands"]) &&
+          settings["preferredMicroInverterBrands"].length > 0
+        ) {
+          preferredMicroInverterBrand = String(settings["preferredMicroInverterBrands"][0]);
+        }
+        if (
+          Array.isArray(settings["preferredHybridInverterBrands"]) &&
+          settings["preferredHybridInverterBrands"].length > 0
+        ) {
+          preferredHybridInverterBrand = String(settings["preferredHybridInverterBrands"][0]);
+        }
       } catch {}
     }
+
+    const isMicro = mappedInverterType === "microinverter";
+    const isHybrid = mappedInverterType === "hybrid";
 
     const modulePowerW = modPowerWUser || 585;
     const moduleQty = targetModules || Math.max(4, Math.round((safeKwp * 1000) / modulePowerW));
@@ -4088,7 +4105,10 @@ Regras estritas:
     const invPowerSizes = [3, 3.6, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 75, 100];
     let invPower = 3;
     let invCount = 1;
-    if (realSystemKwp > 3.8) {
+    if (isMicro) {
+      invPower = 2;
+      invCount = Math.max(1, Math.ceil(realSystemKwp / 2));
+    } else if (realSystemKwp > 3.8) {
       if (realSystemKwp <= 130) {
         for (const size of invPowerSizes) {
           if (size * 1.3 >= realSystemKwp) {
@@ -4110,13 +4130,29 @@ Regras estritas:
       }
     }
 
+    const standardInverterBrand = isMicro
+      ? preferredMicroInverterBrand || "NEP"
+      : isHybrid
+        ? preferredHybridInverterBrand || "Deye"
+        : preferredInverterBrand || "Solplanet";
+
+    const eliteInverterBrand = isMicro
+      ? preferredMicroInverterBrand && preferredMicroInverterBrand.toLowerCase() !== "nep"
+        ? preferredMicroInverterBrand
+        : "Hoymiles"
+      : isHybrid
+        ? preferredHybridInverterBrand || "Deye"
+        : preferredInverterBrand || "Growatt";
+
+    const premiumInverterBrand = isMicro ? "GoodWe" : isHybrid ? "Huawei" : "Huawei";
+
     const tiers = [
       {
         id: "economic",
         distributorName: "Standard",
         distributorId: "kwp-standard",
         materialCostFactor: 0.88,
-        inverterBrand: preferredInverterBrand || "Growatt",
+        inverterBrand: standardInverterBrand,
         moduleBrand: preferredModuleBrand || "DAH Solar",
       },
       {
@@ -4124,7 +4160,7 @@ Regras estritas:
         distributorName: "Elite",
         distributorId: "kwp-elite",
         materialCostFactor: 1.0,
-        inverterBrand: preferredInverterBrand || "Growatt",
+        inverterBrand: eliteInverterBrand,
         moduleBrand: preferredModuleBrand || "Canadian Solar",
       },
       {
@@ -4132,7 +4168,7 @@ Regras estritas:
         distributorName: "Premium",
         distributorId: "kwp-premium",
         materialCostFactor: 1.15,
-        inverterBrand: "Huawei",
+        inverterBrand: premiumInverterBrand,
         moduleBrand: "Jinko Solar",
       },
     ];
@@ -4158,9 +4194,15 @@ Regras estritas:
         },
         {
           productId: "kwp-inv",
-          productName: `Inversor ${cfg.inverterBrand} ${invPower}kW`,
+          productName: isMicro
+            ? `${invCount > 1 ? `${invCount}x ` : ""}Microinversor ${cfg.inverterBrand} ${invPower}kW`
+            : isHybrid
+              ? `Inversor Híbrido ${cfg.inverterBrand} ${invPower}kW`
+              : invCount > 1
+                ? `${invCount}x Inversor ${cfg.inverterBrand} ${invPower}kW`
+                : `Inversor ${cfg.inverterBrand} ${invPower}kW`,
           brandName: cfg.inverterBrand,
-          categoryName: "inverter",
+          categoryName: isMicro ? "microinverter" : isHybrid ? "hybrid_inverter" : "inverter",
           quantity: invCount,
           unitPrice: invTotal / invCount,
           lineTotal: invTotal,
@@ -4180,8 +4222,6 @@ Regras estritas:
         });
       }
 
-      const isMicro = mappedInverterType === "microinverter";
-      const isHybrid = mappedInverterType === "hybrid";
       const invLabel = isMicro
         ? `${invCount}x Microinversor${invCount > 1 ? "es" : ""}`
         : isHybrid
