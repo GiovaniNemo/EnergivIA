@@ -419,11 +419,27 @@ export class OrganizationsService {
               dto.inverterBrandTiers,
               dto.preferredInverterBrands
             );
+            const microPref = compilePreferredFromTiers(
+              dto.microInverterBrandTiers,
+              dto.preferredMicroInverterBrands
+            );
+            const hybridPref = compilePreferredFromTiers(
+              dto.hybridInverterBrandTiers,
+              dto.preferredHybridInverterBrands
+            );
             return {
               ...(modPref ? { preferredModuleBrands: modPref } : {}),
               ...(invPref ? { preferredInverterBrands: invPref } : {}),
+              ...(microPref ? { preferredMicroInverterBrands: microPref } : {}),
+              ...(hybridPref ? { preferredHybridInverterBrands: hybridPref } : {}),
               ...(dto.moduleBrandTiers ? { moduleBrandTiers: dto.moduleBrandTiers } : {}),
               ...(dto.inverterBrandTiers ? { inverterBrandTiers: dto.inverterBrandTiers } : {}),
+              ...(dto.microInverterBrandTiers
+                ? { microInverterBrandTiers: dto.microInverterBrandTiers }
+                : {}),
+              ...(dto.hybridInverterBrandTiers
+                ? { hybridInverterBrandTiers: dto.hybridInverterBrandTiers }
+                : {}),
             };
           })(),
           referralSource: dto.referralSource?.trim() || null,
@@ -587,8 +603,18 @@ export class OrganizationsService {
       defaultKwpRate: readNumberSetting(org.settings, "defaultKwpRate"),
       preferredModuleBrands: readStringArraySetting(org.settings, "preferredModuleBrands"),
       preferredInverterBrands: readStringArraySetting(org.settings, "preferredInverterBrands"),
+      preferredMicroInverterBrands: readStringArraySetting(
+        org.settings,
+        "preferredMicroInverterBrands"
+      ),
+      preferredHybridInverterBrands: readStringArraySetting(
+        org.settings,
+        "preferredHybridInverterBrands"
+      ),
       moduleBrandTiers: readTierSetting(org.settings, "moduleBrandTiers"),
       inverterBrandTiers: readTierSetting(org.settings, "inverterBrandTiers"),
+      microInverterBrandTiers: readTierSetting(org.settings, "microInverterBrandTiers"),
+      hybridInverterBrandTiers: readTierSetting(org.settings, "hybridInverterBrandTiers"),
       cardPaymentDefaults: readCardPaymentDefaults(org.settings),
       referralSource: readOptionalSetting(org.settings, "referralSource"),
       referredBy: readOptionalSetting(org.settings, "referredBy"),
@@ -759,8 +785,21 @@ export class OrganizationsService {
           organization.settings,
           "preferredInverterBrands"
         ),
+        preferredMicroInverterBrands: readStringArraySetting(
+          organization.settings,
+          "preferredMicroInverterBrands"
+        ),
+        preferredHybridInverterBrands: readStringArraySetting(
+          organization.settings,
+          "preferredHybridInverterBrands"
+        ),
         moduleBrandTiers: readTierSetting(organization.settings, "moduleBrandTiers"),
         inverterBrandTiers: readTierSetting(organization.settings, "inverterBrandTiers"),
+        microInverterBrandTiers: readTierSetting(organization.settings, "microInverterBrandTiers"),
+        hybridInverterBrandTiers: readTierSetting(
+          organization.settings,
+          "hybridInverterBrandTiers"
+        ),
         role: m.role,
         membershipId: m.id,
         subscription: organization.subscription,
@@ -798,8 +837,18 @@ export class OrganizationsService {
       defaultKwpRate: readNumberSetting(org.settings, "defaultKwpRate"),
       preferredModuleBrands: readStringArraySetting(org.settings, "preferredModuleBrands"),
       preferredInverterBrands: readStringArraySetting(org.settings, "preferredInverterBrands"),
+      preferredMicroInverterBrands: readStringArraySetting(
+        org.settings,
+        "preferredMicroInverterBrands"
+      ),
+      preferredHybridInverterBrands: readStringArraySetting(
+        org.settings,
+        "preferredHybridInverterBrands"
+      ),
       moduleBrandTiers: readTierSetting(org.settings, "moduleBrandTiers"),
       inverterBrandTiers: readTierSetting(org.settings, "inverterBrandTiers"),
+      microInverterBrandTiers: readTierSetting(org.settings, "microInverterBrandTiers"),
+      hybridInverterBrandTiers: readTierSetting(org.settings, "hybridInverterBrandTiers"),
       cardPaymentDefaults: readCardPaymentDefaults(org.settings),
       role: membership.role,
     };
@@ -950,6 +999,12 @@ export class OrganizationsService {
       ...(dto.inverterBrandTiers !== undefined && {
         inverterBrandTiers: dto.inverterBrandTiers,
       }),
+      ...(dto.microInverterBrandTiers !== undefined && {
+        microInverterBrandTiers: dto.microInverterBrandTiers,
+      }),
+      ...(dto.hybridInverterBrandTiers !== undefined && {
+        hybridInverterBrandTiers: dto.hybridInverterBrandTiers,
+      }),
       ...(dto.cardPaymentDefaults !== undefined && {
         cardPaymentDefaults: dto.cardPaymentDefaults,
       }),
@@ -959,9 +1014,19 @@ export class OrganizationsService {
           dto.inverterBrandTiers,
           dto.preferredInverterBrands
         );
+        const microPref = compilePreferredFromTiers(
+          dto.microInverterBrandTiers,
+          dto.preferredMicroInverterBrands
+        );
+        const hybridPref = compilePreferredFromTiers(
+          dto.hybridInverterBrandTiers,
+          dto.preferredHybridInverterBrands
+        );
         return {
           ...(modPref !== undefined && { preferredModuleBrands: modPref }),
           ...(invPref !== undefined && { preferredInverterBrands: invPref }),
+          ...(microPref !== undefined && { preferredMicroInverterBrands: microPref }),
+          ...(hybridPref !== undefined && { preferredHybridInverterBrands: hybridPref }),
         };
       })(),
     };
@@ -987,8 +1052,12 @@ export class OrganizationsService {
           dto.defaultKwpRate !== undefined ||
           dto.preferredModuleBrands !== undefined ||
           dto.preferredInverterBrands !== undefined ||
+          dto.preferredMicroInverterBrands !== undefined ||
+          dto.preferredHybridInverterBrands !== undefined ||
           dto.moduleBrandTiers !== undefined ||
           dto.inverterBrandTiers !== undefined ||
+          dto.microInverterBrandTiers !== undefined ||
+          dto.hybridInverterBrandTiers !== undefined ||
           dto.cardPaymentDefaults !== undefined) && { settings: nextSettings }),
       },
     });
@@ -1049,8 +1118,18 @@ export class OrganizationsService {
       defaultKwpRate: readNumberSetting(org.settings, "defaultKwpRate"),
       preferredModuleBrands: readStringArraySetting(org.settings, "preferredModuleBrands"),
       preferredInverterBrands: readStringArraySetting(org.settings, "preferredInverterBrands"),
+      preferredMicroInverterBrands: readStringArraySetting(
+        org.settings,
+        "preferredMicroInverterBrands"
+      ),
+      preferredHybridInverterBrands: readStringArraySetting(
+        org.settings,
+        "preferredHybridInverterBrands"
+      ),
       moduleBrandTiers: readTierSetting(org.settings, "moduleBrandTiers"),
       inverterBrandTiers: readTierSetting(org.settings, "inverterBrandTiers"),
+      microInverterBrandTiers: readTierSetting(org.settings, "microInverterBrandTiers"),
+      hybridInverterBrandTiers: readTierSetting(org.settings, "hybridInverterBrandTiers"),
       cardPaymentDefaults: readCardPaymentDefaults(org.settings),
     };
   }

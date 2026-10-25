@@ -62,6 +62,16 @@ export class UpdateOrganizationDto {
   preferredInverterBrands?: string[];
 
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  preferredMicroInverterBrands?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  preferredHybridInverterBrands?: string[];
+
+  @IsOptional()
   moduleBrandTiers?: {
     standard: string[];
     elite: string[];
@@ -71,6 +81,22 @@ export class UpdateOrganizationDto {
 
   @IsOptional()
   inverterBrandTiers?: {
+    standard: string[];
+    elite: string[];
+    premium: string[];
+    priority?: string | null;
+  };
+
+  @IsOptional()
+  microInverterBrandTiers?: {
+    standard: string[];
+    elite: string[];
+    premium: string[];
+    priority?: string | null;
+  };
+
+  @IsOptional()
+  hybridInverterBrandTiers?: {
     standard: string[];
     elite: string[];
     premium: string[];
