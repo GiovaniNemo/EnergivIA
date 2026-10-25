@@ -58,7 +58,12 @@ export class BrandsService {
     await this.prisma.brand.delete({ where: { id } });
   }
 
-  async getDistributorAvailable(): Promise<{ modules: string[]; inverters: string[] }> {
+  async getDistributorAvailable(): Promise<{
+    modules: string[];
+    inverters: string[];
+    microInverters: string[];
+    hybridInverters: string[];
+  }> {
     const isGeneric = (name: string) => {
       const lower = name.toLowerCase().trim();
       return (
@@ -85,8 +90,10 @@ export class BrandsService {
 
     const modulesSet = new Set<string>();
     const invertersSet = new Set<string>();
+    const microInvertersSet = new Set<string>();
+    const hybridInvertersSet = new Set<string>();
 
-    // 1. Marcas com produtos ativos no catálogo de distribuidores homologados (itens disponíveis no dimensionamento)
+    // 1. Marcas com produtos ativos no catálogo de distribuidores homologados
     const distProds = await this.prisma.distributorProduct.findMany({
       where: {
         active: true,
@@ -114,14 +121,26 @@ export class BrandsService {
 
       if (cat === "module") {
         modulesSet.add(brandName);
-      } else if (cat === "inverter" && !isMicroInverterBrand(brandName)) {
-        // Apenas inversores convencionais (string / central), excluindo microinversores
-        invertersSet.add(brandName);
+      } else if (cat === "microinverter") {
+        microInvertersSet.add(brandName);
+      } else if (cat === "hybrid_inverter" || cat === "hybrid") {
+        hybridInvertersSet.add(brandName);
+      } else if (cat === "inverter") {
+        if (isMicroInverterBrand(brandName)) {
+          microInvertersSet.add(brandName);
+        } else {
+          invertersSet.add(brandName);
+        }
       }
     }
 
-    // 2. Fallback caso não haja vínculos de distribuidor: produtos ativos no catálogo geral
-    if (modulesSet.size === 0 || invertersSet.size === 0) {
+    // 2. Fallback caso algum conjunto esteja vazio: busca produtos ativos no catálogo geral
+    if (
+      modulesSet.size === 0 ||
+      invertersSet.size === 0 ||
+      microInvertersSet.size === 0 ||
+      hybridInvertersSet.size === 0
+    ) {
       const activeProds = await this.prisma.product.findMany({
         where: { active: true },
         select: {
@@ -133,13 +152,16 @@ export class BrandsService {
         const brandName = p.brand?.name?.trim();
         const cat = p.category?.name?.trim().toLowerCase();
         if (!brandName || isGeneric(brandName) || isStructureBrand(brandName)) continue;
+
         if (cat === "module" && modulesSet.size === 0) modulesSet.add(brandName);
-        else if (
-          cat === "inverter" &&
-          !isMicroInverterBrand(brandName) &&
-          invertersSet.size === 0
-        ) {
-          invertersSet.add(brandName);
+        else if (cat === "microinverter") microInvertersSet.add(brandName);
+        else if (cat === "hybrid_inverter" || cat === "hybrid") hybridInvertersSet.add(brandName);
+        else if (cat === "inverter") {
+          if (isMicroInverterBrand(brandName)) {
+            microInvertersSet.add(brandName);
+          } else if (invertersSet.size === 0) {
+            invertersSet.add(brandName);
+          }
         }
       }
     }
@@ -147,6 +169,8 @@ export class BrandsService {
     return {
       modules: Array.from(modulesSet).sort((a, b) => a.localeCompare(b)),
       inverters: Array.from(invertersSet).sort((a, b) => a.localeCompare(b)),
+      microInverters: Array.from(microInvertersSet).sort((a, b) => a.localeCompare(b)),
+      hybridInverters: Array.from(hybridInvertersSet).sort((a, b) => a.localeCompare(b)),
     };
   }
 }
