@@ -14,7 +14,7 @@ import type {
   DistributorTiersResult,
 } from "./types";
 import { isStringSizingResult, type ProductWithSpecs } from "../../domain/solar-sizing/types";
-import type { ModuleSpec, StringInverterSpec } from "../../domain/product-specs";
+import type { ModuleSpec, StringInverterSpec, InverterSpec } from "../../domain/product-specs";
 import { PrismaService } from "../../prisma/prisma.service";
 import { Decimal } from "@prisma/client/runtime/library";
 import { formatKitForWhatsApp } from "./whatsapp-formatter.service";
@@ -704,12 +704,13 @@ export class KitGenerationService {
         : sortedByPricePerW[1]?.module || sortedByPricePerW[0]?.module;
 
     const sortedStringByPrice = [...effectiveStringInverters].sort((a, b) => a.price - b.price);
-    let economicCandidateInverter = sortedStringByPrice[0];
-    let costBenefitCandidateInverter =
+    let economicCandidateInverter: ProductWithSpecs<InverterSpec> | undefined =
+      sortedStringByPrice[0];
+    let costBenefitCandidateInverter: ProductWithSpecs<InverterSpec> | undefined =
       sortedStringByPrice.length > 2
         ? sortedStringByPrice[Math.floor(sortedStringByPrice.length / 2)]
         : sortedStringByPrice[1] || sortedStringByPrice[0];
-    let premiumCandidateInverter =
+    let premiumCandidateInverter: ProductWithSpecs<InverterSpec> | undefined =
       sortedStringByPrice.length > 1
         ? sortedStringByPrice[sortedStringByPrice.length - 1]
         : sortedStringByPrice[0];
