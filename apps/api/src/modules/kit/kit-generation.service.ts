@@ -147,7 +147,21 @@ export class KitGenerationService {
           .map((s) => String(s).toLowerCase().trim())
           .filter(Boolean);
       }
-      if (Array.isArray(settings["preferredInverterBrands"])) {
+      if (
+        input.inverter_type === "microinverter" &&
+        Array.isArray(settings["preferredMicroInverterBrands"])
+      ) {
+        preferredInverterBrands = (settings["preferredMicroInverterBrands"] as string[])
+          .map((s) => String(s).toLowerCase().trim())
+          .filter(Boolean);
+      } else if (
+        input.inverter_type === "hybrid" &&
+        Array.isArray(settings["preferredHybridInverterBrands"])
+      ) {
+        preferredInverterBrands = (settings["preferredHybridInverterBrands"] as string[])
+          .map((s) => String(s).toLowerCase().trim())
+          .filter(Boolean);
+      } else if (Array.isArray(settings["preferredInverterBrands"])) {
         preferredInverterBrands = (settings["preferredInverterBrands"] as string[])
           .map((s) => String(s).toLowerCase().trim())
           .filter(Boolean);
@@ -296,6 +310,8 @@ export class KitGenerationService {
 
     let preferredModuleBrands: string[] = [];
     let preferredInverterBrands: string[] = [];
+    let preferredMicroInverterBrands: string[] = [];
+    let preferredHybridInverterBrands: string[] = [];
     let moduleTiersConfig: {
       standard?: string[];
       elite?: string[];
@@ -303,6 +319,18 @@ export class KitGenerationService {
       priority?: string | null;
     } | null = null;
     let inverterTiersConfig: {
+      standard?: string[];
+      elite?: string[];
+      premium?: string[];
+      priority?: string | null;
+    } | null = null;
+    let microInverterTiersConfig: {
+      standard?: string[];
+      elite?: string[];
+      premium?: string[];
+      priority?: string | null;
+    } | null = null;
+    let hybridInverterTiersConfig: {
       standard?: string[];
       elite?: string[];
       premium?: string[];
@@ -325,6 +353,16 @@ export class KitGenerationService {
           .map((s) => String(s).toLowerCase().trim())
           .filter(Boolean);
       }
+      if (Array.isArray(settings["preferredMicroInverterBrands"])) {
+        preferredMicroInverterBrands = (settings["preferredMicroInverterBrands"] as string[])
+          .map((s) => String(s).toLowerCase().trim())
+          .filter(Boolean);
+      }
+      if (Array.isArray(settings["preferredHybridInverterBrands"])) {
+        preferredHybridInverterBrands = (settings["preferredHybridInverterBrands"] as string[])
+          .map((s) => String(s).toLowerCase().trim())
+          .filter(Boolean);
+      }
       if (settings["moduleBrandTiers"] && typeof settings["moduleBrandTiers"] === "object") {
         moduleTiersConfig = settings["moduleBrandTiers"] as {
           standard?: string[];
@@ -341,6 +379,34 @@ export class KitGenerationService {
           priority?: string | null;
         };
       }
+      if (
+        settings["microInverterBrandTiers"] &&
+        typeof settings["microInverterBrandTiers"] === "object"
+      ) {
+        microInverterTiersConfig = settings["microInverterBrandTiers"] as {
+          standard?: string[];
+          elite?: string[];
+          premium?: string[];
+          priority?: string | null;
+        };
+      }
+      if (
+        settings["hybridInverterBrandTiers"] &&
+        typeof settings["hybridInverterBrandTiers"] === "object"
+      ) {
+        hybridInverterTiersConfig = settings["hybridInverterBrandTiers"] as {
+          standard?: string[];
+          elite?: string[];
+          premium?: string[];
+          priority?: string | null;
+        };
+      }
+    }
+
+    if (input.inverter_type === "microinverter" && preferredMicroInverterBrands.length > 0) {
+      preferredInverterBrands = preferredMicroInverterBrands;
+    } else if (input.inverter_type === "hybrid" && preferredHybridInverterBrands.length > 0) {
+      preferredInverterBrands = preferredHybridInverterBrands;
     }
 
     // 1. Build default base kit first as baseline
@@ -521,6 +587,18 @@ export class KitGenerationService {
       premium: ["sungrow", "fronius", "huawei", "enphase", "apsystems", "goodwe"],
     };
 
+    const DEFAULT_TIER_MICRO_BRANDS = {
+      standard: ["nep", "northern electric power", "tsun", "saj", "deye micro", "deye"],
+      elite: ["growatt", "deye", "hoymiles", "saj"],
+      premium: ["goodwe", "enphase", "apsystems", "hoymiles", "growatt"],
+    };
+
+    const DEFAULT_TIER_HYBRID_BRANDS = {
+      standard: ["deye", "growatt", "livoltek"],
+      elite: ["goodwe", "solis", "growatt", "deye"],
+      premium: ["huawei", "fronius", "sungrow", "goodwe", "deye"],
+    };
+
     // Helper para extrair marcas de um tier garantindo que a marca prioritária (se configurada)
     // apenas tenha precedência DENTRO do tier ao qual ela pertence, sem contaminar os demais tiers.
     const resolveTierBrands = (tierBrands?: string[], priorityBrand?: string | null): string[] => {
@@ -562,23 +640,35 @@ export class KitGenerationService {
       moduleTiersConfig?.priority
     );
 
+    const activeInverterTiers =
+      input.inverter_type === "microinverter"
+        ? microInverterTiersConfig || inverterTiersConfig
+        : input.inverter_type === "hybrid"
+          ? hybridInverterTiersConfig || inverterTiersConfig
+          : inverterTiersConfig;
+
+    const defaultInverterBrands =
+      input.inverter_type === "microinverter"
+        ? DEFAULT_TIER_MICRO_BRANDS
+        : input.inverter_type === "hybrid"
+          ? DEFAULT_TIER_HYBRID_BRANDS
+          : DEFAULT_TIER_INVERTER_BRANDS;
+
     const stdInvBrands = resolveTierBrands(
-      inverterTiersConfig?.standard?.length
-        ? inverterTiersConfig.standard
-        : DEFAULT_TIER_INVERTER_BRANDS.standard,
-      inverterTiersConfig?.priority
+      activeInverterTiers?.standard?.length
+        ? activeInverterTiers.standard
+        : defaultInverterBrands.standard,
+      activeInverterTiers?.priority
     );
     const eliteInvBrands = resolveTierBrands(
-      inverterTiersConfig?.elite?.length
-        ? inverterTiersConfig.elite
-        : DEFAULT_TIER_INVERTER_BRANDS.elite,
-      inverterTiersConfig?.priority
+      activeInverterTiers?.elite?.length ? activeInverterTiers.elite : defaultInverterBrands.elite,
+      activeInverterTiers?.priority
     );
     const premInvBrands = resolveTierBrands(
-      inverterTiersConfig?.premium?.length
-        ? inverterTiersConfig.premium
-        : DEFAULT_TIER_INVERTER_BRANDS.premium,
-      inverterTiersConfig?.priority
+      activeInverterTiers?.premium?.length
+        ? activeInverterTiers.premium
+        : defaultInverterBrands.premium,
+      activeInverterTiers?.priority
     );
 
     // Candidatos de fallback específicos por tier (caso o tier não tenha marcas ou ocorra incompatibilidade)
@@ -614,15 +704,28 @@ export class KitGenerationService {
         : sortedByPricePerW[1]?.module || sortedByPricePerW[0]?.module;
 
     const sortedStringByPrice = [...effectiveStringInverters].sort((a, b) => a.price - b.price);
-    const economicCandidateInverter = sortedStringByPrice[0];
-    const costBenefitCandidateInverter =
+    let economicCandidateInverter = sortedStringByPrice[0];
+    let costBenefitCandidateInverter =
       sortedStringByPrice.length > 2
         ? sortedStringByPrice[Math.floor(sortedStringByPrice.length / 2)]
         : sortedStringByPrice[1] || sortedStringByPrice[0];
-    const premiumCandidateInverter =
+    let premiumCandidateInverter =
       sortedStringByPrice.length > 1
         ? sortedStringByPrice[sortedStringByPrice.length - 1]
         : sortedStringByPrice[0];
+
+    const requestedInverterType = input.inverter_type;
+    if (requestedInverterType === "microinverter" && sortedMicro.length > 0) {
+      economicCandidateInverter = sortedMicro[0];
+      costBenefitCandidateInverter = sortedMicro.length > 2 ? sortedMicro[1] : sortedMicro[0];
+      premiumCandidateInverter =
+        sortedMicro.length > 1 ? sortedMicro[sortedMicro.length - 1] : sortedMicro[0];
+    } else if (requestedInverterType === "hybrid" && sortedHybrid.length > 0) {
+      economicCandidateInverter = sortedHybrid[0];
+      costBenefitCandidateInverter = sortedHybrid.length > 2 ? sortedHybrid[1] : sortedHybrid[0];
+      premiumCandidateInverter =
+        sortedHybrid.length > 1 ? sortedHybrid[sortedHybrid.length - 1] : sortedHybrid[0];
+    }
 
     // Helper unificado para montagem de cada tier respeitando sua distribuição
     const buildTier = async (
@@ -713,12 +816,11 @@ export class KitGenerationService {
     );
 
     // 5. Monta kit Alta Performance (Premium) respeitando estritamente marcas de Premium
-    const requestedInverterType = input.inverter_type;
     let premiumFallbackInverterId = premiumCandidateInverter?.id;
     if (requestedInverterType === "microinverter" && sortedMicro.length > 0) {
-      premiumFallbackInverterId = sortedMicro[0]?.id;
+      premiumFallbackInverterId = premiumCandidateInverter?.id || sortedMicro[0]?.id;
     } else if (requestedInverterType === "hybrid" && sortedHybrid.length > 0) {
-      premiumFallbackInverterId = sortedHybrid[0]?.id;
+      premiumFallbackInverterId = premiumCandidateInverter?.id || sortedHybrid[0]?.id;
     }
 
     const premiumBuilt = await buildTier(
