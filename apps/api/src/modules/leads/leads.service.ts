@@ -502,20 +502,20 @@ export class LeadsService {
       const meta =
         c.metadata && typeof c.metadata === "object" ? (c.metadata as Record<string, unknown>) : {};
       const sessionData =
-        meta.sessionData && typeof meta.sessionData === "object"
-          ? (meta.sessionData as Record<string, unknown>)
+        meta["sessionData"] && typeof meta["sessionData"] === "object"
+          ? (meta["sessionData"] as Record<string, unknown>)
           : {};
       const raw =
         typeof c.title === "string" && c.title.match(/^\d+$/)
           ? c.title
-          : String(meta.customerWaId || meta.phone || "");
+          : String(meta["customerWaId"] || meta["phone"] || "");
       const phone = formatInternationalPhone(raw);
       if (!phone || phone.length < 10) continue;
 
       const existing = contactsMap.get(phone);
       const contactName =
-        (typeof meta.contactName === "string" && meta.contactName) ||
-        (typeof sessionData.clientName === "string" && sessionData.clientName) ||
+        (typeof meta["contactName"] === "string" && (meta["contactName"] as string)) ||
+        (typeof sessionData["clientName"] === "string" && (sessionData["clientName"] as string)) ||
         "Integrador Solar";
 
       if (!existing) {
