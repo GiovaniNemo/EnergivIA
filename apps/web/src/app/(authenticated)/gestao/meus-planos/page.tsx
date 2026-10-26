@@ -22,6 +22,7 @@ import {
   Boxes,
   TrendingUp,
   Sparkles,
+  Headphones,
 } from "lucide-react";
 
 import {
@@ -691,7 +692,52 @@ function MeusPlanosContent() {
                       ))}
                     </ul>
 
-                    <div className="mt-auto pt-5 border-t border-slate-100 dark:border-white/5">
+                    {/* Divisória e Destaque de Suporte Prioritário (Plano Plus) */}
+                    {isPlus && (
+                      <div className="mt-auto mb-5">
+                        <div className="w-full border-t border-slate-200/80 dark:border-white/10 mb-4" />
+                        <div
+                          className={`rounded-2xl p-4 border transition-all ${
+                            isCurrentPlan
+                              ? "bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/25"
+                              : "bg-amber-500/5 dark:bg-yellow-500/10 border-amber-500/25 dark:border-yellow-500/20"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 mb-1.5">
+                            <div
+                              className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                                isCurrentPlan
+                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                  : "bg-amber-500/15 text-amber-600 dark:text-yellow-400"
+                              }`}
+                            >
+                              <Headphones className="w-4 h-4" />
+                            </div>
+                            <span
+                              className={`text-xs font-extrabold uppercase tracking-wider ${
+                                isCurrentPlan
+                                  ? "text-emerald-700 dark:text-emerald-400"
+                                  : "text-amber-800 dark:text-yellow-300"
+                              }`}
+                            >
+                              Suporte Prioritário VIP
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed pl-9.5 font-medium">
+                            Assinantes deste plano contam com fila prioritária exclusiva e
+                            atendimento direto com especialistas técnicos.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div
+                      className={
+                        isPlus
+                          ? "pt-0"
+                          : "mt-auto pt-5 border-t border-slate-100 dark:border-white/5"
+                      }
+                    >
                       {isCurrentPlan ? (
                         <div className="w-full py-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 font-bold text-center text-sm flex items-center justify-center gap-2 shadow-sm">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />

@@ -3,7 +3,16 @@
 import React, { useEffect, useState } from "react";
 import { useOrganization } from "./providers/organization-provider";
 import PaymentWrapper from "./PaymentForm";
-import { Rocket, Gem, CheckCircle2, XCircle, LockKeyhole, LogOut, Sparkles } from "lucide-react";
+import {
+  Rocket,
+  Gem,
+  CheckCircle2,
+  XCircle,
+  LockKeyhole,
+  LogOut,
+  Sparkles,
+  Headphones,
+} from "lucide-react";
 import {
   type PlanFeatureItem,
   normalizePlanFeatures,
@@ -319,7 +328,26 @@ export function TrialLockOverlay() {
                       </ul>
                     </div>
 
-                    <div className="mt-auto pt-2 border-t border-gray-800/80">
+                    {/* Divisória e Suporte Prioritário (Plano Plus) */}
+                    {isPlus && (
+                      <div className="mt-auto mb-3">
+                        <div className="w-full border-t border-gray-800/80 mb-2.5" />
+                        <div className="rounded-xl p-2.5 bg-yellow-500/10 border border-yellow-500/20 text-gray-200">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Headphones className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-300">
+                              Suporte Prioritário VIP
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-gray-300 leading-snug">
+                            Assinantes do Plano Plus contam com fila prioritária exclusiva e
+                            atendimento direto com especialistas técnicos.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className={isPlus ? "pt-0" : "mt-auto pt-2 border-t border-gray-800/80"}>
                       <PaymentWrapper
                         planId={plan?.id || ""}
                         planName={planName}
