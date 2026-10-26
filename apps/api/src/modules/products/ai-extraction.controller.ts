@@ -6,10 +6,13 @@ export class AiExtractionController {
   constructor(private readonly aiExtractionService: AiExtractionService) {}
 
   @Post("extract-datasheet")
-  async extractDatasheet(@Body() body: { datasheetUrl: string; productName?: string }) {
+  async extractDatasheet(
+    @Body() body: { datasheetUrl: string; productName?: string; category?: string }
+  ) {
     return this.aiExtractionService.extractSpecsFromDatasheetUrl(
       body.datasheetUrl,
-      body.productName
+      body.productName,
+      body.category
     );
   }
 }

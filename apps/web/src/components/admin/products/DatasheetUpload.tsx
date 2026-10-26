@@ -40,7 +40,7 @@ export function DatasheetUpload({
     setSuccessMsg("");
     setIsExtracting(true);
     try {
-      const { specs } = await extractDatasheet(value, productName);
+      const { specs } = await extractDatasheet(value, productName, productCategory);
       onExtractedSpecs(specs);
       setSuccessMsg("Ficha técnica preenchida com sucesso pela IA a partir do PDF anexado!");
     } catch (e) {
@@ -83,14 +83,27 @@ export function DatasheetUpload({
         productCategory,
       });
 
-      const uploadRes = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
+      const uploadController = new AbortController();
+      const uploadTimeout = setTimeout(() => uploadController.abort(), 45000);
 
-      if (!uploadRes.ok) {
-        throw new Error("Falha no upload do datasheet para o S3.");
+      try {
+        const uploadRes = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": file.type },
+          body: file,
+          signal: uploadController.signal,
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error("Falha no upload do datasheet para o S3.");
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          throw new Error("Tempo limite excedido ao enviar o arquivo PDF (timeout de 45s).");
+        }
+        throw err;
+      } finally {
+        clearTimeout(uploadTimeout);
       }
 
       onChange(fileUrl);
@@ -98,7 +111,7 @@ export function DatasheetUpload({
       setIsExtracting(true);
 
       // 2. Extrai as especificações usando IA
-      const { specs } = await extractDatasheet(fileUrl, productName);
+      const { specs } = await extractDatasheet(fileUrl, productName, productCategory);
       onExtractedSpecs(specs);
       setSuccessMsg("PDF enviado e especificações extraídas com sucesso pela IA!");
     } catch (e) {

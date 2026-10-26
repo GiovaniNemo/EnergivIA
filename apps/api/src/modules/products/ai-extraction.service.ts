@@ -22,7 +22,11 @@ export class AiExtractionService {
     this.genAI = new GoogleGenerativeAI(this.apiKey);
   }
 
-  async extractSpecsFromDatasheetUrl(datasheetUrl: string, productName?: string) {
+  async extractSpecsFromDatasheetUrl(
+    datasheetUrl: string,
+    productName?: string,
+    category?: string
+  ) {
     const urlWithoutQuery = (datasheetUrl.split("?")[0] ?? "").toLowerCase();
     if (!urlWithoutQuery.endsWith(".pdf")) {
       throw new BadRequestException("O arquivo fornecido não parece ser um PDF.");
@@ -99,18 +103,35 @@ export class AiExtractionService {
       );
     }
 
+    const categoryHint = category
+      ? `CATEGORIA ESPERADA DO EQUIPAMENTO: "${category}". Priorize a extração das propriedades técnicas desta categoria.`
+      : "";
+
     const modelInstruction = productName
       ? `ATENÇÃO: Este documento/datasheet pode conter múltiplos modelos ou colunas comparativas. Extraia as especificações EXCLUSIVAMENTE para o modelo mais aderente a: "${productName}". Ignore os dados dos outros modelos.`
       : `Extraia as especificações técnicas gerais encontradas no datasheet.`;
 
-    const prompt = `Você é um engenheiro sênior de sistemas fotovoltaicos. Analise com atenção o documento de datasheet fornecido (PDF com dados técnicos, tabelas elétricas e mecânicas).
+    const prompt = `Você é um engenheiro sênior de sistemas fotovoltaicos e armazenamento de energia (ESS). Analise com atenção o documento de datasheet fornecido (PDF com dados técnicos, tabelas elétricas e mecânicas).
+${categoryHint}
 ${modelInstruction}
 ${
   hasDigitalText
     ? `Texto auxiliar extraído do documento:\n${textContent}\n`
     : "Nota: O PDF não possui camada de texto selecionável (é um documento escaneado/com imagens). Examine visualmente as tabelas, colunas de especificações e valores numéricos."
 }
-Retorne APENAS um objeto JSON com as chaves "detectedCategory" ('module', 'inverter', 'microinverter' ou 'unknown') e "specs" com os parâmetros numéricos elétricos e mecânicos correspondentes.
+Retorne APENAS um objeto JSON com as chaves "detectedCategory" ('module', 'inverter', 'microinverter', 'battery' ou 'unknown') e "specs" com os parâmetros numéricos elétricos e mecânicos correspondentes.
+
+Para Baterias (sistemas de armazenamento de energia / ESS / Módulos de Bateria de Lítio):
+- "capacity_kwh": Capacidade nominal de energia do módulo em kWh (ex: 5.12 para 5.12 kWh).
+- "capacity_ah": Capacidade nominal em Ampere-hora (Ah) (ex: 100 para 100Ah).
+- "nominal_voltage_v": Tensão nominal do módulo em Volts (ex: 51.2 para 51.2V ou 48 para 48V).
+- "voltage_type": "low_voltage" para Baixa Tensão (sistemas 48V/51.2V - LV) ou "high_voltage" para Alta Tensão (módulos para ligação em série - HV).
+- "chemistry": "lifepo4" para Lítio Ferro Fosfato (LFP/LiFePO4), "lithium_ion" para Íon de Lítio (NMC), "lead_carbon" para Chumbo-Carbono ou "other".
+- "dod_percent": Profundidade de descarga (Depth of Discharge - DoD) em porcentagem (ex: 90 para 90%).
+- "cycles": Ciclos de vida útil (ex: 6000 para 6000 ciclos).
+- "max_charge_current_a": Corrente máxima ou recomendada contínua de carga em Amperes (ex: 50 ou 100).
+- "max_discharge_current_a": Corrente máxima contínua de descarga em Amperes (ex: 100).
+- "warranty_years": Garantia de fábrica em anos (ex: 5 ou 10).
 
 Para Módulos Fotovoltaicos (painéis solares), procure com máxima atenção:
 - "power_w": Potência nominal do módulo em Watts (Pmax/Rated Power), valor STC (ex: 575 para 575W).
@@ -196,9 +217,12 @@ Para Microinversores, procure com máxima atenção:
       ].filter(Boolean) as string[];
     }
 
-    // 1. Tenta extrair usando a lista de modelos Gemini (com suporte multimodal ao PDF)
+    // 1. Tenta extrair usando a lista de modelos Gemini (prioriza os mais rápidos)
     if (this.genAI && this.apiKey) {
-      for (const modelCandidate of candidateModels) {
+      // Limita a no máximo os 3 melhores modelos disponíveis para evitar travamento em cascata demorada
+      const modelsToTry = candidateModels.slice(0, 3);
+
+      for (const modelCandidate of modelsToTry) {
         try {
           this.logger.log(`Tentando extrair datasheet com modelo Gemini: ${modelCandidate}`);
 
@@ -210,9 +234,10 @@ Para Microinversores, procure com máxima atenção:
             },
           });
 
-          // Monta o payload multimodal se houver base64 do PDF
+          // Monta o payload multimodal se for necessário (apenas se NÃO houver texto digital)
+          // Isso reduz a requisição de 20MB para meros KBs, acelerando a resposta de 1 minuto para 2 segundos!
           const contentParts: (string | Part)[] = [prompt];
-          if (pdfBase64) {
+          if (!hasDigitalText && pdfBase64) {
             contentParts.push({
               inlineData: {
                 data: pdfBase64,
@@ -226,10 +251,11 @@ Para Microinversores, procure com máxima atenção:
           const parsed = this.parseJsonSafely(text);
 
           if (parsed && typeof parsed === "object") {
-            const detectedCategory = parsed.detectedCategory || "unknown";
+            const detectedCategory = parsed.detectedCategory || category || "unknown";
             const sanitizedSpecs = this.sanitizeAndEnrichSpecs(
               detectedCategory,
-              parsed.specs || {}
+              parsed.specs || {},
+              category
             );
             return {
               detectedCategory,
@@ -265,10 +291,21 @@ Para Microinversores, procure com máxima atenção:
             messages: [
               {
                 role: "system",
-                content: `Você é um engenheiro sênior de sistemas fotovoltaicos. Analise o texto do datasheet e extraia as especificações técnicas em JSON com formato:
+                content: `Você é um engenheiro sênior de sistemas fotovoltaicos e baterias. Analise o texto do datasheet e extraia as especificações técnicas em JSON com formato:
 {
-  "detectedCategory": "module" | "inverter" | "microinverter" | "unknown",
+  "detectedCategory": "module" | "inverter" | "microinverter" | "battery" | "unknown",
   "specs": {
+    // Para baterias (armazenamento / ESS):
+    "capacity_kwh": number,          // Capacidade nominal de energia (kWh)
+    "capacity_ah": number,           // Capacidade nominal (Ah)
+    "nominal_voltage_v": number,     // Tensão nominal (V)
+    "voltage_type": "low_voltage" | "high_voltage",
+    "chemistry": "lifepo4" | "lithium_ion" | "lead_carbon" | "other",
+    "dod_percent": number,           // Profundidade de descarga (%)
+    "cycles": number,                // Ciclos de vida útil
+    "max_charge_current_a": number,  // Corrente máxima de carga (A)
+    "max_discharge_current_a": number, // Corrente máxima de descarga (A)
+    "warranty_years": number,        // Garantia em anos
     // Para módulos fotovoltaicos:
     "power_w": number,       // Potência STC em Watts
     "warranty_years": number, // Garantia de produto em anos
@@ -305,7 +342,7 @@ Para Microinversores, procure com máxima atenção:
     "min_module_power": number
   }
 }
-Inclua apenas as chaves relevantes para a categoria detectada. Use valores STC para módulos.`,
+Inclua apenas as chaves relevantes para a categoria detectada.`,
               },
               {
                 role: "user",
@@ -323,10 +360,11 @@ Inclua apenas as chaves relevantes para a categoria detectada. Use valores STC p
           if (content) {
             const parsed = JSON.parse(content);
             this.logger.log("Especificações extraídas com sucesso via OpenAI (gpt-4o-mini).");
-            const detectedCategory = parsed.detectedCategory || "unknown";
+            const detectedCategory = parsed.detectedCategory || category || "unknown";
             const sanitizedSpecs = this.sanitizeAndEnrichSpecs(
               detectedCategory,
-              parsed.specs || {}
+              parsed.specs || {},
+              category
             );
             return {
               detectedCategory,
@@ -360,9 +398,93 @@ Inclua apenas as chaves relevantes para a categoria detectada. Use valores STC p
    */
   private sanitizeAndEnrichSpecs(
     detectedCategory: string,
-    rawSpecs: Record<string, unknown>
+    rawSpecs: Record<string, unknown>,
+    expectedCategory?: string
   ): Record<string, unknown> {
     const specs = { ...rawSpecs };
+
+    // Tratamento e cálculo determinístico para Baterias
+    const isBattery =
+      detectedCategory === "battery" ||
+      expectedCategory === "battery" ||
+      specs["capacity_kwh"] !== undefined ||
+      specs["capacity_ah"] !== undefined ||
+      specs["dod_percent"] !== undefined;
+
+    if (isBattery) {
+      // 1. Coerência entre kWh, Ah e Tensão: kWh = (Ah * V) / 1000
+      let v = typeof specs["nominal_voltage_v"] === "number" ? specs["nominal_voltage_v"] : null;
+      let ah = typeof specs["capacity_ah"] === "number" ? specs["capacity_ah"] : null;
+      let kwh = typeof specs["capacity_kwh"] === "number" ? specs["capacity_kwh"] : null;
+
+      if (v === null && ah && kwh && ah > 0) {
+        v = Number(((kwh * 1000) / ah).toFixed(1));
+        specs["nominal_voltage_v"] = v;
+      }
+      if (kwh === null && ah && v) {
+        kwh = Number(((ah * v) / 1000).toFixed(2));
+        specs["capacity_kwh"] = kwh;
+      }
+      if (ah === null && kwh && v && v > 0) {
+        ah = Math.round((kwh * 1000) / v);
+        specs["capacity_ah"] = ah;
+      }
+
+      // 2. Normalização de DoD (ex: 0.90 -> 90)
+      const dod = typeof specs["dod_percent"] === "number" ? specs["dod_percent"] : null;
+      if (dod !== null) {
+        if (dod > 0 && dod <= 1) {
+          specs["dod_percent"] = Math.round(dod * 100);
+        } else if (dod > 100) {
+          specs["dod_percent"] = 90;
+        }
+      } else {
+        specs["dod_percent"] = 90;
+      }
+
+      // 3. Normalização de Química
+      const rawChem = String(specs["chemistry"] || "").toLowerCase();
+      if (rawChem.includes("lfp") || rawChem.includes("lifepo4") || rawChem.includes("ferro")) {
+        specs["chemistry"] = "lifepo4";
+      } else if (rawChem.includes("nmc") || rawChem.includes("ion") || rawChem.includes("íon")) {
+        specs["chemistry"] = "lithium_ion";
+      } else if (
+        rawChem.includes("lead") ||
+        rawChem.includes("carbon") ||
+        rawChem.includes("chumbo")
+      ) {
+        specs["chemistry"] = "lead_carbon";
+      } else if (!specs["chemistry"]) {
+        specs["chemistry"] = "lifepo4";
+      }
+
+      // 4. Normalização de Classe de Tensão (low_voltage vs high_voltage)
+      const rawVType = String(specs["voltage_type"] || "").toLowerCase();
+      if (rawVType.includes("high") || rawVType.includes("hv") || rawVType.includes("alta")) {
+        specs["voltage_type"] = "high_voltage";
+      } else if (
+        rawVType.includes("low") ||
+        rawVType.includes("lv") ||
+        rawVType.includes("baixa")
+      ) {
+        specs["voltage_type"] = "low_voltage";
+      } else if (v !== null) {
+        specs["voltage_type"] = v > 60 ? "high_voltage" : "low_voltage";
+      } else {
+        specs["voltage_type"] = "low_voltage";
+      }
+
+      // 5. Normalização de ciclos e correntes
+      if (typeof specs["cycles"] === "number" && specs["cycles"] < 100 && specs["cycles"] > 0) {
+        specs["cycles"] = Math.round(specs["cycles"] * 1000);
+      }
+      if (typeof specs["max_charge_current_a"] === "string") {
+        specs["max_charge_current_a"] = parseFloat(specs["max_charge_current_a"]);
+      }
+      if (typeof specs["max_discharge_current_a"] === "string") {
+        specs["max_discharge_current_a"] = parseFloat(specs["max_discharge_current_a"]);
+      }
+    }
 
     // Tratamento e cálculo determinístico para Inversores
     if (detectedCategory === "inverter" || specs["nominal_power_w"] !== undefined) {

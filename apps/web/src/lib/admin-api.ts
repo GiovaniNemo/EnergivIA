@@ -131,7 +131,8 @@ export async function fetchProducts(params?: QueryProductsParams): Promise<Produ
 
 export async function extractDatasheet(
   datasheetUrl: string,
-  productName?: string
+  productName?: string,
+  category?: string
 ): Promise<{
   detectedCategory: string;
   specs: Record<string, unknown>;
@@ -139,7 +140,7 @@ export async function extractDatasheet(
   const res = await fetch(`${getApiUrl()}/products/ai/extract-datasheet`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ datasheetUrl, productName }),
+    body: JSON.stringify({ datasheetUrl, productName, category }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
