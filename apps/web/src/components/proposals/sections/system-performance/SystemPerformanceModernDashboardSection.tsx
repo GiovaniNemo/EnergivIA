@@ -16,11 +16,11 @@ function ModernHeroCapacityCard({
   const bar = `linear-gradient(90deg, ${theme.primary}, ${theme.secondary})`;
   return (
     <div
-      className="system-performance-dashboard-hero relative flex h-full min-h-[200px] flex-col justify-center overflow-hidden rounded-2xl px-6 py-6 backdrop-blur-md"
+      className="system-performance-dashboard-hero relative flex h-full min-h-[200px] flex-col justify-center overflow-hidden rounded-2xl px-6 py-6 shadow-xs"
       style={{
-        backgroundColor: `color-mix(in srgb, ${theme.text} 8%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${theme.text} 14%, transparent)`,
-        boxShadow: `inset 0 1px 0 color-mix(in srgb, ${theme.text} 8%, transparent)`,
+        backgroundColor: `color-mix(in srgb, ${theme.text} 4%, ${theme.background || "#ffffff"})`,
+        border: `1px solid color-mix(in srgb, ${theme.text} 14%, #e2e8f0)`,
+        boxShadow: `0 2px 10px rgba(0, 0, 0, 0.03)`,
       }}
     >
       <div
@@ -83,11 +83,11 @@ function ModernGlassMetric({
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl px-5 py-4 backdrop-blur-md"
+      className="relative overflow-hidden rounded-2xl px-5 py-4 shadow-xs"
       style={{
-        backgroundColor: `color-mix(in srgb, ${theme.text} 8%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${theme.text} 14%, transparent)`,
-        boxShadow: `inset 0 1px 0 color-mix(in srgb, ${theme.text} 8%, transparent)`,
+        backgroundColor: `color-mix(in srgb, ${theme.text} 4%, ${theme.background || "#ffffff"})`,
+        border: `1px solid color-mix(in srgb, ${theme.text} 14%, #e2e8f0)`,
+        boxShadow: `0 2px 8px rgba(0, 0, 0, 0.03)`,
       }}
     >
       <div

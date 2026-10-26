@@ -351,16 +351,15 @@ function filterVisibleProposalEquipmentItems(
 }
 
 const equipmentChromeBorder = {
-  borderColor: "color-mix(in srgb, currentColor 22%, transparent)",
+  borderColor: "color-mix(in srgb, currentColor 14%, #e2e8f0)",
 } as const;
 
 const equipmentChromeSurface = {
-  backgroundColor: "color-mix(in srgb, currentColor 8%, transparent)",
+  backgroundColor: "#f8fafc",
 } as const;
 
 const equipmentIconDisc = {
-  backgroundColor:
-    "color-mix(in srgb, var(--preview-primary-color, currentColor) 22%, transparent)",
+  backgroundColor: "color-mix(in srgb, var(--preview-primary-color, currentColor) 14%, #ffffff)",
 } as const;
 
 const equipmentIconColor = {
@@ -375,10 +374,9 @@ function renderProposalEquipmentCards(items: ProposalEquipmentItem[]): JSX.Eleme
         return (
           <div
             key={item.id}
-            className="proposal-equipment-card flex h-full flex-wrap gap-3 rounded-xl border p-3 shadow-sm"
+            className="proposal-equipment-card flex h-full flex-wrap gap-3 rounded-xl border p-3 shadow-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
             style={{
-              ...equipmentChromeBorder,
-              backgroundColor: "color-mix(in srgb, currentColor 5%, transparent)",
+              backgroundColor: "#ffffff",
             }}
           >
             <div
@@ -924,122 +922,161 @@ export function renderSectionContent(
 
       return (
         <div className="space-y-5">
-          <div
-            className="flex flex-wrap items-center justify-between gap-3 border-b pb-3.5"
-            style={equipmentChromeBorder}
-          >
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3.5 border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 text-lg font-bold">
+              <span
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-lg font-bold border shadow-2xs"
+                style={{
+                  backgroundColor:
+                    "color-mix(in srgb, var(--preview-primary-color, #059669) 12%, #ffffff)",
+                  borderColor:
+                    "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, transparent)",
+                  color: "var(--preview-primary-color, #059669)",
+                }}
+              >
                 🔋
               </span>
               <div>
-                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                <span
+                  className="text-xs font-bold uppercase tracking-wider"
+                  style={{ color: "var(--preview-primary-color, #059669)" }}
+                >
                   {sysTypeLabel}
                 </span>
-                <p className="text-xs opacity-75">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   Armazenamento de alta performance e segurança energética ininterrupta
                 </p>
               </div>
             </div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 px-3 py-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border shadow-2xs"
+              style={{
+                backgroundColor:
+                  "color-mix(in srgb, var(--preview-primary-color, #059669) 10%, #ffffff)",
+                borderColor:
+                  "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, transparent)",
+                color: "var(--preview-primary-color, #059669)",
+              }}
+            >
               ⚡ Exclusivo Híbrido / Off-Grid
             </span>
           </div>
 
           <div
             data-editor-field-path="text"
-            className="preview-editable-target text-sm leading-relaxed opacity-90 max-w-3xl"
+            className="preview-editable-target text-sm leading-relaxed text-slate-700 dark:text-slate-300 max-w-3xl"
           >
             {renderRichText(f.text, vars)}
           </div>
 
-          {}
-          <div
-            className="rounded-2xl border p-5 sm:p-6 bg-gradient-to-br from-[var(--color-card)] to-amber-500/[0.03]"
-            style={equipmentChromeBorder}
-          >
+          {/* Hero Card BESS Arquitetônico - Fundo 100% Sólido */}
+          <div className="rounded-2xl border p-5 sm:p-6 shadow-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-              {}
+              {/* Coluna Esquerda: Bateria & Indicador Modular */}
               <div className="md:col-span-5 flex flex-col justify-between border-b md:border-b-0 md:border-r pb-5 md:pb-0 md:pr-6 border-slate-200 dark:border-slate-800">
-                <span className="text-[11px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">
+                <span
+                  className="text-[11px] font-bold uppercase tracking-widest"
+                  style={{ color: "var(--preview-primary-color, #059669)" }}
+                >
                   Capacidade de Armazenamento
                 </span>
                 <div
-                  className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-[var(--color-foreground)]"
+                  className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50"
                   data-editor-field-path="batteryCapacityKwh"
                 >
                   {cap || "10,24 kWh"}
                 </div>
-                <p className="mt-1 text-xs opacity-70">
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                   Energia útil disponível para fornecimento contínuo
                 </p>
 
-                {}
+                {/* Barras de células com cor primária */}
                 <div className="mt-4 flex gap-1.5">
                   {[1, 2, 3, 4].map((barIdx) => (
                     <div
                       key={barIdx}
-                      className="h-2 flex-1 rounded-full bg-emerald-500/80 shadow-xs"
+                      className="h-2 flex-1 rounded-full shadow-2xs"
+                      style={{ backgroundColor: "var(--preview-primary-color, #059669)" }}
                       title="Módulo de bateria 100% calibrado"
                     />
                   ))}
                 </div>
 
-                <div className="mt-3 flex items-center gap-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <div
+                  className="mt-3 flex items-center gap-2 text-[11px] font-medium"
+                  style={{ color: "var(--preview-primary-color, #059669)" }}
+                >
+                  <span
+                    className="h-2 w-2 rounded-full animate-pulse"
+                    style={{ backgroundColor: "var(--preview-primary-color, #059669)" }}
+                  />
                   <span>Tecnologia {tech}</span>
                 </div>
               </div>
 
-              {}
+              {/* Coluna Direita: 4 Métricas Chave com Fundos 100% Sólidos */}
               <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="rounded-xl border p-3.5 bg-slate-50/50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                <div className="rounded-xl border p-3.5 bg-slate-50 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 shadow-2xs">
+                  <span
+                    className="text-[10px] font-bold uppercase tracking-wider"
+                    style={{ color: "var(--preview-primary-color, #059669)" }}
+                  >
                     Potência de Backup EPS
                   </span>
                   <div
-                    className="mt-1 text-xl font-bold text-[var(--color-foreground)]"
+                    className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100"
                     data-editor-field-path="backupPowerKw"
                   >
                     {backupPwr}
                   </div>
-                  <span className="text-[11px] opacity-70">Alimentação contínua de cargas</span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Alimentação contínua de cargas
+                  </span>
                 </div>
 
-                <div className="rounded-xl border p-3.5 bg-slate-50/50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                <div className="rounded-xl border p-3.5 bg-slate-50 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 shadow-2xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                     Comutação No-Break
                   </span>
                   <div
-                    className="mt-1 text-xl font-bold text-[var(--color-foreground)]"
+                    className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100"
                     data-editor-field-path="switchTimeMs"
                   >
                     {switchTime}
                   </div>
-                  <span className="text-[11px] opacity-70">Acionamento imperceptível</span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Acionamento imperceptível
+                  </span>
                 </div>
 
-                <div className="rounded-xl border p-3.5 bg-slate-50/50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                <div className="rounded-xl border p-3.5 bg-slate-50 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 shadow-2xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                     Autonomia Estimada
                   </span>
                   <div
-                    className="mt-1 text-xl font-bold text-[var(--color-foreground)]"
+                    className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100"
                     data-editor-field-path="autonomyHours"
                   >
                     {autonomy}
                   </div>
-                  <span className="text-[11px] opacity-70">Para circuitos prioritários</span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Para circuitos prioritários
+                  </span>
                 </div>
 
-                <div className="rounded-xl border p-3.5 bg-slate-50/50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                <div className="rounded-xl border p-3.5 bg-slate-50 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 shadow-2xs">
+                  <span
+                    className="text-[10px] font-bold uppercase tracking-wider"
+                    style={{ color: "var(--preview-primary-color, #059669)" }}
+                  >
                     Vida Útil & Garantia
                   </span>
-                  <div className="mt-1 text-base font-bold text-[var(--color-foreground)]">
+                  <div className="mt-1 text-base font-bold text-slate-900 dark:text-slate-100">
                     10 Anos · +6.000 Ciclos
                   </div>
-                  <span className="text-[11px] opacity-70">Sem risco de degradação térmica</span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Sem risco de degradação térmica
+                  </span>
                 </div>
               </div>
             </div>
@@ -1070,99 +1107,138 @@ export function renderSectionContent(
 
       return (
         <div className="space-y-5">
-          <div className="border-b pb-3" style={equipmentChromeBorder}>
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+          <div className="border-b pb-3 border-slate-200 dark:border-slate-800">
+            <span
+              className="text-xs font-bold uppercase tracking-wider"
+              style={{ color: "var(--preview-primary-color, #059669)" }}
+            >
               {eyebrow}
             </span>
-            <h3 className="mt-1 text-lg sm:text-xl font-bold text-[var(--color-foreground)]">
+            <h3 className="mt-1 text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-50">
               {title}
             </h3>
             {f.text ? (
-              <div className="mt-1.5 text-xs sm:text-sm opacity-80 leading-relaxed max-w-3xl">
+              <div className="mt-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
                 {renderRichText(f.text, vars)}
               </div>
             ) : null}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {}
-            <div
-              className="rounded-xl border p-4 sm:p-5 flex flex-col justify-between bg-[var(--color-card)] relative overflow-hidden"
-              style={equipmentChromeBorder}
-            >
+            {/* Card 1: Dia - Fundo 100% Sólido */}
+            <div className="rounded-xl border p-4 sm:p-5 flex flex-col justify-between bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs relative overflow-hidden">
               <div className="flex items-center justify-between mb-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 font-bold text-base">
+                <span
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-base font-bold shadow-2xs"
+                  style={{
+                    backgroundColor:
+                      "color-mix(in srgb, var(--preview-primary-color, #059669) 14%, #ffffff)",
+                    color: "var(--preview-primary-color, #059669)",
+                  }}
+                >
                   ☀️
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
+                <span
+                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border"
+                  style={{
+                    backgroundColor:
+                      "color-mix(in srgb, var(--preview-primary-color, #059669) 10%, #ffffff)",
+                    borderColor:
+                      "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, transparent)",
+                    color: "var(--preview-primary-color, #059669)",
+                  }}
+                >
                   01. Dia
                 </span>
               </div>
-              <h4 className="font-bold text-sm text-[var(--color-foreground)] mb-1.5">
+              <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-1.5">
                 Geração & Recarga Solar
               </h4>
-              <p className="text-xs leading-relaxed opacity-80 flex-1">{daytimeDesc}</p>
-              <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+              <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300 flex-1">
+                {daytimeDesc}
+              </p>
+              <div
+                className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] font-semibold flex items-center gap-1.5"
+                style={{ color: "var(--preview-primary-color, #059669)" }}
+              >
                 <span>⚡ Carga 100% gratuita do Sol</span>
               </div>
             </div>
 
-            {}
-            <div
-              className="rounded-xl border p-4 sm:p-5 flex flex-col justify-between bg-[var(--color-card)] relative overflow-hidden"
-              style={equipmentChromeBorder}
-            >
+            {/* Card 2: Noite - Fundo 100% Sólido */}
+            <div className="rounded-xl border p-4 sm:p-5 flex flex-col justify-between bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs relative overflow-hidden">
               <div className="flex items-center justify-between mb-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500 font-bold text-base">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400 font-bold text-base shadow-2xs">
                   🌙
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded">
                   02. Noite
                 </span>
               </div>
-              <h4 className="font-bold text-sm text-[var(--color-foreground)] mb-1.5">
+              <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-1.5">
                 Autoconsumo das Baterias
               </h4>
-              <p className="text-xs leading-relaxed opacity-80 flex-1">{nighttimeDesc}</p>
-              <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+              <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300 flex-1">
+                {nighttimeDesc}
+              </p>
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
                 <span>🛡️ Fuga das tarifas de ponta</span>
               </div>
             </div>
 
-            {}
-            <div
-              className="rounded-xl border p-4 sm:p-5 flex flex-col justify-between bg-gradient-to-br from-[var(--color-card)] to-emerald-500/[0.04] relative overflow-hidden"
-              style={equipmentChromeBorder}
-            >
+            {/* Card 3: Queda de Rede (EPS) - Fundo 100% Sólido */}
+            <div className="rounded-xl border p-4 sm:p-5 flex flex-col justify-between bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs relative overflow-hidden">
               <div className="flex items-center justify-between mb-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-base">
+                <span
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-base font-bold shadow-2xs"
+                  style={{
+                    backgroundColor:
+                      "color-mix(in srgb, var(--preview-primary-color, #059669) 14%, #ffffff)",
+                    color: "var(--preview-primary-color, #059669)",
+                  }}
+                >
                   ⚡
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                <span
+                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border"
+                  style={{
+                    backgroundColor:
+                      "color-mix(in srgb, var(--preview-primary-color, #059669) 10%, #ffffff)",
+                    borderColor:
+                      "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, transparent)",
+                    color: "var(--preview-primary-color, #059669)",
+                  }}
+                >
                   03. Queda de Rede
                 </span>
               </div>
-              <h4 className="font-bold text-sm text-[var(--color-foreground)] mb-1.5">
+              <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-1.5">
                 No-Break Instantâneo EPS
               </h4>
-              <p className="text-xs leading-relaxed opacity-80 flex-1">{blackoutDesc}</p>
-              <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+              <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300 flex-1">
+                {blackoutDesc}
+              </p>
+              <div
+                className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] font-semibold flex items-center gap-1.5"
+                style={{ color: "var(--preview-primary-color, #059669)" }}
+              >
                 <span>⏱️ Resposta rápida em {switchTime}</span>
               </div>
             </div>
           </div>
 
-          <div
-            className="rounded-xl border p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/40"
-            style={equipmentChromeBorder}
-          >
+          {/* Banner inferior de segurança - Fundo 100% Sólido */}
+          <div className="rounded-xl border p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xs">
             <div className="flex items-center gap-2">
               <span className="text-base">🛡️</span>
-              <span className="text-xs font-semibold text-[var(--color-foreground)]">
+              <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                 Segurança energética residencial e corporativa: {independence}
               </span>
             </div>
-            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+            <span
+              className="text-[11px] font-bold"
+              style={{ color: "var(--preview-primary-color, #059669)" }}
+            >
               Operação 100% Automática
             </span>
           </div>
@@ -1177,28 +1253,34 @@ export function renderSectionContent(
 
       return (
         <div className="space-y-5">
-          <div className="border-b pb-3" style={equipmentChromeBorder}>
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+          <div className="border-b pb-3 border-slate-200 dark:border-slate-800">
+            <span
+              className="text-xs font-bold uppercase tracking-wider"
+              style={{ color: "var(--preview-primary-color, #059669)" }}
+            >
               {eyebrow}
             </span>
-            <h3 className="mt-1 text-lg sm:text-xl font-bold text-[var(--color-foreground)]">
+            <h3 className="mt-1 text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-50">
               {title}
             </h3>
             {f.text ? (
-              <div className="mt-1.5 text-xs sm:text-sm opacity-80 leading-relaxed max-w-3xl">
+              <div className="mt-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
                 {renderRichText(f.text, vars)}
               </div>
             ) : null}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            {}
+            {/* Lista de Circuitos Prioritários - Fundos 100% Sólidos */}
             <div className="lg:col-span-6 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-foreground)]">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
                   Circuitos & Eletrodomésticos Protegidos
                 </span>
-                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                <span
+                  className="text-[11px] font-bold"
+                  style={{ color: "var(--preview-primary-color, #059669)" }}
+                >
                   Autonomia: {autonomy}
                 </span>
               </div>
@@ -1229,20 +1311,28 @@ export function renderSectionContent(
                 ].map((load, idx) => (
                   <div
                     key={idx}
-                    className="rounded-xl border p-3 flex items-start gap-3 bg-[var(--color-card)]"
-                    style={equipmentChromeBorder}
+                    className="rounded-xl border p-3 flex items-start gap-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xs"
                   >
                     <span className="text-lg shrink-0 mt-0.5">{load.icon}</span>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[var(--color-foreground)]">
+                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
                           {load.name}
                         </span>
-                        <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                        <span
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded border"
+                          style={{
+                            backgroundColor:
+                              "color-mix(in srgb, var(--preview-primary-color, #059669) 10%, #ffffff)",
+                            borderColor:
+                              "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, transparent)",
+                            color: "var(--preview-primary-color, #059669)",
+                          }}
+                        >
                           Ativo
                         </span>
                       </div>
-                      <p className="mt-0.5 text-[11px] opacity-75 leading-relaxed">
+                      <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
                         {load.benefit}
                       </p>
                     </div>
@@ -1251,22 +1341,26 @@ export function renderSectionContent(
               </div>
             </div>
 
-            {}
+            {/* Comparativo Bateria vs Gerador - Fundo 100% Sólido */}
             <div className="lg:col-span-6 flex flex-col justify-between">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-foreground)]">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
                   Por que Bateria Solar e Não um Gerador?
                 </span>
 
-                <div
-                  className="mt-3 rounded-2xl border overflow-hidden"
-                  style={equipmentChromeBorder}
-                >
+                <div className="mt-3 rounded-2xl border overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs">
                   <div className="grid grid-cols-2 text-center text-xs font-bold border-b border-slate-200 dark:border-slate-800">
-                    <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <div
+                      className="p-2.5 font-bold"
+                      style={{
+                        backgroundColor:
+                          "color-mix(in srgb, var(--preview-primary-color, #059669) 12%, #ffffff)",
+                        color: "var(--preview-primary-color, #059669)",
+                      }}
+                    >
                       ⚡ Bateria Solar LiFePO4
                     </div>
-                    <div className="p-2.5 bg-slate-100 dark:bg-slate-800 opacity-75">
+                    <div className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                       ⛽ Gerador a Combustível
                     </div>
                   </div>
@@ -1299,11 +1393,14 @@ export function renderSectionContent(
                         gen: "Troca de óleo, velas e filtros",
                       },
                     ].map((row, rIdx) => (
-                      <div key={rIdx} className="grid grid-cols-2 p-2.5">
-                        <div className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
+                      <div key={rIdx} className="grid grid-cols-2 p-2.5 bg-white dark:bg-slate-900">
+                        <div
+                          className="font-semibold flex items-center gap-1.5"
+                          style={{ color: "var(--preview-primary-color, #059669)" }}
+                        >
                           <span className="text-xs">✓</span> {row.solar}
                         </div>
-                        <div className="opacity-70 flex items-center gap-1.5">
+                        <div className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                           <span className="text-xs">✗</span> {row.gen}
                         </div>
                       </div>
@@ -1312,12 +1409,11 @@ export function renderSectionContent(
                 </div>
               </div>
 
-              <div
-                className="mt-4 rounded-xl border p-3 flex items-center justify-between text-xs bg-slate-50/50 dark:bg-slate-900/40"
-                style={equipmentChromeBorder}
-              >
-                <span className="opacity-80">Durabilidade do Banco de Baterias:</span>
-                <strong className="text-[var(--color-foreground)] font-semibold">{lifespan}</strong>
+              <div className="mt-4 rounded-xl border p-3 flex items-center justify-between text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xs">
+                <span className="text-slate-600 dark:text-slate-400 font-medium">
+                  Durabilidade do Banco de Baterias:
+                </span>
+                <strong className="text-slate-900 dark:text-slate-100 font-bold">{lifespan}</strong>
               </div>
             </div>
           </div>
@@ -1827,9 +1923,9 @@ export function renderSectionContent(
       const projected5y = vars.custo_5_anos_energia;
       const projected10y = vars.custo_10_anos_energia;
       const metricCardStyle: CSSProperties = {
-        borderColor: "color-mix(in srgb, currentColor 18%, transparent)",
-        backgroundColor: "color-mix(in srgb, currentColor 7%, transparent)",
-        boxShadow: "0 12px 28px rgba(2, 6, 23, 0.14)",
+        borderColor: "color-mix(in srgb, currentColor 14%, #e2e8f0)",
+        backgroundColor: "#ffffff",
+        boxShadow: "0 2px 10px rgba(2, 6, 23, 0.04), 0 1px 3px rgba(2, 6, 23, 0.02)",
       };
       const buildDiagnosticCardStyle = (accentColor: string): CSSProperties => ({
         color: "currentColor",
@@ -1837,9 +1933,9 @@ export function renderSectionContent(
         padding: "0.75rem",
         borderWidth: 1,
         borderStyle: "solid",
-        borderColor: `color-mix(in srgb, ${accentColor} 48%, rgba(148,163,184,0.38))`,
-        backgroundColor: "color-mix(in srgb, currentColor 5%, transparent)",
-        boxShadow: "0 6px 16px rgba(2, 6, 23, 0.08)",
+        borderColor: `color-mix(in srgb, ${accentColor} 40%, #e2e8f0)`,
+        backgroundColor: "#ffffff",
+        boxShadow: "0 2px 8px rgba(2, 6, 23, 0.04)",
       });
       return (
         <div className="space-y-4">

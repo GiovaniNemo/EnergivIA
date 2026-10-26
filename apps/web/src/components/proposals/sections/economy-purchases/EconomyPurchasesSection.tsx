@@ -69,10 +69,9 @@ interface EconomyPurchasesSectionProps {
   vars: PreviewRenderVariables;
 }
 
-const surfaceSoftBg: CSSProperties["background"] =
-  "color-mix(in srgb, var(--preview-primary-color, currentColor) 6%, transparent)";
+const surfaceSoftBg: CSSProperties["background"] = "#ffffff";
 
-const dividerColor = "color-mix(in srgb, currentColor 16%, transparent)";
+const dividerColor = "color-mix(in srgb, currentColor 14%, #e2e8f0)";
 
 export function EconomyPurchasesSection({
   section,
@@ -273,16 +272,19 @@ function renderVerticalStack(
                 return (
                   <div
                     key={String(item.row.id ?? `${item.row.name}-${item.index}`)}
-                    className="economy-purchases-item-card border"
+                    className="economy-purchases-item-card border shadow-xs"
                     style={{
-                      background: "color-mix(in srgb, currentColor 4%, transparent)",
+                      background: "#ffffff",
                       borderColor: dividerColor,
                     }}
                   >
                     <div
                       data-editor-field-path={`purchaseItems[${item.index}].icon`}
-                      className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg"
-                      style={{ background: "color-mix(in srgb, currentColor 8%, transparent)" }}
+                      className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg shadow-2xs"
+                      style={{
+                        background:
+                          "color-mix(in srgb, var(--preview-primary-color, currentColor) 12%, #ffffff)",
+                      }}
                     >
                       <Icon className="h-5 w-5" aria-hidden />
                     </div>
@@ -488,9 +490,9 @@ function renderInverted(
                   }}
                 />
                 <div
-                  className="absolute right-4 top-4 rounded-full border px-3 py-1 text-[13px] font-extrabold tracking-[-0.01em]"
+                  className="absolute right-4 top-4 rounded-full border px-3 py-1 text-[13px] font-extrabold tracking-[-0.01em] shadow-2xs"
                   style={{
-                    background: "color-mix(in srgb, currentColor 4%, transparent)",
+                    background: "#ffffff",
                     borderColor: dividerColor,
                     color: "var(--preview-primary-color, currentColor)",
                   }}
@@ -499,9 +501,10 @@ function renderInverted(
                 </div>
                 <div
                   data-editor-field-path={`purchaseItems[${item.index}].icon`}
-                  className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl border"
+                  className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl border shadow-2xs"
                   style={{
-                    background: "color-mix(in srgb, currentColor 4%, transparent)",
+                    background:
+                      "color-mix(in srgb, var(--preview-primary-color, currentColor) 12%, #ffffff)",
                     borderColor: dividerColor,
                   }}
                 >
@@ -611,8 +614,11 @@ function renderNarrative(
                 <div className="mb-4 flex items-center gap-3">
                   <div
                     data-editor-field-path={`purchaseItems[${item.index}].icon`}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg"
-                    style={{ background: "color-mix(in srgb, currentColor 8%, transparent)" }}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg shadow-2xs"
+                    style={{
+                      background:
+                        "color-mix(in srgb, var(--preview-primary-color, currentColor) 12%, #ffffff)",
+                    }}
                   >
                     <Icon className="h-4.5 w-4.5" aria-hidden />
                   </div>

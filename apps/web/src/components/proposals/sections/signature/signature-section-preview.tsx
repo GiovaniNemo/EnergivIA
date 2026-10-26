@@ -82,54 +82,58 @@ function resolveSignaturePalette(
     secondary,
     bg,
     text,
-    // Cards background & border adapting to light/dark palette
-    cardBg: isDark
-      ? `color-mix(in srgb, ${text} 6%, transparent)`
-      : `color-mix(in srgb, ${text} 3%, transparent)`,
+    // Cards background & border com fundo 100% sólido e opaco (evita vazamento de órbitas/linhas de fundo no PDF)
+    cardBg: isDark ? "#1e293b" : "#ffffff",
     cardBorder: isDark
-      ? `color-mix(in srgb, ${text} 14%, transparent)`
-      : `color-mix(in srgb, ${text} 12%, transparent)`,
-    cardShadow: isDark ? "none" : `0 2px 8px color-mix(in srgb, ${text} 4%, transparent)`,
+      ? "rgba(255, 255, 255, 0.12)"
+      : "color-mix(in srgb, currentColor 14%, #e2e8f0)",
+    cardShadow: isDark ? "none" : "0 2px 10px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02)",
 
-    // Canvas panel for the signature
-    canvasBg: isDark
-      ? `color-mix(in srgb, ${bg} 85%, black 15%)`
-      : `color-mix(in srgb, ${bg} 75%, white 25%)`,
-    canvasBorder: `color-mix(in srgb, ${text} 20%, transparent)`,
-    signatureLine: `color-mix(in srgb, ${text} 28%, transparent)`,
+    // Canvas panel for the signature - 100% sólido
+    canvasBg: isDark ? "#0f172a" : "#f8fafc",
+    canvasBorder: isDark
+      ? "rgba(255, 255, 255, 0.14)"
+      : "color-mix(in srgb, currentColor 18%, #cbd5e1)",
+    signatureLine: isDark
+      ? "rgba(255, 255, 255, 0.3)"
+      : "color-mix(in srgb, currentColor 28%, #94a3b8)",
     signatureStroke: primary,
 
-    // Contratante badge
-    clientBadgeBg: `color-mix(in srgb, ${primary} 12%, transparent)`,
-    clientBadgeBorder: `color-mix(in srgb, ${primary} 28%, transparent)`,
+    // Contratante badge - sólido
+    clientBadgeBg: isDark
+      ? `color-mix(in srgb, ${primary} 22%, #1e293b)`
+      : `color-mix(in srgb, ${primary} 12%, #ffffff)`,
+    clientBadgeBorder: `color-mix(in srgb, ${primary} 35%, transparent)`,
     clientBadgeText: primary,
 
-    // Contratada badge
-    companyBadgeBg: `color-mix(in srgb, ${text} 8%, transparent)`,
-    companyBadgeBorder: `color-mix(in srgb, ${text} 18%, transparent)`,
+    // Contratada badge - sólido
+    companyBadgeBg: isDark
+      ? `color-mix(in srgb, ${text} 14%, #1e293b)`
+      : `color-mix(in srgb, ${text} 8%, #ffffff)`,
+    companyBadgeBorder: `color-mix(in srgb, ${text} 24%, transparent)`,
     companyBadgeText: text,
 
-    // Text levels
-    textTitle: text,
-    textRole: `color-mix(in srgb, ${text} 75%, transparent)`,
-    textDoc: `color-mix(in srgb, ${text} 50%, transparent)`,
-    textMuted: `color-mix(in srgb, ${text} 65%, transparent)`,
-    divider: `color-mix(in srgb, ${text} 10%, transparent)`,
+    // Text levels com alto contraste
+    textTitle: isDark ? "#f8fafc" : text,
+    textRole: isDark ? "#cbd5e1" : `color-mix(in srgb, ${text} 80%, #475569)`,
+    textDoc: isDark ? "#94a3b8" : `color-mix(in srgb, ${text} 60%, #64748b)`,
+    textMuted: isDark ? "#94a3b8" : `color-mix(in srgb, ${text} 65%, #64748b)`,
+    divider: isDark ? "rgba(255, 255, 255, 0.1)" : "color-mix(in srgb, currentColor 12%, #e2e8f0)",
 
-    // Digital banner
-    digitalBannerBg: isDark
-      ? `color-mix(in srgb, ${primary} 12%, ${bg})`
-      : `color-mix(in srgb, ${primary} 8%, ${bg})`,
-    digitalBannerBorder: `color-mix(in srgb, ${primary} 26%, transparent)`,
-    digitalChipBg: isDark
-      ? `color-mix(in srgb, ${text} 10%, ${bg})`
-      : `color-mix(in srgb, ${text} 5%, ${bg})`,
-    digitalChipBorder: `color-mix(in srgb, ${text} 15%, transparent)`,
+    // Digital banner - sólido
+    digitalBannerBg: isDark ? "#1e293b" : "#ffffff",
+    digitalBannerBorder: `color-mix(in srgb, ${primary} 28%, #cbd5e1)`,
+    digitalChipBg: isDark ? "#0f172a" : "#f8fafc",
+    digitalChipBorder: isDark
+      ? "rgba(255, 255, 255, 0.15)"
+      : "color-mix(in srgb, currentColor 15%, #cbd5e1)",
 
-    // Legal disclaimer
-    legalBg: `color-mix(in srgb, ${text} 4%, transparent)`,
-    legalBorder: `color-mix(in srgb, ${text} 12%, transparent)`,
-    legalText: `color-mix(in srgb, ${text} 72%, transparent)`,
+    // Legal disclaimer - fundo 100% sólido
+    legalBg: isDark ? "#1e293b" : "#ffffff",
+    legalBorder: isDark
+      ? "rgba(255, 255, 255, 0.12)"
+      : "color-mix(in srgb, currentColor 14%, #e2e8f0)",
+    legalText: isDark ? "#cbd5e1" : `color-mix(in srgb, ${text} 80%, #334155)`,
   };
 }
 
