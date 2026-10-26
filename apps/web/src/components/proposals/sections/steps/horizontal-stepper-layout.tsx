@@ -30,7 +30,7 @@ export function HorizontalStepperLayout(props: HorizontalStepperLayoutProps): JS
             <div
               className="process-steps-horizontal-item flex min-w-0 items-center gap-3 rounded-2xl px-5 py-4 shadow-md ring-1"
               style={{
-                backgroundColor: withAlpha(theme.background, 0.65),
+                backgroundColor: theme.background || "#ffffff",
                 borderColor: border,
                 boxShadow: pillShadow,
                 color: theme.text,

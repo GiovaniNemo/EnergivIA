@@ -34,11 +34,11 @@ export function StepsGridLayout({
           style={{
             borderRadius: 18,
             padding: "20px 22px",
-            backgroundColor: withAlpha(theme.background, 0.55),
+            backgroundColor: theme.background || "#ffffff",
             borderColor: border,
             borderWidth: 1,
             borderStyle: "solid",
-            boxShadow: `0 10px 36px ${shadow}`,
+            boxShadow: `0 4px 16px ${shadow}`,
             color: theme.text,
           }}
         >

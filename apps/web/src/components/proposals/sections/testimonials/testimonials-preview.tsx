@@ -75,9 +75,9 @@ function testimonialCardChrome(theme: ReturnType<typeof brandingToStepsTheme>): 
   color: string;
 } {
   return {
-    backgroundColor: withAlpha(theme.background, 0.55),
-    borderColor: withAlpha(theme.primary, 0.2),
-    boxShadow: `0 10px 36px ${withAlpha(theme.primary, 0.1)}`,
+    backgroundColor: theme.background || "#ffffff",
+    borderColor: withAlpha(theme.primary, 0.22),
+    boxShadow: `0 4px 16px ${withAlpha(theme.primary, 0.08)}`,
     color: theme.text,
   };
 }
@@ -89,10 +89,10 @@ export function TestimonialsSectionPreview({
   intro,
 }: TestimonialsSectionPreviewProps): JSX.Element {
   const theme = brandingToStepsTheme(branding);
-  const muted = withAlpha(theme.text, 0.72);
-  const subtle = withAlpha(theme.text, 0.78);
-  const avatarRing = withAlpha(theme.text, 0.14);
-  const avatarOverlapBorder = withAlpha(theme.background, 0.82);
+  const muted = withAlpha(theme.text, 0.75);
+  const subtle = withAlpha(theme.text, 0.88);
+  const avatarRing = withAlpha(theme.text, 0.16);
+  const avatarOverlapBorder = theme.background || "#ffffff";
 
   const fields = section.fields as Record<string, unknown>;
   const rawItems = asItems(fields["items"]);

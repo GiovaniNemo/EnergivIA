@@ -56,8 +56,8 @@ export function DecisionCTASection(props: DecisionCTASectionProps): JSX.Element 
   }
 
   const border = withAlpha(theme.primary, 0.2);
-  const cardShadow = "0 16px 48px " + withAlpha(theme.primary, 0.1);
-  const cardBg = withAlpha(theme.background, 0.45);
+  const cardShadow = "0 8px 32px " + withAlpha(theme.primary, 0.08);
+  const cardBg = theme.background || "#ffffff";
 
   return (
     <div className={className} style={{ color: theme.text }}>

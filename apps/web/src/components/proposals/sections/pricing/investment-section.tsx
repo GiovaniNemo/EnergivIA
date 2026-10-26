@@ -106,7 +106,7 @@ export function InvestmentSection({
   const negativeColor = withAlpha(theme.secondary, 0.75);
   const cardStyle = {
     border: `1px solid ${withAlpha(theme.text, 0.16)}`,
-    backgroundColor: withAlpha(theme.background, 0.72),
+    backgroundColor: theme.background || "#ffffff",
     color: theme.text,
   };
 
@@ -156,10 +156,7 @@ export function InvestmentSection({
 
       {variant === "split" ? (
         <section className="grid gap-4 rounded-2xl p-4 md:grid-cols-[2fr_1fr]" style={cardStyle}>
-          <div
-            className="rounded-xl p-4"
-            style={{ backgroundColor: withAlpha(theme.background, 0.56) }}
-          >
+          <div className="rounded-xl p-4" style={{ backgroundColor: "#f8fafc" }}>
             <p className="text-sm font-semibold">Investimento</p>
             <p className="mt-1 text-5xl font-bold">{moneyBRL(totalInvestment)}</p>
             <p className="mt-2 text-sm" style={{ color: withAlpha(theme.text, 0.72) }}>
@@ -236,8 +233,8 @@ export function InvestmentSection({
 
       {showRoiChart ? (
         <section
-          className="rounded-2xl border p-4"
-          style={{ ...cardStyle, backgroundColor: withAlpha(theme.background, 0.62) }}
+          className="rounded-2xl border p-4 shadow-sm"
+          style={{ ...cardStyle, backgroundColor: theme.background || "#ffffff" }}
         >
           <p className="mb-3 text-sm font-semibold">ROI acumulado por ano</p>
           <div className="h-[280px] w-full">
