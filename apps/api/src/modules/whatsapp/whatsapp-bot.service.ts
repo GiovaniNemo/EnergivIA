@@ -1509,6 +1509,218 @@ export function resolveQuoteIndexFromText(
   return null;
 }
 
+export interface AvailableProposalTemplate {
+  id: string;
+  name: string;
+  isHybrid?: boolean;
+  config?: any;
+}
+
+export function isTemplateHybridCompatible(template: { name?: string; config?: any }): boolean {
+  if (!template) return false;
+
+  // 1. Verificação por palavra-chave no nome do template
+  const name = (template.name || "").toLowerCase();
+  const hybridKeywords = [
+    "híbrido",
+    "hibrido",
+    "bateria",
+    "baterias",
+    "bess",
+    "armazenamento",
+    "backup",
+    "off-grid",
+    "offgrid",
+    "off grid",
+  ];
+  if (hybridKeywords.some((kw) => name.includes(kw))) {
+    return true;
+  }
+
+  // 2. Verificação por estrutura de seções e campos do config/document
+  const config = template.config;
+  if (config && typeof config === "object") {
+    const sections = Array.isArray(config.sections) ? config.sections : [];
+    for (const section of sections) {
+      if (!section) continue;
+      // Seção explícita de storage_backup
+      if (section.type === "storage_backup") {
+        return true;
+      }
+      // Seção proposal_equipment com produtos de bateria/híbrido
+      if (section.type === "proposal_equipment") {
+        const lines = section.fields?.equipmentLines;
+        if (Array.isArray(lines)) {
+          const hasBattery = lines.some((line: any) => {
+            const cat = (line?.categoryName || line?.category || "").toLowerCase();
+            const prodName = (line?.productName || line?.name || "").toLowerCase();
+            return (
+              cat.includes("battery") ||
+              cat.includes("bateria") ||
+              cat.includes("bess") ||
+              prodName.includes("bateria") ||
+              prodName.includes("híbrido") ||
+              prodName.includes("hibrido")
+            );
+          });
+          if (hasBattery) return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+export interface TemplateSelectionListResult {
+  text: string;
+  selectableTemplates: AvailableProposalTemplate[];
+  incompatibleTemplates: AvailableProposalTemplate[];
+}
+
+export function formatTemplateSelectionList(
+  templates: AvailableProposalTemplate[],
+  isHybridQuote: boolean
+): TemplateSelectionListResult {
+  const numberEmojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
+
+  if (!isHybridQuote) {
+    let text = "";
+    templates.forEach((t, i) => {
+      const emoji = numberEmojis[i] || `${i + 1}️⃣`;
+      text += `> ${emoji} *${t.name}*\n`;
+    });
+    text += `> 0️⃣ *Voltar / Rever dados*\n`;
+
+    return {
+      text,
+      selectableTemplates: templates,
+      incompatibleTemplates: [],
+    };
+  }
+
+  // Cotação Híbrida / com Bateria
+  const hybridTemplates = templates.filter((t) => t.isHybrid);
+  const onGridTemplates = templates.filter((t) => !t.isHybrid);
+
+  let selectableTemplates: AvailableProposalTemplate[] = [];
+
+  if (hybridTemplates.length > 0) {
+    selectableTemplates = hybridTemplates;
+  } else {
+    // Se o integrador não tiver templates de híbrido, oferece o Blueprint Oficial Híbrido da EnergivIA
+    selectableTemplates = [
+      {
+        id: "blueprint-hybrid-official",
+        name: "Modelo Híbrido & Backup Solar (EnergivIA)",
+        isHybrid: true,
+      },
+    ];
+  }
+
+  let text = "";
+  selectableTemplates.forEach((t, i) => {
+    const emoji = numberEmojis[i] || `${i + 1}️⃣`;
+    text += `> ${emoji} *${t.name}*\n`;
+  });
+
+  // Risca os modelos on-grid com a formatação de WhatsApp (~...~)
+  if (onGridTemplates.length > 0) {
+    text += `\n*Modelos On-Grid incompatíveis com Baterias:*\n`;
+    onGridTemplates.forEach((t) => {
+      text += `> ~${t.name} (Incompatível com Baterias)~\n`;
+    });
+  }
+
+  text += `> 0️⃣ *Voltar / Rever dados*\n`;
+
+  return {
+    text,
+    selectableTemplates,
+    incompatibleTemplates: onGridTemplates,
+  };
+}
+
+export interface TemplateResolutionResult {
+  success: boolean;
+  chosenTemplate?: AvailableProposalTemplate;
+  reason?: "incompatible_on_grid" | "invalid_option";
+  errorMessage?: string;
+}
+
+export function resolveChosenTemplate(
+  input: string,
+  templates: AvailableProposalTemplate[],
+  isHybridQuote: boolean
+): TemplateResolutionResult {
+  const { selectableTemplates, incompatibleTemplates } = formatTemplateSelectionList(
+    templates,
+    isHybridQuote
+  );
+
+  const clean = input.trim();
+  const digitMatch = clean.match(/^(\d+)/);
+  let requestedIdx: number | null = null;
+
+  if (digitMatch && digitMatch[1]) {
+    requestedIdx = parseInt(digitMatch[1], 10) - 1;
+  } else {
+    const lower = clean.toLowerCase();
+    if (/\b(?:um|uma|primeiro|primeira)\b/i.test(lower)) requestedIdx = 0;
+    else if (/\b(?:dois|duas|segundo|segunda)\b/i.test(lower)) requestedIdx = 1;
+    else if (/\b(?:tres|três|terceiro|terceira)\b/i.test(lower)) requestedIdx = 2;
+    else if (/\b(?:quatro|quarta|quarto)\b/i.test(lower)) requestedIdx = 3;
+    else if (/\b(?:cinco|quinta|quinto)\b/i.test(lower)) requestedIdx = 4;
+  }
+
+  if (requestedIdx === null || requestedIdx < 0) {
+    return {
+      success: false,
+      reason: "invalid_option",
+      errorMessage: "Opção inválida. Por favor, envie o número do modelo desejado.",
+    };
+  }
+
+  // Se for cotação híbrida
+  if (isHybridQuote) {
+    // Se o índice digitado corresponder a um dos templates híbridos selecionáveis
+    if (requestedIdx < selectableTemplates.length) {
+      return {
+        success: true,
+        chosenTemplate: selectableTemplates[requestedIdx],
+      };
+    }
+
+    // Se o usuário digitou uma opção que bate com os templates on-grid riscados
+    const isIncompatibleChoice =
+      incompatibleTemplates.length > 0 &&
+      requestedIdx >= selectableTemplates.length &&
+      requestedIdx < selectableTemplates.length + incompatibleTemplates.length;
+
+    return {
+      success: false,
+      reason: "incompatible_on_grid",
+      errorMessage: isIncompatibleChoice
+        ? "⚠️ Este modelo comercial é exclusivo para sistemas On-Grid convencionais e não possui suporte a baterias/backup. Para sistemas híbridos, escolha o modelo com armazenamento ou o Modelo Oficial Híbrido EnergivIA."
+        : "⚠️ Este modelo comercial é exclusivo para sistemas On-Grid convencionais e não possui suporte a baterias/backup. Para sistemas híbridos, escolha o modelo com armazenamento ou o Modelo Oficial Híbrido EnergivIA.",
+    };
+  }
+
+  // Cotação normal (On-Grid)
+  if (requestedIdx < selectableTemplates.length) {
+    return {
+      success: true,
+      chosenTemplate: selectableTemplates[requestedIdx],
+    };
+  }
+
+  return {
+    success: false,
+    reason: "invalid_option",
+    errorMessage: "Opção inválida. Por favor, envie o número do modelo desejado.",
+  };
+}
+
 @Injectable()
 export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WhatsappBotService.name);
@@ -4489,8 +4701,9 @@ Regras estritas:
   }
 
   private async getAvailableTemplates(
-    tenantId: string
-  ): Promise<Array<{ id: string; name: string }>> {
+    tenantId: string,
+    options?: { isHybrid?: boolean }
+  ): Promise<AvailableProposalTemplate[]> {
     const orgTemplates = await this.prisma.proposalTemplate.findMany({
       where: { tenantId, status: "PUBLISHED", deletedAt: null },
       orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
@@ -4498,7 +4711,11 @@ Regras estritas:
     });
 
     if (orgTemplates.length > 0) {
-      return orgTemplates.map((t) => ({ id: t.id, name: t.name }));
+      return orgTemplates.map((t) => ({
+        id: t.id,
+        name: t.name,
+        isHybrid: isTemplateHybridCompatible(t),
+      }));
     }
 
     const blueprints = await this.prisma.proposalTemplateBlueprint.findMany({
@@ -4508,13 +4725,29 @@ Regras estritas:
     });
 
     if (blueprints.length > 0) {
-      return blueprints.map((b) => ({ id: b.id, name: b.name }));
+      return blueprints.map((b) => ({
+        id: b.id,
+        name: b.name,
+        isHybrid: isTemplateHybridCompatible({ name: b.name, config: b.document }),
+      }));
+    }
+
+    if (options?.isHybrid) {
+      return [
+        {
+          id: "default-hibrido-bess",
+          name: "Modelo Híbrido & Backup Solar (EnergivIA)",
+          isHybrid: true,
+        },
+        { id: "default-moderno", name: "Modelo Comercial Moderno", isHybrid: false },
+        { id: "default-executivo", name: "Modelo Executivo Solar", isHybrid: false },
+      ];
     }
 
     return [
-      { id: "default-moderno", name: "Modelo Comercial Moderno (Padrão)" },
-      { id: "default-executivo", name: "Modelo Executivo Solar" },
-      { id: "default-minimalista", name: "Modelo Minimalista" },
+      { id: "default-moderno", name: "Modelo Comercial Moderno (Padrão)", isHybrid: false },
+      { id: "default-executivo", name: "Modelo Executivo Solar", isHybrid: false },
+      { id: "default-minimalista", name: "Modelo Minimalista", isHybrid: false },
     ];
   }
 
@@ -7427,9 +7660,39 @@ ${catalogContext}`;
       );
     }
 
-    const generateProposalAndReply = async (chosenTemplateIndex: number = 0): Promise<string> => {
-      const availableTemplates = await this.getAvailableTemplates(conversation.organizationId);
-      const chosenTemplate = availableTemplates[chosenTemplateIndex] || availableTemplates[0];
+    const generateProposalAndReply = async (
+      chosenOption: number | AvailableProposalTemplate = 0
+    ): Promise<string> => {
+      const isHybridQuote =
+        sessionCtx.inverterType === "hybrid" ||
+        sessionCtx.inverterType === "off_grid" ||
+        (typeof (sessionCtx as any).batteryCapacityKwh === "number" &&
+          (sessionCtx as any).batteryCapacityKwh > 0) ||
+        (typeof (sessionCtx as any).batteryQuantity === "number" &&
+          (sessionCtx as any).batteryQuantity > 0);
+
+      const availableTemplates = await this.getAvailableTemplates(conversation.organizationId, {
+        isHybrid: isHybridQuote,
+      });
+
+      let chosenTemplate: AvailableProposalTemplate;
+      if (typeof chosenOption === "object" && chosenOption !== null) {
+        chosenTemplate = chosenOption;
+      } else {
+        const { selectableTemplates } = formatTemplateSelectionList(
+          availableTemplates,
+          isHybridQuote
+        );
+        chosenTemplate = selectableTemplates[chosenOption] ||
+          availableTemplates[chosenOption] ||
+          availableTemplates[0] || {
+            id: isHybridQuote ? "blueprint-hybrid-official" : "default-moderno",
+            name: isHybridQuote
+              ? "Modelo Híbrido & Backup Solar (EnergivIA)"
+              : "Modelo Comercial Moderno",
+            isHybrid: isHybridQuote,
+          };
+      }
 
       let clientName =
         sessionCtx.clientName && isValidClientName(sessionCtx.clientName)
@@ -7679,20 +7942,33 @@ ${catalogContext}`;
         });
 
         // 6. Template
-        let template = chosenTemplate?.id
-          ? await this.prisma.proposalTemplate.findFirst({
-              where: {
-                id: chosenTemplate.id,
-                tenantId: conversation.organizationId,
-                deletedAt: null,
-              },
-            })
-          : null;
+        let template =
+          chosenTemplate?.id && !chosenTemplate.id.startsWith("blueprint-hybrid-official")
+            ? await this.prisma.proposalTemplate.findFirst({
+                where: {
+                  id: chosenTemplate.id,
+                  tenantId: conversation.organizationId,
+                  deletedAt: null,
+                },
+              })
+            : null;
 
         if (!template && chosenTemplate?.id) {
-          const blueprint = await this.prisma.proposalTemplateBlueprint.findFirst({
+          let blueprint = await this.prisma.proposalTemplateBlueprint.findFirst({
             where: { id: chosenTemplate.id, published: true },
           });
+          if (!blueprint && isHybridQuote) {
+            blueprint = await this.prisma.proposalTemplateBlueprint.findFirst({
+              where: {
+                published: true,
+                OR: [
+                  { name: { contains: "Híbrido", mode: "insensitive" } },
+                  { name: { contains: "Bateria", mode: "insensitive" } },
+                  { name: { contains: "Backup", mode: "insensitive" } },
+                ],
+              },
+            });
+          }
           if (blueprint) {
             template = await this.prisma.proposalTemplate.create({
               data: {
@@ -7704,6 +7980,30 @@ ${catalogContext}`;
               },
             });
           }
+        }
+
+        if (!template && isHybridQuote) {
+          template = await this.prisma.proposalTemplate.create({
+            data: {
+              tenantId: conversation.organizationId,
+              name: "Modelo Híbrido & Backup Solar (EnergivIA)",
+              status: "PUBLISHED",
+              config: {
+                sections: [
+                  { id: "hero-1", type: "hero_cover", title: "Capa do Projeto Solar Híbrido" },
+                  {
+                    id: "gen-1",
+                    type: "generation_chart",
+                    title: "Estimativa de Geração & Consumo",
+                  },
+                  { id: "bess-1", type: "storage_backup", title: "Armazenamento & Backup (BESS)" },
+                  { id: "equip-1", type: "proposal_equipment", title: "Equipamentos & Baterias" },
+                  { id: "fin-1", type: "financial_summary", title: "Investimento & Economia" },
+                ],
+              },
+              version: 1,
+            },
+          });
         }
 
         const defaultTemplate =
@@ -7968,12 +8268,18 @@ ${catalogContext}`;
           clientPhone: detectedPhone,
         });
 
-        const templates = await this.getAvailableTemplates(conversation.organizationId);
-        let templateListText = "";
-        templates.forEach((t, i) => {
-          templateListText += `> ${this.numToEmoji(i + 1)} *${t.name}*\n`;
+        const isHybridQuote =
+          sessionCtx.inverterType === "hybrid" ||
+          sessionCtx.inverterType === "off_grid" ||
+          (typeof (sessionCtx as any).batteryCapacityKwh === "number" &&
+            (sessionCtx as any).batteryCapacityKwh > 0) ||
+          (typeof (sessionCtx as any).batteryQuantity === "number" &&
+            (sessionCtx as any).batteryQuantity > 0);
+
+        const templates = await this.getAvailableTemplates(conversation.organizationId, {
+          isHybrid: isHybridQuote,
         });
-        templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
+        const { text: templateListText } = formatTemplateSelectionList(templates, isHybridQuote);
 
         return (
           `Cliente *${name}* e WhatsApp \`${formatPhone(detectedPhone)}\` registrados com sucesso! 👤✨\n\n` +
@@ -8060,12 +8366,18 @@ ${catalogContext}`;
         clientPhone: sessionCtx.clientWhatsapp,
       });
 
-      const templates = await this.getAvailableTemplates(conversation.organizationId);
-      let templateListText = "";
-      templates.forEach((t, i) => {
-        templateListText += `> ${this.numToEmoji(i + 1)} *${t.name}*\n`;
+      const isHybridQuote =
+        sessionCtx.inverterType === "hybrid" ||
+        sessionCtx.inverterType === "off_grid" ||
+        (typeof (sessionCtx as any).batteryCapacityKwh === "number" &&
+          (sessionCtx as any).batteryCapacityKwh > 0) ||
+        (typeof (sessionCtx as any).batteryQuantity === "number" &&
+          (sessionCtx as any).batteryQuantity > 0);
+
+      const templates = await this.getAvailableTemplates(conversation.organizationId, {
+        isHybrid: isHybridQuote,
       });
-      templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
+      const { text: templateListText } = formatTemplateSelectionList(templates, isHybridQuote);
 
       const phoneDisplay = ` e WhatsApp \`${formatPhone(resolvedPhone)}\``;
 
@@ -8109,12 +8421,18 @@ ${catalogContext}`;
             clientPhone,
           });
 
-          const templates = await this.getAvailableTemplates(conversation.organizationId);
-          let templateListText = "";
-          templates.forEach((t, i) => {
-            templateListText += `> ${this.numToEmoji(i + 1)} *${t.name}*\n`;
+          const isHybridQuote =
+            sessionCtx.inverterType === "hybrid" ||
+            sessionCtx.inverterType === "off_grid" ||
+            (typeof (sessionCtx as any).batteryCapacityKwh === "number" &&
+              (sessionCtx as any).batteryCapacityKwh > 0) ||
+            (typeof (sessionCtx as any).batteryQuantity === "number" &&
+              (sessionCtx as any).batteryQuantity > 0);
+
+          const templates = await this.getAvailableTemplates(conversation.organizationId, {
+            isHybrid: isHybridQuote,
           });
-          templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
+          const { text: templateListText } = formatTemplateSelectionList(templates, isHybridQuote);
 
           const phoneDisplay = clientPhone ? ` e WhatsApp \`${formatPhone(clientPhone)}\`` : "";
 
@@ -8140,9 +8458,43 @@ ${catalogContext}`;
         return `Sem problemas! Qual o nome correto do seu cliente final para a proposta comercial? (Ex: João da Silva)`;
       }
 
-      const templateChoiceStr = incomingText.replace(/\D/g, "");
-      const chosenTemplateIndex = templateChoiceStr ? parseInt(templateChoiceStr, 10) - 1 : 0;
-      return generateProposalAndReply(chosenTemplateIndex);
+      const isHybridQuote =
+        sessionCtx.inverterType === "hybrid" ||
+        sessionCtx.inverterType === "off_grid" ||
+        (typeof (sessionCtx as any).batteryCapacityKwh === "number" &&
+          (sessionCtx as any).batteryCapacityKwh > 0) ||
+        (typeof (sessionCtx as any).batteryQuantity === "number" &&
+          (sessionCtx as any).batteryQuantity > 0);
+
+      const availableTemplates = await this.getAvailableTemplates(conversation.organizationId, {
+        isHybrid: isHybridQuote,
+      });
+
+      const resolution = resolveChosenTemplate(incomingText, availableTemplates, isHybridQuote);
+
+      if (!resolution.success) {
+        const { text: templateListText } = formatTemplateSelectionList(
+          availableTemplates,
+          isHybridQuote
+        );
+        if (resolution.reason === "incompatible_on_grid") {
+          return (
+            `⚠️ *Modelo não compatível com Sistema Híbrido/Bateria!*\n\n` +
+            `O modelo comercial selecionado é exclusivo para sistemas On-Grid convencionais e não suporta armazenamento ou backup.\n` +
+            `Para sistemas com baterias, selecione um dos modelos compatíveis:\n\n` +
+            `${templateListText}\n` +
+            `_(Digite o número do modelo híbrido ou 0️⃣ para voltar)_`
+          );
+        }
+
+        return (
+          `Opção não reconhecida. Por favor, selecione o *modelo de proposta*:\n\n` +
+          `${templateListText}\n` +
+          `_(Responda com o número da opção desejada)_`
+        );
+      }
+
+      return generateProposalAndReply(resolution.chosenTemplate || 0);
     }
 
     // ESTADO D.1: O Bot perguntou a capacidade de baterias para o inversor híbrido
@@ -10023,12 +10375,19 @@ ${catalogContext}`;
         );
       }
       if (lastBotMsg.includes("Qual modelo de proposta comercial você deseja usar")) {
-        const templates = await this.getAvailableTemplates(conversation.organizationId);
-        let templateListText = "";
-        templates.forEach((t, i) => {
-          templateListText += `> ${this.numToEmoji(i + 1)} *${t.name}*\n`;
+        const isHybridQuote =
+          sessionCtx.inverterType === "hybrid" ||
+          sessionCtx.inverterType === "off_grid" ||
+          (typeof (sessionCtx as any).batteryCapacityKwh === "number" &&
+            (sessionCtx as any).batteryCapacityKwh > 0) ||
+          (typeof (sessionCtx as any).batteryQuantity === "number" &&
+            (sessionCtx as any).batteryQuantity > 0);
+
+        const templates = await this.getAvailableTemplates(conversation.organizationId, {
+          isHybrid: isHybridQuote,
         });
-        templateListText += `> 0️⃣ *Voltar / Rever dados*\n`;
+        const { text: templateListText } = formatTemplateSelectionList(templates, isHybridQuote);
+
         return (
           `Opção não reconhecida. Por favor, selecione o *modelo de proposta*:\n\n` +
           templateListText +

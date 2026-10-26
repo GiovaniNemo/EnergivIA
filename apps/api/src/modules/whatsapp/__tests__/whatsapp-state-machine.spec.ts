@@ -126,7 +126,8 @@ describe("WhatsApp Bot - Deterministic Finite State Machine (FSM)", () => {
       expect(STEP_PREVIOUS_MAP.AWAITING_BATTERY_STORAGE).toBe("AWAITING_INVERTER_TYPE");
       expect(STEP_PREVIOUS_MAP.AWAITING_INVERTER_TYPE).toBe("AWAITING_ROOF_TYPE");
       expect(STEP_PREVIOUS_MAP.AWAITING_ROOF_TYPE).toBe("AWAITING_GRID_TYPE");
-      expect(STEP_PREVIOUS_MAP.AWAITING_GRID_TYPE).toBe("AWAITING_CITY");
+      expect(STEP_PREVIOUS_MAP.AWAITING_GRID_TYPE).toBe("AWAITING_BILL_VALUE");
+      expect(STEP_PREVIOUS_MAP.AWAITING_BILL_VALUE).toBe("AWAITING_CITY");
     });
   });
 
@@ -164,7 +165,7 @@ describe("WhatsApp Bot - Deterministic Finite State Machine (FSM)", () => {
       );
     });
 
-    it("should transition from AWAITING_CITY to AWAITING_GRID_TYPE when valid city is provided", async () => {
+    it("should transition from AWAITING_CITY to AWAITING_BILL_VALUE when valid city is provided", async () => {
       const conversation: any = {
         id: "conv-002",
         organizationId: "org-test",
@@ -183,17 +184,54 @@ describe("WhatsApp Bot - Deterministic Finite State Machine (FSM)", () => {
       });
 
       expect(reply).toContain("Localização Identificada");
-      expect(reply).toContain("Qual o padrão de entrada da instalação");
+      expect(reply).toContain("Qual é o valor médio da conta de luz");
 
       expect(mockPrisma.conversation.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "conv-002" },
           data: expect.objectContaining({
             metadata: expect.objectContaining({
-              step: "AWAITING_GRID_TYPE",
+              step: "AWAITING_BILL_VALUE",
               sessionData: expect.objectContaining({
                 cidade: "Maringá",
                 uf: "PR",
+              }),
+            }),
+          }),
+        })
+      );
+    });
+
+    it("should transition from AWAITING_BILL_VALUE to AWAITING_GRID_TYPE when bill value is provided", async () => {
+      const conversation: any = {
+        id: "conv-002b",
+        organizationId: "org-test",
+        title: "Test Session",
+        metadata: {
+          step: "AWAITING_BILL_VALUE",
+          sessionData: { consumptionKwh: 450, cidade: "Maringá", uf: "PR" },
+        },
+        messages: [
+          { role: "assistant", content: "Qual é o valor médio da conta de luz atual em R$?" },
+        ],
+      };
+
+      const reply = await (service as any).generateBotResponse({
+        conversation,
+        incomingText: "850",
+        extractionResult: null,
+      });
+
+      expect(reply).toContain("Qual o padrão de entrada da instalação");
+
+      expect(mockPrisma.conversation.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "conv-002b" },
+          data: expect.objectContaining({
+            metadata: expect.objectContaining({
+              step: "AWAITING_GRID_TYPE",
+              sessionData: expect.objectContaining({
+                billValue: 850,
               }),
             }),
           }),

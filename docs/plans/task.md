@@ -736,7 +736,7 @@
 | task-740 | Cálculo da Tarifa (energyPriceKwh) e Persistência na Simulação | completed | Calcula tarifa efetiva real ou regional por UF e persiste energyPriceKwh e billValue em simulation e systemSizing |
 | task-741 | Sincronização 100% com Templates de Propostas e Salvaguarda Anti-Mock | completed | Preenche conta_mensal_energia, comparacao_antes, comparacao_depois e cobertura_consumo_pct com dados reais e proteção anti-mock |
 | task-742 | Validação Completa, Testes Automatizados (Vitest), Build e Push | completed | 19 testes unitários aprovados (15 API + 4 Web), build da API compilado com sucesso e alterações sincronizadas |
-| task-743 | Variáveis Dinâmicas de Bateria em public-proposal-variables.ts e Testes Unitários | not-started | Injetar bateria_sistema, capacidade_bateria_kwh, quantidade_baterias, modo_backup e testes no Vitest |
-| task-744 | Seção storage_backup, Cards de Bateria e Badge Exclusivo no Editor | not-started | Implementar storage_backup, badges ⚡ Exclusivo Híbrido / Off-Grid no modal e nos cards de equipamentos |
-| task-745 | Filtragem de Templates, Riscado (~...~) e Salvaguarda Híbrida no WhatsApp Bot | not-started | Riscar templates on-grid com ~...~ quando híbrido, priorizar modelos compatíveis e blueprint híbrido |
-| task-746 | Validação Completa, Testes Automatizados (Vitest), Build e Push | not-started | Executar suite completa de testes, build da API e Web, atualizar task.md e enviar para origin/main |
+| task-743 | Variáveis Dinâmicas de Bateria em public-proposal-variables.ts e Testes Unitários | completed | Injetar bateria_sistema, capacidade_bateria_kwh, quantidade_baterias, modo_backup e testes no Vitest (5/5 passando) |
+| task-744 | Seção storage_backup, Cards de Bateria e Badge Exclusivo no Editor | completed | Implementado storage_backup, badges ⚡ Exclusivo Híbrido / Off-Grid no modal e nos cards de equipamentos |
+| task-745 | Filtragem de Templates, Riscado (~...~) e Salvaguarda Híbrida no WhatsApp Bot | completed | Templates on-grid riscados com ~...~ quando híbrido, modelos híbridos ativos selecionáveis, blueprint híbrido fallback e 8 testes Vitest aprovados |
+| task-746 | Validação Completa, Testes Automatizados (Vitest), Build e Push | completed | 36+ testes Vitest aprovados (Web e API), nest build da API e ESLint web 100% aprovados, sincronizado com origin/main |
