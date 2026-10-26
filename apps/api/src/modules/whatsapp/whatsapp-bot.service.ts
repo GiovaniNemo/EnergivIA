@@ -737,6 +737,159 @@ export function parseConsumptionInput(text: string): number | null {
   return null;
 }
 
+/** Verifica se a mensagem indica desejo de pular a pergunta de valor da conta ou estimar pela tarifa regional */
+export function isSkipBillValueInput(text: string): boolean {
+  if (!text) return false;
+  const clean = text
+    .toLowerCase()
+    .trim()
+    .replace(/[.,!?:;*~_]/g, "");
+  return (
+    clean === "0" ||
+    clean === "0️⃣" ||
+    clean === "pular" ||
+    clean === "pula" ||
+    clean === "ignorar" ||
+    clean === "ignora" ||
+    clean === "estimar" ||
+    clean === "estima" ||
+    clean === "estimativa" ||
+    clean === "nao sei" ||
+    clean === "não sei" ||
+    clean === "deixa" ||
+    clean === "padrao" ||
+    clean === "padrão" ||
+    clean === "sem valor"
+  );
+}
+
+/** Extrai valor em reais (R$) da conta/fatura de luz a partir de mensagens naturais em português */
+export function parseBillValueInput(text: string): number | null {
+  if (!text) return null;
+  const clean = text.replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, "").trim();
+
+  // Se o texto for comando de pulo ("0", "pular"), não é valor da conta
+  if (isSkipBillValueInput(clean)) return null;
+
+  // Pattern A: Menção com contexto de fatura / conta / gasto / valor
+  // ex: "conta de 850 reais", "fatura de R$ 1.100", "minha conta é de 850 reais", "pago 680 por mes", "gasto cerca de 750 reais de luz", "conta atual de 1200"
+  const billContextRegex =
+    /(?:conta|fatura|gasto|pago|pagando|valor|custo|faturas)\s*(?:de\s+luz|de\s+energia|atual|mensal|m[ée]dia)?\s*(?:[eé]|vem|d[aá]|uns|cerca\s+de|mais\s+ou\s+menos)?\s*(?:de|em|uns)?\s*(?:r\$\s*)?(\d+[\d.,]*)(?:\s*(?:reais|conto))?(?:\b|[^\w.,]|$)/i;
+
+  const contextMatch = clean.match(billContextRegex);
+  if (contextMatch && contextMatch[1]) {
+    const matchIndex = contextMatch.index || 0;
+    const postSnippet = clean
+      .slice(matchIndex + contextMatch[0].length, matchIndex + contextMatch[0].length + 15)
+      .toLowerCase();
+    const isKwhOrKwp = /^\s*(?:kwh|kwp|kw\b|w\b|mwp)/.test(postSnippet);
+    if (!isKwhOrKwp) {
+      const val = parsePtBrNumber(contextMatch[1]);
+      if (Number.isFinite(val) && val >= 25 && val <= 1_000_000) {
+        return Math.round(val * 100) / 100;
+      }
+    }
+  }
+
+  // Pattern B: Frases com verbos de valor (ex: "dá mais ou menos uns 800 reais", "vem uns 920 reais")
+  const colloquialValueRegex =
+    /(?:d[aá]|vem|fica|est[aá])\s*(?:mais\s+ou\s+menos)?\s*(?:uns|cerca\s+de)?\s*(?:r\$\s*)?(\d+[\d.,]*)\s*(?:reais|conto)(?:\b|[^\w.,]|$)/i;
+  const colloquialMatch = clean.match(colloquialValueRegex);
+  if (colloquialMatch && colloquialMatch[1]) {
+    const val = parsePtBrNumber(colloquialMatch[1]);
+    if (Number.isFinite(val) && val >= 25 && val <= 1_000_000) {
+      return Math.round(val * 100) / 100;
+    }
+  }
+
+  // Pattern C: Símbolo R$ ou sufixo "reais" explícito em qualquer lugar do texto
+  const currencyWithSymbolOrWordRegex =
+    /(?:r\$\s*(\d+[\d.,]*)|(\d+[\d.,]*)\s*(?:reais|conto))(?:\b|[^\w.,]|$)/gi;
+
+  let currMatch: RegExpExecArray | null;
+  while ((currMatch = currencyWithSymbolOrWordRegex.exec(clean)) !== null) {
+    const rawVal = currMatch[1] || currMatch[2];
+    if (rawVal) {
+      const val = parsePtBrNumber(rawVal);
+      if (Number.isFinite(val) && val >= 25 && val <= 1_000_000) {
+        return Math.round(val * 100) / 100;
+      }
+    }
+  }
+
+  // Pattern D: Se a mensagem for apenas um número isolado (comum em resposta à pergunta "Qual o valor da conta?")
+  // Ex: "850", "850,00", "1.250,50", "2.500"
+  // mas NÃO pode ter sufixo kwh/kwp/kw/w/placas/modulos
+  const hasUnitKwh = /(?:kwh|kwp|kw\b|w\b|mwp|placas?|m[oó]dulos?|pain[eé]is?)/i.test(clean);
+  if (!hasUnitKwh) {
+    const standaloneNumberRegex = /^(?:r\$\s*)?(\d+[\d.,]*)\s*(?:reais|conto)?$/i;
+    const numMatch = clean.match(standaloneNumberRegex);
+    if (numMatch && numMatch[1]) {
+      const val = parsePtBrNumber(numMatch[1]);
+      if (Number.isFinite(val) && val >= 25 && val <= 1_000_000) {
+        return Math.round(val * 100) / 100;
+      }
+    }
+  }
+
+  return null;
+}
+
+/** Tarifas médias residenciais de energia elétrica (R$/kWh com tributos) por UF (Referência ANEEL) */
+export const UF_AVERAGE_TARIFFS: Record<string, number> = {
+  AC: 0.98,
+  AL: 0.96,
+  AP: 0.92,
+  AM: 0.95,
+  BA: 0.94,
+  CE: 0.95,
+  DF: 0.86,
+  ES: 0.85,
+  GO: 0.89,
+  MA: 0.97,
+  MT: 0.94,
+  MS: 0.93,
+  MG: 0.96,
+  PA: 1.05,
+  PB: 0.93,
+  PR: 0.87,
+  PE: 0.94,
+  PI: 0.96,
+  RJ: 1.02,
+  RN: 0.93,
+  RS: 0.88,
+  RO: 0.92,
+  RR: 0.89,
+  SC: 0.84,
+  SP: 0.89,
+  SE: 0.91,
+  TO: 0.96,
+};
+
+export const DEFAULT_NATIONAL_AVERAGE_TARIFF = 0.89;
+
+/** Retorna a tarifa média estimada em R$/kWh para a UF fornecida */
+export function getRegionalAverageTariff(uf?: string | null): number {
+  if (!uf) return DEFAULT_NATIONAL_AVERAGE_TARIFF;
+  const upperUf = uf.trim().toUpperCase();
+  return UF_AVERAGE_TARIFFS[upperUf] ?? DEFAULT_NATIONAL_AVERAGE_TARIFF;
+}
+
+/** Calcula a tarifa efetiva de energia (R$/kWh) baseada na conta ou fallback regional */
+export function calculateEffectiveTariff(
+  billValue: number | undefined | null,
+  consumptionKwh: number | undefined | null,
+  uf?: string | null
+): number {
+  if (billValue && consumptionKwh && consumptionKwh > 0) {
+    const rawTariff = billValue / consumptionKwh;
+    if (rawTariff >= 0.35 && rawTariff <= 2.5) {
+      return Math.round(rawTariff * 10000) / 10000;
+    }
+  }
+  return getRegionalAverageTariff(uf);
+}
+
 /** Converte entradas textuais de potência (ex: 3000 kwp, 3 mwp, 1.5 gw) para kWp */
 export function parsePowerInput(text: string): number | null {
   if (!text) return null;
@@ -4494,6 +4647,7 @@ Regras estritas:
       targetKWp?: number;
       targetModules?: number;
       consumptionKwh?: number;
+      billValue?: number;
       gridVoltage?: string;
       roofType?: string;
       pendingCityCandidates?: MunicipalityCandidate[];
@@ -4508,6 +4662,24 @@ Regras estritas:
     sessionCtx.cidade = hspRes.city;
     sessionCtx.estado = hspRes.uf;
     sessionCtx.hsp = hspRes.hsp;
+
+    // Se o valor da conta ainda NÃO foi informado (e não veio de fatura nem de texto inicial):
+    // Pergunta o valor da conta de luz em R$ e aguarda AWAITING_BILL_VALUE
+    if (sessionCtx.billValue === undefined) {
+      await setStep("AWAITING_BILL_VALUE", {
+        cidade: hspRes.city,
+        uf: hspRes.uf,
+        hsp: hspRes.hsp,
+      });
+
+      return (
+        `*_Localização Identificada!_* \`${hspRes.city}/${hspRes.uf}\` 📍☀️\n` +
+        `> Irradiação Solar: \`${hspRes.hsp.toFixed(2)} kWh/m²/dia\`\n\n` +
+        `💡 *Qual é o valor médio da conta de luz atual em R$?*\n\n` +
+        `> Digite o valor (ex: *850* ou *850,00*).\n` +
+        `> Ou envie *0* para estimar automaticamente pela tarifa da sua região.`
+      );
+    }
 
     const isLargeKit = Boolean(
       (sessionCtx.targetKWp && sessionCtx.targetKWp >= 15) ||
@@ -4525,6 +4697,7 @@ Regras estritas:
           cidade: hspRes.city,
           uf: hspRes.uf,
           hsp: hspRes.hsp,
+          billValue: sessionCtx.billValue,
           gridType: sessionCtx.gridVoltage,
           roofType: sessionCtx.roofType,
         });
@@ -4543,6 +4716,7 @@ Regras estritas:
         cidade: hspRes.city,
         uf: hspRes.uf,
         hsp: hspRes.hsp,
+        billValue: sessionCtx.billValue,
         gridType: sessionCtx.gridVoltage,
       });
       return (
@@ -4557,6 +4731,7 @@ Regras estritas:
       cidade: hspRes.city,
       uf: hspRes.uf,
       hsp: hspRes.hsp,
+      billValue: sessionCtx.billValue,
       roofType: sessionCtx.roofType,
     });
     const roofInfo = sessionCtx.roofType ? `> 🏠 Estrutura: *${sessionCtx.roofType}*\n` : "";
@@ -5179,6 +5354,7 @@ ${catalogContext}`;
       clientName?: string;
       clientWhatsapp?: string;
       chosenQuoteIndex: number;
+      billValue?: number;
       inverterType?: "string" | "microinverter" | "hybrid" | "off_grid";
       inverterDescription?: string;
       batteryKwh?: number;
@@ -5204,6 +5380,7 @@ ${catalogContext}`;
       let clientName: string | undefined = undefined;
       let clientWhatsapp: string | undefined = undefined;
       let chosenQuoteIndex = 0;
+      let billValue: number | undefined = undefined;
       let inverterType: "string" | "microinverter" | "hybrid" | "off_grid" | undefined = undefined;
       let inverterDescription: string | undefined = undefined;
       let batteryKwh: number | undefined = undefined;
@@ -5219,6 +5396,7 @@ ${catalogContext}`;
         if (meta) {
           if (meta["exactAverageKwh"]) consumptionKwh = Number(meta["exactAverageKwh"]);
           if (meta["consumptionKwh"]) consumptionKwh = Number(meta["consumptionKwh"]);
+          if (meta["billValue"]) billValue = Number(meta["billValue"]);
           if (meta["targetKWp"]) targetKWp = Number(meta["targetKWp"]);
           if (meta["targetModules"]) targetModules = Number(meta["targetModules"]);
           if (meta["cidade"]) cidade = String(meta["cidade"]);
@@ -5271,6 +5449,7 @@ ${catalogContext}`;
             clientName = undefined;
             clientWhatsapp = undefined;
             chosenQuoteIndex = 0;
+            billValue = undefined;
             inverterType = undefined;
             inverterDescription = undefined;
             batteryKwh = undefined;
@@ -5446,6 +5625,7 @@ ${catalogContext}`;
           clientName = undefined;
           clientWhatsapp = undefined;
           chosenQuoteIndex = 0;
+          billValue = undefined;
           inverterType = undefined;
           inverterDescription = undefined;
           batteryKwh = undefined;
@@ -5783,6 +5963,7 @@ ${catalogContext}`;
         clientName,
         clientWhatsapp,
         chosenQuoteIndex,
+        billValue,
         inverterType,
         inverterDescription,
         batteryKwh,
@@ -5823,6 +6004,13 @@ ${catalogContext}`;
       isNewBillSubmission ||
       (isAtMenuOrCompleted && (hasDirectKwhInput || quoteEntities.isQuoteRequest));
 
+    if (sessionCtx.billValue === undefined && !isNewBillSubmission) {
+      const directBillInput = parseBillValueInput(incomingText);
+      if (directBillInput !== null && directBillInput >= 25 && directBillInput <= 1_000_000) {
+        sessionCtx.billValue = directBillInput;
+      }
+    }
+
     const rawCidade = storedSessionData.cidade || convMeta["cidade"];
     const rawUf = storedSessionData.uf || convMeta["uf"];
     const rawConsumption = storedSessionData.consumptionKwh ?? convMeta["consumptionKwh"];
@@ -5842,12 +6030,15 @@ ${catalogContext}`;
       storedSessionData.batteryVoltageType || (convMeta["batteryVoltageType"] as any);
     const rawHasBms = storedSessionData.hasBms ?? (convMeta["hasBms"] as any);
     const rawHasBattery = storedSessionData.hasBattery ?? (convMeta["hasBattery"] as any);
+    const rawBillValue = storedSessionData.billValue ?? (convMeta["billValue"] as any);
 
     // CRUCIAL: Se a conversa estiver ociosa (menu inicial), com proposta concluída, ou se enviou uma nova fatura,
     // NUNCA hidrata dados de localização (cidade/UF), padrão de rede, telhado ou potência de cotações antigas!
     if (!isAtMenuOrCompleted && !isNewBillSubmission) {
       if (rawCidade && !sessionCtx.cidade) sessionCtx.cidade = rawCidade;
       if (rawUf && !sessionCtx.estado) sessionCtx.estado = rawUf;
+      if (rawBillValue !== undefined && sessionCtx.billValue === undefined)
+        sessionCtx.billValue = rawBillValue;
       if (
         rawConsumption !== undefined &&
         !sessionCtx.consumptionKwh &&
@@ -5948,6 +6139,9 @@ ${catalogContext}`;
       if (extractionResult.exactAverageKwh && !sessionCtx.consumptionKwh) {
         sessionCtx.consumptionKwh = extractionResult.exactAverageKwh;
       }
+      if (extractionResult.data.valor_total_fatura_reais && sessionCtx.billValue === undefined) {
+        sessionCtx.billValue = extractionResult.data.valor_total_fatura_reais;
+      }
     }
 
     // Helper determinístico para atualizar estado e dados acumulados
@@ -5958,6 +6152,7 @@ ${catalogContext}`;
         cidade: sessionCtx.cidade,
         uf: sessionCtx.estado,
         consumptionKwh: sessionCtx.consumptionKwh,
+        billValue: sessionCtx.billValue,
         kwp: sessionCtx.targetKWp,
         moduleCount: sessionCtx.targetModules,
         gridType: sessionCtx.gridVoltage,
@@ -5982,6 +6177,7 @@ ${catalogContext}`;
         if (patchData.uf !== undefined) sessionCtx.estado = patchData.uf;
         if (patchData.consumptionKwh !== undefined)
           sessionCtx.consumptionKwh = patchData.consumptionKwh;
+        if (patchData.billValue !== undefined) sessionCtx.billValue = patchData.billValue;
         if (patchData.kwp !== undefined) sessionCtx.targetKWp = patchData.kwp;
         if (patchData.moduleCount !== undefined) sessionCtx.targetModules = patchData.moduleCount;
         if (patchData.gridType !== undefined) sessionCtx.gridVoltage = patchData.gridType;
@@ -5999,6 +6195,7 @@ ${catalogContext}`;
         delete updatedSessionData.cidade;
         delete updatedSessionData.uf;
         delete updatedSessionData.consumptionKwh;
+        delete updatedSessionData.billValue;
         delete updatedSessionData.kwp;
         delete updatedSessionData.moduleCount;
         delete updatedSessionData.gridType;
@@ -6021,6 +6218,7 @@ ${catalogContext}`;
         sessionCtx.cidade = undefined;
         sessionCtx.estado = undefined;
         sessionCtx.consumptionKwh = undefined;
+        sessionCtx.billValue = undefined;
         sessionCtx.targetKWp = undefined;
         sessionCtx.targetModules = undefined;
         sessionCtx.modPowerWUser = undefined;
@@ -7051,6 +7249,19 @@ ${catalogContext}`;
         currentStep === "AWAITING_GRID_TYPE" ||
         lastBotMsg.includes("Qual o padrão de entrada da instalação?")
       ) {
+        await setStep("AWAITING_BILL_VALUE");
+        return (
+          `Certo! Vamos alterar o valor da conta de luz. 💡\n\n` +
+          `Qual é o valor médio da conta de luz em R$? (Ex: \`850\` ou \`850,00\`)\n` +
+          `_(Ou envie 0️⃣ para estimar pela tarifa regional ou voltar para a cidade)_`
+        );
+      }
+
+      if (
+        currentStep === "AWAITING_BILL_VALUE" ||
+        lastBotMsg.includes("Qual é o valor médio da conta de luz atual em R$?") ||
+        lastBotMsg.includes("valor médio da conta de luz atual em R$")
+      ) {
         delete sessionCtx.pendingCityCandidates;
         delete sessionCtx.pendingCityName;
         await setStep("AWAITING_CITY");
@@ -7397,7 +7608,20 @@ ${catalogContext}`;
           },
         });
 
-        // 4. Cria Dimensionamento
+        // 4. Calcula Tarifa Efetiva e Cria Dimensionamento
+        const effectiveTariff = calculateEffectiveTariff(
+          sessionCtx.billValue,
+          effectiveConsumption,
+          sessionCtx.estado
+        );
+        const calculatedBillValue =
+          sessionCtx.billValue ?? Math.round(effectiveConsumption * effectiveTariff);
+        const monthlySavingsVal = Math.round(effectiveConsumption * effectiveTariff * 0.95);
+        const calculatedPayback =
+          monthlySavingsVal > 0
+            ? Math.max(1, Math.round((quotedSaleBrl / (monthlySavingsVal * 12)) * 10) / 10)
+            : 3.2;
+
         await this.prisma.systemSizing.create({
           data: {
             tenantId: conversation.organizationId,
@@ -7405,6 +7629,8 @@ ${catalogContext}`;
             name: `Dimensionamento IA - ${selectedQuote.kwp} kWp`,
             input: {
               monthlyConsumptionKwh: effectiveConsumption,
+              energyPriceKwh: effectiveTariff,
+              billValue: calculatedBillValue,
               cidade: sessionCtx.cidade || "São Paulo",
               estado: sessionCtx.estado || "SP",
             },
@@ -7414,12 +7640,6 @@ ${catalogContext}`;
             },
           },
         });
-
-        const monthlySavingsVal = Math.round(effectiveConsumption * 0.9);
-        const calculatedPayback =
-          monthlySavingsVal > 0
-            ? Math.max(1, Math.round((quotedSaleBrl / (monthlySavingsVal * 12)) * 10) / 10)
-            : 3.2;
 
         // 5. Cria Simulação
         const simulation = await this.prisma.simulation.create({
@@ -7431,8 +7651,13 @@ ${catalogContext}`;
               systemSizeKw: selectedQuote.kwp,
               investmentAmount: quotedSaleBrl,
               financingType: "CASH",
+              energyPriceKwh: effectiveTariff,
+              billValue: calculatedBillValue,
+              monthlyConsumptionKwh: effectiveConsumption,
               sizing: {
                 monthlyConsumptionKwh: effectiveConsumption,
+                energyPriceKwh: effectiveTariff,
+                billValue: calculatedBillValue,
                 cidade: sessionCtx.cidade || "São Paulo",
                 estado: sessionCtx.estado || "SP",
                 recommendedPowerKw: selectedQuote.kwp,
@@ -8369,6 +8594,121 @@ ${catalogContext}`;
         `> Ex: \`2500\`, \`R$ 3.200,00\`, \`4000\` ou \`total 18500\`\n` +
         `> Envie 0️⃣ para voltar\n\n` +
         `_(Qual preço você deseja utilizar para esta cotação?)_`
+      );
+    }
+
+    // ESTADO E.3: O Bot perguntou o valor da conta de luz em R$
+    if (
+      currentStep === "AWAITING_BILL_VALUE" ||
+      lastBotMsg.includes("Qual é o valor médio da conta de luz atual em R$?") ||
+      lastBotMsg.includes("valor médio da conta de luz atual em R$")
+    ) {
+      // 1. Se o usuário quiser pular ou estimar pela tarifa regional
+      if (isSkipBillValueInput(incomingText)) {
+        sessionCtx.billValue = undefined;
+
+        const hasCompleteVoltage = Boolean(sessionCtx.gridVoltage?.includes("V"));
+        if (hasCompleteVoltage && sessionCtx.roofType) {
+          const quotes = await kitsFor({ roofType: sessionCtx.roofType });
+          if (quotes.length > 0) {
+            await setStep("AWAITING_KIT_SELECTION", { billValue: undefined });
+            return (
+              `Perfeito! Usaremos a tarifa média estimada da sua concessionária. ⚡\n\n` +
+              this.formatQuotesListText(quotes, sessionCtx)
+            );
+          }
+        }
+
+        if (hasCompleteVoltage && !sessionCtx.roofType) {
+          await setStep("AWAITING_ROOF_TYPE", { billValue: undefined });
+          return (
+            `Perfeito! Usaremos a tarifa média estimada da sua concessionária. ⚡\n\n` +
+            this.ROOF_OPTIONS_TEXT
+          );
+        }
+
+        await setStep("AWAITING_GRID_TYPE", { billValue: undefined });
+        const isLargeKit = Boolean(
+          (sessionCtx.targetKWp && sessionCtx.targetKWp >= 15) ||
+          (sessionCtx.targetModules && sessionCtx.targetModules >= 26) ||
+          (sessionCtx.consumptionKwh && sessionCtx.consumptionKwh >= 2500)
+        );
+        const gridPrompt = isLargeKit
+          ? this.buildLargeKitGridQuestionText(
+              sessionCtx.targetKWp
+                ? this.formatPowerBadge(sessionCtx.targetKWp)
+                : sessionCtx.consumptionKwh
+                  ? `${sessionCtx.consumptionKwh} kWh/mês`
+                  : "grande porte"
+            )
+          : this.GRID_OPTIONS_TEXT;
+
+        return (
+          `Perfeito! Usaremos a tarifa média estimada da sua concessionária. ⚡\n\n` +
+          `Qual o padrão de entrada da instalação?\n\n` +
+          gridPrompt
+        );
+      }
+
+      // 2. Extração do valor informado
+      const parsedBill = parseBillValueInput(incomingText);
+      if (parsedBill !== null && parsedBill >= 25 && parsedBill <= 1_000_000) {
+        sessionCtx.billValue = parsedBill;
+
+        const hasCompleteVoltage = Boolean(sessionCtx.gridVoltage?.includes("V"));
+        if (hasCompleteVoltage && sessionCtx.roofType) {
+          const quotes = await kitsFor({ roofType: sessionCtx.roofType });
+          if (quotes.length > 0) {
+            await setStep("AWAITING_KIT_SELECTION", { billValue: parsedBill });
+            return (
+              `*_Valor da Conta Registrado:_* *${parsedBill.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}* 💡\n\n` +
+              this.formatQuotesListText(quotes, sessionCtx)
+            );
+          }
+        }
+
+        if (hasCompleteVoltage && !sessionCtx.roofType) {
+          await setStep("AWAITING_ROOF_TYPE", { billValue: parsedBill });
+          return (
+            `*_Valor da Conta Registrado:_* *${parsedBill.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}* 💡\n\n` +
+            this.ROOF_OPTIONS_TEXT
+          );
+        }
+
+        await setStep("AWAITING_GRID_TYPE", { billValue: parsedBill });
+        const isLargeKit = Boolean(
+          (sessionCtx.targetKWp && sessionCtx.targetKWp >= 15) ||
+          (sessionCtx.targetModules && sessionCtx.targetModules >= 26) ||
+          (sessionCtx.consumptionKwh && sessionCtx.consumptionKwh >= 2500)
+        );
+        const gridPrompt = isLargeKit
+          ? this.buildLargeKitGridQuestionText(
+              sessionCtx.targetKWp
+                ? this.formatPowerBadge(sessionCtx.targetKWp)
+                : sessionCtx.consumptionKwh
+                  ? `${sessionCtx.consumptionKwh} kWh/mês`
+                  : "grande porte"
+            )
+          : this.GRID_OPTIONS_TEXT;
+
+        return (
+          `*_Valor da Conta Registrado:_* *${parsedBill.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}* 💡\n\n` +
+          `Qual o padrão de entrada da instalação?\n\n` +
+          gridPrompt
+        );
+      }
+
+      // 3. Verifica correção de dimensionamento
+      const billCorrection = await handleDimensioningCorrection();
+      if (billCorrection) return billCorrection;
+
+      // 4. Fallback orientativo
+      return (
+        `Valor não reconhecido. 💡\n\n` +
+        `Por favor, informe o valor médio da conta de luz em reais:\n` +
+        `> Exemplo: \`850\` ou \`R$ 850,00\`\n` +
+        `> Ou envie *0* para estimar automaticamente pela tarifa regional.\n\n` +
+        `_(Ou digite 0️⃣ para voltar)_`
       );
     }
 

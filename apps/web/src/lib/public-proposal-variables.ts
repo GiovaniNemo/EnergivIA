@@ -1,7 +1,7 @@
 import type { ProposalDocumentJson } from "@/components/proposals/editor/types";
 import type { FinancialSimulationInputJson, FinancialSimulationResultJson } from "@/lib/leads-api";
-import type { PublicProposalPayload } from "@/lib/public-proposals-api";
-import { stripCnpjNumbersFromCompanyName } from "@/lib/company-name-utils";
+import type { PublicProposalPayload } from "./public-proposals-api";
+import { stripCnpjNumbersFromCompanyName } from "./company-name-utils";
 
 function formatBRL(n: number | null | undefined): string {
   if (n == null || typeof n !== "number" || Number.isNaN(n)) return "R$ 0,00";
@@ -179,9 +179,47 @@ export function mergePublicProposalVariables(
     }
 
     const sizingIn = input.sizing;
-    const energyPrice = input.energyPriceKwh;
-    if (sizingIn?.monthlyConsumptionKwh != null && energyPrice != null && energyPrice > 0) {
-      merged["conta_mensal_energia"] = sizingIn.monthlyConsumptionKwh * energyPrice;
+    const rawInput = input as Record<string, unknown>;
+    const rawSizing = sizingIn as Record<string, unknown> | undefined;
+
+    const inputBill = typeof rawInput["billValue"] === "number" ? rawInput["billValue"] : null;
+    const sizingBill = typeof rawSizing?.["billValue"] === "number" ? rawSizing["billValue"] : null;
+    const directBillValue =
+      inputBill && inputBill > 0 ? inputBill : sizingBill && sizingBill > 0 ? sizingBill : null;
+
+    const inputCons =
+      typeof rawInput["monthlyConsumptionKwh"] === "number"
+        ? rawInput["monthlyConsumptionKwh"]
+        : null;
+    const sizingCons =
+      typeof rawSizing?.["consumptionKwh"] === "number" ? rawSizing["consumptionKwh"] : null;
+
+    const monthlyConsumptionKwh =
+      sizingIn?.monthlyConsumptionKwh ?? inputCons ?? sizingCons ?? null;
+
+    let energyPrice = input.energyPriceKwh;
+    if (
+      (energyPrice == null || energyPrice <= 0) &&
+      directBillValue &&
+      monthlyConsumptionKwh &&
+      monthlyConsumptionKwh > 0
+    ) {
+      energyPrice = directBillValue / monthlyConsumptionKwh;
+    } else if (
+      (energyPrice == null || energyPrice <= 0) &&
+      result.monthlySavings &&
+      monthlyConsumptionKwh &&
+      monthlyConsumptionKwh > 0
+    ) {
+      energyPrice = result.monthlySavings / (monthlyConsumptionKwh * 0.95);
+    } else if (energyPrice == null || energyPrice <= 0) {
+      energyPrice = 0.89;
+    }
+
+    if (directBillValue != null && directBillValue > 0) {
+      merged["conta_mensal_energia"] = directBillValue;
+    } else if (monthlyConsumptionKwh != null && monthlyConsumptionKwh > 0 && energyPrice > 0) {
+      merged["conta_mensal_energia"] = Math.round(monthlyConsumptionKwh * energyPrice);
     }
 
     const sizingRes = result.sizing;
@@ -218,14 +256,29 @@ export function mergePublicProposalVariables(
     }
 
     const monthlyBillRaw = merged["conta_mensal_energia"];
-    const monthlyBill = typeof monthlyBillRaw === "number" ? monthlyBillRaw : null;
+    const monthlyBill =
+      typeof monthlyBillRaw === "number" && monthlyBillRaw > 0
+        ? monthlyBillRaw
+        : monthlyConsumptionKwh && monthlyConsumptionKwh > 0 && energyPrice > 0
+          ? monthlyConsumptionKwh * energyPrice
+          : null;
+
     if (monthlyBill != null && monthlyBill > 0) {
+      merged["conta_mensal_energia"] = monthlyBill;
       merged["comparacao_antes"] = formatBRL(monthlyBill);
-      merged["comparacao_depois"] = formatBRL(Math.max(0, monthlyBill - result.monthlySavings));
-      const coverage = (result.monthlySavings / monthlyBill) * 100;
+      const afterSavings = Math.max(0, monthlyBill - (result.monthlySavings || 0));
+      merged["comparacao_depois"] = formatBRL(afterSavings);
+      const coverage = result.monthlySavings ? (result.monthlySavings / monthlyBill) * 100 : 95;
       if (Number.isFinite(coverage)) {
-        merged["cobertura_consumo_pct"] = Math.min(100, Math.round(coverage));
+        merged["cobertura_consumo_pct"] = Math.min(100, Math.max(0, Math.round(coverage)));
       }
+    } else if (result.monthlySavings && result.monthlySavings > 0) {
+      // Salvaguarda retroativa para propostas legadas: infere conta anterior a partir da economia real
+      const inferredBill = Math.round(result.monthlySavings / 0.95);
+      merged["conta_mensal_energia"] = inferredBill;
+      merged["comparacao_antes"] = formatBRL(inferredBill);
+      merged["comparacao_depois"] = formatBRL(Math.max(0, inferredBill - result.monthlySavings));
+      merged["cobertura_consumo_pct"] = 95;
     }
 
     const investimento = input.investmentAmount;

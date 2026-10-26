@@ -7,6 +7,7 @@ export type WhatsappBotStep =
   | "IDLE" // Menu inicial / Aguardando fatura, consumo em kWh ou potência em kWp
   | "AWAITING_CITY" // Aguardando município e estado (ex: "Maringá/PR")
   | "AWAITING_CITY_STATE" // Aguardando seleção de estado para município homônimo (ex: Belém -> PA, AL, PB)
+  | "AWAITING_BILL_VALUE" // Aguardando valor da conta de luz em R$ (ou 0 para estimar)
   | "AWAITING_GRID_TYPE" // Aguardando padrão da rede elétrica (Mono, Bi, Tri)
   | "AWAITING_ROOF_TYPE" // Aguardando estrutura do telhado (Cerâmica, Fibro, etc.)
   | "AWAITING_INVERTER_TYPE" // Aguardando tecnologia do inversor (1-String, 2-Micro, 3-Híbrido)
@@ -27,6 +28,7 @@ export interface WhatsappSessionData {
   uf?: string;
   hsp?: number;
   consumptionKwh?: number;
+  billValue?: number;
   kwp?: number;
   moduleCount?: number;
   gridType?: string;
@@ -81,7 +83,8 @@ export const STEP_PREVIOUS_MAP: Partial<Record<WhatsappBotStep, WhatsappBotStep>
   AWAITING_BATTERY_STORAGE: "AWAITING_INVERTER_TYPE",
   AWAITING_INVERTER_TYPE: "AWAITING_ROOF_TYPE",
   AWAITING_ROOF_TYPE: "AWAITING_GRID_TYPE",
-  AWAITING_GRID_TYPE: "AWAITING_CITY",
+  AWAITING_GRID_TYPE: "AWAITING_BILL_VALUE",
+  AWAITING_BILL_VALUE: "AWAITING_CITY",
   AWAITING_CITY_STATE: "AWAITING_CITY",
 };
 
