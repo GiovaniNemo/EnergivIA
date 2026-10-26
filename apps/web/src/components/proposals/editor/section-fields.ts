@@ -330,6 +330,9 @@ export const VARIANT_LABELS: Record<string, string> = {
   two_column: "Grade duas colunas",
   interview: "Editorial entrevista",
   headline: "Pergunta em destaque",
+  cards_vs_generator: "Cards + Gerador",
+  matrix: "Matriz Comparativa",
+  dashboard: "Painel de Métricas",
 };
 
 export const VARIANT_DISPLAY_ICONS: Record<string, string> = {
@@ -348,6 +351,9 @@ export const VARIANT_DISPLAY_ICONS: Record<string, string> = {
   "image-background-overlay": "image-plus",
   "image-focus": "scan-search",
   "image-top": "panel-top",
+  cards_vs_generator: "columns-2",
+  matrix: "grid",
+  dashboard: "layout-dashboard",
   hero: "layout-panel-left",
   "editorial-split": "columns-2",
   "process-steps": "arrow-right-circle",
@@ -1267,8 +1273,9 @@ export const SECTION_FIELD_CONFIG: Record<SectionType, DynamicField[]> = {
     },
     {
       name: "generatorComparisonEnabled",
-      label: "Exibir Comparativo com Gerador a Combustível",
-      type: "checkbox",
+      label: "Exibir comparativo com gerador a combustível",
+      type: "toggle",
+      defaultValue: true,
       group: "Conteúdo",
       helperText:
         "Compara o silêncio e custo zero de recarga solar vs barulho e manutenção de gerador fóssil.",

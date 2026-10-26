@@ -10,18 +10,6 @@ export const COVER_APPEARANCE_FIELD_CONFIG: DynamicField[] = [
     group: "Aparência",
     visibleWhen: { field: "variant", notEquals: "minimal" },
   },
-  {
-    name: "coverHeight",
-    label: "Altura da capa",
-    type: "range",
-    group: "Aparência",
-    min: 100,
-    max: 300,
-    step: 5,
-    numberMode: "int",
-    unit: "%",
-    helperText: "100% = altura atual, 300% = 3x a altura.",
-  },
   { name: "backgroundColor", label: "Cor de fundo", type: "color", group: "Aparência" },
   { name: "overlayColor", label: "Cor do overlay", type: "color", group: "Aparência" },
   {

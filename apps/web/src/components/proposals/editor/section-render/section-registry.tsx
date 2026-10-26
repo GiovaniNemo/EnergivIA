@@ -117,6 +117,18 @@ function resolveSectionVariantServerSafe(sectionType: string, variant: unknown):
     if (normalized === "compact") return "compact";
     return "table";
   }
+  if (sectionType === "critical_loads_autonomy") {
+    if (normalized === "matrix" || normalized === "minimal") return normalized;
+    return "cards_vs_generator";
+  }
+  if (sectionType === "storage_backup") {
+    if (normalized === "dashboard" || normalized === "minimal") return normalized;
+    return "cards";
+  }
+  if (sectionType === "hybrid_flow") {
+    if (normalized === "timeline" || normalized === "minimal") return normalized;
+    return "cards";
+  }
   if (sectionType === "gallery") {
     if (
       normalized === "grid_uniform" ||
@@ -132,6 +144,114 @@ function resolveSectionVariantServerSafe(sectionType: string, variant: unknown):
     return "grid_uniform";
   }
   return normalized || "default";
+}
+
+interface ParsedProtectedAppliance {
+  name: string;
+  benefit: string;
+  iconName: "snowflake" | "wifi" | "laptop" | "lightbulb" | "shield" | "zap";
+}
+
+function parseProtectedAppliances(rawText: unknown): ParsedProtectedAppliance[] {
+  const defaultAppliances: ParsedProtectedAppliance[] = [
+    {
+      name: "Geladeira & Freezers",
+      benefit: "Alimentos e medicamentos protegidos contra estragos durante apagões.",
+      iconName: "snowflake",
+    },
+    {
+      name: "Home Office & Internet Wi-Fi",
+      benefit: "Conexão sem oscilação; reuniões e trabalho mantidos sem interrupções.",
+      iconName: "wifi",
+    },
+    {
+      name: "Iluminação Estratégica & Tomadas",
+      benefit: "Pontos essenciais da residência ou empresa 100% iluminados e ativos.",
+      iconName: "lightbulb",
+    },
+    {
+      name: "Portão Eletrônico, Câmeras & Alarme",
+      benefit: "Segurança perimetral e controle de acesso operando normalmente.",
+      iconName: "shield",
+    },
+  ];
+
+  if (typeof rawText !== "string" || !rawText.trim()) {
+    return defaultAppliances;
+  }
+
+  const items = rawText
+    .split(/[\n,;]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (items.length === 0) return defaultAppliances;
+
+  return items.map((name) => {
+    const lower = name.toLowerCase();
+    let iconName: ParsedProtectedAppliance["iconName"] = "zap";
+    let benefit = "Alimentação ininterrupta garantida pelo sistema híbrido EPS.";
+    if (
+      lower.includes("gelad") ||
+      lower.includes("freez") ||
+      lower.includes("refrig") ||
+      lower.includes("aliment")
+    ) {
+      iconName = "snowflake";
+      benefit = "Alimentos e perecíveis mantidos refrigerados durante o apagão.";
+    } else if (
+      lower.includes("wifi") ||
+      lower.includes("wi-fi") ||
+      lower.includes("internet") ||
+      lower.includes("rotead")
+    ) {
+      iconName = "wifi";
+      benefit = "Comunicação e internet ativas mesmo sem energia na rede.";
+    } else if (
+      lower.includes("comp") ||
+      lower.includes("office") ||
+      lower.includes("pc") ||
+      lower.includes("note")
+    ) {
+      iconName = "laptop";
+      benefit = "Equipamentos de trabalho protegidos contra desligamento repentino.";
+    } else if (
+      lower.includes("luz") ||
+      lower.includes("ilumin") ||
+      lower.includes("lâmp") ||
+      lower.includes("tomad")
+    ) {
+      iconName = "lightbulb";
+      benefit = "Ambientes iluminados com conforto e segurança para sua família.";
+    } else if (
+      lower.includes("port") ||
+      lower.includes("câmer") ||
+      lower.includes("camer") ||
+      lower.includes("alarm") ||
+      lower.includes("segur")
+    ) {
+      iconName = "shield";
+      benefit = "Controle de acesso e monitoramento 24h sem vulnerabilidade.";
+    }
+    return { name, benefit, iconName };
+  });
+}
+
+function renderApplianceIcon(iconName: ParsedProtectedAppliance["iconName"]): JSX.Element {
+  switch (iconName) {
+    case "snowflake":
+      return <LucideIcons.Snowflake className="h-4 w-4 shrink-0 text-cyan-600" />;
+    case "wifi":
+      return <LucideIcons.Wifi className="h-4 w-4 shrink-0 text-blue-600" />;
+    case "laptop":
+      return <LucideIcons.Laptop className="h-4 w-4 shrink-0 text-indigo-600" />;
+    case "lightbulb":
+      return <LucideIcons.Lightbulb className="h-4 w-4 shrink-0 text-amber-600" />;
+    case "shield":
+      return <LucideIcons.ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />;
+    default:
+      return <LucideIcons.Zap className="h-4 w-4 shrink-0 text-emerald-600" />;
+  }
 }
 
 interface SectionFields {
@@ -906,6 +1026,7 @@ export function renderSectionContent(
         />
       );
     case "storage_backup": {
+      const variant = resolveSectionVariantServerSafe("storage_backup", section.variant);
       const cap = tpl(f.batteryCapacityKwh || "{{capacidade_bateria_kwh}}", vars);
       const backupPwr = tpl(f.backupPowerKw || "5.0 kW", vars);
       const autonomy = tpl(f.autonomyHours || "8 a 14 horas", vars);
@@ -934,7 +1055,7 @@ export function renderSectionContent(
                   color: "var(--preview-primary-color, #059669)",
                 }}
               >
-                🔋
+                <Battery className="h-5 w-5" />
               </span>
               <div>
                 <span
@@ -958,7 +1079,7 @@ export function renderSectionContent(
                 color: "var(--preview-primary-color, #059669)",
               }}
             >
-              ⚡ Exclusivo Híbrido / Off-Grid
+              <Zap className="h-3 w-3 inline" /> Exclusivo Híbrido / Off-Grid
             </span>
           </div>
 
@@ -970,140 +1091,215 @@ export function renderSectionContent(
             {renderRichText(f.text, vars)}
           </div>
 
-          {/* Hero Card BESS Arquitetônico - Fundo 100% Sólido */}
-          <div
-            className="rounded-2xl border p-5 sm:p-6 shadow-sm"
-            style={{
-              backgroundColor: "#ffffff",
-              borderColor: "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
-            }}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-              {/* Coluna Esquerda: Bateria & Indicador Modular */}
-              <div className="md:col-span-5 flex flex-col justify-between border-b md:border-b-0 md:border-r pb-5 md:pb-0 md:pr-6 border-slate-200">
-                <span
-                  className="text-[11px] font-bold uppercase tracking-widest"
-                  style={{ color: "var(--preview-primary-color, #059669)" }}
-                >
-                  Capacidade de Armazenamento
-                </span>
-                <div
-                  className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900"
-                  data-editor-field-path="batteryCapacityKwh"
-                >
-                  {cap || "10,24 kWh"}
-                </div>
-                <p className="mt-1 text-xs font-medium text-slate-600">
-                  Energia útil disponível para fornecimento contínuo
-                </p>
-
-                {/* Barras de células com cor primária */}
-                <div className="mt-4 flex gap-1.5">
-                  {[1, 2, 3, 4].map((barIdx) => (
-                    <div
-                      key={barIdx}
-                      className="h-2 flex-1 rounded-full shadow-2xs"
-                      style={{ backgroundColor: "var(--preview-primary-color, #059669)" }}
-                      title="Módulo de bateria 100% calibrado"
-                    />
-                  ))}
-                </div>
-
-                <div
-                  className="mt-3 flex items-center gap-2 text-[11px] font-medium"
-                  style={{ color: "var(--preview-primary-color, #059669)" }}
-                >
-                  <span
-                    className="h-2 w-2 rounded-full animate-pulse"
-                    style={{ backgroundColor: "var(--preview-primary-color, #059669)" }}
-                  />
-                  <span>Tecnologia {tech}</span>
-                </div>
-              </div>
-
-              {/* Coluna Direita: 4 Métricas Chave com Fundos 100% Sólidos */}
-              <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div
-                  className="rounded-xl border p-3.5 shadow-2xs border-slate-200"
-                  style={{ backgroundColor: "#f8fafc" }}
-                >
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-wider"
-                    style={{ color: "var(--preview-primary-color, #059669)" }}
-                  >
-                    Potência de Backup EPS
+          {variant === "dashboard" ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="rounded-xl border p-3.5 shadow-2xs border-slate-200 bg-white">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                    Capacidade BESS
                   </span>
-                  <div
-                    className="mt-1 text-xl font-bold text-slate-900"
-                    data-editor-field-path="backupPowerKw"
-                  >
-                    {backupPwr}
-                  </div>
-                  <span className="text-[11px] font-medium text-slate-600">
-                    Alimentação contínua de cargas
+                  <div className="mt-1 text-2xl font-bold text-slate-900">{cap || "10,24 kWh"}</div>
+                  <span className="text-[11px] font-medium text-slate-500">
+                    Energia útil nominal
                   </span>
                 </div>
-
-                <div
-                  className="rounded-xl border p-3.5 shadow-2xs border-slate-200"
-                  style={{ backgroundColor: "#f8fafc" }}
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700">
-                    Comutação No-Break
+                <div className="rounded-xl border p-3.5 shadow-2xs border-slate-200 bg-white">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                    Potência Backup
                   </span>
-                  <div
-                    className="mt-1 text-xl font-bold text-slate-900"
-                    data-editor-field-path="switchTimeMs"
-                  >
-                    {switchTime}
-                  </div>
-                  <span className="text-[11px] font-medium text-slate-600">
+                  <div className="mt-1 text-2xl font-bold text-slate-900">{backupPwr}</div>
+                  <span className="text-[11px] font-medium text-slate-500">Saída contínua EPS</span>
+                </div>
+                <div className="rounded-xl border p-3.5 shadow-2xs border-slate-200 bg-white">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                    Comutação EPS
+                  </span>
+                  <div className="mt-1 text-2xl font-bold text-slate-900">{switchTime}</div>
+                  <span className="text-[11px] font-medium text-slate-500">
                     Acionamento imperceptível
                   </span>
                 </div>
-
-                <div
-                  className="rounded-xl border p-3.5 shadow-2xs border-slate-200"
-                  style={{ backgroundColor: "#f8fafc" }}
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700">
-                    Autonomia Estimada
+                <div className="rounded-xl border p-3.5 shadow-2xs border-slate-200 bg-white">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                    Autonomia Est.
                   </span>
-                  <div
-                    className="mt-1 text-xl font-bold text-slate-900"
-                    data-editor-field-path="autonomyHours"
-                  >
-                    {autonomy}
-                  </div>
-                  <span className="text-[11px] font-medium text-slate-600">
-                    Para circuitos prioritários
-                  </span>
-                </div>
-
-                <div
-                  className="rounded-xl border p-3.5 shadow-2xs border-slate-200"
-                  style={{ backgroundColor: "#f8fafc" }}
-                >
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-wider"
-                    style={{ color: "var(--preview-primary-color, #059669)" }}
-                  >
-                    Vida Útil & Garantia
-                  </span>
-                  <div className="mt-1 text-base font-bold text-slate-900">
-                    10 Anos · +6.000 Ciclos
-                  </div>
-                  <span className="text-[11px] font-medium text-slate-600">
-                    Sem risco de degradação térmica
+                  <div className="mt-1 text-2xl font-bold text-slate-900">{autonomy}</div>
+                  <span className="text-[11px] font-medium text-slate-500">
+                    Circuitos essenciais
                   </span>
                 </div>
               </div>
+              <div className="rounded-xl border p-3.5 border-slate-200 bg-slate-50 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 text-slate-700 font-medium">
+                  <LucideIcons.ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  <span>Tecnologia {tech}</span>
+                </div>
+                <span className="font-bold text-slate-900">10 Anos · +6.000 Ciclos</span>
+              </div>
             </div>
-          </div>
+          ) : variant === "minimal" ? (
+            <div className="rounded-xl border p-4 border-slate-200 bg-white shadow-2xs space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Battery className="h-5 w-5 text-emerald-600" />
+                  <span className="text-base font-bold text-slate-900">
+                    {cap || "10,24 kWh"} LiFePO4
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="px-2.5 py-1 rounded-md bg-slate-100 font-semibold text-slate-700">
+                    Backup: {backupPwr}
+                  </span>
+                  <span className="px-2.5 py-1 rounded-md bg-slate-100 font-semibold text-slate-700">
+                    Comutação: {switchTime}
+                  </span>
+                  <span className="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    Autonomia: {autonomy}
+                  </span>
+                </div>
+              </div>
+              <div className="text-[11px] text-slate-600 font-medium flex items-center gap-1.5 pt-2 border-t border-slate-100">
+                <LucideIcons.ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                <span>
+                  {tech} — 10 Anos de Garantia e mais de 6.000 ciclos sem degradação térmica.
+                </span>
+              </div>
+            </div>
+          ) : (
+            /* Layout Cards Padrão */
+            <div
+              className="rounded-2xl border p-5 sm:p-6 shadow-sm"
+              style={{
+                backgroundColor: "#ffffff",
+                borderColor:
+                  "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
+              }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <div className="md:col-span-5 flex flex-col justify-between border-b md:border-b-0 md:border-r pb-5 md:pb-0 md:pr-6 border-slate-200">
+                  <span
+                    className="text-[11px] font-bold uppercase tracking-widest"
+                    style={{ color: "var(--preview-primary-color, #059669)" }}
+                  >
+                    Capacidade de Armazenamento
+                  </span>
+                  <div
+                    className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900"
+                    data-editor-field-path="batteryCapacityKwh"
+                  >
+                    {cap || "10,24 kWh"}
+                  </div>
+                  <p className="mt-1 text-xs font-medium text-slate-600">
+                    Energia útil disponível para fornecimento contínuo
+                  </p>
+
+                  <div className="mt-4 flex gap-1.5">
+                    {[1, 2, 3, 4].map((barIdx) => (
+                      <div
+                        key={barIdx}
+                        className="h-2 flex-1 rounded-full shadow-2xs"
+                        style={{ backgroundColor: "var(--preview-primary-color, #059669)" }}
+                        title="Módulo de bateria 100% calibrado"
+                      />
+                    ))}
+                  </div>
+
+                  <div
+                    className="mt-3 flex items-center gap-2 text-[11px] font-medium"
+                    style={{ color: "var(--preview-primary-color, #059669)" }}
+                  >
+                    <span
+                      className="h-2 w-2 rounded-full animate-pulse"
+                      style={{ backgroundColor: "var(--preview-primary-color, #059669)" }}
+                    />
+                    <span>Tecnologia {tech}</span>
+                  </div>
+                </div>
+
+                <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div
+                    className="rounded-xl border p-3.5 shadow-2xs border-slate-200"
+                    style={{ backgroundColor: "#f8fafc" }}
+                  >
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: "var(--preview-primary-color, #059669)" }}
+                    >
+                      Potência de Backup EPS
+                    </span>
+                    <div
+                      className="mt-1 text-xl font-bold text-slate-900"
+                      data-editor-field-path="backupPowerKw"
+                    >
+                      {backupPwr}
+                    </div>
+                    <span className="text-[11px] font-medium text-slate-600">
+                      Alimentação contínua de cargas
+                    </span>
+                  </div>
+
+                  <div
+                    className="rounded-xl border p-3.5 shadow-2xs border-slate-200"
+                    style={{ backgroundColor: "#f8fafc" }}
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                      Comutação No-Break
+                    </span>
+                    <div
+                      className="mt-1 text-xl font-bold text-slate-900"
+                      data-editor-field-path="switchTimeMs"
+                    >
+                      {switchTime}
+                    </div>
+                    <span className="text-[11px] font-medium text-slate-600">
+                      Acionamento imperceptível
+                    </span>
+                  </div>
+
+                  <div
+                    className="rounded-xl border p-3.5 shadow-2xs border-slate-200"
+                    style={{ backgroundColor: "#f8fafc" }}
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                      Autonomia Estimada
+                    </span>
+                    <div
+                      className="mt-1 text-xl font-bold text-slate-900"
+                      data-editor-field-path="autonomyHours"
+                    >
+                      {autonomy}
+                    </div>
+                    <span className="text-[11px] font-medium text-slate-600">
+                      Para circuitos prioritários
+                    </span>
+                  </div>
+
+                  <div
+                    className="rounded-xl border p-3.5 shadow-2xs border-slate-200"
+                    style={{ backgroundColor: "#f8fafc" }}
+                  >
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: "var(--preview-primary-color, #059669)" }}
+                    >
+                      Vida Útil & Garantia
+                    </span>
+                    <div className="mt-1 text-base font-bold text-slate-900">
+                      10 Anos · +6.000 Ciclos
+                    </div>
+                    <span className="text-[11px] font-medium text-slate-600">
+                      Sem risco de degradação térmica
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
     case "hybrid_flow": {
+      const variant = resolveSectionVariantServerSafe("hybrid_flow", section.variant);
       const eyebrow = tpl(f.eyebrow || "Energia Ininterrupta 24h", vars);
       const title = tpl(f.title || "Como Funciona o Seu Sistema Solar Híbrido", vars);
       const daytimeDesc = tpl(
@@ -1124,6 +1320,36 @@ export function renderSectionContent(
       const switchTime = tpl(f.switchTime || "< 10ms", vars);
       const independence = tpl(f.gridIndependencePct || "Até 95% de independência", vars);
 
+      const flowSteps = [
+        {
+          num: "01",
+          label: "Dia",
+          title: "Geração & Recarga Solar",
+          desc: daytimeDesc,
+          benefit: "Carga 100% gratuita do Sol",
+          icon: <LucideIcons.Sun className="h-5 w-5 text-amber-500" />,
+          accentClass: "bg-amber-50 border-amber-200 text-amber-700",
+        },
+        {
+          num: "02",
+          label: "Noite",
+          title: "Autoconsumo das Baterias",
+          desc: nighttimeDesc,
+          benefit: "Fuga das tarifas de ponta",
+          icon: <LucideIcons.Moon className="h-5 w-5 text-indigo-500" />,
+          accentClass: "bg-indigo-50 border-indigo-200 text-indigo-700",
+        },
+        {
+          num: "03",
+          label: "Queda de Rede",
+          title: "No-Break Instantâneo EPS",
+          desc: blackoutDesc,
+          benefit: `Resposta rápida em ${switchTime}`,
+          icon: <LucideIcons.Zap className="h-5 w-5 text-emerald-500" />,
+          accentClass: "bg-emerald-50 border-emerald-200 text-emerald-700",
+        },
+      ];
+
       return (
         <div className="space-y-5">
           <div className="border-b pb-3 border-slate-200">
@@ -1144,119 +1370,96 @@ export function renderSectionContent(
             ) : null}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Card 1: Dia - Fundo 100% Sólido */}
-            <div
-              className="rounded-xl border p-4 sm:p-5 flex flex-col justify-between shadow-xs relative overflow-hidden border-slate-200"
-              style={{ backgroundColor: "#ffffff" }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-base font-bold shadow-2xs"
-                  style={{
-                    backgroundColor:
-                      "color-mix(in srgb, var(--preview-primary-color, #059669) 14%, #ffffff)",
-                    color: "var(--preview-primary-color, #059669)",
-                  }}
-                >
-                  ☀️
-                </span>
-                <span
-                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border"
-                  style={{
-                    backgroundColor:
-                      "color-mix(in srgb, var(--preview-primary-color, #059669) 10%, #ffffff)",
-                    borderColor:
-                      "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
-                    color: "var(--preview-primary-color, #059669)",
-                  }}
-                >
-                  01. Dia
-                </span>
-              </div>
-              <h4 className="font-bold text-sm text-slate-900 mb-1.5">Geração & Recarga Solar</h4>
-              <p className="text-xs leading-relaxed text-slate-700 flex-1 font-medium">
-                {daytimeDesc}
-              </p>
-              <div
-                className="mt-4 pt-3 border-t border-slate-100 text-[11px] font-semibold flex items-center gap-1.5"
-                style={{ color: "var(--preview-primary-color, #059669)" }}
-              >
-                <span>⚡ Carga 100% gratuita do Sol</span>
+          {variant === "timeline" ? (
+            <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200">
+              {flowSteps.map((step, idx) => (
+                <div key={idx} className="relative group">
+                  <div className="absolute -left-6 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white border-2 border-emerald-600 shadow-2xs">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                  </div>
+                  <div className="rounded-xl border p-4 bg-white border-slate-200 shadow-2xs space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                        {step.icon}
+                        <span>
+                          {step.num}. {step.title}
+                        </span>
+                      </span>
+                      <span
+                        className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${step.accentClass}`}
+                      >
+                        {step.label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      {step.desc}
+                    </p>
+                    <div className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1 pt-1">
+                      <LucideIcons.Check className="h-3 w-3" /> {step.benefit}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : variant === "minimal" ? (
+            <div className="rounded-xl border p-4 bg-white border-slate-200 shadow-2xs space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {flowSteps.map((step, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-lg border border-slate-100 bg-slate-50 space-y-1"
+                  >
+                    <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
+                      {step.icon}
+                      <span>{step.title}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-normal font-medium">
+                      {step.benefit}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
-
-            {/* Card 2: Noite - Fundo 100% Sólido */}
-            <div
-              className="rounded-xl border p-4 sm:p-5 flex flex-col justify-between shadow-xs relative overflow-hidden border-slate-200"
-              style={{ backgroundColor: "#ffffff" }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 font-bold text-base shadow-2xs">
-                  🌙
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
-                  02. Noite
-                </span>
-              </div>
-              <h4 className="font-bold text-sm text-slate-900 mb-1.5">Autoconsumo das Baterias</h4>
-              <p className="text-xs leading-relaxed text-slate-700 flex-1 font-medium">
-                {nighttimeDesc}
-              </p>
-              <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] font-semibold text-indigo-700 flex items-center gap-1.5">
-                <span>🛡️ Fuga das tarifas de ponta</span>
-              </div>
-            </div>
-
-            {/* Card 3: Queda de Rede (EPS) - Fundo 100% Sólido */}
-            <div
-              className="rounded-xl border p-4 sm:p-5 flex flex-col justify-between shadow-xs relative overflow-hidden border-slate-200"
-              style={{ backgroundColor: "#ffffff" }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-base font-bold shadow-2xs"
-                  style={{
-                    backgroundColor:
-                      "color-mix(in srgb, var(--preview-primary-color, #059669) 14%, #ffffff)",
-                    color: "var(--preview-primary-color, #059669)",
-                  }}
+          ) : (
+            /* Cards Padrão */
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {flowSteps.map((step, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-xl border p-4 sm:p-5 flex flex-col justify-between shadow-xs relative overflow-hidden border-slate-200 bg-white"
                 >
-                  ⚡
-                </span>
-                <span
-                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border"
-                  style={{
-                    backgroundColor:
-                      "color-mix(in srgb, var(--preview-primary-color, #059669) 10%, #ffffff)",
-                    borderColor:
-                      "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
-                    color: "var(--preview-primary-color, #059669)",
-                  }}
-                >
-                  03. Queda de Rede
-                </span>
-              </div>
-              <h4 className="font-bold text-sm text-slate-900 mb-1.5">No-Break Instantâneo EPS</h4>
-              <p className="text-xs leading-relaxed text-slate-700 flex-1 font-medium">
-                {blackoutDesc}
-              </p>
-              <div
-                className="mt-4 pt-3 border-t border-slate-100 text-[11px] font-semibold flex items-center gap-1.5"
-                style={{ color: "var(--preview-primary-color, #059669)" }}
-              >
-                <span>⏱️ Resposta rápida em {switchTime}</span>
-              </div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg shadow-2xs bg-slate-50 border border-slate-200">
+                      {step.icon}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${step.accentClass}`}
+                    >
+                      {step.num}. {step.label}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-sm text-slate-900 mb-1.5">{step.title}</h4>
+                  <p className="text-xs leading-relaxed text-slate-700 flex-1 font-medium">
+                    {step.desc}
+                  </p>
+                  <div
+                    className="mt-4 pt-3 border-t border-slate-100 text-[11px] font-semibold flex items-center gap-1.5"
+                    style={{ color: "var(--preview-primary-color, #059669)" }}
+                  >
+                    <LucideIcons.Check className="h-3.5 w-3.5" />
+                    <span>{step.benefit}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
 
-          {/* Banner inferior de segurança - Fundo 100% Sólido */}
           <div
             className="rounded-xl border p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs border-slate-200"
             style={{ backgroundColor: "#f8fafc" }}
           >
             <div className="flex items-center gap-2">
-              <span className="text-base">🛡️</span>
+              <LucideIcons.ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
               <span className="text-xs font-semibold text-slate-900">
                 Segurança energética residencial e corporativa: {independence}
               </span>
@@ -1272,10 +1475,14 @@ export function renderSectionContent(
       );
     }
     case "critical_loads_autonomy": {
+      const variant = resolveSectionVariantServerSafe("critical_loads_autonomy", section.variant);
       const eyebrow = tpl(f.eyebrow || "Segurança & Conforto", vars);
       const title = tpl(f.title || "Cargas Críticas Protegidas contra Quedas de Energia", vars);
       const autonomy = tpl(f.estimatedAutonomy || "12 a 24 horas", vars);
       const lifespan = tpl(f.batteryLifespan || "Mais de 15 anos (6.000 a 8.000 ciclos)", vars);
+      const showGeneratorComparison =
+        f.generatorComparisonEnabled !== false && String(f.generatorComparisonEnabled) !== "false";
+      const protectedLoads = parseProtectedAppliances(f.protectedAppliances);
 
       return (
         <div className="space-y-5">
@@ -1297,158 +1504,323 @@ export function renderSectionContent(
             ) : null}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            {/* Lista de Circuitos Prioritários - Fundos 100% Sólidos */}
-            <div className="lg:col-span-6 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                  Circuitos & Eletrodomésticos Protegidos
+          {variant === "matrix" ? (
+            /* Variante Matriz Técnica */
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs">
+                <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                  <LucideIcons.ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  Matriz de Resiliência Energética
                 </span>
-                <span
-                  className="text-[11px] font-bold"
-                  style={{ color: "var(--preview-primary-color, #059669)" }}
-                >
-                  Autonomia: {autonomy}
-                </span>
+                <div className="flex items-center gap-2 font-semibold">
+                  <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px]">
+                    Autonomia: {autonomy}
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-white text-slate-700 border border-slate-200 text-[11px]">
+                    Comutação EPS: &lt; 10ms
+                  </span>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                {[
-                  {
-                    icon: "🧊",
-                    name: "Geladeira & Freezers",
-                    benefit: "Alimentos e medicamentos protegidos contra estragos durante apagões.",
-                  },
-                  {
-                    icon: "💻",
-                    name: "Home Office & Internet Wi-Fi",
-                    benefit:
-                      "Conexão sem oscilação; reuniões e trabalho mantidos sem interrupções.",
-                  },
-                  {
-                    icon: "💡",
-                    name: "Iluminação Estratégica & Tomadas",
-                    benefit: "Pontos essenciais da residência ou empresa 100% iluminados e ativos.",
-                  },
-                  {
-                    icon: "🚪",
-                    name: "Portão Eletrônico, Câmeras & Alarme",
-                    benefit: "Segurança perimetral e controle de acesso operando normalmente.",
-                  },
-                ].map((load, idx) => (
+              {/* Grid 2x2 de Quadrantes Técnicos */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {protectedLoads.slice(0, 4).map((load, idx) => (
                   <div
                     key={idx}
-                    className="rounded-xl border p-3 flex items-start gap-3 shadow-2xs border-slate-200"
-                    style={{ backgroundColor: "#ffffff" }}
+                    className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs flex flex-col justify-between"
                   >
-                    <span className="text-lg shrink-0 mt-0.5">{load.icon}</span>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-900">{load.name}</span>
-                        <span
-                          className="text-[10px] font-semibold px-2 py-0.5 rounded border"
-                          style={{
-                            backgroundColor:
-                              "color-mix(in srgb, var(--preview-primary-color, #059669) 10%, #ffffff)",
-                            borderColor:
-                              "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
-                            color: "var(--preview-primary-color, #059669)",
-                          }}
-                        >
-                          Ativo
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 border border-slate-200">
+                            {renderApplianceIcon(load.iconName)}
+                          </span>
+                          <span className="font-bold text-xs text-slate-900">{load.name}</span>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
+                          Sustentado
                         </span>
                       </div>
-                      <p className="mt-0.5 text-[11px] text-slate-600 leading-relaxed font-medium">
+                      <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
                         {load.benefit}
                       </p>
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                      <span>Status: Alimentação Contínua</span>
+                      <span className="text-emerald-700 font-bold">100% Protegido</span>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
 
-            {/* Comparativo Bateria vs Gerador - Fundo 100% Sólido */}
-            <div className="lg:col-span-6 flex flex-col justify-between">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                  Por que Bateria Solar e Não um Gerador?
-                </span>
-
-                <div
-                  className="mt-3 rounded-2xl border overflow-hidden shadow-xs border-slate-200"
-                  style={{ backgroundColor: "#ffffff" }}
-                >
-                  <div className="grid grid-cols-2 text-center text-xs font-bold border-b border-slate-200">
-                    <div
-                      className="p-2.5 font-bold"
-                      style={{
-                        backgroundColor:
-                          "color-mix(in srgb, var(--preview-primary-color, #059669) 12%, #ffffff)",
-                        color: "var(--preview-primary-color, #059669)",
-                      }}
-                    >
-                      ⚡ Bateria Solar LiFePO4
-                    </div>
-                    <div className="p-2.5 bg-slate-100 text-slate-700 font-bold">
-                      ⛽ Gerador a Combustível
-                    </div>
+              {/* Se o comparativo com gerador estiver ativo */}
+              {showGeneratorComparison ? (
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <LucideIcons.Zap className="h-4 w-4 text-emerald-600" />
+                      Diferenciais frente ao gerador a combustão
+                    </span>
+                    <span className="text-[10px] font-semibold text-slate-500">
+                      Tecnologia Solar BESS
+                    </span>
                   </div>
-
-                  <div className="divide-y divide-slate-200 text-xs">
-                    {[
-                      {
-                        label: "Ruído",
-                        solar: "100% Silencioso (Zero Ruído)",
-                        gen: "Barulho alto e incômodo",
-                      },
-                      {
-                        label: "Combustível",
-                        solar: "Energia Solar 100% Gratuita",
-                        gen: "Gasolina/Diesel caro e inflamável",
-                      },
-                      {
-                        label: "Partida",
-                        solar: "Automática em < 10ms",
-                        gen: "Manual ou atrasada com falhas",
-                      },
-                      {
-                        label: "Poluição",
-                        solar: "Zero Fumaça ou Emissões",
-                        gen: "Gases tóxicos e fuligem",
-                      },
-                      {
-                        label: "Manutenção",
-                        solar: "Zero Peças Móveis",
-                        gen: "Troca de óleo, velas e filtros",
-                      },
-                    ].map((row, rIdx) => (
-                      <div key={rIdx} className="grid grid-cols-2 p-2.5 bg-white">
-                        <div
-                          className="font-semibold flex items-center gap-1.5"
-                          style={{ color: "var(--preview-primary-color, #059669)" }}
-                        >
-                          <span className="text-xs">✓</span> {row.solar}
-                        </div>
-                        <div className="text-slate-600 font-medium flex items-center gap-1.5">
-                          <span className="text-xs">✗</span> {row.gen}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
+                    <div className="p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-100 flex items-start gap-2">
+                      <LucideIcons.Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">Zero Ruído</div>
+                        <div className="text-[11px] text-slate-600">
+                          100% silencioso vs mais de 75dB de geradores
                         </div>
                       </div>
-                    ))}
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-100 flex items-start gap-2">
+                      <LucideIcons.Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">Energia Gratuita</div>
+                        <div className="text-[11px] text-slate-600">
+                          Recarga pelo Sol vs combustível caro
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-100 flex items-start gap-2">
+                      <LucideIcons.Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">Partida &lt; 10ms</div>
+                        <div className="text-[11px] text-slate-600">
+                          Comutação imediata sem falhas mecânicas
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : null}
 
-              <div
-                className="mt-4 rounded-xl border p-3 flex items-center justify-between text-xs shadow-2xs border-slate-200"
-                style={{ backgroundColor: "#f8fafc" }}
-              >
-                <span className="text-slate-700 font-medium">
-                  Durabilidade do Banco de Baterias:
-                </span>
-                <strong className="text-slate-900 font-bold">{lifespan}</strong>
+              {/* Banner inferior */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="text-slate-700 font-medium">Durabilidade do Banco LiFePO4:</span>
+                <span className="font-bold text-slate-900">{lifespan}</span>
               </div>
             </div>
-          </div>
+          ) : variant === "minimal" ? (
+            /* Variante Minimalista */
+            <div className="space-y-4">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    Equipamentos com Alimentação Garantida
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold">
+                    Autonomia: {autonomy}
+                  </span>
+                </div>
+
+                {/* Chips das cargas */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {protectedLoads.map((load, idx) => (
+                    <div
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-800 font-medium"
+                    >
+                      {renderApplianceIcon(load.iconName)}
+                      <span>{load.name}</span>
+                      <LucideIcons.Check className="h-3 w-3 text-emerald-600 shrink-0 ml-0.5" />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Resumo de métricas horizontais */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-3 border-t border-slate-100 text-xs">
+                  <div className="p-2 rounded bg-slate-50 border border-slate-100">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase">
+                      Autonomia Estimada
+                    </span>
+                    <div className="font-bold text-slate-900">{autonomy}</div>
+                  </div>
+                  <div className="p-2 rounded bg-slate-50 border border-slate-100">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase">
+                      Tempo de Comutação
+                    </span>
+                    <div className="font-bold text-slate-900">&lt; 10ms (Inaudível)</div>
+                  </div>
+                  <div className="p-2 rounded bg-slate-50 border border-slate-100">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase">
+                      Vida Útil BESS
+                    </span>
+                    <div className="font-bold text-slate-900">{lifespan}</div>
+                  </div>
+                </div>
+
+                {showGeneratorComparison ? (
+                  <p className="text-[11px] text-slate-600 font-medium pt-1 flex items-center gap-1.5">
+                    <LucideIcons.ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <span>
+                      Diferencial vs Gerador: Operação 100% limpa, sem poluição sonora e com recarga
+                      solar contínua.
+                    </span>
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            /* Variante Cards + Gerador (cards_vs_generator) */
+            <div
+              className={`grid grid-cols-1 ${showGeneratorComparison ? "lg:grid-cols-12" : ""} gap-5`}
+            >
+              {/* Lista de Circuitos Prioritários - Fundos 100% Sólidos */}
+              <div className={`${showGeneratorComparison ? "lg:col-span-6" : "w-full"} space-y-3`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                    Circuitos & Eletrodomésticos Protegidos
+                  </span>
+                  <span
+                    className="text-[11px] font-bold"
+                    style={{ color: "var(--preview-primary-color, #059669)" }}
+                  >
+                    Autonomia: {autonomy}
+                  </span>
+                </div>
+
+                <div
+                  className={
+                    showGeneratorComparison ? "space-y-2" : "grid grid-cols-1 sm:grid-cols-2 gap-3"
+                  }
+                >
+                  {protectedLoads.map((load, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-xl border p-3 flex items-start gap-3 shadow-2xs border-slate-200"
+                      style={{ backgroundColor: "#ffffff" }}
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 border border-slate-200 shrink-0 mt-0.5">
+                        {renderApplianceIcon(load.iconName)}
+                      </span>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-900">{load.name}</span>
+                          <span
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded border"
+                            style={{
+                              backgroundColor:
+                                "color-mix(in srgb, var(--preview-primary-color, #059669) 10%, #ffffff)",
+                              borderColor:
+                                "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
+                              color: "var(--preview-primary-color, #059669)",
+                            }}
+                          >
+                            Ativo
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-[11px] text-slate-600 leading-relaxed font-medium">
+                          {load.benefit}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {!showGeneratorComparison ? (
+                  <div
+                    className="rounded-xl border p-3 flex items-center justify-between text-xs shadow-2xs border-slate-200"
+                    style={{ backgroundColor: "#f8fafc" }}
+                  >
+                    <span className="text-slate-700 font-medium">
+                      Durabilidade do Banco de Baterias:
+                    </span>
+                    <strong className="text-slate-900 font-bold">{lifespan}</strong>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Comparativo Bateria vs Gerador - Somente se ativado */}
+              {showGeneratorComparison ? (
+                <div className="lg:col-span-6 flex flex-col justify-between">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                      Por que Bateria Solar e Não um Gerador?
+                    </span>
+
+                    <div
+                      className="mt-3 rounded-2xl border overflow-hidden shadow-xs border-slate-200"
+                      style={{ backgroundColor: "#ffffff" }}
+                    >
+                      <div className="grid grid-cols-2 text-center text-xs font-bold border-b border-slate-200">
+                        <div
+                          className="p-2.5 font-bold flex items-center justify-center gap-1.5"
+                          style={{
+                            backgroundColor:
+                              "color-mix(in srgb, var(--preview-primary-color, #059669) 12%, #ffffff)",
+                            color: "var(--preview-primary-color, #059669)",
+                          }}
+                        >
+                          <LucideIcons.Zap className="h-3.5 w-3.5" />
+                          <span>Bateria Solar LiFePO4</span>
+                        </div>
+                        <div className="p-2.5 bg-slate-100 text-slate-700 font-bold flex items-center justify-center gap-1.5">
+                          <LucideIcons.Flame className="h-3.5 w-3.5 text-slate-600" />
+                          <span>Gerador a Combustível</span>
+                        </div>
+                      </div>
+
+                      <div className="divide-y divide-slate-200 text-xs">
+                        {[
+                          {
+                            label: "Ruído",
+                            solar: "100% Silencioso (Zero Ruído)",
+                            gen: "Barulho alto e incômodo",
+                          },
+                          {
+                            label: "Combustível",
+                            solar: "Energia Solar 100% Gratuita",
+                            gen: "Gasolina/Diesel caro e inflamável",
+                          },
+                          {
+                            label: "Partida",
+                            solar: "Automática em < 10ms",
+                            gen: "Manual ou atrasada com falhas",
+                          },
+                          {
+                            label: "Poluição",
+                            solar: "Zero Fumaça ou Emissões",
+                            gen: "Gases tóxicos e fuligem",
+                          },
+                          {
+                            label: "Manutenção",
+                            solar: "Zero Peças Móveis",
+                            gen: "Troca periódica de óleo e filtros",
+                          },
+                        ].map((row, rIdx) => (
+                          <div key={rIdx} className="grid grid-cols-2 p-2.5 bg-white">
+                            <div
+                              className="font-semibold flex items-center gap-1.5"
+                              style={{ color: "var(--preview-primary-color, #059669)" }}
+                            >
+                              <LucideIcons.Check className="h-3 w-3 shrink-0" /> {row.solar}
+                            </div>
+                            <div className="text-slate-600 font-medium flex items-center gap-1.5">
+                              <LucideIcons.X className="h-3 w-3 text-slate-400 shrink-0" />{" "}
+                              {row.gen}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    className="mt-4 rounded-xl border p-3 flex items-center justify-between text-xs shadow-2xs border-slate-200"
+                    style={{ backgroundColor: "#f8fafc" }}
+                  >
+                    <span className="text-slate-700 font-medium">
+                      Durabilidade do Banco de Baterias:
+                    </span>
+                    <strong className="text-slate-900 font-bold">{lifespan}</strong>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       );
     }

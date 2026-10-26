@@ -170,7 +170,13 @@ export function renderToggleField({
   section,
   onSectionFieldChange,
 }: DynamicFieldRenderContext): JSX.Element {
-  const checked = Boolean(section.fields[field.name]);
+  const rawValue = section.fields[field.name];
+  const checked =
+    rawValue === false || rawValue === "false"
+      ? false
+      : rawValue === true || rawValue === "true"
+        ? true
+        : Boolean(rawValue ?? field.defaultValue);
   return (
     <div
       key={field.name}

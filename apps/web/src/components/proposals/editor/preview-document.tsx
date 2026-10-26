@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { useMemo, useRef } from "react";
 import type { PageWidth, ProposalDocumentJson, Spacing } from "./types";
 import { Cover } from "@/components/sections/Cover/Cover";
 import type { CoverContent, CoverVariant } from "@/components/sections/Cover/cover-utils";
@@ -224,8 +224,8 @@ export function PreviewDocument({
   documentState,
   selectedSectionId,
   onSelectSection,
-  onSectionHeightChange,
-  interactionScale = 1,
+  onSectionHeightChange: _onSectionHeightChange,
+  interactionScale: _interactionScale = 1,
   sectionRenderOptions,
   mode = "web",
   viewport = "desktop",
@@ -345,65 +345,7 @@ export function PreviewDocument({
     pdf: "max-w-[794px]",
   };
   const interactive = typeof onSelectSection === "function";
-  const resizeDragRef = useRef<{
-    sectionId: string;
-    startY: number;
-    startHeightPercent: number;
-  } | null>(null);
 
-  function clampHeightPercent(value: number): number {
-    return Math.max(100, Math.min(300, Math.round(value)));
-  }
-
-  function startSectionHeightDrag(
-    sectionId: string,
-    initialHeightPercent: number,
-    event: ReactPointerEvent<HTMLButtonElement>
-  ): void {
-    if (!onSectionHeightChange || !interactive) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const pointerTarget = event.currentTarget;
-    pointerTarget.setPointerCapture?.(event.pointerId);
-    const normalizedScale = Math.max(0.25, Math.min(2, interactionScale || 1));
-    const sectionElement = event.currentTarget.closest(
-      "[data-preview-section-id]"
-    ) as HTMLElement | null;
-    const renderedHeightPx = sectionElement ? sectionElement.getBoundingClientRect().height : 0;
-    const renderedUnscaledPx = renderedHeightPx > 0 ? renderedHeightPx / normalizedScale : 0;
-    const baseHeightPx = 250;
-    const renderedHeightPercent =
-      renderedUnscaledPx > 0 ? (renderedUnscaledPx / baseHeightPx) * 100 : initialHeightPercent;
-    const startHeightPercent = clampHeightPercent(
-      Math.max(initialHeightPercent, renderedHeightPercent)
-    );
-
-    resizeDragRef.current = {
-      sectionId,
-      startY: event.clientY,
-      startHeightPercent,
-    };
-
-    const onPointerMove = (moveEvent: PointerEvent) => {
-      const drag = resizeDragRef.current;
-      if (!drag) return;
-      const deltaY = moveEvent.clientY - drag.startY;
-      const deltaPercent = (deltaY / (baseHeightPx * normalizedScale)) * 100;
-      onSectionHeightChange(
-        drag.sectionId,
-        clampHeightPercent(drag.startHeightPercent + deltaPercent)
-      );
-    };
-    const finishDrag = () => {
-      resizeDragRef.current = null;
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", finishDrag);
-      window.removeEventListener("pointercancel", finishDrag);
-    };
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", finishDrag);
-    window.addEventListener("pointercancel", finishDrag);
-  }
   function resolveTargetElement(target: EventTarget | null): Element | null {
     if (target instanceof Element) return target;
     if (target instanceof Node) return target.parentElement;
@@ -817,25 +759,6 @@ export function PreviewDocument({
             }}
             showSectionDivider={resolveDividerToggle(coverFields["showSectionDivider"])}
           />
-          {interactive &&
-          onSectionHeightChange &&
-          coverSection?.id &&
-          selectedSectionId === coverSection.id ? (
-            <button
-              type="button"
-              aria-label="Arrastar para ajustar altura da seção"
-              onPointerDown={(event) =>
-                startSectionHeightDrag(
-                  coverSection.id,
-                  Number(coverFields["coverHeight"] ?? 100),
-                  event
-                )
-              }
-              className="absolute bottom-1 left-1/2 z-30 -translate-x-1/2 rounded-md border border-white/25 bg-black/45 px-2 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-sm transition hover:bg-black/60"
-            >
-              ↕ Altura
-            </button>
-          ) : null}
         </div>
 
         <div>
@@ -899,22 +822,6 @@ export function PreviewDocument({
                   mode,
                 })}
               </SectionShell>
-              {interactive && onSectionHeightChange && selectedSectionId === section.id ? (
-                <button
-                  type="button"
-                  aria-label="Arrastar para ajustar altura da seção"
-                  onPointerDown={(event) =>
-                    startSectionHeightDrag(
-                      section.id,
-                      Number((section.fields as Record<string, unknown>)["coverHeight"] ?? 100),
-                      event
-                    )
-                  }
-                  className="absolute bottom-1 left-1/2 z-30 -translate-x-1/2 rounded-md border border-white/25 bg-black/45 px-2 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-sm transition hover:bg-black/60"
-                >
-                  ↕ Altura
-                </button>
-              ) : null}
             </div>
           ))}
         </div>
