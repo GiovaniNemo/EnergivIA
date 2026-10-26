@@ -923,13 +923,13 @@ export function renderSectionContent(
             : "Sistema Híbrido Conectado com Backup (BESS)";
 
       return (
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div
-            className="flex flex-wrap items-center justify-between gap-2 border-b pb-3"
+            className="flex flex-wrap items-center justify-between gap-3 border-b pb-3.5"
             style={equipmentChromeBorder}
           >
-            <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 text-base font-bold">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 text-lg font-bold">
                 🔋
               </span>
               <div>
@@ -937,75 +937,389 @@ export function renderSectionContent(
                   {sysTypeLabel}
                 </span>
                 <p className="text-xs opacity-75">
-                  Armazenamento inteligente & alimentação contínua de cargas essenciais
+                  Armazenamento de alta performance e segurança energética ininterrupta
                 </p>
               </div>
             </div>
-            <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 px-3 py-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
               ⚡ Exclusivo Híbrido / Off-Grid
             </span>
           </div>
 
           <div
             data-editor-field-path="text"
-            className="preview-editable-target text-sm leading-relaxed opacity-90"
+            className="preview-editable-target text-sm leading-relaxed opacity-90 max-w-3xl"
           >
             {renderRichText(f.text, vars)}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-xl border p-3 bg-amber-500/5" style={equipmentChromeBorder}>
-              <div className="text-[11px] font-medium uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                <span>🔋</span> Capacidade Útil
+          {}
+          <div
+            className="rounded-2xl border p-5 sm:p-6 bg-gradient-to-br from-[var(--color-card)] to-amber-500/[0.03]"
+            style={equipmentChromeBorder}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+              {}
+              <div className="md:col-span-5 flex flex-col justify-between border-b md:border-b-0 md:border-r pb-5 md:pb-0 md:pr-6 border-slate-200 dark:border-slate-800">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">
+                  Capacidade de Armazenamento
+                </span>
+                <div
+                  className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-[var(--color-foreground)]"
+                  data-editor-field-path="batteryCapacityKwh"
+                >
+                  {cap || "10,24 kWh"}
+                </div>
+                <p className="mt-1 text-xs opacity-70">
+                  Energia útil disponível para fornecimento contínuo
+                </p>
+
+                {}
+                <div className="mt-4 flex gap-1.5">
+                  {[1, 2, 3, 4].map((barIdx) => (
+                    <div
+                      key={barIdx}
+                      className="h-2 flex-1 rounded-full bg-emerald-500/80 shadow-xs"
+                      title="Módulo de bateria 100% calibrado"
+                    />
+                  ))}
+                </div>
+
+                <div className="mt-3 flex items-center gap-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Tecnologia {tech}</span>
+                </div>
               </div>
-              <div className="mt-1 text-lg font-bold" data-editor-field-path="batteryCapacityKwh">
-                {cap || "10,24 kWh"}
+
+              {}
+              <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="rounded-xl border p-3.5 bg-slate-50/50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    Potência de Backup EPS
+                  </span>
+                  <div
+                    className="mt-1 text-xl font-bold text-[var(--color-foreground)]"
+                    data-editor-field-path="backupPowerKw"
+                  >
+                    {backupPwr}
+                  </div>
+                  <span className="text-[11px] opacity-70">Alimentação contínua de cargas</span>
+                </div>
+
+                <div className="rounded-xl border p-3.5 bg-slate-50/50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                    Comutação No-Break
+                  </span>
+                  <div
+                    className="mt-1 text-xl font-bold text-[var(--color-foreground)]"
+                    data-editor-field-path="switchTimeMs"
+                  >
+                    {switchTime}
+                  </div>
+                  <span className="text-[11px] opacity-70">Acionamento imperceptível</span>
+                </div>
+
+                <div className="rounded-xl border p-3.5 bg-slate-50/50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                    Autonomia Estimada
+                  </span>
+                  <div
+                    className="mt-1 text-xl font-bold text-[var(--color-foreground)]"
+                    data-editor-field-path="autonomyHours"
+                  >
+                    {autonomy}
+                  </div>
+                  <span className="text-[11px] opacity-70">Para circuitos prioritários</span>
+                </div>
+
+                <div className="rounded-xl border p-3.5 bg-slate-50/50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                    Vida Útil & Garantia
+                  </span>
+                  <div className="mt-1 text-base font-bold text-[var(--color-foreground)]">
+                    10 Anos · +6.000 Ciclos
+                  </div>
+                  <span className="text-[11px] opacity-70">Sem risco de degradação térmica</span>
+                </div>
               </div>
-              <div className="text-[10px] opacity-70">Banco de baterias</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    case "hybrid_flow": {
+      const eyebrow = tpl(f.eyebrow || "Energia Ininterrupta 24h", vars);
+      const title = tpl(f.title || "Como Funciona o Seu Sistema Solar Híbrido", vars);
+      const daytimeDesc = tpl(
+        f.daytimeDescription ||
+          "Geração solar alimenta o consumo diurno e o excedente carrega o banco de baterias a custo zero.",
+        vars
+      );
+      const nighttimeDesc = tpl(
+        f.nighttimeDescription ||
+          "Ao anoitecer, as baterias suprem a casa evitando tarifas caras da concessionária no horário de ponta.",
+        vars
+      );
+      const blackoutDesc = tpl(
+        f.blackoutDescription ||
+          "Em caso de apagão na rede externa, o sistema comuta em < 10ms mantendo tudo 100% funcionando.",
+        vars
+      );
+      const switchTime = tpl(f.switchTime || "< 10ms", vars);
+      const independence = tpl(f.gridIndependencePct || "Até 95% de independência", vars);
+
+      return (
+        <div className="space-y-5">
+          <div className="border-b pb-3" style={equipmentChromeBorder}>
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+              {eyebrow}
+            </span>
+            <h3 className="mt-1 text-lg sm:text-xl font-bold text-[var(--color-foreground)]">
+              {title}
+            </h3>
+            {f.text ? (
+              <div className="mt-1.5 text-xs sm:text-sm opacity-80 leading-relaxed max-w-3xl">
+                {renderRichText(f.text, vars)}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {}
+            <div
+              className="rounded-xl border p-4 sm:p-5 flex flex-col justify-between bg-[var(--color-card)] relative overflow-hidden"
+              style={equipmentChromeBorder}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 font-bold text-base">
+                  ☀️
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
+                  01. Dia
+                </span>
+              </div>
+              <h4 className="font-bold text-sm text-[var(--color-foreground)] mb-1.5">
+                Geração & Recarga Solar
+              </h4>
+              <p className="text-xs leading-relaxed opacity-80 flex-1">{daytimeDesc}</p>
+              <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <span>⚡ Carga 100% gratuita do Sol</span>
+              </div>
             </div>
 
-            <div className="rounded-xl border p-3" style={equipmentChromeBorder}>
-              <div className="text-[11px] font-medium uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                <span>⚡</span> Backup EPS
+            {}
+            <div
+              className="rounded-xl border p-4 sm:p-5 flex flex-col justify-between bg-[var(--color-card)] relative overflow-hidden"
+              style={equipmentChromeBorder}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500 font-bold text-base">
+                  🌙
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
+                  02. Noite
+                </span>
               </div>
-              <div className="mt-1 text-lg font-bold" data-editor-field-path="backupPowerKw">
-                {backupPwr}
+              <h4 className="font-bold text-sm text-[var(--color-foreground)] mb-1.5">
+                Autoconsumo das Baterias
+              </h4>
+              <p className="text-xs leading-relaxed opacity-80 flex-1">{nighttimeDesc}</p>
+              <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                <span>🛡️ Fuga das tarifas de ponta</span>
               </div>
-              <div className="text-[10px] opacity-70">Potência contínua</div>
             </div>
 
-            <div className="rounded-xl border p-3" style={equipmentChromeBorder}>
-              <div className="text-[11px] font-medium uppercase tracking-wider opacity-80 flex items-center gap-1">
-                <span>⏱️</span> Autonomia
+            {}
+            <div
+              className="rounded-xl border p-4 sm:p-5 flex flex-col justify-between bg-gradient-to-br from-[var(--color-card)] to-emerald-500/[0.04] relative overflow-hidden"
+              style={equipmentChromeBorder}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-base">
+                  ⚡
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                  03. Queda de Rede
+                </span>
               </div>
-              <div className="mt-1 text-lg font-bold" data-editor-field-path="autonomyHours">
-                {autonomy}
+              <h4 className="font-bold text-sm text-[var(--color-foreground)] mb-1.5">
+                No-Break Instantâneo EPS
+              </h4>
+              <p className="text-xs leading-relaxed opacity-80 flex-1">{blackoutDesc}</p>
+              <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                <span>⏱️ Resposta rápida em {switchTime}</span>
               </div>
-              <div className="text-[10px] opacity-70">Cargas essenciais</div>
-            </div>
-
-            <div className="rounded-xl border p-3" style={equipmentChromeBorder}>
-              <div className="text-[11px] font-medium uppercase tracking-wider opacity-80 flex items-center gap-1">
-                <span>🛡️</span> No-Break
-              </div>
-              <div className="mt-1 text-lg font-bold" data-editor-field-path="switchTimeMs">
-                {switchTime}
-              </div>
-              <div className="text-[10px] opacity-70">Transferência rápida</div>
             </div>
           </div>
 
           <div
-            className="rounded-lg border px-3 py-2 text-xs flex items-center justify-between gap-2"
-            style={equipmentChromeSurface}
+            className="rounded-xl border p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/40"
+            style={equipmentChromeBorder}
           >
-            <span className="opacity-75">
-              Tecnologia das células:{" "}
-              <strong className="font-semibold text-[var(--color-foreground)]">{tech}</strong>
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-base">🛡️</span>
+              <span className="text-xs font-semibold text-[var(--color-foreground)]">
+                Segurança energética residencial e corporativa: {independence}
+              </span>
+            </div>
             <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-              100% Seguro · Proteção BMS
+              Operação 100% Automática
             </span>
+          </div>
+        </div>
+      );
+    }
+    case "critical_loads_autonomy": {
+      const eyebrow = tpl(f.eyebrow || "Segurança & Conforto", vars);
+      const title = tpl(f.title || "Cargas Críticas Protegidas contra Quedas de Energia", vars);
+      const autonomy = tpl(f.estimatedAutonomy || "12 a 24 horas", vars);
+      const lifespan = tpl(f.batteryLifespan || "Mais de 15 anos (6.000 a 8.000 ciclos)", vars);
+
+      return (
+        <div className="space-y-5">
+          <div className="border-b pb-3" style={equipmentChromeBorder}>
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+              {eyebrow}
+            </span>
+            <h3 className="mt-1 text-lg sm:text-xl font-bold text-[var(--color-foreground)]">
+              {title}
+            </h3>
+            {f.text ? (
+              <div className="mt-1.5 text-xs sm:text-sm opacity-80 leading-relaxed max-w-3xl">
+                {renderRichText(f.text, vars)}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {}
+            <div className="lg:col-span-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-foreground)]">
+                  Circuitos & Eletrodomésticos Protegidos
+                </span>
+                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                  Autonomia: {autonomy}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {[
+                  {
+                    icon: "🧊",
+                    name: "Geladeira & Freezers",
+                    benefit: "Alimentos e medicamentos protegidos contra estragos durante apagões.",
+                  },
+                  {
+                    icon: "💻",
+                    name: "Home Office & Internet Wi-Fi",
+                    benefit:
+                      "Conexão sem oscilação; reuniões e trabalho mantidos sem interrupções.",
+                  },
+                  {
+                    icon: "💡",
+                    name: "Iluminação Estratégica & Tomadas",
+                    benefit: "Pontos essenciais da residência ou empresa 100% iluminados e ativos.",
+                  },
+                  {
+                    icon: "🚪",
+                    name: "Portão Eletrônico, Câmeras & Alarme",
+                    benefit: "Segurança perimetral e controle de acesso operando normalmente.",
+                  },
+                ].map((load, idx) => (
+                  <div
+                    key={idx}
+                    className="rounded-xl border p-3 flex items-start gap-3 bg-[var(--color-card)]"
+                    style={equipmentChromeBorder}
+                  >
+                    <span className="text-lg shrink-0 mt-0.5">{load.icon}</span>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-[var(--color-foreground)]">
+                          {load.name}
+                        </span>
+                        <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                          Ativo
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[11px] opacity-75 leading-relaxed">
+                        {load.benefit}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {}
+            <div className="lg:col-span-6 flex flex-col justify-between">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-foreground)]">
+                  Por que Bateria Solar e Não um Gerador?
+                </span>
+
+                <div
+                  className="mt-3 rounded-2xl border overflow-hidden"
+                  style={equipmentChromeBorder}
+                >
+                  <div className="grid grid-cols-2 text-center text-xs font-bold border-b border-slate-200 dark:border-slate-800">
+                    <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      ⚡ Bateria Solar LiFePO4
+                    </div>
+                    <div className="p-2.5 bg-slate-100 dark:bg-slate-800 opacity-75">
+                      ⛽ Gerador a Combustível
+                    </div>
+                  </div>
+
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                    {[
+                      {
+                        label: "Ruído",
+                        solar: "100% Silencioso (Zero Ruído)",
+                        gen: "Barulho alto e incômodo",
+                      },
+                      {
+                        label: "Combustível",
+                        solar: "Energia Solar 100% Gratuita",
+                        gen: "Gasolina/Diesel caro e inflamável",
+                      },
+                      {
+                        label: "Partida",
+                        solar: "Automática em < 10ms",
+                        gen: "Manual ou atrasada com falhas",
+                      },
+                      {
+                        label: "Poluição",
+                        solar: "Zero Fumaça ou Emissões",
+                        gen: "Gases tóxicos e fuligem",
+                      },
+                      {
+                        label: "Manutenção",
+                        solar: "Zero Peças Móveis",
+                        gen: "Troca de óleo, velas e filtros",
+                      },
+                    ].map((row, rIdx) => (
+                      <div key={rIdx} className="grid grid-cols-2 p-2.5">
+                        <div className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
+                          <span className="text-xs">✓</span> {row.solar}
+                        </div>
+                        <div className="opacity-70 flex items-center gap-1.5">
+                          <span className="text-xs">✗</span> {row.gen}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className="mt-4 rounded-xl border p-3 flex items-center justify-between text-xs bg-slate-50/50 dark:bg-slate-900/40"
+                style={equipmentChromeBorder}
+              >
+                <span className="opacity-80">Durabilidade do Banco de Baterias:</span>
+                <strong className="text-[var(--color-foreground)] font-semibold">{lifespan}</strong>
+              </div>
+            </div>
           </div>
         </div>
       );

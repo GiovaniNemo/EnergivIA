@@ -36,6 +36,8 @@ export type SectionType =
   | "comparison"
   | "video"
   | "storage_backup"
+  | "hybrid_flow"
+  | "critical_loads_autonomy"
   | "custom";
 
 export interface ProposalSection {

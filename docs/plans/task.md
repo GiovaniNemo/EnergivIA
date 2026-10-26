@@ -740,3 +740,8 @@
 | task-744 | Seção storage_backup, Cards de Bateria e Badge Exclusivo no Editor | completed | Implementado storage_backup, badges ⚡ Exclusivo Híbrido / Off-Grid no modal e nos cards de equipamentos |
 | task-745 | Filtragem de Templates, Riscado (~...~) e Salvaguarda Híbrida no WhatsApp Bot | completed | Templates on-grid riscados com ~...~ quando híbrido, modelos híbridos ativos selecionáveis, blueprint híbrido fallback e 8 testes Vitest aprovados |
 | task-746 | Validação Completa, Testes Automatizados (Vitest), Build e Push | completed | 36+ testes Vitest aprovados (Web e API), nest build da API e ESLint web 100% aprovados, sincronizado com origin/main |
+| task-747 | Redesign dos Mockups e Remoção dos Elementos Feios em AddSectionModal.tsx | completed | Eliminados botões amadores [🔋 BESS] e [⚡ EPS], wireframes geométricos modernos e badge minimalista integrada ao card |
+| task-748 | Tipagens e Configuração de Campos em types.ts e section-fields.ts | completed | Registrados hybrid_flow e critical_loads_autonomy com campos, variants e defaults de alto impacto persuasivo |
+| task-749 | Renderizadores Visuais das 3 Seções em section-registry.tsx | completed | Implementada suíte completa: Hero Card BESS LiFePO4 unificado, Modos 24h Dia/Noite/Apagão e Cargas Protegidas vs Gerador a Combustível |
+| task-750 | Blueprint Oficial Híbrido e Suporte no WhatsApp Bot | completed | Atualizado isTemplateHybridCompatible para suportar novas seções e template oficial incluindo a suíte completa de 3 seções |
+| task-751 | Validação Completa, Testes e Git Push | completed | 8 testes Vitest aprovados na API, NestJS build compilado com sucesso, Next.js build (84 rotas) aprovado com 0 erros, ESLint limpo e commit enviado |

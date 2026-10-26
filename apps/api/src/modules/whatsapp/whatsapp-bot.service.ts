@@ -1543,8 +1543,12 @@ export function isTemplateHybridCompatible(template: { name?: string; config?: a
     const sections = Array.isArray(config.sections) ? config.sections : [];
     for (const section of sections) {
       if (!section) continue;
-      // Seção explícita de storage_backup
-      if (section.type === "storage_backup") {
+      // Seção explícita de storage_backup, hybrid_flow ou critical_loads_autonomy
+      if (
+        section.type === "storage_backup" ||
+        section.type === "hybrid_flow" ||
+        section.type === "critical_loads_autonomy"
+      ) {
         return true;
       }
       // Seção proposal_equipment com produtos de bateria/híbrido
@@ -7997,6 +8001,16 @@ ${catalogContext}`;
                     title: "Estimativa de Geração & Consumo",
                   },
                   { id: "bess-1", type: "storage_backup", title: "Armazenamento & Backup (BESS)" },
+                  {
+                    id: "flow-1",
+                    type: "hybrid_flow",
+                    title: "Modos de Operação 24h & Ciclo Solar",
+                  },
+                  {
+                    id: "loads-1",
+                    type: "critical_loads_autonomy",
+                    title: "Cargas Protegidas & Autonomia no Apagão",
+                  },
                   { id: "equip-1", type: "proposal_equipment", title: "Equipamentos & Baterias" },
                   { id: "fin-1", type: "financial_summary", title: "Investimento & Economia" },
                 ],

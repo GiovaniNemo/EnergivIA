@@ -15,12 +15,30 @@ describe("Templates Híbridos vs On-Grid no WhatsApp Bot", () => {
       expect(isTemplateHybridCompatible({ name: "Template com Armazenamento" })).toBe(true);
     });
 
-    it("deve identificar template híbrido se config contiver seção storage_backup ou equipamento de bateria", () => {
+    it("deve identificar template híbrido se config contiver seção storage_backup, hybrid_flow, critical_loads_autonomy ou equipamento de bateria", () => {
       expect(
         isTemplateHybridCompatible({
           name: "Modelo Executivo",
           config: {
             sections: [{ type: "storage_backup", title: "Armazenamento & Backup" }],
+          },
+        })
+      ).toBe(true);
+
+      expect(
+        isTemplateHybridCompatible({
+          name: "Modelo Autonomia",
+          config: {
+            sections: [{ type: "hybrid_flow", title: "Modos de Operação 24h" }],
+          },
+        })
+      ).toBe(true);
+
+      expect(
+        isTemplateHybridCompatible({
+          name: "Modelo No-Break",
+          config: {
+            sections: [{ type: "critical_loads_autonomy", title: "Cargas Protegidas" }],
           },
         })
       ).toBe(true);

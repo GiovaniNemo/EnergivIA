@@ -142,6 +142,8 @@ export const SECTION_TYPES_OWN_TITLE = new Set<SectionType>([
   "faq",
   "financing",
   "storage_backup",
+  "hybrid_flow",
+  "critical_loads_autonomy",
 ]);
 
 export const SECTION_TYPES_NO_ALIGNMENT = new Set<SectionType>(["introduction", "about_company"]);
@@ -155,6 +157,8 @@ export const SECTION_TYPES: SectionType[] = [
   "generation_consumption",
   "proposal_equipment",
   "storage_backup",
+  "hybrid_flow",
+  "critical_loads_autonomy",
   "gallery",
   "economy_purchases",
   "pricing",
@@ -188,6 +192,8 @@ export const SECTION_CATEGORY_BY_TYPE: Record<SectionType, SectionCategory> = {
   generation_consumption: "Essenciais",
   proposal_equipment: "Essenciais",
   storage_backup: "Essenciais",
+  hybrid_flow: "Essenciais",
+  critical_loads_autonomy: "Essenciais",
   gallery: "Visual",
   economy_purchases: "Financeiro",
   pricing: "Financeiro",
@@ -213,6 +219,8 @@ export const SECTION_TYPE_LABELS: Record<SectionType, string> = {
   generation_consumption: "Dados de Geração e Consumo",
   proposal_equipment: "Equipamentos da proposta",
   storage_backup: "Armazenamento & Backup (BESS)",
+  hybrid_flow: "Modos de Operação 24h & Ciclo Solar",
+  critical_loads_autonomy: "Cargas Protegidas & Autonomia no Apagão",
   gallery: "Galeria",
   economy_purchases: "Poder de compra",
   pricing: "Investimento",
@@ -238,6 +246,8 @@ export const SECTION_VARIANTS: Record<SectionType, string[]> = {
   generation_consumption: ["default", "modern", "modern_dashboard"],
   proposal_equipment: ["cards", "table", "list"],
   storage_backup: ["cards", "dashboard", "minimal"],
+  hybrid_flow: ["timeline", "cards", "minimal"],
+  critical_loads_autonomy: ["cards_vs_generator", "matrix", "minimal"],
   gallery: ["grid_uniform", "masonry", "mosaic_hero", "editorial", "overlay"],
   economy_purchases: ["vertical_stack", "split", "inverted", "narrative"],
   pricing: ["table", "compact"],
@@ -449,6 +459,12 @@ const SECTION_VARIANT_BEHAVIOR: Record<
   },
   storage_backup: {
     cards: { aliases: ["default"] },
+  },
+  hybrid_flow: {
+    timeline: { aliases: ["default"] },
+  },
+  critical_loads_autonomy: {
+    cards_vs_generator: { aliases: ["default"] },
   },
   custom: {},
 };
@@ -1194,6 +1210,77 @@ export const SECTION_FIELD_CONFIG: Record<SectionType, DynamicField[]> = {
       helperText: "Química das células (ex: LiFePO4 Lítio Ferro Fosfato - 6.000 ciclos).",
     },
   ],
+  hybrid_flow: [
+    ...COMMON_SECTION_BASE_FIELDS,
+    {
+      name: "daytimeDescription",
+      label: "Modo Diurno (Geração Solar + Carga)",
+      type: "textarea",
+      group: "Conteúdo",
+      helperText: "Explicação da operação durante o dia.",
+    },
+    {
+      name: "nighttimeDescription",
+      label: "Modo Noturno (Descarga & Autoconsumo)",
+      type: "textarea",
+      group: "Conteúdo",
+      helperText: "Explicação do fornecimento noturno pelas baterias.",
+    },
+    {
+      name: "blackoutDescription",
+      label: "Modo Blackout (Queda da Concessionária)",
+      type: "textarea",
+      group: "Conteúdo",
+      helperText: "Explicação da comutação automática em caso de apagão.",
+    },
+    {
+      name: "switchTime",
+      label: "Tempo de Resposta EPS",
+      type: "text",
+      group: "Conteúdo",
+      helperText: "Velocidade de transferência (ex: < 10ms - imperceptível).",
+    },
+    {
+      name: "gridIndependencePct",
+      label: "Grau de Independência Estimado",
+      type: "text",
+      group: "Conteúdo",
+      helperText: "Ex: Até 95% de independência da rede.",
+    },
+  ],
+  critical_loads_autonomy: [
+    ...COMMON_SECTION_BASE_FIELDS,
+    {
+      name: "protectedAppliances",
+      label: "Cargas e Equipamentos Protegidos",
+      type: "textarea",
+      group: "Conteúdo",
+      helperText:
+        "Lista de aparelhos essenciais (ex: Geladeira, Freezers, Internet Wi-Fi, Iluminação, Portão, Câmeras).",
+    },
+    {
+      name: "estimatedAutonomy",
+      label: "Autonomia Estimada das Cargas",
+      type: "text",
+      group: "Conteúdo",
+      helperText: "Horas de sustentação em apagão (ex: 12 a 24 horas).",
+    },
+    {
+      name: "generatorComparisonEnabled",
+      label: "Exibir Comparativo com Gerador a Combustível",
+      type: "checkbox",
+      group: "Conteúdo",
+      helperText:
+        "Compara o silêncio e custo zero de recarga solar vs barulho e manutenção de gerador fóssil.",
+    },
+    {
+      name: "batteryLifespan",
+      label: "Vida Útil LiFePO4",
+      type: "text",
+      group: "Conteúdo",
+      helperText: "Ex: Mais de 15 anos (6.000 a 8.000 ciclos).",
+    },
+  ],
   custom: [...COMMON_SECTION_BASE_FIELDS],
 };
 
@@ -1206,6 +1293,8 @@ export const SECTION_USES_RICH_TEXT_EDITOR: Record<SectionType, boolean> = {
   generation_consumption: false,
   proposal_equipment: false,
   storage_backup: false,
+  hybrid_flow: false,
+  critical_loads_autonomy: false,
   gallery: false,
   economy_purchases: false,
   pricing: false,
@@ -1479,6 +1568,29 @@ export const SECTION_DEFAULT_FIELDS: Record<SectionType, Record<string, unknown>
     autonomyHours: "8 a 12 horas",
     switchTimeMs: "< 10ms",
     batteryTechnology: "LiFePO4 Lítio Ferro Fosfato (6.000 ciclos)",
+  }),
+  hybrid_flow: withSectionBaseDefaults({
+    eyebrow: "Energia Ininterrupta 24h",
+    title: "Como Funciona o Seu Sistema Solar Híbrido",
+    text: "<p>Seu sistema opera de forma totalmente inteligente e automática durante o dia, a noite e especialmente durante falhas ou apagões da rede elétrica.</p>",
+    daytimeDescription:
+      "Geração solar alimenta todo o consumo instantâneo do imóvel e a energia excedente recarrega o banco de baterias a custo zero.",
+    nighttimeDescription:
+      "Ao anoitecer, as baterias entram em ação fornecendo energia limpa e gratuita, evitando a tarifa cara da concessionária no horário de ponta.",
+    blackoutDescription:
+      "Em caso de tempestades ou panes na rede da distribuidora, o sistema comuta em menos de 10 milissegundos mantendo seus equipamentos essenciais 100% ligados.",
+    switchTime: "< 10ms (Imperceptível)",
+    gridIndependencePct: "Até 95% de independência",
+  }),
+  critical_loads_autonomy: withSectionBaseDefaults({
+    eyebrow: "Segurança & Conforto",
+    title: "Cargas Críticas Protegidas contra Quedas de Energia",
+    text: "<p>Diferente da energia solar convencional que desliga quando a rede cai, o sistema híbrido mantém o que é mais importante funcionando sem interrupção na sua casa ou empresa.</p>",
+    protectedAppliances:
+      "Refrigerador, Freezers, Internet Wi-Fi, Computadores, Iluminação Essencial, Portão Eletrônico e Câmeras de Segurança",
+    estimatedAutonomy: "12 a 24 horas",
+    batteryLifespan: "Mais de 15 anos (6.000 a 8.000 ciclos)",
+    generatorComparisonEnabled: true,
   }),
   custom: withSectionBaseDefaults({}),
 };

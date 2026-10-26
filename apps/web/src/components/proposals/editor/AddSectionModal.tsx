@@ -65,8 +65,16 @@ const SECTION_META: Record<SectionType, { desc: string; vars: number }> = {
   comparison: { desc: "Tabela comparativa entre diferentes sistemas ou concorrentes.", vars: 5 },
   video: { desc: "Incorporação de vídeo explicativo ou depoimento em vídeo.", vars: 1 },
   storage_backup: {
-    desc: "Banco de baterias, modo de backup EPS e autonomia para sistemas híbridos e off-grid.",
+    desc: "Banco de baterias BESS, modo de backup EPS e especificações técnicas de autonomia LiFePO4.",
     vars: 4,
+  },
+  hybrid_flow: {
+    desc: "Infográfico didático e comercial do ciclo 24h: Operação Dia, Noite e Proteção no Apagão.",
+    vars: 3,
+  },
+  critical_loads_autonomy: {
+    desc: "Matriz visual de eletrodomésticos essenciais que continuam ligados e comparativo vs gerador a combustível.",
+    vars: 3,
   },
   custom: { desc: "Seção totalmente customizável com editor livre de conteúdo.", vars: 0 },
 };
@@ -83,6 +91,8 @@ type MockupKind =
   | "signature"
   | "video"
   | "battery"
+  | "hybrid_flow"
+  | "critical_loads"
   | "custom";
 
 const TYPE_MOCKUP: Record<SectionType, MockupKind> = {
@@ -94,6 +104,8 @@ const TYPE_MOCKUP: Record<SectionType, MockupKind> = {
   generation_consumption: "chart",
   proposal_equipment: "list",
   storage_backup: "battery",
+  hybrid_flow: "hybrid_flow",
+  critical_loads_autonomy: "critical_loads",
   gallery: "media",
   economy_purchases: "pricing",
   pricing: "pricing",
@@ -272,18 +284,62 @@ function SectionMockup({ kind, large }: { kind: MockupKind; large?: boolean }) {
   if (kind === "battery")
     return (
       <div className={base}>
-        <MockBar w="45%" h={bar} color="dark" />
-        <div className="flex flex-1 items-center justify-center gap-1.5 p-1">
-          <div className="flex flex-col items-center justify-center rounded border border-amber-500/30 bg-amber-500/10 p-1 flex-1">
-            <span className="text-[9px] font-bold text-amber-500">🔋 BESS</span>
-            <MockBar w="70%" h={bar - 1} color="accent" />
+        <MockBar w="50%" h={bar} color="dark" />
+        <div className="flex flex-1 flex-col justify-center gap-1.5 p-1">
+          <div className="flex items-center gap-1.5 rounded-sm bg-slate-100 dark:bg-slate-800 px-1.5 py-1">
+            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+            <div className="flex flex-1 flex-col gap-0.5">
+              <MockBar w="70%" h={bar - 1} color="accent" />
+              <MockBar w="45%" h={bar - 2} />
+            </div>
           </div>
-          <div className="flex flex-col items-center justify-center rounded border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-1 flex-1">
-            <span className="text-[9px] font-bold text-emerald-500">⚡ EPS</span>
-            <MockBar w="70%" h={bar - 1} />
+          <div className="flex items-center gap-1.5 rounded-sm bg-slate-100 dark:bg-slate-800 px-1.5 py-1">
+            <div className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+            <div className="flex flex-1 flex-col gap-0.5">
+              <MockBar w="60%" h={bar - 1} />
+              <MockBar w="35%" h={bar - 2} />
+            </div>
+          </div>
+        </div>
+        <MockBar w="55%" h={bar - 1} />
+      </div>
+    );
+  if (kind === "hybrid_flow")
+    return (
+      <div className={base}>
+        <MockBar w="45%" h={bar} color="dark" />
+        <div className="flex flex-1 items-center justify-between gap-1 p-1">
+          <div className="flex flex-col items-center gap-1 rounded bg-amber-50 dark:bg-amber-950/30 p-1 flex-1">
+            <div className="h-2 w-2 rounded-full bg-amber-400" />
+            <MockBar w="80%" h={bar - 2} color="accent" />
+          </div>
+          <div className="h-0.5 w-2 bg-slate-300 dark:bg-slate-600" />
+          <div className="flex flex-col items-center gap-1 rounded bg-slate-100 dark:bg-slate-800 p-1 flex-1">
+            <div className="h-2 w-2 rounded-full bg-emerald-500" />
+            <MockBar w="80%" h={bar - 2} />
+          </div>
+          <div className="h-0.5 w-2 bg-slate-300 dark:bg-slate-600" />
+          <div className="flex flex-col items-center gap-1 rounded bg-slate-100 dark:bg-slate-800 p-1 flex-1">
+            <div className="h-2 w-2 rounded-full bg-indigo-500" />
+            <MockBar w="80%" h={bar - 2} />
           </div>
         </div>
         <MockBar w="60%" h={bar - 1} />
+      </div>
+    );
+  if (kind === "critical_loads")
+    return (
+      <div className={base}>
+        <MockBar w="50%" h={bar} color="dark" />
+        <div className="flex flex-1 flex-col justify-center gap-1 p-1">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-sm bg-emerald-500/80 shrink-0" />
+              <MockBar w={i === 1 ? "75%" : i === 2 ? "60%" : "85%"} h={bar - 1} />
+            </div>
+          ))}
+        </div>
+        <MockBar w="40%" h={bar - 1} color="accent" />
       </div>
     );
   if (kind === "custom")
@@ -476,6 +532,29 @@ const DEMO_FIELD_OVERRIDES: Partial<Record<SectionType, Record<string, unknown>>
     autonomyHours: "10 a 14 horas",
     switchTimeMs: "< 10ms (EPS)",
     batteryTechnology: "LiFePO4 Lítio Ferro Fosfato (6.000 ciclos)",
+  },
+  hybrid_flow: {
+    eyebrow: "Energia Ininterrupta 24h",
+    title: "Como Funciona o Seu Sistema Solar Híbrido",
+    text: "<p>Seu sistema opera de forma totalmente inteligente e automática durante o dia, a noite e especialmente durante falhas ou apagões da rede elétrica.</p>",
+    daytimeDescription:
+      "Geração solar alimenta todo o consumo instantâneo do imóvel e a energia excedente recarrega o banco de baterias a custo zero.",
+    nighttimeDescription:
+      "Ao anoitecer, as baterias entram em ação fornecendo energia limpa e gratuita, evitando a tarifa cara da concessionária no horário de ponta.",
+    blackoutDescription:
+      "Em caso de tempestades ou panes na rede da distribuidora, o sistema comuta em menos de 10 milissegundos mantendo seus equipamentos essenciais 100% ligados.",
+    switchTime: "< 10ms (Imperceptível)",
+    gridIndependencePct: "Até 95% de independência",
+  },
+  critical_loads_autonomy: {
+    eyebrow: "Segurança & Conforto",
+    title: "Cargas Críticas Protegidas contra Quedas de Energia",
+    text: "<p>Diferente da energia solar convencional que desliga quando a rede cai, o sistema híbrido mantém o que é mais importante funcionando sem interrupção na sua casa ou empresa.</p>",
+    protectedAppliances:
+      "Refrigerador, Freezers, Internet Wi-Fi, Computadores, Iluminação Essencial, Portão Eletrônico e Câmeras de Segurança",
+    estimatedAutonomy: "12 a 24 horas",
+    batteryLifespan: "Mais de 15 anos (6.000 a 8.000 ciclos)",
+    generatorComparisonEnabled: true,
   },
 };
 
@@ -1177,11 +1256,6 @@ export function AddSectionModal({
                             Novo
                           </span>
                         )}
-                        {type === "storage_backup" && (
-                          <span className="absolute left-2 bottom-2 rounded bg-amber-500/20 border border-amber-500/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">
-                            ⚡ Exclusivo Híbrido / Off-Grid
-                          </span>
-                        )}
                         <button
                           type="button"
                           onClick={(e) => toggleFavorite(type, e)}
@@ -1208,7 +1282,16 @@ export function AddSectionModal({
                         <p className="text-[13px] font-semibold leading-tight text-[var(--color-foreground)]">
                           {SECTION_TYPE_LABELS[type]}
                         </p>
-                        <p className="mt-0.5 text-[11px] text-[var(--color-muted-foreground)]">
+                        {(type === "storage_backup" ||
+                          type === "hybrid_flow" ||
+                          type === "critical_loads_autonomy") && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                              ⚡ Híbrido & Backup
+                            </span>
+                          </div>
+                        )}
+                        <p className="mt-1 text-[11px] text-[var(--color-muted-foreground)]">
                           {SECTION_CATEGORY_BY_TYPE[type]}
                           {(() => {
                             const variantCount = (SECTION_VARIANTS[type] ?? []).length;
@@ -1242,7 +1325,9 @@ export function AddSectionModal({
                     <span className="inline-block rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
                       {SECTION_CATEGORY_BY_TYPE[selected]}
                     </span>
-                    {selected === "storage_backup" && (
+                    {(selected === "storage_backup" ||
+                      selected === "hybrid_flow" ||
+                      selected === "critical_loads_autonomy") && (
                       <span className="inline-block rounded bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
                         ⚡ Exclusivo Híbrido / Off-Grid
                       </span>
