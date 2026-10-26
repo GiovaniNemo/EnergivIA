@@ -87,6 +87,29 @@ export function mergePublicProposalVariables(
         const n = (i.productName || "").toLowerCase();
         return c.includes("est") || c.includes("perf") || n.includes("est") || n.includes("perf");
       });
+      const batteryItem = integrator.kitItems.find((i) => {
+        const c = (i.categoryName || "").toLowerCase();
+        const n = (i.productName || "").toLowerCase();
+        return (
+          c.includes("bat") ||
+          c.includes("bess") ||
+          c.includes("armazen") ||
+          n.includes("bat") ||
+          n.includes("bess")
+        );
+      });
+      const hybridInverterItem = integrator.kitItems.find((i) => {
+        const c = (i.categoryName || "").toLowerCase();
+        const n = (i.productName || "").toLowerCase();
+        return (
+          c.includes("hybrid") ||
+          c.includes("híbrid") ||
+          c.includes("hibrid") ||
+          n.includes("hybrid") ||
+          n.includes("híbrid") ||
+          n.includes("hibrid")
+        );
+      });
 
       if (moduleItem) {
         const qty = moduleItem.quantity || 1;
@@ -104,6 +127,33 @@ export function mergePublicProposalVariables(
       }
       if (structItem) {
         merged["estrutura_fixacao"] = structItem.productName;
+      }
+      if (batteryItem) {
+        const qty = batteryItem.quantity || 1;
+        merged["bateria_sistema"] =
+          `${qty}x ${batteryItem.productName}${batteryItem.brandName ? ` (${batteryItem.brandName})` : ""}`;
+        merged["quantidade_baterias"] = qty;
+        merged["modelo_bateria"] = batteryItem.productName;
+        merged["tipo_sistema_solar"] = "Híbrido com Armazenamento (BESS)";
+        merged["modo_backup"] = "Backup Automático EPS (< 10ms)";
+
+        const kwhMatch = batteryItem.productName.match(/(\d+(?:[.,]\d+)?)\s*kwh/i);
+        if (kwhMatch) {
+          const singleKwh = parseFloat(kwhMatch[1].replace(",", "."));
+          if (!Number.isNaN(singleKwh)) {
+            const totalKwh = Math.round(singleKwh * qty * 100) / 100;
+            merged["capacidade_bateria_kwh"] = `${totalKwh} kWh`;
+          }
+        }
+      }
+      if (hybridInverterItem) {
+        const qty = hybridInverterItem.quantity || 1;
+        merged["inversor_hibrido"] =
+          `${qty}x ${hybridInverterItem.productName}${hybridInverterItem.brandName ? ` (${hybridInverterItem.brandName})` : ""}`;
+        merged["tipo_sistema_solar"] = "Híbrido com Armazenamento (BESS)";
+        if (!merged["modo_backup"]) {
+          merged["modo_backup"] = "Backup Automático EPS (< 10ms)";
+        }
       }
     }
 
@@ -253,6 +303,37 @@ export function mergePublicProposalVariables(
         : `${inverterComp.quantity} inversor(es)`;
     } else if (sizingRes?.inverterCount != null) {
       merged["inversor_sistema"] = `${sizingRes.inverterCount} inversor(es)`;
+    }
+
+    const batteryComp = findComponent(["bat", "bess"]);
+    if (batteryComp && !merged["bateria_sistema"]) {
+      merged["bateria_sistema"] = batteryComp.spec
+        ? `${batteryComp.quantity}x ${batteryComp.spec}`
+        : `${batteryComp.quantity} bateria(s)`;
+      merged["quantidade_baterias"] = batteryComp.quantity;
+      merged["tipo_sistema_solar"] = "Híbrido com Armazenamento (BESS)";
+      if (!merged["modo_backup"]) {
+        merged["modo_backup"] = "Backup Automático EPS (< 10ms)";
+      }
+    }
+
+    if (
+      typeof rawInput["batteryCapacityKwh"] === "number" &&
+      Number(rawInput["batteryCapacityKwh"]) > 0
+    ) {
+      merged["capacidade_bateria_kwh"] = `${rawInput["batteryCapacityKwh"]} kWh`;
+      merged["tipo_sistema_solar"] = "Híbrido com Armazenamento (BESS)";
+      if (!merged["modo_backup"]) {
+        merged["modo_backup"] = "Backup Automático EPS (< 10ms)";
+      }
+    }
+    if (
+      typeof rawInput["batteryQuantity"] === "number" &&
+      Number(rawInput["batteryQuantity"]) > 0
+    ) {
+      if (!merged["quantidade_baterias"]) {
+        merged["quantidade_baterias"] = Number(rawInput["batteryQuantity"]);
+      }
     }
 
     const monthlyBillRaw = merged["conta_mensal_energia"];

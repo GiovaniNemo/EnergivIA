@@ -167,4 +167,64 @@ describe("mergePublicProposalVariables", () => {
       expect(variables?.["cobertura_consumo_pct"]).toBeGreaterThanOrEqual(90);
     });
   });
+
+  describe("Sistemas Híbridos e Armazenamento (Baterias)", () => {
+    it("deve mapear variáveis de bateria e inversor híbrido a partir dos kitItems do integrador", () => {
+      const payload = {
+        id: "prop-hybrid-1",
+        validUntil: new Date(Date.now() + 86400000).toISOString(),
+        renderedData: {
+          integrator: {
+            kitItems: [
+              {
+                productName: "Módulo Longi 620W",
+                quantity: 12,
+                categoryName: "module",
+                brandName: "Longi",
+              },
+              {
+                productName: "Inversor Híbrido Deye 8kW Monofásico",
+                quantity: 1,
+                categoryName: "hybrid_inverter",
+                brandName: "Deye",
+              },
+              {
+                productName: "Bateria Lítio LiFePO4 5.12 kWh LV",
+                quantity: 2,
+                categoryName: "battery",
+                brandName: "Dyness",
+              },
+            ],
+          },
+        },
+        simulation: {
+          input: {
+            systemSizeKw: 7.44,
+            investmentAmount: 42000,
+            batteryCapacityKwh: 10.24,
+            batteryQuantity: 2,
+          },
+          result: {
+            monthlySavings: 750,
+            annualSavings: [9000],
+            paybackYears: 4.6,
+          },
+        },
+      };
+
+      const variables = mergePublicProposalVariables(
+        {},
+        payload as unknown as PublicProposalPayload
+      );
+
+      expect(variables?.["bateria_sistema"]).toBe("2x Bateria Lítio LiFePO4 5.12 kWh LV (Dyness)");
+      expect(variables?.["quantidade_baterias"]).toBe(2);
+      expect(variables?.["capacidade_bateria_kwh"]).toBe("10.24 kWh");
+      expect(variables?.["inversor_hibrido"]).toBe(
+        "1x Inversor Híbrido Deye 8kW Monofásico (Deye)"
+      );
+      expect(variables?.["modo_backup"]).toBe("Backup Automático EPS (< 10ms)");
+      expect(variables?.["tipo_sistema_solar"]).toBe("Híbrido com Armazenamento (BESS)");
+    });
+  });
 });
