@@ -1821,6 +1821,99 @@ export function renderSectionContent(
               ) : null}
             </div>
           )}
+
+          {/* ================= CARD CUSTO REAL DO APAGÃO (BLACKOUT ROI) ================= */}
+          {f.showBlackoutCost !== false && String(f.showBlackoutCost) !== "false" ? (
+            <div
+              className="rounded-2xl border p-4 sm:p-5 shadow-xs"
+              style={{
+                backgroundColor: "#ffffff",
+                borderColor:
+                  "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
+                boxShadow: "0 2px 10px rgba(2, 6, 23, 0.03)",
+              }}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg border text-amber-600 border-amber-200 bg-amber-50">
+                    <LucideIcons.AlertTriangle className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
+                      O Custo Real de um Apagão sem Baterias (Blackout Loss)
+                    </h4>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      O prejuízo invisível de uma queda prolongada costuma superar o valor do banco
+                      de energia
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
+                  <LucideIcons.Shield className="h-3 w-3" />
+                  Segurança Inegociável
+                </span>
+              </div>
+
+              <div className="mt-3.5 grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Alimentos & Freezers
+                  </span>
+                  <p className="mt-1 text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                    R$ 800 a R$ 2.500 em perda
+                  </p>
+                  <span className="mt-1 text-[10px] text-slate-400 font-medium leading-tight">
+                    Descarte forçado de carnes, laticínios e insumos refrigerados.
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Home Office & Conexão
+                  </span>
+                  <p className="mt-1 text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                    Zero produtividade
+                  </p>
+                  <span className="mt-1 text-[10px] text-slate-400 font-medium leading-tight">
+                    Wi-Fi, reuniões e computadores cortados no meio do expediente.
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Danos a Eletrodomésticos
+                  </span>
+                  <p className="mt-1 text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                    Picos no religamento
+                  </p>
+                  <span className="mt-1 text-[10px] text-slate-400 font-medium leading-tight">
+                    Surtos de tensão da concessionária que queimam placas eletrônicas.
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Segurança & Acessos
+                  </span>
+                  <p className="mt-1 text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                    Imóvel vulnerável
+                  </p>
+                  <span className="mt-1 text-[10px] text-slate-400 font-medium leading-tight">
+                    Portões travados, câmeras desligadas e alarmes fora do ar.
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50/80 border border-emerald-200/80 px-3 py-2 text-[11px] text-emerald-900">
+                <LucideIcons.ShieldCheck className="h-4 w-4 shrink-0 text-emerald-700" />
+                <span className="leading-tight font-medium">
+                  <strong>Resposta instantânea:</strong> Comutação EPS em menos de 10ms
+                  (imperceptível) que mantém seu imóvel 100% ativo e protege sua família e seu
+                  patrimônio.
+                </span>
+              </div>
+            </div>
+          ) : null}
         </div>
       );
     }
@@ -2380,6 +2473,217 @@ export function renderSectionContent(
               </p>
             </div>
           </div>
+
+          {/* ================= CUSTO DA INAÇÃO (TAXÔMETRO DO ATRASO) ================= */}
+          {f.showInactionCost !== false && String(f.showInactionCost) !== "false" && monthlyBill > 0
+            ? (() => {
+                const dailyLoss = Math.round(monthlyBill / 30);
+                const loss30d = Math.round(monthlyBill);
+                const loss60d = Math.round(monthlyBill * 2);
+                const loss90d = Math.round(monthlyBill * 3);
+                return (
+                  <div
+                    className="rounded-2xl border p-4 sm:p-5 shadow-xs"
+                    style={{
+                      backgroundColor: "#ffffff",
+                      borderColor:
+                        "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
+                      boxShadow: "0 2px 10px rgba(2, 6, 23, 0.03)",
+                    }}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg border text-rose-600 border-rose-200 bg-rose-50">
+                          <LucideIcons.Clock className="h-4 w-4" />
+                        </span>
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
+                            {String(
+                              f.inactionTitle || "Custo da Inação — O Preço de Adiar a Decisão"
+                            )}
+                          </h4>
+                          <p className="text-[11px] text-slate-500 font-medium">
+                            Recursos transferidos compulsoriamente para a concessionária a cada
+                            ciclo de espera
+                          </p>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-2.5 py-0.5 text-[10px] font-bold text-rose-700">
+                        <LucideIcons.TrendingDown className="h-3 w-3" />
+                        Atraso Gera Prejuízo
+                      </span>
+                    </div>
+
+                    <div className="mt-3.5 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex flex-col justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          A cada 24 horas
+                        </span>
+                        <p className="mt-1 text-base sm:text-lg font-black text-rose-600 tabular-nums">
+                          {toCurrency(dailyLoss)}
+                        </p>
+                        <span className="mt-0.5 text-[10px] text-slate-400 font-medium">
+                          perda por dia
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex flex-col justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          30 dias de espera
+                        </span>
+                        <p className="mt-1 text-base sm:text-lg font-black text-slate-900 tabular-nums">
+                          {toCurrency(loss30d)}
+                        </p>
+                        <span className="mt-0.5 text-[10px] text-slate-400 font-medium">
+                          1 fatura inteira
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex flex-col justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          60 dias de espera
+                        </span>
+                        <p className="mt-1 text-base sm:text-lg font-black text-slate-900 tabular-nums">
+                          {toCurrency(loss60d)}
+                        </p>
+                        <span className="mt-0.5 text-[10px] text-slate-400 font-medium">
+                          2 faturas perdidas
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex flex-col justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          90 dias de espera
+                        </span>
+                        <p className="mt-1 text-base sm:text-lg font-black text-slate-900 tabular-nums">
+                          {toCurrency(loss90d)}
+                        </p>
+                        <span className="mt-0.5 text-[10px] text-slate-400 font-medium">
+                          3 faturas perdidas
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50/80 border border-emerald-200/80 px-3 py-2 text-[11px] text-emerald-900">
+                      <LucideIcons.ShieldCheck className="h-4 w-4 shrink-0 text-emerald-700" />
+                      <span className="leading-tight font-medium">
+                        <strong>Ação preventiva imediata:</strong> Aprovar o projeto nesta safra
+                        congela seu custo na taxa mínima e evita que esse capital seja drenado mês a
+                        mês.
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()
+            : null}
+
+          {/* ================= PROJEÇÃO DE INFLAÇÃO TARIFÁRIA A 10 ANOS ================= */}
+          {f.showInflationProjection !== false &&
+          String(f.showInflationProjection) !== "false" &&
+          monthlyBill > 0
+            ? (() => {
+                let totalConcessionaria = 0;
+                let currentBill = monthlyBill * 12;
+                for (let y = 0; y < 10; y++) {
+                  totalConcessionaria += currentBill;
+                  currentBill *= 1.085;
+                }
+                totalConcessionaria = Math.round(totalConcessionaria);
+                const totalSolar10y = Math.round(monthlyBill * 0.08 * 12 * 10);
+                const totalPoupanca = Math.max(0, totalConcessionaria - totalSolar10y);
+
+                return (
+                  <div
+                    className="rounded-2xl border p-4 sm:p-5 shadow-xs"
+                    style={{
+                      backgroundColor: "#ffffff",
+                      borderColor: "color-mix(in srgb, currentColor 14%, #e2e8f0)",
+                      boxShadow: "0 2px 10px rgba(2, 6, 23, 0.03)",
+                    }}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg border text-amber-600 border-amber-200 bg-amber-50">
+                          <LucideIcons.LineChart className="h-4 w-4" />
+                        </span>
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
+                            Curva da Inflação Energética (Projeção a 10 Anos)
+                          </h4>
+                          <p className="text-[11px] text-slate-500 font-medium">
+                            Histórico brasileiro de reajustes tarifários médios de 8,5% a.a. vs
+                            Custo Solar travado
+                          </p>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                        <LucideIcons.Shield className="h-3 w-3" />
+                        Blindagem Tarifária
+                      </span>
+                    </div>
+
+                    <div className="mt-3.5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="rounded-xl border border-rose-200/80 bg-rose-50/40 p-3.5 flex flex-col justify-between">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">
+                            Sem Solar (Concessionária)
+                          </span>
+                          <p className="mt-1 text-lg sm:text-xl font-black text-rose-700 tabular-nums">
+                            {toCurrency(totalConcessionaria)}
+                          </p>
+                        </div>
+                        <span className="mt-2 text-[10px] text-slate-600 font-medium leading-tight">
+                          Gasto cumulativo entregue à distribuidora com inflação média histórica.
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 flex flex-col justify-between">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                            Com Solar (Taxa Mínima)
+                          </span>
+                          <p className="mt-1 text-lg sm:text-xl font-black text-slate-900 tabular-nums">
+                            {toCurrency(totalSolar10y)}
+                          </p>
+                        </div>
+                        <span className="mt-2 text-[10px] text-slate-600 font-medium leading-tight">
+                          Custo total residual projetado considerando disponibilidade e iluminação.
+                        </span>
+                      </div>
+
+                      <div
+                        className="rounded-xl border p-3.5 flex flex-col justify-between"
+                        style={{
+                          backgroundColor:
+                            "color-mix(in srgb, var(--preview-primary-color, #059669) 8%, #ffffff)",
+                          borderColor:
+                            "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
+                        }}
+                      >
+                        <div>
+                          <span
+                            className="text-[10px] font-bold uppercase tracking-wider"
+                            style={{ color: "var(--preview-primary-color, #059669)" }}
+                          >
+                            Patrimônio Poupado
+                          </span>
+                          <p
+                            className="mt-1 text-lg sm:text-xl font-black tabular-nums"
+                            style={{ color: "var(--preview-primary-color, #059669)" }}
+                          >
+                            {toCurrency(totalPoupanca)}
+                          </p>
+                        </div>
+                        <span className="mt-2 text-[10px] font-medium leading-tight text-slate-700">
+                          Recursos preservados no seu bolso ou caixa da empresa em 10 anos.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
+            : null}
+
           {painPoints.length ? (
             <div className="space-y-2">
               <p className="text-[11px] uppercase tracking-[0.08em] font-semibold text-slate-700">
@@ -2674,6 +2978,128 @@ export function renderSectionContent(
               )}
             </div>
           ) : null}
+
+          {/* ================= EQUIVALÊNCIAS AMBIENTAIS & SELO ESG ================= */}
+          {f.showEnvironmentalImpact !== false && String(f.showEnvironmentalImpact) !== "false"
+            ? (() => {
+                const annualKwh = vars.geracao_mensal_kwh
+                  ? Number(vars.geracao_mensal_kwh) * 12
+                  : vars.producao_anual
+                    ? parseInt(String(vars.producao_anual).replace(/\D/g, "")) || 9600
+                    : 9600;
+                const trees =
+                  Number(vars.equivalente_arvores_ano) ||
+                  Math.max(12, Math.round((annualKwh * 0.0817) / 22));
+                const kmAvoided = Math.round(annualKwh * 1.6);
+                const co2Tons = ((annualKwh * 0.0817) / 1000).toFixed(1);
+
+                return (
+                  <div
+                    className="rounded-2xl border p-4 sm:p-5 shadow-xs"
+                    style={{
+                      backgroundColor: "#ffffff",
+                      borderColor:
+                        "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
+                      boxShadow: "0 2px 10px rgba(2, 6, 23, 0.03)",
+                    }}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border shadow-2xs"
+                          style={{
+                            backgroundColor:
+                              "color-mix(in srgb, var(--preview-primary-color, #059669) 12%, #ffffff)",
+                            borderColor:
+                              "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
+                            color: "var(--preview-primary-color, #059669)",
+                          }}
+                        >
+                          <LucideIcons.Leaf className="h-4 w-4" />
+                        </span>
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
+                            Impacto Ambiental Tangível & Responsabilidade ESG
+                          </h4>
+                          <p className="text-[11px] text-slate-500 font-medium">
+                            Contribuição ecológica concreta gerada pela operação da sua usina solar
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold border shadow-2xs"
+                        style={{
+                          backgroundColor:
+                            "color-mix(in srgb, var(--preview-primary-color, #059669) 10%, #ffffff)",
+                          borderColor:
+                            "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
+                          color: "var(--preview-primary-color, #059669)",
+                        }}
+                      >
+                        <LucideIcons.BadgeCheck className="h-3 w-3" />
+                        Matriz de Energia Limpa
+                      </span>
+                    </div>
+
+                    <div className="mt-3.5 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex items-center gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100/70 text-emerald-700">
+                          <LucideIcons.Trees className="h-5 w-5" />
+                        </span>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            Árvores Preservadas
+                          </span>
+                          <p className="text-base font-extrabold text-slate-900 tabular-nums">
+                            {trees} árvores/ano
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex items-center gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-100/70 text-sky-700">
+                          <LucideIcons.Car className="h-5 w-5" />
+                        </span>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            Deslocamento Fóssil Evitado
+                          </span>
+                          <p className="text-base font-extrabold text-slate-900 tabular-nums">
+                            {kmAvoided.toLocaleString("pt-BR")} km/ano
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex items-center gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100/70 text-amber-700">
+                          <LucideIcons.CloudRain className="h-5 w-5" />
+                        </span>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            CO₂ Neutralizado
+                          </span>
+                          <p className="text-base font-extrabold text-slate-900 tabular-nums">
+                            {co2Tons} ton/ano
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between rounded-lg bg-slate-50 border border-slate-200/80 px-3 py-2 text-[11px] text-slate-700 font-medium">
+                      <span className="flex items-center gap-1.5">
+                        <LucideIcons.Award className="h-4 w-4 text-emerald-600" />
+                        <span>
+                          Selo institucional disponível para comunicação e marketing corporativo.
+                        </span>
+                      </span>
+                      <span className="font-bold text-emerald-700 uppercase tracking-wider text-[10px]">
+                        100% Renovável
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()
+            : null}
         </div>
       );
     }
@@ -3534,15 +3960,196 @@ export function renderSectionContent(
           }
         />
       );
-    case "social_proof":
-    case "guarantees": {
+    case "social_proof": {
       const items = asStringArray(f.items);
       return (
-        <ul data-editor-field-path="items" className="list-disc space-y-1 pl-5">
-          {(items.length ? items : ["Item 1", "Item 2"]).map((item, index) => (
+        <ul data-editor-field-path="items" className="list-disc space-y-1 pl-5 text-sm">
+          {(items.length
+            ? items
+            : ["Mais de 500 usinas homologadas", "Índice de 99,4% de satisfação comprovada"]
+          ).map((item, index) => (
             <li key={`${item}-${index}`}>{item}</li>
           ))}
         </ul>
+      );
+    }
+    case "guarantees": {
+      const items = asStringArray(f.items);
+      const variant = String(section.variant ?? "cards");
+      const showQuad =
+        f.showQuadShield !== false && String(f.showQuadShield) !== "false" && variant !== "simple";
+
+      return (
+        <div className="space-y-4">
+          {f.text ? (
+            <div
+              data-editor-field-path="text"
+              className="preview-editable-target text-sm font-medium text-slate-700"
+            >
+              {renderRichText(f.text, vars)}
+            </div>
+          ) : null}
+
+          {showQuad ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* 1. Estanqueidade do Telhado */}
+              <div
+                className="rounded-2xl border p-4 shadow-xs flex flex-col justify-between"
+                style={{
+                  backgroundColor: "#ffffff",
+                  borderColor: "color-mix(in srgb, currentColor 14%, #e2e8f0)",
+                  boxShadow: "0 2px 8px rgba(2, 6, 23, 0.03)",
+                }}
+              >
+                <div>
+                  <div className="flex items-center gap-2.5 mb-2.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg border text-emerald-700 bg-emerald-50 border-emerald-200">
+                      <LucideIcons.Home className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                        Estanqueidade do Telhado
+                      </h4>
+                      <span className="text-[10px] font-semibold text-emerald-700">
+                        Garantia de Vedação Completa
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                    Vedação técnica profissional e impermeabilização em cada ponto de ancoragem.
+                    Garantia formal contra qualquer goteira ou dano à cobertura.
+                  </p>
+                </div>
+                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                  <span>Cobertura: Fixação & Telhas</span>
+                  <span className="text-emerald-700 font-bold">100% Protegido</span>
+                </div>
+              </div>
+
+              {/* 2. Engenharia ART / CREA / CFT */}
+              <div
+                className="rounded-2xl border p-4 shadow-xs flex flex-col justify-between"
+                style={{
+                  backgroundColor: "#ffffff",
+                  borderColor: "color-mix(in srgb, currentColor 14%, #e2e8f0)",
+                  boxShadow: "0 2px 8px rgba(2, 6, 23, 0.03)",
+                }}
+              >
+                <div>
+                  <div className="flex items-center gap-2.5 mb-2.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg border text-blue-700 bg-blue-50 border-blue-200">
+                      <LucideIcons.FileCheck className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                        Responsabilidade Técnica
+                      </h4>
+                      <span className="text-[10px] font-semibold text-blue-700">
+                        ART / CREA / CFT Emitida
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                    Projeto elétrico e memorial descritivo assinados por engenheiro credenciado.
+                    Vistoria técnica e protocolo oficial junto à distribuidora de energia.
+                  </p>
+                </div>
+                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                  <span>Homologação Concessionária</span>
+                  <span className="text-blue-700 font-bold">Oficial & Registrado</span>
+                </div>
+              </div>
+
+              {/* 3. Proteções Elétricas NBR 16690 */}
+              <div
+                className="rounded-2xl border p-4 shadow-xs flex flex-col justify-between"
+                style={{
+                  backgroundColor: "#ffffff",
+                  borderColor: "color-mix(in srgb, currentColor 14%, #e2e8f0)",
+                  boxShadow: "0 2px 8px rgba(2, 6, 23, 0.03)",
+                }}
+              >
+                <div>
+                  <div className="flex items-center gap-2.5 mb-2.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg border text-amber-700 bg-amber-50 border-amber-200">
+                      <LucideIcons.ShieldCheck className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                        Proteção Elétrica NBR 16690
+                      </h4>
+                      <span className="text-[10px] font-semibold text-amber-700">
+                        DPS & Disjuntores Classe II
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                    String Box dedicada com proteção contra descargas atmosféricas e surtos de
+                    tensão. Segurança total contra incêndios e sobrecorrentes.
+                  </p>
+                </div>
+                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                  <span>Conformidade ABNT</span>
+                  <span className="text-amber-700 font-bold">Certificado NBR</span>
+                </div>
+              </div>
+
+              {/* 4. Performance Linear 25 Anos */}
+              <div
+                className="rounded-2xl border p-4 shadow-xs flex flex-col justify-between"
+                style={{
+                  backgroundColor: "#ffffff",
+                  borderColor: "color-mix(in srgb, currentColor 14%, #e2e8f0)",
+                  boxShadow: "0 2px 8px rgba(2, 6, 23, 0.03)",
+                }}
+              >
+                <div>
+                  <div className="flex items-center gap-2.5 mb-2.5">
+                    <span
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border shadow-2xs"
+                      style={{
+                        backgroundColor:
+                          "color-mix(in srgb, var(--preview-primary-color, #059669) 12%, #ffffff)",
+                        borderColor:
+                          "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
+                        color: "var(--preview-primary-color, #059669)",
+                      }}
+                    >
+                      <LucideIcons.Award className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                        Performance de 25 Anos
+                      </h4>
+                      <span
+                        className="text-[10px] font-semibold"
+                        style={{ color: "var(--preview-primary-color, #059669)" }}
+                      >
+                        Tier 1 & Pós-Venda Nacional
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                    Garantia linear de geração de energia de até 25 anos nos módulos fotovoltaicos e
+                    suporte técnico com peças e reposição em solo nacional.
+                  </p>
+                </div>
+                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                  <span>Garantia de Fábrica</span>
+                  <span className="text-emerald-700 font-bold">25 Anos Linear</span>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {items.length ? (
+            <ul data-editor-field-path="items" className="list-disc space-y-1 pl-5 text-sm">
+              {items.map((item, index) => (
+                <li key={`${item}-${index}`}>{item}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       );
     }
     case "process_steps": {
@@ -3867,55 +4474,332 @@ export function renderSectionContent(
           branding={options?.branding}
         />
       );
-    case "comparison":
+    case "comparison": {
+      const variant = String(section.variant ?? "default");
+      const isMarketOnly = variant === "market_roi";
+      const isTurnkeyOnly = variant === "turnkey_vs_market";
+      const showBeforeAfter = !isMarketOnly && !isTurnkeyOnly;
+      const showMarketRoi = isMarketOnly || variant === "all_in_one" || f.showMarketRoi === true;
+      const showTurnkey =
+        isTurnkeyOnly || variant === "all_in_one" || f.showTurnkeyComparison === true;
+
+      // Cálculo de TIR / Retorno de Mercado
+      const annualSavings =
+        parseMoneyLikeServerSafe(vars.economia_anual, 0) ||
+        parseMoneyLikeServerSafe(vars.economia_mensal, 0) * 12;
+      const totalInv =
+        parseMoneyLikeServerSafe(vars.investimento_total, 0) ||
+        parseMoneyLikeServerSafe(vars.investimento_com_desconto, 0) ||
+        28000;
+      const annualRoi =
+        totalInv > 0 && annualSavings > 0
+          ? Math.min(65, Math.max(16, Math.round((annualSavings / totalInv) * 1000) / 10))
+          : 27.8;
+
       return (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div data-editor-field-path="text" className="preview-editable-target">
             {renderRichText(f.text, vars)}
           </div>
-          <div className="comparison-cards-grid">
-            <div
-              className="rounded-xl border p-3 sm:p-4 shadow-2xs border-slate-200"
-              style={{ backgroundColor: "#f8fafc" }}
-            >
-              <p
-                data-editor-field-path="beforeLabel"
-                className="text-xs uppercase font-bold tracking-wider text-slate-600"
+
+          {/* ================= 1. ANTES VS DEPOIS (MENSAL) ================= */}
+          {showBeforeAfter && (vars.comparacao_antes || vars.comparacao_depois) ? (
+            <div className="comparison-cards-grid">
+              <div
+                className="rounded-xl border p-3 sm:p-4 shadow-2xs border-slate-200"
+                style={{ backgroundColor: "#f8fafc" }}
               >
-                {String(f.beforeLabel ?? "Antes")}
-              </p>
-              <p className="mt-1 text-base sm:text-lg font-bold text-slate-900">
-                {vars.comparacao_antes}
-              </p>
-            </div>
-            <div
-              className="rounded-xl border p-3 sm:p-4 shadow-2xs"
-              style={{
-                backgroundColor:
-                  "color-mix(in srgb, var(--preview-primary-color, #059669) 10%, #ffffff)",
-                borderColor:
-                  "color-mix(in srgb, var(--preview-primary-color, #059669) 30%, #e2e8f0)",
-              }}
-            >
-              <p
-                data-editor-field-path="afterLabel"
-                className="text-xs uppercase font-bold tracking-wider"
-                style={{ color: "var(--preview-primary-color, #059669)" }}
-              >
-                {String(f.afterLabel ?? "Depois")}
-              </p>
-              <p
-                className="mt-1 text-base sm:text-lg font-extrabold"
+                <p
+                  data-editor-field-path="beforeLabel"
+                  className="text-xs uppercase font-bold tracking-wider text-slate-600"
+                >
+                  {String(f.beforeLabel ?? "Antes da Energia Solar")}
+                </p>
+                <p className="mt-1 text-base sm:text-lg font-bold text-slate-900 tabular-nums">
+                  {vars.comparacao_antes}
+                </p>
+                <span className="text-[10px] text-slate-500 font-medium">
+                  despesa mensal contínua na concessionária
+                </span>
+              </div>
+              <div
+                className="rounded-xl border p-3 sm:p-4 shadow-2xs"
                 style={{
-                  color: "color-mix(in srgb, var(--preview-primary-color, #059669) 80%, #000000)",
+                  backgroundColor:
+                    "color-mix(in srgb, var(--preview-primary-color, #059669) 10%, #ffffff)",
+                  borderColor:
+                    "color-mix(in srgb, var(--preview-primary-color, #059669) 30%, #e2e8f0)",
                 }}
               >
-                {vars.comparacao_depois}
-              </p>
+                <p
+                  data-editor-field-path="afterLabel"
+                  className="text-xs uppercase font-bold tracking-wider"
+                  style={{ color: "var(--preview-primary-color, #059669)" }}
+                >
+                  {String(f.afterLabel ?? "Depois da Usina Própria")}
+                </p>
+                <p
+                  className="mt-1 text-base sm:text-lg font-extrabold tabular-nums"
+                  style={{
+                    color: "color-mix(in srgb, var(--preview-primary-color, #059669) 80%, #000000)",
+                  }}
+                >
+                  {vars.comparacao_depois}
+                </p>
+                <span
+                  className="text-[10px] font-medium"
+                  style={{ color: "var(--preview-primary-color, #059669)" }}
+                >
+                  apenas taxa básica de disponibilidade
+                </span>
+              </div>
             </div>
-          </div>
+          ) : null}
+
+          {/* ================= 2. RETORNO VS INVESTIMENTOS DE MERCADO (TIR) ================= */}
+          {showMarketRoi ? (
+            <div
+              className="rounded-2xl border p-4 sm:p-5 shadow-xs"
+              style={{
+                backgroundColor: "#ffffff",
+                borderColor:
+                  "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
+                boxShadow: "0 2px 10px rgba(2, 6, 23, 0.03)",
+              }}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border shadow-2xs"
+                    style={{
+                      backgroundColor:
+                        "color-mix(in srgb, var(--preview-primary-color, #059669) 12%, #ffffff)",
+                      borderColor:
+                        "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
+                      color: "var(--preview-primary-color, #059669)",
+                    }}
+                  >
+                    <LucideIcons.TrendingUp className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
+                      {String(
+                        f.marketRoiTitle || "Retorno Anual Comparado (TIR Líquida de Imposto)"
+                      )}
+                    </h4>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Rentabilidade média anual do capital investido em energia solar vs mercado
+                      financeiro
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold border shadow-2xs"
+                  style={{
+                    backgroundColor:
+                      "color-mix(in srgb, var(--preview-primary-color, #059669) 10%, #ffffff)",
+                    borderColor:
+                      "color-mix(in srgb, var(--preview-primary-color, #059669) 25%, #e2e8f0)",
+                    color: "var(--preview-primary-color, #059669)",
+                  }}
+                >
+                  <LucideIcons.Award className="h-3 w-3" />
+                  Isento de IRPF
+                </span>
+              </div>
+
+              {/* Barras Horizontais de Rentabilidade */}
+              <div className="mt-4 space-y-3">
+                {/* Poupança */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-600 font-medium">Caderneta de Poupança</span>
+                    <span className="font-bold text-slate-500 tabular-nums">6,5% a.a.</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-full rounded-full bg-slate-300" style={{ width: "20%" }} />
+                  </div>
+                </div>
+
+                {/* Tesouro Selic / CDB */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-600 font-medium">
+                      CDB / Tesouro Selic (Líquido de IR 15%)
+                    </span>
+                    <span className="font-bold text-slate-600 tabular-nums">9,4% a.a.</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-full rounded-full bg-slate-400" style={{ width: "30%" }} />
+                  </div>
+                </div>
+
+                {/* Fundos Imobiliários */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-600 font-medium">
+                      Fundos Imobiliários (FIIs - Média de Mercado)
+                    </span>
+                    <span className="font-bold text-slate-700 tabular-nums">10,8% a.a.</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-full rounded-full bg-slate-500" style={{ width: "35%" }} />
+                  </div>
+                </div>
+
+                {/* ENERGIA SOLAR ENERGIVIA */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span
+                      className="flex items-center gap-1.5"
+                      style={{ color: "var(--preview-primary-color, #059669)" }}
+                    >
+                      <LucideIcons.Sparkles className="h-3.5 w-3.5" />
+                      <span>Gerador Solar Fotovoltaico (Seu Projeto)</span>
+                    </span>
+                    <span
+                      className="text-sm font-black tabular-nums"
+                      style={{ color: "var(--preview-primary-color, #059669)" }}
+                    >
+                      {annualRoi}% ao ano (Líquido)
+                    </span>
+                  </div>
+                  <div className="h-3 w-full rounded-full bg-emerald-50 border border-emerald-200/60 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(100, Math.max(30, annualRoi * 2.5))}%`,
+                        backgroundColor: "var(--preview-primary-color, #059669)",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3.5 rounded-lg bg-slate-50 border border-slate-200/80 p-2.5 flex items-center justify-between text-[11px] text-slate-600 font-medium">
+                <span>
+                  <strong>Ativo Real:</strong> Retorno superior garantido pelo corte imediato de
+                  custo com garantia física vinculada ao seu imóvel.
+                </span>
+                <span className="font-bold text-emerald-700 shrink-0 ml-2">Zero Volatilidade</span>
+              </div>
+            </div>
+          ) : null}
+
+          {/* ================= 3. TURNKEY COMPLETO VS CONCORRÊNCIA AMADORA ================= */}
+          {showTurnkey ? (
+            <div
+              className="rounded-2xl border p-4 sm:p-5 shadow-xs"
+              style={{
+                backgroundColor: "#ffffff",
+                borderColor: "color-mix(in srgb, currentColor 14%, #e2e8f0)",
+                boxShadow: "0 2px 10px rgba(2, 6, 23, 0.03)",
+              }}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg border text-emerald-700 bg-emerald-50 border-emerald-200">
+                    <LucideIcons.BadgeCheck className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
+                      {String(
+                        f.turnkeyTitle || "Projeto de Engenharia Turnkey vs Instalações Informais"
+                      )}
+                    </h4>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      O diferencial de segurança, conformidade e integridade da nossa entrega
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                  <LucideIcons.ShieldCheck className="h-3 w-3" />
+                  Padrão de Excelência
+                </span>
+              </div>
+
+              <div className="mt-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Coluna 1: Nosso Projeto */}
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
+                    <span className="font-bold text-xs text-emerald-950 uppercase tracking-wide">
+                      Engenharia EnergivIA (Turnkey)
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded">
+                      Incluso 100%
+                    </span>
+                  </div>
+                  <ul className="space-y-1.5 text-xs text-emerald-900 font-medium">
+                    <li className="flex items-start gap-1.5">
+                      <LucideIcons.Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>ART de Engenharia Elétrica registrada no CREA/CFT</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <LucideIcons.Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>Estrutura de alumínio anodizado e inox anti-corrosão</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <LucideIcons.Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>Cabos solares especiais anti-UV com dupla isolação</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <LucideIcons.Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>String Box com DPS Classe II e proteções completas</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <LucideIcons.Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>Homologação e vistoria com a concessionária 100% gerenciadas</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <LucideIcons.Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>Seguro de montagem e garantia de estanqueidade contra goteiras</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Coluna 2: Mercado Informal */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <span className="font-bold text-xs text-slate-700 uppercase tracking-wide">
+                      Instalações Informais do Mercado
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded">
+                      Riscos Ocultos
+                    </span>
+                  </div>
+                  <ul className="space-y-1.5 text-xs text-slate-600 font-medium">
+                    <li className="flex items-start gap-1.5">
+                      <LucideIcons.X className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+                      <span>Sem ART ou assinatura de terceiros sem visita real</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <LucideIcons.X className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+                      <span>Estruturas de ferro que oxidam e mancham a cobertura</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <LucideIcons.X className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+                      <span>Fiação comum de construção sem proteção térmica solar</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <LucideIcons.X className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+                      <span>Omissão de DPS contra raios para baratear o custo</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <LucideIcons.X className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+                      <span>Burocracia na concessionária repassada ao cliente</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <LucideIcons.X className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+                      <span>Sem cobertura de danos a telhas ou vazamentos</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       );
+    }
     case "video": {
       const url = String(f.videoUrl ?? "");
       const embedUrl = toEmbedUrl(url);

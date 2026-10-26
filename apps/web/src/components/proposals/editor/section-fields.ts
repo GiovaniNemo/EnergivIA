@@ -242,7 +242,7 @@ export const SECTION_VARIANTS: Record<SectionType, string[]> = {
   introduction: ["carta", "hero", "split-name", "centered", "editorial-stripe"],
   about_company: ["hero", "editorial-split", "process-steps", "split-proof", "manifesto"],
   diagnostic_energy: ["topics", "list", "cards"],
-  solution: ["topics", "cards"],
+  solution: ["topics", "cards", "environmental_impact"],
   generation_consumption: ["default", "modern", "modern_dashboard"],
   proposal_equipment: ["cards", "table", "list"],
   storage_backup: ["cards", "dashboard", "minimal"],
@@ -254,12 +254,12 @@ export const SECTION_VARIANTS: Record<SectionType, string[]> = {
   financing: ["default", "split"],
   testimonials: ["overlap", "quote_header"],
   social_proof: ["stats", "logos"],
-  guarantees: ["cards", "simple"],
+  guarantees: ["cards", "quad_shield", "simple"],
   process_steps: ["vertical", "horizontal", "cards"],
   faq: ["list", "two_column", "interview", "headline"],
   cta: ["primary", "secondary"],
   signature: ["default", "digital"],
-  comparison: ["default", "highlight"],
+  comparison: ["default", "market_roi", "turnkey_vs_market", "all_in_one", "highlight"],
   video: ["hero", "split", "cinematic", "dark", "editorial"],
   custom: ["default"],
 };
@@ -333,6 +333,11 @@ export const VARIANT_LABELS: Record<string, string> = {
   cards_vs_generator: "Cards + Gerador",
   matrix: "Matriz Comparativa",
   dashboard: "Painel de Métricas",
+  quad_shield: "Blindagem Quádrupla",
+  market_roi: "Retorno vs Mercado (TIR)",
+  turnkey_vs_market: "Turnkey vs Concorrência",
+  all_in_one: "Comparativo Completo 360°",
+  environmental_impact: "Impacto Ecológico & ESG",
 };
 
 export const VARIANT_DISPLAY_ICONS: Record<string, string> = {
@@ -404,6 +409,11 @@ export const VARIANT_DISPLAY_ICONS: Record<string, string> = {
   two_column: "columns-2",
   interview: "newspaper",
   headline: "type",
+  quad_shield: "shield-check",
+  market_roi: "trending-up",
+  turnkey_vs_market: "badge-check",
+  all_in_one: "layers",
+  environmental_impact: "leaf",
 };
 
 const SECTION_VARIANT_BEHAVIOR: Record<
@@ -658,6 +668,15 @@ export const SECTION_FIELD_CONFIG: Record<SectionType, DynamicField[]> = {
       aiFieldPurpose:
         "Texto plano explicando em linguagem simples como a solução funciona, sem checklist operacional detalhado.",
     },
+    {
+      name: "showEnvironmentalImpact",
+      label: "Exibir Equivalências Ambientais & Selo ESG",
+      type: "toggle",
+      defaultValue: true,
+      group: "Sustentabilidade",
+      helperText:
+        "Exibe árvores salvas, km de combustível fóssil evitados e badge de energia limpa.",
+    },
     ...COVER_APPEARANCE_FIELD_CONFIG,
   ],
   diagnostic_energy: [
@@ -711,6 +730,30 @@ export const SECTION_FIELD_CONFIG: Record<SectionType, DynamicField[]> = {
       type: "color",
       group: "Dores e impactos",
       helperText: "Padrão: cor primária do tema.",
+    },
+    {
+      name: "showInactionCost",
+      label: "Exibir Custo da Inação (Taxômetro do Atraso)",
+      type: "toggle",
+      defaultValue: true,
+      group: "Custo da Inação",
+      helperText: "Exibe a perda financeira diária e acumulada a cada 30, 60 e 90 dias de atraso.",
+    },
+    {
+      name: "inactionTitle",
+      label: "Título do Custo da Inação",
+      type: "text",
+      group: "Custo da Inação",
+      placeholder: "Custo da Inação — O Preço de Adiar a Decisão",
+    },
+    {
+      name: "showInflationProjection",
+      label: "Exibir Curva da Inflação Tarifária a 10 Anos",
+      type: "toggle",
+      defaultValue: true,
+      group: "Inflação Tarifária",
+      helperText:
+        "Compara o spread inflacionário acumulado da concessionária vs custo fixado com Solar.",
     },
   ],
   generation_consumption: [
@@ -944,7 +987,19 @@ export const SECTION_FIELD_CONFIG: Record<SectionType, DynamicField[]> = {
     ...COMMON_SECTION_BASE_FIELDS,
     { name: "items", label: "Itens de prova social", type: "list" },
   ],
-  guarantees: [...COMMON_SECTION_BASE_FIELDS, { name: "items", label: "Garantias", type: "list" }],
+  guarantees: [
+    ...COMMON_SECTION_BASE_FIELDS,
+    {
+      name: "showQuadShield",
+      label: "Exibir Blindagem Quádrupla de Risco",
+      type: "toggle",
+      defaultValue: true,
+      group: "Blindagem de Risco",
+      helperText:
+        "Exibe os 4 pilares: Estanqueidade do Telhado, ART/CREA, Proteção NBR 16690 e Performance 25 Anos.",
+    },
+    { name: "items", label: "Garantias adicionais", type: "list", group: "Garantias" },
+  ],
   process_steps: [
     ...COMMON_SECTION_BASE_FIELDS,
     {
@@ -1134,8 +1189,25 @@ export const SECTION_FIELD_CONFIG: Record<SectionType, DynamicField[]> = {
   ],
   comparison: [
     ...COMMON_SECTION_BASE_FIELDS,
-    { name: "beforeLabel", label: "Rótulo do antes", type: "text" },
-    { name: "afterLabel", label: "Rótulo do depois", type: "text" },
+    { name: "beforeLabel", label: "Rótulo do antes", type: "text", group: "Antes e Depois" },
+    { name: "afterLabel", label: "Rótulo do depois", type: "text", group: "Antes e Depois" },
+    {
+      name: "showMarketRoi",
+      label: "Exibir Comparativo com Aplicações de Mercado (TIR)",
+      type: "toggle",
+      defaultValue: true,
+      group: "Mercado e Rentabilidade",
+      helperText:
+        "Compara o retorno anual líquido isento de IR da Energia Solar com Poupança, CDB e FIIs.",
+    },
+    {
+      name: "showTurnkeyComparison",
+      label: "Exibir Projeto Turnkey vs Concorrência Amadora",
+      type: "toggle",
+      defaultValue: true,
+      group: "Padrão de Engenharia",
+      helperText: "Diferencia o padrão de excelência da EnergivIA contra instaladores informais.",
+    },
   ],
   video: [
     ...COMMON_SECTION_BASE_FIELDS.filter((f) => f.name !== "text"),
@@ -1286,6 +1358,15 @@ export const SECTION_FIELD_CONFIG: Record<SectionType, DynamicField[]> = {
       type: "text",
       group: "Conteúdo",
       helperText: "Ex: Mais de 15 anos (6.000 a 8.000 ciclos).",
+    },
+    {
+      name: "showBlackoutCost",
+      label: "Exibir Card Custo Real do Apagão (Blackout ROI)",
+      type: "toggle",
+      defaultValue: true,
+      group: "Conteúdo",
+      helperText:
+        "Evidencia o prejuízo invisível com perda de alimentos, home office, faturamento e danos a aparelhos.",
     },
   ],
   custom: [...COMMON_SECTION_BASE_FIELDS],
@@ -1494,7 +1575,12 @@ export const SECTION_DEFAULT_FIELDS: Record<SectionType, Record<string, unknown>
     ],
   }),
   social_proof: withSectionBaseDefaults({ items: [] }),
-  guarantees: withSectionBaseDefaults({ items: [] }),
+  guarantees: withSectionBaseDefaults({
+    title: "Garantias & Segurança da Contratação",
+    text: "<p>Sua tranquilidade é respaldada pelas maiores marcas globais e conformidade rigorosa com normas de engenharia brasileiras.</p>",
+    showQuadShield: true,
+    items: [],
+  }),
   process_steps: withSectionBaseDefaults({
     title: "Nosso processo",
     text: "<p>Etapas claras desde o primeiro contato até a usina em operação.</p>",
@@ -1556,8 +1642,12 @@ export const SECTION_DEFAULT_FIELDS: Record<SectionType, Record<string, unknown>
     backgroundImage: "",
   }),
   comparison: withSectionBaseDefaults({
+    title: "Estudo Comparativo de Viabilidade",
+    text: "<p>Análise comparativa direta entre o modelo tradicional de despesa e as vantagens patrimoniais da geração solar própria.</p>",
     beforeLabel: "Custo mensal atual de energia",
     afterLabel: "Custo mensal projetado com solar",
+    showMarketRoi: true,
+    showTurnkeyComparison: true,
   }),
   video: withSectionBaseDefaults({
     videoUrl: "",
@@ -1598,6 +1688,7 @@ export const SECTION_DEFAULT_FIELDS: Record<SectionType, Record<string, unknown>
     estimatedAutonomy: "12 a 24 horas",
     batteryLifespan: "Mais de 15 anos (6.000 a 8.000 ciclos)",
     generatorComparisonEnabled: true,
+    showBlackoutCost: true,
   }),
   custom: withSectionBaseDefaults({}),
 };

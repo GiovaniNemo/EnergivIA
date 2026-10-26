@@ -442,28 +442,111 @@ export function ProposalPaymentCards({
                   </span>
                 </p>
 
-                {(monthlySavings ?? 0) > 0 && financing.installmentAmount > 0 && (
-                  <div
-                    className="mt-2.5 flex items-start gap-1.5 rounded-lg border p-2 text-[11px] leading-tight"
-                    style={{
-                      backgroundColor: palette.highlightBox.bg,
-                      borderColor: palette.highlightBox.border,
-                      color: palette.highlightBox.text,
-                    }}
-                  >
-                    <TrendingUp
-                      className="h-3.5 w-3.5 shrink-0 mt-0.5"
-                      style={{ color: palette.highlightBox.iconColor }}
-                    />
-                    <span>
-                      Sua economia de{" "}
-                      <strong style={{ color: palette.highlightBox.text }}>
-                        {formatBRL(monthlySavings ?? 0)}/mês
-                      </strong>{" "}
-                      paga a parcela!
-                    </span>
-                  </div>
-                )}
+                {(monthlySavings ?? 0) > 0 &&
+                  financing.installmentAmount > 0 &&
+                  (() => {
+                    const savings = monthlySavings ?? 0;
+                    const installment = financing.installmentAmount;
+                    const netDiff = savings - installment;
+                    const isPositive = netDiff >= 0;
+                    return (
+                      <div
+                        className="mt-3 rounded-xl border p-3 text-[11px] leading-tight space-y-2 shadow-2xs"
+                        style={{
+                          backgroundColor: palette.highlightBox.bg,
+                          borderColor: palette.highlightBox.border,
+                          color: palette.highlightBox.text,
+                        }}
+                      >
+                        <div className="flex items-center justify-between font-bold text-[10px] uppercase tracking-wider">
+                          <span
+                            className="flex items-center gap-1.5"
+                            style={{ color: palette.highlightBox.iconColor }}
+                          >
+                            <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                            Substituição Inteligente
+                          </span>
+                          {isPositive ? (
+                            <span
+                              className="rounded px-1.5 py-0.5 text-[9px] font-bold border"
+                              style={{
+                                backgroundColor: palette.primaryBadgeBg,
+                                borderColor: palette.highlightBox.border,
+                                color: palette.primary,
+                              }}
+                            >
+                              Fluxo Positivo
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div
+                          className="grid grid-cols-2 gap-2 pt-1.5 border-t border-dashed"
+                          style={{ borderTopColor: palette.divider }}
+                        >
+                          <div>
+                            <span
+                              className="text-[10px] font-medium"
+                              style={{ color: palette.textMuted }}
+                            >
+                              Economia na fatura:
+                            </span>
+                            <p
+                              className="font-extrabold text-xs tabular-nums"
+                              style={{ color: palette.primary }}
+                            >
+                              +{formatBRL(savings)}
+                            </p>
+                          </div>
+                          <div>
+                            <span
+                              className="text-[10px] font-medium"
+                              style={{ color: palette.textMuted }}
+                            >
+                              Parcela bancária:
+                            </span>
+                            <p
+                              className="font-extrabold text-xs tabular-nums"
+                              style={{ color: palette.text }}
+                            >
+                              -{formatBRL(installment)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div
+                          className="rounded-lg p-2 flex items-center justify-between border"
+                          style={{
+                            backgroundColor: palette.cardBg,
+                            borderColor: palette.cardBorder,
+                          }}
+                        >
+                          <span className="font-bold text-[10px]" style={{ color: palette.text }}>
+                            {isPositive
+                              ? "Sobra líquida no bolso:"
+                              : "Investimento mensal líquido:"}
+                          </span>
+                          <span
+                            className="font-black text-xs tabular-nums"
+                            style={{ color: isPositive ? palette.primary : palette.text }}
+                          >
+                            {isPositive
+                              ? `+${formatBRL(netDiff)}/mês`
+                              : `${formatBRL(Math.abs(netDiff))}/mês`}
+                          </span>
+                        </div>
+
+                        <p
+                          className="text-[10px] leading-snug"
+                          style={{ color: palette.textMuted }}
+                        >
+                          {isPositive
+                            ? "Você não desembolsa do salário: a própria economia na luz quita a parcela e ainda sobra troco todo mês."
+                            : "A economia na fatura cobre a maior parte da parcela, transformando despesa contínua em patrimônio."}
+                        </p>
+                      </div>
+                    );
+                  })()}
               </div>
             </div>
 
