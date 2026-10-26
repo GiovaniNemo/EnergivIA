@@ -1,10 +1,19 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Box, Button, Paper, Typography, Breadcrumbs, Link as MuiLink } from "@mui/material";
+import {
+  Box,
+  Button,
+  Paper,
+  Typography,
+  Breadcrumbs,
+  Link as MuiLink,
+  Snackbar,
+  Alert,
+} from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SaveIcon from "@mui/icons-material/Save";
 import { ProductForm } from "@/components/admin/products/ProductForm";
@@ -72,12 +81,28 @@ export default function NewProductPage(): JSX.Element {
     if (effectiveCategoryName === "microinverter") methods.setValue("specs.type", "micro");
   }, [effectiveCategoryName, methods]);
 
+  const [feedback, setFeedback] = useState<{
+    message: string;
+    severity: "success" | "error";
+  } | null>(null);
+
   const createMutation = useMutation({
     mutationFn: createProduct,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
-      alert("Produto cadastrado com sucesso!");
-      router.push("/admin/produtos");
+      setFeedback({
+        message: "Produto cadastrado com sucesso!",
+        severity: "success",
+      });
+      setTimeout(() => {
+        router.push("/admin/produtos?created=true");
+      }, 700);
+    },
+    onError: (err: Error) => {
+      setFeedback({
+        message: err.message || "Falha ao cadastrar produto.",
+        severity: "error",
+      });
     },
   });
 
@@ -197,6 +222,23 @@ export default function NewProductPage(): JSX.Element {
           </form>
         </Paper>
       </Box>
+
+      <Snackbar
+        open={Boolean(feedback)}
+        autoHideDuration={4000}
+        onClose={() => setFeedback(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        {feedback ? (
+          <Alert
+            severity={feedback.severity}
+            onClose={() => setFeedback(null)}
+            sx={{ width: "100%", boxShadow: 3, fontWeight: 500 }}
+          >
+            {feedback.message}
+          </Alert>
+        ) : undefined}
+      </Snackbar>
     </FormProvider>
   );
 }

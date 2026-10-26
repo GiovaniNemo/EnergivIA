@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
@@ -12,6 +12,8 @@ import {
   Breadcrumbs,
   Link as MuiLink,
   CircularProgress,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SaveIcon from "@mui/icons-material/Save";
@@ -97,12 +99,26 @@ export default function EditProductPage(): JSX.Element {
     [watchCategoryId, categories]
   );
 
+  const [feedback, setFeedback] = useState<{
+    message: string;
+    severity: "success" | "error";
+  } | null>(null);
+
   const updateMutation = useMutation({
     mutationFn: (data: Parameters<typeof updateProduct>[1]) => updateProduct(id!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "product", id] });
-      alert("Produto atualizado com sucesso!");
+      setFeedback({
+        message: "Produto atualizado com sucesso!",
+        severity: "success",
+      });
+    },
+    onError: (err: Error) => {
+      setFeedback({
+        message: err.message || "Falha ao atualizar produto.",
+        severity: "error",
+      });
     },
   });
 
@@ -230,6 +246,23 @@ export default function EditProductPage(): JSX.Element {
           </form>
         </Paper>
       </Box>
+
+      <Snackbar
+        open={Boolean(feedback)}
+        autoHideDuration={4000}
+        onClose={() => setFeedback(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        {feedback ? (
+          <Alert
+            severity={feedback.severity}
+            onClose={() => setFeedback(null)}
+            sx={{ width: "100%", boxShadow: 3, fontWeight: 500 }}
+          >
+            {feedback.message}
+          </Alert>
+        ) : undefined}
+      </Snackbar>
     </FormProvider>
   );
 }

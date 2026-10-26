@@ -158,6 +158,20 @@ export default function AdminProductsPage(): JSX.Element {
     severity: "success" | "error";
   } | null>(null);
 
+  useEffect(() => {
+    if (searchParams?.get("created") === "true") {
+      setFeedback({
+        message: "Produto cadastrado com sucesso!",
+        severity: "success",
+      });
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("created");
+        window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+      }
+    }
+  }, [searchParams]);
+
   const toggleActiveMutation = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) => updateProduct(id, { active }),
     onSuccess: (_, variables) => {
