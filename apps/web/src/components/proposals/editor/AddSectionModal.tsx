@@ -64,6 +64,10 @@ const SECTION_META: Record<SectionType, { desc: string; vars: number }> = {
   },
   comparison: { desc: "Tabela comparativa entre diferentes sistemas ou concorrentes.", vars: 5 },
   video: { desc: "Incorporação de vídeo explicativo ou depoimento em vídeo.", vars: 1 },
+  storage_backup: {
+    desc: "Banco de baterias, modo de backup EPS e autonomia para sistemas híbridos e off-grid.",
+    vars: 4,
+  },
   custom: { desc: "Seção totalmente customizável com editor livre de conteúdo.", vars: 0 },
 };
 
@@ -78,6 +82,7 @@ type MockupKind =
   | "stats"
   | "signature"
   | "video"
+  | "battery"
   | "custom";
 
 const TYPE_MOCKUP: Record<SectionType, MockupKind> = {
@@ -88,6 +93,7 @@ const TYPE_MOCKUP: Record<SectionType, MockupKind> = {
   solution: "text",
   generation_consumption: "chart",
   proposal_equipment: "list",
+  storage_backup: "battery",
   gallery: "media",
   economy_purchases: "pricing",
   pricing: "pricing",
@@ -261,6 +267,23 @@ function SectionMockup({ kind, large }: { kind: MockupKind; large?: boolean }) {
         <div className="flex-1 rounded-sm bg-slate-800 dark:bg-slate-900 flex items-center justify-center">
           <div className="h-0 w-0 border-y-[6px] border-l-[10px] border-y-transparent border-l-white/70" />
         </div>
+      </div>
+    );
+  if (kind === "battery")
+    return (
+      <div className={base}>
+        <MockBar w="45%" h={bar} color="dark" />
+        <div className="flex flex-1 items-center justify-center gap-1.5 p-1">
+          <div className="flex flex-col items-center justify-center rounded border border-amber-500/30 bg-amber-500/10 p-1 flex-1">
+            <span className="text-[9px] font-bold text-amber-500">🔋 BESS</span>
+            <MockBar w="70%" h={bar - 1} color="accent" />
+          </div>
+          <div className="flex flex-col items-center justify-center rounded border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-1 flex-1">
+            <span className="text-[9px] font-bold text-emerald-500">⚡ EPS</span>
+            <MockBar w="70%" h={bar - 1} />
+          </div>
+        </div>
+        <MockBar w="60%" h={bar - 1} />
       </div>
     );
   if (kind === "custom")
@@ -443,6 +466,16 @@ const DEMO_FIELD_OVERRIDES: Partial<Record<SectionType, Record<string, unknown>>
     title: "Como funciona uma instalação solar do início ao fim.",
     description:
       "<p>Um tour de quatro minutos pela equipe técnica em obra: do <strong>dimensionamento ao comissionamento</strong>.</p>",
+  },
+  storage_backup: {
+    title: "Armazenamento & Backup Solar (BESS)",
+    text: "<p>Segurança energética completa para sua residência ou empresa: fornecimento ininterrupto de energia mesmo com apagões na rede da concessionária.</p>",
+    systemType: "hybrid",
+    batteryCapacityKwh: "10,24 kWh",
+    backupPowerKw: "5,0 kW",
+    autonomyHours: "10 a 14 horas",
+    switchTimeMs: "< 10ms (EPS)",
+    batteryTechnology: "LiFePO4 Lítio Ferro Fosfato (6.000 ciclos)",
   },
 };
 
@@ -1144,6 +1177,11 @@ export function AddSectionModal({
                             Novo
                           </span>
                         )}
+                        {type === "storage_backup" && (
+                          <span className="absolute left-2 bottom-2 rounded bg-amber-500/20 border border-amber-500/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                            ⚡ Exclusivo Híbrido / Off-Grid
+                          </span>
+                        )}
                         <button
                           type="button"
                           onClick={(e) => toggleFavorite(type, e)}
@@ -1200,9 +1238,16 @@ export function AddSectionModal({
 
                 {}
                 <div className="flex-1 px-5 pb-5 pt-4">
-                  <span className="mb-2 inline-block rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
-                    {SECTION_CATEGORY_BY_TYPE[selected]}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                    <span className="inline-block rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                      {SECTION_CATEGORY_BY_TYPE[selected]}
+                    </span>
+                    {selected === "storage_backup" && (
+                      <span className="inline-block rounded bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                        ⚡ Exclusivo Híbrido / Off-Grid
+                      </span>
+                    )}
+                  </div>
                   <h3 className="mb-1 text-[17px] font-bold text-[var(--color-foreground)]">
                     {SECTION_TYPE_LABELS[selected]}
                   </h3>

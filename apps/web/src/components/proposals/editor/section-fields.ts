@@ -124,6 +124,8 @@ const SECTION_AI_CONTEXT_BY_TYPE: Partial<Record<SectionType, string>> = {
   signature: "Formaliza fechamento e aceite da proposta.",
   comparison: "Compara cenário antes e depois da solução para evidenciar ganho.",
   video: "Complementa a proposta com conteúdo em vídeo para reforçar entendimento e confiança.",
+  storage_backup:
+    "Apresenta a solução de baterias, armazenamento de energia e no-break solar para sistemas híbridos ou off-grid. Destaque autonomia durante apagões, proteção de cargas críticas e tecnologia das baterias.",
   custom: "Seção personalizada cujo conteúdo deve se alinhar ao objetivo definido no template.",
 };
 
@@ -139,6 +141,7 @@ export const SECTION_TYPES_OWN_TITLE = new Set<SectionType>([
   "economy_purchases",
   "faq",
   "financing",
+  "storage_backup",
 ]);
 
 export const SECTION_TYPES_NO_ALIGNMENT = new Set<SectionType>(["introduction", "about_company"]);
@@ -151,6 +154,7 @@ export const SECTION_TYPES: SectionType[] = [
   "solution",
   "generation_consumption",
   "proposal_equipment",
+  "storage_backup",
   "gallery",
   "economy_purchases",
   "pricing",
@@ -183,6 +187,7 @@ export const SECTION_CATEGORY_BY_TYPE: Record<SectionType, SectionCategory> = {
   solution: "Essenciais",
   generation_consumption: "Essenciais",
   proposal_equipment: "Essenciais",
+  storage_backup: "Essenciais",
   gallery: "Visual",
   economy_purchases: "Financeiro",
   pricing: "Financeiro",
@@ -207,6 +212,7 @@ export const SECTION_TYPE_LABELS: Record<SectionType, string> = {
   solution: "Solução",
   generation_consumption: "Dados de Geração e Consumo",
   proposal_equipment: "Equipamentos da proposta",
+  storage_backup: "Armazenamento & Backup (BESS)",
   gallery: "Galeria",
   economy_purchases: "Poder de compra",
   pricing: "Investimento",
@@ -231,6 +237,7 @@ export const SECTION_VARIANTS: Record<SectionType, string[]> = {
   solution: ["topics", "cards"],
   generation_consumption: ["default", "modern", "modern_dashboard"],
   proposal_equipment: ["cards", "table", "list"],
+  storage_backup: ["cards", "dashboard", "minimal"],
   gallery: ["grid_uniform", "masonry", "mosaic_hero", "editorial", "overlay"],
   economy_purchases: ["vertical_stack", "split", "inverted", "narrative"],
   pricing: ["table", "compact"],
@@ -439,6 +446,9 @@ const SECTION_VARIANT_BEHAVIOR: Record<
   video: {
     hero: { aliases: ["embed", "default"] },
     split: { aliases: ["inline"] },
+  },
+  storage_backup: {
+    cards: { aliases: ["default"] },
   },
   custom: {},
 };
@@ -1133,6 +1143,57 @@ export const SECTION_FIELD_CONFIG: Record<SectionType, DynamicField[]> = {
         "Texto descritivo do vídeo. Pode usar <strong> para destacar palavras. Tom profissional, foco em valor.",
     },
   ],
+  storage_backup: [
+    ...COMMON_SECTION_BASE_FIELDS,
+    {
+      name: "systemType",
+      label: "Topologia do Sistema",
+      type: "select",
+      group: "Conteúdo",
+      options: [
+        { label: "Híbrido Conectado à Rede com Backup (BESS)", value: "hybrid" },
+        { label: "Off-Grid Autónomo / Isolado", value: "off_grid" },
+        { label: "Zero Grid (Sem Injeção com Baterias)", value: "zero_grid" },
+      ],
+      helperText: "Define a arquitetura do sistema com baterias.",
+    },
+    {
+      name: "batteryCapacityKwh",
+      label: "Capacidade de Armazenamento (kWh)",
+      type: "text",
+      group: "Armazenamento",
+      helperText:
+        "Capacidade total útil do banco de baterias (ex: {{capacidade_bateria_kwh}} ou 10.24 kWh).",
+    },
+    {
+      name: "backupPowerKw",
+      label: "Potência de Backup EPS (kW)",
+      type: "text",
+      group: "Armazenamento",
+      helperText: "Potência contínua fornecida em caso de queda de energia (ex: 5.0 kW ou 8.0 kW).",
+    },
+    {
+      name: "autonomyHours",
+      label: "Autonomia Estimada",
+      type: "text",
+      group: "Armazenamento",
+      helperText: "Tempo estimado de fornecimento para cargas essenciais (ex: 8 a 14 horas).",
+    },
+    {
+      name: "switchTimeMs",
+      label: "Comutação No-break",
+      type: "text",
+      group: "Armazenamento",
+      helperText: "Velocidade de transferência para o modo backup (ex: < 10ms - imperceptível).",
+    },
+    {
+      name: "batteryTechnology",
+      label: "Tecnologia da Bateria",
+      type: "text",
+      group: "Armazenamento",
+      helperText: "Química das células (ex: LiFePO4 Lítio Ferro Fosfato - 6.000 ciclos).",
+    },
+  ],
   custom: [...COMMON_SECTION_BASE_FIELDS],
 };
 
@@ -1144,6 +1205,7 @@ export const SECTION_USES_RICH_TEXT_EDITOR: Record<SectionType, boolean> = {
   solution: false,
   generation_consumption: false,
   proposal_equipment: false,
+  storage_backup: false,
   gallery: false,
   economy_purchases: false,
   pricing: false,
@@ -1407,6 +1469,16 @@ export const SECTION_DEFAULT_FIELDS: Record<SectionType, Record<string, unknown>
     title: "Como funciona uma instalação solar do início ao fim.",
     description:
       "<p>Um tour pela nossa equipe técnica em obra: do <strong>dimensionamento ao comissionamento</strong>.</p>",
+  }),
+  storage_backup: withSectionBaseDefaults({
+    title: "Armazenamento & Backup Solar (BESS)",
+    text: "<p>Sistema inteligente com banco de baterias de lítio de alta capacidade e inversor híbrido. Garante fornecimento contínuo de energia elétrica mesmo em caso de apagões da concessionária, além de proteger os equipamentos vitais da sua residência ou empresa.</p>",
+    systemType: "hybrid",
+    batteryCapacityKwh: "{{capacidade_bateria_kwh}}",
+    backupPowerKw: "5.0 kW",
+    autonomyHours: "8 a 12 horas",
+    switchTimeMs: "< 10ms",
+    batteryTechnology: "LiFePO4 Lítio Ferro Fosfato (6.000 ciclos)",
   }),
   custom: withSectionBaseDefaults({}),
 };

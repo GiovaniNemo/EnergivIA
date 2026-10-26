@@ -1230,15 +1230,35 @@ function ProposalEquipmentLinesField({
       <div className="space-y-3">
         {lines.map((line, index) => {
           const p = byId.get(line.productId);
+          const catName = (p?.category?.name || "").toLowerCase();
+          const prodName = (p?.name || "").toLowerCase();
+          const isHybridOrStorage =
+            catName.includes("bater") ||
+            catName.includes("battery") ||
+            catName.includes("bms") ||
+            catName.includes("híbrid") ||
+            catName.includes("hibrid") ||
+            catName.includes("off-grid") ||
+            catName.includes("off_grid") ||
+            prodName.includes("híbrido") ||
+            prodName.includes("hibrido") ||
+            prodName.includes("bateria");
           return (
             <div
               key={`${line.productId}-${index}`}
               className="flex flex-col gap-2 rounded border border-[var(--color-border)] bg-[var(--color-muted)]/20 p-2 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-[var(--color-foreground)]">
-                  {p ? p.name : `ID não resolvido (${line.productId})`}
-                </p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-xs font-medium text-[var(--color-foreground)]">
+                    {p ? p.name : `ID não resolvido (${line.productId})`}
+                  </p>
+                  {isHybridOrStorage ? (
+                    <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-300">
+                      ⚡ Exclusivo Híbrido / Off-Grid
+                    </span>
+                  ) : null}
+                </div>
                 {p ? (
                   <p className="text-[11px] text-[var(--color-muted-foreground)]">
                     {p.category.name} · {p.brand.name}

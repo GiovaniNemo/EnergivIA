@@ -35,6 +35,7 @@ export type SectionType =
   | "signature"
   | "comparison"
   | "video"
+  | "storage_backup"
   | "custom";
 
 export interface ProposalSection {

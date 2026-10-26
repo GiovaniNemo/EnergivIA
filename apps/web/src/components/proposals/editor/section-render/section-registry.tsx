@@ -402,6 +402,28 @@ function renderProposalEquipmentCards(items: ProposalEquipmentItem[]): JSX.Eleme
                 {item.title ? (
                   <p className="text-sm font-semibold leading-snug">{item.title}</p>
                 ) : null}
+                {(() => {
+                  const cat = (item.categoryName || "").toLowerCase();
+                  const title = (item.title || "").toLowerCase();
+                  const isHybridOrStorage =
+                    cat.includes("battery") ||
+                    cat.includes("bater") ||
+                    cat.includes("bms") ||
+                    cat.includes("hybrid") ||
+                    cat.includes("off_grid") ||
+                    cat.includes("off-grid") ||
+                    title.includes("bateria") ||
+                    title.includes("híbrido") ||
+                    title.includes("hibrido");
+                  if (isHybridOrStorage) {
+                    return (
+                      <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-300">
+                        ⚡ Exclusivo Híbrido / Off-Grid
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
                 {item.isTier1 ? (
                   <img
                     src="/badges/tier1.png"
@@ -885,6 +907,109 @@ export function renderSectionContent(
           )}
         />
       );
+    case "storage_backup": {
+      const cap = tpl(f.batteryCapacityKwh || "{{capacidade_bateria_kwh}}", vars);
+      const backupPwr = tpl(f.backupPowerKw || "5.0 kW", vars);
+      const autonomy = tpl(f.autonomyHours || "8 a 14 horas", vars);
+      const switchTime = tpl(f.switchTimeMs || "< 10ms", vars);
+      const tech = tpl(f.batteryTechnology || "LiFePO4 Lítio Ferro Fosfato (6.000 ciclos)", vars);
+      const sysType = String(f.systemType || "hybrid");
+
+      const sysTypeLabel =
+        sysType === "off_grid"
+          ? "Sistema Off-Grid Autónomo"
+          : sysType === "zero_grid"
+            ? "Sistema Zero Grid com Baterias"
+            : "Sistema Híbrido Conectado com Backup (BESS)";
+
+      return (
+        <div className="space-y-4">
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 border-b pb-3"
+            style={equipmentChromeBorder}
+          >
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 text-base font-bold">
+                🔋
+              </span>
+              <div>
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                  {sysTypeLabel}
+                </span>
+                <p className="text-xs opacity-75">
+                  Armazenamento inteligente & alimentação contínua de cargas essenciais
+                </p>
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+              ⚡ Exclusivo Híbrido / Off-Grid
+            </span>
+          </div>
+
+          <div
+            data-editor-field-path="text"
+            className="preview-editable-target text-sm leading-relaxed opacity-90"
+          >
+            {renderRichText(f.text, vars)}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-xl border p-3 bg-amber-500/5" style={equipmentChromeBorder}>
+              <div className="text-[11px] font-medium uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <span>🔋</span> Capacidade Útil
+              </div>
+              <div className="mt-1 text-lg font-bold" data-editor-field-path="batteryCapacityKwh">
+                {cap || "10,24 kWh"}
+              </div>
+              <div className="text-[10px] opacity-70">Banco de baterias</div>
+            </div>
+
+            <div className="rounded-xl border p-3" style={equipmentChromeBorder}>
+              <div className="text-[11px] font-medium uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <span>⚡</span> Backup EPS
+              </div>
+              <div className="mt-1 text-lg font-bold" data-editor-field-path="backupPowerKw">
+                {backupPwr}
+              </div>
+              <div className="text-[10px] opacity-70">Potência contínua</div>
+            </div>
+
+            <div className="rounded-xl border p-3" style={equipmentChromeBorder}>
+              <div className="text-[11px] font-medium uppercase tracking-wider opacity-80 flex items-center gap-1">
+                <span>⏱️</span> Autonomia
+              </div>
+              <div className="mt-1 text-lg font-bold" data-editor-field-path="autonomyHours">
+                {autonomy}
+              </div>
+              <div className="text-[10px] opacity-70">Cargas essenciais</div>
+            </div>
+
+            <div className="rounded-xl border p-3" style={equipmentChromeBorder}>
+              <div className="text-[11px] font-medium uppercase tracking-wider opacity-80 flex items-center gap-1">
+                <span>🛡️</span> No-Break
+              </div>
+              <div className="mt-1 text-lg font-bold" data-editor-field-path="switchTimeMs">
+                {switchTime}
+              </div>
+              <div className="text-[10px] opacity-70">Transferência rápida</div>
+            </div>
+          </div>
+
+          <div
+            className="rounded-lg border px-3 py-2 text-xs flex items-center justify-between gap-2"
+            style={equipmentChromeSurface}
+          >
+            <span className="opacity-75">
+              Tecnologia das células:{" "}
+              <strong className="font-semibold text-[var(--color-foreground)]">{tech}</strong>
+            </span>
+            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+              100% Seguro · Proteção BMS
+            </span>
+          </div>
+        </div>
+      );
+    }
     case "about_company": {
       const isPdf = renderMode === "pdf";
       const variant = String(section.variant ?? "hero");
