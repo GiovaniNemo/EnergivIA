@@ -74,8 +74,8 @@ export function TrialLockOverlay() {
           <span className="mt-1 sm:mt-0 flex h-2 w-2 shrink-0 rounded-full bg-amber-400 animate-pulse" />
           <span className="leading-snug">
             {user?.isTrialProposalLimitReached
-              ? "⚡ Você atingiu o limite de 20 propostas gratuitas do período de teste."
-              : "☀️ Seu período de teste gratuito de 7 dias úteis foi concluído."}{" "}
+              ? "Você atingiu o limite de 20 propostas gratuitas do período de teste."
+              : "Seu período de teste gratuito de 7 dias úteis foi concluído."}{" "}
             Seu histórico continua salvo! Faça upgrade para continuar gerando propostas comerciais
             com IA.
           </span>
@@ -102,7 +102,7 @@ export function TrialLockOverlay() {
         <div className="flex items-start sm:items-center gap-2">
           <span className="mt-1 sm:mt-0 flex h-2 w-2 shrink-0 rounded-full bg-amber-400 animate-pulse" />
           <span className="leading-snug">
-            ⚡ Você atingiu o limite mensal de {user?.proposalsLimit ?? 50} propostas do{" "}
+            Você atingiu o limite mensal de {user?.proposalsLimit ?? 50} propostas do{" "}
             {user?.planName || "seu plano"}. Faça upgrade para o Plano Pro para gerar propostas
             comerciais ilimitadas.
           </span>
@@ -170,6 +170,10 @@ export function TrialLockOverlay() {
                 Escolha o plano ideal para continuar gerando orçamentos e propostas comerciais com
                 IA.
               </p>
+              <div className="mt-3 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs font-semibold">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>Condição especial: todos os valores estão com preços de lançamento</span>
+              </div>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch max-w-6xl mx-auto">
@@ -277,6 +281,10 @@ export function TrialLockOverlay() {
                         </span>
                         <span className="text-gray-400 text-xs font-medium">/mês</span>
                       </div>
+                      <p className="text-[10px] font-semibold text-emerald-400/90 mt-1 flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5 shrink-0" />
+                        Valor promocional de lançamento
+                      </p>
                     </div>
 
                     <div className="flex-grow mb-4">

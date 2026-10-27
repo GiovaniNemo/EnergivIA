@@ -768,3 +768,5 @@
 | task-777 | Adicionar linha horizontal e destaque de Suporte Prioritário em meus-planos/page.tsx | completed | Divisória horizontal e box refinado com ícone Headphones, badge Suporte Prioritário VIP e texto profissional implementados |
 | task-778 | Atualizar TrialLockOverlay.tsx com linha horizontal e Suporte Prioritário no Plano Plus | completed | Adicionado divisor horizontal e badge VIP no modal de bloqueio mantendo simetria visual |
 | task-779 | Validação de build, testes de regressão (Vitest), commit e push | completed | ESLint no web aprovado com 0 erros, testes executados e alterações sincronizadas com origin/main |
+| task-780 | Adicionar aviso de Preços de Lançamento na tela de planos (meus-planos/page.tsx e TrialLockOverlay.tsx) | completed | Banner informativo de condição especial de lançamento e selo nos cards implementados sem emojis |
+| task-781 | Validar lint, testes, build, commit e push | completed | ESLint sem erros, TypeScript validado nos arquivos modificados, testes Vitest aprovados e sincronizado com origin/main |

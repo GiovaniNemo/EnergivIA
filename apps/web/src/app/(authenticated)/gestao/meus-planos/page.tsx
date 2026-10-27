@@ -160,7 +160,7 @@ function MeusPlanosContent() {
           if (res.ok) {
             setToastMessage({
               type: "success",
-              text: "🎉 Assinatura ativada com sucesso! Todos os recursos foram liberados.",
+              text: "Assinatura ativada com sucesso! Todos os recursos foram liberados.",
             });
             await refetchOrg();
             await loadData();
@@ -507,10 +507,33 @@ function MeusPlanosContent() {
 
       {/* PLANS GRID */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-[var(--color-foreground)] mb-6 flex items-center gap-2">
+        <h2 className="text-2xl font-bold text-[var(--color-foreground)] mb-4 flex items-center gap-2">
           <Rocket className="w-6 h-6 text-[var(--color-primary)]" />
           {subscription ? "Opções de Upgrade & Outros Planos" : "Planos Disponíveis"}
         </h2>
+
+        {/* Aviso de Preços de Lançamento */}
+        <div className="mb-6 rounded-2xl border border-emerald-500/25 bg-emerald-50/70 dark:bg-emerald-950/25 px-4 py-3.5 sm:px-5 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-bold text-[var(--color-foreground)]">
+                  Condição Especial: Valores em Preço de Lançamento
+                </span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
+                  Oferta de Lançamento
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-[var(--color-muted-foreground)] mt-0.5">
+                Os valores exibidos abaixo são preços promocionais de lançamento por tempo limitado.
+                Assine agora para garantir essa condição especial na sua assinatura.
+              </p>
+            </div>
+          </div>
+        </div>
 
         {plans.length === 0 ? (
           <div className="text-center py-16 backdrop-blur-xl bg-white dark:bg-slate-900/30 rounded-2xl border border-slate-200 dark:border-white/10 p-8 max-w-md mx-auto shadow-sm">
@@ -657,6 +680,10 @@ function MeusPlanosContent() {
                           /mês
                         </span>
                       </div>
+                      <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mt-1.5 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 shrink-0" />
+                        Valor promocional de lançamento
+                      </p>
                     </div>
                   </div>
 
