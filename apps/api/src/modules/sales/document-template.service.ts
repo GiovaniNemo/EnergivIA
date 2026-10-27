@@ -55,7 +55,7 @@ export class DocumentTemplateService {
    * Renderiza o HTML em PDF via Chromium e computa o hash criptográfico SHA-256
    */
   async generatePdfWithHash(html: string): Promise<{ pdfBuffer: Buffer; sha256Hash: string }> {
-    const pdfBuffer = await this.pdfRenderer.renderHtmlPdf(html);
+    const pdfBuffer = await this.pdfRenderer.renderHtmlToPdf({ html });
     const sha256Hash = crypto.createHash("sha256").update(pdfBuffer).digest("hex");
 
     return {

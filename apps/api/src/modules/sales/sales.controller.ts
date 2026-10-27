@@ -18,8 +18,9 @@ export class SalesController {
     @Param("proposalId") proposalId: string,
     @CurrentUser() user?: JwtPayload
   ) {
+    const userObj = user as (JwtPayload & { name?: string }) | undefined;
     return this.salesService.convertToSale(tenantId, proposalId, {
-      name: user?.name,
+      name: userObj?.name,
       email: user?.email,
     });
   }

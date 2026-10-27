@@ -9,7 +9,7 @@ describe("DocumentTemplateService", () => {
 
   beforeEach(() => {
     mockPdfRenderer = {
-      renderHtmlPdf: vi.fn().mockResolvedValue(Buffer.from("%PDF-1.4 Mock Contract Content")),
+      renderHtmlToPdf: vi.fn().mockResolvedValue(Buffer.from("%PDF-1.4 Mock Contract Content")),
     };
 
     service = new DocumentTemplateService(mockPdfRenderer);
@@ -86,7 +86,7 @@ describe("DocumentTemplateService", () => {
     const html = "<html><body><h1>Teste de Contrato</h1></body></html>";
     const { pdfBuffer, sha256Hash } = await service.generatePdfWithHash(html);
 
-    expect(mockPdfRenderer.renderHtmlPdf).toHaveBeenCalledWith(html);
+    expect(mockPdfRenderer.renderHtmlToPdf).toHaveBeenCalledWith({ html });
     expect(pdfBuffer).toBeInstanceOf(Buffer);
     expect(typeof sha256Hash).toBe("string");
     expect(sha256Hash.length).toBe(64); // SHA-256 hex string length
