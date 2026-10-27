@@ -780,3 +780,7 @@
 | task-789 | Executar testes unitários, validação de build/lint, commit e push | completed | 12 testes Vitest aprovados (100%), ESLint Web e API com 0 erros, build NestJS compilado e enviado ao origin/main |
 | task-790 | Corrigir classes de background e borda do card de teste gratuito em dark mode (meus-planos/page.tsx) | completed | Ajustado gradiente dark:from, dark:via, dark:to e borda âmbar para eliminar fundo branco no dark mode |
 | task-791 | Validar build/lint, commit e push das alterações | completed | Lint aprovado (0 erros), alterações validadas e enviadas para origin/main |
+| task-792 | Adicionar validação de correspondência de valor (unit_amount) entre Stripe e plano em stripe.service.ts | completed | Detecta divergência de centavos entre Stripe e banco de dados e recria preço sincronizado no Stripe |
+| task-793 | Atualizar syncDefaultPlans em plans.service.ts para resetar stripeId ao alterar targetPrice | completed | Reseta stripeId para null quando o preço padrão de um plano for modificado |
+| task-794 | Criar testes unitários para sincronização automática de preço do Stripe (stripe-plan-price-sync.spec.ts) | completed | 2 testes vitest cobrindo auto-recuperação de preço divergente e reaproveitamento de preço válido |
+| task-795 | Validar testes vitest, build e commit/push | completed | 6 testes Vitest aprovados no módulo Stripe, ESLint sem erros e alterações enviadas para origin/main |

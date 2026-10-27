@@ -52,6 +52,7 @@ export class PlansService implements OnModuleInit {
       const updateData: Prisma.PlanUpdateInput = {};
       if (targetPrice !== null) {
         updateData.price = targetPrice;
+        updateData.stripeId = null;
       }
       if (needFeaturesUpdate) {
         updateData.features = normalizePlanFeatures(

@@ -279,11 +279,32 @@ export class StripeService {
       }
     }
 
-    // Valida se o preço existe no ambiente ativo do Stripe (Test vs Live)
+    // Valida se o preço existe no ambiente ativo do Stripe (Test vs Live) e se corresponde ao valor atual do plano
     let validStripePriceId = plan.stripeId;
+    let existingProductId: string | undefined;
+
     if (validStripePriceId) {
       try {
-        await this.stripe.prices.retrieve(validStripePriceId);
+        const retrievedPrice = await this.stripe.prices.retrieve(validStripePriceId);
+        existingProductId =
+          typeof retrievedPrice.product === "string"
+            ? retrievedPrice.product
+            : (retrievedPrice.product as Stripe.Product)?.id;
+
+        const expectedUnitAmount = Math.round(Number(plan.price) * 100);
+        const expectedInterval = (plan.interval as "month" | "year") || "month";
+
+        if (
+          retrievedPrice.active === false ||
+          retrievedPrice.unit_amount !== expectedUnitAmount ||
+          (retrievedPrice.recurring?.interval &&
+            retrievedPrice.recurring.interval !== expectedInterval)
+        ) {
+          this.logger.warn(
+            `Preço ${validStripePriceId} no Stripe (${retrievedPrice.unit_amount} centavos, interval: ${retrievedPrice.recurring?.interval}) diverge do plano "${plan.name}" no banco (${expectedUnitAmount} centavos, interval: ${expectedInterval}). Sincronizando novo preço no Stripe...`
+          );
+          validStripePriceId = null;
+        }
       } catch (err) {
         this.logger.warn(
           `Preço ${validStripePriceId} não encontrado no ambiente Stripe ativo (${err}). Recriando produto e preço no Stripe...`
@@ -293,12 +314,12 @@ export class StripeService {
     }
 
     if (!validStripePriceId) {
-      const product = await this.createProduct(
-        `Plano ${plan.name} - EnergivIA`,
-        plan.description || undefined
-      );
+      const productId =
+        existingProductId ||
+        (await this.createProduct(`Plano ${plan.name} - EnergivIA`, plan.description || undefined))
+          .id;
       const stripePrice = await this.createPrice(
-        product.id,
+        productId,
         Number(plan.price),
         (plan.interval as "month" | "year") || "month"
       );
