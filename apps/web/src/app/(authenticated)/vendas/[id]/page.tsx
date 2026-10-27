@@ -22,7 +22,6 @@ import {
   Search,
   Send,
   ShieldCheck,
-  Sparkles,
   User,
   Zap,
 } from "lucide-react";
@@ -87,10 +86,6 @@ export default function VendaDetailPage(): JSX.Element {
   } | null>(null);
 
   const [searchingCep, setSearchingCep] = useState(false);
-  const [cepFeedback, setCepFeedback] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
 
   const addressNumberRef = useRef<HTMLInputElement>(null);
 
@@ -529,36 +524,47 @@ export default function VendaDetailPage(): JSX.Element {
           {/* Section: Identificação do Cliente */}
           <Card className="border-[var(--color-border)] bg-[var(--color-card)]">
             <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    {formData.customerType === "PJ" ? (
-                      <Building2 className="h-4 w-4 text-[var(--color-primary)]" />
-                    ) : (
-                      <User className="h-4 w-4 text-[var(--color-primary)]" />
-                    )}
-                    <CardTitle className="text-sm font-semibold">
-                      {formData.customerType === "PJ"
-                        ? "Identificação da Empresa (Pessoa Jurídica)"
-                        : "Identificação do Titular (Pessoa Física)"}
-                    </CardTitle>
-                  </div>
-                  <CardDescription className="text-xs">
-                    {formData.customerType === "PJ"
-                      ? "Dados cadastrais da empresa contratante e do representante legal perante a ANEEL."
-                      : "Dados do cliente titular do contrato e da unidade consumidora."}
-                  </CardDescription>
-                </div>
-
-                {formData.customerType === "PJ" && (
-                  <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-300">
-                    <Sparkles className="h-3 w-3" />
-                    Consulta CNPJ Habilitada
-                  </span>
+              <div className="flex items-center gap-2">
+                {formData.customerType === "PJ" ? (
+                  <Building2 className="h-4 w-4 text-[var(--color-primary)]" />
+                ) : (
+                  <User className="h-4 w-4 text-[var(--color-primary)]" />
                 )}
+                <CardTitle className="text-sm font-semibold">
+                  {formData.customerType === "PJ"
+                    ? "Identificação da Empresa (Pessoa Jurídica)"
+                    : "Identificação do Titular (Pessoa Física)"}
+                </CardTitle>
               </div>
+              <CardDescription className="text-xs">
+                {formData.customerType === "PJ"
+                  ? "Dados cadastrais da empresa contratante e do representante legal perante a ANEEL."
+                  : "Dados do cliente titular do contrato e da unidade consumidora."}
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Linha 1: Nome Completo (2 cols) + Tipo de Pessoa (1 col) */}
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                  {formData.customerType === "PJ"
+                    ? "Razão Social / Nome Empresarial"
+                    : "Nome Completo do Titular"}
+                </label>
+                <input
+                  type="text"
+                  value={formData.customerName}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, customerName: e.target.value }))
+                  }
+                  placeholder={
+                    formData.customerType === "PJ"
+                      ? "Ex: Soluções em Energia Ltda"
+                      : "Ex: João da Silva"
+                  }
+                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                />
+              </div>
+
               <div>
                 <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
                   Tipo de Pessoa
@@ -581,20 +587,12 @@ export default function VendaDetailPage(): JSX.Element {
                 </select>
               </div>
 
-              {/* Campo CNPJ / CPF com Busca Automática da Receita para PJ */}
-              <div className="sm:col-span-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                    {formData.customerType === "PJ" ? "CNPJ da Empresa" : "CPF do Titular"}
-                  </label>
-                  {formData.customerType === "PJ" && (
-                    <span className="text-[11px] text-[var(--color-primary)]">
-                      Puxa razão social, endereço e sócios automaticamente
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-1 flex items-center gap-2">
+              {/* Linha 2: CPF/CNPJ (1 col) + RG/IE (1 col) + Telefone/WhatsApp (1 col) */}
+              <div>
+                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                  {formData.customerType === "PJ" ? "CNPJ da Empresa" : "CPF do Titular"}
+                </label>
+                <div className="relative mt-1 flex items-center">
                   <input
                     type="text"
                     value={formData.customerCpfCnpj}
@@ -622,63 +620,25 @@ export default function VendaDetailPage(): JSX.Element {
                       formData.customerType === "PJ" ? "00.000.000/0000-00" : "000.000.000-00"
                     }
                     maxLength={formData.customerType === "PJ" ? 18 : 14}
-                    className="flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
                   />
-
                   {formData.customerType === "PJ" && (
                     <button
                       type="button"
                       onClick={() => handleSearchCnpj()}
                       disabled={searchingCnpj}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 px-3 py-2 text-xs font-semibold text-[var(--color-primary)] shadow-sm hover:bg-[var(--color-primary)]/20 disabled:opacity-50"
+                      className="absolute right-1 top-1 bottom-1 inline-flex items-center gap-1 rounded-md bg-[var(--color-muted)] px-2.5 text-[11px] font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-muted)]/80 disabled:opacity-50"
+                      title="Consultar CNPJ"
                     >
                       {searchingCnpj ? (
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        <RefreshCw className="h-3 w-3 animate-spin" />
                       ) : (
-                        <Search className="h-3.5 w-3.5" />
+                        <Search className="h-3 w-3" />
                       )}
-                      {searchingCnpj ? "Buscando..." : "Consultar CNPJ"}
+                      Buscar
                     </button>
                   )}
                 </div>
-
-                {/* Feedback CNPJ */}
-                {cnpjFeedback && (
-                  <div
-                    className={cn(
-                      "mt-2 rounded-md p-2 text-xs font-medium flex items-center gap-1.5",
-                      cnpjFeedback.type === "success"
-                        ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30"
-                        : "bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/30"
-                    )}
-                  >
-                    {cnpjFeedback.type === "success" && (
-                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                    )}
-                    <span>{cnpjFeedback.message}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  {formData.customerType === "PJ"
-                    ? "Razão Social / Nome Empresarial"
-                    : "Nome Completo do Titular"}
-                </label>
-                <input
-                  type="text"
-                  value={formData.customerName}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, customerName: e.target.value }))
-                  }
-                  placeholder={
-                    formData.customerType === "PJ"
-                      ? "Ex: Soluções em Energia Ltda"
-                      : "Ex: João da Silva"
-                  }
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
-                />
               </div>
 
               <div>
@@ -702,10 +662,25 @@ export default function VendaDetailPage(): JSX.Element {
                 />
               </div>
 
+              <div>
+                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                  Telefone / WhatsApp
+                </label>
+                <input
+                  type="text"
+                  value={formData.customerPhone}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, customerPhone: formatPhone(e.target.value) }))
+                  }
+                  placeholder="(00) 00000-0000"
+                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                />
+              </div>
+
               {/* Campos do Representante Legal quando PJ */}
               {formData.customerType === "PJ" && (
                 <>
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
                       Representante Legal (Sócio / Administrador)
                     </label>
@@ -721,9 +696,6 @@ export default function VendaDetailPage(): JSX.Element {
                       placeholder="Ex: Carlos Eduardo de Oliveira"
                       className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
                     />
-                    <span className="text-[10px] text-[var(--color-muted-foreground)]">
-                      Pessoa física que assinará digitalmente pela empresa.
-                    </span>
                   </div>
 
                   <div>
@@ -746,6 +718,22 @@ export default function VendaDetailPage(): JSX.Element {
                   </div>
                 </>
               )}
+
+              {/* Linha 3 quando PF: E-mail (1 col) + Estado Civil (1 col) + Profissão (1 col) */}
+              <div>
+                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                  E-mail do Titular (Para envio do OTP de assinatura)
+                </label>
+                <input
+                  type="email"
+                  value={formData.customerEmail}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, customerEmail: e.target.value }))
+                  }
+                  placeholder="cliente@email.com"
+                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                />
+              </div>
 
               {formData.customerType === "PF" && (
                 <div>
@@ -785,39 +773,26 @@ export default function VendaDetailPage(): JSX.Element {
                 </div>
               )}
 
-              <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  E-mail do Titular (Para envio do OTP de assinatura)
-                </label>
-                <input
-                  type="email"
-                  value={formData.customerEmail}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, customerEmail: e.target.value }))
-                  }
-                  placeholder="cliente@email.com"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  Telefone / WhatsApp
-                </label>
-                <input
-                  type="text"
-                  value={formData.customerPhone}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, customerPhone: formatPhone(e.target.value) }))
-                  }
-                  placeholder="(00) 00000-0000"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
-                />
-              </div>
+              {/* Feedback CNPJ se houver */}
+              {cnpjFeedback && (
+                <div
+                  className={cn(
+                    "sm:col-span-2 lg:col-span-3 rounded-md p-2 text-xs font-medium flex items-center gap-1.5",
+                    cnpjFeedback.type === "success"
+                      ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30"
+                      : "bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/30"
+                  )}
+                >
+                  {cnpjFeedback.type === "success" && (
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                  )}
+                  <span>{cnpjFeedback.message}</span>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Section: Endereço de Instalação com Busca ViaCEP */}
+          {/* Section: Endereço de Instalação */}
           <Card className="border-[var(--color-border)] bg-[var(--color-card)]">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
@@ -831,73 +806,36 @@ export default function VendaDetailPage(): JSX.Element {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Box de busca rápida de CEP no topo */}
-              <div className="sm:col-span-2 lg:col-span-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 p-3.5">
-                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <label className="text-xs font-semibold text-[var(--color-foreground)] flex items-center gap-1.5">
-                      <Search className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-                      Consultar Endereço por CEP (ViaCEP)
-                    </label>
-                    <p className="mt-0.5 text-[11px] text-[var(--color-muted-foreground)]">
-                      Digite o CEP para autopreencher rua, bairro, cidade e estado sem precisar
-                      digitar tudo manualmente.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={formData.zipCode}
-                      onChange={(e) => {
-                        const formatted = formatCep(e.target.value);
-                        setFormData((prev) => ({ ...prev, zipCode: formatted }));
-                        if (formatted.replace(/\D/g, "").length === 8) {
-                          handleSearchCep(formatted);
-                        }
-                      }}
-                      onBlur={() => {
-                        if (formData.zipCode.replace(/\D/g, "").length === 8) {
-                          handleSearchCep(formData.zipCode);
-                        }
-                      }}
-                      placeholder="00000-000"
-                      maxLength={9}
-                      className="w-32 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs font-semibold text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() => handleSearchCep()}
-                      disabled={searchingCep}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 px-3.5 py-2 text-xs font-semibold text-[var(--color-primary)] shadow-sm hover:bg-[var(--color-primary)]/20 disabled:opacity-50"
-                    >
-                      {searchingCep ? (
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Search className="h-3.5 w-3.5" />
-                      )}
-                      {searchingCep ? "Buscando..." : "Buscar CEP"}
-                    </button>
-                  </div>
+              <div>
+                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                  CEP
+                </label>
+                <div className="relative mt-1">
+                  <input
+                    type="text"
+                    value={formData.zipCode}
+                    onChange={(e) => {
+                      const formatted = formatCep(e.target.value);
+                      setFormData((prev) => ({ ...prev, zipCode: formatted }));
+                      if (formatted.replace(/\D/g, "").length === 8) {
+                        handleSearchCep(formatted);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (formData.zipCode.replace(/\D/g, "").length === 8) {
+                        handleSearchCep(formData.zipCode);
+                      }
+                    }}
+                    placeholder="00000-000"
+                    maxLength={9}
+                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  />
+                  {searchingCep && (
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin text-[var(--color-primary)]" />
+                    </div>
+                  )}
                 </div>
-
-                {/* Feedback do CEP */}
-                {cepFeedback && (
-                  <div
-                    className={cn(
-                      "mt-2.5 rounded-md px-3 py-1.5 text-xs font-medium flex items-center gap-1.5",
-                      cepFeedback.type === "success"
-                        ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30"
-                        : "bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/30"
-                    )}
-                  >
-                    {cepFeedback.type === "success" && (
-                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                    )}
-                    <span>{cepFeedback.message}</span>
-                  </div>
-                )}
               </div>
 
               <div className="lg:col-span-2">
@@ -986,21 +924,6 @@ export default function VendaDetailPage(): JSX.Element {
                   }
                   maxLength={2}
                   placeholder="MG"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  CEP Confirmado
-                </label>
-                <input
-                  type="text"
-                  value={formData.zipCode}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, zipCode: formatCep(e.target.value) }))
-                  }
-                  placeholder="00000-000"
                   className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
                 />
               </div>
