@@ -822,3 +822,4 @@
 | task-831 | Validar testes automatizados, linters, build, commit e push | in-progress | Executando testes vitest, linters e build |
 | task-832 | Remover legenda 'linhas no catálogo' e redesenhar botão/layout de 'Converter em Venda' em /proposals | completed | Removido 'linhas no catálogo', alinhado horizontalmente com as métricas e botão executivo sólido implementado |
 | task-833 | Alinhar grid do card de identificação (CPF/tipo/dados) e remover banner de busca ViaCEP na ficha da venda (/vendas/[id]) | completed | Grid 3x3 alinhado, CPF normalizado, banner e CEP Confirmado removidos, busca silenciosa integrada |
+| task-834 | Concessionárias do Brasil com datalist/digitação, valor formatado em Reais (R$) e opções de pagamento na ficha da venda | completed | Todas distribuidoras ANEEL cadastradas com digitação livre, máscara de moeda BRL e opções/chips de pagamento |

@@ -36,7 +36,94 @@ import {
   formatCpf,
   formatPhone,
 } from "@/lib/consultas-api";
-import { cn } from "@energivia/utils";
+import { cn, maskMoneyBrlFromDigits, parseMoneyBrlDisplay } from "@energivia/utils";
+
+const BRAZIL_CONCESSIONARIAS = [
+  // Principais / Grandes Grupos Nacionais
+  "CEMIG (Minas Gerais)",
+  "COPEL (Paraná)",
+  "CPFL Paulista (São Paulo)",
+  "CPFL Piratininga (São Paulo)",
+  "CPFL Santa Cruz (São Paulo / PR / MG)",
+  "RGE Sul (Rio Grande do Sul)",
+  "Enel Distribuição São Paulo (SP)",
+  "Enel Distribuição Rio de Janeiro (RJ)",
+  "Enel Distribuição Ceará (CE)",
+  "Light (Rio de Janeiro)",
+  "Neoenergia Elektro (São Paulo / MS)",
+  "Neoenergia Coelba (Bahia)",
+  "Neoenergia Pernambuco (Celpe)",
+  "Neoenergia Cosern (Rio Grande do Norte)",
+  "Neoenergia Brasília (CEB - DF)",
+  "Equatorial Goiás (GO)",
+  "Equatorial Maranhão (Cemar)",
+  "Equatorial Pará (Celpa)",
+  "Equatorial Piauí (Cepisa)",
+  "Equatorial Alagoas (Ceal)",
+  "Equatorial Amapá (CEA)",
+  "CEEE Equatorial (Rio Grande do Sul)",
+  "Energisa Minas Gerais (MG)",
+  "Energisa Mato Grosso (MT)",
+  "Energisa Mato Grosso do Sul (MS)",
+  "Energisa Paraíba (PB)",
+  "Energisa Borborema (PB)",
+  "Energisa Sergipe (SE)",
+  "Energisa Tocantins (TO)",
+  "Energisa Rondônia (Ceron)",
+  "Energisa Acre (Eletroacre)",
+  "Energisa Sul-Sudeste (SP / PR)",
+  "Celesc Distribuição (Santa Catarina)",
+  "EDP São Paulo (SP)",
+  "EDP Espírito Santo (ES)",
+  "Amazonas Energia (AM)",
+  "Roraima Energia (RR)",
+  // Concessionárias Regionais, Municipais e Permissionárias
+  "DMED (Poços de Caldas - MG)",
+  "Demei (Ijuí - RS)",
+  "Eflul (Urussanga - SC)",
+  "Cooperaliança (Içara - SC)",
+  "ELFSM (Santa Maria - ES)",
+  "Chesp (Goiás)",
+  "Forcel (Paraná)",
+  "MuxEnergia (RS)",
+  "Nova Palma Energia (RS)",
+  "Hidroelétrica Panambi (RS)",
+];
+
+const COMMON_CONCESSIONARIA_ALIASES = [
+  "CEMIG",
+  "COPEL",
+  "ENEL SP",
+  "ENEL RJ",
+  "ENEL CE",
+  "CPFL Paulista",
+  "CPFL Piratininga",
+  "LIGHT",
+  "CELESC",
+  "NEOENERGIA ELEKTRO",
+  "NEOENERGIA COELBA",
+  "EQUATORIAL GOIÁS",
+  "ENERGISA MG",
+  "EDP SP",
+  "EDP ES",
+];
+
+const PAYMENT_CONDITIONS_OPTIONS = [
+  "À Vista (PIX / Transferência Bancária)",
+  "À Vista (50% Entrada + 50% na Conexão)",
+  "À Vista (30% Entrada + 40% na Entrega + 30% na Conexão)",
+  "Financiamento Bancário (BV Financeira)",
+  "Financiamento Bancário (Banco Santander)",
+  "Financiamento Bancário (Solfácil)",
+  "Financiamento Bancário (Banco do Brasil / Pronaf)",
+  "Financiamento Bancário (Caixa Econômica)",
+  "Financiamento Bancário (Sicredi / Sicoob)",
+  "Financiamento Bancário (Outras Instituições)",
+  "Cartão de Crédito (Parcelado até 12x)",
+  "Cartão de Crédito (Parcelado até 18x / 21x)",
+  "Boleto Bancário Parcelado",
+  "Consórcio Solar",
+];
 
 const SALE_STATUS_OPTIONS = [
   { value: "AWAITING_ANALYSIS", label: "Aguardando Análise" },
@@ -149,12 +236,17 @@ export default function VendaDetailPage(): JSX.Element {
         utilityCompany: data.utilityCompany || data.distributionCompany || "CEMIG",
         ucNumber: data.ucNumber || data.consumerUnitNumber || "",
         systemPowerKwp: data.systemPowerKwp != null ? String(data.systemPowerKwp) : "",
-        totalValue:
-          data.totalValue != null
-            ? String(data.totalValue)
-            : data.investmentAmount != null
-              ? String(data.investmentAmount)
-              : "",
+        totalValue: (() => {
+          const raw =
+            data.totalValue != null
+              ? Number(data.totalValue)
+              : data.investmentAmount != null
+                ? Number(data.investmentAmount)
+                : null;
+          return raw != null && !isNaN(raw)
+            ? maskMoneyBrlFromDigits(String(Math.round(raw * 100)))
+            : "";
+        })(),
         paymentMethod: data.paymentMethod || "Financiamento Bancário",
         status: data.status || "AWAITING_ANALYSIS",
         notes: data.notes || "",
@@ -293,7 +385,14 @@ export default function VendaDetailPage(): JSX.Element {
         utilityCompany: formData.utilityCompany,
         ucNumber: formData.ucNumber,
         systemPowerKwp: formData.systemPowerKwp ? parseFloat(formData.systemPowerKwp) : undefined,
-        totalValue: formData.totalValue ? parseFloat(formData.totalValue) : undefined,
+        totalValue:
+          parseMoneyBrlDisplay(formData.totalValue) > 0
+            ? parseMoneyBrlDisplay(formData.totalValue)
+            : undefined,
+        investmentAmount:
+          parseMoneyBrlDisplay(formData.totalValue) > 0
+            ? parseMoneyBrlDisplay(formData.totalValue)
+            : undefined,
         paymentMethod: formData.paymentMethod,
         status: formData.status,
         notes: formData.notes,
@@ -948,15 +1047,26 @@ export default function VendaDetailPage(): JSX.Element {
                 <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
                   Concessionária de Energia
                 </label>
-                <input
-                  type="text"
-                  value={formData.utilityCompany}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, utilityCompany: e.target.value }))
-                  }
-                  placeholder="Ex: CEMIG, CPFL, ENEL, COPEL"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
-                />
+                <div className="relative mt-1">
+                  <input
+                    type="text"
+                    list="brazil-concessionarias-list"
+                    value={formData.utilityCompany}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, utilityCompany: e.target.value }))
+                    }
+                    placeholder="Selecione ou digite (Ex: Copel, Cemig, Enel...)"
+                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  />
+                  <datalist id="brazil-concessionarias-list">
+                    {COMMON_CONCESSIONARIA_ALIASES.map((alias) => (
+                      <option key={"alias-" + alias} value={alias} />
+                    ))}
+                    {BRAZIL_CONCESSIONARIAS.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
+                </div>
               </div>
 
               <div>
@@ -990,31 +1100,76 @@ export default function VendaDetailPage(): JSX.Element {
 
               <div>
                 <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  Valor Total do Contrato (R$)
+                  Valor Total do Contrato
                 </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.totalValue}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, totalValue: e.target.value }))}
-                  placeholder="Ex: 24500.00"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
-                />
+                <div className="relative mt-1">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[var(--color-muted-foreground)]">
+                    R$
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={formData.totalValue}
+                    onChange={(e) => {
+                      const masked = maskMoneyBrlFromDigits(e.target.value);
+                      setFormData((prev) => ({ ...prev, totalValue: masked }));
+                    }}
+                    placeholder="0,00"
+                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] pl-9 pr-3 py-2 text-xs font-semibold text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  />
+                </div>
               </div>
 
-              <div>
+              <div className="sm:col-span-1 lg:col-span-2">
                 <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
                   Condição / Forma de Pagamento
                 </label>
-                <input
-                  type="text"
-                  value={formData.paymentMethod}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, paymentMethod: e.target.value }))
-                  }
-                  placeholder="Ex: Financiamento BV em 60x"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
-                />
+                <div className="relative mt-1">
+                  <input
+                    type="text"
+                    list="payment-conditions-list"
+                    value={formData.paymentMethod}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, paymentMethod: e.target.value }))
+                    }
+                    placeholder="Selecione ou digite a forma de pagamento"
+                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  />
+                  <datalist id="payment-conditions-list">
+                    {PAYMENT_CONDITIONS_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt} />
+                    ))}
+                  </datalist>
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] font-medium text-[var(--color-muted-foreground)]">
+                    Atalhos:
+                  </span>
+                  {[
+                    "À Vista (PIX / Transferência Bancária)",
+                    "Financiamento Bancário (BV Financeira)",
+                    "Financiamento Bancário (Banco Santander)",
+                    "Cartão de Crédito (Parcelado até 12x)",
+                    "Boleto Bancário Parcelado",
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, paymentMethod: preset }))}
+                      className="rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/50 px-2 py-0.5 text-[10px] font-medium text-[var(--color-muted-foreground)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-colors"
+                    >
+                      {preset.split(" (")[0] +
+                        (preset.includes("12x")
+                          ? " 12x"
+                          : preset.includes("BV")
+                            ? " BV"
+                            : preset.includes("Santander")
+                              ? " Santander"
+                              : "")}
+                    </button>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
