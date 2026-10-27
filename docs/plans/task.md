@@ -778,3 +778,5 @@
 | task-787 | Atualizar PaymentForm.tsx, meus-planos/page.tsx e TrialLockOverlay.tsx (Order Bump R$ 59,90/mês + remover Sparkles) | completed | Checkbox pré-marcado nos cards, gestão no banner de assinatura ativa e remoção de todos os ícones Sparkles |
 | task-788 | Integrar ação e exibição de Assinatura Digital ZapSign nas propostas comerciais | completed | Criado ProposalZapSignCard em ProposalInternalView e botão de assinatura ZapSign em PublicProposalView |
 | task-789 | Executar testes unitários, validação de build/lint, commit e push | completed | 12 testes Vitest aprovados (100%), ESLint Web e API com 0 erros, build NestJS compilado e enviado ao origin/main |
+| task-790 | Corrigir classes de background e borda do card de teste gratuito em dark mode (meus-planos/page.tsx) | completed | Ajustado gradiente dark:from, dark:via, dark:to e borda âmbar para eliminar fundo branco no dark mode |
+| task-791 | Validar build/lint, commit e push das alterações | completed | Lint aprovado (0 erros), alterações validadas e enviadas para origin/main |

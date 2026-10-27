@@ -557,7 +557,7 @@ function MeusPlanosContent() {
           </div>
         </div>
       ) : (
-        <div className="mb-10 backdrop-blur-xl bg-gradient-to-r from-amber-50/70 via-white to-amber-50/30 dark:bg-slate-900/30 border border-amber-200 dark:border-white/10 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+        <div className="mb-10 backdrop-blur-xl bg-gradient-to-r from-amber-50/70 via-white to-amber-50/30 dark:from-amber-950/30 dark:via-slate-900/40 dark:to-amber-950/20 border border-amber-200 dark:border-amber-500/30 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm dark:shadow-lg dark:shadow-amber-950/20">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center shrink-0">
               <Calendar className="w-6 h-6" />
