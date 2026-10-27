@@ -30,18 +30,18 @@ export class DocumentTemplateService {
    * Constrói o HTML final do documento a partir do tipo e dados
    */
   buildDocumentHtml(
-    type: DocumentType,
+    type: DocumentType | string,
     data: Record<string, string | number | undefined | null>
   ): string {
     let rawTemplate = "";
 
-    switch (type) {
-      case DocumentType.CONTRATO_PF:
-      case DocumentType.CONTRATO_PJ:
+    switch (String(type)) {
+      case "CONTRATO_PF":
+      case "CONTRATO_PJ":
         rawTemplate = CONTRACT_PF_TEMPLATE;
         break;
-      case DocumentType.PROCURACAO_PF:
-      case DocumentType.PROCURACAO_PJ:
+      case "PROCURACAO_PF":
+      case "PROCURACAO_PJ":
         rawTemplate = POWER_OF_ATTORNEY_PF_TEMPLATE;
         break;
       default:

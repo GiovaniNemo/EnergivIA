@@ -20,6 +20,9 @@ describe("SalesService", () => {
         update: vi.fn(),
         count: vi.fn(),
       },
+      lead: {
+        update: vi.fn(),
+      },
     };
 
     service = new SalesService(mockPrisma);
@@ -72,7 +75,7 @@ describe("SalesService", () => {
         },
       };
       mockPrisma.proposal.findFirst.mockResolvedValue(mockProposal);
-      mockPrisma.sale.findFirst.mockResolvedValue(null); // No previous sale for max number
+      mockPrisma.sale.findFirst.mockResolvedValue(null);
       mockPrisma.sale.create.mockImplementation((args: any) =>
         Promise.resolve({ id: "sale-new", ...args.data })
       );
@@ -109,22 +112,43 @@ describe("SalesService", () => {
   });
 
   describe("updateSale", () => {
-    it("should update sale fields successfully", async () => {
-      const mockSale = { id: "sale-1", tenantId: "tenant-1" };
+    it("should update sale fields and update lead.whatsapp instead of invalid phone field", async () => {
+      const mockSale = {
+        id: "sale-1",
+        tenantId: "tenant-1",
+        proposal: {
+          deal: {
+            leadId: "lead-1",
+            lead: {
+              id: "lead-1",
+              name: "Maria Oliveira",
+              email: "maria@exemplo.com",
+              whatsapp: "(31) 98888-7777",
+            },
+          },
+        },
+        documents: [],
+      };
       mockPrisma.sale.findFirst.mockResolvedValue(mockSale);
+      mockPrisma.lead.update.mockResolvedValue({});
       mockPrisma.sale.update.mockResolvedValue({ ...mockSale, consumerUnitNumber: "998877" });
 
       const updated = await service.updateSale("tenant-1", "sale-1", {
         consumerUnitNumber: "998877",
+        customerName: "Maria Oliveira",
+        customerEmail: "maria@exemplo.com",
+        customerPhone: "(31) 98888-7777",
       });
 
       expect(updated.consumerUnitNumber).toBe("998877");
-      expect(mockPrisma.sale.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: "sale-1" },
-          data: expect.objectContaining({ consumerUnitNumber: "998877" }),
-        })
-      );
+      expect(mockPrisma.lead.update).toHaveBeenCalledWith({
+        where: { id: "lead-1" },
+        data: expect.objectContaining({
+          name: "Maria Oliveira",
+          email: "maria@exemplo.com",
+          whatsapp: "(31) 98888-7777",
+        }),
+      });
     });
   });
 });

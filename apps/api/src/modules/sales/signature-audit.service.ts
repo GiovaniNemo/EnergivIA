@@ -3,11 +3,18 @@ import * as crypto from "node:crypto";
 import { PrismaService } from "../../prisma/prisma.service";
 import { EmailService } from "../../common/email/email.service";
 import { DocumentTemplateService } from "./document-template.service";
-import { DocumentSignStatus, SaleStatus } from "@prisma/client";
+import { DocumentSignStatus, DocumentType, SaleStatus } from "@prisma/client";
+
+const STATUS_SIGNED = (DocumentSignStatus?.SIGNED ?? "SIGNED") as DocumentSignStatus;
+const STATUS_OTP_SENT = (DocumentSignStatus?.OTP_SENT ?? "OTP_SENT") as DocumentSignStatus;
+const SALE_STATUS_SIGNED = (SaleStatus?.SIGNED ?? "SIGNED") as SaleStatus;
 
 function maskCpf(cpf?: string | null): string {
   if (!cpf) return "—";
   const clean = cpf.replace(/\D/g, "");
+  if (clean.length === 14) {
+    return `**.${clean.substring(2, 5)}.${clean.substring(5, 8)}/${clean.substring(8, 12)}-**`;
+  }
   if (clean.length !== 11) return cpf;
   return `***.${clean.substring(3, 6)}.${clean.substring(6, 9)}-**`;
 }
@@ -59,27 +66,44 @@ export class SignatureAuditService {
       throw new NotFoundException("Documento não encontrado ou link expirado.");
     }
 
-    const lead = doc.sale.proposal.deal.lead;
-    const isSigned = doc.status === DocumentSignStatus.SIGNED;
+    const lead = doc.sale?.proposal?.deal?.lead;
+    const isSigned = doc.status === STATUS_SIGNED;
+
+    const signerName = isSigned
+      ? doc.signerName || lead?.name || doc.sale?.legalRepresentativeName || "Titular do Contrato"
+      : lead?.name || doc.sale?.legalRepresentativeName || doc.signerName || "Titular do Contrato";
+
+    const companyName = doc.sale?.tenant?.name || "EnergivIA Soluções Solares";
 
     return {
       id: doc.id,
       title: doc.title,
       templateType: doc.templateType,
+      documentType: doc.templateType,
       status: doc.status,
+      signStatus: doc.status,
       isSigned,
+      createdAt: doc.createdAt,
       signedAt: doc.signedAt,
       signedPdfHash: doc.signedPdfHash,
       originalPdfHash: doc.originalPdfHash,
-      customerName: lead.name,
-      customerCpfMasked: maskCpf(doc.sale.documentNumber || lead.cpfCnpj),
-      customerEmailMasked: maskEmail(lead.email),
-      installationAddress: doc.sale.installationAddress,
-      installationCity: doc.sale.installationCity,
-      installationState: doc.sale.installationState,
-      systemPowerKwp: doc.sale.systemPowerKwp,
-      companyName: doc.sale.tenant.name,
-      companyLogoUrl: doc.sale.tenant.logoUrl,
+      signerName,
+      customerName: signerName,
+      customerType: doc.sale?.customerType ?? "PF",
+      customerCpfMasked: maskCpf(
+        doc.sale?.legalRepresentativeCpf ||
+          doc.sale?.documentNumber ||
+          lead?.cpfCnpj ||
+          doc.signerCpf
+      ),
+      customerEmailMasked: maskEmail(lead?.email || doc.signerEmail),
+      installationAddress: doc.sale?.installationAddress,
+      installationCity: doc.sale?.installationCity,
+      installationState: doc.sale?.installationState,
+      systemPowerKwp: doc.sale?.systemPowerKwp,
+      companyName,
+      organizationName: companyName,
+      companyLogoUrl: doc.sale?.tenant?.logoUrl,
       otpVerified: Boolean(doc.otpVerifiedAt),
     };
   }
@@ -113,19 +137,29 @@ export class SignatureAuditService {
       throw new NotFoundException("Documento não encontrado.");
     }
 
-    if (doc.status === DocumentSignStatus.SIGNED) {
+    if (doc.status === STATUS_SIGNED) {
       throw new BadRequestException("Este documento já foi assinado e finalizado.");
     }
 
-    const lead = doc.sale.proposal.deal.lead;
-    const registeredCpf = (doc.sale.documentNumber || lead.cpfCnpj || "").replace(/\D/g, "");
+    const lead = doc.sale?.proposal?.deal?.lead;
+    const candidateDocs = [
+      doc.sale?.documentNumber,
+      doc.sale?.legalRepresentativeCpf,
+      lead?.cpfCnpj,
+      doc.signerCpf,
+    ]
+      .map((val) => (val || "").replace(/\D/g, ""))
+      .filter((val) => val.length > 0);
+
     const cleanProvidedCpf = (providedCpf || "").replace(/\D/g, "");
 
-    if (registeredCpf && cleanProvidedCpf !== registeredCpf) {
-      throw new BadRequestException("O CPF informado não confere com o cadastro do titular.");
+    if (candidateDocs.length > 0 && !candidateDocs.includes(cleanProvidedCpf)) {
+      throw new BadRequestException(
+        "O CPF/CNPJ informado não confere com o cadastro do titular ou representante legal."
+      );
     }
 
-    const targetEmail = lead.email;
+    const targetEmail = lead?.email || doc.signerEmail;
     if (!targetEmail) {
       throw new BadRequestException(
         "Nenhum e-mail de contato cadastrado para envio do código de segurança. Contate seu consultor."
@@ -141,17 +175,18 @@ export class SignatureAuditService {
       data: {
         otpCode,
         otpExpiresAt,
-        status: DocumentSignStatus.OTP_SENT,
+        status: STATUS_OTP_SENT,
       },
     });
 
-    // Enviar e-mail de OTP
-    const companyName = doc.sale.tenant.name || "EnergivIA Soluções Solares";
+    const signerDisplayName =
+      lead?.name || doc.sale?.legalRepresentativeName || doc.signerName || "Cliente";
+    const companyName = doc.sale?.tenant?.name || "EnergivIA Soluções Solares";
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
         <h2 style="color: #0f172a; margin-top: 0;">Código de Segurança para Assinatura Eletrônica</h2>
         <p style="color: #334155; font-size: 15px; line-height: 1.5;">
-          Olá, <strong>${lead.name}</strong>!
+          Olá, <strong>${signerDisplayName}</strong>!
         </p>
         <p style="color: #334155; font-size: 15px; line-height: 1.5;">
           Você solicitou a validação para assinatura do documento <strong>"${doc.title}"</strong> junto à <strong>${companyName}</strong>.
@@ -250,7 +285,7 @@ export class SignatureAuditService {
       throw new NotFoundException("Documento não encontrado.");
     }
 
-    if (doc.status === DocumentSignStatus.SIGNED) {
+    if (doc.status === STATUS_SIGNED) {
       return {
         signed: true,
         alreadySigned: true,
@@ -263,10 +298,21 @@ export class SignatureAuditService {
       throw new BadRequestException("Imagem da rubrica/assinatura é obrigatória.");
     }
 
-    const lead = doc.sale.proposal.deal.lead;
-    const signerName = dto.signerName?.trim() || lead.name;
-    const signerCpf = dto.signerCpf?.trim() || doc.sale.documentNumber || lead.cpfCnpj || "—";
-    const signerEmail = lead.email || "—";
+    const lead = doc.sale?.proposal?.deal?.lead;
+    const signerName =
+      dto.signerName?.trim() ||
+      lead?.name ||
+      doc.sale?.legalRepresentativeName ||
+      doc.signerName ||
+      "Signatário";
+    const signerCpf =
+      dto.signerCpf?.trim() ||
+      doc.sale?.legalRepresentativeCpf ||
+      doc.sale?.documentNumber ||
+      lead?.cpfCnpj ||
+      doc.signerCpf ||
+      "—";
+    const signerEmail = lead?.email || doc.signerEmail || "—";
 
     const forwarded = req.headers?.["x-forwarded-for"];
     const signerIp =
@@ -316,6 +362,7 @@ export class SignatureAuditService {
         <div class="card">
           <div style="font-weight: bold; color: #059669; margin-bottom: 10px; text-transform: uppercase; font-size: 9pt;">1. Identificação do Documento</div>
           <div class="row"><span class="label">Título do Documento:</span><span class="val">${doc.title}</span></div>
+          <div class="row"><span class="label">Empresa Integradora:</span><span class="val">${doc.sale?.tenant?.name || "EnergivIA Soluções Solares"}</span></div>
           <div class="row"><span class="label">Código de Rastreio (UUID):</span><span class="val">${doc.publicToken}</span></div>
           <div class="row"><span class="label">Hash Original (SHA-256):</span><span class="val">${doc.originalPdfHash || "—"}</span></div>
         </div>
@@ -323,7 +370,7 @@ export class SignatureAuditService {
         <div class="card">
           <div style="font-weight: bold; color: #059669; margin-bottom: 10px; text-transform: uppercase; font-size: 9pt;">2. Dados do Signatário e Autenticação</div>
           <div class="row"><span class="label">Nome Completo:</span><span class="val">${signerName}</span></div>
-          <div class="row"><span class="label">CPF do Signatário:</span><span class="val">${signerCpf}</span></div>
+          <div class="row"><span class="label">CPF / Documento:</span><span class="val">${signerCpf}</span></div>
           <div class="row"><span class="label">E-mail Cadastrado:</span><span class="val">${signerEmail}</span></div>
           <div class="row"><span class="label">Endereço IP Registrado:</span><span class="val">${signerIp}</span></div>
           <div class="row"><span class="label">Ambiente / Navegador:</span><span class="val">${signerUserAgent}</span></div>
@@ -364,7 +411,7 @@ export class SignatureAuditService {
     await this.prisma.saleDocument.update({
       where: { id: doc.id },
       data: {
-        status: DocumentSignStatus.SIGNED,
+        status: STATUS_SIGNED,
         signedAt,
         signerName,
         signerCpf,
@@ -379,10 +426,12 @@ export class SignatureAuditService {
     });
 
     // Atualizar status da venda para SIGNED
-    await this.prisma.sale.update({
-      where: { id: doc.sale.id },
-      data: { status: SaleStatus.SIGNED },
-    });
+    if (doc.sale?.id) {
+      await this.prisma.sale.update({
+        where: { id: doc.sale.id },
+        data: { status: SALE_STATUS_SIGNED },
+      });
+    }
 
     return {
       signed: true,
@@ -394,13 +443,29 @@ export class SignatureAuditService {
   async getDocumentPdf(publicToken: string): Promise<{ buffer: Buffer; filename: string }> {
     const doc = await this.prisma.saleDocument.findUnique({
       where: { publicToken },
+      include: {
+        sale: {
+          include: {
+            proposal: {
+              include: {
+                deal: {
+                  include: {
+                    lead: true,
+                  },
+                },
+              },
+            },
+            tenant: true,
+          },
+        },
+      },
     });
 
     if (!doc) {
       throw new NotFoundException("Documento não encontrado.");
     }
 
-    const isSigned = doc.status === DocumentSignStatus.SIGNED;
+    const isSigned = doc.status === STATUS_SIGNED;
     const targetUrl = isSigned && doc.signedPdfUrl ? doc.signedPdfUrl : doc.originalPdfUrl;
 
     if (targetUrl) {
@@ -416,7 +481,55 @@ export class SignatureAuditService {
       }
     }
 
-    // Fallback se não encontrar o arquivo no disco: regerar dinamicamente
+    // Fallback: regerar o PDF dinamicamente se o container tiver sido reiniciado
+    if (doc.sale) {
+      try {
+        const lead = doc.sale.proposal?.deal?.lead;
+        const tenant = doc.sale.tenant;
+        const formattedDate = new Date(doc.createdAt || Date.now()).toLocaleDateString("pt-BR", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+        const formattedInvestment = new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        }).format(doc.sale.investmentAmount || 0);
+
+        const html = this.documentTemplateService.buildDocumentHtml(
+          doc.templateType as DocumentType,
+          {
+            nome_cliente:
+              lead?.name || doc.sale.legalRepresentativeName || doc.signerName || "Cliente",
+            cpf_cliente: doc.sale.documentNumber || lead?.cpfCnpj || doc.signerCpf || "—",
+            rg_cliente: doc.sale.rgNumber
+              ? `${doc.sale.rgNumber} ${doc.sale.rgIssuer ?? ""}`.trim()
+              : "—",
+            endereco_instalacao: doc.sale.installationAddress || "—",
+            cidade_instalacao: doc.sale.installationCity || "—",
+            estado_instalacao: doc.sale.installationState || "—",
+            cep_instalacao: doc.sale.installationZip || "—",
+            concessionaria: doc.sale.distributionCompany || "—",
+            numero_uc: doc.sale.consumerUnitNumber || "—",
+            potencia_kwp: doc.sale.systemPowerKwp > 0 ? doc.sale.systemPowerKwp.toFixed(2) : "—",
+            valor_total: formattedInvestment,
+            forma_pagamento: doc.sale.paymentMethod || "À Vista / Financiamento Bancário",
+            nome_empresa: tenant?.name || "EnergivIA Soluções Solares",
+            nome_vendedor: doc.sale.sellerName || "Consultor Técnico",
+            data_atual: formattedDate,
+          }
+        );
+
+        const { pdfBuffer } = await this.documentTemplateService.generatePdfWithHash(html);
+        return {
+          buffer: pdfBuffer,
+          filename: `${doc.title.replace(/[^a-zA-Z0-9_-]/g, "_")}${isSigned ? "_assinado" : ""}.pdf`,
+        };
+      } catch (err) {
+        this.logger.warn(`Erro ao regerar PDF em fallback para token ${publicToken}: ${err}`);
+      }
+    }
+
     const dummyPdf = Buffer.from("%PDF-1.4 Mock Contract Content");
     return {
       buffer: dummyPdf,

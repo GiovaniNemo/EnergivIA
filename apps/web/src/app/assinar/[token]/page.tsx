@@ -30,6 +30,7 @@ function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
     const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
     return d.toLocaleString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
@@ -42,12 +43,18 @@ function formatDate(iso: string | null | undefined): string {
   }
 }
 
-function formatCpf(val: string): string {
-  const digits = val.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
-  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+function formatCpfOrCnpj(val: string): string {
+  const digits = val.replace(/\D/g, "").slice(0, 14);
+  if (digits.length <= 11) {
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+  }
+  if (digits.length <= 12) {
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
+  }
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12, 14)}`;
 }
 
 export default function PublicSignDocumentPage(): JSX.Element {
@@ -86,7 +93,7 @@ export default function PublicSignDocumentPage(): JSX.Element {
       try {
         const data = await getPublicDocument(token);
         setDoc(data);
-        if (data.signStatus === "SIGNED") {
+        if (data.signStatus === "SIGNED" || data.status === "SIGNED" || data.isSigned) {
           setStep(5);
           setSignResult({
             signedAt: data.signedAt,
@@ -106,7 +113,7 @@ export default function PublicSignDocumentPage(): JSX.Element {
   async function handleRequestOtp(e: React.FormEvent) {
     e.preventDefault();
     if (!cpfInput.trim()) {
-      setError("Por favor, digite seu CPF cadastrado.");
+      setError("Por favor, digite seu CPF ou CNPJ cadastrado.");
       return;
     }
     setRequestingOtp(true);
@@ -116,7 +123,7 @@ export default function PublicSignDocumentPage(): JSX.Element {
       setEmailMasked(res.emailMasked);
       setStep(3);
     } catch (err: any) {
-      setError(err.message || "Erro ao verificar CPF. Confira os números digitados.");
+      setError(err.message || "Erro ao verificar CPF/CNPJ. Confira os números digitados.");
     } finally {
       setRequestingOtp(false);
     }
@@ -192,6 +199,10 @@ export default function PublicSignDocumentPage(): JSX.Element {
     setHasSignature(false);
   }
 
+  const signerDisplayName = doc?.signerName || doc?.customerName || "Titular do Contrato";
+  const organizationDisplayName =
+    doc?.organizationName || doc?.companyName || "EnergivIA Soluções Solares";
+
   // Submit Signature
   async function handleConfirmSign() {
     if (!hasSignature || !canvasRef.current) {
@@ -209,8 +220,8 @@ export default function PublicSignDocumentPage(): JSX.Element {
       const dataUrl = canvasRef.current.toDataURL("image/png");
       const res = await signPublicDocument(token, {
         signatureImage: dataUrl,
-        signerName: doc.signerName || "Signatário",
-        signerCpf: cpfInput || doc.signerCpf,
+        signerName: signerDisplayName,
+        signerCpf: cpfInput || doc?.signerCpf,
       });
 
       setSignResult(res);
@@ -326,7 +337,9 @@ export default function PublicSignDocumentPage(): JSX.Element {
                   {docTitle}
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Gerado em {formatDate(doc?.createdAt)}
+                  {doc?.createdAt
+                    ? `Gerado em ${formatDate(doc.createdAt)}`
+                    : "Pronto para assinatura eletrônica"}
                 </p>
               </div>
             </div>
@@ -336,13 +349,13 @@ export default function PublicSignDocumentPage(): JSX.Element {
               <div className="flex justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700/60">
                 <span className="text-slate-500 dark:text-slate-400">Signatário Titular:</span>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  {doc?.signerName}
+                  {signerDisplayName}
                 </span>
               </div>
               <div className="flex justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700/60">
                 <span className="text-slate-500 dark:text-slate-400">Empresa Integradora:</span>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  {doc?.organizationName}
+                  {organizationDisplayName}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -350,7 +363,7 @@ export default function PublicSignDocumentPage(): JSX.Element {
                   Integridade (SHA-256 Original):
                 </span>
                 <span className="font-mono text-[10px] text-slate-600 dark:text-slate-300">
-                  {doc?.originalPdfHash?.slice(0, 16)}...
+                  {doc?.originalPdfHash ? `${doc.originalPdfHash.slice(0, 16)}...` : "—"}
                 </span>
               </div>
             </div>
@@ -378,7 +391,7 @@ export default function PublicSignDocumentPage(): JSX.Element {
           </div>
         )}
 
-        {/* STEP 2: CONFIRMAÇÃO DE CPF */}
+        {/* STEP 2: CONFIRMAÇÃO DE CPF / CNPJ */}
         {step === 2 && (
           <form
             onSubmit={handleRequestOtp}
@@ -393,20 +406,20 @@ export default function PublicSignDocumentPage(): JSX.Element {
                   Confirmação de Identidade
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Para garantir a segurança jurídica, confirme o CPF do titular.
+                  Para garantir a segurança jurídica, confirme o CPF ou CNPJ cadastrado.
                 </p>
               </div>
             </div>
 
             <div>
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                Digite seu CPF
+                Digite seu CPF ou CNPJ
               </label>
               <input
                 type="text"
                 value={cpfInput}
-                onChange={(e) => setCpfInput(formatCpf(e.target.value))}
-                maxLength={14}
+                onChange={(e) => setCpfInput(formatCpfOrCnpj(e.target.value))}
+                maxLength={18}
                 placeholder="000.000.000-00"
                 className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 autoFocus
@@ -483,7 +496,7 @@ export default function PublicSignDocumentPage(): JSX.Element {
                 onClick={() => setStep(2)}
                 className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
               >
-                <ArrowLeft className="h-3.5 w-3.5" /> Corrigir CPF
+                <ArrowLeft className="h-3.5 w-3.5" /> Corrigir CPF/CNPJ
               </button>
 
               <button
@@ -545,7 +558,7 @@ export default function PublicSignDocumentPage(): JSX.Element {
               />
               <div className="pointer-events-none absolute bottom-5 left-8 right-8 border-b border-slate-300 dark:border-slate-700 text-center pb-1">
                 <span className="text-[10px] uppercase tracking-wider text-slate-400">
-                  Linha de Assinatura · {doc?.signerName}
+                  Linha de Assinatura · {signerDisplayName}
                 </span>
               </div>
             </div>
@@ -615,7 +628,7 @@ export default function PublicSignDocumentPage(): JSX.Element {
               <div className="flex justify-between">
                 <span className="text-slate-500 dark:text-slate-400">Signatário:</span>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  {doc?.signerName}
+                  {signerDisplayName}
                 </span>
               </div>
               <div className="flex justify-between">

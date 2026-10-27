@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DocumentTemplateService } from "../document-template.service";
-import { DocumentType } from "@prisma/client";
 
 describe("DocumentTemplateService", () => {
   let service: DocumentTemplateService;
@@ -47,7 +46,7 @@ describe("DocumentTemplateService", () => {
       data_atual: "27 de outubro de 2026",
     };
 
-    const html = service.buildDocumentHtml(DocumentType.CONTRATO_PF, data);
+    const html = service.buildDocumentHtml("CONTRATO_PF", data);
 
     expect(html).toContain(
       "CONTRATO DE PRESTAÇÃO DE SERVIÇOS E FORNECIMENTO DE SISTEMA FOTOVOLTAICO"
@@ -73,7 +72,7 @@ describe("DocumentTemplateService", () => {
       data_atual: "27 de outubro de 2026",
     };
 
-    const html = service.buildDocumentHtml(DocumentType.PROCURACAO_PF, data);
+    const html = service.buildDocumentHtml("PROCURACAO_PF", data);
 
     expect(html).toContain("PROCURAÇÃO ESPECÍFICA - ACESSO À REDE DE DISTRIBUIÇÃO");
     expect(html).toContain("CPFL Paulista");
@@ -89,6 +88,6 @@ describe("DocumentTemplateService", () => {
     expect(mockPdfRenderer.renderHtmlToPdf).toHaveBeenCalledWith({ html });
     expect(pdfBuffer).toBeInstanceOf(Buffer);
     expect(typeof sha256Hash).toBe("string");
-    expect(sha256Hash.length).toBe(64); // SHA-256 hex string length
+    expect(sha256Hash.length).toBe(64);
   });
 });

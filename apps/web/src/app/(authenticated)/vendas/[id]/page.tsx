@@ -132,7 +132,11 @@ export default function VendaDetailPage(): JSX.Element {
         customerType: data.customerType || "PF",
         customerName: data.customerName || data.proposal?.deal?.lead?.name || "",
         customerEmail: data.customerEmail || data.proposal?.deal?.lead?.email || "",
-        customerPhone: data.customerPhone || data.proposal?.deal?.lead?.phone || "",
+        customerPhone:
+          data.customerPhone ||
+          data.proposal?.deal?.lead?.whatsapp ||
+          data.proposal?.deal?.lead?.phone ||
+          "",
         customerCpfCnpj:
           data.customerCpfCnpj || data.documentNumber || data.proposal?.deal?.lead?.cpfCnpj || "",
         customerRgIe: data.customerRgIe || data.rgNumber || "",
@@ -299,7 +303,11 @@ export default function VendaDetailPage(): JSX.Element {
         status: formData.status,
         notes: formData.notes,
       });
-      setSale(updated);
+      setSale((prev: any) => ({
+        ...prev,
+        ...updated,
+        customerName: formData.customerName || prev?.customerName,
+      }));
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3500);
     } catch (err: any) {
@@ -427,7 +435,9 @@ export default function VendaDetailPage(): JSX.Element {
               value={formData.status}
               onChange={(e) => {
                 setFormData((prev) => ({ ...prev, status: e.target.value }));
-                updateSale(saleId, { status: e.target.value }).then((res) => setSale(res));
+                updateSale(saleId, { status: e.target.value }).then((res) =>
+                  setSale((prev: any) => ({ ...prev, ...res }))
+                );
               }}
               className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1.5 text-xs font-medium text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
             >

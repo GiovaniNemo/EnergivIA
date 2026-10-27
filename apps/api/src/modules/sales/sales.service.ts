@@ -5,6 +5,16 @@ import { UpdateSaleDto } from "./dto/update-sale.dto";
 import { QuerySalesDto } from "./dto/query-sales.dto";
 import { DocumentTemplateService } from "./document-template.service";
 
+const CUSTOMER_TYPE_PF = (CustomerType?.PF ?? "PF") as CustomerType;
+const CUSTOMER_TYPE_PJ = (CustomerType?.PJ ?? "PJ") as CustomerType;
+const SALE_STATUS_AWAITING = (SaleStatus?.AWAITING_ANALYSIS ?? "AWAITING_ANALYSIS") as SaleStatus;
+const SALE_STATUS_DOCS_PENDING = (SaleStatus?.DOCUMENTS_PENDING ??
+  "DOCUMENTS_PENDING") as SaleStatus;
+const SALE_STATUS_CANCELED = (SaleStatus?.CANCELED ?? "CANCELED") as SaleStatus;
+const DOC_STATUS_PENDING = (DocumentSignStatus?.PENDING ?? "PENDING") as DocumentSignStatus;
+const DOC_TYPE_CONTRATO_PF = (DocumentType?.CONTRATO_PF ?? "CONTRATO_PF") as DocumentType;
+const DOC_TYPE_CONTRATO_PJ = (DocumentType?.CONTRATO_PJ ?? "CONTRATO_PJ") as DocumentType;
+
 function formatSaleDocument<T extends Record<string, unknown>>(d: T) {
   return {
     ...d,
@@ -69,7 +79,7 @@ export class SalesService {
     // Determinar se é PF ou PJ
     const rawDoc = lead?.cpfCnpj?.replace(/\D/g, "") ?? "";
     const isPj = rawDoc.length > 11 || Boolean(lead?.company);
-    const customerType = isPj ? CustomerType.PJ : CustomerType.PF;
+    const customerType = isPj ? CUSTOMER_TYPE_PJ : CUSTOMER_TYPE_PF;
 
     // Gerar número sequencial de venda por organização
     const lastSale = await this.prisma.sale.findFirst({
@@ -91,7 +101,7 @@ export class SalesService {
         proposalId: proposal.id,
         dealId: proposal.dealId,
         saleNumber,
-        status: SaleStatus.AWAITING_ANALYSIS,
+        status: SALE_STATUS_AWAITING,
         customerType,
         documentNumber: lead?.cpfCnpj ?? null,
         legalRepresentativeName: isPj ? lead?.name : null,
@@ -256,7 +266,7 @@ export class SalesService {
       throw new NotFoundException("Venda não encontrada.");
     }
 
-    // Se forneceu customerName, customerEmail, etc., atualizar no Lead vinculado
+    // Se forneceu customerName, customerEmail, customerPhone ou customerCpfCnpj, atualizar no Lead vinculado
     if (
       existing.proposal?.deal?.leadId &&
       (dto.customerName || dto.customerEmail || dto.customerPhone || dto.customerCpfCnpj)
@@ -267,12 +277,28 @@ export class SalesService {
           data: {
             ...(dto.customerName && { name: dto.customerName }),
             ...(dto.customerEmail && { email: dto.customerEmail }),
-            ...(dto.customerPhone && { phone: dto.customerPhone }),
+            ...(dto.customerPhone && { whatsapp: dto.customerPhone }),
             ...(dto.customerCpfCnpj && { cpfCnpj: dto.customerCpfCnpj }),
           },
         });
       } catch (err) {
-        this.logger.warn(`Falha ao atualizar dados do lead na venda ${id}: ${err}`);
+        this.logger.warn(
+          `Falha ao atualizar cpfCnpj/lead na venda ${id}, tentando sem cpfCnpj: ${err}`
+        );
+        try {
+          if (dto.customerName || dto.customerEmail || dto.customerPhone) {
+            await this.prisma.lead.update({
+              where: { id: existing.proposal.deal.leadId },
+              data: {
+                ...(dto.customerName && { name: dto.customerName }),
+                ...(dto.customerEmail && { email: dto.customerEmail }),
+                ...(dto.customerPhone && { whatsapp: dto.customerPhone }),
+              },
+            });
+          }
+        } catch (innerErr) {
+          this.logger.warn(`Falha ao atualizar dados básicos do lead na venda ${id}: ${innerErr}`);
+        }
       }
     }
 
@@ -354,7 +380,7 @@ export class SalesService {
         ...(dto.status !== undefined && {
           status:
             dto.status === ("CANCELLED" as unknown as SaleStatus)
-              ? SaleStatus.CANCELED
+              ? SALE_STATUS_CANCELED
               : dto.status,
         }),
       },
@@ -403,8 +429,11 @@ export class SalesService {
       currency: "BRL",
     }).format(sale.investmentAmount);
 
+    const signerName = lead?.name || sale.legalRepresentativeName || "Cliente";
+    const signerCpf = sale.legalRepresentativeCpf || sale.documentNumber || lead?.cpfCnpj || "—";
+
     const data: Record<string, string | number | undefined | null> = {
-      nome_cliente: lead?.name ?? "Cliente",
+      nome_cliente: signerName,
       cpf_cliente: sale.documentNumber || lead?.cpfCnpj || "—",
       rg_cliente: sale.rgNumber ? `${sale.rgNumber} ${sale.rgIssuer ?? ""}`.trim() : "—",
       endereco_instalacao: sale.installationAddress || "—",
@@ -425,14 +454,14 @@ export class SalesService {
     const { pdfBuffer, sha256Hash } = await this.documentTemplateService.generatePdfWithHash(html);
 
     const docTitle =
-      documentType === DocumentType.CONTRATO_PF || documentType === DocumentType.CONTRATO_PJ
+      documentType === DOC_TYPE_CONTRATO_PF || documentType === DOC_TYPE_CONTRATO_PJ
         ? `Contrato de Venda e Instalação Solar - #${sale.saleNumber ?? ""}`.trim()
         : `Procuração ANEEL / Concessionária - #${sale.saleNumber ?? ""}`.trim();
 
     const fileName = `doc-${sale.id}-${documentType.toLowerCase()}-${Date.now()}.pdf`;
     this.documentTemplateService.savePdfToDisk(fileName, pdfBuffer);
 
-    // Salvar registro no banco
+    // Salvar registro no banco já com dados iniciais do signatário
     const saleDoc = await this.prisma.saleDocument.create({
       data: {
         saleId: sale.id,
@@ -441,15 +470,18 @@ export class SalesService {
         title: docTitle,
         originalPdfUrl: `/uploads/sales-documents/${fileName}`,
         originalPdfHash: sha256Hash,
-        status: DocumentSignStatus.PENDING,
+        status: DOC_STATUS_PENDING,
+        signerName,
+        signerCpf: signerCpf !== "—" ? signerCpf : null,
+        signerEmail: lead?.email ?? null,
       },
     });
 
     // Se o status da venda era AWAITING_ANALYSIS, atualizar para DOCUMENTS_PENDING
-    if (sale.status === SaleStatus.AWAITING_ANALYSIS) {
+    if (sale.status === SALE_STATUS_AWAITING) {
       await this.prisma.sale.update({
         where: { id: sale.id },
-        data: { status: SaleStatus.DOCUMENTS_PENDING },
+        data: { status: SALE_STATUS_DOCS_PENDING },
       });
     }
 

@@ -816,3 +816,7 @@
 | task-825 | Adicionar consulta automática de CNPJ (Receita Federal) e CEP (ViaCEP) na ficha da venda | completed | Suporte a auto-preenchimento para PJ via CNPJ e endereço via CEP no frontend e backend |
 | task-826 | Uniformizar e nivelar layout dos cards de métricas de vendas (/vendas) | completed | Cabeçalhos com altura padronizada h-10, ícones em badges fixas e alinhamento milimétrico de valores e legendas |
 | task-827 | Corrigir erro TS2339 no build da API (lead.phone -> lead.whatsapp em sales.service) | completed | Corrigido acesso à propriedade do modelo Prisma Lead em getSaleById e build da API validado 100% |
+| task-828 | Escrever testes unitários (RED) para preenchimento de dados públicos em SignatureAuditService e SalesService | completed | Testes reproduzindo ausência de signerName/organizationName/createdAt e uso indevido de phone em lead.update |
+| task-829 | Corrigir SignatureAuditService e SalesService para retornar todos os metadados do signatário e integradora | completed | Mapeados signerName, organizationName, createdAt, signStatus e corrigido lead.update com whatsapp |
+| task-830 | Atualizar /assinar/[token]/page.tsx com fallbacks seguros e suporte a CPF/CNPJ na validação | completed | Preenchimento de Signatário Titular, Empresa Integradora, data de geração e suporte a CPF/CNPJ implementados |
+| task-831 | Validar testes automatizados, linters, build, commit e push | completed | 18 testes vitest aprovados (100%), linters API e Web com 0 erros e enviado para origin/main |
