@@ -806,3 +806,4 @@
 | task-815 | Frontend: listagem de vendas (/vendas) e ficha da venda (/vendas/[id]) com abas modernas | completed | Ficha cadastral, geração de documentos em 1 clique, atalho de WhatsApp e trilha de auditoria |
 | task-816 | Frontend: experiência pública de assinatura eletrônica nativa (/assinar/[token]) | completed | Preview de documento, validação de CPF, código OTP e canvas de assinatura |
 | task-817 | Validação de ponta a ponta, testes automatizados, linters e guia de teste | completed | 16 testes unitários aprovados (100%), linters API e Web limpos com 0 erros e guia de testes pronto |
+| task-818 | Remover card e modal de Conformidade Legal & Aceite dos Termos da tela de organização (/settings/organization) | completed | Card de conformidade legal, certidão probatória e modal de declaração de termos removidos da visão do integrador |
