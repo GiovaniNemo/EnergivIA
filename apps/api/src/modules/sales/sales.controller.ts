@@ -7,7 +7,7 @@ import { SalesService } from "./sales.service";
 import { UpdateSaleDto } from "./dto/update-sale.dto";
 import { QuerySalesDto } from "./dto/query-sales.dto";
 
-@Controller("sales")
+@Controller(["sales", "api/sales"])
 @UseGuards(UnifiedAuthGuard)
 export class SalesController {
   constructor(private readonly salesService: SalesService) {}

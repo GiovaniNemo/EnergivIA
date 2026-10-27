@@ -77,7 +77,9 @@ async function proxy(request: NextRequest, params: { path: string[] }, method: s
     }
   }
 
-  const url = new URL(path, `${BACKEND_URL}/`);
+  const cleanBase = BACKEND_URL.replace(/\/+$/, "");
+  const cleanPath = path.replace(/^\/+/, "");
+  const url = new URL(`${cleanBase}/${cleanPath}`);
   request.nextUrl.searchParams.forEach((v, k) => url.searchParams.set(k, v));
 
   const orgId =

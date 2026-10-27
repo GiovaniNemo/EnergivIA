@@ -4,7 +4,7 @@ import { Public } from "../../common/decorators/public.decorator";
 import { SignatureAuditService } from "./signature-audit.service";
 
 @Public()
-@Controller("public/documents")
+@Controller(["public/documents", "api/public/documents"])
 export class PublicSignatureController {
   constructor(private readonly signatureAuditService: SignatureAuditService) {}
 
@@ -37,7 +37,7 @@ export class PublicSignatureController {
     return this.signatureAuditService.signDocument(token, body, req);
   }
 
-  @Get(":token/download")
+  @Get([":token/download", ":token/pdf"])
   @Header("Content-Type", "application/pdf")
   async downloadPdf(@Param("token") token: string) {
     const { buffer, filename } = await this.signatureAuditService.getDocumentPdf(token);
