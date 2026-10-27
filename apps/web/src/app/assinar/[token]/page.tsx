@@ -253,10 +253,10 @@ export default function PublicSignDocumentPage(): JSX.Element {
     );
   }
 
-  const isContract = doc?.documentType?.startsWith("CONTRATO");
-  const docTitle = isContract
-    ? "Contrato de Compra e Venda Solar"
-    : "Procuração para Homologação ANEEL";
+  const isContract = String(doc?.templateType || doc?.documentType || "").startsWith("CONTRATO");
+  const docTitle =
+    doc?.title ||
+    (isContract ? "Contrato de Compra e Venda Solar" : "Procuração para Homologação ANEEL");
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white dark:bg-slate-950 dark:text-slate-100">

@@ -5,6 +5,15 @@ import { UpdateSaleDto } from "./dto/update-sale.dto";
 import { QuerySalesDto } from "./dto/query-sales.dto";
 import { DocumentTemplateService } from "./document-template.service";
 
+function formatSaleDocument<T extends Record<string, unknown>>(d: T) {
+  return {
+    ...d,
+    documentType: d["templateType"] ?? d["documentType"],
+    signStatus: d["status"] ?? d["signStatus"],
+    signToken: d["publicToken"] ?? d["signToken"],
+  };
+}
+
 @Injectable()
 export class SalesService {
   private readonly logger = new Logger(SalesService.name);
@@ -178,8 +187,15 @@ export class SalesService {
       this.prisma.sale.count({ where }),
     ]);
 
+    const mappedItems = items.map((sale) => ({
+      ...sale,
+      documents: sale.documents?.map((d) =>
+        formatSaleDocument(d as unknown as Record<string, unknown>)
+      ),
+    }));
+
     return {
-      items,
+      items: mappedItems,
       total,
       page,
       limit,
@@ -211,7 +227,12 @@ export class SalesService {
       throw new NotFoundException("Venda não encontrada.");
     }
 
-    return sale;
+    return {
+      ...sale,
+      documents: sale.documents?.map((d) =>
+        formatSaleDocument(d as unknown as Record<string, unknown>)
+      ),
+    };
   }
 
   async updateSale(tenantId: string, id: string, dto: UpdateSaleDto) {
@@ -361,6 +382,6 @@ export class SalesService {
       });
     }
 
-    return saleDoc;
+    return formatSaleDocument(saleDoc as unknown as Record<string, unknown>);
   }
 }

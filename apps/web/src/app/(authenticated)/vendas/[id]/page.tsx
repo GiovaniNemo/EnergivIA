@@ -202,9 +202,11 @@ export default function VendaDetailPage(): JSX.Element {
 
   function handleCopyWhatsAppMessage(doc: any) {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const signUrl = `${origin}/assinar/${doc.signToken}`;
+    const token = doc.publicToken || doc.signToken || "";
+    const signUrl = `${origin}/assinar/${token}`;
     const clientFirstName = (formData.customerName || "Cliente").split(" ")[0];
-    const docName = doc.documentType.startsWith("CONTRATO")
+    const docType = String(doc.templateType || doc.documentType || "");
+    const docName = docType.startsWith("CONTRATO")
       ? "Contrato de Venda do Sistema Solar"
       : "Procuração para Homologação ANEEL";
 
@@ -846,11 +848,15 @@ export default function VendaDetailPage(): JSX.Element {
               ) : (
                 <div className="divide-y divide-[var(--color-border)]">
                   {sale.documents.map((doc: any) => {
-                    const isSigned = doc.signStatus === "SIGNED";
-                    const isContract = doc.documentType.startsWith("CONTRATO");
-                    const title = isContract
-                      ? "Contrato de Compra e Venda de Sistema Solar"
-                      : "Procuração de Acesso e Homologação ANEEL";
+                    const isSigned = (doc.status || doc.signStatus) === "SIGNED";
+                    const docType = String(doc.templateType || doc.documentType || "");
+                    const isContract = docType.startsWith("CONTRATO");
+                    const title =
+                      doc.title ||
+                      (isContract
+                        ? "Contrato de Compra e Venda de Sistema Solar"
+                        : "Procuração de Acesso e Homologação ANEEL");
+                    const token = doc.publicToken || doc.signToken || "";
 
                     return (
                       <div
@@ -899,7 +905,7 @@ export default function VendaDetailPage(): JSX.Element {
                         <div className="flex flex-wrap items-center gap-2">
                           {/* Visualizar / Baixar PDF */}
                           <a
-                            href={`/api/proxy/public/documents/${doc.signToken}/pdf`}
+                            href={`/api/proxy/public/documents/${token}/pdf`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-xs font-medium text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-muted)]"
@@ -912,10 +918,10 @@ export default function VendaDetailPage(): JSX.Element {
                           {!isSigned && (
                             <>
                               <button
-                                onClick={() => handleCopySignLink(doc.signToken)}
+                                onClick={() => handleCopySignLink(token)}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-xs font-medium text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-muted)]"
                               >
-                                {copiedLink === doc.signToken ? (
+                                {copiedLink === token ? (
                                   <>
                                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                                     Copiado!
@@ -946,7 +952,7 @@ export default function VendaDetailPage(): JSX.Element {
                               </button>
 
                               <Link
-                                href={`/assinar/${doc.signToken}`}
+                                href={`/assinar/${token}`}
                                 target="_blank"
                                 className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] p-1.5 text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
                                 title="Abrir página de assinatura"
@@ -1023,50 +1029,58 @@ export default function VendaDetailPage(): JSX.Element {
                 </p>
               )}
 
-              {sale?.documents?.map((doc: any) => (
-                <div
-                  key={doc.id}
-                  className="rounded-lg border border-[var(--color-border)] p-3 text-xs space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-[var(--color-foreground)]">
-                      {doc.documentType}
-                    </span>
-                    <span className="text-[11px] text-[var(--color-muted-foreground)]">
-                      Token: <code className="font-mono">{doc.signToken}</code>
-                    </span>
-                  </div>
+              {sale?.documents?.map((doc: any) => {
+                const docType = String(doc.templateType || doc.documentType || "");
+                const isContract = docType.startsWith("CONTRATO");
+                const title =
+                  doc.title ||
+                  (isContract ? "Contrato de Venda do Sistema Solar" : "Procuração ANEEL");
+                const token = doc.publicToken || doc.signToken || "";
+                const isSigned = (doc.status || doc.signStatus) === "SIGNED";
 
-                  <div className="grid gap-2 sm:grid-cols-2 text-[11px] text-[var(--color-muted-foreground)]">
-                    <div>
-                      <strong>Hash do Documento Original (SHA-256):</strong>
-                      <div className="font-mono text-[10px] break-all">{doc.originalPdfHash}</div>
+                return (
+                  <div
+                    key={doc.id}
+                    className="rounded-lg border border-[var(--color-border)] p-3 text-xs space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-[var(--color-foreground)]">{title}</span>
+                      <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                        Token: <code className="font-mono">{token}</code>
+                      </span>
                     </div>
-                    {doc.signedPdfHash && (
+
+                    <div className="grid gap-2 sm:grid-cols-2 text-[11px] text-[var(--color-muted-foreground)]">
                       <div>
-                        <strong>Hash do Documento Assinado (SHA-256):</strong>
-                        <div className="font-mono text-[10px] break-all text-emerald-700 dark:text-emerald-300">
-                          {doc.signedPdfHash}
+                        <strong>Hash do Documento Original (SHA-256):</strong>
+                        <div className="font-mono text-[10px] break-all">{doc.originalPdfHash}</div>
+                      </div>
+                      {doc.signedPdfHash && (
+                        <div>
+                          <strong>Hash do Documento Assinado (SHA-256):</strong>
+                          <div className="font-mono text-[10px] break-all text-emerald-700 dark:text-emerald-300">
+                            {doc.signedPdfHash}
+                          </div>
                         </div>
+                      )}
+                    </div>
+
+                    {isSigned && (
+                      <div className="pt-2 border-t border-[var(--color-border)] flex flex-wrap items-center gap-4 text-[11px]">
+                        <span>
+                          <strong>Signatário:</strong> {doc.signerName}
+                        </span>
+                        <span>
+                          <strong>Data/Hora:</strong> {formatDate(doc.signedAt)}
+                        </span>
+                        <span>
+                          <strong>IP Registrado:</strong> {doc.signerIp || "—"}
+                        </span>
                       </div>
                     )}
                   </div>
-
-                  {doc.signStatus === "SIGNED" && (
-                    <div className="pt-2 border-t border-[var(--color-border)] flex flex-wrap items-center gap-4 text-[11px]">
-                      <span>
-                        <strong>Signatário:</strong> {doc.signerName}
-                      </span>
-                      <span>
-                        <strong>Data/Hora:</strong> {formatDate(doc.signedAt)}
-                      </span>
-                      <span>
-                        <strong>IP Registrado:</strong> {doc.signerIp || "—"}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
