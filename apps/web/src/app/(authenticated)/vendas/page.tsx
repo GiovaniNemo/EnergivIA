@@ -188,67 +188,73 @@ export default function VendasPage(): JSX.Element {
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Card className="border-[var(--color-border)] bg-[var(--color-card)]/90 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--color-muted-foreground)]">
-              Total de Vendas
-            </CardTitle>
-            <Zap className="h-4 w-4 text-[var(--color-primary)]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-[var(--color-foreground)]">{stats.total}</div>
-            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Volume: {formatBrl(stats.totalRevenue)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-[var(--color-border)] bg-[var(--color-card)]/90 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-amber-600 dark:text-amber-400">
-              Aguardando Documentos
-            </CardTitle>
-            <FileText className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-[var(--color-foreground)]">
-              {stats.awaiting}
-            </div>
-            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Ficha em complemento
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-[var(--color-border)] bg-[var(--color-card)]/90 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-purple-600 dark:text-purple-400">
-              Em Assinatura
-            </CardTitle>
-            <FileSignature className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-[var(--color-foreground)]">{stats.signing}</div>
-            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Link enviado ao cliente
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-[var(--color-border)] bg-[var(--color-card)]/90 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-              Contratos Assinados
-            </CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-[var(--color-foreground)]">{stats.signed}</div>
-            <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
-              Prontos p/ homologação
-            </p>
-          </CardContent>
-        </Card>
+        {[
+          {
+            title: "Total de Vendas",
+            value: stats.total,
+            subtitle: `Volume: ${formatBrl(stats.totalRevenue)}`,
+            icon: Zap,
+            colorClass: "text-emerald-600 dark:text-emerald-400",
+            bgClass: "bg-emerald-500/10 border-emerald-500/20",
+          },
+          {
+            title: "Aguardando Documentos",
+            value: stats.awaiting,
+            subtitle: "Ficha em complemento",
+            icon: FileText,
+            colorClass: "text-amber-600 dark:text-amber-400",
+            bgClass: "bg-amber-500/10 border-amber-500/20",
+          },
+          {
+            title: "Em Assinatura",
+            value: stats.signing,
+            subtitle: "Link enviado ao cliente",
+            icon: FileSignature,
+            colorClass: "text-purple-600 dark:text-purple-400",
+            bgClass: "bg-purple-500/10 border-purple-500/20",
+          },
+          {
+            title: "Contratos Assinados",
+            value: stats.signed,
+            subtitle: "Prontos p/ homologação",
+            icon: CheckCircle2,
+            colorClass: "text-teal-600 dark:text-teal-400",
+            bgClass: "bg-teal-500/10 border-teal-500/20",
+          },
+        ].map((metric) => {
+          const Icon = metric.icon;
+          return (
+            <Card
+              key={metric.title}
+              className="flex flex-col justify-between border-[var(--color-border)] bg-[var(--color-card)]/90 backdrop-blur-sm shadow-sm transition hover:shadow-md"
+            >
+              <CardHeader className="flex flex-row items-start justify-between gap-3 p-5 pb-2">
+                <div className="flex h-10 items-start">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] leading-snug">
+                    {metric.title}
+                  </span>
+                </div>
+                <div
+                  className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
+                    metric.bgClass,
+                    metric.colorClass
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                </div>
+              </CardHeader>
+              <CardContent className="p-5 pt-0">
+                <div className="text-2xl font-bold tracking-tight text-[var(--color-foreground)]">
+                  {metric.value}
+                </div>
+                <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+                  {metric.subtitle}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Filter and Search Bar */}
