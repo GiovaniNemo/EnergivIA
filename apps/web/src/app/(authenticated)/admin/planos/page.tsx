@@ -228,7 +228,11 @@ export default function AdminPlanosPage() {
           const subRes = await fetch(`/api/proxy/stripe/subscription/${currentOrganization.id}`);
           if (subRes.ok) {
             const subData = await subRes.json();
-            setCurrentOrgSubscription(subData && subData.status !== "canceled" ? subData : null);
+            setCurrentOrgSubscription(
+              subData && (subData.status === "active" || subData.status === "trialing")
+                ? subData
+                : null
+            );
           } else {
             setCurrentOrgSubscription(null);
           }

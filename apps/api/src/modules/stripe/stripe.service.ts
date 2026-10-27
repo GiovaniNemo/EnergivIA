@@ -331,12 +331,19 @@ export class StripeService {
       });
     }
 
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
+    if (!tenant) throw new Error("Tenant not found.");
+
     // Procura ou cria o customer no Stripe
-    let subscription = await this.prisma.subscription.findUnique({
+    const subscription = await this.prisma.subscription.findUnique({
       where: { tenantId },
     });
 
-    let stripeCustomerId = subscription?.stripeCustomerId;
+    const tenantSettings = (tenant.settings as Record<string, unknown>) || {};
+    let stripeCustomerId =
+      subscription?.stripeCustomerId || (tenantSettings["stripeCustomerId"] as string | undefined);
 
     // Se já existia um customer gravado, verifica se ele é válido no ambiente ativo do Stripe
     if (stripeCustomerId) {
@@ -354,11 +361,6 @@ export class StripeService {
     }
 
     if (!stripeCustomerId) {
-      const tenant = await this.prisma.tenant.findUnique({
-        where: { id: tenantId },
-      });
-      if (!tenant) throw new Error("Tenant not found.");
-
       const customer = await this.stripe.customers.create({
         name: tenant.name,
         metadata: {
@@ -367,18 +369,18 @@ export class StripeService {
       });
       stripeCustomerId = customer.id;
 
-      // Ensure we have a subscription record if there isn't one yet
-      if (!subscription) {
-        subscription = await this.prisma.subscription.create({
-          data: {
-            tenantId,
-            planId,
+      // Salva o stripeCustomerId nas configurações do tenant (NUNCA cria registro em Subscription antes da confirmação de pagamento!)
+      await this.prisma.tenant.update({
+        where: { id: tenantId },
+        data: {
+          settings: {
+            ...tenantSettings,
             stripeCustomerId,
-            status: "incomplete",
-            currentPeriodEnd: new Date(),
           },
-        });
-      } else {
+        },
+      });
+
+      if (subscription) {
         await this.prisma.subscription.update({
           where: { tenantId },
           data: { stripeCustomerId },
@@ -1237,6 +1239,16 @@ export class StripeService {
       where: { tenantId },
       include: { plan: true },
     });
+
+    if (!subscription) return null;
+
+    // Apenas assinaturas com status 'active' ou 'trialing' são consideradas válidas/vigentes.
+    // Status como 'incomplete', 'incomplete_expired', 'canceled', 'unpaid' NÃO são ativas!
+    const isActive = subscription.status === "active" || subscription.status === "trialing";
+    if (!isActive) {
+      return null;
+    }
+
     return subscription;
   }
 
@@ -1299,7 +1311,10 @@ export class StripeService {
       where: { tenantId },
     });
 
-    if (!subscription || subscription.status === "canceled") {
+    const isActive =
+      subscription && (subscription.status === "active" || subscription.status === "trialing");
+
+    if (!isActive) {
       throw new BadRequestException(
         "Sua organização precisa possuir uma assinatura ativa para gerenciar o Add-on do ZapSign."
       );

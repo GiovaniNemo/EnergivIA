@@ -51,7 +51,7 @@ export class ZapSignService {
       return { enabled: true };
     }
 
-    if (subscription && subscription.status !== "canceled") {
+    if (subscription && (subscription.status === "active" || subscription.status === "trialing")) {
       const isLifetime =
         subscription.stripeSubscriptionId === "sub_lifetime_admin_v1t4l1c10" ||
         (subscription.currentPeriodEnd &&

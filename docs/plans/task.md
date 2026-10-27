@@ -784,3 +784,7 @@
 | task-793 | Atualizar syncDefaultPlans em plans.service.ts para resetar stripeId ao alterar targetPrice | completed | Reseta stripeId para null quando o preço padrão de um plano for modificado |
 | task-794 | Criar testes unitários para sincronização automática de preço do Stripe (stripe-plan-price-sync.spec.ts) | completed | 2 testes vitest cobrindo auto-recuperação de preço divergente e reaproveitamento de preço válido |
 | task-795 | Validar testes vitest, build e commit/push | completed | 6 testes Vitest aprovados no módulo Stripe, ESLint sem erros e alterações enviadas para origin/main |
+| task-796 | Remover criação prematura de Subscription (status incomplete) em createCheckoutSession e salvar stripeCustomerId em tenant.settings | completed | Eliminada criação indevida de Subscription antes da confirmação de pagamento no Stripe |
+| task-797 | Filtrar estritamente apenas status "active" e "trialing" em getSubscriptionByTenant e no frontend (meus-planos e admin/planos) | completed | Assinaturas com status incomplete, canceled ou unpaid agora retornam null e não ativam plano |
+| task-798 | Escrever testes unitários para garantir que createCheckoutSession não cria Subscription no banco antes do pagamento | completed | 5 testes vitest cobrindo isolamento de checkout e validação estrita de status |
+| task-799 | Validar suíte de testes vitest, linters e commit/push | completed | 49 testes aprovados (100%), ESLint API e Web sem erros e enviado para origin/main |

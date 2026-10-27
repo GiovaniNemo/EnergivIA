@@ -132,7 +132,7 @@ function MeusPlanosContent() {
         const subRes = await fetch(`/api/proxy/stripe/subscription/${targetOrgId}`);
         if (subRes.ok) {
           const subData = await subRes.json();
-          if (subData && subData.status !== "canceled") {
+          if (subData && (subData.status === "active" || subData.status === "trialing")) {
             setSubscription(subData);
           } else {
             setSubscription(null);

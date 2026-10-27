@@ -3,7 +3,7 @@ import { StripeService } from "../stripe.service";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "@/shared/prisma/prisma.service";
 
-describe("StripeService - Sincronização e Validação de Preços do Plano", () => {
+describe("StripeService - Sincronização de Preços e Segurança de Assinatura", () => {
   let service: StripeService;
   let prismaMock: {
     plan: {
@@ -13,9 +13,12 @@ describe("StripeService - Sincronização e Validação de Preços do Plano", ()
     };
     subscription: {
       findUnique: ReturnType<typeof vi.fn>;
+      create: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
     };
     tenant: {
       findUnique: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
     };
     systemSetting: {
       findUnique: ReturnType<typeof vi.fn>;
@@ -77,12 +80,16 @@ describe("StripeService - Sincronização e Validação de Preços do Plano", ()
           stripeCustomerId: "cus_plus_123",
           status: "active",
         }),
+        create: vi.fn(),
+        update: vi.fn(),
       },
       tenant: {
         findUnique: vi.fn().mockResolvedValue({
           id: "tenant_plus",
           name: "Empresa Solar Plus",
+          settings: {},
         }),
+        update: vi.fn(),
       },
       systemSetting: {
         findUnique: vi.fn().mockResolvedValue({
@@ -229,5 +236,93 @@ describe("StripeService - Sincronização e Validação de Preços do Plano", ()
     // Deve usar o preço já existente
     const sessionArgs = stripeMock.checkout.sessions.create.mock.calls[0][0];
     expect(sessionArgs.line_items).toEqual([{ price: "price_old_399_stripe", quantity: 1 }]);
+  });
+
+  it("NUNCA cria registro em Subscription no banco de dados apenas ao abrir a tela de checkout (evita ativação indevida)", async () => {
+    // Simula tenant sem assinatura ativa prévia
+    prismaMock.subscription.findUnique.mockResolvedValueOnce(null);
+
+    stripeMock.prices.retrieve.mockImplementation(async (priceId: string) => {
+      if (priceId === "price_old_399_stripe") {
+        return {
+          id: "price_old_399_stripe",
+          active: true,
+          unit_amount: 39700,
+          currency: "brl",
+          recurring: { interval: "month" },
+          product: "prod_plus_existing",
+        };
+      }
+      return null;
+    });
+
+    await service.createCheckoutSession(
+      "plan_plus_id",
+      "tenant_plus",
+      "https://energivia.com.br",
+      undefined,
+      false
+    );
+
+    // CRÍTICO: prisma.subscription.create NÃO pode ser chamado no createCheckoutSession!
+    expect(prismaMock.subscription.create).not.toHaveBeenCalled();
+  });
+
+  it("getSubscriptionByTenant ignora assinaturas com status incomplete, canceled ou unpaid e retorna null", async () => {
+    // 1. Status incomplete
+    prismaMock.subscription.findUnique.mockResolvedValueOnce({
+      id: "sub_inc",
+      tenantId: "tenant_plus",
+      planId: "plan_plus_id",
+      status: "incomplete",
+    });
+    const resIncomplete = await service.getSubscriptionByTenant("tenant_plus");
+    expect(resIncomplete).toBeNull();
+
+    // 2. Status canceled
+    prismaMock.subscription.findUnique.mockResolvedValueOnce({
+      id: "sub_canc",
+      tenantId: "tenant_plus",
+      planId: "plan_plus_id",
+      status: "canceled",
+    });
+    const resCanceled = await service.getSubscriptionByTenant("tenant_plus");
+    expect(resCanceled).toBeNull();
+
+    // 3. Status unpaid
+    prismaMock.subscription.findUnique.mockResolvedValueOnce({
+      id: "sub_unp",
+      tenantId: "tenant_plus",
+      planId: "plan_plus_id",
+      status: "unpaid",
+    });
+    const resUnpaid = await service.getSubscriptionByTenant("tenant_plus");
+    expect(resUnpaid).toBeNull();
+  });
+
+  it("getSubscriptionByTenant retorna a assinatura quando status é active ou trialing", async () => {
+    // 1. Active
+    const activeSub = {
+      id: "sub_active",
+      tenantId: "tenant_plus",
+      planId: "plan_plus_id",
+      status: "active",
+      plan: { name: "Plus", price: 397 },
+    };
+    prismaMock.subscription.findUnique.mockResolvedValueOnce(activeSub);
+    const resActive = await service.getSubscriptionByTenant("tenant_plus");
+    expect(resActive).toEqual(activeSub);
+
+    // 2. Trialing
+    const trialingSub = {
+      id: "sub_trialing",
+      tenantId: "tenant_plus",
+      planId: "plan_plus_id",
+      status: "trialing",
+      plan: { name: "Plus", price: 397 },
+    };
+    prismaMock.subscription.findUnique.mockResolvedValueOnce(trialingSub);
+    const resTrialing = await service.getSubscriptionByTenant("tenant_plus");
+    expect(resTrialing).toEqual(trialingSub);
   });
 });
