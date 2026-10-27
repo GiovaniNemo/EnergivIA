@@ -805,4 +805,4 @@
 | task-814 | Frontend: navegação Vendas no menu lateral e ação Converter para Venda em propostas | completed | Vendas adicionado ao menu.config.ts e ação Converter para Venda em propostas |
 | task-815 | Frontend: listagem de vendas (/vendas) e ficha da venda (/vendas/[id]) com abas modernas | completed | Ficha cadastral, geração de documentos em 1 clique, atalho de WhatsApp e trilha de auditoria |
 | task-816 | Frontend: experiência pública de assinatura eletrônica nativa (/assinar/[token]) | completed | Preview de documento, validação de CPF, código OTP e canvas de assinatura |
-| task-817 | Validação de ponta a ponta, testes automatizados, linters e guia de teste | in_progress | Verificação completa de build e testes |
+| task-817 | Validação de ponta a ponta, testes automatizados, linters e guia de teste | completed | 16 testes unitários aprovados (100%), linters API e Web limpos com 0 erros e guia de testes pronto |
