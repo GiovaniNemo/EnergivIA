@@ -25,6 +25,7 @@ import {
   SlidersHorizontal,
   UserCheck,
   LifeBuoy,
+  BadgeCheck,
 } from "lucide-react";
 
 export type SidebarSectionKey = "operation" | "management" | "admin" | "platform";
@@ -80,6 +81,14 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/propostas",
     section: "operation",
     tooltip: "Propostas: orçamentos e estudos solares",
+    highlight: true,
+  },
+  {
+    label: "Vendas",
+    icon: BadgeCheck,
+    path: "/vendas",
+    section: "operation",
+    tooltip: "Vendas: fechamento comercial, contratos e assinaturas",
     highlight: true,
   },
   {

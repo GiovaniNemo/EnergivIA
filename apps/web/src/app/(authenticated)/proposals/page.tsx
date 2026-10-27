@@ -6,6 +6,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { listProposals, type DealStage, type ProposalListItem } from "@/lib/leads-api";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@energivia/utils";
 import {
   Briefcase,
@@ -18,8 +19,11 @@ import {
   Plus,
   TrendingUp,
   User,
+  BadgeCheck,
+  Loader2,
 } from "lucide-react";
 import { DealStageBadge } from "@/app/(authenticated)/leads/deal-stage-badge";
+import { convertProposalToSale } from "@/lib/sales-api";
 
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Rascunho",
@@ -102,10 +106,24 @@ function parseDealStage(raw: string): DealStage | null {
 }
 
 export default function ProposalsPage(): JSX.Element {
+  const router = useRouter();
   const { currentOrganizationId, loading: orgLoading } = useOrganization();
   const [items, setItems] = useState<ProposalListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [convertingId, setConvertingId] = useState<string | null>(null);
+
+  async function handleConvertToSale(proposalId: string) {
+    try {
+      setConvertingId(proposalId);
+      const sale = await convertProposalToSale(proposalId);
+      router.push(`/vendas/${sale.id}`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erro ao converter proposta em venda.");
+    } finally {
+      setConvertingId(null);
+    }
+  }
 
   useEffect(() => {
     if (!currentOrganizationId) return;
@@ -276,9 +294,10 @@ export default function ProposalsPage(): JSX.Element {
               {items.map((p) => {
                 const dealStage = parseDealStage(p.deal.stage);
                 const hasValue = p.quotedValueBrl != null;
-                const kwpLabel = p.quotedValueBrl != null && p.systemPowerKw != null && p.systemPowerKw > 0
-                  ? formatBrl(p.quotedValueBrl / p.systemPowerKw)
-                  : "—";
+                const kwpLabel =
+                  p.quotedValueBrl != null && p.systemPowerKw != null && p.systemPowerKw > 0
+                    ? formatBrl(p.quotedValueBrl / p.systemPowerKw)
+                    : "—";
 
                 return (
                   <li key={p.id}>
@@ -361,6 +380,21 @@ export default function ProposalsPage(): JSX.Element {
                               ? "Nenhuma linha de kit gravada"
                               : `${p.kitLineCount} linha${p.kitLineCount === 1 ? "" : "s"} no catálogo`}
                           </p>
+                          <div className="flex items-center justify-end gap-2 pt-1">
+                            <button
+                              type="button"
+                              disabled={convertingId === p.id}
+                              onClick={() => handleConvertToSale(p.id)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 transition hover:bg-emerald-500/20 disabled:opacity-50 dark:text-emerald-400"
+                            >
+                              {convertingId === p.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <BadgeCheck className="h-3.5 w-3.5" />
+                              )}
+                              Converter para Venda
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>

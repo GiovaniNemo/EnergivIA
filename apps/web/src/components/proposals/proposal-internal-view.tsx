@@ -32,6 +32,7 @@ import {
 } from "@/lib/leads-api";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { listProposalTemplates, type ProposalTemplateEntity } from "@/lib/proposal-templates-api";
+import { convertProposalToSale } from "@/lib/sales-api";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -138,6 +139,7 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
   const [costDefaultsError, setCostDefaultsError] = useState<string | null>(null);
   const [costDefaultsSaved, setCostDefaultsSaved] = useState(false);
   const [orgCostRulesExist, setOrgCostRulesExist] = useState(false);
+  const [convertingToSale, setConvertingToSale] = useState(false);
   const [regeneratedPublicUrl, setRegeneratedPublicUrl] = useState<string | null>(null);
   const [actionToast, setActionToast] = useState<{
     type: "success" | "error";
@@ -378,6 +380,20 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
       await reload();
     } catch (e) {
       alert(e instanceof Error ? e.message : "Erro ao fechar proposta");
+    }
+  }
+
+  async function handleConvertToSale(): Promise<void> {
+    if (!proposal) return;
+    setConvertingToSale(true);
+    try {
+      const sale = await convertProposalToSale(proposal.id);
+      showToast("success", "Proposta convertida em venda com sucesso!");
+      router.push(`/vendas/${sale.id}`);
+    } catch (e) {
+      showToast("error", e instanceof Error ? e.message : "Erro ao converter proposta em venda.");
+    } finally {
+      setConvertingToSale(false);
     }
   }
 
@@ -712,6 +728,8 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
         templateSaving={templateSaving}
         previewLayoutHref={previewLayoutHref}
         templateError={templateError}
+        onConvertToSale={() => void handleConvertToSale()}
+        isConvertingToSale={convertingToSale}
       />
 
       <section

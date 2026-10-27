@@ -20,6 +20,7 @@ import {
   Send,
   Calculator,
   Pencil,
+  BadgeCheck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -89,6 +90,8 @@ export type ProposalInternalHeaderProps = {
   templateSaving: boolean;
   previewLayoutHref: string | null;
   templateError?: string | null;
+  onConvertToSale?: () => void;
+  isConvertingToSale?: boolean;
 };
 
 export function ProposalInternalHeader({
@@ -117,6 +120,8 @@ export function ProposalInternalHeader({
   templateSaving,
   previewLayoutHref,
   templateError,
+  onConvertToSale,
+  isConvertingToSale,
 }: ProposalInternalHeaderProps): JSX.Element {
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
@@ -226,6 +231,21 @@ export function ProposalInternalHeader({
 
               {isActionsOpen && (
                 <div className="absolute right-0 top-12 z-50 w-56 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-1.5 shadow-xl shadow-black/25 animate-in fade-in zoom-in-95">
+                  {onConvertToSale && (
+                    <button
+                      type="button"
+                      disabled={isConvertingToSale}
+                      onClick={() => {
+                        setIsActionsOpen(false);
+                        onConvertToSale();
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-emerald-600 transition hover:bg-emerald-500/10 dark:text-emerald-400"
+                    >
+                      <BadgeCheck className="h-4 w-4 text-emerald-500" />
+                      <span>Converter para Venda</span>
+                    </button>
+                  )}
+
                   <a
                     href={publicProposalPath}
                     target="_blank"
