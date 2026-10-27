@@ -1,0 +1,262 @@
+import { Injectable, NotFoundException, Logger } from "@nestjs/common";
+import { PrismaService } from "../../prisma/prisma.service";
+import { CustomerType, SaleStatus } from "@prisma/client";
+import { UpdateSaleDto } from "./dto/update-sale.dto";
+import { QuerySalesDto } from "./dto/query-sales.dto";
+
+@Injectable()
+export class SalesService {
+  private readonly logger = new Logger(SalesService.name);
+
+  constructor(private readonly prisma: PrismaService) {}
+
+  async convertToSale(
+    tenantId: string,
+    proposalId: string,
+    user?: { name?: string; email?: string }
+  ) {
+    const proposal = await this.prisma.proposal.findFirst({
+      where: { id: proposalId, tenantId },
+      include: {
+        sale: true,
+        deal: {
+          include: {
+            lead: true,
+          },
+        },
+        simulation: true,
+      },
+    });
+
+    if (!proposal) {
+      throw new NotFoundException("Proposta não encontrada.");
+    }
+
+    if (proposal.sale) {
+      return proposal.sale;
+    }
+
+    const lead = proposal.deal?.lead;
+    const simInput = (proposal.simulation?.input as Record<string, unknown>) ?? {};
+    const simResult = (proposal.simulation?.result as Record<string, unknown>) ?? {};
+    const sizing = (simResult["sizing"] as Record<string, unknown>) ?? {};
+
+    // Extrair potência e investimento com fallbacks robustos
+    const systemPowerKwp =
+      Number(sizing["recommendedPowerKw"]) ||
+      Number(simInput["systemPowerKwp"]) ||
+      Number(simInput["potenciaKwp"]) ||
+      0;
+
+    const investmentAmount =
+      Number(simInput["investmentAmount"]) || Number(simInput["valorTotal"]) || 0;
+
+    // Determinar se é PF ou PJ
+    const rawDoc = lead?.cpfCnpj?.replace(/\D/g, "") ?? "";
+    const isPj = rawDoc.length > 11 || Boolean(lead?.company);
+    const customerType = isPj ? CustomerType.PJ : CustomerType.PF;
+
+    // Gerar número sequencial de venda por organização
+    const lastSale = await this.prisma.sale.findFirst({
+      where: { tenantId, saleNumber: { not: null } },
+      orderBy: { saleNumber: "desc" },
+      select: { saleNumber: true },
+    });
+    const saleNumber = Math.max(1000, lastSale?.saleNumber ?? 1000) + 1;
+
+    const sellerName =
+      user?.name ||
+      user?.email ||
+      (proposal.deal as unknown as { assignedUser?: { name?: string } })?.assignedUser?.name ||
+      "Consultor EnergivIA";
+
+    const sale = await this.prisma.sale.create({
+      data: {
+        tenantId,
+        proposalId: proposal.id,
+        dealId: proposal.dealId,
+        saleNumber,
+        status: SaleStatus.AWAITING_ANALYSIS,
+        customerType,
+        documentNumber: lead?.cpfCnpj ?? null,
+        legalRepresentativeName: isPj ? lead?.name : null,
+        installationAddress: typeof simInput["address"] === "string" ? simInput["address"] : null,
+        installationCity: typeof simInput["city"] === "string" ? simInput["city"] : null,
+        installationState: typeof simInput["state"] === "string" ? simInput["state"] : null,
+        installationZip: typeof simInput["zipCode"] === "string" ? simInput["zipCode"] : null,
+        distributionCompany:
+          typeof simInput["distributor"] === "string" ? simInput["distributor"] : null,
+        systemPowerKwp,
+        investmentAmount,
+        sellerName,
+      },
+    });
+
+    // Se a proposta estava em DRAFT ou SENT, atualizar para ACCEPTED automaticamente
+    try {
+      if (proposal.status !== "ACCEPTED") {
+        await this.prisma.proposal.update({
+          where: { id: proposal.id },
+          data: { status: "ACCEPTED" },
+        });
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Não foi possível atualizar status da proposta ${proposal.id} para ACCEPTED: ${err}`
+      );
+    }
+
+    return sale;
+  }
+
+  async listSales(tenantId: string, query?: QuerySalesDto) {
+    const page = Math.max(1, Number(query?.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(query?.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const where: Record<string, unknown> = {
+      tenantId,
+    };
+
+    if (query?.status) {
+      where["status"] = query.status;
+    }
+
+    if (query?.search?.trim()) {
+      const search = query.search.trim();
+      const num = Number(search);
+      where["OR"] = [
+        {
+          proposal: {
+            deal: {
+              lead: {
+                name: { contains: search, mode: "insensitive" },
+              },
+            },
+          },
+        },
+        { documentNumber: { contains: search } },
+        ...(Number.isFinite(num) ? [{ saleNumber: num }] : []),
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      this.prisma.sale.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          proposal: {
+            include: {
+              deal: {
+                include: {
+                  lead: true,
+                },
+              },
+            },
+          },
+          documents: {
+            select: {
+              id: true,
+              templateType: true,
+              title: true,
+              status: true,
+              publicToken: true,
+              signedAt: true,
+            },
+          },
+        },
+      }),
+      this.prisma.sale.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getSaleById(tenantId: string, id: string) {
+    const sale = await this.prisma.sale.findFirst({
+      where: { id, tenantId },
+      include: {
+        proposal: {
+          include: {
+            deal: {
+              include: {
+                lead: true,
+              },
+            },
+            simulation: true,
+          },
+        },
+        documents: {
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+
+    if (!sale) {
+      throw new NotFoundException("Venda não encontrada.");
+    }
+
+    return sale;
+  }
+
+  async updateSale(tenantId: string, id: string, dto: UpdateSaleDto) {
+    const existing = await this.prisma.sale.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!existing) {
+      throw new NotFoundException("Venda não encontrada.");
+    }
+
+    const birthDate =
+      dto.birthDate != null && dto.birthDate !== "" ? new Date(dto.birthDate) : undefined;
+
+    return this.prisma.sale.update({
+      where: { id },
+      data: {
+        ...(dto.customerType !== undefined && { customerType: dto.customerType }),
+        ...(dto.documentNumber !== undefined && { documentNumber: dto.documentNumber }),
+        ...(dto.rgNumber !== undefined && { rgNumber: dto.rgNumber }),
+        ...(dto.rgIssuer !== undefined && { rgIssuer: dto.rgIssuer }),
+        ...(birthDate !== undefined && { birthDate }),
+        ...(dto.maritalStatus !== undefined && { maritalStatus: dto.maritalStatus }),
+        ...(dto.profession !== undefined && { profession: dto.profession }),
+        ...(dto.legalRepresentativeName !== undefined && {
+          legalRepresentativeName: dto.legalRepresentativeName,
+        }),
+        ...(dto.legalRepresentativeCpf !== undefined && {
+          legalRepresentativeCpf: dto.legalRepresentativeCpf,
+        }),
+        ...(dto.installationAddress !== undefined && {
+          installationAddress: dto.installationAddress,
+        }),
+        ...(dto.installationCity !== undefined && {
+          installationCity: dto.installationCity,
+        }),
+        ...(dto.installationState !== undefined && {
+          installationState: dto.installationState,
+        }),
+        ...(dto.installationZip !== undefined && {
+          installationZip: dto.installationZip,
+        }),
+        ...(dto.distributionCompany !== undefined && {
+          distributionCompany: dto.distributionCompany,
+        }),
+        ...(dto.consumerUnitNumber !== undefined && {
+          consumerUnitNumber: dto.consumerUnitNumber,
+        }),
+        ...(dto.paymentMethod !== undefined && { paymentMethod: dto.paymentMethod }),
+        ...(dto.notes !== undefined && { notes: dto.notes }),
+        ...(dto.status !== undefined && { status: dto.status }),
+      },
+    });
+  }
+}
