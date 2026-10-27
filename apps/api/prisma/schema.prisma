@@ -51,6 +51,7 @@ model Tenant {
   referralCode          String?              @map("referral_code")
   salesRep              User?                @relation("TenantSalesRep", fields: [salesRepId], references: [id], onDelete: SetNull)
   salesNotes            SalesActivityNote[]
+  sales                 Sale[]
 
   @@index([slug])
   @@index([deletedAt])
@@ -283,6 +284,7 @@ model Deal {
   lead      Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
   assignedUser User?   @relation("DealAssignedUser", fields: [assignedUserId], references: [id], onDelete: SetNull)
   proposals Proposal[]
+  sales     Sale[]
   notifications UserNotification[]
 
   @@index([tenantId])
@@ -443,6 +445,7 @@ model Proposal {
   proposalTemplate ProposalTemplate? @relation(fields: [proposalTemplateId], references: [id], onDelete: SetNull)
   sections     Section[]
   notifications UserNotification[]
+  sale         Sale?
 
   @@unique([tenantId, proposalNumber])
   @@index([tenantId])
@@ -1530,6 +1533,113 @@ model TermsAcceptanceLog {
   @@index([acceptedAt])
   @@index([termsVersion])
   @@map("terms_acceptance_logs")
+}
+
+model Sale {
+  id                      String       @id @default(cuid())
+  tenantId                String
+  proposalId              String       @unique
+  dealId                  String?
+  saleNumber              Int?
+  status                  SaleStatus   @default(AWAITING_ANALYSIS)
+
+  customerType            CustomerType @default(PF)
+  documentNumber          String?
+  rgNumber                String?
+  rgIssuer                String?
+  birthDate               DateTime?
+  maritalStatus           String?
+  profession              String?
+  legalRepresentativeName String?
+  legalRepresentativeCpf  String?
+
+  installationAddress     String?
+  installationCity        String?
+  installationState       String?
+  installationZip         String?
+  distributionCompany     String?
+  consumerUnitNumber      String?
+
+  systemPowerKwp          Float
+  investmentAmount        Float
+  paymentMethod           String?
+  sellerName              String?
+
+  notes                   String?      @db.Text
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+
+  tenant                  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  proposal                Proposal     @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  deal                    Deal?        @relation(fields: [dealId], references: [id])
+  documents               SaleDocument[]
+
+  @@index([tenantId, status])
+  @@index([proposalId])
+}
+
+model SaleDocument {
+  id                String             @id @default(cuid())
+  saleId            String
+  tenantId          String
+  templateType      DocumentType
+  title             String
+  originalPdfUrl    String?
+  originalPdfHash   String?
+  signedPdfUrl      String?
+  signedPdfHash     String?
+  status            DocumentSignStatus @default(PENDING)
+  publicToken       String             @unique @default(uuid())
+
+  otpCode           String?
+  otpExpiresAt      DateTime?
+  otpVerifiedAt     DateTime?
+
+  signedAt          DateTime?
+  signerName        String?
+  signerCpf         String?
+  signerEmail       String?
+  signerIp          String?
+  signerUserAgent   String?
+  signatureImage    String?            @db.Text
+  signatureHash     String?
+
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  sale              Sale               @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@index([publicToken])
+  @@index([saleId])
+}
+
+enum SaleStatus {
+  AWAITING_ANALYSIS
+  DOCUMENTS_PENDING
+  SIGNATURE_PENDING
+  SIGNED
+  IN_HOMOLOGATION
+  COMPLETED
+  CANCELED
+}
+
+enum CustomerType {
+  PF
+  PJ
+}
+
+enum DocumentType {
+  CONTRATO_PF
+  CONTRATO_PJ
+  PROCURACAO_PF
+  PROCURACAO_PJ
+}
+
+enum DocumentSignStatus {
+  PENDING
+  OTP_SENT
+  SIGNED
+  REFUSED
 }
 
 
