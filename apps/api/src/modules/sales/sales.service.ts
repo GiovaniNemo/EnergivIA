@@ -1,14 +1,20 @@
-import { Injectable, NotFoundException, Logger } from "@nestjs/common";
+import { Injectable, NotFoundException, Logger, Optional, Inject } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
-import { CustomerType, SaleStatus } from "@prisma/client";
+import { CustomerType, SaleStatus, DocumentType, DocumentSignStatus } from "@prisma/client";
 import { UpdateSaleDto } from "./dto/update-sale.dto";
 import { QuerySalesDto } from "./dto/query-sales.dto";
+import { DocumentTemplateService } from "./document-template.service";
 
 @Injectable()
 export class SalesService {
   private readonly logger = new Logger(SalesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional()
+    @Inject(DocumentTemplateService)
+    private readonly documentTemplateService?: DocumentTemplateService
+  ) {}
 
   async convertToSale(
     tenantId: string,
@@ -258,5 +264,98 @@ export class SalesService {
         ...(dto.status !== undefined && { status: dto.status }),
       },
     });
+  }
+
+  async generateSaleDocument(tenantId: string, saleId: string, documentType: DocumentType) {
+    if (!this.documentTemplateService) {
+      throw new NotFoundException("Serviço de geração de documentos não inicializado.");
+    }
+
+    const sale = await this.prisma.sale.findFirst({
+      where: { id: saleId, tenantId },
+      include: {
+        proposal: {
+          include: {
+            deal: {
+              include: {
+                lead: true,
+              },
+            },
+            simulation: true,
+          },
+        },
+        tenant: true,
+      },
+    });
+
+    if (!sale) {
+      throw new NotFoundException("Venda não encontrada.");
+    }
+
+    const lead = sale.proposal?.deal?.lead;
+    const tenant = sale.tenant;
+
+    const formattedDate = new Date().toLocaleDateString("pt-BR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    const formattedInvestment = new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(sale.investmentAmount);
+
+    const data: Record<string, string | number | undefined | null> = {
+      nome_cliente: lead?.name ?? "Cliente",
+      cpf_cliente: sale.documentNumber || lead?.cpfCnpj || "—",
+      rg_cliente: sale.rgNumber ? `${sale.rgNumber} ${sale.rgIssuer ?? ""}`.trim() : "—",
+      endereco_instalacao: sale.installationAddress || "—",
+      cidade_instalacao: sale.installationCity || "—",
+      estado_instalacao: sale.installationState || "—",
+      cep_instalacao: sale.installationZip || "—",
+      concessionaria: sale.distributionCompany || "—",
+      numero_uc: sale.consumerUnitNumber || "—",
+      potencia_kwp: sale.systemPowerKwp > 0 ? sale.systemPowerKwp.toFixed(2) : "—",
+      valor_total: formattedInvestment,
+      forma_pagamento: sale.paymentMethod || "À Vista / Financiamento Bancário",
+      nome_empresa: tenant?.name || "EnergivIA Soluções Solares",
+      nome_vendedor: sale.sellerName || "Consultor Técnico",
+      data_atual: formattedDate,
+    };
+
+    const html = this.documentTemplateService.buildDocumentHtml(documentType, data);
+    const { pdfBuffer, sha256Hash } = await this.documentTemplateService.generatePdfWithHash(html);
+
+    const docTitle =
+      documentType === DocumentType.CONTRATO_PF || documentType === DocumentType.CONTRATO_PJ
+        ? `Contrato de Venda e Instalação Solar - #${sale.saleNumber ?? ""}`.trim()
+        : `Procuração ANEEL / Concessionária - #${sale.saleNumber ?? ""}`.trim();
+
+    const fileName = `doc-${sale.id}-${documentType.toLowerCase()}-${Date.now()}.pdf`;
+    this.documentTemplateService.savePdfToDisk(fileName, pdfBuffer);
+
+    // Salvar registro no banco
+    const saleDoc = await this.prisma.saleDocument.create({
+      data: {
+        saleId: sale.id,
+        tenantId,
+        templateType: documentType,
+        title: docTitle,
+        originalPdfUrl: `/uploads/sales-documents/${fileName}`,
+        originalPdfHash: sha256Hash,
+        status: DocumentSignStatus.PENDING,
+      },
+    });
+
+    // Se o status da venda era AWAITING_ANALYSIS, atualizar para DOCUMENTS_PENDING
+    if (sale.status === SaleStatus.AWAITING_ANALYSIS) {
+      await this.prisma.sale.update({
+        where: { id: sale.id },
+        data: { status: SaleStatus.DOCUMENTS_PENDING },
+      });
+    }
+
+    return saleDoc;
   }
 }

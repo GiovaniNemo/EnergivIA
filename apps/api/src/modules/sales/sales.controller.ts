@@ -38,4 +38,13 @@ export class SalesController {
   updateSale(@TenantId() tenantId: string, @Param("id") id: string, @Body() dto: UpdateSaleDto) {
     return this.salesService.updateSale(tenantId, id, dto);
   }
+
+  @Post(":id/documents/generate")
+  generateDocument(
+    @TenantId() tenantId: string,
+    @Param("id") id: string,
+    @Body() body: { documentType: import("@prisma/client").DocumentType }
+  ) {
+    return this.salesService.generateSaleDocument(tenantId, id, body.documentType);
+  }
 }

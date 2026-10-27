@@ -800,7 +800,7 @@
 | task-809 | Validar lint, commit e push | completed | ESLint @energivia/web aprovado com 0 erros e alterações enviadas para origin/main |
 | task-810 | Schema Prisma: modelos Sale e SaleDocument, enums e sincronização db:push | completed | Modelos Sale e SaleDocument sincronizados com o banco Neon PostgreSQL |
 | task-811 | Backend: módulo SalesModule e endpoint de conversão com auto-preenchimento | completed | SalesModule criado com conversão de proposta, DTOs e testes unitários |
-| task-812 | Backend: motor de geração de contratos e procuração com tags dinâmicas e hash SHA-256 | not_started | Contrato PF e Procuração ANEEL com substituição de variáveis |
+| task-812 | Backend: motor de geração de contratos e procuração com tags dinâmicas e hash SHA-256 | completed | DocumentTemplateService com Contrato PF, Procuração ANEEL e hash SHA-256 |
 | task-813 | Backend: endpoints públicos de assinatura (/public/documents/:token), OTP e auditoria jurídica | not_started | OTP por e-mail, rubrica em canvas, duplo hash SHA-256 e termo de auditoria |
 | task-814 | Frontend: navegação Vendas no menu lateral e ação Converter para Venda em propostas | not_started | Menu de operação e gatilho de 1 clique |
 | task-815 | Frontend: listagem de vendas (/vendas) e ficha da venda (/vendas/[id]) com abas modernas | not_started | Ficha cadastral, geração de documentos e link rápido para WhatsApp |
