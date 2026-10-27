@@ -78,7 +78,7 @@ function MetricTile({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-lg border px-3 py-2.5 sm:min-h-[4.25rem]",
+        "flex h-full flex-col justify-center rounded-lg border px-3.5 py-2.5 sm:min-h-[4.25rem]",
         muted
           ? "border-[var(--color-border)]/80 bg-[var(--color-muted)]/20"
           : "border-emerald-500/20 bg-emerald-500/[0.06] dark:border-emerald-400/15 dark:bg-emerald-500/[0.05]"
@@ -302,7 +302,7 @@ export default function ProposalsPage(): JSX.Element {
                 return (
                   <li key={p.id}>
                     <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/40 p-4 transition-colors hover:border-emerald-500/25 hover:bg-[var(--color-muted)]/[0.2] sm:p-5">
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
                         <div className="flex min-w-0 flex-1 gap-3">
                           <div className="mt-0.5 hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-muted)]/60 text-emerald-600 sm:flex dark:text-emerald-400">
                             <FileText className="h-5 w-5" />
@@ -360,41 +360,40 @@ export default function ProposalsPage(): JSX.Element {
                           </div>
                         </div>
 
-                        <div className="w-full shrink-0 space-y-2 lg:max-w-md lg:min-w-[300px]">
-                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
-                            <MetricTile
-                              label="Valor da Proposta"
-                              value={hasValue ? formatBrl(p.quotedValueBrl!) : "—"}
-                              icon={CircleDollarSign}
-                              muted={!hasValue}
-                            />
-                            <MetricTile
-                              label="Valor do kWp"
-                              value={kwpLabel}
-                              icon={TrendingUp}
-                              muted={kwpLabel === "—"}
-                            />
+                        <div className="flex w-full shrink-0 flex-col gap-2.5 sm:flex-row sm:items-stretch lg:w-auto">
+                          <div className="grid flex-1 grid-cols-2 gap-2 sm:flex sm:items-stretch sm:gap-2.5">
+                            <div className="sm:min-w-[148px]">
+                              <MetricTile
+                                label="Valor da Proposta"
+                                value={hasValue ? formatBrl(p.quotedValueBrl!) : "—"}
+                                icon={CircleDollarSign}
+                                muted={!hasValue}
+                              />
+                            </div>
+                            <div className="sm:min-w-[138px]">
+                              <MetricTile
+                                label="Valor do kWp"
+                                value={kwpLabel}
+                                icon={TrendingUp}
+                                muted={kwpLabel === "—"}
+                              />
+                            </div>
                           </div>
-                          <p className="text-center text-[0.7rem] text-[var(--color-muted-foreground)] sm:text-right">
-                            {p.kitLineCount === 0
-                              ? "Nenhuma linha de kit gravada"
-                              : `${p.kitLineCount} linha${p.kitLineCount === 1 ? "" : "s"} no catálogo`}
-                          </p>
-                          <div className="flex items-center justify-end gap-2 pt-1">
-                            <button
-                              type="button"
-                              disabled={convertingId === p.id}
-                              onClick={() => handleConvertToSale(p.id)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 transition hover:bg-emerald-500/20 disabled:opacity-50 dark:text-emerald-400"
-                            >
-                              {convertingId === p.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <BadgeCheck className="h-3.5 w-3.5" />
-                              )}
-                              Converter para Venda
-                            </button>
-                          </div>
+
+                          <button
+                            type="button"
+                            disabled={convertingId === p.id}
+                            onClick={() => handleConvertToSale(p.id)}
+                            className="group inline-flex min-h-[42px] shrink-0 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-60 sm:min-h-[4.25rem]"
+                          >
+                            {convertingId === p.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <BadgeCheck className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" />
+                            )}
+                            <span>Converter em Venda</span>
+                            <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-75 transition-transform group-hover:translate-x-0.5" />
+                          </button>
                         </div>
                       </div>
                     </div>
