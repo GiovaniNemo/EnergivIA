@@ -130,7 +130,7 @@ export function ProposalZapSignCard({
               ) : addonEnabled === false ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-slate-500/10 border border-slate-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-muted-foreground)]">
                   <Lock className="w-3 h-3" />
-                  Add-on Opcional (+ R$ 59,90/mês)
+                  Add-on Opcional (+ R$ 89,90/mês)
                 </span>
               ) : null}
             </div>
@@ -152,7 +152,7 @@ export function ProposalZapSignCard({
               className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3.5 text-xs font-bold text-white transition shadow-sm"
             >
               <FileSignature className="w-3.5 h-3.5" />
-              Ativar Assinatura Digital (+ R$ 59,90/mês)
+              Ativar Assinatura Digital (+ R$ 89,90/mês)
             </Link>
           ) : status === "SIGNED" && (zapsignSignedPdfUrl || signUrl) ? (
             <a

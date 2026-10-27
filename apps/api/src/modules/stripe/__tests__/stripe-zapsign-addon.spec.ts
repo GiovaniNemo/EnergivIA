@@ -3,7 +3,7 @@ import { StripeService } from "../stripe.service";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../../prisma/prisma.service";
 
-describe("StripeService - ZapSign Optional Add-on (R$ 59,90/mês)", () => {
+describe("StripeService - ZapSign Optional Add-on (R$ 89,90/mês)", () => {
   let service: StripeService;
   let prismaMock: {
     plan: {
@@ -103,11 +103,11 @@ describe("StripeService - ZapSign Optional Add-on (R$ 59,90/mês)", () => {
       systemSetting: {
         findUnique: vi.fn().mockResolvedValue({
           key: "STRIPE_ZAPSIGN_ADDON_PRICE_ID",
-          value: "price_zapsign_5990",
+          value: "price_zapsign_8990",
         }),
         upsert: vi.fn().mockResolvedValue({
           key: "STRIPE_ZAPSIGN_ADDON_PRICE_ID",
-          value: "price_zapsign_5990",
+          value: "price_zapsign_8990",
         }),
       },
     };
@@ -119,12 +119,12 @@ describe("StripeService - ZapSign Optional Add-on (R$ 59,90/mês)", () => {
         retrieve: vi.fn().mockImplementation(async (priceId: string) => ({
           id: priceId,
           active: true,
-          unit_amount: priceId === "price_zapsign_5990" ? 5990 : 9700,
-          product: priceId === "price_zapsign_5990" ? "prod_zapsign" : "prod_plan",
+          unit_amount: priceId === "price_zapsign_8990" ? 8990 : 9700,
+          product: priceId === "price_zapsign_8990" ? "prod_zapsign" : "prod_plan",
         })),
         create: vi.fn().mockResolvedValue({
-          id: "price_zapsign_5990",
-          unit_amount: 5990,
+          id: "price_zapsign_8990",
+          unit_amount: 8990,
           product: "prod_zapsign",
         }),
       },
@@ -155,7 +155,7 @@ describe("StripeService - ZapSign Optional Add-on (R$ 59,90/mês)", () => {
           items: {
             data: [
               { id: "si_plan_1", price: { id: "price_plan_essencial_97", unit_amount: 9700 } },
-              { id: "si_zapsign_1", price: { id: "price_zapsign_5990", unit_amount: 5990 } },
+              { id: "si_zapsign_1", price: { id: "price_zapsign_8990", unit_amount: 8990 } },
             ],
           },
         }),
@@ -163,7 +163,7 @@ describe("StripeService - ZapSign Optional Add-on (R$ 59,90/mês)", () => {
       subscriptionItems: {
         create: vi.fn().mockResolvedValue({
           id: "si_zapsign_new",
-          price: { id: "price_zapsign_5990" },
+          price: { id: "price_zapsign_8990" },
         }),
         del: vi.fn().mockResolvedValue({ id: "si_zapsign_1", deleted: true }),
       },
@@ -173,7 +173,7 @@ describe("StripeService - ZapSign Optional Add-on (R$ 59,90/mês)", () => {
     (service as unknown as { stripe: unknown }).stripe = stripeMock;
   });
 
-  it("inclui o ZapSign (R$ 59,90/mês) em line_items quando includeZapSignAddon = true (pré-marcado)", async () => {
+  it("inclui o ZapSign (R$ 89,90/mês) em line_items quando includeZapSignAddon = true (pré-marcado)", async () => {
     await service.createCheckoutSession(
       "plan_essencial",
       "tenant_1",
@@ -186,13 +186,13 @@ describe("StripeService - ZapSign Optional Add-on (R$ 59,90/mês)", () => {
     const callArg = stripeMock.checkout.sessions.create.mock.calls[0][0];
     expect(callArg.line_items).toEqual([
       { price: "price_plan_essencial_97", quantity: 1 },
-      { price: "price_zapsign_5990", quantity: 1 },
+      { price: "price_zapsign_8990", quantity: 1 },
     ]);
     expect(callArg.optional_items).toBeUndefined();
     expect(callArg.metadata.includeZapSignAddon).toBe("true");
   });
 
-  it("envia o ZapSign (R$ 59,90/mês) em optional_items do Stripe quando includeZapSignAddon = false (desmarcado no card)", async () => {
+  it("envia o ZapSign (R$ 89,90/mês) em optional_items do Stripe quando includeZapSignAddon = false (desmarcado no card)", async () => {
     await service.createCheckoutSession(
       "plan_essencial",
       "tenant_1",
@@ -204,11 +204,11 @@ describe("StripeService - ZapSign Optional Add-on (R$ 59,90/mês)", () => {
     expect(stripeMock.checkout.sessions.create).toHaveBeenCalledTimes(1);
     const callArg = stripeMock.checkout.sessions.create.mock.calls[0][0];
     expect(callArg.line_items).toEqual([{ price: "price_plan_essencial_97", quantity: 1 }]);
-    expect(callArg.optional_items).toEqual([{ price: "price_zapsign_5990", quantity: 1 }]);
+    expect(callArg.optional_items).toEqual([{ price: "price_zapsign_8990", quantity: 1 }]);
     expect(callArg.metadata.includeZapSignAddon).toBe("false");
   });
 
-  it("cria o produto e preço de R$ 59,90 (5990 centavos) no Stripe se ainda não existir em SystemSetting", async () => {
+  it("cria o produto e preço de R$ 89,90 (8990 centavos) no Stripe se ainda não existir em SystemSetting", async () => {
     prismaMock.systemSetting.findUnique.mockResolvedValueOnce(null);
 
     const priceId = await service.ensureZapSignAddonPrice();
@@ -220,12 +220,12 @@ describe("StripeService - ZapSign Optional Add-on (R$ 59,90/mês)", () => {
     );
     expect(stripeMock.prices.create).toHaveBeenCalledWith({
       product: "prod_zapsign",
-      unit_amount: 5990,
+      unit_amount: 8990,
       currency: "brl",
       recurring: { interval: "month" },
     });
     expect(prismaMock.systemSetting.upsert).toHaveBeenCalled();
-    expect(priceId).toBe("price_zapsign_5990");
+    expect(priceId).toBe("price_zapsign_8990");
   });
 
   it("permite ativar e desativar o Add-on ZapSign em uma assinatura já ativa via toggleZapSignAddon", async () => {
@@ -233,7 +233,7 @@ describe("StripeService - ZapSign Optional Add-on (R$ 59,90/mês)", () => {
     const activateRes = await service.toggleZapSignAddon("tenant_1", true);
     expect(stripeMock.subscriptionItems.create).toHaveBeenCalledWith({
       subscription: "sub_stripe_123",
-      price: "price_zapsign_5990",
+      price: "price_zapsign_8990",
       quantity: 1,
     });
     expect(prismaMock.subscription.update).toHaveBeenCalledWith({

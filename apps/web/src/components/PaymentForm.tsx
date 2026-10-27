@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { Tag, AlertTriangle, Loader2, X, ShieldCheck, FileSignature, Check } from "lucide-react";
 
-export const ZAPSIGN_ADDON_MONTHLY_PRICE = 59.9;
+export const ZAPSIGN_ADDON_MONTHLY_PRICE = 89.9;
 
 interface PaymentFormProps {
   planId: string;
@@ -224,7 +224,7 @@ export default function PaymentForm({
               : "bg-slate-200/60 dark:bg-white/10 text-slate-500 dark:text-slate-400 border-slate-300/50 dark:border-white/10"
           }`}
         >
-          + R$ 59,90/mês
+          + R$ 89,90/mês
         </span>
       </div>
 

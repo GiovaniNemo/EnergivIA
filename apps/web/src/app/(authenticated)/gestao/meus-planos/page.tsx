@@ -261,7 +261,7 @@ function MeusPlanosContent() {
       setToastMessage({
         type: "success",
         text: enabled
-          ? "Módulo de Assinatura Digital (+ R$ 59,90/mês) ativado com sucesso na sua assinatura!"
+          ? "Módulo de Assinatura Digital (+ R$ 89,90/mês) ativado com sucesso na sua assinatura!"
           : "Módulo de Assinatura Digital desativado da sua assinatura.",
       });
       await refetchOrg();
@@ -520,7 +520,7 @@ function MeusPlanosContent() {
                         )}
                         {subscription.zapsignAddonActive
                           ? "Desativar Assinatura Digital"
-                          : "Ativar Assinatura Digital (+ R$ 59,90/mês)"}
+                          : "Ativar Assinatura Digital (+ R$ 89,90/mês)"}
                       </button>
                     )}
                   </>

@@ -794,3 +794,5 @@
 | task-803 | Validar build/lint, commit e push | completed | ESLint @energivia/web aprovado com 0 erros e alterações enviadas para origin/main |
 | task-804 | Remover menções diretas a ZapSign no frontend e backend (White-label: Assinatura Digital de Contratos) | completed | Menções a ZapSign substituídas por Assinatura Digital em PaymentForm, Meus Planos, ProposalZapSignCard, views interna e pública |
 | task-805 | Validar build/lint, commit e push | completed | ESLint web com 0 erros, testes de zapsign no backend 100% aprovados e enviado para origin/main |
+| task-806 | Atualizar precificação do Módulo de Assinatura Digital para R$ 89,90/mês no backend (Stripe) e frontend | completed | ZAPSIGN_ADDON_PRICE_BRL atualizado para 89.9, recriação dinâmica no Stripe com 8990 centavos e textos da UI para R$ 89,90/mês |
+| task-807 | Executar testes unitários do Stripe e linter, commit e push | completed | Testes vitest do Stripe passaram (4/4), ESLint web com 0 erros e alterações enviadas para origin/main |

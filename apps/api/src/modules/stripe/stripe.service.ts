@@ -5,7 +5,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { Prisma } from "@prisma/client";
 import { AdminAlertsService } from "../notifications/admin-alerts.service";
 
-export const ZAPSIGN_ADDON_PRICE_BRL = 59.9;
+export const ZAPSIGN_ADDON_PRICE_BRL = 89.9;
 export const ZAPSIGN_ADDON_SETTING_KEY = "STRIPE_ZAPSIGN_ADDON_PRICE_ID";
 
 @Injectable()
@@ -203,7 +203,11 @@ export class StripeService {
     if (priceId) {
       try {
         const retrieved = await this.stripe.prices.retrieve(priceId);
-        if (retrieved && retrieved.active !== false && retrieved.unit_amount === 5990) {
+        if (
+          retrieved &&
+          retrieved.active !== false &&
+          retrieved.unit_amount === Math.round(ZAPSIGN_ADDON_PRICE_BRL * 100)
+        ) {
           return retrieved.id;
         }
       } catch {
@@ -216,7 +220,7 @@ export class StripeService {
 
     const product = await this.createProduct(
       "Add-on Assinatura Digital ZapSign - EnergivIA",
-      "Módulo adicional de assinatura digital de contratos e propostas com validade jurídica via ZapSign (R$ 59,90/mês)"
+      "Módulo adicional de assinatura digital de contratos e propostas com validade jurídica (R$ 89,90/mês)"
     );
     const createdPrice = await this.createPrice(product.id, ZAPSIGN_ADDON_PRICE_BRL, "month");
     priceId = createdPrice.id;
@@ -1374,7 +1378,10 @@ export class StripeService {
             subscription.stripeSubscriptionId
           );
           const foundItem = stripeSub.items?.data?.find(
-            (it) => it.price?.id === zapsignPriceId || it.price?.unit_amount === 5990
+            (it) =>
+              it.price?.id === zapsignPriceId ||
+              it.price?.unit_amount === Math.round(ZAPSIGN_ADDON_PRICE_BRL * 100) ||
+              it.price?.unit_amount === 5990
           );
           if (foundItem) {
             itemId = foundItem.id;
@@ -1415,7 +1422,9 @@ export class StripeService {
     const items = stripeSub?.items?.data || [];
     const matched = items.find(
       (item) =>
-        (zapsignPriceId && item.price?.id === zapsignPriceId) || item.price?.unit_amount === 5990
+        (zapsignPriceId && item.price?.id === zapsignPriceId) ||
+        item.price?.unit_amount === Math.round(ZAPSIGN_ADDON_PRICE_BRL * 100) ||
+        item.price?.unit_amount === 5990
     );
     if (matched) {
       return { active: true, itemId: matched.id };
