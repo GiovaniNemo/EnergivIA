@@ -788,3 +788,5 @@
 | task-797 | Filtrar estritamente apenas status "active" e "trialing" em getSubscriptionByTenant e no frontend (meus-planos e admin/planos) | completed | Assinaturas com status incomplete, canceled ou unpaid agora retornam null e não ativam plano |
 | task-798 | Escrever testes unitários para garantir que createCheckoutSession não cria Subscription no banco antes do pagamento | completed | 5 testes vitest cobrindo isolamento de checkout e validação estrita de status |
 | task-799 | Validar suíte de testes vitest, linters e commit/push | completed | 49 testes aprovados (100%), ESLint API e Web sem erros e enviado para origin/main |
+| task-800 | Harmonizar layout e hierarquia dos botões do banner de assinatura ativa (meus-planos/page.tsx) | completed | Botões Gerenciar Faturas e ZapSign alinhados em altura uniforme h-10, ação de cancelamento sutil e preço em R$ BRL |
+| task-801 | Validar build/lint, commit e push | completed | ESLint @energivia/web com 0 erros e alterações enviadas para origin/main |

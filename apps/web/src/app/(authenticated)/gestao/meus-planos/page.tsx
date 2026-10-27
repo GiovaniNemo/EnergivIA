@@ -410,7 +410,7 @@ function MeusPlanosContent() {
                   </span>
                 ) : (
                   <span className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
-                    R$ {currentPlanPrice.toFixed(2)}
+                    R$ {currentPlanPrice.toFixed(2).replace(".", ",")}
                     <span className="text-sm text-[var(--color-muted-foreground)] font-normal">
                       /mês
                     </span>
@@ -418,7 +418,7 @@ function MeusPlanosContent() {
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-6 text-sm text-[var(--color-muted-foreground)] pt-1">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs sm:text-sm text-[var(--color-muted-foreground)] pt-1">
                 {isSpecialAccess ? (
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -476,60 +476,66 @@ function MeusPlanosContent() {
             </div>
 
             {/* Actions for current subscription */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col items-start lg:items-end justify-center gap-2.5 shrink-0 pt-2 lg:pt-0">
+              <div className="flex flex-wrap items-center gap-2.5">
+                {isSpecialAccess ? (
+                  <div className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-medium text-xs sm:text-sm shadow-xs">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    Conta Autorizada (Plus)
+                  </div>
+                ) : isLifetime ? (
+                  <div className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-medium text-xs sm:text-sm shadow-xs">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    Acesso Total Liberado
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleOpenPortal}
+                      disabled={portalLoading}
+                      className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800 text-[var(--color-foreground)] border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 font-medium text-xs sm:text-sm transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                    >
+                      {portalLoading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      )}
+                      Gerenciar Faturas & Cartão
+                    </button>
+
+                    {!isSpecialAccess && !isLifetime && subscription && (
+                      <button
+                        onClick={() => handleToggleZapSignAddon(!subscription.zapsignAddonActive)}
+                        disabled={zapsignLoading}
+                        className={`inline-flex items-center gap-2 h-10 px-4 rounded-xl font-medium text-xs sm:text-sm transition-all shadow-xs disabled:opacity-50 cursor-pointer ${
+                          subscription.zapsignAddonActive
+                            ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                            : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20"
+                        }`}
+                      >
+                        {zapsignLoading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <FileSignature className="w-3.5 h-3.5" />
+                        )}
+                        {subscription.zapsignAddonActive
+                          ? "Desativar ZapSign"
+                          : "Ativar ZapSign (+ R$ 59,90/mês)"}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+
               {!isSpecialAccess && !isLifetime && subscription && (
                 <button
-                  onClick={() => handleToggleZapSignAddon(!subscription.zapsignAddonActive)}
-                  disabled={zapsignLoading}
-                  className={`inline-flex items-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition shadow-sm disabled:opacity-50 ${
-                    subscription.zapsignAddonActive
-                      ? "bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30"
-                      : "bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white border border-slate-800 dark:border-emerald-500"
-                  }`}
+                  type="button"
+                  onClick={() => setShowCancelModal(true)}
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-red-400 dark:text-slate-500 dark:hover:text-red-400 transition-colors py-1 px-2 rounded-lg hover:bg-red-500/10 cursor-pointer"
                 >
-                  {zapsignLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <FileSignature className="w-4 h-4" />
-                  )}
-                  {subscription.zapsignAddonActive
-                    ? "Desativar Add-on ZapSign"
-                    : "Ativar ZapSign (+ R$ 59,90/mês)"}
+                  <XCircle className="w-3.5 h-3.5" />
+                  Cancelar assinatura
                 </button>
-              )}
-              {isSpecialAccess ? (
-                <div className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-100/90 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-semibold text-sm shadow-sm">
-                  <ShieldCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-                  Conta Autorizada (Plus)
-                </div>
-              ) : isLifetime ? (
-                <div className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-100/90 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-semibold text-sm shadow-sm">
-                  <ShieldCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-                  Acesso Total Liberado
-                </div>
-              ) : (
-                <>
-                  <button
-                    onClick={handleOpenPortal}
-                    disabled={portalLoading}
-                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white dark:bg-[var(--color-card)] hover:bg-slate-50 dark:hover:bg-[var(--color-muted)] text-[var(--color-foreground)] border border-slate-200 dark:border-[var(--color-border)] font-semibold text-sm transition shadow-sm disabled:opacity-50"
-                  >
-                    {portalLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <ExternalLink className="w-4 h-4" />
-                    )}
-                    Gerenciar Faturas & Cartão
-                  </button>
-
-                  <button
-                    onClick={() => setShowCancelModal(true)}
-                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20 font-semibold text-sm transition"
-                  >
-                    <XCircle className="w-4 h-4" />
-                    Cancelar Plano
-                  </button>
-                </>
               )}
             </div>
           </div>
