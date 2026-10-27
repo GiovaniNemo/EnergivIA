@@ -349,6 +349,12 @@ export interface ProposalDetail {
   renderedData?: (ProposalRenderedDataShape & Record<string, unknown>) | null;
   discountBrl?: number | null;
   publicToken?: string | null;
+  zapsignDocToken?: string | null;
+  zapsignSignerToken?: string | null;
+  zapsignSignUrl?: string | null;
+  zapsignStatus?: string | null;
+  zapsignSignedPdfUrl?: string | null;
+  zapsignSignedAt?: string | null;
   deal: {
     id: string;
     title: string;

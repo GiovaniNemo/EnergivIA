@@ -26,6 +26,10 @@ export interface PublicProposalPayload {
   discountBrl?: number | null;
   companyName?: string | null;
   companyLogoUrl?: string | null;
+  zapsignSignUrl?: string | null;
+  zapsignStatus?: string | null;
+  zapsignSignedPdfUrl?: string | null;
+  zapsignSignedAt?: string | null;
   renderedData?: {
     integrator?: {
       version: number;

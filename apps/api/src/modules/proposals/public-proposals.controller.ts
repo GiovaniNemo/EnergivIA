@@ -12,13 +12,22 @@ import {
 } from "@nestjs/common";
 import type { Response } from "express";
 import { ProposalsService } from "./proposals.service";
+import { ZapSignService } from "./zapsign.service";
 import { Public } from "../../common/decorators/public.decorator";
 import { RespondPublicProposalDto } from "./dto/respond-public-proposal.dto";
 
 @Controller("public/proposals")
 @Public()
 export class PublicProposalsController {
-  constructor(private readonly proposalsService: ProposalsService) {}
+  constructor(
+    private readonly proposalsService: ProposalsService,
+    private readonly zapsignService?: ZapSignService
+  ) {}
+
+  @Post("webhooks/zapsign")
+  handleZapSignWebhook(@Body() payload: Record<string, unknown>) {
+    return this.zapsignService?.handleWebhook(payload) ?? { processed: false };
+  }
 
   @Get(":id")
   findPublic(

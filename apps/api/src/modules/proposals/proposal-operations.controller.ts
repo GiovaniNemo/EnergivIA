@@ -10,6 +10,7 @@ import {
   UseGuards,
   Header,
   StreamableFile,
+  Optional,
 } from "@nestjs/common";
 import type { JwtPayload } from "@energivia/types";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
@@ -17,12 +18,37 @@ import { OrgOwnerOrAdminGuard } from "../../common/guards/org-owner-or-admin.gua
 import { TenantId } from "../../common/decorators/tenant-id.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { ProposalsService } from "./proposals.service";
+import { ZapSignService } from "./zapsign.service";
 import { UpdateProposalPaymentOptionsDto } from "./dto/update-proposal-payment-options.dto";
 
 @Controller("proposals")
 @UseGuards(UnifiedAuthGuard)
 export class ProposalOperationsController {
-  constructor(private readonly proposalsService: ProposalsService) {}
+  constructor(
+    private readonly proposalsService: ProposalsService,
+    @Optional()
+    private readonly zapsignService?: ZapSignService
+  ) {}
+
+  @Get("zapsign/status")
+  getZapSignStatus(@TenantId() tenantId: string) {
+    return this.zapsignService?.isAddonActiveForTenant(tenantId) ?? { enabled: false };
+  }
+
+  @Post(":id/zapsign")
+  createZapSignDocument(
+    @TenantId() tenantId: string,
+    @Param("id") id: string,
+    @Body()
+    body?: {
+      name?: string;
+      email?: string;
+      phone?: string;
+      forceRecreate?: boolean;
+    }
+  ) {
+    return this.zapsignService?.createSignatureDocument(tenantId, id, body);
+  }
 
   @Post("generate-ai-section")
   generateAiSection(@Body() body: { prompt: string; contextText?: string }) {

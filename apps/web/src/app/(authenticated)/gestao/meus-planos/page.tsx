@@ -21,8 +21,9 @@ import {
   Info,
   Boxes,
   TrendingUp,
-  Sparkles,
   Headphones,
+  FileSignature,
+  Tag,
 } from "lucide-react";
 
 import {
@@ -46,6 +47,7 @@ interface SubscriptionData {
   planId: string;
   status: string;
   stripeSubscriptionId?: string;
+  zapsignAddonActive?: boolean;
   currentPeriodEnd: string;
   plan?: Plan;
 }
@@ -106,6 +108,7 @@ function MeusPlanosContent() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [zapsignLoading, setZapsignLoading] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<{
     type: "success" | "error" | "info";
@@ -234,6 +237,40 @@ function MeusPlanosContent() {
       setToastMessage({ type: "error", text: msg });
     } finally {
       setCancelLoading(false);
+    }
+  };
+
+  const handleToggleZapSignAddon = async (enabled: boolean) => {
+    if (!currentOrganization?.id) return;
+    setZapsignLoading(true);
+    try {
+      const res = await fetch("/api/proxy/stripe/subscription/zapsign-addon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenantId: currentOrganization.id,
+          enabled,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || "Erro ao atualizar Add-on do ZapSign");
+      }
+
+      setToastMessage({
+        type: "success",
+        text: enabled
+          ? "Add-on Assinatura Digital ZapSign (+ R$ 59,90/mês) ativado com sucesso na sua assinatura!"
+          : "Add-on Assinatura Digital ZapSign desativado da sua assinatura.",
+      });
+      await refetchOrg();
+      await loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao atualizar Add-on do ZapSign";
+      setToastMessage({ type: "error", text: msg });
+    } finally {
+      setZapsignLoading(false);
     }
   };
 
@@ -384,7 +421,7 @@ function MeusPlanosContent() {
               <div className="flex flex-wrap items-center gap-6 text-sm text-[var(--color-muted-foreground)] pt-1">
                 {isSpecialAccess ? (
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span className="text-slate-600 dark:text-slate-300">
                       Plano Plus liberado com IA no WhatsApp e propostas comerciais ilimitadas
                     </span>
@@ -417,11 +454,49 @@ function MeusPlanosContent() {
                     <span>Cobrança automática via Stripe</span>
                   </div>
                 )}
+
+                <div className="flex items-center gap-2">
+                  <FileSignature className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>
+                    ZapSign:{" "}
+                    <strong
+                      className={
+                        subscription?.zapsignAddonActive || isLifetime || isSpecialAccess
+                          ? "text-emerald-700 dark:text-emerald-400"
+                          : "text-slate-500 dark:text-slate-400"
+                      }
+                    >
+                      {subscription?.zapsignAddonActive || isLifetime || isSpecialAccess
+                        ? "Ativo"
+                        : "Não contratado"}
+                    </strong>
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* Actions for current subscription */}
             <div className="flex flex-wrap items-center gap-3">
+              {!isSpecialAccess && !isLifetime && subscription && (
+                <button
+                  onClick={() => handleToggleZapSignAddon(!subscription.zapsignAddonActive)}
+                  disabled={zapsignLoading}
+                  className={`inline-flex items-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition shadow-sm disabled:opacity-50 ${
+                    subscription.zapsignAddonActive
+                      ? "bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30"
+                      : "bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white border border-slate-800 dark:border-emerald-500"
+                  }`}
+                >
+                  {zapsignLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileSignature className="w-4 h-4" />
+                  )}
+                  {subscription.zapsignAddonActive
+                    ? "Desativar Add-on ZapSign"
+                    : "Ativar ZapSign (+ R$ 59,90/mês)"}
+                </button>
+              )}
               {isSpecialAccess ? (
                 <div className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-100/90 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-semibold text-sm shadow-sm">
                   <ShieldCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
@@ -516,7 +591,7 @@ function MeusPlanosContent() {
         <div className="mb-6 rounded-2xl border border-emerald-500/25 bg-emerald-50/70 dark:bg-emerald-950/25 px-4 py-3.5 sm:px-5 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
           <div className="flex items-start sm:items-center gap-3.5">
             <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-              <Sparkles className="w-4 h-4" />
+              <Tag className="w-4 h-4" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -594,7 +669,7 @@ function MeusPlanosContent() {
                     </div>
                   ) : isPlus ? (
                     <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 text-xs font-extrabold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider shadow-sm flex items-center gap-1 z-10">
-                      <Sparkles className="w-3.5 h-3.5 fill-slate-950" /> Mais Escolhido
+                      Mais Escolhido
                     </div>
                   ) : isUpgrade ? (
                     <div
@@ -680,8 +755,7 @@ function MeusPlanosContent() {
                           /mês
                         </span>
                       </div>
-                      <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mt-1.5 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 shrink-0" />
+                      <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mt-1.5">
                         Valor promocional de lançamento
                       </p>
                     </div>

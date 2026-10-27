@@ -5,6 +5,9 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { Prisma } from "@prisma/client";
 import { AdminAlertsService } from "../notifications/admin-alerts.service";
 
+export const ZAPSIGN_ADDON_PRICE_BRL = 59.9;
+export const ZAPSIGN_ADDON_SETTING_KEY = "STRIPE_ZAPSIGN_ADDON_PRICE_ID";
+
 @Injectable()
 export class StripeService {
   private stripe: Stripe;
@@ -183,11 +186,60 @@ export class StripeService {
     return { allowed: true };
   }
 
+  async ensureZapSignAddonPrice(): Promise<string> {
+    let priceId: string | null = null;
+
+    try {
+      const setting = await this.prisma.systemSetting?.findUnique({
+        where: { key: ZAPSIGN_ADDON_SETTING_KEY },
+      });
+      if (setting?.value) {
+        priceId = setting.value;
+      }
+    } catch {
+      // Ignora erro caso tabela ainda não acessível
+    }
+
+    if (priceId) {
+      try {
+        const retrieved = await this.stripe.prices.retrieve(priceId);
+        if (retrieved && retrieved.active !== false && retrieved.unit_amount === 5990) {
+          return retrieved.id;
+        }
+      } catch {
+        this.logger.warn(
+          `Preço ZapSign ${priceId} não encontrado no ambiente Stripe ativo. Recriando...`
+        );
+      }
+      priceId = null;
+    }
+
+    const product = await this.createProduct(
+      "Add-on Assinatura Digital ZapSign - EnergivIA",
+      "Módulo adicional de assinatura digital de contratos e propostas com validade jurídica via ZapSign (R$ 59,90/mês)"
+    );
+    const createdPrice = await this.createPrice(product.id, ZAPSIGN_ADDON_PRICE_BRL, "month");
+    priceId = createdPrice.id;
+
+    try {
+      await this.prisma.systemSetting?.upsert({
+        where: { key: ZAPSIGN_ADDON_SETTING_KEY },
+        update: { value: priceId },
+        create: { key: ZAPSIGN_ADDON_SETTING_KEY, value: priceId },
+      });
+    } catch (err) {
+      this.logger.warn(`Não foi possível persistir ${ZAPSIGN_ADDON_SETTING_KEY}: ${err}`);
+    }
+
+    return priceId;
+  }
+
   async createCheckoutSession(
     planId: string,
     tenantId: string,
     returnUrl?: string,
-    couponCode?: string
+    couponCode?: string,
+    includeZapSignAddon = true
   ) {
     const upperCoupon = couponCode?.trim().toUpperCase();
     if (upperCoupon === "V1T4L1C10" || upperCoupon === "VITALICIOADMINS") {
@@ -317,15 +369,41 @@ export class StripeService {
     const webUrl =
       returnUrl || this.configService.get<string>("NEXT_PUBLIC_APP_URL") || "http://localhost:3000";
 
+    let zapsignPriceId: string | null = null;
+    try {
+      zapsignPriceId = await this.ensureZapSignAddonPrice();
+    } catch (err) {
+      this.logger.warn(`Não foi possível obter/criar preço do Add-on ZapSign: ${err}`);
+    }
+
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+      {
+        price: validStripePriceId,
+        quantity: 1,
+      },
+    ];
+
+    if (includeZapSignAddon !== false && zapsignPriceId) {
+      lineItems.push({
+        price: zapsignPriceId,
+        quantity: 1,
+      });
+    }
+
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: stripeCustomerId,
       payment_method_types: ["card"],
-      line_items: [
-        {
-          price: validStripePriceId,
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
+      ...(includeZapSignAddon === false && zapsignPriceId
+        ? {
+            optional_items: [
+              {
+                price: zapsignPriceId,
+                quantity: 1,
+              },
+            ],
+          }
+        : {}),
       mode: "subscription",
       success_url: `${webUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${webUrl}/gestao/meus-planos`,
@@ -334,6 +412,7 @@ export class StripeService {
         tenantId,
         planId,
         couponCode: couponCode || "",
+        includeZapSignAddon: includeZapSignAddon !== false ? "true" : "false",
       },
     };
 
@@ -1069,6 +1148,7 @@ export class StripeService {
         planId: plan.id,
         status: "active",
         stripeSubscriptionId: "sub_lifetime_admin_v1t4l1c10",
+        zapsignAddonActive: true,
         currentPeriodEnd: lifetimeEnd,
       },
       create: {
@@ -1076,6 +1156,7 @@ export class StripeService {
         planId: plan.id,
         status: "active",
         stripeSubscriptionId: "sub_lifetime_admin_v1t4l1c10",
+        zapsignAddonActive: true,
         currentPeriodEnd: lifetimeEnd,
       },
       include: {
@@ -1192,6 +1273,120 @@ export class StripeService {
     return { success: true, subscription: updated };
   }
 
+  async toggleZapSignAddon(tenantId: string, enabled: boolean) {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { tenantId },
+    });
+
+    if (!subscription || subscription.status === "canceled") {
+      throw new BadRequestException(
+        "Sua organização precisa possuir uma assinatura ativa para gerenciar o Add-on do ZapSign."
+      );
+    }
+
+    const isLifetime =
+      subscription.stripeSubscriptionId === "sub_lifetime_admin_v1t4l1c10" ||
+      (subscription.currentPeriodEnd &&
+        new Date(subscription.currentPeriodEnd).getFullYear() >= 2090);
+
+    if (isLifetime || !subscription.stripeSubscriptionId) {
+      const updated = await this.prisma.subscription.update({
+        where: { tenantId },
+        data: {
+          zapsignAddonActive: enabled,
+          zapsignSubscriptionItemId: enabled ? subscription.zapsignSubscriptionItemId : null,
+        },
+      });
+      return {
+        success: true,
+        zapsignAddonActive: enabled,
+        subscription: updated,
+      };
+    }
+
+    const zapsignPriceId = await this.ensureZapSignAddonPrice();
+
+    if (enabled) {
+      let itemId = subscription.zapsignSubscriptionItemId;
+      if (!itemId) {
+        const createdItem = await this.stripe.subscriptionItems.create({
+          subscription: subscription.stripeSubscriptionId,
+          price: zapsignPriceId,
+          quantity: 1,
+        });
+        itemId = createdItem.id;
+      }
+
+      const updated = await this.prisma.subscription.update({
+        where: { tenantId },
+        data: {
+          zapsignAddonActive: true,
+          zapsignSubscriptionItemId: itemId,
+        },
+      });
+
+      return {
+        success: true,
+        zapsignAddonActive: true,
+        subscription: updated,
+      };
+    } else {
+      let itemId = subscription.zapsignSubscriptionItemId;
+      if (!itemId && subscription.stripeSubscriptionId) {
+        try {
+          const stripeSub = await this.stripe.subscriptions.retrieve(
+            subscription.stripeSubscriptionId
+          );
+          const foundItem = stripeSub.items?.data?.find(
+            (it) => it.price?.id === zapsignPriceId || it.price?.unit_amount === 5990
+          );
+          if (foundItem) {
+            itemId = foundItem.id;
+          }
+        } catch (err) {
+          this.logger.warn(`Erro ao buscar subscription item do ZapSign para remoção: ${err}`);
+        }
+      }
+
+      if (itemId) {
+        try {
+          await this.stripe.subscriptionItems.del(itemId);
+        } catch (err) {
+          this.logger.warn(`Erro ao remover item ZapSign (${itemId}) no Stripe: ${err}`);
+        }
+      }
+
+      const updated = await this.prisma.subscription.update({
+        where: { tenantId },
+        data: {
+          zapsignAddonActive: false,
+          zapsignSubscriptionItemId: null,
+        },
+      });
+
+      return {
+        success: true,
+        zapsignAddonActive: false,
+        subscription: updated,
+      };
+    }
+  }
+
+  private extractZapSignItemFromStripeSub(
+    stripeSub: Stripe.Subscription | null | undefined,
+    zapsignPriceId?: string | null
+  ): { active: boolean; itemId: string | null } {
+    const items = stripeSub?.items?.data || [];
+    const matched = items.find(
+      (item) =>
+        (zapsignPriceId && item.price?.id === zapsignPriceId) || item.price?.unit_amount === 5990
+    );
+    if (matched) {
+      return { active: true, itemId: matched.id };
+    }
+    return { active: false, itemId: null };
+  }
+
   // --- WEBHOOK HANDLING ---
 
   async handleWebhook(signature: string, payload: Buffer) {
@@ -1282,6 +1477,18 @@ export class StripeService {
 
     let status = "active";
     let currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    let zapsignAddonActive = session.metadata?.["includeZapSignAddon"] === "true";
+    let zapsignSubscriptionItemId: string | null = null;
+
+    let savedZapSignPriceId: string | null = null;
+    try {
+      const setting = await this.prisma.systemSetting?.findUnique({
+        where: { key: ZAPSIGN_ADDON_SETTING_KEY },
+      });
+      savedZapSignPriceId = setting?.value ?? null;
+    } catch {
+      // ignore
+    }
 
     if (stripeSubscriptionId) {
       try {
@@ -1292,6 +1499,11 @@ export class StripeService {
         const rawEnd = (stripeSub as unknown as Record<string, unknown>)?.["current_period_end"];
         if (typeof rawEnd === "number" && !isNaN(rawEnd) && rawEnd > 0) {
           currentPeriodEnd = new Date(rawEnd * 1000);
+        }
+        const extracted = this.extractZapSignItemFromStripeSub(stripeSub, savedZapSignPriceId);
+        if (extracted.active) {
+          zapsignAddonActive = true;
+          zapsignSubscriptionItemId = extracted.itemId;
         }
       } catch (err) {
         this.logger.warn(`Could not retrieve Stripe subscription ${stripeSubscriptionId}: ${err}`);
@@ -1304,6 +1516,8 @@ export class StripeService {
         planId: plan.id,
         stripeSubscriptionId: stripeSubscriptionId || undefined,
         stripeCustomerId: stripeCustomerId || undefined,
+        zapsignAddonActive,
+        zapsignSubscriptionItemId,
         status,
         currentPeriodEnd,
       },
@@ -1312,6 +1526,8 @@ export class StripeService {
         planId: plan.id,
         stripeCustomerId: stripeCustomerId || undefined,
         stripeSubscriptionId: stripeSubscriptionId || undefined,
+        zapsignAddonActive,
+        zapsignSubscriptionItemId,
         status,
         currentPeriodEnd,
       },
@@ -1372,11 +1588,25 @@ export class StripeService {
       currentPeriodEnd = new Date(rawEnd * 1000);
     }
 
+    let savedZapSignPriceId: string | null = null;
+    try {
+      const setting = await this.prisma.systemSetting?.findUnique({
+        where: { key: ZAPSIGN_ADDON_SETTING_KEY },
+      });
+      savedZapSignPriceId = setting?.value ?? null;
+    } catch {
+      // ignore
+    }
+
+    const extracted = this.extractZapSignItemFromStripeSub(subscription, savedZapSignPriceId);
+
     await this.prisma.subscription.update({
       where: { id: dbSubscription.id },
       data: {
         status: subscription.status,
         stripeSubscriptionId: subscription.id,
+        zapsignAddonActive: extracted.active,
+        zapsignSubscriptionItemId: extracted.itemId,
         currentPeriodEnd,
       },
     });

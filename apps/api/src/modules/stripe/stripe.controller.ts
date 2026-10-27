@@ -33,7 +33,14 @@ export class StripeController {
 
   @Post("create-checkout-session")
   async createCheckoutSession(
-    @Body() body: { planId: string; tenantId: string; returnUrl?: string; couponCode?: string }
+    @Body()
+    body: {
+      planId: string;
+      tenantId: string;
+      returnUrl?: string;
+      couponCode?: string;
+      includeZapSignAddon?: boolean;
+    }
   ) {
     if (!body.planId || !body.tenantId) {
       throw new BadRequestException("planId and tenantId are required");
@@ -44,11 +51,26 @@ export class StripeController {
         body.planId,
         body.tenantId,
         body.returnUrl,
-        body.couponCode
+        body.couponCode,
+        body.includeZapSignAddon !== undefined ? Boolean(body.includeZapSignAddon) : true
       );
       return { url: session.url };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Erro interno no Stripe";
+      throw new BadRequestException(errorMessage);
+    }
+  }
+
+  @Post("subscription/zapsign-addon")
+  async toggleZapSignAddon(@Body() body: { tenantId: string; enabled: boolean }) {
+    if (!body.tenantId || body.enabled === undefined) {
+      throw new BadRequestException("tenantId and enabled are required");
+    }
+    try {
+      return await this.stripeService.toggleZapSignAddon(body.tenantId, Boolean(body.enabled));
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Erro ao atualizar Add-on ZapSign";
       throw new BadRequestException(errorMessage);
     }
   }

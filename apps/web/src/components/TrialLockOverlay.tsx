@@ -3,16 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useOrganization } from "./providers/organization-provider";
 import PaymentWrapper from "./PaymentForm";
-import {
-  Rocket,
-  Gem,
-  CheckCircle2,
-  XCircle,
-  LockKeyhole,
-  LogOut,
-  Sparkles,
-  Headphones,
-} from "lucide-react";
+import { Rocket, Gem, CheckCircle2, XCircle, LockKeyhole, LogOut, Headphones } from "lucide-react";
 import {
   type PlanFeatureItem,
   normalizePlanFeatures,
@@ -171,7 +162,6 @@ export function TrialLockOverlay() {
                 IA.
               </p>
               <div className="mt-3 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs font-semibold">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span>Condição especial: todos os valores estão com preços de lançamento</span>
               </div>
             </div>
@@ -225,8 +215,7 @@ export function TrialLockOverlay() {
                   >
                     {isHighlighted && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-950 px-3 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase shadow-[0_0_12px_rgba(250,204,21,0.5)] flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 fill-yellow-950 text-yellow-950" /> MAIS
-                        ESCOLHIDO
+                        MAIS ESCOLHIDO
                       </div>
                     )}
 
@@ -281,8 +270,7 @@ export function TrialLockOverlay() {
                         </span>
                         <span className="text-gray-400 text-xs font-medium">/mês</span>
                       </div>
-                      <p className="text-[10px] font-semibold text-emerald-400/90 mt-1 flex items-center gap-1">
-                        <Sparkles className="w-2.5 h-2.5 shrink-0" />
+                      <p className="text-[10px] font-semibold text-emerald-400/90 mt-1">
                         Valor promocional de lançamento
                       </p>
                     </div>
@@ -359,6 +347,8 @@ export function TrialLockOverlay() {
                       <PaymentWrapper
                         planId={plan?.id || ""}
                         planName={planName}
+                        planPrice={planPrice}
+                        compactAddon={true}
                         className={
                           isPlus
                             ? "w-full py-2.5 rounded-xl text-xs font-bold shadow-md transition-all hover:scale-[1.01] bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-500 hover:to-indigo-500 shadow-purple-500/25"

@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useOrganization } from "@/components/providers/organization-provider";
-import { Tag, AlertTriangle, Loader2, X, ShieldCheck } from "lucide-react";
+import { Tag, AlertTriangle, Loader2, X, ShieldCheck, FileSignature, Check } from "lucide-react";
+
+export const ZAPSIGN_ADDON_MONTHLY_PRICE = 59.9;
 
 interface PaymentFormProps {
   planId: string;
@@ -10,6 +12,7 @@ interface PaymentFormProps {
   planPrice?: number;
   buttonText?: string;
   className?: string;
+  compactAddon?: boolean;
 }
 
 interface AppliedCoupon {
@@ -28,10 +31,14 @@ export default function PaymentForm({
   planPrice,
   buttonText,
   className,
+  compactAddon = false,
 }: PaymentFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { currentOrganization } = useOrganization();
+
+  // Add-on ZapSign (R$ 59,90/mês) pré-marcado por padrão; o cliente pode desmarcar se não quiser
+  const [includeZapSignAddon, setIncludeZapSignAddon] = useState(true);
 
   // Coupon state
   const [showCouponInput, setShowCouponInput] = useState(false);
@@ -127,6 +134,7 @@ export default function PaymentForm({
           tenantId: currentOrganization.id,
           returnUrl,
           couponCode: effectiveCoupon || undefined,
+          includeZapSignAddon,
         }),
       });
 
@@ -163,8 +171,80 @@ export default function PaymentForm({
     }
   }
 
+  const effectiveBasePrice =
+    discountedFirstPrice !== null ? discountedFirstPrice : (planPrice ?? null);
+  const totalMonthlyWithAddon =
+    effectiveBasePrice !== null
+      ? effectiveBasePrice + (includeZapSignAddon ? ZAPSIGN_ADDON_MONTHLY_PRICE : 0)
+      : null;
+
   return (
     <div className="w-full space-y-3">
+      {/* ADD-ON OPCIONAL ZAPSIGN (PRÉ-MARCADO) */}
+      <div
+        role="checkbox"
+        aria-checked={includeZapSignAddon}
+        tabIndex={0}
+        onClick={() => setIncludeZapSignAddon((prev) => !prev)}
+        onKeyDown={(e) => {
+          if (e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            setIncludeZapSignAddon((prev) => !prev);
+          }
+        }}
+        className={`group cursor-pointer select-none rounded-2xl border transition-all text-left ${
+          compactAddon ? "p-2.5" : "p-3.5"
+        } ${
+          includeZapSignAddon
+            ? "bg-emerald-50/80 dark:bg-emerald-500/10 border-emerald-500/40 dark:border-emerald-500/35 shadow-sm"
+            : "bg-slate-50/70 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 opacity-85"
+        }`}
+      >
+        <div className="flex items-start gap-2.5">
+          <div
+            className={`mt-0.5 w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+              includeZapSignAddon
+                ? "bg-emerald-600 border-emerald-600 text-white"
+                : "bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600"
+            }`}
+          >
+            {includeZapSignAddon && <Check className="w-3 h-3 stroke-[3]" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--color-foreground)]">
+                <FileSignature className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                Assinatura Digital ZapSign
+              </span>
+              <span
+                className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full border ${
+                  includeZapSignAddon
+                    ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30"
+                    : "bg-slate-200/70 dark:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-300/60 dark:border-white/10"
+                }`}
+              >
+                + R$ 59,90/mês
+              </span>
+            </div>
+            <p className="text-[11px] text-[var(--color-muted-foreground)] leading-snug mt-1">
+              {includeZapSignAddon
+                ? "Incluso na compra para assinatura jurídica de contratos. Desmarque caso não queira."
+                : "Desmarcado. Você ainda poderá marcar dentro do checkout do Stripe se desejar."}
+            </p>
+            {totalMonthlyWithAddon !== null && !appliedCoupon?.isLifetimeAdmin && (
+              <div className="mt-1.5 pt-1.5 border-t border-slate-200/70 dark:border-white/10 flex items-center justify-between text-[11px]">
+                <span className="text-[var(--color-muted-foreground)] font-medium">
+                  Total mensal {includeZapSignAddon ? "(Plano + ZapSign)" : "(Somente Plano)"}:
+                </span>
+                <span className="font-extrabold text-[var(--color-foreground)]">
+                  R$ {totalMonthlyWithAddon.toFixed(2).replace(".", ",")}/mês
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* COUPON SECTION */}
       {!appliedCoupon && !showCouponInput ? (
         <button
@@ -238,7 +318,7 @@ export default function PaymentForm({
               ) : (
                 discountedFirstPrice !== null && (
                   <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold">
-                    1ª parcela: R$ {discountedFirstPrice.toFixed(2)}{" "}
+                    1ª parcela do plano: R$ {discountedFirstPrice.toFixed(2)}{" "}
                     <span className="line-through opacity-60 font-normal text-[10px]">
                       R$ {planPrice?.toFixed(2)}
                     </span>

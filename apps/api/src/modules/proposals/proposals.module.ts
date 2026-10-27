@@ -11,6 +11,7 @@ import { PdfRendererService } from "./pdf-renderer.service";
 import { ProposalTemplatesController } from "./proposal-templates.controller";
 import { ProposalTemplatesService } from "./proposal-templates.service";
 import { PublicProposalsController } from "./public-proposals.controller";
+import { ZapSignService } from "./zapsign.service";
 
 @Module({
   imports: [forwardRef(() => NotificationsModule), LeadActivityLogModule, StockModule],
@@ -26,7 +27,8 @@ import { PublicProposalsController } from "./public-proposals.controller";
     ProposalTemplatesService,
     ProposalEquipmentService,
     PdfRendererService,
+    ZapSignService,
   ],
-  exports: [ProposalsService, ProposalTemplatesService, PdfRendererService],
+  exports: [ProposalsService, ProposalTemplatesService, PdfRendererService, ZapSignService],
 })
 export class ProposalsModule {}

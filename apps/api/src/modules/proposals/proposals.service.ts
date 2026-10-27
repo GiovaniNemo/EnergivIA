@@ -450,6 +450,10 @@ export class ProposalsService {
         discountBrl: proposal.discountBrl ?? null,
         companyName: proposal.tenant?.name ?? null,
         companyLogoUrl: proposal.tenant?.logoUrl ?? null,
+        zapsignSignUrl: proposal.zapsignSignUrl ?? null,
+        zapsignStatus: proposal.zapsignStatus ?? null,
+        zapsignSignedPdfUrl: proposal.zapsignSignedPdfUrl ?? null,
+        zapsignSignedAt: proposal.zapsignSignedAt ?? null,
         deal: { lead: { name: proposal.deal?.lead?.name ?? "Cliente" } },
         simulation: proposal.simulation
           ? { input: proposal.simulation.input, result: proposal.simulation.result }

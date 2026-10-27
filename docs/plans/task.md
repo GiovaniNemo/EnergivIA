@@ -770,3 +770,11 @@
 | task-779 | Validação de build, testes de regressão (Vitest), commit e push | completed | ESLint no web aprovado com 0 erros, testes executados e alterações sincronizadas com origin/main |
 | task-780 | Adicionar aviso de Preços de Lançamento na tela de planos (meus-planos/page.tsx e TrialLockOverlay.tsx) | completed | Banner informativo de condição especial de lançamento e selo nos cards implementados sem emojis |
 | task-781 | Validar lint, testes, build, commit e push | completed | ESLint sem erros, TypeScript validado nos arquivos modificados, testes Vitest aprovados e sincronizado com origin/main |
+| task-782 | Brainstorming: Explorar e alinhar arquitetura do Add-on Opcional ZapSign nos planos e no Stripe Checkout | completed | Valor definido em R$ 59,90/mês recorrente pré-marcado + integração API ZapSign |
+| task-783 | Brainstorming: Propor 2-3 abordagens arquiteturais e apresentar design para aprovação | completed | Design e plano salvos em docs/plans/2026-10-26-zapsign-addon-stripe-design.md e 2026-10-26-zapsign-addon-stripe-plan.md |
+| task-784 | Atualizar Schema Prisma e Gerar Cliente (campos ZapSign em Subscription e Proposal) | completed | Adicionados zapsignAddonActive, zapsignSubscriptionItemId e campos zapsign\* em Proposal |
+| task-785 | Implementar Add-on ZapSign (R$ 59,90/mês) no StripeService e StripeController com testes unitários | completed | 4 testes aprovados em stripe-zapsign-addon.spec.ts (line_items, optional_items, ensureZapSignAddonPrice e toggleZapSignAddon) |
+| task-786 | Criar ZapSignService e endpoints em ProposalsModule com testes unitários | completed | ZapSignService implementado e 8 testes unitários aprovados |
+| task-787 | Atualizar PaymentForm.tsx, meus-planos/page.tsx e TrialLockOverlay.tsx (Order Bump R$ 59,90/mês + remover Sparkles) | completed | Checkbox pré-marcado nos cards, gestão no banner de assinatura ativa e remoção de todos os ícones Sparkles |
+| task-788 | Integrar ação e exibição de Assinatura Digital ZapSign nas propostas comerciais | completed | Criado ProposalZapSignCard em ProposalInternalView e botão de assinatura ZapSign em PublicProposalView |
+| task-789 | Executar testes unitários, validação de build/lint, commit e push | completed | 12 testes Vitest aprovados (100%), ESLint Web e API com 0 erros, build NestJS compilado e enviado ao origin/main |
