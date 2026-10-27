@@ -804,5 +804,5 @@
 | task-813 | Backend: endpoints públicos de assinatura (/public/documents/:token), OTP e auditoria jurídica | completed | PublicSignatureController e SignatureAuditService com OTP por e-mail e hash SHA-256 |
 | task-814 | Frontend: navegação Vendas no menu lateral e ação Converter para Venda em propostas | completed | Vendas adicionado ao menu.config.ts e ação Converter para Venda em propostas |
 | task-815 | Frontend: listagem de vendas (/vendas) e ficha da venda (/vendas/[id]) com abas modernas | completed | Ficha cadastral, geração de documentos em 1 clique, atalho de WhatsApp e trilha de auditoria |
-| task-816 | Frontend: experiência pública de assinatura eletrônica nativa (/assinar/[token]) | in_progress | Preview de documento, validação de CPF, código OTP e canvas de assinatura |
-| task-817 | Validação de ponta a ponta, testes automatizados, linters e guia de teste | not_started | Verificação completa de build e testes |
+| task-816 | Frontend: experiência pública de assinatura eletrônica nativa (/assinar/[token]) | completed | Preview de documento, validação de CPF, código OTP e canvas de assinatura |
+| task-817 | Validação de ponta a ponta, testes automatizados, linters e guia de teste | in_progress | Verificação completa de build e testes |
