@@ -233,7 +233,7 @@ export class SalesService {
       ...sale,
       ...(lead?.name && { customerName: lead.name }),
       ...(lead?.email && { customerEmail: lead.email }),
-      ...(lead?.phone && { customerPhone: lead.phone }),
+      ...(lead?.whatsapp && { customerPhone: lead.whatsapp }),
       documents: sale.documents?.map((d) =>
         formatSaleDocument(d as unknown as Record<string, unknown>)
       ),

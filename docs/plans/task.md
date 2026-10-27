@@ -815,3 +815,4 @@
 | task-824 | Blindar acessos a documentos com optional chaining (d?. e doc?.) em listagem e detalhes | completed | Proteção contra itens nulos/indefinidos em vendas/page.tsx e vendas/[id]/page.tsx |
 | task-825 | Adicionar consulta automática de CNPJ (Receita Federal) e CEP (ViaCEP) na ficha da venda | completed | Suporte a auto-preenchimento para PJ via CNPJ e endereço via CEP no frontend e backend |
 | task-826 | Uniformizar e nivelar layout dos cards de métricas de vendas (/vendas) | completed | Cabeçalhos com altura padronizada h-10, ícones em badges fixas e alinhamento milimétrico de valores e legendas |
+| task-827 | Corrigir erro TS2339 no build da API (lead.phone -> lead.whatsapp em sales.service) | completed | Corrigido acesso à propriedade do modelo Prisma Lead em getSaleById e build da API validado 100% |
