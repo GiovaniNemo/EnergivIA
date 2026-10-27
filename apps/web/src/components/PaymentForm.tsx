@@ -212,7 +212,7 @@ export default function PaymentForm({
               }`}
             />
             <span className="text-xs font-semibold text-[var(--color-foreground)] truncate">
-              Assinatura Digital ZapSign
+              Assinatura Digital de Contratos
             </span>
           </div>
         </div>

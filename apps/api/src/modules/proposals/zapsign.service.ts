@@ -65,7 +65,7 @@ export class ZapSignService {
     return {
       enabled: false,
       reason:
-        "O módulo de Assinatura Digital ZapSign (+ R$ 59,90/mês) não está ativo na sua assinatura. Ative o Add-on em Meus Planos para enviar contratos com validade jurídica.",
+        "O módulo de Assinatura Digital (+ R$ 59,90/mês) não está ativo na sua assinatura. Ative o módulo em Meus Planos para enviar contratos com validade jurídica.",
     };
   }
 

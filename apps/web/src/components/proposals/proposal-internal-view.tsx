@@ -882,7 +882,7 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
                 }
               : null
           );
-          showToast("success", "Link de assinatura digital ZapSign gerado com sucesso!");
+          showToast("success", "Link de assinatura digital gerado com sucesso!");
         }}
       />
 

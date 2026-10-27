@@ -792,3 +792,5 @@
 | task-801 | Validar build/lint, commit e push | completed | ESLint @energivia/web com 0 erros e alterações enviadas para origin/main |
 | task-802 | Refatorar card de add-on do ZapSign em PaymentForm.tsx para layout elegante em linha única | completed | Card transformado em linha horizontal única com checkbox, ícone, título e badge + R$ 59,90/mês, eliminando textos redundantes |
 | task-803 | Validar build/lint, commit e push | completed | ESLint @energivia/web aprovado com 0 erros e alterações enviadas para origin/main |
+| task-804 | Remover menções diretas a ZapSign no frontend e backend (White-label: Assinatura Digital de Contratos) | completed | Menções a ZapSign substituídas por Assinatura Digital em PaymentForm, Meus Planos, ProposalZapSignCard, views interna e pública |
+| task-805 | Validar build/lint, commit e push | completed | ESLint web com 0 erros, testes de zapsign no backend 100% aprovados e enviado para origin/main |

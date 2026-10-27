@@ -255,19 +255,19 @@ function MeusPlanosContent() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || "Erro ao atualizar Add-on do ZapSign");
+        throw new Error(errData.message || "Erro ao atualizar Assinatura Digital");
       }
 
       setToastMessage({
         type: "success",
         text: enabled
-          ? "Add-on Assinatura Digital ZapSign (+ R$ 59,90/mês) ativado com sucesso na sua assinatura!"
-          : "Add-on Assinatura Digital ZapSign desativado da sua assinatura.",
+          ? "Módulo de Assinatura Digital (+ R$ 59,90/mês) ativado com sucesso na sua assinatura!"
+          : "Módulo de Assinatura Digital desativado da sua assinatura.",
       });
       await refetchOrg();
       await loadData();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro ao atualizar Add-on do ZapSign";
+      const msg = err instanceof Error ? err.message : "Erro ao atualizar Assinatura Digital";
       setToastMessage({ type: "error", text: msg });
     } finally {
       setZapsignLoading(false);
@@ -458,7 +458,7 @@ function MeusPlanosContent() {
                 <div className="flex items-center gap-2">
                   <FileSignature className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>
-                    ZapSign:{" "}
+                    Assinatura Digital:{" "}
                     <strong
                       className={
                         subscription?.zapsignAddonActive || isLifetime || isSpecialAccess
@@ -467,8 +467,8 @@ function MeusPlanosContent() {
                       }
                     >
                       {subscription?.zapsignAddonActive || isLifetime || isSpecialAccess
-                        ? "Ativo"
-                        : "Não contratado"}
+                        ? "Ativa"
+                        : "Não contratada"}
                     </strong>
                   </span>
                 </div>
@@ -519,8 +519,8 @@ function MeusPlanosContent() {
                           <FileSignature className="w-3.5 h-3.5" />
                         )}
                         {subscription.zapsignAddonActive
-                          ? "Desativar ZapSign"
-                          : "Ativar ZapSign (+ R$ 59,90/mês)"}
+                          ? "Desativar Assinatura Digital"
+                          : "Ativar Assinatura Digital (+ R$ 59,90/mês)"}
                       </button>
                     )}
                   </>

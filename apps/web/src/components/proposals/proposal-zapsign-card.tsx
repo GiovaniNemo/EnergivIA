@@ -106,7 +106,7 @@ export function ProposalZapSignCard({
   return (
     <section
       className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4"
-      aria-label="Assinatura Digital ZapSign"
+      aria-label="Assinatura Digital"
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-start gap-3">
@@ -116,7 +116,7 @@ export function ProposalZapSignCard({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-sm font-semibold text-[var(--color-foreground)]">
-                Assinatura Digital com Validade Jurídica (ZapSign)
+                Assinatura Digital com Validade Jurídica
               </h2>
               {status === "SIGNED" ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
@@ -136,11 +136,11 @@ export function ProposalZapSignCard({
             </div>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
               {status === "SIGNED"
-                ? "Esta proposta foi assinada digitalmente pelo cliente com validade jurídica no ZapSign."
+                ? "Esta proposta foi assinada digitalmente pelo cliente com validade jurídica."
                 : addonEnabled === false
                   ? addonReason ||
-                    "Envie propostas e contratos para assinatura jurídica com 1 clique ativando o módulo ZapSign em Meus Planos."
-                  : "Gere o link oficial de assinatura eletrônica no ZapSign a partir do PDF desta proposta para enviar ao cliente."}
+                    "Envie propostas e contratos para assinatura jurídica com 1 clique ativando o módulo de Assinatura Digital em Meus Planos."
+                  : "Gere o link oficial de assinatura eletrônica a partir do PDF desta proposta para enviar ao cliente."}
             </p>
           </div>
         </div>
@@ -152,7 +152,7 @@ export function ProposalZapSignCard({
               className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3.5 text-xs font-bold text-white transition shadow-sm"
             >
               <FileSignature className="w-3.5 h-3.5" />
-              Ativar ZapSign (+ R$ 59,90/mês)
+              Ativar Assinatura Digital (+ R$ 59,90/mês)
             </Link>
           ) : status === "SIGNED" && (zapsignSignedPdfUrl || signUrl) ? (
             <a
@@ -168,7 +168,7 @@ export function ProposalZapSignCard({
             <>
               <Button type="button" size="sm" variant="outline" onClick={handleCopy}>
                 <Copy className="mr-1.5 h-3.5 w-3.5" />
-                {copied ? "Link Copiado!" : "Copiar Link ZapSign"}
+                {copied ? "Link Copiado!" : "Copiar Link de Assinatura"}
               </Button>
               <a
                 href={signUrl}
@@ -177,7 +177,7 @@ export function ProposalZapSignCard({
                 className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 text-xs font-bold text-white transition"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
-                Abrir no ZapSign
+                Abrir Documento
               </a>
               <Button
                 type="button"
@@ -185,7 +185,7 @@ export function ProposalZapSignCard({
                 variant="ghost"
                 disabled={loading}
                 onClick={() => void handleGenerateZapSign(true)}
-                title="Regerar documento no ZapSign com o PDF atualizado"
+                title="Regerar documento de assinatura com o PDF atualizado"
               >
                 {loading ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -205,12 +205,12 @@ export function ProposalZapSignCard({
               {loading ? (
                 <>
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  Gerando no ZapSign...
+                  Gerando documento...
                 </>
               ) : (
                 <>
                   <FileSignature className="mr-1.5 h-3.5 w-3.5" />
-                  Gerar Assinatura ZapSign
+                  Gerar Assinatura Digital
                 </>
               )}
             </Button>
