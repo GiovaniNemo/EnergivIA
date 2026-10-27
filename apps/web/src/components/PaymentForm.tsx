@@ -171,16 +171,9 @@ export default function PaymentForm({
     }
   }
 
-  const effectiveBasePrice =
-    discountedFirstPrice !== null ? discountedFirstPrice : (planPrice ?? null);
-  const totalMonthlyWithAddon =
-    effectiveBasePrice !== null
-      ? effectiveBasePrice + (includeZapSignAddon ? ZAPSIGN_ADDON_MONTHLY_PRICE : 0)
-      : null;
-
   return (
     <div className="w-full space-y-3">
-      {/* ADD-ON OPCIONAL ZAPSIGN (PRÉ-MARCADO) */}
+      {/* ADD-ON OPCIONAL ZAPSIGN EM LINHA ÚNICA (ENTERPRISE SAAS) */}
       <div
         role="checkbox"
         aria-checked={includeZapSignAddon}
@@ -192,57 +185,47 @@ export default function PaymentForm({
             setIncludeZapSignAddon((prev) => !prev);
           }
         }}
-        className={`group cursor-pointer select-none rounded-2xl border transition-all text-left ${
-          compactAddon ? "p-2.5" : "p-3.5"
+        className={`group cursor-pointer select-none rounded-xl border transition-all flex items-center justify-between gap-3 ${
+          compactAddon ? "px-3 py-2" : "px-3.5 py-2.5"
         } ${
           includeZapSignAddon
-            ? "bg-emerald-50/80 dark:bg-emerald-500/10 border-emerald-500/40 dark:border-emerald-500/35 shadow-sm"
-            : "bg-slate-50/70 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 opacity-85"
+            ? "bg-emerald-50/70 dark:bg-emerald-500/10 border-emerald-500/40 dark:border-emerald-500/30 shadow-xs hover:border-emerald-500/60"
+            : "bg-slate-50/60 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 opacity-80 hover:opacity-100"
         }`}
       >
-        <div className="flex items-start gap-2.5">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div
-            className={`mt-0.5 w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+            className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
               includeZapSignAddon
-                ? "bg-emerald-600 border-emerald-600 text-white"
-                : "bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600"
+                ? "bg-emerald-600 border-emerald-600 text-white shadow-xs"
+                : "bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 group-hover:border-slate-400 dark:group-hover:border-slate-500"
             }`}
           >
             {includeZapSignAddon && <Check className="w-3 h-3 stroke-[3]" />}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center justify-between gap-1.5">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--color-foreground)]">
-                <FileSignature className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                Assinatura Digital ZapSign
-              </span>
-              <span
-                className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full border ${
-                  includeZapSignAddon
-                    ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30"
-                    : "bg-slate-200/70 dark:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-300/60 dark:border-white/10"
-                }`}
-              >
-                + R$ 59,90/mês
-              </span>
-            </div>
-            <p className="text-[11px] text-[var(--color-muted-foreground)] leading-snug mt-1">
-              {includeZapSignAddon
-                ? "Incluso na compra para assinatura jurídica de contratos. Desmarque caso não queira."
-                : "Desmarcado. Você ainda poderá marcar dentro do checkout do Stripe se desejar."}
-            </p>
-            {totalMonthlyWithAddon !== null && !appliedCoupon?.isLifetimeAdmin && (
-              <div className="mt-1.5 pt-1.5 border-t border-slate-200/70 dark:border-white/10 flex items-center justify-between text-[11px]">
-                <span className="text-[var(--color-muted-foreground)] font-medium">
-                  Total mensal {includeZapSignAddon ? "(Plano + ZapSign)" : "(Somente Plano)"}:
-                </span>
-                <span className="font-extrabold text-[var(--color-foreground)]">
-                  R$ {totalMonthlyWithAddon.toFixed(2).replace(".", ",")}/mês
-                </span>
-              </div>
-            )}
+          <div className="flex items-center gap-1.5 min-w-0">
+            <FileSignature
+              className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                includeZapSignAddon
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : "text-slate-400 dark:text-slate-500"
+              }`}
+            />
+            <span className="text-xs font-semibold text-[var(--color-foreground)] truncate">
+              Assinatura Digital ZapSign
+            </span>
           </div>
         </div>
+
+        <span
+          className={`text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0 transition-colors ${
+            includeZapSignAddon
+              ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30"
+              : "bg-slate-200/60 dark:bg-white/10 text-slate-500 dark:text-slate-400 border-slate-300/50 dark:border-white/10"
+          }`}
+        >
+          + R$ 59,90/mês
+        </span>
       </div>
 
       {/* COUPON SECTION */}

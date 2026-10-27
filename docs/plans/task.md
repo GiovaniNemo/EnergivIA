@@ -790,3 +790,5 @@
 | task-799 | Validar suíte de testes vitest, linters e commit/push | completed | 49 testes aprovados (100%), ESLint API e Web sem erros e enviado para origin/main |
 | task-800 | Harmonizar layout e hierarquia dos botões do banner de assinatura ativa (meus-planos/page.tsx) | completed | Botões Gerenciar Faturas e ZapSign alinhados em altura uniforme h-10, ação de cancelamento sutil e preço em R$ BRL |
 | task-801 | Validar build/lint, commit e push | completed | ESLint @energivia/web com 0 erros e alterações enviadas para origin/main |
+| task-802 | Refatorar card de add-on do ZapSign em PaymentForm.tsx para layout elegante em linha única | completed | Card transformado em linha horizontal única com checkbox, ícone, título e badge + R$ 59,90/mês, eliminando textos redundantes |
+| task-803 | Validar build/lint, commit e push | completed | ESLint @energivia/web aprovado com 0 erros e alterações enviadas para origin/main |
