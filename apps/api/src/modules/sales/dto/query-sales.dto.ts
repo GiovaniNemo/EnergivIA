@@ -1,6 +1,5 @@
-import { IsEnum, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsNumber, IsOptional, IsString } from "class-validator";
 import { Type } from "class-transformer";
-import { SaleStatus } from "@prisma/client";
 
 export class QuerySalesDto {
   @IsOptional()
@@ -8,8 +7,8 @@ export class QuerySalesDto {
   search?: string;
 
   @IsOptional()
-  @IsEnum(SaleStatus)
-  status?: SaleStatus;
+  @IsString()
+  status?: string;
 
   @IsOptional()
   @Type(() => Number)

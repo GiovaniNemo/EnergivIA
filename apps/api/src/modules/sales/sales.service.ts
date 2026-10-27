@@ -124,8 +124,9 @@ export class SalesService {
       tenantId,
     };
 
-    if (query?.status) {
-      where["status"] = query.status;
+    if (query?.status && query.status !== "ALL") {
+      const normalizedStatus = query.status === "CANCELLED" ? "CANCELED" : query.status;
+      where["status"] = normalizedStatus;
     }
 
     if (query?.search?.trim()) {
@@ -260,8 +261,12 @@ export class SalesService {
           consumerUnitNumber: dto.consumerUnitNumber,
         }),
         ...(dto.paymentMethod !== undefined && { paymentMethod: dto.paymentMethod }),
-        ...(dto.notes !== undefined && { notes: dto.notes }),
-        ...(dto.status !== undefined && { status: dto.status }),
+        ...(dto.status !== undefined && {
+          status:
+            dto.status === ("CANCELLED" as unknown as SaleStatus)
+              ? SaleStatus.CANCELED
+              : dto.status,
+        }),
       },
     });
   }

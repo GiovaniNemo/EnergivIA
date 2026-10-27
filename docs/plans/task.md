@@ -810,3 +810,4 @@
 | task-819 | Corrigir erros de compilação da API no Railway (renderHtmlToPdf e tipo de user em sales) | completed | renderHtmlToPdf corrigido com argumento { html }, tipo de user em sales.controller ajustado e build validado 100% |
 | task-820 | Excluir conta/organização EDELTEC criada hoje do banco de dados | completed | Tenant cmvqlln34001xus01854z2dbf, membro, assinatura e certidão de termos excluídos definitivamente sem resíduos |
 | task-821 | Corrigir roteamento de /sales no SalesController, PublicSignatureController, DTOs e Proxy | completed | Adicionado suporte duplo a /sales e /api/sales, validadores no QuerySalesDto/UpdateSaleDto e normalização de URL no proxy |
+| task-822 | Normalizar filtros de status e compatibilizar CANCELED/CANCELLED no DTO e Service | completed | QuerySalesDto ajustado com status string opcional, tratamento de ALL e normalização em updateSale |

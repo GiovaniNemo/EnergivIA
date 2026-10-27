@@ -80,6 +80,11 @@ const SALE_STATUS_MAP: Record<string, { label: string; badgeClass: string; icon:
     badgeClass: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
     icon: Clock,
   },
+  CANCELED: {
+    label: "Cancelada",
+    badgeClass: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
+    icon: Clock,
+  },
 };
 
 function formatBrl(val: number | null | undefined): string {
