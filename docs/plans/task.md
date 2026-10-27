@@ -808,3 +808,4 @@
 | task-817 | Validação de ponta a ponta, testes automatizados, linters e guia de teste | completed | 16 testes unitários aprovados (100%), linters API e Web limpos com 0 erros e guia de testes pronto |
 | task-818 | Remover card e modal de Conformidade Legal & Aceite dos Termos da tela de organização (/settings/organization) | completed | Card de conformidade legal, certidão probatória e modal de declaração de termos removidos da visão do integrador |
 | task-819 | Corrigir erros de compilação da API no Railway (renderHtmlToPdf e tipo de user em sales) | completed | renderHtmlToPdf corrigido com argumento { html }, tipo de user em sales.controller ajustado e build validado 100% |
+| task-820 | Excluir conta/organização EDELTEC criada hoje do banco de dados | completed | Tenant cmvqlln34001xus01854z2dbf, membro, assinatura e certidão de termos excluídos definitivamente sem resíduos |
