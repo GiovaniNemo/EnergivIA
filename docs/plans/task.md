@@ -812,3 +812,4 @@
 | task-821 | Corrigir roteamento de /sales no SalesController, PublicSignatureController, DTOs e Proxy | completed | Adicionado suporte duplo a /sales e /api/sales, validadores no QuerySalesDto/UpdateSaleDto e normalização de URL no proxy |
 | task-822 | Normalizar filtros de status e compatibilizar CANCELED/CANCELLED no DTO e Service | completed | QuerySalesDto ajustado com status string opcional, tratamento de ALL e normalização em updateSale |
 | task-823 | Corrigir TypeError startsWith mapeando templateType, publicToken e status em documentos | completed | formatSaleDocument adicionado no service e fallbacks seguros implementados em vendas/[id], vendas e assinar |
+| task-824 | Blindar acessos a documentos com optional chaining (d?. e doc?.) em listagem e detalhes | completed | Proteção contra itens nulos/indefinidos em vendas/page.tsx e vendas/[id]/page.tsx |

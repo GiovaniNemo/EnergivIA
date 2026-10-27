@@ -202,10 +202,10 @@ export default function VendaDetailPage(): JSX.Element {
 
   function handleCopyWhatsAppMessage(doc: any) {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const token = doc.publicToken || doc.signToken || "";
+    const token = doc?.publicToken || doc?.signToken || "";
     const signUrl = `${origin}/assinar/${token}`;
     const clientFirstName = (formData.customerName || "Cliente").split(" ")[0];
-    const docType = String(doc.templateType || doc.documentType || "");
+    const docType = String(doc?.templateType || doc?.documentType || "");
     const docName = docType.startsWith("CONTRATO")
       ? "Contrato de Venda do Sistema Solar"
       : "Procuração para Homologação ANEEL";
@@ -848,15 +848,15 @@ export default function VendaDetailPage(): JSX.Element {
               ) : (
                 <div className="divide-y divide-[var(--color-border)]">
                   {sale.documents.map((doc: any) => {
-                    const isSigned = (doc.status || doc.signStatus) === "SIGNED";
-                    const docType = String(doc.templateType || doc.documentType || "");
+                    const isSigned = (doc?.status || doc?.signStatus) === "SIGNED";
+                    const docType = String(doc?.templateType || doc?.documentType || "");
                     const isContract = docType.startsWith("CONTRATO");
                     const title =
-                      doc.title ||
+                      doc?.title ||
                       (isContract
                         ? "Contrato de Compra e Venda de Sistema Solar"
                         : "Procuração de Acesso e Homologação ANEEL");
-                    const token = doc.publicToken || doc.signToken || "";
+                    const token = doc?.publicToken || doc?.signToken || "";
 
                     return (
                       <div
@@ -1030,13 +1030,13 @@ export default function VendaDetailPage(): JSX.Element {
               )}
 
               {sale?.documents?.map((doc: any) => {
-                const docType = String(doc.templateType || doc.documentType || "");
+                const docType = String(doc?.templateType || doc?.documentType || "");
                 const isContract = docType.startsWith("CONTRATO");
                 const title =
-                  doc.title ||
+                  doc?.title ||
                   (isContract ? "Contrato de Venda do Sistema Solar" : "Procuração ANEEL");
-                const token = doc.publicToken || doc.signToken || "";
-                const isSigned = (doc.status || doc.signStatus) === "SIGNED";
+                const token = doc?.publicToken || doc?.signToken || "";
+                const isSigned = (doc?.status || doc?.signStatus) === "SIGNED";
 
                 return (
                   <div

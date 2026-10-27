@@ -322,15 +322,15 @@ export default function VendasPage(): JSX.Element {
             const StatusIcon = statusConfig.icon;
 
             const hasContract = sale.documents?.some((d) =>
-              String(d.templateType || d.documentType || "").startsWith("CONTRATO")
+              String(d?.templateType || d?.documentType || "").startsWith("CONTRATO")
             );
             const hasPoa = sale.documents?.some((d) =>
-              String(d.templateType || d.documentType || "").startsWith("PROCURACAO")
+              String(d?.templateType || d?.documentType || "").startsWith("PROCURACAO")
             );
             const allSigned =
               sale.documents &&
               sale.documents.length > 0 &&
-              sale.documents.every((d) => (d.status || d.signStatus) === "SIGNED");
+              sale.documents.every((d) => (d?.status || d?.signStatus) === "SIGNED");
 
             return (
               <Card
