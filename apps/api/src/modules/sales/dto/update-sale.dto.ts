@@ -67,6 +67,71 @@ export class UpdateSaleDto {
 
   @IsOptional()
   @IsString()
+  customerName?: string;
+
+  @IsOptional()
+  @IsString()
+  customerEmail?: string;
+
+  @IsOptional()
+  @IsString()
+  customerPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  customerCpfCnpj?: string;
+
+  @IsOptional()
+  @IsString()
+  customerRgIe?: string;
+
+  @IsOptional()
+  @IsString()
+  addressStreet?: string;
+
+  @IsOptional()
+  @IsString()
+  addressNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  addressComp?: string;
+
+  @IsOptional()
+  @IsString()
+  addressNeighborhood?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @IsOptional()
+  @IsString()
+  zipCode?: string;
+
+  @IsOptional()
+  @IsString()
+  utilityCompany?: string;
+
+  @IsOptional()
+  @IsString()
+  ucNumber?: string;
+
+  @IsOptional()
+  systemPowerKwp?: number;
+
+  @IsOptional()
+  totalValue?: number;
+
+  @IsOptional()
+  investmentAmount?: number;
+
+  @IsOptional()
+  @IsString()
   notes?: string;
 
   @IsOptional()

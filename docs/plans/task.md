@@ -813,3 +813,4 @@
 | task-822 | Normalizar filtros de status e compatibilizar CANCELED/CANCELLED no DTO e Service | completed | QuerySalesDto ajustado com status string opcional, tratamento de ALL e normalização em updateSale |
 | task-823 | Corrigir TypeError startsWith mapeando templateType, publicToken e status em documentos | completed | formatSaleDocument adicionado no service e fallbacks seguros implementados em vendas/[id], vendas e assinar |
 | task-824 | Blindar acessos a documentos com optional chaining (d?. e doc?.) em listagem e detalhes | completed | Proteção contra itens nulos/indefinidos em vendas/page.tsx e vendas/[id]/page.tsx |
+| task-825 | Adicionar consulta automática de CNPJ (Receita Federal) e CEP (ViaCEP) na ficha da venda | completed | Suporte a auto-preenchimento para PJ via CNPJ e endereço via CEP no frontend e backend |

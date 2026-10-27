@@ -227,8 +227,13 @@ export class SalesService {
       throw new NotFoundException("Venda não encontrada.");
     }
 
+    const lead = sale.proposal?.deal?.lead;
+
     return {
       ...sale,
+      ...(lead?.name && { customerName: lead.name }),
+      ...(lead?.email && { customerEmail: lead.email }),
+      ...(lead?.phone && { customerPhone: lead.phone }),
       documents: sale.documents?.map((d) =>
         formatSaleDocument(d as unknown as Record<string, unknown>)
       ),
@@ -238,21 +243,76 @@ export class SalesService {
   async updateSale(tenantId: string, id: string, dto: UpdateSaleDto) {
     const existing = await this.prisma.sale.findFirst({
       where: { id, tenantId },
+      include: {
+        proposal: {
+          include: {
+            deal: true,
+          },
+        },
+      },
     });
 
     if (!existing) {
       throw new NotFoundException("Venda não encontrada.");
     }
 
+    // Se forneceu customerName, customerEmail, etc., atualizar no Lead vinculado
+    if (
+      existing.proposal?.deal?.leadId &&
+      (dto.customerName || dto.customerEmail || dto.customerPhone || dto.customerCpfCnpj)
+    ) {
+      try {
+        await this.prisma.lead.update({
+          where: { id: existing.proposal.deal.leadId },
+          data: {
+            ...(dto.customerName && { name: dto.customerName }),
+            ...(dto.customerEmail && { email: dto.customerEmail }),
+            ...(dto.customerPhone && { phone: dto.customerPhone }),
+            ...(dto.customerCpfCnpj && { cpfCnpj: dto.customerCpfCnpj }),
+          },
+        });
+      } catch (err) {
+        this.logger.warn(`Falha ao atualizar dados do lead na venda ${id}: ${err}`);
+      }
+    }
+
     const birthDate =
       dto.birthDate != null && dto.birthDate !== "" ? new Date(dto.birthDate) : undefined;
 
-    return this.prisma.sale.update({
+    const docNum = dto.documentNumber || dto.customerCpfCnpj;
+    const rgNum = dto.rgNumber || dto.customerRgIe;
+    const instAddress =
+      dto.installationAddress ||
+      (dto.addressStreet
+        ? [
+            dto.addressStreet,
+            dto.addressNumber ? `nº ${dto.addressNumber}` : "",
+            dto.addressComp,
+            dto.addressNeighborhood,
+          ]
+            .filter(Boolean)
+            .join(", ")
+        : undefined);
+
+    const instCity = dto.installationCity || dto.city;
+    const instState = dto.installationState || dto.state;
+    const instZip = dto.installationZip || dto.zipCode;
+    const distCompany = dto.distributionCompany || dto.utilityCompany;
+    const ucNum = dto.consumerUnitNumber || dto.ucNumber;
+    const sysPower = dto.systemPowerKwp !== undefined ? Number(dto.systemPowerKwp) : undefined;
+    const investAmt =
+      dto.investmentAmount !== undefined
+        ? Number(dto.investmentAmount)
+        : dto.totalValue !== undefined
+          ? Number(dto.totalValue)
+          : undefined;
+
+    const updated = await this.prisma.sale.update({
       where: { id },
       data: {
         ...(dto.customerType !== undefined && { customerType: dto.customerType }),
-        ...(dto.documentNumber !== undefined && { documentNumber: dto.documentNumber }),
-        ...(dto.rgNumber !== undefined && { rgNumber: dto.rgNumber }),
+        ...(docNum !== undefined && { documentNumber: docNum }),
+        ...(rgNum !== undefined && { rgNumber: rgNum }),
         ...(dto.rgIssuer !== undefined && { rgIssuer: dto.rgIssuer }),
         ...(birthDate !== undefined && { birthDate }),
         ...(dto.maritalStatus !== undefined && { maritalStatus: dto.maritalStatus }),
@@ -263,25 +323,34 @@ export class SalesService {
         ...(dto.legalRepresentativeCpf !== undefined && {
           legalRepresentativeCpf: dto.legalRepresentativeCpf,
         }),
-        ...(dto.installationAddress !== undefined && {
-          installationAddress: dto.installationAddress,
+        ...(instAddress !== undefined && {
+          installationAddress: instAddress,
         }),
-        ...(dto.installationCity !== undefined && {
-          installationCity: dto.installationCity,
+        ...(instCity !== undefined && {
+          installationCity: instCity,
         }),
-        ...(dto.installationState !== undefined && {
-          installationState: dto.installationState,
+        ...(instState !== undefined && {
+          installationState: instState,
         }),
-        ...(dto.installationZip !== undefined && {
-          installationZip: dto.installationZip,
+        ...(instZip !== undefined && {
+          installationZip: instZip,
         }),
-        ...(dto.distributionCompany !== undefined && {
-          distributionCompany: dto.distributionCompany,
+        ...(distCompany !== undefined && {
+          distributionCompany: distCompany,
         }),
-        ...(dto.consumerUnitNumber !== undefined && {
-          consumerUnitNumber: dto.consumerUnitNumber,
+        ...(ucNum !== undefined && {
+          consumerUnitNumber: ucNum,
         }),
+        ...(sysPower !== undefined &&
+          !Number.isNaN(sysPower) && {
+            systemPowerKwp: sysPower,
+          }),
+        ...(investAmt !== undefined &&
+          !Number.isNaN(investAmt) && {
+            investmentAmount: investAmt,
+          }),
         ...(dto.paymentMethod !== undefined && { paymentMethod: dto.paymentMethod }),
+        ...(dto.notes !== undefined && { notes: dto.notes }),
         ...(dto.status !== undefined && {
           status:
             dto.status === ("CANCELLED" as unknown as SaleStatus)
@@ -290,6 +359,8 @@ export class SalesService {
         }),
       },
     });
+
+    return updated;
   }
 
   async generateSaleDocument(tenantId: string, saleId: string, documentType: DocumentType) {

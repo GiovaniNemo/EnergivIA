@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -19,14 +19,24 @@ import {
   MapPin,
   RefreshCw,
   Save,
+  Search,
   Send,
   ShieldCheck,
+  Sparkles,
   User,
   Zap,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingState } from "@/components/ui/loading-state";
 import { generateSaleDocument, getSaleById, updateSale } from "@/lib/sales-api";
+import {
+  fetchCnpjData,
+  fetchViaCepData,
+  formatCep,
+  formatCnpj,
+  formatCpf,
+  formatPhone,
+} from "@/lib/consultas-api";
 import { cn } from "@energivia/utils";
 
 const SALE_STATUS_OPTIONS = [
@@ -69,6 +79,21 @@ export default function VendaDetailPage(): JSX.Element {
 
   const [sale, setSale] = useState<any>(null);
 
+  // Estados de consulta automática
+  const [searchingCnpj, setSearchingCnpj] = useState(false);
+  const [cnpjFeedback, setCnpjFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const [searchingCep, setSearchingCep] = useState(false);
+  const [cepFeedback, setCepFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const addressNumberRef = useRef<HTMLInputElement>(null);
+
   // Form state
   const [formData, setFormData] = useState({
     customerType: "PF",
@@ -77,6 +102,8 @@ export default function VendaDetailPage(): JSX.Element {
     customerPhone: "",
     customerCpfCnpj: "",
     customerRgIe: "",
+    legalRepresentativeName: "",
+    legalRepresentativeCpf: "",
     maritalStatus: "Casado(a)",
     profession: "",
     addressStreet: "",
@@ -103,24 +130,32 @@ export default function VendaDetailPage(): JSX.Element {
       setSale(data);
       setFormData({
         customerType: data.customerType || "PF",
-        customerName: data.customerName || "",
-        customerEmail: data.customerEmail || "",
-        customerPhone: data.customerPhone || "",
-        customerCpfCnpj: data.customerCpfCnpj || "",
-        customerRgIe: data.customerRgIe || "",
+        customerName: data.customerName || data.proposal?.deal?.lead?.name || "",
+        customerEmail: data.customerEmail || data.proposal?.deal?.lead?.email || "",
+        customerPhone: data.customerPhone || data.proposal?.deal?.lead?.phone || "",
+        customerCpfCnpj:
+          data.customerCpfCnpj || data.documentNumber || data.proposal?.deal?.lead?.cpfCnpj || "",
+        customerRgIe: data.customerRgIe || data.rgNumber || "",
+        legalRepresentativeName: data.legalRepresentativeName || "",
+        legalRepresentativeCpf: data.legalRepresentativeCpf || "",
         maritalStatus: data.maritalStatus || "Casado(a)",
         profession: data.profession || "",
-        addressStreet: data.addressStreet || "",
+        addressStreet: data.addressStreet || data.installationAddress || "",
         addressNumber: data.addressNumber || "",
         addressComp: data.addressComp || "",
         addressNeighborhood: data.addressNeighborhood || "",
-        city: data.city || "",
-        state: data.state || "",
-        zipCode: data.zipCode || "",
-        utilityCompany: data.utilityCompany || "CEMIG",
-        ucNumber: data.ucNumber || "",
+        city: data.city || data.installationCity || "",
+        state: data.state || data.installationState || "",
+        zipCode: data.zipCode || data.installationZip || "",
+        utilityCompany: data.utilityCompany || data.distributionCompany || "CEMIG",
+        ucNumber: data.ucNumber || data.consumerUnitNumber || "",
         systemPowerKwp: data.systemPowerKwp != null ? String(data.systemPowerKwp) : "",
-        totalValue: data.totalValue != null ? String(data.totalValue) : "",
+        totalValue:
+          data.totalValue != null
+            ? String(data.totalValue)
+            : data.investmentAmount != null
+              ? String(data.investmentAmount)
+              : "",
         paymentMethod: data.paymentMethod || "Financiamento Bancário",
         status: data.status || "AWAITING_ANALYSIS",
         notes: data.notes || "",
@@ -138,6 +173,100 @@ export default function VendaDetailPage(): JSX.Element {
     }
   }, [saleId]);
 
+  async function handleSearchCnpj(customCnpj?: string) {
+    const raw = (customCnpj || formData.customerCpfCnpj || "").replace(/\D/g, "");
+    if (raw.length !== 14) {
+      setCnpjFeedback({
+        type: "error",
+        message: "O CNPJ precisa conter 14 dígitos para a busca automática.",
+      });
+      return;
+    }
+
+    setSearchingCnpj(true);
+    setCnpjFeedback(null);
+    try {
+      const data = await fetchCnpjData(raw);
+      setFormData((prev) => ({
+        ...prev,
+        customerName: data.razaoSocial || data.nomeFantasia || prev.customerName,
+        customerCpfCnpj: data.cnpjFormatado,
+        customerPhone: data.telefone || prev.customerPhone,
+        customerEmail: data.email || prev.customerEmail,
+        legalRepresentativeName: data.representanteLegal || prev.legalRepresentativeName,
+        legalRepresentativeCpf: data.cpfRepresentante || prev.legalRepresentativeCpf,
+        zipCode: data.cep || prev.zipCode,
+        addressStreet: data.logradouro || prev.addressStreet,
+        addressNumber: data.numero || prev.addressNumber,
+        addressComp: data.complemento || prev.addressComp,
+        addressNeighborhood: data.bairro || prev.addressNeighborhood,
+        city: data.cidade || prev.city,
+        state: data.estado || prev.state,
+      }));
+
+      setCnpjFeedback({
+        type: "success",
+        message:
+          "Dados da empresa e endereço preenchidos via Receita Federal! Você pode ajustar qualquer campo manualmente.",
+      });
+      setTimeout(() => setCnpjFeedback(null), 8000);
+    } catch (err: any) {
+      setCnpjFeedback({
+        type: "error",
+        message: err.message || "CNPJ não encontrado na Receita. Preencha os campos manualmente.",
+      });
+    } finally {
+      setSearchingCnpj(false);
+    }
+  }
+
+  async function handleSearchCep(customCep?: string) {
+    const raw = (customCep || formData.zipCode || "").replace(/\D/g, "");
+    if (raw.length !== 8) {
+      setCepFeedback({
+        type: "error",
+        message: "O CEP precisa conter 8 dígitos para busca automática.",
+      });
+      return;
+    }
+
+    setSearchingCep(true);
+    setCepFeedback(null);
+    try {
+      const data = await fetchViaCepData(raw);
+      setFormData((prev) => ({
+        ...prev,
+        zipCode: data.cepFormatado,
+        addressStreet: data.logradouro || prev.addressStreet,
+        addressNeighborhood: data.bairro || prev.addressNeighborhood,
+        city: data.cidade || prev.city,
+        state: data.estado || prev.state,
+        addressComp: data.complemento || prev.addressComp,
+      }));
+
+      setCepFeedback({
+        type: "success",
+        message: "Endereço localizado com sucesso via ViaCEP!",
+      });
+
+      setTimeout(() => {
+        setCepFeedback(null);
+        addressNumberRef.current?.focus();
+      }, 3000);
+
+      setTimeout(() => {
+        addressNumberRef.current?.focus();
+      }, 100);
+    } catch (err: any) {
+      setCepFeedback({
+        type: "error",
+        message: err.message || "CEP não encontrado. Preencha o endereço manualmente.",
+      });
+    } finally {
+      setSearchingCep(false);
+    }
+  }
+
   async function handleSave(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setSaving(true);
@@ -151,6 +280,8 @@ export default function VendaDetailPage(): JSX.Element {
         customerPhone: formData.customerPhone,
         customerCpfCnpj: formData.customerCpfCnpj,
         customerRgIe: formData.customerRgIe,
+        legalRepresentativeName: formData.legalRepresentativeName,
+        legalRepresentativeCpf: formData.legalRepresentativeCpf,
         maritalStatus: formData.maritalStatus,
         profession: formData.profession,
         addressStreet: formData.addressStreet,
@@ -178,7 +309,9 @@ export default function VendaDetailPage(): JSX.Element {
     }
   }
 
-  async function handleGenerateDoc(docType: "CONTRATO_PF" | "PROCURACAO_PF") {
+  async function handleGenerateDoc(
+    docType: "CONTRATO_PF" | "CONTRATO_PJ" | "PROCURACAO_PF" | "PROCURACAO_PJ"
+  ) {
     setGeneratingDoc(docType);
     setError(null);
     try {
@@ -386,13 +519,34 @@ export default function VendaDetailPage(): JSX.Element {
           {/* Section: Identificação do Cliente */}
           <Card className="border-[var(--color-border)] bg-[var(--color-card)]">
             <CardHeader className="pb-4">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-[var(--color-primary)]" />
-                <CardTitle className="text-sm font-semibold">Identificação do Titular</CardTitle>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    {formData.customerType === "PJ" ? (
+                      <Building2 className="h-4 w-4 text-[var(--color-primary)]" />
+                    ) : (
+                      <User className="h-4 w-4 text-[var(--color-primary)]" />
+                    )}
+                    <CardTitle className="text-sm font-semibold">
+                      {formData.customerType === "PJ"
+                        ? "Identificação da Empresa (Pessoa Jurídica)"
+                        : "Identificação do Titular (Pessoa Física)"}
+                    </CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">
+                    {formData.customerType === "PJ"
+                      ? "Dados cadastrais da empresa contratante e do representante legal perante a ANEEL."
+                      : "Dados do cliente titular do contrato e da unidade consumidora."}
+                  </CardDescription>
+                </div>
+
+                {formData.customerType === "PJ" && (
+                  <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-300">
+                    <Sparkles className="h-3 w-3" />
+                    Consulta CNPJ Habilitada
+                  </span>
+                )}
               </div>
-              <CardDescription className="text-xs">
-                Dados do cliente titular do contrato e da unidade consumidora.
-              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
@@ -401,9 +555,15 @@ export default function VendaDetailPage(): JSX.Element {
                 </label>
                 <select
                   value={formData.customerType}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, customerType: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    const nextType = e.target.value;
+                    setFormData((prev) => ({
+                      ...prev,
+                      customerType: nextType,
+                      customerCpfCnpj: "",
+                    }));
+                    setCnpjFeedback(null);
+                  }}
                   className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
                 >
                   <option value="PF">Pessoa Física (PF)</option>
@@ -411,9 +571,90 @@ export default function VendaDetailPage(): JSX.Element {
                 </select>
               </div>
 
+              {/* Campo CNPJ / CPF com Busca Automática da Receita para PJ */}
+              <div className="sm:col-span-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                    {formData.customerType === "PJ" ? "CNPJ da Empresa" : "CPF do Titular"}
+                  </label>
+                  {formData.customerType === "PJ" && (
+                    <span className="text-[11px] text-[var(--color-primary)]">
+                      Puxa razão social, endereço e sócios automaticamente
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={formData.customerCpfCnpj}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (formData.customerType === "PJ") {
+                        const formatted = formatCnpj(val);
+                        setFormData((prev) => ({ ...prev, customerCpfCnpj: formatted }));
+                        if (formatted.replace(/\D/g, "").length === 14) {
+                          handleSearchCnpj(formatted);
+                        }
+                      } else {
+                        setFormData((prev) => ({ ...prev, customerCpfCnpj: formatCpf(val) }));
+                      }
+                    }}
+                    onBlur={() => {
+                      if (
+                        formData.customerType === "PJ" &&
+                        formData.customerCpfCnpj.replace(/\D/g, "").length === 14
+                      ) {
+                        handleSearchCnpj(formData.customerCpfCnpj);
+                      }
+                    }}
+                    placeholder={
+                      formData.customerType === "PJ" ? "00.000.000/0000-00" : "000.000.000-00"
+                    }
+                    maxLength={formData.customerType === "PJ" ? 18 : 14}
+                    className="flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  />
+
+                  {formData.customerType === "PJ" && (
+                    <button
+                      type="button"
+                      onClick={() => handleSearchCnpj()}
+                      disabled={searchingCnpj}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 px-3 py-2 text-xs font-semibold text-[var(--color-primary)] shadow-sm hover:bg-[var(--color-primary)]/20 disabled:opacity-50"
+                    >
+                      {searchingCnpj ? (
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Search className="h-3.5 w-3.5" />
+                      )}
+                      {searchingCnpj ? "Buscando..." : "Consultar CNPJ"}
+                    </button>
+                  )}
+                </div>
+
+                {/* Feedback CNPJ */}
+                {cnpjFeedback && (
+                  <div
+                    className={cn(
+                      "mt-2 rounded-md p-2 text-xs font-medium flex items-center gap-1.5",
+                      cnpjFeedback.type === "success"
+                        ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30"
+                        : "bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/30"
+                    )}
+                  >
+                    {cnpjFeedback.type === "success" && (
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                    )}
+                    <span>{cnpjFeedback.message}</span>
+                  </div>
+                )}
+              </div>
+
               <div className="sm:col-span-2">
                 <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  Nome Completo / Razão Social
+                  {formData.customerType === "PJ"
+                    ? "Razão Social / Nome Empresarial"
+                    : "Nome Completo do Titular"}
                 </label>
                 <input
                   type="text"
@@ -421,29 +662,20 @@ export default function VendaDetailPage(): JSX.Element {
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, customerName: e.target.value }))
                   }
-                  placeholder="Ex: João da Silva"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  {formData.customerType === "PJ" ? "CNPJ" : "CPF"}
-                </label>
-                <input
-                  type="text"
-                  value={formData.customerCpfCnpj}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, customerCpfCnpj: e.target.value }))
+                  placeholder={
+                    formData.customerType === "PJ"
+                      ? "Ex: Soluções em Energia Ltda"
+                      : "Ex: João da Silva"
                   }
-                  placeholder="000.000.000-00"
                   className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
                 />
               </div>
 
               <div>
                 <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  {formData.customerType === "PJ" ? "Inscrição Estadual" : "RG / Órgão Emissor"}
+                  {formData.customerType === "PJ"
+                    ? "Inscrição Estadual (IE)"
+                    : "RG / Órgão Emissor"}
                 </label>
                 <input
                   type="text"
@@ -451,10 +683,59 @@ export default function VendaDetailPage(): JSX.Element {
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, customerRgIe: e.target.value }))
                   }
-                  placeholder="Ex: MG-12.345.678 SSP"
+                  placeholder={
+                    formData.customerType === "PJ"
+                      ? "Ex: 123.456.789.000 ou ISENTO"
+                      : "Ex: MG-12.345.678 SSP"
+                  }
                   className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
                 />
               </div>
+
+              {/* Campos do Representante Legal quando PJ */}
+              {formData.customerType === "PJ" && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                      Representante Legal (Sócio / Administrador)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.legalRepresentativeName}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          legalRepresentativeName: e.target.value,
+                        }))
+                      }
+                      placeholder="Ex: Carlos Eduardo de Oliveira"
+                      className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                    />
+                    <span className="text-[10px] text-[var(--color-muted-foreground)]">
+                      Pessoa física que assinará digitalmente pela empresa.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                      CPF do Representante Legal
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.legalRepresentativeCpf}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          legalRepresentativeCpf: formatCpf(e.target.value),
+                        }))
+                      }
+                      placeholder="000.000.000-00"
+                      maxLength={14}
+                      className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                    />
+                  </div>
+                </>
+              )}
 
               {formData.customerType === "PF" && (
                 <div>
@@ -517,7 +798,7 @@ export default function VendaDetailPage(): JSX.Element {
                   type="text"
                   value={formData.customerPhone}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, customerPhone: e.target.value }))
+                    setFormData((prev) => ({ ...prev, customerPhone: formatPhone(e.target.value) }))
                   }
                   placeholder="(00) 00000-0000"
                   className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
@@ -526,7 +807,7 @@ export default function VendaDetailPage(): JSX.Element {
             </CardContent>
           </Card>
 
-          {/* Section: Endereço de Instalação */}
+          {/* Section: Endereço de Instalação com Busca ViaCEP */}
           <Card className="border-[var(--color-border)] bg-[var(--color-card)]">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
@@ -540,6 +821,75 @@ export default function VendaDetailPage(): JSX.Element {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {/* Box de busca rápida de CEP no topo */}
+              <div className="sm:col-span-2 lg:col-span-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 p-3.5">
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--color-foreground)] flex items-center gap-1.5">
+                      <Search className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                      Consultar Endereço por CEP (ViaCEP)
+                    </label>
+                    <p className="mt-0.5 text-[11px] text-[var(--color-muted-foreground)]">
+                      Digite o CEP para autopreencher rua, bairro, cidade e estado sem precisar
+                      digitar tudo manualmente.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={formData.zipCode}
+                      onChange={(e) => {
+                        const formatted = formatCep(e.target.value);
+                        setFormData((prev) => ({ ...prev, zipCode: formatted }));
+                        if (formatted.replace(/\D/g, "").length === 8) {
+                          handleSearchCep(formatted);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (formData.zipCode.replace(/\D/g, "").length === 8) {
+                          handleSearchCep(formData.zipCode);
+                        }
+                      }}
+                      placeholder="00000-000"
+                      maxLength={9}
+                      className="w-32 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs font-semibold text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => handleSearchCep()}
+                      disabled={searchingCep}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 px-3.5 py-2 text-xs font-semibold text-[var(--color-primary)] shadow-sm hover:bg-[var(--color-primary)]/20 disabled:opacity-50"
+                    >
+                      {searchingCep ? (
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Search className="h-3.5 w-3.5" />
+                      )}
+                      {searchingCep ? "Buscando..." : "Buscar CEP"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Feedback do CEP */}
+                {cepFeedback && (
+                  <div
+                    className={cn(
+                      "mt-2.5 rounded-md px-3 py-1.5 text-xs font-medium flex items-center gap-1.5",
+                      cepFeedback.type === "success"
+                        ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30"
+                        : "bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/30"
+                    )}
+                  >
+                    {cepFeedback.type === "success" && (
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                    )}
+                    <span>{cepFeedback.message}</span>
+                  </div>
+                )}
+              </div>
+
               <div className="lg:col-span-2">
                 <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
                   Logradouro (Rua / Av / Estrada)
@@ -560,6 +910,7 @@ export default function VendaDetailPage(): JSX.Element {
                   Número
                 </label>
                 <input
+                  ref={addressNumberRef}
                   type="text"
                   value={formData.addressNumber}
                   onChange={(e) =>
@@ -580,7 +931,7 @@ export default function VendaDetailPage(): JSX.Element {
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, addressComp: e.target.value }))
                   }
-                  placeholder="Apto 101 / Casa 2"
+                  placeholder="Apto 101 / Galpão B"
                   className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
                 />
               </div>
@@ -631,12 +982,14 @@ export default function VendaDetailPage(): JSX.Element {
 
               <div>
                 <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  CEP
+                  CEP Confirmado
                 </label>
                 <input
                   type="text"
                   value={formData.zipCode}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, zipCode: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, zipCode: formatCep(e.target.value) }))
+                  }
                   placeholder="00000-000"
                   className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
                 />
@@ -760,28 +1113,34 @@ export default function VendaDetailPage(): JSX.Element {
                 <div className="flex items-center gap-2 text-[var(--color-primary)]">
                   <FileText className="h-5 w-5" />
                   <CardTitle className="text-sm font-semibold">
-                    Contrato de Compra e Venda Solar
+                    Contrato de Compra e Venda Solar ({formData.customerType})
                   </CardTitle>
                 </div>
                 <CardDescription className="text-xs">
                   Gera o contrato comercial em PDF com todas as cláusulas, preenchendo
-                  automaticamente os dados do cliente, potência em kWp e valor.
+                  automaticamente os dados de{" "}
+                  {formData.customerType === "PJ" ? "empresa e sócio" : "cliente"}, potência em kWp
+                  e valor.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <button
-                  onClick={() => handleGenerateDoc("CONTRATO_PF")}
-                  disabled={generatingDoc === "CONTRATO_PF"}
+                  onClick={() =>
+                    handleGenerateDoc(
+                      formData.customerType === "PJ" ? "CONTRATO_PJ" : "CONTRATO_PF"
+                    )
+                  }
+                  disabled={generatingDoc === "CONTRATO_PF" || generatingDoc === "CONTRATO_PJ"}
                   className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50"
                 >
-                  {generatingDoc === "CONTRATO_PF" ? (
+                  {generatingDoc === "CONTRATO_PF" || generatingDoc === "CONTRATO_PJ" ? (
                     <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <Zap className="h-3.5 w-3.5" />
                   )}
-                  {generatingDoc === "CONTRATO_PF"
+                  {generatingDoc === "CONTRATO_PF" || generatingDoc === "CONTRATO_PJ"
                     ? "Gerando Contrato..."
-                    : "Gerar Contrato de Venda"}
+                    : `Gerar Contrato de Venda (${formData.customerType})`}
                 </button>
               </CardContent>
             </Card>
@@ -791,28 +1150,33 @@ export default function VendaDetailPage(): JSX.Element {
                 <div className="flex items-center gap-2 text-[var(--color-primary)]">
                   <FileCheck2 className="h-5 w-5" />
                   <CardTitle className="text-sm font-semibold">
-                    Procuração de Homologação ANEEL
+                    Procuração de Homologação ANEEL ({formData.customerType})
                   </CardTitle>
                 </div>
                 <CardDescription className="text-xs">
-                  Gera o termo de outorga para o integrador representar o cliente junto à
+                  Gera o termo de outorga para o integrador representar{" "}
+                  {formData.customerType === "PJ" ? "a empresa" : "o cliente"} junto à
                   concessionária de energia ({formData.utilityCompany || "CEMIG"}).
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <button
-                  onClick={() => handleGenerateDoc("PROCURACAO_PF")}
-                  disabled={generatingDoc === "PROCURACAO_PF"}
+                  onClick={() =>
+                    handleGenerateDoc(
+                      formData.customerType === "PJ" ? "PROCURACAO_PJ" : "PROCURACAO_PF"
+                    )
+                  }
+                  disabled={generatingDoc === "PROCURACAO_PF" || generatingDoc === "PROCURACAO_PJ"}
                   className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50"
                 >
-                  {generatingDoc === "PROCURACAO_PF" ? (
+                  {generatingDoc === "PROCURACAO_PF" || generatingDoc === "PROCURACAO_PJ" ? (
                     <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <Zap className="h-3.5 w-3.5" />
                   )}
-                  {generatingDoc === "PROCURACAO_PF"
+                  {generatingDoc === "PROCURACAO_PF" || generatingDoc === "PROCURACAO_PJ"
                     ? "Gerando Procuração..."
-                    : "Gerar Procuração ANEEL"}
+                    : `Gerar Procuração ANEEL (${formData.customerType})`}
                 </button>
               </CardContent>
             </Card>
