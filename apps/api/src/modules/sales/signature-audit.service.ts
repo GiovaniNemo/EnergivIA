@@ -35,22 +35,25 @@ export function parseUserAgentFriendly(ua?: string | null): string {
   const arch =
     ua.includes("x64") || ua.includes("Win64") || ua.includes("WOW64") ? " (64-bit)" : "";
 
+  function extractMajorVersion(match: RegExpMatchArray | null): string {
+    const full = match?.[1];
+    if (!full) return "";
+    const major = full.split(".")[0];
+    return major ? " " + major : "";
+  }
+
   let browser = "Navegador Web";
   if (ua.includes("OPR/") || ua.includes("Opera")) {
-    const match = ua.match(/OPR\/([\d.]+)/);
-    const ver = match ? " " + match[1].split(".")[0] : "";
+    const ver = extractMajorVersion(ua.match(/OPR\/([\d.]+)/));
     browser = "Opera / Opera GX" + ver;
   } else if (ua.includes("Edg/")) {
-    const match = ua.match(/Edg\/([\d.]+)/);
-    const ver = match ? " " + match[1].split(".")[0] : "";
+    const ver = extractMajorVersion(ua.match(/Edg\/([\d.]+)/));
     browser = "Microsoft Edge" + ver;
   } else if (ua.includes("Chrome/") && !ua.includes("Chromium")) {
-    const match = ua.match(/Chrome\/([\d.]+)/);
-    const ver = match ? " " + match[1].split(".")[0] : "";
+    const ver = extractMajorVersion(ua.match(/Chrome\/([\d.]+)/));
     browser = "Google Chrome" + ver;
   } else if (ua.includes("Firefox/")) {
-    const match = ua.match(/Firefox\/([\d.]+)/);
-    const ver = match ? " " + match[1].split(".")[0] : "";
+    const ver = extractMajorVersion(ua.match(/Firefox\/([\d.]+)/));
     browser = "Mozilla Firefox" + ver;
   } else if (ua.includes("Safari/") && !ua.includes("Chrome/")) {
     browser = "Apple Safari";

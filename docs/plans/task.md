@@ -819,7 +819,7 @@
 | task-828 | Escrever testes unitários (RED) para preenchimento de dados públicos em SignatureAuditService e SalesService | completed | Testes reproduzindo ausência de signerName/organizationName/createdAt e uso indevido de phone em lead.update |
 | task-829 | Corrigir SignatureAuditService e SalesService para retornar todos os metadados do signatário e integradora | completed | Mapeados signerName, organizationName, createdAt, signStatus e corrigido lead.update com whatsapp |
 | task-830 | Atualizar /assinar/[token]/page.tsx com fallbacks seguros e suporte a CPF/CNPJ na validação | completed | Preenchimento de Signatário Titular, Empresa Integradora, data de geração e suporte a CPF/CNPJ implementados |
-| task-831 | Validar testes automatizados, linters, build, commit e push | in-progress | Executando testes vitest, linters e build |
+| task-831 | Validar testes automatizados, linters, build, commit e push | completed | Executados testes vitest, linters e build com 100% de sucesso |
 | task-832 | Remover legenda 'linhas no catálogo' e redesenhar botão/layout de 'Converter em Venda' em /proposals | completed | Removido 'linhas no catálogo', alinhado horizontalmente com as métricas e botão executivo sólido implementado |
 | task-833 | Alinhar grid do card de identificação (CPF/tipo/dados) e remover banner de busca ViaCEP na ficha da venda (/vendas/[id]) | completed | Grid 3x3 alinhado, CPF normalizado, banner e CEP Confirmado removidos, busca silenciosa integrada |
 | task-834 | Concessionárias do Brasil com datalist/digitação, valor formatado em Reais (R$) e opções de pagamento na ficha da venda | completed | Todas distribuidoras ANEEL cadastradas com digitação livre, máscara de moeda BRL e opções/chips de pagamento |
@@ -828,3 +828,4 @@
 | task-837 | Parser inteligente de User-Agent forense (Opera GX, Chrome, Windows, etc.) no certificado de auditoria | completed | Identifica e exibe o navegador e SO reais (ex: Opera GX 137 no Windows 10) sem o jargão Mozilla |
 | task-838 | Popular customerName, totalValue e metadados na listagem de vendas (/vendas) e fallbacks | completed | Mapeamento no SalesService (listSales/getSaleById/convertToSale) e fallbacks robustos no frontend |
 | task-839 | Documento completo assinado com blocos de assinatura (Contratada e Contratante) e folha anexa de auditoria | completed | Integrar corpo do contrato/procuração, bloco bilateral de assinaturas e folha probatória no PDF assinado |
+| task-840 | Corrigir TS2532 em parseUserAgentFriendly e duplicidade em signature-audit.service.ts para build Railway | completed | Version lookup null-safe com extractMajorVersion, remoção de método duplicado e build nest validado com sucesso |
