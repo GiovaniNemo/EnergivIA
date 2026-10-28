@@ -14,6 +14,7 @@ import { DocumentTemplateService } from "./document-template.service";
 import { CONTRACT_PF_TEMPLATE } from "./templates/contract-pf.template";
 import { POWER_OF_ATTORNEY_PF_TEMPLATE } from "./templates/power-of-attorney-pf.template";
 
+// Módulo de Vendas e Gestão de Contratos Digitais (v1.0.2)
 const CUSTOMER_TYPE_PF = (CustomerType?.PF ?? "PF") as CustomerType;
 const CUSTOMER_TYPE_PJ = (CustomerType?.PJ ?? "PJ") as CustomerType;
 const SALE_STATUS_AWAITING = (SaleStatus?.AWAITING_ANALYSIS ?? "AWAITING_ANALYSIS") as SaleStatus;
