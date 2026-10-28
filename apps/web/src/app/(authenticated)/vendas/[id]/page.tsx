@@ -1228,6 +1228,31 @@ export default function VendaDetailPage(): JSX.Element {
             </CardContent>
           </Card>
 
+          {/* Cláusulas Específicas do Contrato e Observações */}
+          <Card className="border-[var(--color-border)] bg-[var(--color-card)]">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2 text-[var(--color-primary)]">
+                <FileSignature className="h-4 w-4" />
+                <CardTitle className="text-sm font-semibold">
+                  Cláusulas Específicas do Contrato & Observações
+                </CardTitle>
+              </div>
+              <CardDescription className="text-xs">
+                Condições particulares combinadas com o cliente. O que for digitado aqui aparecerá
+                impresso na Cláusula 15ª do Contrato de Compra e Venda Solar.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <textarea
+                rows={3}
+                value={formData.notes}
+                onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+                placeholder="Ex: Cláusula Especial: O cliente autoriza a instalação dos módulos sobre a estrutura da edícula dos fundos e declara estar ciente dos prazos de vistoria da concessionária..."
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-2.5 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+              />
+            </CardContent>
+          </Card>
+
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="submit"
@@ -1248,6 +1273,77 @@ export default function VendaDetailPage(): JSX.Element {
       {/* Tab 2: Documentos & Assinatura Digital */}
       {activeTab === "documentos" && (
         <div className="space-y-6">
+          {/* Card de Configuração de Logo e Cláusulas Personalizadas */}
+          <Card className="border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="flex items-center gap-2 text-[var(--color-primary)]">
+                  <FileSignature className="h-5 w-5" />
+                  <CardTitle className="text-sm font-semibold">
+                    Personalização do Contrato (Logo da Empresa & Cláusulas do Integrador)
+                  </CardTitle>
+                </div>
+                {sale?.tenant?.logoUrl ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                      Logo no cabeçalho:
+                    </span>
+                    <img
+                      src={sale.tenant.logoUrl}
+                      alt={sale.tenant.name || "Empresa"}
+                      className="h-7 max-w-[120px] object-contain rounded border border-border/60 bg-white px-1"
+                    />
+                  </div>
+                ) : (
+                  <Link
+                    href="/configuracoes/organizacao"
+                    className="inline-flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400 hover:underline"
+                  >
+                    <Building2 className="h-3.5 w-3.5" />
+                    Adicionar logo da empresa nas configurações
+                  </Link>
+                )}
+              </div>
+              <CardDescription className="text-xs">
+                As condições e cláusulas digitadas abaixo são editáveis e serão inseridas
+                automaticamente na <strong>Cláusula 15ª do Contrato em PDF</strong>.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-[var(--color-foreground)] block mb-1">
+                  Cláusulas e Condições Específicas do Integrador (Opcional):
+                </label>
+                <textarea
+                  rows={3}
+                  value={formData.notes}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Ex: Cláusula Adicional: O cliente autoriza expressamente a instalação dos módulos sobre a estrutura da edícula dos fundos. As adequações da tubulação civil serão acompanhadas pelo responsável técnico..."
+                  className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-2.5 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                  * Lembre-se de salvar antes de gerar ou regenerar o contrato para aplicar o texto
+                  atualizado.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleSave()}
+                  disabled={saving}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-[var(--color-secondary)] px-3 py-1.5 text-xs font-medium text-[var(--color-secondary-foreground)] transition hover:opacity-90 disabled:opacity-50"
+                >
+                  {saving ? (
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Save className="h-3 w-3" />
+                  )}
+                  Salvar Cláusulas
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Quick Action: Gerar novos documentos */}
           <div className="grid gap-4 sm:grid-cols-2">
             <Card className="border-[var(--color-border)] bg-[var(--color-card)] transition hover:border-[var(--color-primary)]/40">

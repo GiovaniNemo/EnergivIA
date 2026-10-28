@@ -22,6 +22,17 @@ export class DocumentTemplateService {
       if (key === "folha_auditoria_anexa") {
         return val ? String(val) : "";
       }
+      if (
+        key === "bloco_logo_empresa" ||
+        key === "bloco_clausulas_personalizadas" ||
+        key === "tabela_equipamentos" ||
+        key === "qualificacao_contratante" ||
+        key === "qualificacao_contratada" ||
+        key.startsWith("bloco_") ||
+        key.startsWith("tabela_")
+      ) {
+        return val ? String(val) : "";
+      }
       if (key === "bloco_assinatura_cliente") {
         if (val && val !== "—") return String(val);
         return `<div style="border: 1px dashed #94a3b8; background: #ffffff; border-radius: 6px; padding: 8px; text-align: center;">

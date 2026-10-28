@@ -520,6 +520,7 @@ export class SalesService {
 
     const lead = sale.proposal?.deal?.lead;
     const tenant = sale.tenant;
+    const tenantSettings = (tenant?.settings as Record<string, unknown>) || {};
 
     const formattedDate = new Date().toLocaleDateString("pt-BR", {
       day: "numeric",
@@ -535,7 +536,186 @@ export class SalesService {
     const signerName = lead?.name || sale.legalRepresentativeName || "Cliente";
     const signerCpf = sale.legalRepresentativeCpf || sale.documentNumber || lead?.cpfCnpj || "—";
 
+    // Dados da Contratada (Empresa Integrador)
+    const tenantCnpj =
+      typeof tenantSettings["cnpj"] === "string" && tenantSettings["cnpj"].trim()
+        ? tenantSettings["cnpj"].trim()
+        : "—";
+
+    const tenantAddressParts = [
+      tenantSettings["street"],
+      tenantSettings["number"],
+      tenantSettings["neighborhood"],
+      tenantSettings["city"],
+      tenantSettings["state"] ? String(tenantSettings["state"]) : null,
+      tenantSettings["cep"] ? `CEP ${tenantSettings["cep"]}` : null,
+    ].filter(Boolean);
+    const tenantAddress =
+      tenantAddressParts.length > 0
+        ? tenantAddressParts.join(", ")
+        : "Endereço cadastrado na plataforma";
+
+    const tenantPix =
+      (tenantSettings["contractPixKey"] as string) ||
+      (tenantSettings["pixKey"] as string) ||
+      (tenantCnpj !== "—" ? `Chave CNPJ: ${tenantCnpj}` : "A combinar com a Contratada");
+
+    // Logo da empresa
+    const tenantLogo = tenant?.logoUrl || "";
+    const blocoLogoEmpresa = tenantLogo
+      ? `<img src="${tenantLogo}" alt="${tenant?.name || "Empresa"}" style="max-height: 48px; max-width: 170px; object-fit: contain; display: block;" />`
+      : `<div style="font-size: 11pt; font-weight: 800; color: #0f172a; border-left: 3px solid #059669; padding-left: 8px; line-height: 1.2;">${tenant?.name || "ENERGIVIA"}</div>`;
+
+    // Cláusulas adicionais personalizadas do integrador
+    const customClauses =
+      (sale.notes && sale.notes.trim()) ||
+      (typeof tenantSettings["customContractClauses"] === "string"
+        ? (tenantSettings["customContractClauses"] as string).trim()
+        : "");
+
+    const blocoClausulasPersonalizadas = customClauses
+      ? `<div class="section-title">15. DAS CONDIÇÕES E CLÁUSULAS ADICIONAIS DO INTEGRADOR</div>
+<div class="box" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; margin-top: 6px;">
+  <p style="font-weight: 600; color: #166534; font-size: 9pt; margin-bottom: 6px;">
+    Ficam expressamente estipuladas entre as Partes as seguintes condições especiais e operacionais:
+  </p>
+  <div style="font-size: 9pt; color: #1e293b; white-space: pre-line; line-height: 1.45;">${customClauses}</div>
+</div>`
+      : `<div class="section-title">15. DAS CONDIÇÕES E CLÁUSULAS ADICIONAIS DO INTEGRADOR</div>
+<p style="font-size: 9pt; color: #64748b; font-style: italic;">
+  Não foram estipuladas condições acessórias adicionais para este atendimento, vigorando integralmente as cláusulas gerais e técnicas deste instrumento.
+</p>`;
+
+    // Qualificação das Partes
+    const isPj =
+      sale.customerType === "PJ" ||
+      documentType === DOC_TYPE_CONTRATO_PJ ||
+      Boolean(lead?.cpfCnpj && lead.cpfCnpj.replace(/\D/g, "").length === 14);
+
+    const clientAddress =
+      [
+        sale.installationAddress,
+        sale.installationCity,
+        sale.installationState ? String(sale.installationState) : null,
+        sale.installationZip ? `CEP ${sale.installationZip}` : null,
+      ]
+        .filter(Boolean)
+        .join(", ") || "Endereço cadastrado";
+
+    const qualificacaoContratante = isPj
+      ? `<strong>${sale.customerName || signerName}</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº <strong>${sale.documentNumber || lead?.cpfCnpj || "—"}</strong>, com sede e instalação em <strong>${clientAddress}</strong>, representada por seu representante legal <strong>${sale.legalRepresentativeName || signerName}</strong>, CPF nº <strong>${sale.legalRepresentativeCpf || signerCpf}</strong>.`
+      : `<strong>${signerName}</strong>, inscrito(a) no CPF/MF sob o nº <strong>${signerCpf}</strong>, portador(a) do RG nº <strong>${sale.rgNumber ? `${sale.rgNumber} ${sale.rgIssuer ?? ""}`.trim() : "—"}</strong>, com domicílio e instalação em <strong>${clientAddress}</strong>.`;
+
+    const qualificacaoContratada = `<strong>${tenant?.name || "EnergivIA Soluções Solares"}</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº <strong>${tenantCnpj}</strong>, com sede em <strong>${tenantAddress}</strong>, representada por seu consultor técnico/comercial <strong>${sale.sellerName || "Representante Autorizado"}</strong>.`;
+
+    // Tabela de Equipamentos
+    const renderedData = (sale.proposal?.renderedData as Record<string, unknown>) || {};
+    const integratorData = (renderedData["integrator"] as Record<string, unknown>) || {};
+    const kitItems = (
+      Array.isArray(integratorData["kitItems"]) ? integratorData["kitItems"] : []
+    ) as Array<{
+      productName?: string;
+      brandName?: string;
+      quantity?: number;
+      categoryName?: string;
+    }>;
+
+    let tabelaEquipamentos = "";
+    if (kitItems.length > 0) {
+      const rows = kitItems
+        .map(
+          (item, idx) => `
+        <tr>
+          <td style="text-align: center; color: #64748b;">${idx + 1}</td>
+          <td style="font-weight: 600; color: #0f172a;">${item.productName || "Componente Fotovoltaico"}</td>
+          <td style="color: #334155;">${item.brandName || "Fabricante Homologado"}</td>
+          <td style="text-align: center; font-weight: 600;">${item.quantity ?? 1}</td>
+        </tr>`
+        )
+        .join("");
+      tabelaEquipamentos = `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 8%; text-align: center;">Item</th>
+            <th style="width: 52%;">Equipamento / Descrição Técnica</th>
+            <th style="width: 25%;">Marca / Fabricante</th>
+            <th style="width: 15%; text-align: center;">Qtd.</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>`;
+    } else {
+      const kwpDisplay = sale.systemPowerKwp > 0 ? sale.systemPowerKwp.toFixed(2) : "—";
+      tabelaEquipamentos = `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 8%; text-align: center;">Item</th>
+            <th style="width: 52%;">Equipamento / Descrição Técnica</th>
+            <th style="width: 25%;">Padrão / Certificação</th>
+            <th style="width: 15%; text-align: center;">Qtd.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="text-align: center;">1</td>
+            <td><strong>Módulos Fotovoltaicos de Alta Eficiência</strong> (Potência total dimensionada: ${kwpDisplay} kWp)</td>
+            <td>Selo INMETRO Classe A</td>
+            <td style="text-align: center;">Lote compatível</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">2</td>
+            <td><strong>Inversor(es) de Frequência Solar On-Grid</strong> com monitoramento Wi-Fi integrado</td>
+            <td>Certificado Portaria INMETRO</td>
+            <td style="text-align: center;">Compatível</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">3</td>
+            <td><strong>Estrutura de Fixação</strong> em alumínio anodizado e aço inox para fixação dos módulos</td>
+            <td>Resistência a intempéries</td>
+            <td style="text-align: center;">1 Conjunto</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">4</td>
+            <td><strong>String Box e Proteções DC/AC</strong> (Dispositivos DPS e disjuntores de proteção)</td>
+            <td>Conforme NBR 5410/16690</td>
+            <td style="text-align: center;">1 Conjunto</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">5</td>
+            <td><strong>Cabos Solares Flexíveis 1,8kV CC com proteção UV e Conectores MC4</strong></td>
+            <td>Norma ABNT NBR 16690</td>
+            <td style="text-align: center;">Lote</td>
+          </tr>
+        </tbody>
+      </table>`;
+    }
+
+    const simulationResult = (sale.proposal?.simulation?.result as Record<string, unknown>) || {};
+    const genMonthly =
+      simulationResult["estimatedGenerationMonthlyKwh"] ||
+      simulationResult["monthlyGeneration"] ||
+      simulationResult["monthlyProduction"] ||
+      (sale.systemPowerKwp > 0 ? Math.round(sale.systemPowerKwp * 125) : 450);
+
+    const prazoDias = (tenantSettings["contractDeliveryDays"] as string) || "45";
+    const garantiaMeses = (tenantSettings["contractWarrantyMonths"] as string) || "12";
+    const multaRescisaoPct = (tenantSettings["contractFinePct"] as string) || "15%";
+
     const data: Record<string, string | number | undefined | null> = {
+      bloco_logo_empresa: blocoLogoEmpresa,
+      qualificacao_contratada: qualificacaoContratada,
+      qualificacao_contratante: qualificacaoContratante,
+      tabela_equipamentos: tabelaEquipamentos,
+      bloco_clausulas_personalizadas: blocoClausulasPersonalizadas,
+      chave_pix: tenantPix,
+      prazo_dias: prazoDias,
+      garantia_meses: garantiaMeses,
+      multa_rescisao_pct: multaRescisaoPct,
+      geracao_estimada_kwh: `${genMonthly}`,
       nome_cliente: signerName,
       cpf_cliente: sale.documentNumber || lead?.cpfCnpj || "—",
       rg_cliente: sale.rgNumber ? `${sale.rgNumber} ${sale.rgIssuer ?? ""}`.trim() : "—",
