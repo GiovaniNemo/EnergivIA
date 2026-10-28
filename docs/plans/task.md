@@ -852,3 +852,4 @@
 | task-861 | Procuração ANEEL: Incorporar poderes de carga, cadastros, termos e doação de rede com modelo dinâmico nacional | completed | Template aprimorado com aumento/redução de carga, termos, doação de rede e substabelecimento sem prender a estados específicos |
 | task-862 | Meta Pixel: Instalação do componente de rastreamento com respeito a consentimento LGPD e id oficial | completed | Criado componente MetaPixel com Script afterInteractive, PageView e helper de eventos trackMetaEvent |
 | task-863 | Configurações: Remover card e rota de custos do projeto da tela de preferências | completed | Card Custos do projeto removido de /configuracoes, link interno limpo e rota redirecionada |
+| task-864 | Metadados: Atualizar título da aba do navegador para "Energivia | O seu parceiro via IA" | completed | Atualizado default title e OpenGraph no layout raiz e na home page |

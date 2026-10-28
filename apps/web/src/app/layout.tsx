@@ -43,7 +43,7 @@ export function generateMetadata(): Metadata {
   return {
     metadataBase: new URL(baseUrl),
     title: {
-      default: "EnergivIA | Software e IA para Integradores de Energia Solar",
+      default: "Energivia | O seu parceiro via IA",
       template: "%s | EnergivIA",
     },
     description:
