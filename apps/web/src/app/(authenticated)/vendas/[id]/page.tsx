@@ -170,6 +170,17 @@ export default function VendaDetailPage(): JSX.Element {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[] | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  function clearFieldError(field: string) {
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  }
 
   // Estados de exclusão de minuta
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
@@ -354,62 +365,69 @@ export default function VendaDetailPage(): JSX.Element {
     }
   }
 
-  function validateFichaCadastral(): string[] {
-    const errs: string[] = [];
+  function validateFichaCadastral(): Record<string, string> {
+    const errs: Record<string, string> = {};
 
     if (!formData.customerName?.trim()) {
-      errs.push(
+      errs.customerName =
         formData.customerType === "PJ"
-          ? "Razão Social / Nome Empresarial da Empresa"
-          : "Nome Completo do Titular"
-      );
+          ? "Razão Social / Nome Empresarial é obrigatório"
+          : "Nome Completo do Titular é obrigatório";
     }
 
     const cleanDoc = (formData.customerCpfCnpj || "").replace(/\D/g, "");
     if (!cleanDoc) {
-      errs.push(formData.customerType === "PJ" ? "CNPJ da Empresa" : "CPF do Titular");
+      errs.customerCpfCnpj =
+        formData.customerType === "PJ"
+          ? "CNPJ da Empresa é obrigatório"
+          : "CPF do Titular é obrigatório";
     } else if (formData.customerType === "PJ" && cleanDoc.length !== 14) {
-      errs.push("CNPJ da Empresa inválido (necessário 14 dígitos)");
+      errs.customerCpfCnpj = "CNPJ da Empresa inválido (necessário 14 dígitos)";
     } else if (formData.customerType !== "PJ" && cleanDoc.length !== 11) {
-      errs.push("CPF do Titular inválido (necessário 11 dígitos)");
+      errs.customerCpfCnpj = "CPF do Titular inválido (necessário 11 dígitos)";
     }
 
     if (formData.customerType === "PJ") {
       if (!formData.legalRepresentativeName?.trim()) {
-        errs.push("Nome Completo do Representante Legal");
+        errs.legalRepresentativeName = "Nome Completo do Representante Legal é obrigatório";
       }
       const cleanRepCpf = (formData.legalRepresentativeCpf || "").replace(/\D/g, "");
       if (!cleanRepCpf || cleanRepCpf.length !== 11) {
-        errs.push("CPF do Representante Legal (necessário 11 dígitos)");
+        errs.legalRepresentativeCpf = "CPF do Representante Legal inválido (necessário 11 dígitos)";
       }
     }
 
     if (!formData.customerEmail?.trim() || !formData.customerEmail.includes("@")) {
-      errs.push("E-mail válido para envio e assinatura digital");
+      errs.customerEmail = "E-mail válido é obrigatório para envio do OTP e assinatura digital";
     }
 
     const cleanPhone = (formData.customerPhone || "").replace(/\D/g, "");
     if (!cleanPhone || cleanPhone.length < 10) {
-      errs.push("Telefone / WhatsApp com DDD");
+      errs.customerPhone = "Telefone / WhatsApp com DDD é obrigatório";
     }
 
-    if (!formData.zipCode?.trim()) errs.push("CEP do local da instalação");
-    if (!formData.addressStreet?.trim()) errs.push("Logradouro / Rua");
-    if (!formData.addressNumber?.trim()) errs.push("Número do imóvel");
-    if (!formData.city?.trim()) errs.push("Cidade");
-    if (!formData.state?.trim()) errs.push("Estado (UF)");
+    if (!formData.zipCode?.trim()) errs.zipCode = "CEP do local de instalação é obrigatório";
+    if (!formData.addressStreet?.trim()) errs.addressStreet = "Logradouro / Rua é obrigatório";
+    if (!formData.addressNumber?.trim()) errs.addressNumber = "Número do imóvel é obrigatório";
+    if (!formData.addressNeighborhood?.trim()) errs.addressNeighborhood = "Bairro é obrigatório";
+    if (!formData.city?.trim()) errs.city = "Cidade é obrigatória";
+    if (!formData.state?.trim()) errs.state = "Estado (UF) é obrigatório";
 
-    if (!formData.utilityCompany?.trim()) errs.push("Distribuidora / Concessionária de Energia");
-    if (!formData.ucNumber?.trim()) errs.push("Número da Unidade Consumidora (UC)");
+    if (!formData.utilityCompany?.trim()) {
+      errs.utilityCompany = "Distribuidora / Concessionária de Energia é obrigatória";
+    }
+    if (!formData.ucNumber?.trim()) {
+      errs.ucNumber = "Número da Unidade Consumidora (UC) é obrigatório";
+    }
 
     const kwp = parseFloat(formData.systemPowerKwp || "0");
     if (!formData.systemPowerKwp || isNaN(kwp) || kwp <= 0) {
-      errs.push("Potência do Sistema em kWp");
+      errs.systemPowerKwp = "Potência do Sistema em kWp é obrigatória";
     }
 
     const valor = parseMoneyBrlDisplay(formData.totalValue || "");
     if (isNaN(valor) || valor <= 0) {
-      errs.push("Valor Total do Sistema Solar (R$)");
+      errs.totalValue = "Valor Total do Contrato (R$) é obrigatório";
     }
 
     return errs;
@@ -420,18 +438,29 @@ export default function VendaDetailPage(): JSX.Element {
     setSaving(true);
     setSaveSuccess(false);
     setError(null);
-    setValidationErrors(null);
 
-    const validation = validateFichaCadastral();
-    if (validation.length > 0) {
-      setValidationErrors(validation);
+    const errors = validateFichaCadastral();
+    const errorKeys = Object.keys(errors);
+    if (errorKeys.length > 0) {
+      setFieldErrors(errors);
+      setValidationErrors(Object.values(errors));
       setError(
-        "Preencha todos os campos obrigatórios da ficha cadastral para prosseguir para a emissão do contrato."
+        "Preencha todos os campos obrigatórios destacados em vermelho para prosseguir para a emissão do contrato."
       );
       setSaving(false);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      const firstKey = errorKeys[0];
+      setTimeout(() => {
+        const el = document.getElementById(`field-${firstKey}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.focus();
+        }
+      }, 80);
       return;
     }
+
+    setFieldErrors({});
+    setValidationErrors(null);
 
     try {
       const updated = await updateSale(saleId, {
@@ -797,37 +826,71 @@ export default function VendaDetailPage(): JSX.Element {
               </div>
 
               <div className="sm:col-span-1 lg:col-span-2">
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                <label
+                  className={cn(
+                    "text-xs font-medium",
+                    fieldErrors.customerName
+                      ? "font-semibold text-rose-600 dark:text-rose-400"
+                      : "text-[var(--color-muted-foreground)]"
+                  )}
+                >
                   {formData.customerType === "PJ"
                     ? "Razão Social / Nome Empresarial"
                     : "Nome Completo do Titular"}
+                  {fieldErrors.customerName && (
+                    <span className="ml-1 font-bold text-rose-500">*</span>
+                  )}
                 </label>
                 <input
+                  id="field-customerName"
                   type="text"
                   value={formData.customerName}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, customerName: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, customerName: e.target.value }));
+                    clearFieldError("customerName");
+                  }}
                   placeholder={
                     formData.customerType === "PJ"
                       ? "Ex: Soluções em Energia Ltda"
                       : "Ex: João da Silva"
                   }
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  className={cn(
+                    "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                    fieldErrors.customerName
+                      ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                      : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                  )}
                 />
+                {fieldErrors.customerName && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {fieldErrors.customerName}
+                  </p>
+                )}
               </div>
 
               {/* Linha 2: CPF/CNPJ (1 col) + RG/IE (1 col) + Telefone/WhatsApp (1 col) */}
               <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                <label
+                  className={cn(
+                    "text-xs font-medium",
+                    fieldErrors.customerCpfCnpj
+                      ? "font-semibold text-rose-600 dark:text-rose-400"
+                      : "text-[var(--color-muted-foreground)]"
+                  )}
+                >
                   {formData.customerType === "PJ" ? "CNPJ da Empresa" : "CPF do Titular"}
+                  {fieldErrors.customerCpfCnpj && (
+                    <span className="ml-1 font-bold text-rose-500">*</span>
+                  )}
                 </label>
                 <div className="relative mt-1 flex items-center">
                   <input
+                    id="field-customerCpfCnpj"
                     type="text"
                     value={formData.customerCpfCnpj}
                     onChange={(e) => {
                       const val = e.target.value;
+                      clearFieldError("customerCpfCnpj");
                       if (formData.customerType === "PJ") {
                         const formatted = formatCnpj(val);
                         setFormData((prev) => ({ ...prev, customerCpfCnpj: formatted }));
@@ -850,7 +913,12 @@ export default function VendaDetailPage(): JSX.Element {
                       formData.customerType === "PJ" ? "00.000.000/0000-00" : "000.000.000-00"
                     }
                     maxLength={formData.customerType === "PJ" ? 18 : 14}
-                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                    className={cn(
+                      "w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                      fieldErrors.customerCpfCnpj
+                        ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                        : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                    )}
                   />
                   {formData.customerType === "PJ" && (
                     <button
@@ -869,6 +937,11 @@ export default function VendaDetailPage(): JSX.Element {
                     </button>
                   )}
                 </div>
+                {fieldErrors.customerCpfCnpj && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {fieldErrors.customerCpfCnpj}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -893,76 +966,167 @@ export default function VendaDetailPage(): JSX.Element {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                <label
+                  className={cn(
+                    "text-xs font-medium",
+                    fieldErrors.customerPhone
+                      ? "font-semibold text-rose-600 dark:text-rose-400"
+                      : "text-[var(--color-muted-foreground)]"
+                  )}
+                >
                   Telefone / WhatsApp
+                  {fieldErrors.customerPhone && (
+                    <span className="ml-1 font-bold text-rose-500">*</span>
+                  )}
                 </label>
                 <input
+                  id="field-customerPhone"
                   type="text"
                   value={formData.customerPhone}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, customerPhone: formatPhone(e.target.value) }))
-                  }
+                  onChange={(e) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      customerPhone: formatPhone(e.target.value),
+                    }));
+                    clearFieldError("customerPhone");
+                  }}
                   placeholder="(00) 00000-0000"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  className={cn(
+                    "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                    fieldErrors.customerPhone
+                      ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                      : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                  )}
                 />
+                {fieldErrors.customerPhone && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {fieldErrors.customerPhone}
+                  </p>
+                )}
               </div>
 
               {/* Campos do Representante Legal quando PJ */}
               {formData.customerType === "PJ" && (
                 <>
                   <div className="sm:col-span-2">
-                    <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                    <label
+                      className={cn(
+                        "text-xs font-medium",
+                        fieldErrors.legalRepresentativeName
+                          ? "font-semibold text-rose-600 dark:text-rose-400"
+                          : "text-[var(--color-muted-foreground)]"
+                      )}
+                    >
                       Representante Legal (Sócio / Administrador)
+                      {fieldErrors.legalRepresentativeName && (
+                        <span className="ml-1 font-bold text-rose-500">*</span>
+                      )}
                     </label>
                     <input
+                      id="field-legalRepresentativeName"
                       type="text"
                       value={formData.legalRepresentativeName}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setFormData((prev) => ({
                           ...prev,
                           legalRepresentativeName: e.target.value,
-                        }))
-                      }
+                        }));
+                        clearFieldError("legalRepresentativeName");
+                      }}
                       placeholder="Ex: Carlos Eduardo de Oliveira"
-                      className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                      className={cn(
+                        "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                        fieldErrors.legalRepresentativeName
+                          ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                          : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                      )}
                     />
+                    {fieldErrors.legalRepresentativeName && (
+                      <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                        {fieldErrors.legalRepresentativeName}
+                      </p>
+                    )}
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                    <label
+                      className={cn(
+                        "text-xs font-medium",
+                        fieldErrors.legalRepresentativeCpf
+                          ? "font-semibold text-rose-600 dark:text-rose-400"
+                          : "text-[var(--color-muted-foreground)]"
+                      )}
+                    >
                       CPF do Representante Legal
+                      {fieldErrors.legalRepresentativeCpf && (
+                        <span className="ml-1 font-bold text-rose-500">*</span>
+                      )}
                     </label>
                     <input
+                      id="field-legalRepresentativeCpf"
                       type="text"
                       value={formData.legalRepresentativeCpf}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setFormData((prev) => ({
                           ...prev,
                           legalRepresentativeCpf: formatCpf(e.target.value),
-                        }))
-                      }
+                        }));
+                        clearFieldError("legalRepresentativeCpf");
+                      }}
                       placeholder="000.000.000-00"
                       maxLength={14}
-                      className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                      className={cn(
+                        "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                        fieldErrors.legalRepresentativeCpf
+                          ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                          : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                      )}
                     />
+                    {fieldErrors.legalRepresentativeCpf && (
+                      <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                        {fieldErrors.legalRepresentativeCpf}
+                      </p>
+                    )}
                   </div>
                 </>
               )}
 
               {/* Linha 3 quando PF: E-mail (1 col) + Estado Civil (1 col) + Profissão (1 col) */}
               <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                <label
+                  className={cn(
+                    "text-xs font-medium",
+                    fieldErrors.customerEmail
+                      ? "font-semibold text-rose-600 dark:text-rose-400"
+                      : "text-[var(--color-muted-foreground)]"
+                  )}
+                >
                   E-mail do Titular (Para envio do OTP de assinatura)
+                  {fieldErrors.customerEmail && (
+                    <span className="ml-1 font-bold text-rose-500">*</span>
+                  )}
                 </label>
                 <input
+                  id="field-customerEmail"
                   type="email"
                   value={formData.customerEmail}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, customerEmail: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, customerEmail: e.target.value }));
+                    clearFieldError("customerEmail");
+                  }}
                   placeholder="cliente@email.com"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  className={cn(
+                    "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                    fieldErrors.customerEmail
+                      ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                      : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                  )}
                 />
+                {fieldErrors.customerEmail && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {fieldErrors.customerEmail}
+                  </p>
+                )}
               </div>
 
               {formData.customerType === "PF" && (
@@ -1037,16 +1201,26 @@ export default function VendaDetailPage(): JSX.Element {
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  CEP
+                <label
+                  className={cn(
+                    "text-xs font-medium",
+                    fieldErrors.zipCode
+                      ? "font-semibold text-rose-600 dark:text-rose-400"
+                      : "text-[var(--color-muted-foreground)]"
+                  )}
+                >
+                  CEP{" "}
+                  {fieldErrors.zipCode && <span className="ml-1 font-bold text-rose-500">*</span>}
                 </label>
                 <div className="relative mt-1">
                   <input
+                    id="field-zipCode"
                     type="text"
                     value={formData.zipCode}
                     onChange={(e) => {
                       const formatted = formatCep(e.target.value);
                       setFormData((prev) => ({ ...prev, zipCode: formatted }));
+                      clearFieldError("zipCode");
                       if (formatted.replace(/\D/g, "").length === 8) {
                         handleSearchCep(formatted);
                       }
@@ -1058,7 +1232,12 @@ export default function VendaDetailPage(): JSX.Element {
                     }}
                     placeholder="00000-000"
                     maxLength={9}
-                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                    className={cn(
+                      "w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                      fieldErrors.zipCode
+                        ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                        : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                    )}
                   />
                   {searchingCep && (
                     <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
@@ -1066,37 +1245,86 @@ export default function VendaDetailPage(): JSX.Element {
                     </div>
                   )}
                 </div>
+                {fieldErrors.zipCode && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {fieldErrors.zipCode}
+                  </p>
+                )}
               </div>
 
               <div className="lg:col-span-2">
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                <label
+                  className={cn(
+                    "text-xs font-medium",
+                    fieldErrors.addressStreet
+                      ? "font-semibold text-rose-600 dark:text-rose-400"
+                      : "text-[var(--color-muted-foreground)]"
+                  )}
+                >
                   Logradouro (Rua / Av / Estrada)
+                  {fieldErrors.addressStreet && (
+                    <span className="ml-1 font-bold text-rose-500">*</span>
+                  )}
                 </label>
                 <input
+                  id="field-addressStreet"
                   type="text"
                   value={formData.addressStreet}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, addressStreet: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, addressStreet: e.target.value }));
+                    clearFieldError("addressStreet");
+                  }}
                   placeholder="Ex: Rua das Palmeiras"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  className={cn(
+                    "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                    fieldErrors.addressStreet
+                      ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                      : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                  )}
                 />
+                {fieldErrors.addressStreet && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {fieldErrors.addressStreet}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  Número
+                <label
+                  className={cn(
+                    "text-xs font-medium",
+                    fieldErrors.addressNumber
+                      ? "font-semibold text-rose-600 dark:text-rose-400"
+                      : "text-[var(--color-muted-foreground)]"
+                  )}
+                >
+                  Número{" "}
+                  {fieldErrors.addressNumber && (
+                    <span className="ml-1 font-bold text-rose-500">*</span>
+                  )}
                 </label>
                 <input
+                  id="field-addressNumber"
                   ref={addressNumberRef}
                   type="text"
                   value={formData.addressNumber}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, addressNumber: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, addressNumber: e.target.value }));
+                    clearFieldError("addressNumber");
+                  }}
                   placeholder="123"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  className={cn(
+                    "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                    fieldErrors.addressNumber
+                      ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                      : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                  )}
                 />
+                {fieldErrors.addressNumber && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {fieldErrors.addressNumber}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -1115,47 +1343,111 @@ export default function VendaDetailPage(): JSX.Element {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  Bairro
+                <label
+                  className={cn(
+                    "text-xs font-medium",
+                    fieldErrors.addressNeighborhood
+                      ? "font-semibold text-rose-600 dark:text-rose-400"
+                      : "text-[var(--color-muted-foreground)]"
+                  )}
+                >
+                  Bairro{" "}
+                  {fieldErrors.addressNeighborhood && (
+                    <span className="ml-1 font-bold text-rose-500">*</span>
+                  )}
                 </label>
                 <input
+                  id="field-addressNeighborhood"
                   type="text"
                   value={formData.addressNeighborhood}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, addressNeighborhood: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, addressNeighborhood: e.target.value }));
+                    clearFieldError("addressNeighborhood");
+                  }}
                   placeholder="Centro"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  className={cn(
+                    "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                    fieldErrors.addressNeighborhood
+                      ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                      : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                  )}
                 />
+                {fieldErrors.addressNeighborhood && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {fieldErrors.addressNeighborhood}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  Cidade
+                <label
+                  className={cn(
+                    "text-xs font-medium",
+                    fieldErrors.city
+                      ? "font-semibold text-rose-600 dark:text-rose-400"
+                      : "text-[var(--color-muted-foreground)]"
+                  )}
+                >
+                  Cidade{" "}
+                  {fieldErrors.city && <span className="ml-1 font-bold text-rose-500">*</span>}
                 </label>
                 <input
+                  id="field-city"
                   type="text"
                   value={formData.city}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, city: e.target.value }));
+                    clearFieldError("city");
+                  }}
                   placeholder="Ex: Belo Horizonte"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  className={cn(
+                    "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                    fieldErrors.city
+                      ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                      : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                  )}
                 />
+                {fieldErrors.city && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {fieldErrors.city}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  Estado (UF)
+                <label
+                  className={cn(
+                    "text-xs font-medium",
+                    fieldErrors.state
+                      ? "font-semibold text-rose-600 dark:text-rose-400"
+                      : "text-[var(--color-muted-foreground)]"
+                  )}
+                >
+                  Estado (UF){" "}
+                  {fieldErrors.state && <span className="ml-1 font-bold text-rose-500">*</span>}
                 </label>
                 <input
+                  id="field-state"
                   type="text"
                   value={formData.state}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, state: e.target.value.toUpperCase() }))
-                  }
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, state: e.target.value.toUpperCase() }));
+                    clearFieldError("state");
+                  }}
                   maxLength={2}
                   placeholder="MG"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  className={cn(
+                    "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                    fieldErrors.state
+                      ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                      : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                  )}
                 />
+                {fieldErrors.state && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {fieldErrors.state}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1176,8 +1468,18 @@ export default function VendaDetailPage(): JSX.Element {
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                  <label
+                    className={cn(
+                      "text-xs font-medium",
+                      fieldErrors.utilityCompany
+                        ? "font-semibold text-rose-600 dark:text-rose-400"
+                        : "text-[var(--color-muted-foreground)]"
+                    )}
+                  >
                     Concessionária de Energia
+                    {fieldErrors.utilityCompany && (
+                      <span className="ml-1 font-bold text-rose-500">*</span>
+                    )}
                   </label>
                   {isCustomUtility ? (
                     <button
@@ -1185,6 +1487,7 @@ export default function VendaDetailPage(): JSX.Element {
                       onClick={() => {
                         setIsCustomUtility(false);
                         setFormData((prev) => ({ ...prev, utilityCompany: "CEMIG" }));
+                        clearFieldError("utilityCompany");
                       }}
                       className="text-[10px] font-medium text-[var(--color-primary)] hover:underline"
                     >
@@ -1203,6 +1506,7 @@ export default function VendaDetailPage(): JSX.Element {
 
                 {!isCustomUtility ? (
                   <select
+                    id="field-utilityCompany"
                     value={
                       BRAZIL_CONCESSIONARIAS.some(
                         (c) =>
@@ -1216,13 +1520,19 @@ export default function VendaDetailPage(): JSX.Element {
                         : formData.utilityCompany
                     }
                     onChange={(e) => {
+                      clearFieldError("utilityCompany");
                       if (e.target.value === "__CUSTOM__") {
                         setIsCustomUtility(true);
                       } else {
                         setFormData((prev) => ({ ...prev, utilityCompany: e.target.value }));
                       }
                     }}
-                    className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                    className={cn(
+                      "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                      fieldErrors.utilityCompany
+                        ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                        : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                    )}
                   >
                     <option value="">Selecione a concessionária...</option>
                     {formData.utilityCompany &&
@@ -1240,67 +1550,152 @@ export default function VendaDetailPage(): JSX.Element {
                   </select>
                 ) : (
                   <input
+                    id="field-utilityCompany"
                     type="text"
                     value={formData.utilityCompany}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, utilityCompany: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      setFormData((prev) => ({ ...prev, utilityCompany: e.target.value }));
+                      clearFieldError("utilityCompany");
+                    }}
                     placeholder="Digite o nome da concessionária"
                     autoFocus
-                    className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                    className={cn(
+                      "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                      fieldErrors.utilityCompany
+                        ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                        : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                    )}
                   />
+                )}
+                {fieldErrors.utilityCompany && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {fieldErrors.utilityCompany}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                <label
+                  className={cn(
+                    "text-xs font-medium",
+                    fieldErrors.ucNumber
+                      ? "font-semibold text-rose-600 dark:text-rose-400"
+                      : "text-[var(--color-muted-foreground)]"
+                  )}
+                >
                   Número da Unidade Consumidora (UC)
+                  {fieldErrors.ucNumber && <span className="ml-1 font-bold text-rose-500">*</span>}
                 </label>
                 <input
+                  id="field-ucNumber"
                   type="text"
                   value={formData.ucNumber}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, ucNumber: e.target.value }))}
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, ucNumber: e.target.value }));
+                    clearFieldError("ucNumber");
+                  }}
                   placeholder="Ex: 3001234567"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  className={cn(
+                    "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                    fieldErrors.ucNumber
+                      ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                      : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                  )}
                 />
+                {fieldErrors.ucNumber && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {fieldErrors.ucNumber}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                <label
+                  className={cn(
+                    "text-xs font-medium",
+                    fieldErrors.systemPowerKwp
+                      ? "font-semibold text-rose-600 dark:text-rose-400"
+                      : "text-[var(--color-muted-foreground)]"
+                  )}
+                >
                   Potência do Sistema (kWp)
+                  {fieldErrors.systemPowerKwp && (
+                    <span className="ml-1 font-bold text-rose-500">*</span>
+                  )}
                 </label>
                 <input
+                  id="field-systemPowerKwp"
                   type="number"
                   step="0.01"
                   value={formData.systemPowerKwp}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, systemPowerKwp: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, systemPowerKwp: e.target.value }));
+                    clearFieldError("systemPowerKwp");
+                  }}
                   placeholder="Ex: 6.80"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  className={cn(
+                    "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                    fieldErrors.systemPowerKwp
+                      ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                      : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                  )}
                 />
+                {fieldErrors.systemPowerKwp && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {fieldErrors.systemPowerKwp}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                <label
+                  className={cn(
+                    "text-xs font-medium",
+                    fieldErrors.totalValue
+                      ? "font-semibold text-rose-600 dark:text-rose-400"
+                      : "text-[var(--color-muted-foreground)]"
+                  )}
+                >
                   Valor Total do Contrato
+                  {fieldErrors.totalValue && (
+                    <span className="ml-1 font-bold text-rose-500">*</span>
+                  )}
                 </label>
                 <div className="relative mt-1">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[var(--color-muted-foreground)]">
+                  <span
+                    className={cn(
+                      "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold",
+                      fieldErrors.totalValue
+                        ? "text-rose-500"
+                        : "text-[var(--color-muted-foreground)]"
+                    )}
+                  >
                     R$
                   </span>
                   <input
+                    id="field-totalValue"
                     type="text"
                     inputMode="numeric"
                     value={formData.totalValue}
                     onChange={(e) => {
                       const masked = maskMoneyBrlFromDigits(e.target.value);
                       setFormData((prev) => ({ ...prev, totalValue: masked }));
+                      clearFieldError("totalValue");
                     }}
                     placeholder="0,00"
-                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] pl-9 pr-3 py-2 text-xs font-semibold text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                    className={cn(
+                      "w-full rounded-lg border bg-[var(--color-background)] pl-9 pr-3 py-2 text-xs font-semibold text-[var(--color-foreground)] transition-colors focus:outline-none",
+                      fieldErrors.totalValue
+                        ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                        : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                    )}
                   />
                 </div>
+                {fieldErrors.totalValue && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {fieldErrors.totalValue}
+                  </p>
+                )}
               </div>
 
               <div className="sm:col-span-1 lg:col-span-2">
