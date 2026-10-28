@@ -829,3 +829,7 @@
 | task-838 | Popular customerName, totalValue e metadados na listagem de vendas (/vendas) e fallbacks | completed | Mapeamento no SalesService (listSales/getSaleById/convertToSale) e fallbacks robustos no frontend |
 | task-839 | Documento completo assinado com blocos de assinatura (Contratada e Contratante) e folha anexa de auditoria | completed | Integrar corpo do contrato/procuração, bloco bilateral de assinaturas e folha probatória no PDF assinado |
 | task-840 | Corrigir TS2532 em parseUserAgentFriendly e duplicidade em signature-audit.service.ts para build Railway | completed | Version lookup null-safe com extractMajorVersion, remoção de método duplicado e build nest validado com sucesso |
+| task-841 | Brainstorming: Explorar contexto e requisitos para edição de contratos em tempo real e remoção de cards | in-progress | Mapeamento da remoção dos cards de personalização e concepção do editor de documentos in-place |
+| task-842 | Brainstorming: Propor 2-3 abordagens de UX/Fluxo para abrir e editar contratos em tempo real | not-started | Apresentar trade-offs e recomendação ao usuário com pergunta direcionada |
+| task-843 | Brainstorming: Estruturar e aprovar documento de design com o usuário | not-started | Salvar em docs/plans/ e obter aprovação |
+| task-844 | Planejamento da implementação (writing-plans) | not-started | Elaborar plano de execução com passos atômicos |
