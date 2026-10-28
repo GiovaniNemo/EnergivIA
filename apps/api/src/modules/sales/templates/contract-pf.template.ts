@@ -11,14 +11,19 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
     *, *:before, *:after {
       box-sizing: border-box;
     }
+    html, body {
+      background-color: #ffffff !important;
+      color: #1e293b;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       font-size: 9.5pt;
       line-height: 1.45;
-      color: #1e293b;
       margin: 0;
       padding: 0;
-      background: #ffffff;
+      background: #ffffff !important;
     }
     .header {
       border-bottom: 2px solid #0f172a;
@@ -69,11 +74,15 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
       color: #0f172a;
       border-left: 3px solid #059669;
       padding-left: 8px;
-      page-break-after: avoid;
+      page-break-after: avoid !important;
+      break-after: avoid !important;
+      break-after: avoid-page !important;
     }
     p, li {
       text-align: justify;
       margin: 0 0 6px 0;
+      orphans: 2;
+      widows: 2;
     }
     ul {
       margin: 4px 0 8px 18px;
@@ -88,7 +97,8 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
       border-radius: 6px;
       padding: 10px 12px;
       margin: 8px 0;
-      page-break-inside: avoid;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
     }
     .grid {
       display: table;
@@ -110,7 +120,8 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
     }
     table.data-table {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       font-size: 8.5pt;
       margin: 8px 0;
       page-break-inside: auto;
@@ -124,12 +135,23 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
       break-inside: auto;
     }
     table.data-table tr {
-      page-break-inside: avoid;
-      break-inside: avoid;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      break-inside: avoid-page !important;
     }
     table.data-table th, table.data-table td {
-      border: 1px solid #cbd5e1;
+      border-top: 1px solid #cbd5e1;
+      border-left: 1px solid #cbd5e1;
       padding: 5px 8px;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      box-sizing: border-box;
+    }
+    table.data-table th:last-child, table.data-table td:last-child {
+      border-right: 1px solid #cbd5e1;
+    }
+    table.data-table tbody tr:last-child td {
+      border-bottom: 1px solid #cbd5e1;
     }
     table.data-table th {
       background-color: #f1f5f9;
@@ -139,7 +161,9 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
     }
     .signatures-wrapper {
       margin-top: 25px;
-      page-break-inside: avoid;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      break-inside: avoid-page !important;
     }
   </style>
 </head>

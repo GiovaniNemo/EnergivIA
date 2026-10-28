@@ -534,6 +534,21 @@ export default function VendaDetailPage(): JSX.Element {
     }
   }
 
+  async function handleGenerateStandardDocument(
+    docType: "CONTRATO_PF" | "CONTRATO_PJ" | "PROCURACAO_PF" | "PROCURACAO_PJ"
+  ) {
+    setGeneratingDoc(docType);
+    setError(null);
+    try {
+      await generateSaleDocument(saleId, docType);
+      await loadSale();
+    } catch (err: any) {
+      setError(err.message || "Erro ao emitir documento com modelo padrão");
+    } finally {
+      setGeneratingDoc(null);
+    }
+  }
+
   async function handleOpenDocumentEditor(
     docType: "CONTRATO_PF" | "CONTRATO_PJ" | "PROCURACAO_PF" | "PROCURACAO_PJ"
   ) {
@@ -623,9 +638,12 @@ export default function VendaDetailPage(): JSX.Element {
         <div className="flex items-center gap-3">
           <Link
             href="/vendas"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-muted-foreground)] transition hover:text-[var(--color-foreground)]"
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-xs font-semibold text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-muted)] hover:border-[var(--color-primary)]/40 transition-colors"
+            title="Voltar para a listagem geral de vendas"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+            <span className="hidden sm:inline">Voltar para Vendas</span>
+            <span className="sm:hidden">Voltar</span>
           </Link>
           <div>
             <div className="flex items-center gap-2">
@@ -1787,10 +1805,25 @@ export default function VendaDetailPage(): JSX.Element {
       {/* Tab 2: Documentos & Assinatura Digital */}
       {activeTab === "documentos" && (
         <div className="space-y-6">
+          {/* Top navigation inside Tab 2 */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("cadastro")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-muted)] transition-colors"
+            >
+              <ArrowLeft className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
+              <span>Voltar para 1. Ficha Cadastral</span>
+            </button>
+            <span className="text-[11px] text-[var(--color-muted-foreground)]">
+              Etapa 2 de 3: Emissão e Assinatura Digital
+            </span>
+          </div>
+
           {/* Quick Action: Gerar e Editar Documentos em Tempo Real */}
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Contrato de Compra e Venda Solar */}
-            <Card className="border-[var(--color-border)] bg-[var(--color-card)] transition hover:border-[var(--color-primary)]/40 shadow-sm">
+            <Card className="border-[var(--color-border)] bg-[var(--color-card)] transition hover:border-[var(--color-primary)]/40 shadow-sm flex flex-col justify-between">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-[var(--color-primary)]">
@@ -1808,39 +1841,64 @@ export default function VendaDetailPage(): JSX.Element {
                   )}
                 </div>
                 <CardDescription className="text-xs">
-                  Abra a minuta completa do contrato com todas as cláusulas preenchidas. Edite
-                  qualquer parágrafo, adicione novas cláusulas e salve em tempo real.
+                  Emita diretamente com as cláusulas padrão da plataforma ou personalize a minuta
+                  exclusivamente para este cliente.
                 </CardDescription>
+
+                <div className="mt-2 rounded-lg bg-[var(--color-background)] p-2.5 border border-[var(--color-border)]/70 text-[11px] text-[var(--color-muted-foreground)] space-y-1">
+                  <div className="font-semibold text-[var(--color-foreground)] flex items-center gap-1">
+                    <span>💡</span> Escopo da Edição:
+                  </div>
+                  <p>
+                    O modelo padrão da empresa permanece intacto nas configurações gerais. As
+                    cláusulas e textos editados aqui aplicam-se{" "}
+                    <strong>exclusivamente ao contrato deste cliente</strong>.
+                  </p>
+                </div>
               </CardHeader>
-              <CardContent>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleOpenDocumentEditor(
-                      formData.customerType === "PJ" ? "CONTRATO_PJ" : "CONTRATO_PF"
+              <CardContent className="pt-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleGenerateStandardDocument(
+                        formData.customerType === "PJ" ? "CONTRATO_PJ" : "CONTRATO_PF"
+                      )
+                    }
+                    disabled={generatingDoc === "CONTRATO_PF" || generatingDoc === "CONTRATO_PJ"}
+                    className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50"
+                  >
+                    {generatingDoc === "CONTRATO_PF" || generatingDoc === "CONTRATO_PJ" ? (
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <FileText className="h-3.5 w-3.5" />
+                    )}
+                    {sale?.documents?.some((d: any) =>
+                      String(d?.templateType || d?.documentType || "").startsWith("CONTRATO")
                     )
-                  }
-                  disabled={generatingDoc === "CONTRATO_PF" || generatingDoc === "CONTRATO_PJ"}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50"
-                >
-                  {generatingDoc === "CONTRATO_PF" || generatingDoc === "CONTRATO_PJ" ? (
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <FileEdit className="h-3.5 w-3.5" />
-                  )}
-                  {generatingDoc === "CONTRATO_PF" || generatingDoc === "CONTRATO_PJ"
-                    ? "Preparando Minuta..."
-                    : sale?.documents?.some((d: any) =>
-                          String(d?.templateType || d?.documentType || "").startsWith("CONTRATO")
-                        )
-                      ? `Abrir e Editar Contrato em Tempo Real`
-                      : `Abrir e Personalizar Contrato (${formData.customerType})`}
-                </button>
+                      ? "Regenerar com Modelo Padrão"
+                      : "Gerar Contrato (Padrão)"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleOpenDocumentEditor(
+                        formData.customerType === "PJ" ? "CONTRATO_PJ" : "CONTRATO_PF"
+                      )
+                    }
+                    disabled={generatingDoc === "CONTRATO_PF" || generatingDoc === "CONTRATO_PJ"}
+                    className="inline-flex items-center gap-2 rounded-lg border border-emerald-600/30 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
+                  >
+                    <FileEdit className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Editar Contrato deste Cliente</span>
+                  </button>
+                </div>
               </CardContent>
             </Card>
 
             {/* Procuração de Homologação ANEEL */}
-            <Card className="border-[var(--color-border)] bg-[var(--color-card)] transition hover:border-[var(--color-primary)]/40 shadow-sm">
+            <Card className="border-[var(--color-border)] bg-[var(--color-card)] transition hover:border-[var(--color-primary)]/40 shadow-sm flex flex-col justify-between">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-[var(--color-primary)]">
@@ -1860,34 +1918,62 @@ export default function VendaDetailPage(): JSX.Element {
                 <CardDescription className="text-xs">
                   Termo de outorga para o integrador representar{" "}
                   {formData.customerType === "PJ" ? "a empresa" : "o cliente"} junto à
-                  concessionária de energia ({formData.utilityCompany || "CEMIG"}). Edite os termos
-                  se necessário.
+                  concessionária de energia ({formData.utilityCompany || "CEMIG"}).
                 </CardDescription>
+
+                <div className="mt-2 rounded-lg bg-[var(--color-background)] p-2.5 border border-[var(--color-border)]/70 text-[11px] text-[var(--color-muted-foreground)] space-y-1">
+                  <div className="font-semibold text-[var(--color-foreground)] flex items-center gap-1">
+                    <span>💡</span> Escopo da Edição:
+                  </div>
+                  <p>
+                    O modelo de procuração padrão permanece preservado. Quaisquer poderes ou
+                    parágrafos ajustados aqui são aplicados{" "}
+                    <strong>apenas para este cliente</strong>.
+                  </p>
+                </div>
               </CardHeader>
-              <CardContent>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleOpenDocumentEditor(
-                      formData.customerType === "PJ" ? "PROCURACAO_PJ" : "PROCURACAO_PF"
+              <CardContent className="pt-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleGenerateStandardDocument(
+                        formData.customerType === "PJ" ? "PROCURACAO_PJ" : "PROCURACAO_PF"
+                      )
+                    }
+                    disabled={
+                      generatingDoc === "PROCURACAO_PF" || generatingDoc === "PROCURACAO_PJ"
+                    }
+                    className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50"
+                  >
+                    {generatingDoc === "PROCURACAO_PF" || generatingDoc === "PROCURACAO_PJ" ? (
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <FileCheck2 className="h-3.5 w-3.5" />
+                    )}
+                    {sale?.documents?.some((d: any) =>
+                      String(d?.templateType || d?.documentType || "").startsWith("PROCURACAO")
                     )
-                  }
-                  disabled={generatingDoc === "PROCURACAO_PF" || generatingDoc === "PROCURACAO_PJ"}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50"
-                >
-                  {generatingDoc === "PROCURACAO_PF" || generatingDoc === "PROCURACAO_PJ" ? (
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <FileEdit className="h-3.5 w-3.5" />
-                  )}
-                  {generatingDoc === "PROCURACAO_PF" || generatingDoc === "PROCURACAO_PJ"
-                    ? "Preparando Minuta..."
-                    : sale?.documents?.some((d: any) =>
-                          String(d?.templateType || d?.documentType || "").startsWith("PROCURACAO")
-                        )
-                      ? `Abrir e Editar Procuração em Tempo Real`
-                      : `Abrir e Personalizar Procuração (${formData.customerType})`}
-                </button>
+                      ? "Regenerar com Modelo Padrão"
+                      : "Gerar Procuração (Padrão)"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleOpenDocumentEditor(
+                        formData.customerType === "PJ" ? "PROCURACAO_PJ" : "PROCURACAO_PF"
+                      )
+                    }
+                    disabled={
+                      generatingDoc === "PROCURACAO_PF" || generatingDoc === "PROCURACAO_PJ"
+                    }
+                    className="inline-flex items-center gap-2 rounded-lg border border-emerald-600/30 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
+                  >
+                    <FileEdit className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Editar Procuração deste Cliente</span>
+                  </button>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -2126,127 +2212,179 @@ export default function VendaDetailPage(): JSX.Element {
               )}
             </CardContent>
           </Card>
+
+          {/* Bottom navigation inside Tab 2 */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)] pt-4">
+            <button
+              type="button"
+              onClick={() => setActiveTab("cadastro")}
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-2 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-muted)] transition-colors shadow-sm"
+            >
+              <ArrowLeft className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+              <span>Voltar para 1. Ficha Cadastral</span>
+            </button>
+
+            {sale?.documents?.some((d: any) => (d?.status || d?.signStatus) === "SIGNED") && (
+              <button
+                type="button"
+                onClick={() => setActiveTab("auditoria")}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/30 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition-colors dark:bg-emerald-950/40 dark:text-emerald-300"
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span>Ver Trilha de Auditoria Jurídica →</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 
       {/* Tab 3: Trilha de Auditoria Jurídica */}
       {activeTab === "auditoria" && (
-        <Card className="border-[var(--color-border)] bg-[var(--color-card)]">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-emerald-600" />
-              <CardTitle className="text-sm font-semibold">
-                Validade Jurídica & Trilha de Auditoria
-              </CardTitle>
-            </div>
-            <CardDescription className="text-xs">
-              Conformidade com a Medida Provisória nº 2.200-2/2001 e Lei Federal nº 14.063/2020 para
-              assinaturas eletrônicas avançadas.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-lg bg-[var(--color-muted)]/50 p-4 text-xs space-y-2">
-              <div className="flex items-center gap-2 font-semibold text-[var(--color-foreground)]">
-                <Fingerprint className="h-4 w-4 text-[var(--color-primary)]" />
-                Garantias Técnicas e Legais Integradas:
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setActiveTab("documentos")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-muted)] transition-colors shadow-sm"
+            >
+              <ArrowLeft className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
+              <span>Voltar para 2. Contratos & Documentos</span>
+            </button>
+          </div>
+          <Card className="border-[var(--color-border)] bg-[var(--color-card)]">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-emerald-600" />
+                <CardTitle className="text-sm font-semibold">
+                  Validade Jurídica & Trilha de Auditoria
+                </CardTitle>
               </div>
-              <ul className="list-disc pl-5 space-y-1 text-[var(--color-muted-foreground)]">
-                <li>
-                  <strong>Autenticação em 2 Etapas (OTP):</strong> Código de validação enviado
-                  diretamente para o e-mail do titular cadastrado.
-                </li>
-                <li>
-                  <strong>Confirmação de Identidade:</strong> Exigência de confirmação dos 3
-                  primeiros dígitos e dígito verificador do CPF do titular.
-                </li>
-                <li>
-                  <strong>Integridade Criptográfica:</strong> Duplo hash SHA-256 (hash do documento
-                  original e hash final do documento após aposição de assinatura).
-                </li>
-                <li>
-                  <strong>Evidências Forenses:</strong> Registro do endereço IP do signatário, porta
-                  lógica, User-Agent do dispositivo e carimbo de data/hora oficial de Brasília.
-                </li>
-                <li>
-                  <strong>Folha de Auditoria Jurídica Anexa:</strong> O PDF assinado é emitido com a
-                  folha de auditoria e certificado digital anexos na última página.
-                </li>
-              </ul>
-            </div>
+              <CardDescription className="text-xs">
+                Conformidade com a Medida Provisória nº 2.200-2/2001 e Lei Federal nº 14.063/2020
+                para assinaturas eletrônicas avançadas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg bg-[var(--color-muted)]/50 p-4 text-xs space-y-2">
+                <div className="flex items-center gap-2 font-semibold text-[var(--color-foreground)]">
+                  <Fingerprint className="h-4 w-4 text-[var(--color-primary)]" />
+                  Garantias Técnicas e Legais Integradas:
+                </div>
+                <ul className="list-disc pl-5 space-y-1 text-[var(--color-muted-foreground)]">
+                  <li>
+                    <strong>Autenticação em 2 Etapas (OTP):</strong> Código de validação enviado
+                    diretamente para o e-mail do titular cadastrado.
+                  </li>
+                  <li>
+                    <strong>Confirmação de Identidade:</strong> Exigência de confirmação dos 3
+                    primeiros dígitos e dígito verificador do CPF do titular.
+                  </li>
+                  <li>
+                    <strong>Integridade Criptográfica:</strong> Duplo hash SHA-256 (hash do
+                    documento original e hash final do documento após aposição de assinatura).
+                  </li>
+                  <li>
+                    <strong>Evidências Forenses:</strong> Registro do endereço IP do signatário,
+                    porta lógica, User-Agent do dispositivo e carimbo de data/hora oficial de
+                    Brasília.
+                  </li>
+                  <li>
+                    <strong>Folha de Auditoria Jurídica Anexa:</strong> O PDF assinado é emitido com
+                    a folha de auditoria e certificado digital anexos na última página.
+                  </li>
+                </ul>
+              </div>
 
-            {/* List of audit trails for all documents */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-semibold text-[var(--color-foreground)]">
-                Histórico de Documentos da Venda:
-              </h4>
+              {/* List of audit trails for all documents */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold text-[var(--color-foreground)]">
+                  Histórico de Documentos da Venda:
+                </h4>
 
-              {(!sale?.documents || sale.documents.length === 0) && (
-                <p className="text-xs text-[var(--color-muted-foreground)]">
-                  Nenhum documento gerado para esta venda até o momento.
-                </p>
-              )}
+                {(!sale?.documents || sale.documents.length === 0) && (
+                  <p className="text-xs text-[var(--color-muted-foreground)]">
+                    Nenhum documento gerado para esta venda até o momento.
+                  </p>
+                )}
 
-              {sale?.documents?.map((doc: any) => {
-                const docType = String(doc?.templateType || doc?.documentType || "");
-                const isContract = docType.startsWith("CONTRATO");
-                const title =
-                  doc?.title ||
-                  (isContract ? "Contrato de Venda do Sistema Solar" : "Procuração ANEEL");
-                const token = doc?.publicToken || doc?.signToken || "";
-                const isSigned = (doc?.status || doc?.signStatus) === "SIGNED";
+                {sale?.documents?.map((doc: any) => {
+                  const docType = String(doc?.templateType || doc?.documentType || "");
+                  const isContract = docType.startsWith("CONTRATO");
+                  const title =
+                    doc?.title ||
+                    (isContract ? "Contrato de Venda do Sistema Solar" : "Procuração ANEEL");
+                  const token = doc?.publicToken || doc?.signToken || "";
+                  const isSigned = (doc?.status || doc?.signStatus) === "SIGNED";
 
-                return (
-                  <div
-                    key={doc.id}
-                    className="rounded-lg border border-[var(--color-border)] p-3 text-xs space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-[var(--color-foreground)]">{title}</span>
-                      <span className="text-[11px] text-[var(--color-muted-foreground)]">
-                        Token: <code className="font-mono">{token}</code>
-                      </span>
-                    </div>
-
-                    <div className="grid gap-2 sm:grid-cols-2 text-[11px] text-[var(--color-muted-foreground)]">
-                      <div>
-                        <strong>Hash do Documento Original (SHA-256):</strong>
-                        <div className="font-mono text-[10px] break-all">{doc.originalPdfHash}</div>
+                  return (
+                    <div
+                      key={doc.id}
+                      className="rounded-lg border border-[var(--color-border)] p-3 text-xs space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-[var(--color-foreground)]">
+                          {title}
+                        </span>
+                        <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                          Token: <code className="font-mono">{token}</code>
+                        </span>
                       </div>
-                      {doc.signedPdfHash && (
+
+                      <div className="grid gap-2 sm:grid-cols-2 text-[11px] text-[var(--color-muted-foreground)]">
                         <div>
-                          <strong>Hash do Documento Assinado (SHA-256):</strong>
-                          <div className="font-mono text-[10px] break-all text-emerald-700 dark:text-emerald-300">
-                            {doc.signedPdfHash}
+                          <strong>Hash do Documento Original (SHA-256):</strong>
+                          <div className="font-mono text-[10px] break-all">
+                            {doc.originalPdfHash}
                           </div>
+                        </div>
+                        {doc.signedPdfHash && (
+                          <div>
+                            <strong>Hash do Documento Assinado (SHA-256):</strong>
+                            <div className="font-mono text-[10px] break-all text-emerald-700 dark:text-emerald-300">
+                              {doc.signedPdfHash}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {isSigned && (
+                        <div className="pt-2 border-t border-[var(--color-border)] flex flex-wrap items-center gap-4 text-[11px]">
+                          <span>
+                            <strong>Signatário:</strong> {doc.signerName}
+                          </span>
+                          <span>
+                            <strong>Data/Hora:</strong> {formatDate(doc.signedAt)}
+                          </span>
+                          <span>
+                            <strong>IP Registrado:</strong> {doc.signerIp || "—"}
+                          </span>
+                          {doc.signerUserAgent && (
+                            <span>
+                              <strong>Dispositivo:</strong>{" "}
+                              {parseUserAgentFriendly(doc.signerUserAgent)}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
 
-                    {isSigned && (
-                      <div className="pt-2 border-t border-[var(--color-border)] flex flex-wrap items-center gap-4 text-[11px]">
-                        <span>
-                          <strong>Signatário:</strong> {doc.signerName}
-                        </span>
-                        <span>
-                          <strong>Data/Hora:</strong> {formatDate(doc.signedAt)}
-                        </span>
-                        <span>
-                          <strong>IP Registrado:</strong> {doc.signerIp || "—"}
-                        </span>
-                        {doc.signerUserAgent && (
-                          <span>
-                            <strong>Dispositivo:</strong>{" "}
-                            {parseUserAgentFriendly(doc.signerUserAgent)}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+          {/* Bottom navigation inside Tab 3 */}
+          <div className="flex items-center justify-start border-t border-[var(--color-border)] pt-4">
+            <button
+              type="button"
+              onClick={() => setActiveTab("documentos")}
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-2 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-muted)] transition-colors shadow-sm"
+            >
+              <ArrowLeft className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+              <span>Voltar para 2. Contratos & Documentos</span>
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Modal de Edição de Documento em Tempo Real */}

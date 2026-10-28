@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  ArrowLeft,
   X,
   Save,
   CheckCircle2,
@@ -267,7 +268,8 @@ export function LiveContractEditorModal({
         }
         .contract-editor-sheet table.data-table {
           width: 100%;
-          border-collapse: collapse;
+          border-collapse: separate;
+          border-spacing: 0;
           font-size: 8.5pt;
           margin: 8px 0;
           page-break-inside: auto;
@@ -281,12 +283,22 @@ export function LiveContractEditorModal({
           break-inside: auto;
         }
         .contract-editor-sheet table.data-table tr {
-          page-break-inside: avoid;
-          break-inside: avoid;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
         }
         .contract-editor-sheet table.data-table th, .contract-editor-sheet table.data-table td {
-          border: 1px solid #cbd5e1;
+          border-top: 1px solid #cbd5e1;
+          border-left: 1px solid #cbd5e1;
           padding: 5px 8px;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          box-sizing: border-box;
+        }
+        .contract-editor-sheet table.data-table th:last-child, .contract-editor-sheet table.data-table td:last-child {
+          border-right: 1px solid #cbd5e1;
+        }
+        .contract-editor-sheet table.data-table tbody tr:last-child td {
+          border-bottom: 1px solid #cbd5e1;
         }
         .contract-editor-sheet table.data-table th {
           background-color: #f1f5f9;
@@ -296,6 +308,8 @@ export function LiveContractEditorModal({
         }
         .contract-editor-sheet .signatures-wrapper {
           margin-top: 25px;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
         }
       `}</style>
 
@@ -303,11 +317,13 @@ export function LiveContractEditorModal({
       <header className="flex flex-wrap items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:px-6">
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors"
-            title="Voltar / Fechar"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors"
+            title="Voltar para a tela da venda"
           >
-            <X className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
+            <span>Voltar</span>
           </button>
 
           <div>
@@ -323,7 +339,7 @@ export function LiveContractEditorModal({
                   Documento Assinado · Modo Somente Leitura
                 </span>
               ) : (
-                "Edição em tempo real · Clique e digite diretamente no texto do documento (Ctrl+S para salvar)"
+                "Edição em tempo real para este cliente · Clique e digite diretamente no texto (Ctrl+S para salvar)"
               )}
             </p>
           </div>
@@ -428,6 +444,17 @@ export function LiveContractEditorModal({
               </button>
             </>
           )}
+
+          <div className="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+            title="Fechar"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       </header>
 
@@ -482,7 +509,7 @@ export function LiveContractEditorModal({
 
             {/* FOLHA DE PAPEL A4 EDITÁVEL */}
             <div
-              className={`min-h-[1123px] w-full rounded-sm bg-white p-8 sm:p-14 text-slate-900 shadow-2xl transition-all border border-slate-200 dark:border-slate-800 contract-editor-sheet ${
+              className={`min-h-[1123px] h-auto w-full rounded-sm bg-white p-8 sm:p-14 text-slate-900 shadow-2xl transition-all border border-slate-200 dark:border-slate-800 contract-editor-sheet ${
                 docData?.isSigned
                   ? "cursor-default select-text"
                   : "focus-within:ring-2 focus-within:ring-emerald-500/40"
@@ -492,10 +519,7 @@ export function LiveContractEditorModal({
                 ref={editorRef}
                 contentEditable={!docData?.isSigned}
                 suppressContentEditableWarning={true}
-                className="focus:outline-none font-sans text-[9pt] leading-relaxed selection:bg-emerald-200 selection:text-emerald-950"
-                style={{
-                  minHeight: "900px",
-                }}
+                className="focus:outline-none font-sans text-[9pt] leading-relaxed selection:bg-emerald-200 selection:text-emerald-950 w-full min-h-[900px] h-auto overflow-visible"
               />
             </div>
 

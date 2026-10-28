@@ -11,6 +11,8 @@ import { CustomerType, SaleStatus, DocumentType, DocumentSignStatus } from "@pri
 import { UpdateSaleDto } from "./dto/update-sale.dto";
 import { QuerySalesDto } from "./dto/query-sales.dto";
 import { DocumentTemplateService } from "./document-template.service";
+import { CONTRACT_PF_TEMPLATE } from "./templates/contract-pf.template";
+import { POWER_OF_ATTORNEY_PF_TEMPLATE } from "./templates/power-of-attorney-pf.template";
 
 const CUSTOMER_TYPE_PF = (CustomerType?.PF ?? "PF") as CustomerType;
 const CUSTOMER_TYPE_PJ = (CustomerType?.PJ ?? "PJ") as CustomerType;
@@ -676,8 +678,19 @@ export class SalesService {
       );
     }
 
+    let finalHtml = contentHtml.trim();
+    if (!finalHtml.toLowerCase().includes("<html") || !finalHtml.toLowerCase().includes("<head")) {
+      const template = String(doc.templateType).startsWith("CONTRATO")
+        ? CONTRACT_PF_TEMPLATE
+        : POWER_OF_ATTORNEY_PF_TEMPLATE;
+      const headMatch = template.match(/<head[\s\S]*?<\/head>/i);
+      const headHtml = headMatch ? headMatch[0] : "<head><meta charset='UTF-8'></head>";
+      const cleanBody = finalHtml.replace(/<\/?(html|body|!DOCTYPE)[^>]*>/gi, "").trim();
+      finalHtml = `<!DOCTYPE html>\n<html lang="pt-BR">\n${headHtml}\n<body>\n${cleanBody}\n</body>\n</html>`;
+    }
+
     const { pdfBuffer, sha256Hash } =
-      await this.documentTemplateService.generatePdfWithHash(contentHtml);
+      await this.documentTemplateService.generatePdfWithHash(finalHtml);
 
     const fileName = `doc-${doc.saleId}-${doc.templateType.toLowerCase()}-${Date.now()}.pdf`;
     this.documentTemplateService.savePdfToDisk(fileName, pdfBuffer);
@@ -685,7 +698,7 @@ export class SalesService {
     const updatedDoc = await this.prisma.saleDocument.update({
       where: { id: doc.id },
       data: {
-        contentHtml,
+        contentHtml: finalHtml,
         originalPdfUrl: `/uploads/sales-documents/${fileName}`,
         originalPdfHash: sha256Hash,
       },
