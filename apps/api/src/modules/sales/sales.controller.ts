@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
 import { TenantId } from "../../common/decorators/tenant-id.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -66,5 +76,14 @@ export class SalesController {
     @Body() body: { contentHtml: string }
   ) {
     return this.salesService.updateDocumentContent(tenantId, id, docId, body.contentHtml);
+  }
+
+  @Delete(":id/documents/:docId")
+  deleteSaleDocument(
+    @TenantId() tenantId: string,
+    @Param("id") id: string,
+    @Param("docId") docId: string
+  ) {
+    return this.salesService.deleteSaleDocument(tenantId, id, docId);
   }
 }

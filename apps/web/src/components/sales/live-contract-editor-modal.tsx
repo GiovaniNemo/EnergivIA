@@ -270,6 +270,19 @@ export function LiveContractEditorModal({
           border-collapse: collapse;
           font-size: 8.5pt;
           margin: 8px 0;
+          page-break-inside: auto;
+          break-inside: auto;
+        }
+        .contract-editor-sheet table.data-table thead {
+          display: table-header-group;
+        }
+        .contract-editor-sheet table.data-table tbody {
+          page-break-inside: auto;
+          break-inside: auto;
+        }
+        .contract-editor-sheet table.data-table tr {
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
         .contract-editor-sheet table.data-table th, .contract-editor-sheet table.data-table td {
           border: 1px solid #cbd5e1;
@@ -375,32 +388,45 @@ export function LiveContractEditorModal({
           )}
 
           {!docData?.isSigned && (
-            <button
-              onClick={handleSave}
-              disabled={saving || loading}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold shadow-md transition-all ${
-                savedSuccess
-                  ? "bg-emerald-600 text-white"
-                  : "bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95"
-              }`}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Salvando...
-                </>
-              ) : savedSuccess ? (
-                <>
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Salvo com Sucesso!
-                </>
-              ) : (
-                <>
-                  <Save className="h-3.5 w-3.5" />
-                  Salvar Alterações
-                </>
-              )}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleInsertClause}
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 shadow-sm hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition-colors"
+                title="Inserir uma nova cláusula no contrato"
+              >
+                <PlusCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <span>+ Nova Cláusula</span>
+              </button>
+
+              <button
+                onClick={handleSave}
+                disabled={saving || loading}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold shadow-md transition-all ${
+                  savedSuccess
+                    ? "bg-emerald-600 text-white"
+                    : "bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95"
+                }`}
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Salvando...
+                  </>
+                ) : savedSuccess ? (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Salvo com Sucesso!
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-3.5 w-3.5" />
+                    Salvar Alterações
+                  </>
+                )}
+              </button>
+            </>
           )}
         </div>
       </header>
@@ -431,7 +457,7 @@ export function LiveContractEditorModal({
                 </span>
               </div>
             ) : (
-              <div className="rounded-lg border border-emerald-600/20 bg-emerald-50/70 p-2.5 text-xs text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-950/30 dark:text-emerald-300 flex items-center justify-between shadow-sm">
+              <div className="rounded-lg border border-emerald-600/20 bg-emerald-50/70 p-2.5 text-xs text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-950/30 dark:text-emerald-300 flex flex-wrap items-center justify-between gap-2 shadow-sm">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                   <span>
@@ -439,9 +465,18 @@ export function LiveContractEditorModal({
                     clicar em <strong>+ Nova Cláusula</strong> para adicionar condições exclusivas.
                   </span>
                 </div>
-                <span className="text-[11px] text-slate-500 hidden sm:inline">
-                  Atalho: <strong>Ctrl + S</strong>
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleInsertClause}
+                    className="inline-flex items-center gap-1.5 rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors"
+                  >
+                    <PlusCircle className="h-3.5 w-3.5" />+ Nova Cláusula
+                  </button>
+                  <span className="text-[11px] text-slate-500 hidden sm:inline">
+                    Atalho: <strong>Ctrl + S</strong>
+                  </span>
+                </div>
               </div>
             )}
 
@@ -463,6 +498,19 @@ export function LiveContractEditorModal({
                 }}
               />
             </div>
+
+            {!docData?.isSigned && (
+              <div className="flex justify-center pb-6">
+                <button
+                  type="button"
+                  onClick={handleInsertClause}
+                  className="inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-emerald-600/40 bg-white/90 px-6 py-2.5 text-xs font-bold text-emerald-700 shadow-sm hover:bg-emerald-50 hover:border-emerald-600 dark:border-emerald-500/40 dark:bg-slate-900/90 dark:text-emerald-300 dark:hover:bg-slate-800 transition-all"
+                >
+                  <PlusCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />+ Inserir
+                  Nova Cláusula Complementar no Final do Contrato
+                </button>
+              </div>
+            )}
           </div>
         )}
       </main>

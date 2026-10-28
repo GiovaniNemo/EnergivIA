@@ -5,13 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
+  AlertCircle,
   ArrowLeft,
   Building2,
   CheckCircle2,
   Clock,
   Copy,
   Download,
-  ExternalLink,
   FileCheck2,
   FileEdit,
   FileSignature,
@@ -23,12 +23,13 @@ import {
   Search,
   Send,
   ShieldCheck,
+  Trash2,
   User,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingState } from "@/components/ui/loading-state";
 import { LiveContractEditorModal } from "@/components/sales/live-contract-editor-modal";
-import { generateSaleDocument, getSaleById, updateSale } from "@/lib/sales-api";
+import { deleteSaleDocument, generateSaleDocument, getSaleById, updateSale } from "@/lib/sales-api";
 import {
   fetchCnpjData,
   fetchViaCepData,
@@ -168,6 +169,12 @@ export default function VendaDetailPage(): JSX.Element {
   const [copiedMsg, setCopiedMsg] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[] | null>(null);
+
+  // Estados de exclusão de minuta
+  const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+  const [docToDelete, setDocToDelete] = useState<any | null>(null);
+  const [deleteSuccessMsg, setDeleteSuccessMsg] = useState<string | null>(null);
 
   const [sale, setSale] = useState<any>(null);
 
@@ -347,11 +354,85 @@ export default function VendaDetailPage(): JSX.Element {
     }
   }
 
-  async function handleSave(e?: React.FormEvent) {
+  function validateFichaCadastral(): string[] {
+    const errs: string[] = [];
+
+    if (!formData.customerName?.trim()) {
+      errs.push(
+        formData.customerType === "PJ"
+          ? "Razão Social / Nome Empresarial da Empresa"
+          : "Nome Completo do Titular"
+      );
+    }
+
+    const cleanDoc = (formData.customerCpfCnpj || "").replace(/\D/g, "");
+    if (!cleanDoc) {
+      errs.push(formData.customerType === "PJ" ? "CNPJ da Empresa" : "CPF do Titular");
+    } else if (formData.customerType === "PJ" && cleanDoc.length !== 14) {
+      errs.push("CNPJ da Empresa inválido (necessário 14 dígitos)");
+    } else if (formData.customerType !== "PJ" && cleanDoc.length !== 11) {
+      errs.push("CPF do Titular inválido (necessário 11 dígitos)");
+    }
+
+    if (formData.customerType === "PJ") {
+      if (!formData.legalRepresentativeName?.trim()) {
+        errs.push("Nome Completo do Representante Legal");
+      }
+      const cleanRepCpf = (formData.legalRepresentativeCpf || "").replace(/\D/g, "");
+      if (!cleanRepCpf || cleanRepCpf.length !== 11) {
+        errs.push("CPF do Representante Legal (necessário 11 dígitos)");
+      }
+    }
+
+    if (!formData.customerEmail?.trim() || !formData.customerEmail.includes("@")) {
+      errs.push("E-mail válido para envio e assinatura digital");
+    }
+
+    const cleanPhone = (formData.customerPhone || "").replace(/\D/g, "");
+    if (!cleanPhone || cleanPhone.length < 10) {
+      errs.push("Telefone / WhatsApp com DDD");
+    }
+
+    if (!formData.zipCode?.trim()) errs.push("CEP do local da instalação");
+    if (!formData.addressStreet?.trim()) errs.push("Logradouro / Rua");
+    if (!formData.addressNumber?.trim()) errs.push("Número do imóvel");
+    if (!formData.city?.trim()) errs.push("Cidade");
+    if (!formData.state?.trim()) errs.push("Estado (UF)");
+
+    if (!formData.utilityCompany?.trim()) errs.push("Distribuidora / Concessionária de Energia");
+    if (!formData.ucNumber?.trim()) errs.push("Número da Unidade Consumidora (UC)");
+
+    const kwp = parseFloat(formData.systemPowerKwp || "0");
+    if (!formData.systemPowerKwp || isNaN(kwp) || kwp <= 0) {
+      errs.push("Potência do Sistema em kWp");
+    }
+
+    const valor = parseMoneyBrlDisplay(formData.totalValue || "");
+    if (isNaN(valor) || valor <= 0) {
+      errs.push("Valor Total do Sistema Solar (R$)");
+    }
+
+    return errs;
+  }
+
+  async function handleSave(e?: React.FormEvent, shouldAdvance: boolean = true) {
     if (e) e.preventDefault();
     setSaving(true);
     setSaveSuccess(false);
     setError(null);
+    setValidationErrors(null);
+
+    const validation = validateFichaCadastral();
+    if (validation.length > 0) {
+      setValidationErrors(validation);
+      setError(
+        "Preencha todos os campos obrigatórios da ficha cadastral para prosseguir para a emissão do contrato."
+      );
+      setSaving(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     try {
       const updated = await updateSale(saleId, {
         customerType: formData.customerType,
@@ -393,10 +474,34 @@ export default function VendaDetailPage(): JSX.Element {
       }));
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3500);
+
+      if (shouldAdvance) {
+        setActiveTab("documentos");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     } catch (err: any) {
       setError(err.message || "Erro ao salvar alterações");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDeleteDocument(docId: string) {
+    setDeletingDocId(docId);
+    setError(null);
+    try {
+      await deleteSaleDocument(saleId, docId);
+      setSale((prev: any) => ({
+        ...prev,
+        documents: (prev?.documents || []).filter((d: any) => d.id !== docId),
+      }));
+      setDocToDelete(null);
+      setDeleteSuccessMsg("Minuta de teste excluída com sucesso.");
+      setTimeout(() => setDeleteSuccessMsg(null), 3500);
+    } catch (err: any) {
+      setError(err.message || "Erro ao excluir minuta");
+    } finally {
+      setDeletingDocId(null);
     }
   }
 
@@ -561,11 +666,36 @@ export default function VendaDetailPage(): JSX.Element {
 
       {saveSuccess && (
         <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-medium text-emerald-800 dark:text-emerald-300">
-          Alterações salvas com sucesso! Os novos dados serão utilizados na emissão de documentos.
+          Ficha cadastral salva com sucesso! Os dados foram validados e atualizados para a emissão
+          de documentos.
         </div>
       )}
 
-      {error && (
+      {deleteSuccessMsg && (
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-medium text-emerald-800 dark:text-emerald-300 animate-in fade-in">
+          {deleteSuccessMsg}
+        </div>
+      )}
+
+      {validationErrors && validationErrors.length > 0 && (
+        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-xs font-medium text-rose-800 dark:text-rose-300 space-y-2 animate-in fade-in">
+          <div className="flex items-center gap-2 font-bold text-rose-700 dark:text-rose-200 text-sm">
+            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
+            <span>Campos Obrigatórios Pendentes para Emissão de Contratos</span>
+          </div>
+          <p className="text-xs text-rose-700/90 dark:text-rose-300/90">
+            A emissão do contrato exige que todos os campos essenciais estejam preenchidos. Por
+            favor, complete os itens abaixo:
+          </p>
+          <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-1.5 list-disc list-inside text-[11px] font-semibold text-rose-800 dark:text-rose-200">
+            {validationErrors.map((err, idx) => (
+              <li key={idx}>{err}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {error && !validationErrors && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs font-medium text-red-800 dark:text-red-300">
           {error}
         </div>
@@ -1253,7 +1383,7 @@ export default function VendaDetailPage(): JSX.Element {
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              {saving ? "Salvando Alterações..." : "Salvar Ficha Cadastral"}
+              {saving ? "Validando e Salvando..." : "Salvar Ficha & Avançar p/ Contrato"}
             </button>
           </div>
         </form>
@@ -1481,74 +1611,116 @@ export default function VendaDetailPage(): JSX.Element {
 
                         {/* Action buttons */}
                         <div className="flex flex-wrap items-center gap-2">
-                          {/* Visualizar / Baixar PDF */}
-                          <a
-                            href={`/api/proxy/public/documents/${token}/pdf?regenerate=true`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-muted)] hover:border-[var(--color-primary)]/40 transition-colors"
-                          >
-                            <Download className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-                            {isSigned
-                              ? "Visualizar Documento Completo Assinado"
-                              : "Visualizar Minuta em PDF"}
-                          </a>
-
-                          {/* Editar em Tempo Real */}
-                          <button
-                            type="button"
-                            onClick={() => setSelectedDocForEditing(doc.id)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/30 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50 transition-colors"
-                          >
-                            <FileEdit className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                            {isSigned ? "Ver Minuta / Cláusulas" : "Editar Documento em Tempo Real"}
-                          </button>
-
-                          {/* Se não estiver assinado, permite copiar o link e copiar texto de WhatsApp */}
-                          {!isSigned && (
+                          {isSigned ? (
                             <>
+                              <a
+                                href={`/api/proxy/public/documents/${token}/pdf?regenerate=true`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-muted)] hover:border-[var(--color-primary)]/40 transition-colors"
+                                title="Visualizar documento completo assinado com trilha de auditoria"
+                              >
+                                <Download className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                                Visualizar PDF Assinado
+                              </a>
+
                               <button
+                                type="button"
+                                onClick={() => setSelectedDocForEditing(doc.id)}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/30 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300 transition-colors"
+                                title="Ver minuta original com cláusulas assinadas"
+                              >
+                                <FileText className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                Ver Minuta
+                              </button>
+
+                              <span
+                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-500/20"
+                                title="Documento juridicamente válido e com hash probatório registrado (inalterável)"
+                              >
+                                <ShieldCheck className="h-3 w-3" />
+                                Protegido por Lei
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              {/* 1. Botão Principal: Editar Minuta */}
+                              <button
+                                type="button"
+                                onClick={() => setSelectedDocForEditing(doc.id)}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors"
+                                title="Abrir minuta para edição em tempo real e adição de cláusulas"
+                              >
+                                <FileEdit className="h-3.5 w-3.5" />
+                                Editar Minuta
+                              </button>
+
+                              {/* 2. Visualizar PDF da minuta */}
+                              <a
+                                href={`/api/proxy/public/documents/${token}/pdf?regenerate=true`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-muted)] transition-colors"
+                                title="Visualizar documento em PDF"
+                              >
+                                <Download className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
+                                PDF
+                              </a>
+
+                              {/* 3. Copiar Link de Assinatura */}
+                              <button
+                                type="button"
                                 onClick={() => handleCopySignLink(token)}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-xs font-medium text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-muted)]"
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-muted)] transition-colors"
+                                title="Copiar link seguro para o cliente assinar"
                               >
                                 {copiedLink === token ? (
                                   <>
                                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                                    Copiado!
+                                    <span className="text-emerald-600 font-semibold">Copiado</span>
                                   </>
                                 ) : (
                                   <>
-                                    <Copy className="h-3.5 w-3.5" />
-                                    Copiar Link
+                                    <Copy className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
+                                    <span>Copiar Link</span>
                                   </>
                                 )}
                               </button>
 
+                              {/* 4. WhatsApp */}
                               <button
+                                type="button"
                                 onClick={() => handleCopyWhatsAppMessage(doc)}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700"
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/30 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 shadow-sm hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300 transition-colors"
+                                title="Copiar mensagem pronta para envio no WhatsApp"
                               >
                                 {copiedMsg === doc.id ? (
                                   <>
-                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                    Mensagem Copiada!
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                                    <span>Copiado!</span>
                                   </>
                                 ) : (
                                   <>
-                                    <Send className="h-3.5 w-3.5" />
-                                    Copiar Texto p/ WhatsApp
+                                    <Send className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>WhatsApp</span>
                                   </>
                                 )}
                               </button>
 
-                              <Link
-                                href={`/assinar/${token}`}
-                                target="_blank"
-                                className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] p-1.5 text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-                                title="Abrir página de assinatura"
+                              {/* 5. Excluir Minuta de Teste */}
+                              <button
+                                type="button"
+                                onClick={() => setDocToDelete(doc)}
+                                disabled={deletingDocId === doc.id}
+                                className="inline-flex items-center justify-center rounded-lg border border-transparent p-1.5 text-red-500 hover:border-red-200 hover:bg-red-50 hover:text-red-700 dark:hover:border-red-900/60 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors"
+                                title="Excluir esta minuta de teste não assinada"
                               >
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </Link>
+                                {deletingDocId === doc.id ? (
+                                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                              </button>
                             </>
                           )}
                         </div>
@@ -1693,6 +1865,67 @@ export default function VendaDetailPage(): JSX.Element {
             loadSale();
           }}
         />
+      )}
+
+      {/* Modal de Confirmação para Exclusão de Minuta de Teste */}
+      {docToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-red-500/10 p-2.5 text-red-600 dark:text-red-400 shrink-0">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-[var(--color-foreground)]">
+                  Excluir Minuta de Contrato?
+                </h3>
+                <p className="text-xs text-[var(--color-muted-foreground)] leading-relaxed">
+                  Esta ação removerá a minuta pendente de teste. Como o documento{" "}
+                  <strong>não foi assinado</strong>, ele pode ser descartado com segurança sem gerar
+                  nenhum efeito ou histórico jurídico.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-[var(--color-background)] p-3 border border-[var(--color-border)] text-xs space-y-1">
+              <div className="font-semibold text-[var(--color-foreground)]">
+                {docToDelete.title || "Contrato Solar"}
+              </div>
+              <div className="text-[11px] text-[var(--color-muted-foreground)]">
+                Status: Aguardando Assinatura · Não oficializado
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDocToDelete(null)}
+                disabled={Boolean(deletingDocId)}
+                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-4 py-2 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-muted)] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteDocument(docToDelete.id)}
+                disabled={Boolean(deletingDocId)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                {deletingDocId ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Sim, Excluir Minuta
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

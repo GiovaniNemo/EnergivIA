@@ -27,6 +27,7 @@ describe("SalesService", () => {
         findFirst: vi.fn(),
         update: vi.fn(),
         create: vi.fn(),
+        delete: vi.fn(),
       },
     };
 
@@ -355,6 +356,40 @@ describe("SalesService", () => {
       await expect(
         service.updateDocumentContent("tenant-1", "sale-1", "doc-1", "<p>Texto Qualquer</p>")
       ).rejects.toThrow(/assinados/);
+    });
+  });
+
+  describe("deleteSaleDocument", () => {
+    it("should delete document if status is PENDING", async () => {
+      const mockDoc = {
+        id: "doc-pending",
+        saleId: "sale-1",
+        tenantId: "tenant-1",
+        status: "PENDING",
+      };
+      mockPrisma.saleDocument.findFirst.mockResolvedValue(mockDoc);
+      mockPrisma.saleDocument.delete.mockResolvedValue(mockDoc);
+
+      const res = await service.deleteSaleDocument("tenant-1", "sale-1", "doc-pending");
+      expect(res.success).toBe(true);
+      expect(mockPrisma.saleDocument.delete).toHaveBeenCalledWith({
+        where: { id: "doc-pending" },
+      });
+    });
+
+    it("should throw BadRequestException if document is SIGNED", async () => {
+      const mockDoc = {
+        id: "doc-signed",
+        saleId: "sale-1",
+        tenantId: "tenant-1",
+        status: "SIGNED",
+      };
+      mockPrisma.saleDocument.findFirst.mockResolvedValue(mockDoc);
+
+      await expect(service.deleteSaleDocument("tenant-1", "sale-1", "doc-signed")).rejects.toThrow(
+        /assinados/
+      );
+      expect(mockPrisma.saleDocument.delete).not.toHaveBeenCalled();
     });
   });
 });

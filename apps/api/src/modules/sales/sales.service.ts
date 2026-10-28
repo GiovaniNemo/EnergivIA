@@ -700,4 +700,29 @@ export class SalesService {
       status: updatedDoc.status,
     };
   }
+
+  async deleteSaleDocument(tenantId: string, saleId: string, docId: string) {
+    const doc = await this.prisma.saleDocument.findFirst({
+      where: { id: docId, saleId, tenantId },
+    });
+
+    if (!doc) {
+      throw new NotFoundException("Documento não encontrado.");
+    }
+
+    if (doc.status === DOC_STATUS_SIGNED) {
+      throw new BadRequestException(
+        "Documentos já assinados possuem validade jurídica probatória e não podem ser excluídos."
+      );
+    }
+
+    await this.prisma.saleDocument.delete({
+      where: { id: doc.id },
+    });
+
+    return {
+      success: true,
+      message: "Minuta excluída com sucesso.",
+    };
+  }
 }

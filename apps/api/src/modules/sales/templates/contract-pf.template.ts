@@ -113,7 +113,19 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
       border-collapse: collapse;
       font-size: 8.5pt;
       margin: 8px 0;
+      page-break-inside: auto;
+      break-inside: auto;
+    }
+    table.data-table thead {
+      display: table-header-group;
+    }
+    table.data-table tbody {
+      page-break-inside: auto;
+      break-inside: auto;
+    }
+    table.data-table tr {
       page-break-inside: avoid;
+      break-inside: avoid;
     }
     table.data-table th, table.data-table td {
       border: 1px solid #cbd5e1;

@@ -103,6 +103,12 @@ export async function updateSaleDocumentContent(
   );
 }
 
+export async function deleteSaleDocument(saleId: string, docId: string): Promise<any> {
+  return apiFetch(`/sales/${encodeURIComponent(saleId)}/documents/${encodeURIComponent(docId)}`, {
+    method: "DELETE",
+  });
+}
+
 // Funções públicas de assinatura
 export async function getPublicDocument(token: string): Promise<any> {
   return apiFetch(`/public/documents/${encodeURIComponent(token)}`);
