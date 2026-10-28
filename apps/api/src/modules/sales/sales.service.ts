@@ -603,7 +603,7 @@ export class SalesService {
         .join(", ") || "Endereço cadastrado";
 
     const qualificacaoContratante = isPj
-      ? `<strong>${sale.customerName || signerName}</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº <strong>${sale.documentNumber || lead?.cpfCnpj || "—"}</strong>, com sede e instalação em <strong>${clientAddress}</strong>, representada por seu representante legal <strong>${sale.legalRepresentativeName || signerName}</strong>, CPF nº <strong>${sale.legalRepresentativeCpf || signerCpf}</strong>.`
+      ? `<strong>${signerName}</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº <strong>${sale.documentNumber || lead?.cpfCnpj || "—"}</strong>, com sede e instalação em <strong>${clientAddress}</strong>, representada por seu representante legal <strong>${sale.legalRepresentativeName || signerName}</strong>, CPF nº <strong>${sale.legalRepresentativeCpf || signerCpf}</strong>.`
       : `<strong>${signerName}</strong>, inscrito(a) no CPF/MF sob o nº <strong>${signerCpf}</strong>, portador(a) do RG nº <strong>${sale.rgNumber ? `${sale.rgNumber} ${sale.rgIssuer ?? ""}`.trim() : "—"}</strong>, com domicílio e instalação em <strong>${clientAddress}</strong>.`;
 
     const qualificacaoContratada = `<strong>${tenant?.name || "EnergivIA Soluções Solares"}</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº <strong>${tenantCnpj}</strong>, com sede em <strong>${tenantAddress}</strong>, representada por seu consultor técnico/comercial <strong>${sale.sellerName || "Representante Autorizado"}</strong>.`;
