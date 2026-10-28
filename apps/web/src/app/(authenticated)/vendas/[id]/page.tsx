@@ -642,8 +642,30 @@ export default function VendaDetailPage(): JSX.Element {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {/* Linha 1: Nome Completo (2 cols) + Tipo de Pessoa (1 col) */}
-              <div className="sm:col-span-2">
+              {/* Linha 1: Tipo de Pessoa (1 col) + Nome Completo / Razão Social (2 cols) */}
+              <div>
+                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                  Tipo de Pessoa (CPF / CNPJ)
+                </label>
+                <select
+                  value={formData.customerType}
+                  onChange={(e) => {
+                    const nextType = e.target.value;
+                    setFormData((prev) => ({
+                      ...prev,
+                      customerType: nextType,
+                      customerCpfCnpj: "",
+                    }));
+                    setCnpjFeedback(null);
+                  }}
+                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                >
+                  <option value="PF">Pessoa Física (PF)</option>
+                  <option value="PJ">Pessoa Jurídica (PJ)</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-1 lg:col-span-2">
                 <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
                   {formData.customerType === "PJ"
                     ? "Razão Social / Nome Empresarial"
@@ -662,28 +684,6 @@ export default function VendaDetailPage(): JSX.Element {
                   }
                   className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
                 />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  Tipo de Pessoa
-                </label>
-                <select
-                  value={formData.customerType}
-                  onChange={(e) => {
-                    const nextType = e.target.value;
-                    setFormData((prev) => ({
-                      ...prev,
-                      customerType: nextType,
-                      customerCpfCnpj: "",
-                    }));
-                    setCnpjFeedback(null);
-                  }}
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
-                >
-                  <option value="PF">Pessoa Física (PF)</option>
-                  <option value="PJ">Pessoa Jurídica (PJ)</option>
-                </select>
               </div>
 
               {/* Linha 2: CPF/CNPJ (1 col) + RG/IE (1 col) + Telefone/WhatsApp (1 col) */}
