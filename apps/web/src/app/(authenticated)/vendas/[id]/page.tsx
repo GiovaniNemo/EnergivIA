@@ -1536,7 +1536,7 @@ export default function VendaDetailPage(): JSX.Element {
                         <div className="flex flex-wrap items-center gap-2">
                           {/* Visualizar / Baixar PDF */}
                           <a
-                            href={`/api/proxy/public/documents/${token}/pdf`}
+                            href={`/api/proxy/public/documents/${token}/pdf?regenerate=true`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-muted)] hover:border-[var(--color-primary)]/40 transition-colors"

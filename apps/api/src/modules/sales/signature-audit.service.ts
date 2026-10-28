@@ -376,7 +376,7 @@ export class SignatureAuditService {
     const signatureHash = crypto.randomUUID();
 
     // Construir o HTML completo assinado (Contrato + Bloco de Assinaturas Bilaterais + Folha de Auditoria)
-    const fullSignedHtml = this.buildFullDocumentHtml(doc, {
+    const fullSignedHtml = await this.buildFullDocumentHtml(doc, {
       isSigned: true,
       signerName,
       signerCpf,
@@ -430,7 +430,7 @@ export class SignatureAuditService {
     };
   }
 
-  buildFullDocumentHtml(
+  async buildFullDocumentHtml(
     doc: {
       title: string;
       publicToken: string;
@@ -480,7 +480,7 @@ export class SignatureAuditService {
       signatureHash: string;
       signatureImage?: string | null;
     }
-  ): string {
+  ): Promise<string> {
     const lead = doc.sale?.proposal?.deal?.lead;
     const tenant = doc.sale?.tenant;
     const formattedDate = new Date(doc.createdAt || Date.now()).toLocaleDateString("pt-BR", {
@@ -488,11 +488,6 @@ export class SignatureAuditService {
       month: "long",
       year: "numeric",
     });
-
-    const formattedInvestment = new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(doc.sale?.investmentAmount || 0);
 
     const isSigned = Boolean(signMeta?.isSigned);
     let clientSignatureBlock = "";
@@ -579,33 +574,29 @@ export class SignatureAuditService {
       lead?.cpfCnpj ||
       "—";
 
-    return this.documentTemplateService.buildDocumentHtml(doc.templateType as DocumentType, {
-      nome_cliente: signerNameResolved,
-      cpf_cliente: signerCpfResolved,
-      rg_cliente: doc.sale?.rgNumber
-        ? `${doc.sale.rgNumber} ${doc.sale.rgIssuer ?? ""}`.trim()
-        : "—",
-      endereco_instalacao: doc.sale?.installationAddress || "—",
-      cidade_instalacao: doc.sale?.installationCity || "—",
-      estado_instalacao: doc.sale?.installationState || "—",
-      cep_instalacao: doc.sale?.installationZip || "—",
-      concessionaria: doc.sale?.distributionCompany || "—",
-      numero_uc: doc.sale?.consumerUnitNumber || "—",
-      potencia_kwp:
-        doc.sale?.systemPowerKwp && doc.sale.systemPowerKwp > 0
-          ? doc.sale.systemPowerKwp.toFixed(2)
-          : "—",
-      valor_total: formattedInvestment,
-      forma_pagamento: doc.sale?.paymentMethod || "À Vista / Financiamento Bancário",
-      nome_empresa: tenant?.name || "EnergivIA Soluções Solares",
-      nome_vendedor: doc.sale?.sellerName || "Consultor Técnico",
-      data_atual: formattedDate,
-      bloco_assinatura_cliente: clientSignatureBlock,
-      folha_auditoria_anexa: auditSheetHtml,
+    const data = await this.documentTemplateService.prepareContractVariables({
+      sale: doc.sale,
+      tenant,
+      lead,
+      formattedDate,
+      clientSignatureBlock,
+      auditSheetHtml,
     });
+
+    if (signerNameResolved && signerNameResolved !== "Cliente") {
+      data["nome_cliente"] = signerNameResolved;
+    }
+    if (signerCpfResolved && signerCpfResolved !== "—") {
+      data["cpf_cliente"] = signerCpfResolved;
+    }
+
+    return this.documentTemplateService.buildDocumentHtml(doc.templateType as DocumentType, data);
   }
 
-  async getDocumentPdf(publicToken: string): Promise<{ buffer: Buffer; filename: string }> {
+  async getDocumentPdf(
+    publicToken: string,
+    forceRegenerate = false
+  ): Promise<{ buffer: Buffer; filename: string }> {
     const doc = await this.prisma.saleDocument.findUnique({
       where: { publicToken },
       include: {
@@ -613,6 +604,7 @@ export class SignatureAuditService {
           include: {
             proposal: {
               include: {
+                simulation: true,
                 deal: {
                   include: {
                     lead: true,
@@ -633,12 +625,12 @@ export class SignatureAuditService {
     const isSigned = doc.status === STATUS_SIGNED;
     const targetUrl = isSigned && doc.signedPdfUrl ? doc.signedPdfUrl : doc.originalPdfUrl;
 
-    if (targetUrl) {
+    if (!forceRegenerate && isSigned && targetUrl) {
       const fileName = targetUrl.split("/").pop();
       if (fileName) {
         const diskBuffer = this.documentTemplateService.getPdfFromDisk(fileName);
-        // Retornar arquivo do disco se existir e (não for assinado ou for um PDF completo com mais de 55KB)
-        if (diskBuffer && (!isSigned || diskBuffer.length > 55000)) {
+        // Retornar arquivo do disco apenas se já for assinado e tiver mais de 80KB (indicando contrato completo + auditoria)
+        if (diskBuffer && diskBuffer.length > 80000) {
           return {
             buffer: diskBuffer,
             filename: `${doc.title.replace(/[^a-zA-Z0-9_-]/g, "_")}${isSigned ? "_assinado" : ""}.pdf`,
@@ -665,7 +657,7 @@ export class SignatureAuditService {
             }
           : undefined;
 
-        const html = this.buildFullDocumentHtml(doc, signMeta);
+        const html = await this.buildFullDocumentHtml(doc, signMeta);
         const { pdfBuffer } = await this.documentTemplateService.generatePdfWithHash(html);
 
         // Se for assinado, salvar a versão completa atualizada no disco para os próximos downloads

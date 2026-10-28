@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Post, Req, StreamableFile, Header } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  StreamableFile,
+  Header,
+  Query,
+} from "@nestjs/common";
 import { Request } from "express";
 import { Public } from "../../common/decorators/public.decorator";
 import { SignatureAuditService } from "./signature-audit.service";
@@ -39,8 +49,9 @@ export class PublicSignatureController {
 
   @Get([":token/download", ":token/pdf"])
   @Header("Content-Type", "application/pdf")
-  async downloadPdf(@Param("token") token: string) {
-    const { buffer, filename } = await this.signatureAuditService.getDocumentPdf(token);
+  async downloadPdf(@Param("token") token: string, @Query("regenerate") regenerate?: string) {
+    const force = regenerate === "true" || regenerate === "1";
+    const { buffer, filename } = await this.signatureAuditService.getDocumentPdf(token, force);
     return new StreamableFile(buffer, {
       type: "application/pdf",
       disposition: `inline; filename="${filename}"`,

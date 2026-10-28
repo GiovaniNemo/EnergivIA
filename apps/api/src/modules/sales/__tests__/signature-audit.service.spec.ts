@@ -22,6 +22,17 @@ describe("SignatureAuditService", () => {
       sendEmail: vi.fn().mockResolvedValue(undefined),
     };
     mockDocTemplateService = {
+      prepareContractVariables: vi.fn().mockImplementation(async (params) => ({
+        bloco_logo_empresa: "<div>LOGO</div>",
+        qualificacao_contratada: "CONTRATADA QUALIFICADA",
+        qualificacao_contratante: "CONTRATANTE QUALIFICADO",
+        tabela_equipamentos: "<table></table>",
+        nome_cliente: params.lead?.name || "Cliente",
+        cpf_cliente: params.lead?.cpfCnpj || "—",
+        valor_total: "R$ 20.493,00",
+        bloco_assinatura_cliente: params.clientSignatureBlock,
+        folha_auditoria_anexa: params.auditSheetHtml,
+      })),
       buildDocumentHtml: vi.fn().mockReturnValue("<html></html>"),
       generatePdfWithHash: vi.fn().mockResolvedValue({
         pdfBuffer: Buffer.from("%PDF-1.4"),

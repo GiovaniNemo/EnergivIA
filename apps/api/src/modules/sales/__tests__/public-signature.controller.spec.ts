@@ -110,4 +110,28 @@ describe("PublicSignatureController", () => {
       expect(result.signedPdfHash.length).toBe(64);
     });
   });
+
+  describe("downloadPdf", () => {
+    it("should pass force=true when regenerate=true query is provided", async () => {
+      mockSignatureAuditService.getDocumentPdf.mockResolvedValue({
+        buffer: Buffer.from("%PDF-1.4 test"),
+        filename: "Contrato_assinado.pdf",
+      });
+
+      const res = await controller.downloadPdf("token-123", "true");
+      expect(mockSignatureAuditService.getDocumentPdf).toHaveBeenCalledWith("token-123", true);
+      expect(res).toBeDefined();
+    });
+
+    it("should pass force=false by default when no regenerate param is passed", async () => {
+      mockSignatureAuditService.getDocumentPdf.mockResolvedValue({
+        buffer: Buffer.from("%PDF-1.4 test"),
+        filename: "Contrato.pdf",
+      });
+
+      const res = await controller.downloadPdf("token-123");
+      expect(mockSignatureAuditService.getDocumentPdf).toHaveBeenCalledWith("token-123", false);
+      expect(res).toBeDefined();
+    });
+  });
 });
