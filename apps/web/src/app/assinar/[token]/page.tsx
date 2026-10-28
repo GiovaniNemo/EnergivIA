@@ -25,6 +25,7 @@ import {
   signPublicDocument,
   verifyPublicOtp,
 } from "@/lib/sales-api";
+import { PdfViewerModal } from "@/components/sales/pdf-viewer-modal";
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -64,6 +65,7 @@ export default function PublicSignDocumentPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [doc, setDoc] = useState<any>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
 
   // Stepper: 1: PREVIEW, 2: CPF, 3: OTP, 4: SIGN, 5: SUCCESS
   const [step, setStep] = useState<number>(1);
@@ -370,15 +372,14 @@ export default function PublicSignDocumentPage(): JSX.Element {
 
             {/* PDF Preview CTA */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
-              <a
-                href={`/api/proxy/public/documents/${token}/pdf?regenerate=true`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => setShowPdfModal(true)}
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-750"
               >
                 <Eye className="h-4 w-4" />
                 Visualizar / Baixar Minuta (PDF)
-              </a>
+              </button>
 
               <button
                 onClick={() => setStep(2)}
@@ -669,6 +670,17 @@ export default function PublicSignDocumentPage(): JSX.Element {
           </div>
         )}
       </main>
+
+      {/* MODAL DE VISUALIZAÇÃO COM BOTÃO DE VOLTAR */}
+      {showPdfModal && (
+        <PdfViewerModal
+          isOpen={showPdfModal}
+          onClose={() => setShowPdfModal(false)}
+          pdfUrl={`/api/proxy/public/documents/${token}/pdf?regenerate=true`}
+          title={docTitle}
+          isSigned={false}
+        />
+      )}
     </div>
   );
 }

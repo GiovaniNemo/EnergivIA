@@ -853,3 +853,4 @@
 | task-862 | Meta Pixel: Instalação do componente de rastreamento com respeito a consentimento LGPD e id oficial | completed | Criado componente MetaPixel com Script afterInteractive, PageView e helper de eventos trackMetaEvent |
 | task-863 | Configurações: Remover card e rota de custos do projeto da tela de preferências | completed | Card Custos do projeto removido de /configuracoes, link interno limpo e rota redirecionada |
 | task-864 | Metadados: Atualizar título da aba do navegador para "Energivia | O seu parceiro via IA" | completed | Atualizado default title e OpenGraph no layout raiz e na home page |
+| task-865 | PDF & Visualizador: Injetar estilos limpos em documentos existentes, fundo branco em todas as páginas, quebra de tabela, modal com botão Voltar e card sólido | completed | Forçado refresh de head em buildFullDocumentHtml, print background, quebra de tabela, PdfViewerModal com Voltar e card de assinatura com fundo sólido |

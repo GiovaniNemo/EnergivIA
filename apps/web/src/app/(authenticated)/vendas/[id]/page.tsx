@@ -29,6 +29,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingState } from "@/components/ui/loading-state";
 import { LiveContractEditorModal } from "@/components/sales/live-contract-editor-modal";
+import { PdfViewerModal } from "@/components/sales/pdf-viewer-modal";
 import { deleteSaleDocument, generateSaleDocument, getSaleById, updateSale } from "@/lib/sales-api";
 import {
   fetchCnpjData,
@@ -165,6 +166,11 @@ export default function VendaDetailPage(): JSX.Element {
   const [saving, setSaving] = useState(false);
   const [generatingDoc, setGeneratingDoc] = useState<string | null>(null);
   const [selectedDocForEditing, setSelectedDocForEditing] = useState<string | null>(null);
+  const [viewingPdfDoc, setViewingPdfDoc] = useState<{
+    url: string;
+    title: string;
+    isSigned?: boolean;
+  } | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [copiedMsg, setCopiedMsg] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -1978,21 +1984,21 @@ export default function VendaDetailPage(): JSX.Element {
             </Card>
           </div>
 
-          {/* Banner de Esclarecimento sobre Assinaturas Bilaterais */}
-          <div className="rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 p-4 text-xs space-y-2">
+          {/* Banner de Esclarecimento sobre Assinaturas Bilaterais com fundo sólido */}
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 text-xs space-y-3 shadow-sm">
             <div className="font-semibold text-[var(--color-foreground)] flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-[var(--color-primary)]" />
               Como Funciona a Assinatura Bilateral (Você e o Cliente):
             </div>
-            <div className="grid gap-2 sm:grid-cols-2 text-[var(--color-muted-foreground)]">
-              <div className="rounded-lg bg-[var(--color-background)]/80 p-3 border border-[var(--color-border)]/50">
+            <div className="grid gap-3 sm:grid-cols-2 text-[var(--color-muted-foreground)]">
+              <div className="rounded-lg bg-[var(--color-background)] p-3.5 border border-[var(--color-border)]">
                 <span className="font-semibold text-[var(--color-foreground)] block mb-1">
                   1. Sua Empresa (CONTRATADA)
                 </span>
                 Assinada e autenticada digitalmente de forma automática pela plataforma EnergivIA na
                 emissão do documento, com carimbo institucional e hash SHA-256.
               </div>
-              <div className="rounded-lg bg-[var(--color-background)]/80 p-3 border border-[var(--color-border)]/50">
+              <div className="rounded-lg bg-[var(--color-background)] p-3.5 border border-[var(--color-border)]">
                 <span className="font-semibold text-[var(--color-foreground)] block mb-1">
                   2. O Cliente (CONTRATANTE)
                 </span>
@@ -2094,16 +2100,21 @@ export default function VendaDetailPage(): JSX.Element {
                         <div className="flex flex-wrap items-center gap-2">
                           {isSigned ? (
                             <>
-                              <a
-                                href={`/api/proxy/public/documents/${token}/pdf?regenerate=true`}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setViewingPdfDoc({
+                                    url: `/api/proxy/public/documents/${token}/pdf?regenerate=true`,
+                                    title: doc.title || "Contrato Assinado",
+                                    isSigned: true,
+                                  })
+                                }
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-muted)] hover:border-[var(--color-primary)]/40 transition-colors"
-                                title="Visualizar documento completo assinado com trilha de auditoria"
+                                title="Visualizar documento completo assinado com botão de voltar"
                               >
                                 <Download className="h-3.5 w-3.5 text-[var(--color-primary)]" />
                                 Visualizar PDF Assinado
-                              </a>
+                              </button>
 
                               <button
                                 type="button"
@@ -2137,16 +2148,21 @@ export default function VendaDetailPage(): JSX.Element {
                               </button>
 
                               {/* 2. Visualizar PDF da minuta */}
-                              <a
-                                href={`/api/proxy/public/documents/${token}/pdf?regenerate=true`}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setViewingPdfDoc({
+                                    url: `/api/proxy/public/documents/${token}/pdf?regenerate=true`,
+                                    title: doc.title || "Minuta de Contrato",
+                                    isSigned: false,
+                                  })
+                                }
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-muted)] transition-colors"
-                                title="Visualizar documento em PDF"
+                                title="Visualizar documento em PDF com botão de voltar"
                               >
                                 <Download className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
                                 PDF
-                              </a>
+                              </button>
 
                               {/* 3. Copiar Link de Assinatura */}
                               <button
@@ -2397,6 +2413,17 @@ export default function VendaDetailPage(): JSX.Element {
           onSaved={() => {
             loadSale();
           }}
+        />
+      )}
+
+      {/* Modal de Visualização de Documento PDF com Botão Voltar */}
+      {viewingPdfDoc && (
+        <PdfViewerModal
+          isOpen={Boolean(viewingPdfDoc)}
+          onClose={() => setViewingPdfDoc(null)}
+          pdfUrl={viewingPdfDoc.url}
+          title={viewingPdfDoc.title}
+          isSigned={viewingPdfDoc.isSigned}
         />
       )}
 

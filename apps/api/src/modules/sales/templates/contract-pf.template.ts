@@ -6,16 +6,16 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
   <style>
     @page {
       size: A4;
-      margin: 14mm 14mm 16mm 14mm;
+      margin: 12mm 14mm 14mm 14mm;
+      background: #ffffff;
     }
     *, *:before, *:after {
       box-sizing: border-box;
     }
-    html, body {
+    html {
       background-color: #ffffff !important;
-      color: #1e293b;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -23,7 +23,11 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
       line-height: 1.45;
       margin: 0;
       padding: 0;
-      background: #ffffff !important;
+      background-color: #ffffff !important;
+      color: #1e293b;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      min-height: 100%;
     }
     .header {
       border-bottom: 2px solid #0f172a;
@@ -120,19 +124,19 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
     }
     table.data-table {
       width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
+      border-collapse: separate !important;
+      border-spacing: 0 !important;
       font-size: 8.5pt;
       margin: 8px 0;
-      page-break-inside: auto;
-      break-inside: auto;
+      page-break-inside: auto !important;
+      break-inside: auto !important;
     }
     table.data-table thead {
-      display: table-header-group;
+      display: table-header-group !important;
     }
     table.data-table tbody {
-      page-break-inside: auto;
-      break-inside: auto;
+      page-break-inside: auto !important;
+      break-inside: auto !important;
     }
     table.data-table tr {
       page-break-inside: avoid !important;
@@ -146,6 +150,7 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
       page-break-inside: avoid !important;
       break-inside: avoid !important;
       box-sizing: border-box;
+      background-color: #ffffff;
     }
     table.data-table th:last-child, table.data-table td:last-child {
       border-right: 1px solid #cbd5e1;
@@ -154,7 +159,7 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
       border-bottom: 1px solid #cbd5e1;
     }
     table.data-table th {
-      background-color: #f1f5f9;
+      background-color: #f1f5f9 !important;
       font-weight: 700;
       color: #0f172a;
       text-align: left;

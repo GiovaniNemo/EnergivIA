@@ -570,18 +570,16 @@ export class SignatureAuditService {
     // Se o documento foi editado e possui contentHtml personalizado, utilizá-lo diretamente como base
     if (doc.contentHtml && typeof doc.contentHtml === "string" && doc.contentHtml.trim()) {
       let customHtml = doc.contentHtml.trim();
-      if (
-        !customHtml.toLowerCase().includes("<html") ||
-        !customHtml.toLowerCase().includes("<head")
-      ) {
-        const template = String(doc.templateType).startsWith("CONTRATO")
-          ? CONTRACT_PF_TEMPLATE
-          : POWER_OF_ATTORNEY_PF_TEMPLATE;
-        const headMatch = template.match(/<head[\s\S]*?<\/head>/i);
-        const headHtml = headMatch ? headMatch[0] : "<head><meta charset='UTF-8'></head>";
-        const cleanBody = customHtml.replace(/<\/?(html|body|!DOCTYPE)[^>]*>/gi, "").trim();
-        customHtml = `<!DOCTYPE html>\n<html lang="pt-BR">\n${headHtml}\n<body>\n${cleanBody}\n</body>\n</html>`;
-      }
+      const template = String(doc.templateType).startsWith("CONTRATO")
+        ? CONTRACT_PF_TEMPLATE
+        : POWER_OF_ATTORNEY_PF_TEMPLATE;
+      const headMatch = template.match(/<head[\s\S]*?<\/head>/i);
+      const headHtml = headMatch ? headMatch[0] : "<head><meta charset='UTF-8'></head>";
+      const cleanBody = customHtml
+        .replace(/<head[\s\S]*?<\/head>/gi, "")
+        .replace(/<\/?(html|body|!DOCTYPE)[^>]*>/gi, "")
+        .trim();
+      customHtml = `<!DOCTYPE html>\n<html lang="pt-BR">\n${headHtml}\n<body>\n${cleanBody}\n</body>\n</html>`;
       if (clientSignatureBlock) {
         if (customHtml.includes("{{bloco_assinatura_cliente}}")) {
           customHtml = customHtml.replace(

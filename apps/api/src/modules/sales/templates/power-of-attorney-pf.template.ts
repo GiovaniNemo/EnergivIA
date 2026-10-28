@@ -7,12 +7,12 @@ export const POWER_OF_ATTORNEY_PF_TEMPLATE = `<!DOCTYPE html>
     @page {
       size: A4;
       margin: 25mm 20mm 25mm 20mm;
+      background: #ffffff;
     }
-    html, body {
+    html {
       background-color: #ffffff !important;
-      color: #1e293b;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -20,7 +20,11 @@ export const POWER_OF_ATTORNEY_PF_TEMPLATE = `<!DOCTYPE html>
       line-height: 1.6;
       margin: 0;
       padding: 0;
-      background: #ffffff !important;
+      background-color: #ffffff !important;
+      color: #1e293b;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      min-height: 100%;
     }
     .header {
       border-bottom: 2px solid #0f172a;

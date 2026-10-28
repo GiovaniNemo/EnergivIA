@@ -17,6 +17,7 @@ import {
   List,
 } from "lucide-react";
 import { getSaleDocumentForEditor, updateSaleDocumentContent } from "@/lib/sales-api";
+import { PdfViewerModal } from "./pdf-viewer-modal";
 
 interface LiveContractEditorModalProps {
   saleId: string;
@@ -37,6 +38,7 @@ export function LiveContractEditorModal({
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
   const [docData, setDocData] = useState<{
     id: string;
     title: string;
@@ -392,15 +394,15 @@ export function LiveContractEditorModal({
         {/* BOTÕES DE SALVAMENTO E VISUALIZAÇÃO */}
         <div className="flex items-center gap-2">
           {docData?.publicToken && (
-            <a
-              href={`/api/proxy/public/documents/${docData.publicToken}/pdf?regenerate=true`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => setShowPdfModal(true)}
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition-colors"
+              title="Visualizar documento em PDF com botão de voltar"
             >
               <ExternalLink className="h-3.5 w-3.5 text-slate-500" />
               <span className="hidden sm:inline">Visualizar PDF</span>
-            </a>
+            </button>
           )}
 
           {!docData?.isSigned && (
@@ -538,6 +540,17 @@ export function LiveContractEditorModal({
           </div>
         )}
       </main>
+
+      {/* MODAL DE VISUALIZAÇÃO DE PDF COM BOTÃO DE VOLTAR */}
+      {showPdfModal && docData?.publicToken && (
+        <PdfViewerModal
+          isOpen={showPdfModal}
+          onClose={() => setShowPdfModal(false)}
+          pdfUrl={`/api/proxy/public/documents/${docData.publicToken}/pdf?regenerate=true`}
+          title={docData.title || "Visualização da Minuta (PDF)"}
+          isSigned={docData.isSigned}
+        />
+      )}
     </div>
   );
 }

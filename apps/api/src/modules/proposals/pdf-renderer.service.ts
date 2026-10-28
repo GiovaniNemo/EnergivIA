@@ -241,6 +241,7 @@ export class PdfRendererService implements OnModuleDestroy {
         waitUntil: ["domcontentloaded", "load"],
         timeout: timeoutMs,
       });
+      await page.emulateMediaType("print");
       await page
         .evaluate(
           () =>
@@ -301,6 +302,7 @@ export class PdfRendererService implements OnModuleDestroy {
         waitUntil: ["domcontentloaded", "networkidle2"],
         timeout: timeoutMs,
       });
+      await page.emulateMediaType("print");
 
       let imageBuffer: Buffer;
       if (options.selector) {
