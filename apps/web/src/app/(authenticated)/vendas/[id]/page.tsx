@@ -99,6 +99,45 @@ const SALE_STATUS_OPTIONS = [
   { value: "CANCELLED", label: "Cancelada" },
 ];
 
+function parseUserAgentFriendly(ua?: string | null): string {
+  if (!ua || typeof ua !== "string") return "Navegador Web";
+  let os = "Dispositivo";
+  if (ua.includes("iPhone")) os = "iPhone (iOS)";
+  else if (ua.includes("iPad")) os = "iPad (iPadOS)";
+  else if (ua.includes("Android")) os = "Android";
+  else if (ua.includes("Windows NT 10.0")) os = "Windows 10/11";
+  else if (ua.includes("Windows NT 6.3")) os = "Windows 8.1";
+  else if (ua.includes("Windows NT 6.1")) os = "Windows 7";
+  else if (ua.includes("Macintosh") || ua.includes("Mac OS X")) os = "macOS";
+  else if (ua.includes("Linux")) os = "Linux";
+
+  const arch =
+    ua.includes("x64") || ua.includes("Win64") || ua.includes("WOW64") ? " (64-bit)" : "";
+
+  let browser = "Navegador";
+  if (ua.includes("OPR/") || ua.includes("Opera")) {
+    const match = ua.match(/OPR\/([\d.]+)/);
+    const ver = match ? " " + match[1].split(".")[0] : "";
+    browser = "Opera / Opera GX" + ver;
+  } else if (ua.includes("Edg/")) {
+    const match = ua.match(/Edg\/([\d.]+)/);
+    const ver = match ? " " + match[1].split(".")[0] : "";
+    browser = "Microsoft Edge" + ver;
+  } else if (ua.includes("Chrome/") && !ua.includes("Chromium")) {
+    const match = ua.match(/Chrome\/([\d.]+)/);
+    const ver = match ? " " + match[1].split(".")[0] : "";
+    browser = "Google Chrome" + ver;
+  } else if (ua.includes("Firefox/")) {
+    const match = ua.match(/Firefox\/([\d.]+)/);
+    const ver = match ? " " + match[1].split(".")[0] : "";
+    browser = "Mozilla Firefox" + ver;
+  } else if (ua.includes("Safari/") && !ua.includes("Chrome/")) {
+    browser = "Apple Safari";
+  }
+
+  return browser + " · " + os + arch;
+}
+
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
@@ -1543,6 +1582,12 @@ export default function VendaDetailPage(): JSX.Element {
                         <span>
                           <strong>IP Registrado:</strong> {doc.signerIp || "—"}
                         </span>
+                        {doc.signerUserAgent && (
+                          <span>
+                            <strong>Dispositivo:</strong>{" "}
+                            {parseUserAgentFriendly(doc.signerUserAgent)}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>

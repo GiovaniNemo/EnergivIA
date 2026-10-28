@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SignatureAuditService } from "../signature-audit.service";
+import { SignatureAuditService, parseUserAgentFriendly } from "../signature-audit.service";
 
 describe("SignatureAuditService", () => {
   let service: SignatureAuditService;
@@ -115,6 +115,37 @@ describe("SignatureAuditService", () => {
 
       const otpByCnpj = await service.requestOtp("token-pj", "12.345.678/0001-90");
       expect(otpByCnpj.success).toBe(true);
+    });
+  });
+
+  describe("parseUserAgentFriendly", () => {
+    it("should recognize Opera GX on Windows NT 10.0", () => {
+      const ua =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36 OPR/137.0.0.0";
+      const res = parseUserAgentFriendly(ua);
+      expect(res).toBe("Opera / Opera GX 137 · Windows 10/11 (64-bit)");
+    });
+
+    it("should recognize Google Chrome, Edge, and mobile devices", () => {
+      expect(
+        parseUserAgentFriendly(
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
+        )
+      ).toBe("Google Chrome 120 · Windows 10/11 (64-bit)");
+
+      expect(
+        parseUserAgentFriendly(
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Safari/604.1"
+        )
+      ).toBe("Apple Safari · iPhone (iOS)");
+
+      expect(
+        parseUserAgentFriendly(
+          "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36"
+        )
+      ).toBe("Google Chrome 120 · Android");
+
+      expect(parseUserAgentFriendly(null)).toBe("Navegador Web / Mobile");
     });
   });
 });

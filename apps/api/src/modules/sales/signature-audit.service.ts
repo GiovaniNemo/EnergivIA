@@ -19,6 +19,46 @@ function maskCpf(cpf?: string | null): string {
   return `***.${clean.substring(3, 6)}.${clean.substring(6, 9)}-**`;
 }
 
+export function parseUserAgentFriendly(ua?: string | null): string {
+  if (!ua || typeof ua !== "string") return "Navegador Web / Mobile";
+
+  let os = "Dispositivo";
+  if (ua.includes("iPhone")) os = "iPhone (iOS)";
+  else if (ua.includes("iPad")) os = "iPad (iPadOS)";
+  else if (ua.includes("Android")) os = "Android";
+  else if (ua.includes("Windows NT 10.0")) os = "Windows 10/11";
+  else if (ua.includes("Windows NT 6.3")) os = "Windows 8.1";
+  else if (ua.includes("Windows NT 6.1")) os = "Windows 7";
+  else if (ua.includes("Macintosh") || ua.includes("Mac OS X")) os = "macOS";
+  else if (ua.includes("Linux")) os = "Linux";
+
+  const arch =
+    ua.includes("x64") || ua.includes("Win64") || ua.includes("WOW64") ? " (64-bit)" : "";
+
+  let browser = "Navegador Web";
+  if (ua.includes("OPR/") || ua.includes("Opera")) {
+    const match = ua.match(/OPR\/([\d.]+)/);
+    const ver = match ? " " + match[1].split(".")[0] : "";
+    browser = "Opera / Opera GX" + ver;
+  } else if (ua.includes("Edg/")) {
+    const match = ua.match(/Edg\/([\d.]+)/);
+    const ver = match ? " " + match[1].split(".")[0] : "";
+    browser = "Microsoft Edge" + ver;
+  } else if (ua.includes("Chrome/") && !ua.includes("Chromium")) {
+    const match = ua.match(/Chrome\/([\d.]+)/);
+    const ver = match ? " " + match[1].split(".")[0] : "";
+    browser = "Google Chrome" + ver;
+  } else if (ua.includes("Firefox/")) {
+    const match = ua.match(/Firefox\/([\d.]+)/);
+    const ver = match ? " " + match[1].split(".")[0] : "";
+    browser = "Mozilla Firefox" + ver;
+  } else if (ua.includes("Safari/") && !ua.includes("Chrome/")) {
+    browser = "Apple Safari";
+  }
+
+  return browser + " · " + os + arch;
+}
+
 function maskEmail(email?: string | null): string {
   if (!email || !email.includes("@")) return "—";
   const [user, domain] = email.split("@");
@@ -328,6 +368,7 @@ export class SignatureAuditService {
       (typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null) ||
       "Navegador Web / Mobile";
 
+    const friendlyUserAgent = parseUserAgentFriendly(signerUserAgent);
     const signedAt = new Date();
     const signatureHash = crypto.randomUUID();
 
@@ -373,7 +414,7 @@ export class SignatureAuditService {
           <div class="row"><span class="label">CPF / Documento:</span><span class="val">${signerCpf}</span></div>
           <div class="row"><span class="label">E-mail Cadastrado:</span><span class="val">${signerEmail}</span></div>
           <div class="row"><span class="label">Endereço IP Registrado:</span><span class="val">${signerIp}</span></div>
-          <div class="row"><span class="label">Ambiente / Navegador:</span><span class="val">${signerUserAgent}</span></div>
+          <div class="row"><span class="label">Ambiente / Navegador:</span><span class="val"><strong>${friendlyUserAgent}</strong><span style="display: block; font-size: 7.5pt; color: #64748b; font-family: monospace; word-break: break-all; margin-top: 2px;">Identificador Forense: ${signerUserAgent}</span></span></div>
           <div class="row"><span class="label">Data e Hora da Assinatura:</span><span class="val">${signedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} (Horário de Brasília)</span></div>
           <div class="row"><span class="label">Validação OTP:</span><span class="val">Confirmado com sucesso via código de 5 dígitos enviado por e-mail</span></div>
 
