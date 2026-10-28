@@ -93,13 +93,128 @@ describe("SalesService", () => {
     });
   });
 
+  describe("listSales", () => {
+    it("should map customerName, totalValue and metadata from relations", async () => {
+      const mockSales = [
+        {
+          id: "sale-1",
+          saleNumber: 1001,
+          investmentAmount: 5657.6,
+          installationCity: "Maringá",
+          installationState: "PR",
+          distributionCompany: "COPEL",
+          consumerUnitNumber: "12345",
+          documentNumber: "111.222.333-44",
+          proposal: {
+            title: "Proposta Comercial - Giovani",
+            deal: {
+              lead: {
+                name: "Giovani",
+                email: "giovani@exemplo.com",
+                whatsapp: "44997423865",
+                cpfCnpj: "111.222.333-44",
+              },
+            },
+            renderedData: {
+              integrator: {
+                quotedSaleBrl: 5657.6,
+              },
+            },
+          },
+          documents: [
+            {
+              id: "doc-1",
+              templateType: "CONTRATO_PF",
+              title: "Contrato",
+              status: "SIGNED",
+              publicToken: "token-1",
+              signedAt: new Date(),
+              signerName: "Giovani",
+              signerCpf: "111.222.333-44",
+            },
+          ],
+        },
+      ];
+
+      mockPrisma.sale.findMany.mockResolvedValue(mockSales);
+      mockPrisma.sale.count.mockResolvedValue(1);
+
+      const result = await service.listSales("tenant-1");
+
+      expect(result.total).toBe(1);
+      expect(result.items[0].customerName).toBe("Giovani");
+      expect(result.items[0].customerEmail).toBe("giovani@exemplo.com");
+      expect(result.items[0].customerPhone).toBe("44997423865");
+      expect(result.items[0].totalValue).toBe(5657.6);
+      expect(result.items[0].city).toBe("Maringá");
+      expect(result.items[0].state).toBe("PR");
+      expect(result.items[0].utilityCompany).toBe("COPEL");
+      expect(result.items[0].ucNumber).toBe("12345");
+    });
+
+    it("should fallback to legalRepresentativeName or proposal deal title when lead name is absent", async () => {
+      const mockSales = [
+        {
+          id: "sale-2",
+          investmentAmount: 20493,
+          legalRepresentativeName: "Emerson Representante",
+          proposal: {
+            deal: {
+              title: "Sistema Fotovoltaico - Emerson",
+            },
+          },
+          documents: [],
+        },
+      ];
+
+      mockPrisma.sale.findMany.mockResolvedValue(mockSales);
+      mockPrisma.sale.count.mockResolvedValue(1);
+
+      const result = await service.listSales("tenant-1");
+      expect(result.items[0].customerName).toBe("Emerson Representante");
+      expect(result.items[0].totalValue).toBe(20493);
+    });
+  });
+
   describe("getSaleById", () => {
-    it("should return sale with relations", async () => {
-      const mockSale = { id: "sale-1", tenantId: "tenant-1", documents: [] };
+    it("should return sale with mapped fields and relations", async () => {
+      const mockSale = {
+        id: "sale-1",
+        tenantId: "tenant-1",
+        investmentAmount: 20493,
+        installationCity: "Maringá",
+        installationState: "PR",
+        distributionCompany: "COPEL (Paraná)",
+        consumerUnitNumber: "425245626256",
+        documentNumber: "139.731.969-07",
+        proposal: {
+          title: "Proposta Comercial - Emerson",
+          deal: {
+            lead: {
+              name: "Emerson",
+              email: "emerson@exemplo.com",
+              whatsapp: "44997423865",
+            },
+          },
+          renderedData: {
+            integrator: {
+              quotedSaleBrl: 20493,
+            },
+          },
+        },
+        documents: [],
+      };
       mockPrisma.sale.findFirst.mockResolvedValue(mockSale);
 
       const result = await service.getSaleById("tenant-1", "sale-1");
-      expect(result).toEqual(mockSale);
+      expect(result.customerName).toBe("Emerson");
+      expect(result.customerEmail).toBe("emerson@exemplo.com");
+      expect(result.customerPhone).toBe("44997423865");
+      expect(result.totalValue).toBe(20493);
+      expect(result.city).toBe("Maringá");
+      expect(result.state).toBe("PR");
+      expect(result.utilityCompany).toBe("COPEL (Paraná)");
+      expect(result.ucNumber).toBe("425245626256");
     });
 
     it("should throw NotFoundException if sale not found", async () => {

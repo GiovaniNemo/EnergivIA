@@ -73,8 +73,18 @@ export class SalesService {
       Number(simInput["potenciaKwp"]) ||
       0;
 
+    const rawIntegrator = (proposal.renderedData as Record<string, unknown> | null)?.[
+      "integrator"
+    ] as Record<string, unknown> | undefined;
+    const quotedSaleBrl =
+      typeof rawIntegrator?.["quotedSaleBrl"] === "number" ? rawIntegrator["quotedSaleBrl"] : null;
+    const dealValue = proposal.deal?.value ? Number(proposal.deal.value) : null;
+
     const investmentAmount =
-      Number(simInput["investmentAmount"]) || Number(simInput["valorTotal"]) || 0;
+      (quotedSaleBrl ??
+        (Number(simInput["investmentAmount"]) || Number(simInput["valorTotal"]) || 0)) ||
+      dealValue ||
+      0;
 
     // Determinar se é PF ou PJ
     const rawDoc = lead?.cpfCnpj?.replace(/\D/g, "") ?? "";
@@ -162,6 +172,9 @@ export class SalesService {
           },
         },
         { documentNumber: { contains: search } },
+        { legalRepresentativeName: { contains: search, mode: "insensitive" } },
+        { installationCity: { contains: search, mode: "insensitive" } },
+        { distributionCompany: { contains: search, mode: "insensitive" } },
         ...(Number.isFinite(num) ? [{ saleNumber: num }] : []),
       ];
     }
@@ -190,6 +203,8 @@ export class SalesService {
               status: true,
               publicToken: true,
               signedAt: true,
+              signerName: true,
+              signerCpf: true,
             },
           },
         },
@@ -197,12 +212,60 @@ export class SalesService {
       this.prisma.sale.count({ where }),
     ]);
 
-    const mappedItems = items.map((sale) => ({
-      ...sale,
-      documents: sale.documents?.map((d) =>
-        formatSaleDocument(d as unknown as Record<string, unknown>)
-      ),
-    }));
+    const mappedItems = items.map((sale) => {
+      const lead = sale.proposal?.deal?.lead;
+      const signerDoc = sale.documents?.find((d) => d.signerName?.trim());
+      const proposalDeal = sale.proposal?.deal;
+
+      const customerName =
+        lead?.name?.trim() ||
+        sale.legalRepresentativeName?.trim() ||
+        signerDoc?.signerName?.trim() ||
+        proposalDeal?.title
+          ?.replace(/^(Sistema Fotovoltaico|Proposta Comercial)\s*[-–—]\s*/i, "")
+          .trim() ||
+        "Cliente não informado";
+
+      const customerEmail = lead?.email || null;
+      const customerPhone =
+        lead?.whatsapp || (lead as unknown as { phone?: string })?.phone || null;
+      const customerCpfCnpj = sale.documentNumber || lead?.cpfCnpj || signerDoc?.signerCpf || null;
+
+      const rawRenderedIntegrator = (
+        sale.proposal?.renderedData as Record<string, unknown> | null
+      )?.["integrator"] as Record<string, unknown> | undefined;
+      const quotedSaleBrl =
+        typeof rawRenderedIntegrator?.["quotedSaleBrl"] === "number"
+          ? rawRenderedIntegrator["quotedSaleBrl"]
+          : null;
+      const dealVal =
+        proposalDeal?.value && typeof proposalDeal.value === "number" && proposalDeal.value > 0
+          ? proposalDeal.value
+          : null;
+
+      const totalValue =
+        (sale.investmentAmount && sale.investmentAmount > 0 ? sale.investmentAmount : null) ??
+        quotedSaleBrl ??
+        dealVal ??
+        sale.investmentAmount ??
+        0;
+
+      return {
+        ...sale,
+        customerName,
+        customerEmail,
+        customerPhone,
+        customerCpfCnpj,
+        city: sale.installationCity,
+        state: sale.installationState,
+        utilityCompany: sale.distributionCompany,
+        ucNumber: sale.consumerUnitNumber,
+        totalValue,
+        documents: sale.documents?.map((d) =>
+          formatSaleDocument(d as unknown as Record<string, unknown>)
+        ),
+      };
+    });
 
     return {
       items: mappedItems,
@@ -238,12 +301,52 @@ export class SalesService {
     }
 
     const lead = sale.proposal?.deal?.lead;
+    const signerDoc = sale.documents?.find((d) => d.signerName?.trim());
+    const proposalDeal = sale.proposal?.deal;
+
+    const customerName =
+      lead?.name?.trim() ||
+      sale.legalRepresentativeName?.trim() ||
+      signerDoc?.signerName?.trim() ||
+      proposalDeal?.title
+        ?.replace(/^(Sistema Fotovoltaico|Proposta Comercial)\s*[-–—]\s*/i, "")
+        .trim() ||
+      "";
+
+    const customerEmail = lead?.email || null;
+    const customerPhone = lead?.whatsapp || (lead as unknown as { phone?: string })?.phone || null;
+    const customerCpfCnpj = sale.documentNumber || lead?.cpfCnpj || signerDoc?.signerCpf || null;
+
+    const rawRenderedIntegrator = (sale.proposal?.renderedData as Record<string, unknown> | null)?.[
+      "integrator"
+    ] as Record<string, unknown> | undefined;
+    const quotedSaleBrl =
+      typeof rawRenderedIntegrator?.["quotedSaleBrl"] === "number"
+        ? rawRenderedIntegrator["quotedSaleBrl"]
+        : null;
+    const dealVal =
+      proposalDeal?.value && typeof proposalDeal.value === "number" && proposalDeal.value > 0
+        ? proposalDeal.value
+        : null;
+
+    const totalValue =
+      (sale.investmentAmount && sale.investmentAmount > 0 ? sale.investmentAmount : null) ??
+      quotedSaleBrl ??
+      dealVal ??
+      sale.investmentAmount ??
+      0;
 
     return {
       ...sale,
-      ...(lead?.name && { customerName: lead.name }),
-      ...(lead?.email && { customerEmail: lead.email }),
-      ...(lead?.whatsapp && { customerPhone: lead.whatsapp }),
+      customerName,
+      customerEmail,
+      customerPhone,
+      customerCpfCnpj,
+      city: sale.installationCity,
+      state: sale.installationState,
+      utilityCompany: sale.distributionCompany,
+      ucNumber: sale.consumerUnitNumber,
+      totalValue,
       documents: sale.documents?.map((d) =>
         formatSaleDocument(d as unknown as Record<string, unknown>)
       ),

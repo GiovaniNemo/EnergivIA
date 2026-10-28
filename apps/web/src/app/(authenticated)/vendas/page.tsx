@@ -23,29 +23,51 @@ import { cn } from "@energivia/utils";
 
 interface SaleListItem {
   id: string;
+  saleNumber?: number | null;
   status: string;
   customerType: string;
-  customerName: string;
-  customerEmail: string | null;
-  customerPhone: string | null;
-  customerCpfCnpj: string | null;
-  city: string | null;
-  state: string | null;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  customerCpfCnpj?: string | null;
+  documentNumber?: string | null;
+  city?: string | null;
+  state?: string | null;
+  installationCity?: string | null;
+  installationState?: string | null;
   systemPowerKwp: number | null;
-  totalValue: number | null;
-  utilityCompany: string | null;
-  ucNumber: string | null;
+  totalValue?: number | null;
+  investmentAmount?: number | null;
+  utilityCompany?: string | null;
+  distributionCompany?: string | null;
+  ucNumber?: string | null;
+  consumerUnitNumber?: string | null;
+  legalRepresentativeName?: string | null;
   createdAt: string;
   proposal?: {
     id: string;
     title: string;
-    customer_name: string;
+    customer_name?: string;
+    deal?: {
+      title?: string;
+      value?: number;
+      lead?: {
+        name?: string;
+        email?: string;
+        whatsapp?: string;
+        cpfCnpj?: string;
+      };
+    };
   } | null;
   documents?: Array<{
     id: string;
-    documentType: string;
-    signStatus: string;
-    signToken: string;
+    templateType?: string;
+    documentType?: string;
+    status?: string;
+    signStatus?: string;
+    publicToken?: string;
+    signToken?: string;
+    signerName?: string;
   }>;
 }
 
@@ -132,13 +154,24 @@ export default function VendasPage(): JSX.Element {
     return sales.filter((item) => {
       const matchStatus = selectedStatus === "ALL" || item.status === selectedStatus;
       const term = search.trim().toLowerCase();
+      const customerName = (
+        item.customerName ||
+        item.proposal?.deal?.lead?.name ||
+        item.legalRepresentativeName ||
+        ""
+      ).toLowerCase();
+      const docNum = (item.customerCpfCnpj || item.documentNumber || "").toLowerCase();
+      const city = (item.city || item.installationCity || "").toLowerCase();
+      const utility = (item.utilityCompany || item.distributionCompany || "").toLowerCase();
+
       const matchSearch =
         !term ||
-        item.customerName?.toLowerCase().includes(term) ||
-        item.customerCpfCnpj?.toLowerCase().includes(term) ||
-        item.city?.toLowerCase().includes(term) ||
-        item.utilityCompany?.toLowerCase().includes(term) ||
-        item.id.toLowerCase().includes(term);
+        customerName.includes(term) ||
+        docNum.includes(term) ||
+        city.includes(term) ||
+        utility.includes(term) ||
+        item.id.toLowerCase().includes(term) ||
+        (item.saleNumber != null && String(item.saleNumber).includes(term));
 
       return matchStatus && matchSearch;
     });
@@ -151,7 +184,10 @@ export default function VendasPage(): JSX.Element {
     ).length;
     const signing = sales.filter((s) => s.status === "SIGNATURE_PENDING").length;
     const signed = sales.filter((s) => s.status === "SIGNED" || s.status === "COMPLETED").length;
-    const totalRevenue = sales.reduce((acc, s) => acc + (s.totalValue || 0), 0);
+    const totalRevenue = sales.reduce((acc, s) => {
+      const val = s.totalValue ?? s.investmentAmount ?? 0;
+      return acc + (typeof val === "number" ? val : Number(val) || 0);
+    }, 0);
 
     return { total, awaiting, signing, signed, totalRevenue };
   }, [sales]);
@@ -338,6 +374,17 @@ export default function VendasPage(): JSX.Element {
               sale.documents.length > 0 &&
               sale.documents.every((d) => (d?.status || d?.signStatus) === "SIGNED");
 
+            const customerName =
+              sale.customerName ||
+              sale.proposal?.deal?.lead?.name ||
+              sale.legalRepresentativeName ||
+              "Cliente não informado";
+            const city = sale.city || sale.installationCity;
+            const state = sale.state || sale.installationState;
+            const utility = sale.utilityCompany || sale.distributionCompany;
+            const uc = sale.ucNumber || sale.consumerUnitNumber;
+            const saleValue = sale.totalValue ?? sale.investmentAmount ?? 0;
+
             return (
               <Card
                 key={sale.id}
@@ -355,22 +402,27 @@ export default function VendasPage(): JSX.Element {
                         <StatusIcon className="h-3 w-3" />
                         {statusConfig.label}
                       </span>
-                      <span className="text-[11px] text-[var(--color-muted-foreground)]">
-                        {formatDate(sale.createdAt)}
-                      </span>
+                      <div className="flex items-center gap-2 text-[11px] text-[var(--color-muted-foreground)]">
+                        {sale.saleNumber && (
+                          <span className="font-mono font-semibold text-[var(--color-foreground)]">
+                            #{sale.saleNumber}
+                          </span>
+                        )}
+                        <span>{formatDate(sale.createdAt)}</span>
+                      </div>
                     </div>
 
                     <CardTitle className="mt-2 text-base font-semibold leading-snug text-[var(--color-foreground)]">
-                      {sale.customerName || "Cliente não informado"}
+                      {customerName}
                     </CardTitle>
 
                     <div className="flex items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
                       <span className="rounded bg-[var(--color-muted)] px-1.5 py-0.5 font-medium">
                         {sale.customerType === "PJ" ? "Pessoa Jurídica" : "Pessoa Física"}
                       </span>
-                      {sale.city && sale.state && (
+                      {city && state && (
                         <span>
-                          {sale.city}/{sale.state}
+                          {city}/{state}
                         </span>
                       )}
                     </div>
@@ -392,16 +444,16 @@ export default function VendasPage(): JSX.Element {
                           Valor da Venda
                         </span>
                         <div className="font-semibold text-[var(--color-foreground)]">
-                          {formatBrl(sale.totalValue)}
+                          {formatBrl(saleValue)}
                         </div>
                       </div>
-                      {sale.utilityCompany && (
+                      {utility && (
                         <div className="col-span-2 pt-1 border-t border-[var(--color-border)]/50 flex justify-between">
                           <span className="text-[11px] text-[var(--color-muted-foreground)]">
                             Concessionária / UC:
                           </span>
                           <span className="font-medium text-[var(--color-foreground)]">
-                            {sale.utilityCompany} {sale.ucNumber ? `· UC ${sale.ucNumber}` : ""}
+                            {utility} {uc ? `· UC ${uc}` : ""}
                           </span>
                         </div>
                       )}
