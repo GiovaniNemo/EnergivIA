@@ -837,4 +837,4 @@
 | task-846 | Backend: Preservação de contentHtml em SignatureAuditService e testes | completed | Garantida integridade de contentHtml salvo no fluxo final de assinatura bilateral e auditoria com testes Vitest |
 | task-847 | Frontend: Remover cards de personalização e integrar ações de edição em vendas/[id] | completed | Cards removidos da aba Ficha Cadastral e Documentos; botões 'Abrir e Editar Contrato/Procuração' adicionados |
 | task-848 | Frontend: Refinar LiveContractEditorModal com toolbar, + Nova Cláusula e atalhos | completed | Folha A4 com estilos profissionais de contrato, atalho Ctrl+S, toolbar de formatação, inserção de cláusula e modo somente leitura pós-assinatura |
-| task-849 | Validação completa (testes automatizados, lint/build), commit e push | in-progress | Testes Vitest 100% aprovados em sales, linters web/api com 0 erros e build de 85 rotas Next.js aprovado |
+| task-849 | Validação completa (testes automatizados, lint/build), commit e push | completed | Testes Vitest 100% aprovados em sales, linters web/api com 0 erros, build de 85 rotas Next.js aprovado e push realizado para origin/main |
