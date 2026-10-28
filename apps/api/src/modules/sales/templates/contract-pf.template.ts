@@ -161,6 +161,57 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
     {{cidade_instalacao}} - {{estado_instalacao}}, {{data_atual}}.
   </p>
 
+  <div class="signatures-wrapper" style="margin-top: 35px; page-break-inside: avoid;">
+    <div class="section-title">8. DAS ASSINATURAS E ACEITE FORMAL</div>
+    <p style="font-size: 9.5pt; color: #475569; margin-bottom: 12px;">
+      Em testemunho da avença, as partes firmam o presente instrumento por meio de assinatura eletrônica qualificada/avançada:
+    </p>
+
+    <div style="display: table; width: 100%; border-spacing: 12px 0; margin-left: -12px; margin-right: -12px;">
+      <div style="display: table-row;">
+        <!-- CONTRATADA -->
+        <div style="display: table-cell; width: 50%; vertical-align: top; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; background: #f8fafc;">
+          <div style="font-size: 8pt; font-weight: 700; color: #059669; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+            CONTRATADA (Empresa Integradora)
+          </div>
+          <div style="font-size: 9.5pt; font-weight: 700; color: #0f172a; margin-bottom: 2px;">
+            {{nome_empresa}}
+          </div>
+          <div style="font-size: 8pt; color: #475569; margin-bottom: 8px;">
+            Representante Comercial: <strong>{{nome_vendedor}}</strong>
+          </div>
+          <div style="border: 1px dashed #059669; background: #ecfdf5; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 8pt; font-weight: 700; color: #047857; text-transform: uppercase;">
+              ✓ ASSINADO DIGITALMENTE
+            </div>
+            <div style="font-size: 7.5pt; color: #065f46; margin-top: 2px;">
+              Autenticado institucionalmente via Plataforma EnergivIA
+            </div>
+            <div style="font-size: 7pt; font-family: monospace; color: #047857; margin-top: 3px;">
+              Emissão e Conformidade: {{data_atual}}
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTRATANTE -->
+        <div style="display: table-cell; width: 50%; vertical-align: top; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; background: #f8fafc;">
+          <div style="font-size: 8pt; font-weight: 700; color: #059669; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+            CONTRATANTE (Cliente Titular)
+          </div>
+          <div style="font-size: 9.5pt; font-weight: 700; color: #0f172a; margin-bottom: 2px;">
+            {{nome_cliente}}
+          </div>
+          <div style="font-size: 8pt; color: #475569; margin-bottom: 8px;">
+            CPF / Documento: <strong>{{cpf_cliente}}</strong>
+          </div>
+          {{bloco_assinatura_cliente}}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{folha_auditoria_anexa}}
+
 </body>
 </html>
 `;

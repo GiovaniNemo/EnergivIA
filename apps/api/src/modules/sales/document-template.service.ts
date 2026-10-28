@@ -19,6 +19,20 @@ export class DocumentTemplateService {
   replaceTags(template: string, data: Record<string, string | number | undefined | null>): string {
     return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
       const val = data[key];
+      if (key === "folha_auditoria_anexa") {
+        return val ? String(val) : "";
+      }
+      if (key === "bloco_assinatura_cliente") {
+        if (val && val !== "—") return String(val);
+        return `<div style="border: 1px dashed #94a3b8; background: #ffffff; border-radius: 6px; padding: 8px; text-align: center;">
+          <div style="font-size: 7.5pt; font-weight: 600; color: #64748b; text-transform: uppercase;">
+            Aguardando Assinatura Eletrônica
+          </div>
+          <div style="font-size: 7pt; color: #94a3b8; margin-top: 2px;">
+            Validação em 2 etapas via OTP por e-mail
+          </div>
+        </div>`;
+      }
       if (val === undefined || val === null || val === "") {
         return "—";
       }

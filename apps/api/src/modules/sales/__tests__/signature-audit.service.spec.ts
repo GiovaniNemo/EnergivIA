@@ -148,4 +148,63 @@ describe("SignatureAuditService", () => {
       expect(parseUserAgentFriendly(null)).toBe("Navegador Web / Mobile");
     });
   });
+
+  describe("signDocument", () => {
+    it("should build complete document with bilateral signatures and attached audit trail", async () => {
+      const mockDoc = {
+        id: "doc-1",
+        title: "Contrato de Venda e Instalação Solar - #1002",
+        publicToken: "token-123",
+        originalPdfHash: "hash-original-sha256",
+        templateType: "CONTRATO_PF",
+        status: "PENDING",
+        sale: {
+          id: "sale-1",
+          investmentAmount: 20493,
+          systemPowerKwp: 7.44,
+          sellerName: "Consultor Técnico",
+          tenant: { name: "EnergivIA Soluções Solares" },
+          proposal: {
+            deal: {
+              lead: {
+                name: "Emerson",
+                cpfCnpj: "139.731.969-07",
+                email: "emerson@exemplo.com",
+              },
+            },
+          },
+        },
+      };
+
+      mockPrisma.saleDocument.findUnique.mockResolvedValue(mockDoc);
+      mockPrisma.saleDocument.update.mockResolvedValue({ ...mockDoc, status: "SIGNED" });
+      mockPrisma.sale.update.mockResolvedValue({});
+
+      const req = {
+        headers: { "user-agent": "Opera/137", "x-forwarded-for": "34.204.200.9" },
+        ip: "34.204.200.9",
+      };
+
+      const res = await service.signDocument(
+        "token-123",
+        {
+          signatureImage:
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+          signerName: "Emerson",
+          signerCpf: "139.731.969-07",
+        },
+        req
+      );
+
+      expect(res.signed).toBe(true);
+      expect(mockDocTemplateService.buildDocumentHtml).toHaveBeenCalled();
+      const passedData = mockDocTemplateService.buildDocumentHtml.mock.calls[0][1];
+      expect(passedData.nome_cliente).toBe("Emerson");
+      expect(passedData.cpf_cliente).toBe("139.731.969-07");
+      expect(passedData.bloco_assinatura_cliente).toContain("data:image/png");
+      expect(passedData.folha_auditoria_anexa).toContain("Certificado de Assinatura Eletrônica");
+      expect(mockDocTemplateService.generatePdfWithHash).toHaveBeenCalled();
+      expect(mockDocTemplateService.savePdfToDisk).toHaveBeenCalled();
+    });
+  });
 });

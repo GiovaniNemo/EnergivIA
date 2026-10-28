@@ -1324,6 +1324,35 @@ export default function VendaDetailPage(): JSX.Element {
             </Card>
           </div>
 
+          {/* Banner de Esclarecimento sobre Assinaturas Bilaterais */}
+          <div className="rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 p-4 text-xs space-y-2">
+            <div className="font-semibold text-[var(--color-foreground)] flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-[var(--color-primary)]" />
+              Como Funciona a Assinatura Bilateral (Você e o Cliente):
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 text-[var(--color-muted-foreground)]">
+              <div className="rounded-lg bg-[var(--color-background)]/80 p-3 border border-[var(--color-border)]/50">
+                <span className="font-semibold text-[var(--color-foreground)] block mb-1">
+                  1. Sua Empresa (CONTRATADA)
+                </span>
+                Assinada e autenticada digitalmente de forma automática pela plataforma EnergivIA na
+                emissão do documento, com carimbo institucional e hash SHA-256.
+              </div>
+              <div className="rounded-lg bg-[var(--color-background)]/80 p-3 border border-[var(--color-border)]/50">
+                <span className="font-semibold text-[var(--color-foreground)] block mb-1">
+                  2. O Cliente (CONTRATANTE)
+                </span>
+                Assina pelo link seguro (celular/computador) com autenticação em 2 etapas (OTP por
+                e-mail e conferência de CPF).
+              </div>
+            </div>
+            <p className="text-[11px] text-[var(--color-muted-foreground)] pt-1">
+              * O documento PDF final contém o <strong>contrato integral</strong> com todas as
+              cláusulas, os <strong>blocos de assinatura de ambas as partes</strong> e a{" "}
+              <strong>folha de trilha de auditoria probatória</strong> anexa no final.
+            </p>
+          </div>
+
           {/* List of Generated Documents */}
           <Card className="border-[var(--color-border)] bg-[var(--color-card)]">
             <CardHeader className="pb-3">
@@ -1414,10 +1443,12 @@ export default function VendaDetailPage(): JSX.Element {
                             href={`/api/proxy/public/documents/${token}/pdf`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-xs font-medium text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-muted)]"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-muted)] hover:border-[var(--color-primary)]/40 transition-colors"
                           >
-                            <Download className="h-3.5 w-3.5" />
-                            {isSigned ? "PDF com Auditoria" : "Baixar PDF"}
+                            <Download className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                            {isSigned
+                              ? "Visualizar Documento Completo Assinado"
+                              : "Visualizar Minuta em PDF"}
                           </a>
 
                           {/* Se não estiver assinado, permite copiar o link e copiar texto de WhatsApp */}

@@ -130,6 +130,23 @@ export const POWER_OF_ATTORNEY_PF_TEMPLATE = `<!DOCTYPE html>
     {{cidade_instalacao}} - {{estado_instalacao}}, {{data_atual}}.
   </p>
 
+  <div class="signature-box" style="margin-top: 35px; text-align: center; page-break-inside: avoid;">
+    <div style="max-width: 420px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; background: #f8fafc;">
+      <div style="font-size: 8.5pt; font-weight: 700; color: #059669; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+        OUTORGANTE (Titular da Unidade Consumidora)
+      </div>
+      <div style="font-size: 10pt; font-weight: 700; color: #0f172a; margin-bottom: 2px;">
+        {{nome_cliente}}
+      </div>
+      <div style="font-size: 8.5pt; color: #475569; margin-bottom: 10px;">
+        CPF / Documento: <strong>{{cpf_cliente}}</strong>
+      </div>
+      {{bloco_assinatura_cliente}}
+    </div>
+  </div>
+
+  {{folha_auditoria_anexa}}
+
 </body>
 </html>
 `;
