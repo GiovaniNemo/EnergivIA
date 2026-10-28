@@ -564,6 +564,34 @@ export class SignatureAuditService {
       `;
     }
 
+    // Se o documento foi editado e possui contentHtml personalizado, utilizá-lo diretamente como base
+    if (doc.contentHtml && typeof doc.contentHtml === "string" && doc.contentHtml.trim()) {
+      let customHtml = doc.contentHtml;
+      if (clientSignatureBlock) {
+        if (customHtml.includes("{{bloco_assinatura_cliente}}")) {
+          customHtml = customHtml.replace(
+            /\{\{bloco_assinatura_cliente\}\}/g,
+            clientSignatureBlock
+          );
+        } else {
+          customHtml = customHtml.replace(
+            /(<\/body>|$)/i,
+            `<div style="margin-top: 20px;">${clientSignatureBlock}</div>$1`
+          );
+        }
+      }
+      if (auditSheetHtml) {
+        if (customHtml.includes("{{folha_auditoria_anexa}}")) {
+          customHtml = customHtml.replace(/\{\{folha_auditoria_anexa\}\}/g, auditSheetHtml);
+        } else if (customHtml.includes("</body>")) {
+          customHtml = customHtml.replace("</body>", `${auditSheetHtml}</body>`);
+        } else {
+          customHtml += auditSheetHtml;
+        }
+      }
+      return customHtml;
+    }
+
     const signerNameResolved =
       signMeta?.signerName || lead?.name || doc.sale?.legalRepresentativeName || "Cliente";
 

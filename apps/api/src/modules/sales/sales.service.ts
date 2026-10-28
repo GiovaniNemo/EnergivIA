@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException, Logger, Optional, Inject } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+  Optional,
+  Inject,
+} from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CustomerType, SaleStatus, DocumentType, DocumentSignStatus } from "@prisma/client";
 import { UpdateSaleDto } from "./dto/update-sale.dto";
@@ -12,6 +19,7 @@ const SALE_STATUS_DOCS_PENDING = (SaleStatus?.DOCUMENTS_PENDING ??
   "DOCUMENTS_PENDING") as SaleStatus;
 const SALE_STATUS_CANCELED = (SaleStatus?.CANCELED ?? "CANCELED") as SaleStatus;
 const DOC_STATUS_PENDING = (DocumentSignStatus?.PENDING ?? "PENDING") as DocumentSignStatus;
+const DOC_STATUS_SIGNED = (DocumentSignStatus?.SIGNED ?? "SIGNED") as DocumentSignStatus;
 const DOC_TYPE_CONTRATO_PF = (DocumentType?.CONTRATO_PF ?? "CONTRATO_PF") as DocumentType;
 const DOC_TYPE_CONTRATO_PJ = (DocumentType?.CONTRATO_PJ ?? "CONTRATO_PJ") as DocumentType;
 
@@ -548,7 +556,7 @@ export class SalesService {
     const fileName = `doc-${sale.id}-${documentType.toLowerCase()}-${Date.now()}.pdf`;
     this.documentTemplateService.savePdfToDisk(fileName, pdfBuffer);
 
-    // Salvar registro no banco já com dados iniciais do signatário
+    // Salvar registro no banco já com dados iniciais do signatário e HTML editável
     const saleDoc = await this.prisma.saleDocument.create({
       data: {
         saleId: sale.id,
@@ -557,6 +565,7 @@ export class SalesService {
         title: docTitle,
         originalPdfUrl: `/uploads/sales-documents/${fileName}`,
         originalPdfHash: sha256Hash,
+        contentHtml: html,
         status: DOC_STATUS_PENDING,
         signerName,
         signerCpf: signerCpf !== "—" ? signerCpf : null,
@@ -573,5 +582,122 @@ export class SalesService {
     }
 
     return formatSaleDocument(saleDoc as unknown as Record<string, unknown>);
+  }
+
+  async getDocumentForEditor(tenantId: string, saleId: string, docId: string) {
+    if (!this.documentTemplateService) {
+      throw new NotFoundException("Serviço de geração de documentos não inicializado.");
+    }
+
+    const doc = await this.prisma.saleDocument.findFirst({
+      where: { id: docId, saleId, tenantId },
+      include: {
+        sale: {
+          include: {
+            proposal: {
+              include: {
+                simulation: true,
+                deal: {
+                  include: {
+                    lead: true,
+                  },
+                },
+              },
+            },
+            tenant: true,
+          },
+        },
+      },
+    });
+
+    if (!doc) {
+      throw new NotFoundException("Documento não encontrado.");
+    }
+
+    let contentHtml = doc.contentHtml;
+    if (!contentHtml || !contentHtml.trim()) {
+      const lead = doc.sale?.proposal?.deal?.lead;
+      const tenant = doc.sale?.tenant;
+      const formattedDate = new Date(doc.createdAt || Date.now()).toLocaleDateString("pt-BR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      const data = await this.documentTemplateService.prepareContractVariables({
+        sale: doc.sale,
+        tenant,
+        lead,
+        formattedDate,
+      });
+
+      contentHtml = this.documentTemplateService.buildDocumentHtml(doc.templateType, data);
+    }
+
+    return {
+      id: doc.id,
+      saleId: doc.saleId,
+      templateType: doc.templateType,
+      title: doc.title,
+      status: doc.status,
+      isSigned: doc.status === DOC_STATUS_SIGNED,
+      publicToken: doc.publicToken,
+      contentHtml,
+      originalPdfUrl: doc.originalPdfUrl,
+      updatedAt: doc.updatedAt,
+    };
+  }
+
+  async updateDocumentContent(
+    tenantId: string,
+    saleId: string,
+    docId: string,
+    contentHtml: string
+  ) {
+    if (!this.documentTemplateService) {
+      throw new NotFoundException("Serviço de geração de documentos não inicializado.");
+    }
+
+    if (!contentHtml || typeof contentHtml !== "string" || !contentHtml.trim()) {
+      throw new BadRequestException("O conteúdo do documento não pode estar vazio.");
+    }
+
+    const doc = await this.prisma.saleDocument.findFirst({
+      where: { id: docId, saleId, tenantId },
+    });
+
+    if (!doc) {
+      throw new NotFoundException("Documento não encontrado.");
+    }
+
+    if (doc.status === DOC_STATUS_SIGNED) {
+      throw new BadRequestException(
+        "Documentos já assinados possuem integridade jurídica e não podem ser editados."
+      );
+    }
+
+    const { pdfBuffer, sha256Hash } =
+      await this.documentTemplateService.generatePdfWithHash(contentHtml);
+
+    const fileName = `doc-${doc.saleId}-${doc.templateType.toLowerCase()}-${Date.now()}.pdf`;
+    this.documentTemplateService.savePdfToDisk(fileName, pdfBuffer);
+
+    const updatedDoc = await this.prisma.saleDocument.update({
+      where: { id: doc.id },
+      data: {
+        contentHtml,
+        originalPdfUrl: `/uploads/sales-documents/${fileName}`,
+        originalPdfHash: sha256Hash,
+      },
+    });
+
+    return {
+      id: updatedDoc.id,
+      title: updatedDoc.title,
+      contentHtml: updatedDoc.contentHtml,
+      originalPdfUrl: updatedDoc.originalPdfUrl,
+      originalPdfHash: updatedDoc.originalPdfHash,
+      status: updatedDoc.status,
+    };
   }
 }

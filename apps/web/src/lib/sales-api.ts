@@ -69,6 +69,40 @@ export async function generateSaleDocument(
   });
 }
 
+export async function getSaleDocumentForEditor(
+  saleId: string,
+  docId: string
+): Promise<{
+  id: string;
+  saleId: string;
+  templateType: string;
+  title: string;
+  contentHtml: string;
+  status: string;
+  isSigned: boolean;
+  publicToken: string;
+  originalPdfUrl?: string;
+  updatedAt?: string;
+}> {
+  return apiFetch(
+    `/sales/${encodeURIComponent(saleId)}/documents/${encodeURIComponent(docId)}/editor`
+  );
+}
+
+export async function updateSaleDocumentContent(
+  saleId: string,
+  docId: string,
+  contentHtml: string
+): Promise<any> {
+  return apiFetch(
+    `/sales/${encodeURIComponent(saleId)}/documents/${encodeURIComponent(docId)}/content`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ contentHtml }),
+    }
+  );
+}
+
 // Funções públicas de assinatura
 export async function getPublicDocument(token: string): Promise<any> {
   return apiFetch(`/public/documents/${encodeURIComponent(token)}`);

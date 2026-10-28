@@ -48,4 +48,23 @@ export class SalesController {
   ) {
     return this.salesService.generateSaleDocument(tenantId, id, body.documentType);
   }
+
+  @Get(":id/documents/:docId/editor")
+  getDocumentForEditor(
+    @TenantId() tenantId: string,
+    @Param("id") id: string,
+    @Param("docId") docId: string
+  ) {
+    return this.salesService.getDocumentForEditor(tenantId, id, docId);
+  }
+
+  @Patch(":id/documents/:docId/content")
+  updateDocumentContent(
+    @TenantId() tenantId: string,
+    @Param("id") id: string,
+    @Param("docId") docId: string,
+    @Body() body: { contentHtml: string }
+  ) {
+    return this.salesService.updateDocumentContent(tenantId, id, docId, body.contentHtml);
+  }
 }

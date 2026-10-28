@@ -23,9 +23,24 @@ describe("SalesService", () => {
       lead: {
         update: vi.fn(),
       },
+      saleDocument: {
+        findFirst: vi.fn(),
+        update: vi.fn(),
+        create: vi.fn(),
+      },
     };
 
-    service = new SalesService(mockPrisma);
+    const mockDocumentTemplateService = {
+      prepareContractVariables: vi.fn().mockResolvedValue({ nome_cliente: "João" }),
+      buildDocumentHtml: vi.fn().mockReturnValue("<html>Corpo do Contrato Gerado</html>"),
+      generatePdfWithHash: vi.fn().mockResolvedValue({
+        pdfBuffer: Buffer.from("pdf-data"),
+        sha256Hash: "hash-sha256-mocked",
+      }),
+      savePdfToDisk: vi.fn(),
+    } as any;
+
+    service = new SalesService(mockPrisma, mockDocumentTemplateService);
   });
 
   describe("convertToSale", () => {
@@ -264,6 +279,82 @@ describe("SalesService", () => {
           whatsapp: "(31) 98888-7777",
         }),
       });
+    });
+  });
+
+  describe("getDocumentForEditor", () => {
+    it("should return existing document contentHtml if present", async () => {
+      const mockDoc = {
+        id: "doc-1",
+        saleId: "sale-1",
+        tenantId: "tenant-1",
+        templateType: "CONTRATO_PF",
+        title: "Contrato de Compra e Venda Solar",
+        status: "PENDING",
+        publicToken: "token-abc",
+        contentHtml: "<p>Cláusula 1ª Original</p>",
+        originalPdfUrl: "/uploads/doc-1.pdf",
+        updatedAt: new Date(),
+      };
+      mockPrisma.saleDocument.findFirst.mockResolvedValue(mockDoc);
+
+      const result = await service.getDocumentForEditor("tenant-1", "sale-1", "doc-1");
+      expect(result.id).toBe("doc-1");
+      expect(result.contentHtml).toBe("<p>Cláusula 1ª Original</p>");
+      expect(result.isSigned).toBe(false);
+    });
+
+    it("should throw NotFoundException if document not found", async () => {
+      mockPrisma.saleDocument.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.getDocumentForEditor("tenant-1", "sale-1", "doc-inexistente")
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe("updateDocumentContent", () => {
+    it("should update contentHtml and regenerate PDF hash when valid", async () => {
+      const mockDoc = {
+        id: "doc-1",
+        saleId: "sale-1",
+        tenantId: "tenant-1",
+        templateType: "CONTRATO_PF",
+        status: "PENDING",
+      };
+      mockPrisma.saleDocument.findFirst.mockResolvedValue(mockDoc);
+      mockPrisma.saleDocument.update.mockResolvedValue({
+        ...mockDoc,
+        contentHtml: "<p>Cláusula Atualizada com Nova Condição</p>",
+        originalPdfUrl: "/uploads/sales-documents/doc-novo.pdf",
+        originalPdfHash: "hash-sha256-mocked",
+      });
+
+      const updated = await service.updateDocumentContent(
+        "tenant-1",
+        "sale-1",
+        "doc-1",
+        "<p>Cláusula Atualizada com Nova Condição</p>"
+      );
+
+      expect(updated.contentHtml).toContain("Nova Condição");
+      expect(updated.originalPdfHash).toBe("hash-sha256-mocked");
+      expect(mockPrisma.saleDocument.update).toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException if document is already SIGNED", async () => {
+      const mockDoc = {
+        id: "doc-1",
+        saleId: "sale-1",
+        tenantId: "tenant-1",
+        templateType: "CONTRATO_PF",
+        status: "SIGNED",
+      };
+      mockPrisma.saleDocument.findFirst.mockResolvedValue(mockDoc);
+
+      await expect(
+        service.updateDocumentContent("tenant-1", "sale-1", "doc-1", "<p>Texto Qualquer</p>")
+      ).rejects.toThrow(/assinados/);
     });
   });
 });

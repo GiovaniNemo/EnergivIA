@@ -829,7 +829,12 @@
 | task-838 | Popular customerName, totalValue e metadados na listagem de vendas (/vendas) e fallbacks | completed | Mapeamento no SalesService (listSales/getSaleById/convertToSale) e fallbacks robustos no frontend |
 | task-839 | Documento completo assinado com blocos de assinatura (Contratada e Contratante) e folha anexa de auditoria | completed | Integrar corpo do contrato/procuração, bloco bilateral de assinaturas e folha probatória no PDF assinado |
 | task-840 | Corrigir TS2532 em parseUserAgentFriendly e duplicidade em signature-audit.service.ts para build Railway | completed | Version lookup null-safe com extractMajorVersion, remoção de método duplicado e build nest validado com sucesso |
-| task-841 | Brainstorming: Explorar contexto e requisitos para edição de contratos em tempo real e remoção de cards | in-progress | Mapeamento da remoção dos cards de personalização e concepção do editor de documentos in-place |
-| task-842 | Brainstorming: Propor 2-3 abordagens de UX/Fluxo para abrir e editar contratos em tempo real | not-started | Apresentar trade-offs e recomendação ao usuário com pergunta direcionada |
-| task-843 | Brainstorming: Estruturar e aprovar documento de design com o usuário | not-started | Salvar em docs/plans/ e obter aprovação |
-| task-844 | Planejamento da implementação (writing-plans) | not-started | Elaborar plano de execução com passos atômicos |
+| task-841 | Brainstorming: Explorar contexto e requisitos para edição de contratos em tempo real e remoção de cards | completed | Mapeamento da remoção dos cards de personalização e concepção do editor de documentos in-place |
+| task-842 | Brainstorming: Propor 2-3 abordagens de UX/Fluxo para abrir e editar contratos em tempo real | completed | Apresentadas 3 abordagens; usuário aprovou Abordagem 1 (Studio Modal em Tela Cheia) |
+| task-843 | Brainstorming: Estruturar e aprovar documento de design com o usuário | completed | Salvo em docs/plans/2026-10-28-edicao-contrato-tempo-real-design.md e comitado |
+| task-844 | Planejamento da implementação (writing-plans) | completed | Salvo em docs/plans/2026-10-28-edicao-contrato-tempo-real.md |
+| task-845 | Backend: Obtenção e Atualização de Documento com suporte a rascunho e testes | completed | Endpoints getDocumentForEditor e updateDocumentContent com suporte a compilação do rascunho inicial e testes Vitest |
+| task-846 | Backend: Preservação de contentHtml em SignatureAuditService e testes | completed | Garantida integridade de contentHtml salvo no fluxo final de assinatura bilateral e auditoria com testes Vitest |
+| task-847 | Frontend: Remover cards de personalização e integrar ações de edição em vendas/[id] | completed | Cards removidos da aba Ficha Cadastral e Documentos; botões 'Abrir e Editar Contrato/Procuração' adicionados |
+| task-848 | Frontend: Refinar LiveContractEditorModal com toolbar, + Nova Cláusula e atalhos | completed | Folha A4 com estilos profissionais de contrato, atalho Ctrl+S, toolbar de formatação, inserção de cláusula e modo somente leitura pós-assinatura |
+| task-849 | Validação completa (testes automatizados, lint/build), commit e push | in-progress | Testes Vitest 100% aprovados em sales, linters web/api com 0 erros e build de 85 rotas Next.js aprovado |

@@ -1588,6 +1588,7 @@ model SaleDocument {
   originalPdfHash   String?
   signedPdfUrl      String?
   signedPdfHash     String?
+  contentHtml       String?            @map("content_html") @db.Text
   status            DocumentSignStatus @default(PENDING)
   publicToken       String             @unique @default(uuid())
 

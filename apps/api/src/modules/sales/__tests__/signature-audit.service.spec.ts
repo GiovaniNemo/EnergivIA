@@ -217,5 +217,59 @@ describe("SignatureAuditService", () => {
       expect(mockDocTemplateService.generatePdfWithHash).toHaveBeenCalled();
       expect(mockDocTemplateService.savePdfToDisk).toHaveBeenCalled();
     });
+
+    it("should preserve edited contentHtml when signing document", async () => {
+      const mockDoc = {
+        id: "doc-custom",
+        saleId: "sale-custom",
+        title: "Contrato Editado em Tempo Real",
+        templateType: "CONTRATO_PF",
+        status: "PENDING",
+        otpVerifiedAt: new Date(),
+        contentHtml:
+          "<html><body><h1>Contrato Customizado</h1><p>Cláusula 10: Condição Especial</p>{{bloco_assinatura_cliente}}{{folha_auditoria_anexa}}</body></html>",
+        sale: {
+          id: "sale-custom",
+          customerType: "PF",
+          documentNumber: "111.222.333-44",
+          proposal: {
+            deal: {
+              lead: {
+                name: "Carlos Solar",
+                cpfCnpj: "111.222.333-44",
+                email: "carlos@exemplo.com",
+              },
+            },
+          },
+        },
+      };
+
+      mockPrisma.saleDocument.findUnique.mockResolvedValue(mockDoc);
+      mockPrisma.saleDocument.update.mockResolvedValue({ ...mockDoc, status: "SIGNED" });
+      mockPrisma.sale.update.mockResolvedValue({});
+
+      const req = {
+        headers: { "user-agent": "Chrome/120", "x-forwarded-for": "187.1.2.3" },
+        ip: "187.1.2.3",
+      };
+
+      const res = await service.signDocument(
+        "token-custom",
+        {
+          signatureImage: "data:image/png;base64,mockSign",
+          signerName: "Carlos Solar",
+          signerCpf: "111.222.333-44",
+        },
+        req
+      );
+
+      expect(res.signed).toBe(true);
+      // If contentHtml is present, it should use generatePdfWithHash with the customized HTML containing the special clause
+      expect(mockDocTemplateService.generatePdfWithHash).toHaveBeenCalled();
+      const generatedHtml = mockDocTemplateService.generatePdfWithHash.mock.calls[0][0];
+      expect(generatedHtml).toContain("Contrato Customizado");
+      expect(generatedHtml).toContain("Cláusula 10: Condição Especial");
+      expect(generatedHtml).toContain("data:image/png;base64,mockSign");
+    });
   });
 });
