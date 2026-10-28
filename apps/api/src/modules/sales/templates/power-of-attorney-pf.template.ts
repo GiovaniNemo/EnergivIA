@@ -88,14 +88,14 @@ export const POWER_OF_ATTORNEY_PF_TEMPLATE = `<!DOCTYPE html>
     <p class="subtitle">Homologação de Micro e Minigeração Distribuída (Resolução Normativa ANEEL nº 1.000/2021 e 1.059/2023)</p>
   </div>
 
-  <div class="section-title">1. OUTORGANTE</div>
+  <div class="section-title">1. OUTORGANTE (TITULAR DA UNIDADE CONSUMIDORA)</div>
   <p>
     <strong>{{nome_cliente}}</strong>, brasileiro(a), portador(a) do RG nº <strong>{{rg_cliente}}</strong> e inscrito(a) no CPF/MF sob o nº <strong>{{cpf_cliente}}</strong>, residente e domiciliado(a) no endereço: <strong>{{endereco_instalacao}}</strong>, na cidade de <strong>{{cidade_instalacao}} - {{estado_instalacao}}</strong>.
   </p>
 
-  <div class="section-title">2. OUTORGADA</div>
+  <div class="section-title">2. OUTORGADOS / PROCURADORES CONSTITUÍDOS</div>
   <p>
-    <strong>{{nome_empresa}}</strong>, com plenos poderes para atuar por meio de seus responsáveis técnicos, engenheiros eletricistas e prepostos legalmente constituídos.
+    <strong>{{nome_empresa}}</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº <strong>{{cnpj_empresa}}</strong>, com poderes para atuar por meio de seus responsáveis técnicos, engenheiros eletricistas, analistas e prepostos devidamente habilitados perante os Conselhos Profissionais competentes (CREA/CFT), podendo ainda substabelecer este mandato, no todo ou em parte, com ou sem reserva de poderes, para o fiel cumprimento das finalidades aqui outorgadas.
   </p>
 
   <div class="section-title">3. IDENTIFICAÇÃO DA UNIDADE CONSUMIDORA (UC)</div>
@@ -118,18 +118,20 @@ export const POWER_OF_ATTORNEY_PF_TEMPLATE = `<!DOCTYPE html>
 
   <div class="section-title">4. DOS PODERES ESPECÍFICOS</div>
   <p>
-    Por este instrumento particular de procuração, o(a) OUTORGANTE confere à OUTORGADA amplos poderes específicos para representá-lo(a) perante a distribuidora de energia elétrica <strong>{{concessionaria}}</strong>, a Agência Nacional de Energia Elétrica (ANEEL) e órgãos correlatos, exclusivamente para:
+    Pelo presente instrumento particular de procuração, o(a) OUTORGANTE nomeia e constitui a OUTORGADA e seus procuradores com amplos poderes para representá-lo(a) perante a distribuidora de energia elétrica <strong>{{concessionaria}}</strong>, a Agência Nacional de Energia Elétrica (ANEEL) e órgãos técnicos afins, conferindo poderes expressos para:
   </p>
   <ul>
-    <li>Solicitar Consulta, Informação e Parecer de Acesso para Conexão de Microgeração ou Minigeração Distribuída;</li>
-    <li>Protocolar projetos elétricos, memoriais descritivos, diagramas unifilares e Anotações de Responsabilidade Técnica (ART/TRT);</li>
-    <li>Acompanhar vistorias técnicas, solicitar re-vistorias e requerer a substituição do medidor de energia convencional por medidor bidirecional;</li>
-    <li>Receber notificações, ofícios, orientações de adequação técnica e assinar o Acordo Operativo / Relacionamento Operacional junto à concessionária.</li>
+    <li><strong>Acesso e Pareceres Técnicos:</strong> Solicitar Consulta, Informação e Parecer de Acesso para conexão de microgeração ou minigeração distribuída à rede elétrica;</li>
+    <li><strong>Aumento ou Redução de Carga:</strong> Requerer aumento ou redução de carga, alteração de nível de tensão e adequação do padrão de entrada de energia elétrica da propriedade;</li>
+    <li><strong>Documentos, Cadastros e Projetos:</strong> Protocolar projetos elétricos, memoriais descritivos, diagramas unifilares, Anotações/Termos de Responsabilidade Técnica (ART/TRT), assinar cadastros, termos de compromisso e responsabilidade técnica;</li>
+    <li><strong>Vistorias e Medição Bidirecional:</strong> Acompanhar vistorias técnicas, solicitar re-vistorias, requerer a substituição ou parametrização do medidor convencional por medidor bidirecional e solicitar a energização e liberação do ponto de conexão;</li>
+    <li><strong>Doação e Adequação de Rede:</strong> Firmar compromissos, acordos e, quando expressamente exigido para atendimento da propriedade, assinar termos ou escrituras de doação/cessão de rede de distribuição de energia elétrica;</li>
+    <li><strong>Acesso a Dados e Prática Geral de Atos:</strong> Consultar dados da Unidade Consumidora e histórico de faturamento/consumo para compensação de créditos de energia (SCEE), praticando, enfim, todos os atos necessários e indispensáveis ao fiel e perfeito cumprimento deste mandato.</li>
   </ul>
 
-  <div class="section-title">5. VALIDADE E ASSINATURA ELETRÔNICA</div>
+  <div class="section-title">5. VALIDADE E EFICÁCIA LEGAL</div>
   <p>
-    Esta procuração tem validade de 12 (doze) meses a contar desta data, podendo ser revogada a qualquer tempo mediante comunicação expressa. As partes reconhecem a plena validade desta assinatura eletrônica conforme o art. 10 da MP nº 2.200-2/2001 e a Lei nº 14.063/2020.
+    Esta procuração tem validade pelo prazo de <strong>12 (doze) meses</strong> a contar desta data, podendo ser revogada a qualquer tempo mediante comunicação expressa. O(A) OUTORGANTE dá por firmes e valiosos todos os atos praticados pelos procuradores no estrito limite deste mandato, reconhecendo a plena eficácia e validade jurídica desta assinatura eletrônica conforme o Art. 10 da Medida Provisória nº 2.200-2/2001 e a Lei Federal nº 14.063/2020.
   </p>
 
   <p style="margin-top: 30px; text-align: center;">
