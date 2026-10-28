@@ -7,6 +7,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { RouteProgress } from "@/components/layout/route-progress";
 import { CookieConsentBanner } from "@/components/ui/cookie-consent-banner";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
+import { MetaPixel } from "@/components/analytics/meta-pixel";
 import { ReferralCapture } from "@/components/analytics/referral-capture";
 import { buildRootGraphSchema, JsonLd } from "@/lib/seo/structured-data";
 import "./globals.css";
@@ -137,6 +138,7 @@ export default function RootLayout({
       >
         <div className="flex min-h-screen flex-1 flex-col">
           <GoogleAnalytics />
+          <MetaPixel />
           <ReferralCapture />
           <ThemeProvider defaultTheme="system" storageKey="energivia-theme">
             <Auth0Provider>
