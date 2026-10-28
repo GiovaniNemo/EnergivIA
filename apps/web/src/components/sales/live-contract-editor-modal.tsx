@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   X,
@@ -9,6 +10,7 @@ import {
   FileText,
   AlertCircle,
   PlusCircle,
+  Scissors,
   ExternalLink,
   Loader2,
   Bold,
@@ -34,6 +36,7 @@ export function LiveContractEditorModal({
   onClose,
   onSaved,
 }: LiveContractEditorModalProps): JSX.Element | null {
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -50,6 +53,10 @@ export function LiveContractEditorModal({
   } | null>(null);
 
   const editorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isOpen || !saleId || !docId) return;
@@ -76,16 +83,17 @@ export function LiveContractEditorModal({
     };
   }, [isOpen, saleId, docId]);
 
-  // Sincronizar o HTML carregado no editor contentEditable (extrai o body limpo)
+  // Sincronizar o HTML carregado no editor contentEditable (extrai o body limpo e remove estilos residuais)
   useEffect(() => {
     if (editorRef.current && docData?.contentHtml && !loading) {
       const match = docData.contentHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-      const inner = match ? match[1] : docData.contentHtml;
+      let inner = match ? match[1] : docData.contentHtml;
+      inner = inner.replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<head[\s\S]*?<\/head>/gi, "");
       editorRef.current.innerHTML = inner;
     }
   }, [docData, loading]);
 
-  // Atalho de teclado Ctrl+S para salvar
+  // Atalho de teclado Ctrl+S para salvar e Escape para fechar
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
@@ -93,13 +101,15 @@ export function LiveContractEditorModal({
         if (!docData?.isSigned && !saving) {
           handleSave();
         }
+      } else if (e.key === "Escape" && isOpen && !showPdfModal) {
+        onClose();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [docData, saving]);
+  }, [docData, saving, isOpen, showPdfModal, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   async function handleSave() {
     if (!editorRef.current || !docData || docData.isSigned) return;
@@ -111,6 +121,8 @@ export function LiveContractEditorModal({
         /(<body[^>]*>)([\s\S]*?)(<\/body>)/i,
         `$1${updatedBody}$3`
       );
+    } else {
+      fullHtml = `<!DOCTYPE html>\n<html lang="pt-BR">\n<head><meta charset="UTF-8"></head>\n<body>${updatedBody}</body>\n</html>`;
     }
 
     setSaving(true);
@@ -138,6 +150,16 @@ export function LiveContractEditorModal({
     }
   }
 
+  function handleInsertPageBreak() {
+    if (!editorRef.current || docData?.isSigned) return;
+    document.execCommand(
+      "insertHTML",
+      false,
+      '<div class="page-break" contenteditable="false"></div><p><br></p>'
+    );
+    editorRef.current.focus();
+  }
+
   function handleInsertClause() {
     if (!editorRef.current || docData?.isSigned) return;
 
@@ -146,16 +168,14 @@ export function LiveContractEditorModal({
     let nextNum = allTitles.length + 1;
     for (const t of allTitles) {
       const match = t.textContent?.match(/^(\d+)\./);
-      if (match) {
-        const n = parseInt(match[1], 10);
-        if (n >= nextNum) nextNum = n + 1;
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (num >= nextNum) nextNum = num + 1;
       }
     }
 
     const clauseHtml = `
-      <div class="section-title">
-        ${nextNum}. DAS CONDIÇÕES COMPLEMENTARES
-      </div>
+      <div class="section-title">${nextNum}. CLÁUSULA ADICIONAL COMPLEMENTAR</div>
       <p>
         ${nextNum}.1. Fica expressamente estipulado entre as Partes que: [digite aqui as condições acordadas diretamente neste parágrafo].
       </p>
@@ -175,10 +195,18 @@ export function LiveContractEditorModal({
     editorRef.current.focus();
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200">
+  const modalContent = (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[9999] flex flex-col bg-slate-950/95 backdrop-blur-sm animate-in fade-in duration-150"
+    >
       {/* ESTILOS ESPECÍFICOS DO CONTRATO SCOPED PARA A FOLHA A4 */}
       <style>{`
+        .contract-editor-sheet {
+          background-color: #ffffff !important;
+          color: #1e293b !important;
+        }
         .contract-editor-sheet .header {
           border-bottom: 2px solid #0f172a;
           padding-bottom: 12px;
@@ -295,6 +323,7 @@ export function LiveContractEditorModal({
           page-break-inside: avoid !important;
           break-inside: avoid !important;
           box-sizing: border-box;
+          background-color: #ffffff;
         }
         .contract-editor-sheet table.data-table th:last-child, .contract-editor-sheet table.data-table td:last-child {
           border-right: 1px solid #cbd5e1;
@@ -303,7 +332,7 @@ export function LiveContractEditorModal({
           border-bottom: 1px solid #cbd5e1;
         }
         .contract-editor-sheet table.data-table th {
-          background-color: #f1f5f9;
+          background-color: #f1f5f9 !important;
           font-weight: 700;
           color: #0f172a;
           text-align: left;
@@ -313,25 +342,50 @@ export function LiveContractEditorModal({
           page-break-inside: avoid !important;
           break-inside: avoid !important;
         }
+        .contract-editor-sheet .page-break {
+          display: block;
+          margin: 28px -36px;
+          padding: 10px 0;
+          border: none;
+          border-top: 2px dashed #94a3b8;
+          position: relative;
+          text-align: center;
+          background: #f8fafc;
+          clear: both;
+          user-select: none;
+        }
+        .contract-editor-sheet .page-break::after {
+          content: "✂ QUEBRA DE PÁGINA A4 (INÍCIO DA PRÓXIMA FOLHA)";
+          display: inline-block;
+          background: #0f172a;
+          color: #ffffff;
+          font-size: 7.5pt;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          padding: 3px 12px;
+          border-radius: 9999px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
       `}</style>
 
       {/* BARRA SUPERIOR DE AÇÕES E FERRAMENTAS DO EDITOR */}
-      <header className="flex flex-wrap items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:px-6">
+      <header className="flex h-16 shrink-0 flex-wrap items-center justify-between border-b border-slate-200 bg-white px-4 py-2 shadow-md dark:border-slate-800 dark:bg-slate-900 sm:px-6">
         <div className="flex items-center gap-3">
+          {/* BOTÃO VOLTAR DESTACADO */}
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
             title="Voltar para a tela da venda"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Voltar</span>
+            <span>Voltar para a Venda</span>
           </button>
 
           <div>
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 sm:text-base">
+              <h2 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 max-w-xs md:max-w-md truncate">
                 {docData?.title || "Editor de Minuta Contratual"}
               </h2>
             </div>
@@ -341,7 +395,7 @@ export function LiveContractEditorModal({
                   Documento Assinado · Modo Somente Leitura
                 </span>
               ) : (
-                "Edição em tempo real para este cliente · Clique e digite diretamente no texto (Ctrl+S para salvar)"
+                "Edição em tempo real para este cliente · Digite diretamente no texto (Ctrl+S para salvar)"
               )}
             </p>
           </div>
@@ -349,7 +403,7 @@ export function LiveContractEditorModal({
 
         {/* BARRA CENTRAL DE FORMATAÇÃO */}
         {!docData?.isSigned && !loading && (
-          <div className="hidden md:flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-850">
+          <div className="hidden lg:flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-850">
             <button
               onClick={() => handleFormat("bold")}
               className="rounded p-1.5 text-slate-600 hover:bg-white hover:text-slate-900 shadow-sm dark:text-slate-300 dark:hover:bg-slate-800 transition"
@@ -386,7 +440,16 @@ export function LiveContractEditorModal({
               className="inline-flex items-center gap-1.5 rounded bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition"
               title="Adicionar uma nova cláusula numerada no contrato"
             >
-              <PlusCircle className="h-3.5 w-3.5" />+ Nova Cláusula
+              <PlusCircle className="h-3.5 w-3.5" />+ Cláusula
+            </button>
+
+            <button
+              onClick={handleInsertPageBreak}
+              className="inline-flex items-center gap-1.5 rounded bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition"
+              title="Inserir quebra de página A4"
+            >
+              <Scissors className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Quebra de Página</span>
             </button>
           </div>
         )}
@@ -411,11 +474,11 @@ export function LiveContractEditorModal({
                 type="button"
                 onClick={handleInsertClause}
                 disabled={loading}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 shadow-sm hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition-colors"
-                title="Inserir uma nova cláusula no contrato"
+                className="inline-flex sm:hidden items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 shadow-sm"
+                title="Inserir nova cláusula"
               >
-                <PlusCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                <span>+ Nova Cláusula</span>
+                <PlusCircle className="h-3.5 w-3.5" />
+                <span>+ Cláusula</span>
               </button>
 
               <button
@@ -435,7 +498,7 @@ export function LiveContractEditorModal({
                 ) : savedSuccess ? (
                   <>
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    Salvo com Sucesso!
+                    Salvo!
                   </>
                 ) : (
                   <>
@@ -452,31 +515,31 @@ export function LiveContractEditorModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
-            title="Fechar"
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+            title="Fechar editor"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
       </header>
 
       {/* ÁREA DE ALERTA DE ERRO */}
       {error && (
-        <div className="flex items-center gap-2 border-b border-rose-200 bg-rose-50 px-6 py-2 text-xs font-medium text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+        <div className="flex items-center gap-2 border-b border-rose-200 bg-rose-50 px-6 py-2 text-xs font-medium text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300 shrink-0">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* ÁREA PRINCIPAL DO CANVAS DO DOCUMENTO (FOLHA A4 SIMULADA) */}
-      <main className="flex-1 overflow-y-auto bg-slate-200/70 p-4 sm:p-8 dark:bg-slate-950 flex justify-center">
+      {/* ÁREA PRINCIPAL DO CANVAS DO DOCUMENTO (FOLHA A4 SIMULADA COM FUNDO SÓLIDO INTEGRAL) */}
+      <main className="flex-1 overflow-y-auto bg-slate-850 p-4 sm:p-8 flex justify-center">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 text-slate-400">
             <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-3" />
             <p className="text-sm font-medium">Carregando minuta para edição em tempo real...</p>
           </div>
         ) : (
-          <div className="w-full max-w-[850px] flex flex-col gap-4">
+          <div className="w-full max-w-[850px] space-y-4">
             {docData?.isSigned ? (
               <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300 flex items-center gap-2 shadow-sm">
                 <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
@@ -490,18 +553,12 @@ export function LiveContractEditorModal({
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                   <span>
-                    Você pode clicar e alterar diretamente qualquer texto do documento abaixo, ou
-                    clicar em <strong>+ Nova Cláusula</strong> para adicionar condições exclusivas.
+                    Clique e altere qualquer texto da minuta abaixo. Use <strong>+ Cláusula</strong>{" "}
+                    para condições especiais ou <strong>Quebra de Página</strong> para separar
+                    folhas A4.
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleInsertClause}
-                    className="inline-flex items-center gap-1.5 rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors"
-                  >
-                    <PlusCircle className="h-3.5 w-3.5" />+ Nova Cláusula
-                  </button>
                   <span className="text-[11px] text-slate-500 hidden sm:inline">
                     Atalho: <strong>Ctrl + S</strong>
                   </span>
@@ -509,9 +566,9 @@ export function LiveContractEditorModal({
               </div>
             )}
 
-            {/* FOLHA DE PAPEL A4 EDITÁVEL */}
+            {/* FOLHA DE PAPEL A4 EDITÁVEL COM FUNDO BRANCO 100% SÓLIDO INTEGRAL */}
             <div
-              className={`min-h-[1123px] h-auto w-full rounded-sm bg-white p-8 sm:p-14 text-slate-900 shadow-2xl transition-all border border-slate-200 dark:border-slate-800 contract-editor-sheet ${
+              className={`min-h-[1123px] h-fit w-full rounded-sm bg-white p-8 sm:p-14 text-slate-900 shadow-2xl transition-all border border-slate-300 dark:border-slate-700 contract-editor-sheet ${
                 docData?.isSigned
                   ? "cursor-default select-text"
                   : "focus-within:ring-2 focus-within:ring-emerald-500/40"
@@ -521,19 +578,28 @@ export function LiveContractEditorModal({
                 ref={editorRef}
                 contentEditable={!docData?.isSigned}
                 suppressContentEditableWarning={true}
-                className="focus:outline-none font-sans text-[9pt] leading-relaxed selection:bg-emerald-200 selection:text-emerald-950 w-full min-h-[900px] h-auto overflow-visible"
+                className="focus:outline-none font-sans text-[9pt] leading-relaxed selection:bg-emerald-200 selection:text-emerald-950 w-full min-h-[900px] h-auto"
               />
             </div>
 
             {!docData?.isSigned && (
-              <div className="flex justify-center pb-6">
+              <div className="flex flex-wrap items-center justify-center gap-3 pb-8 pt-2">
+                <button
+                  type="button"
+                  onClick={handleInsertPageBreak}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-all"
+                >
+                  <Scissors className="h-4 w-4 text-emerald-600" />
+                  <span>+ Inserir Quebra de Página A4</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={handleInsertClause}
                   className="inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-emerald-600/40 bg-white/90 px-6 py-2.5 text-xs font-bold text-emerald-700 shadow-sm hover:bg-emerald-50 hover:border-emerald-600 dark:border-emerald-500/40 dark:bg-slate-900/90 dark:text-emerald-300 dark:hover:bg-slate-800 transition-all"
                 >
-                  <PlusCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />+ Inserir
-                  Nova Cláusula Complementar no Final do Contrato
+                  <PlusCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>+ Inserir Nova Cláusula no Final do Contrato</span>
                 </button>
               </div>
             )}
@@ -553,4 +619,6 @@ export function LiveContractEditorModal({
       )}
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

@@ -73,7 +73,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
               ) : (
                 <SidebarProvider>
                   <Topbar />
-                  <div className="relative z-10 flex min-h-0 flex-1 overflow-hidden">
+                  <div className="relative flex min-h-0 flex-1 overflow-hidden">
                     <AppSidebar />
                     <SidebarInset>
                       <main

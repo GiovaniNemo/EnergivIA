@@ -83,6 +83,20 @@ export const POWER_OF_ATTORNEY_PF_TEMPLATE = `<!DOCTYPE html>
       color: #475569;
       width: 32%;
     }
+    .signature-box {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      break-inside: avoid-page !important;
+    }
+    .page-break {
+      page-break-before: always !important;
+      break-before: always !important;
+      break-before: page !important;
+      height: 0;
+      margin: 0;
+      padding: 0;
+      border: none;
+    }
   </style>
 </head>
 <body>

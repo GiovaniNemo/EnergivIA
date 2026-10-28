@@ -575,10 +575,27 @@ export class SignatureAuditService {
         : POWER_OF_ATTORNEY_PF_TEMPLATE;
       const headMatch = template.match(/<head[\s\S]*?<\/head>/i);
       const headHtml = headMatch ? headMatch[0] : "<head><meta charset='UTF-8'></head>";
-      const cleanBody = customHtml
+      let cleanBody = customHtml
         .replace(/<head[\s\S]*?<\/head>/gi, "")
         .replace(/<\/?(html|body|!DOCTYPE)[^>]*>/gi, "")
         .trim();
+
+      // Injetar quebras de página naturais em documentos gerados anteriormente
+      if (!cleanBody.includes('class="page-break"')) {
+        cleanBody = cleanBody.replace(
+          /(<!-- 5\. DO VALOR|<div class="section-title">5\. DO VALOR)/i,
+          '<div class="page-break"></div>\n$1'
+        );
+        cleanBody = cleanBody.replace(
+          /(<!-- 9\. DO REGIME|<div class="section-title">9\. DO REGIME)/i,
+          '<div class="page-break"></div>\n$1'
+        );
+        cleanBody = cleanBody.replace(
+          /(<!-- 15\. CLÁUSULAS|<div class="section-title">15\. DAS CONDIÇÕES)/i,
+          '<div class="page-break"></div>\n$1'
+        );
+      }
+
       customHtml = `<!DOCTYPE html>\n<html lang="pt-BR">\n${headHtml}\n<body>\n${cleanBody}\n</body>\n</html>`;
       if (clientSignatureBlock) {
         if (customHtml.includes("{{bloco_assinatura_cliente}}")) {

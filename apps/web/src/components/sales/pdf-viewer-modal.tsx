@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowLeft, Download, ExternalLink, FileText, ShieldCheck, X } from "lucide-react";
 
 interface PdfViewerModalProps {
@@ -18,6 +19,12 @@ export function PdfViewerModal({
   title,
   isSigned,
 }: PdfViewerModalProps): JSX.Element | null {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && isOpen) {
@@ -28,21 +35,25 @@ export function PdfViewerModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen || !pdfUrl) return null;
+  if (!isOpen || !pdfUrl || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/90 backdrop-blur-sm animate-in fade-in duration-150">
-      {/* CABEÇALHO DO VISUALIZADOR COM BOTÃO DE VOLTAR */}
-      <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white px-3 sm:px-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 shrink-0">
+  const content = (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[9999] flex flex-col bg-slate-950/95 backdrop-blur-sm animate-in fade-in duration-150"
+    >
+      {/* CABEÇALHO DO VISUALIZADOR COM BOTÃO DE VOLTAR SOBREPOSTO A QUALQUER TOPBAR */}
+      <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 shadow-md dark:border-slate-800 dark:bg-slate-900 shrink-0">
         <div className="flex items-center gap-3">
           {/* BOTÃO VOLTAR DESTACADO */}
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center gap-2 rounded-xl border border-emerald-600/30 bg-emerald-50 px-3.5 py-1.5 text-xs sm:text-sm font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-100 hover:border-emerald-600 dark:border-emerald-500/30 dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:bg-emerald-900/60"
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
             title="Voltar para a tela da venda"
           >
-            <ArrowLeft className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
+            <ArrowLeft className="h-4 w-4" />
             <span>Voltar para a Venda</span>
           </button>
 
@@ -92,7 +103,7 @@ export function PdfViewerModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
             title="Fechar visualizador"
           >
             <X className="h-5 w-5" />
@@ -110,4 +121,6 @@ export function PdfViewerModal({
       </main>
     </div>
   );
+
+  return createPortal(content, document.body);
 }

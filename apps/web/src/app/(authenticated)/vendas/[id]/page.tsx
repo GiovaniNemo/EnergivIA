@@ -2429,7 +2429,7 @@ export default function VendaDetailPage(): JSX.Element {
 
       {/* Modal de Confirmação para Exclusão de Minuta de Teste */}
       {docToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-2xl space-y-4">
             <div className="flex items-start gap-3">
               <div className="rounded-full bg-red-500/10 p-2.5 text-red-600 dark:text-red-400 shrink-0">
