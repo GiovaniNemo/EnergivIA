@@ -838,3 +838,4 @@
 | task-847 | Frontend: Remover cards de personalização e integrar ações de edição em vendas/[id] | completed | Cards removidos da aba Ficha Cadastral e Documentos; botões 'Abrir e Editar Contrato/Procuração' adicionados |
 | task-848 | Frontend: Refinar LiveContractEditorModal com toolbar, + Nova Cláusula e atalhos | completed | Folha A4 com estilos profissionais de contrato, atalho Ctrl+S, toolbar de formatação, inserção de cláusula e modo somente leitura pós-assinatura |
 | task-849 | Validação completa (testes automatizados, lint/build), commit e push | completed | Testes Vitest 100% aprovados em sales, linters web/api com 0 erros, build de 85 rotas Next.js aprovado e push realizado para origin/main |
+| task-850 | Corrigir erro TS2339 contentHtml em buildFullDocumentHtml para compilação da API no Railway | completed | Adicionado contentHtml?: string | null na assinatura de doc em buildFullDocumentHtml e build da API aprovado |

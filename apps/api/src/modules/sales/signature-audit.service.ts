@@ -437,6 +437,7 @@ export class SignatureAuditService {
       originalPdfHash?: string | null;
       templateType: string;
       createdAt?: Date | null;
+      contentHtml?: string | null;
       sale?: {
         investmentAmount?: number | null;
         rgNumber?: string | null;
