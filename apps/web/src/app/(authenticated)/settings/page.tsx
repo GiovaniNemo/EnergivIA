@@ -18,30 +18,17 @@ export default function SettingsPage(): JSX.Element {
         </CardHeader>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Link
-          href="/configuracoes/organizacao"
-          className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
-        >
-          <Card className="h-full transition hover:border-emerald-500/40">
-            <CardHeader>
-              <CardTitle>Organização</CardTitle>
-              <CardDescription>Nome, CNPJ, logo e WhatsApp da empresa.</CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
-        <Link
-          href="/configuracoes/custos-projeto"
-          className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
-        >
-          <Card className="h-full transition hover:border-emerald-500/40">
-            <CardHeader>
-              <CardTitle>Custos do projeto</CardTitle>
-              <CardDescription>Regras de custo por nome, tipo e faixa de kWp.</CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
-      </div>
+      <Link
+        href="/configuracoes/organizacao"
+        className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
+      >
+        <Card className="transition hover:border-emerald-500/40">
+          <CardHeader>
+            <CardTitle>Organização</CardTitle>
+            <CardDescription>Nome, CNPJ, logo e WhatsApp da empresa.</CardDescription>
+          </CardHeader>
+        </Card>
+      </Link>
     </div>
   );
 }

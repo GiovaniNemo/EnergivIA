@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Copy, LinkIcon, AlertTriangle, CheckCircle2 } from "lucide-react";
 import {
@@ -948,12 +947,6 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
             cadastrar as mesmas regras na empresa.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Link
-              href="/configuracoes/custos-projeto"
-              className="inline-flex h-9 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-accent)]"
-            >
-              Abrir custos do projeto
-            </Link>
             {(currentOrganization?.role === "OWNER" || currentOrganization?.role === "ADMIN") &&
             !costDefaultsSaved ? (
               <Button
