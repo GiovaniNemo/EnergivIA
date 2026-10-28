@@ -90,41 +90,6 @@ const BRAZIL_CONCESSIONARIAS = [
   "Hidroelétrica Panambi (RS)",
 ];
 
-const COMMON_CONCESSIONARIA_ALIASES = [
-  "CEMIG",
-  "COPEL",
-  "ENEL SP",
-  "ENEL RJ",
-  "ENEL CE",
-  "CPFL Paulista",
-  "CPFL Piratininga",
-  "LIGHT",
-  "CELESC",
-  "NEOENERGIA ELEKTRO",
-  "NEOENERGIA COELBA",
-  "EQUATORIAL GOIÁS",
-  "ENERGISA MG",
-  "EDP SP",
-  "EDP ES",
-];
-
-const PAYMENT_CONDITIONS_OPTIONS = [
-  "À Vista (PIX / Transferência Bancária)",
-  "À Vista (50% Entrada + 50% na Conexão)",
-  "À Vista (30% Entrada + 40% na Entrega + 30% na Conexão)",
-  "Financiamento Bancário (BV Financeira)",
-  "Financiamento Bancário (Banco Santander)",
-  "Financiamento Bancário (Solfácil)",
-  "Financiamento Bancário (Banco do Brasil / Pronaf)",
-  "Financiamento Bancário (Caixa Econômica)",
-  "Financiamento Bancário (Sicredi / Sicoob)",
-  "Financiamento Bancário (Outras Instituições)",
-  "Cartão de Crédito (Parcelado até 12x)",
-  "Cartão de Crédito (Parcelado até 18x / 21x)",
-  "Boleto Bancário Parcelado",
-  "Consórcio Solar",
-];
-
 const SALE_STATUS_OPTIONS = [
   { value: "AWAITING_ANALYSIS", label: "Aguardando Análise" },
   { value: "DOCUMENTS_PENDING", label: "Documentos Pendentes" },
@@ -173,6 +138,7 @@ export default function VendaDetailPage(): JSX.Element {
   } | null>(null);
 
   const [searchingCep, setSearchingCep] = useState(false);
+  const [isCustomUtility, setIsCustomUtility] = useState(false);
 
   const addressNumberRef = useRef<HTMLInputElement>(null);
 
@@ -314,15 +280,10 @@ export default function VendaDetailPage(): JSX.Element {
   async function handleSearchCep(customCep?: string) {
     const raw = (customCep || formData.zipCode || "").replace(/\D/g, "");
     if (raw.length !== 8) {
-      setCepFeedback({
-        type: "error",
-        message: "O CEP precisa conter 8 dígitos para busca automática.",
-      });
       return;
     }
 
     setSearchingCep(true);
-    setCepFeedback(null);
     try {
       const data = await fetchViaCepData(raw);
       setFormData((prev) => ({
@@ -335,24 +296,11 @@ export default function VendaDetailPage(): JSX.Element {
         addressComp: data.complemento || prev.addressComp,
       }));
 
-      setCepFeedback({
-        type: "success",
-        message: "Endereço localizado com sucesso via ViaCEP!",
-      });
-
-      setTimeout(() => {
-        setCepFeedback(null);
-        addressNumberRef.current?.focus();
-      }, 3000);
-
       setTimeout(() => {
         addressNumberRef.current?.focus();
       }, 100);
     } catch (err: any) {
-      setCepFeedback({
-        type: "error",
-        message: err.message || "CEP não encontrado. Preencha o endereço manualmente.",
-      });
+      console.warn("CEP lookup failed:", err);
     } finally {
       setSearchingCep(false);
     }
@@ -1044,29 +992,81 @@ export default function VendaDetailPage(): JSX.Element {
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
-                <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                  Concessionária de Energia
-                </label>
-                <div className="relative mt-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                    Concessionária de Energia
+                  </label>
+                  {isCustomUtility ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomUtility(false);
+                        setFormData((prev) => ({ ...prev, utilityCompany: "CEMIG" }));
+                      }}
+                      className="text-[10px] font-medium text-[var(--color-primary)] hover:underline"
+                    >
+                      Escolher da lista
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomUtility(true)}
+                      className="text-[10px] font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)]"
+                    >
+                      + Digitar outra
+                    </button>
+                  )}
+                </div>
+
+                {!isCustomUtility ? (
+                  <select
+                    value={
+                      BRAZIL_CONCESSIONARIAS.some(
+                        (c) =>
+                          c.toUpperCase() === (formData.utilityCompany || "").trim().toUpperCase()
+                      )
+                        ? BRAZIL_CONCESSIONARIAS.find(
+                            (c) =>
+                              c.toUpperCase() ===
+                              (formData.utilityCompany || "").trim().toUpperCase()
+                          )
+                        : formData.utilityCompany
+                    }
+                    onChange={(e) => {
+                      if (e.target.value === "__CUSTOM__") {
+                        setIsCustomUtility(true);
+                      } else {
+                        setFormData((prev) => ({ ...prev, utilityCompany: e.target.value }));
+                      }
+                    }}
+                    className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  >
+                    <option value="">Selecione a concessionária...</option>
+                    {formData.utilityCompany &&
+                      !BRAZIL_CONCESSIONARIAS.some(
+                        (c) => c.toUpperCase() === formData.utilityCompany.trim().toUpperCase()
+                      ) && (
+                        <option value={formData.utilityCompany}>{formData.utilityCompany}</option>
+                      )}
+                    {BRAZIL_CONCESSIONARIAS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                    <option value="__CUSTOM__">+ Outra concessionária (Digitar nome)...</option>
+                  </select>
+                ) : (
                   <input
                     type="text"
-                    list="brazil-concessionarias-list"
                     value={formData.utilityCompany}
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, utilityCompany: e.target.value }))
                     }
-                    placeholder="Selecione ou digite (Ex: Copel, Cemig, Enel...)"
-                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                    placeholder="Digite o nome da concessionária"
+                    autoFocus
+                    className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
                   />
-                  <datalist id="brazil-concessionarias-list">
-                    {COMMON_CONCESSIONARIA_ALIASES.map((alias) => (
-                      <option key={"alias-" + alias} value={alias} />
-                    ))}
-                    {BRAZIL_CONCESSIONARIAS.map((c) => (
-                      <option key={c} value={c} />
-                    ))}
-                  </datalist>
-                </div>
+                )}
               </div>
 
               <div>
@@ -1124,49 +1124,64 @@ export default function VendaDetailPage(): JSX.Element {
                 <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
                   Condição / Forma de Pagamento
                 </label>
-                <div className="relative mt-1">
-                  <input
-                    type="text"
-                    list="payment-conditions-list"
-                    value={formData.paymentMethod}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, paymentMethod: e.target.value }))
-                    }
-                    placeholder="Selecione ou digite a forma de pagamento"
-                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
-                  />
-                  <datalist id="payment-conditions-list">
-                    {PAYMENT_CONDITIONS_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt} />
-                    ))}
-                  </datalist>
-                </div>
+                <input
+                  type="text"
+                  value={formData.paymentMethod}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, paymentMethod: e.target.value }))
+                  }
+                  placeholder="Ex: À Vista, Financiamento Bancário, Cartão de Crédito..."
+                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                />
 
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   <span className="text-[10px] font-medium text-[var(--color-muted-foreground)]">
-                    Atalhos:
+                    Opções rápidas:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        paymentMethod: "À Vista (PIX / Transferência)",
+                      }))
+                    }
+                    className="rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/50 px-2 py-0.5 text-[10px] font-medium text-[var(--color-foreground)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-colors"
+                  >
+                    À Vista
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        paymentMethod: "Financiamento Bancário",
+                      }))
+                    }
+                    className="rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/50 px-2 py-0.5 text-[10px] font-medium text-[var(--color-foreground)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-colors"
+                  >
+                    Financiamento
+                  </button>
+
+                  <span className="text-[10px] text-[var(--color-muted-foreground)] ml-1">
+                    Cartão:
                   </span>
                   {[
-                    "À Vista (PIX / Transferência Bancária)",
-                    "Financiamento Bancário (BV Financeira)",
-                    "Financiamento Bancário (Banco Santander)",
-                    "Cartão de Crédito (Parcelado até 12x)",
-                    "Boleto Bancário Parcelado",
-                  ].map((preset) => (
+                    { label: "1x", text: "Cartão de Crédito (1x à vista)" },
+                    { label: "6x", text: "Cartão de Crédito em 6x" },
+                    { label: "10x", text: "Cartão de Crédito em 10x" },
+                    { label: "12x", text: "Cartão de Crédito em 12x" },
+                    { label: "18x", text: "Cartão de Crédito em 18x" },
+                    { label: "21x", text: "Cartão de Crédito em 21x" },
+                    { label: "24x", text: "Cartão de Crédito em 24x" },
+                  ].map((c) => (
                     <button
-                      key={preset}
+                      key={c.label}
                       type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, paymentMethod: preset }))}
-                      className="rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/50 px-2 py-0.5 text-[10px] font-medium text-[var(--color-muted-foreground)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-colors"
+                      onClick={() => setFormData((prev) => ({ ...prev, paymentMethod: c.text }))}
+                      className="rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/50 px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-foreground)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-colors"
                     >
-                      {preset.split(" (")[0] +
-                        (preset.includes("12x")
-                          ? " 12x"
-                          : preset.includes("BV")
-                            ? " BV"
-                            : preset.includes("Santander")
-                              ? " Santander"
-                              : "")}
+                      {c.label}
                     </button>
                   ))}
                 </div>
